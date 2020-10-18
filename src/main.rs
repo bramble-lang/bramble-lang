@@ -213,8 +213,8 @@ pub mod assembly {
                             Register::Eax,
                             Location::Register(Register::Ebx),
                         )));
-                        output.push(Assembly::Instr(Instr::Push(Register::Eax)))
-                    },
+                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                    }
                     super::Token::Add => {
                         let left = ast.left.as_ref().unwrap();
                         Program::traverse(left, output);
@@ -226,8 +226,8 @@ pub mod assembly {
                             Register::Eax,
                             Location::Register(Register::Ebx),
                         )));
-                        output.push(Assembly::Instr(Instr::Push(Register::Eax)))
-                    },
+                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                    }
                     _ => println!("Expected an operator"),
                 }
             }
