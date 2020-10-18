@@ -12,9 +12,17 @@ fn new_ast<'a>() -> Node {
     let ast = Node {
         value: Token::Mul,
         left: Some(Box::new(Node {
-            value: Token::Integer(2),
-            left: None,
-            right: None,
+            value: Token::Add,
+            left: Some(Box::new(Node {
+                value: Token::Integer(2),
+                left: None,
+                right: None,
+            })),
+            right: Some(Box::new(Node {
+                value: Token::Integer(4),
+                left: None,
+                right: None,
+            })),
         })),
         right: Some(Box::new(Node {
             value: Token::Integer(4),
@@ -94,10 +102,8 @@ pub mod assembly {
                 Location::Register(reg) => {
                     let s = format!("{}", reg);
                     f.write_str(&s)
-                },
-                Location::Memory(_) => {
-                    f.write_str("mem")
-                },
+                }
+                Location::Memory(_) => f.write_str("mem"),
             }
         }
     }
@@ -115,14 +121,12 @@ pub mod assembly {
                 Source::Register(reg) => {
                     let s = format!("{}", reg);
                     f.write_str(&s)
-                },
-                Source::Memory(_) => {
-                    f.write_str("mem")
-                },
+                }
+                Source::Memory(_) => f.write_str("mem"),
                 Source::Integer(i) => {
                     let s = format!("{}", i);
                     f.write_str(&s)
-                },
+                }
             }
         }
     }
@@ -134,7 +138,7 @@ pub mod assembly {
         Jmp(Label),
         Mov(Location, Source),
         Add(Register, Location),
-        Mul(Register, Location),
+        IMul(Register, Location),
         Push(Register),
         Pop(Register),
     }
@@ -161,8 +165,11 @@ pub mod assembly {
                         Instr::Pop(reg) => {
                             println!("pop {}", reg);
                         }
-                        Instr::Mul(reg, s) => {
-                            println!("mul {}, {}", reg, s);
+                        Instr::IMul(reg, s) => {
+                            println!("imul {}, {}", reg, s);
+                        }
+                        Instr::Add(reg, s) => {
+                            println!("add {}, {}", reg, s);
                         }
                         _ => {
                             println!("{:?}", inst);
@@ -202,12 +209,25 @@ pub mod assembly {
                         Program::traverse(right, output);
                         output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
                         output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
-                        output.push(Assembly::Instr(Instr::Mul(
+                        output.push(Assembly::Instr(Instr::IMul(
                             Register::Eax,
                             Location::Register(Register::Ebx),
                         )));
                         output.push(Assembly::Instr(Instr::Push(Register::Eax)))
-                    }
+                    },
+                    super::Token::Add => {
+                        let left = ast.left.as_ref().unwrap();
+                        Program::traverse(left, output);
+                        let right = ast.right.as_ref().unwrap();
+                        Program::traverse(right, output);
+                        output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
+                        output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
+                        output.push(Assembly::Instr(Instr::Add(
+                            Register::Eax,
+                            Location::Register(Register::Ebx),
+                        )));
+                        output.push(Assembly::Instr(Instr::Push(Register::Eax)))
+                    },
                     _ => println!("Expected an operator"),
                 }
             }
