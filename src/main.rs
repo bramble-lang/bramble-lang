@@ -4,7 +4,7 @@ fn main() {
     println!("Hello, world!");
     let ast = new_ast();
     println!("{:?}", ast);
-    let program = assembly::Program::compile(ast);
+    let program = assembly::Program::compile(&ast);
     program.print();
 }
 
@@ -180,9 +180,9 @@ pub mod assembly {
             }
         }
 
-        pub fn compile(ast: super::Node) -> Program {
+        pub fn compile(ast: &super::Node) -> Program {
             let mut code = vec![];
-            Program::traverse(&ast, &mut code);
+            Program::traverse(ast, &mut code);
             Program { code }
         }
 
