@@ -11,12 +11,12 @@ fn main() {
 fn new_ast<'a>() -> Node {
     let ast = Node {
         value: Token::Mul,
-        left: Some(Box::new(Node{
+        left: Some(Box::new(Node {
             value: Token::Integer(2),
             left: None,
             right: None,
         })),
-        right: Some(Box::new(Node{
+        right: Some(Box::new(Node {
             value: Token::Integer(4),
             left: None,
             right: None,
@@ -69,6 +69,16 @@ pub mod assembly {
         Ecx,
     }
 
+    impl std::fmt::Display for Register {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Register::Eax => f.write_str("eax"),
+                Register::Ebx => f.write_str("ebx"),
+                Register::Ecx => f.write_str("ecx"),
+            }
+        }
+    }
+
     #[derive(Debug)]
     enum Memory {}
 
@@ -78,11 +88,43 @@ pub mod assembly {
         Memory(Memory),
     }
 
+    impl std::fmt::Display for Location {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+            match self {
+                Location::Register(reg) => {
+                    let s = format!("{}", reg);
+                    f.write_str(&s)
+                },
+                Location::Memory(_) => {
+                    f.write_str("mem")
+                },
+            }
+        }
+    }
+
     #[derive(Debug)]
     enum Source {
         Register(Register),
         Memory(Memory),
         Integer(i32),
+    }
+
+    impl std::fmt::Display for Source {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+            match self {
+                Source::Register(reg) => {
+                    let s = format!("{}", reg);
+                    f.write_str(&s)
+                },
+                Source::Memory(_) => {
+                    f.write_str("mem")
+                },
+                Source::Integer(i) => {
+                    let s = format!("{}", i);
+                    f.write_str(&s)
+                },
+            }
+        }
     }
 
     type Label = String;
@@ -110,33 +152,43 @@ pub mod assembly {
     impl Program {
         pub fn print(&self) {
             for inst in self.code.iter() {
-                println!("{:?}", inst);
+                match inst {
+                    Assembly::Instr(inst) => match inst {
+                        Instr::Mov(l, s) => println!("mov {}, {}", l, s),
+                        Instr::Push(reg) => {
+                            println!("push {}", reg);
+                        }
+                        Instr::Pop(reg) => {
+                            println!("pop {}", reg);
+                        }
+                        Instr::Mul(reg, s) => {
+                            println!("mul {}, {}", reg, s);
+                        }
+                        _ => {
+                            println!("{:?}", inst);
+                        }
+                    },
+                    _ => {}
+                }
             }
         }
 
         pub fn compile(ast: super::Node) -> Program {
             let mut code = vec![];
             Program::traverse(&ast, &mut code);
-            Program{
-                code,
-            }
+            Program { code }
         }
 
         fn traverse(ast: &super::Node, output: &mut Vec<Assembly>) {
             if ast.left.is_none() && ast.right.is_none() {
                 match ast.value {
                     super::Token::Integer(i) => {
-                        output.push(
-                            Assembly::Instr(
-                                Instr::Mov(Location::Register(Register::Eax), Source::Integer(i))
-                            )
-                        );
-                        output.push(
-                            Assembly::Instr(
-                                Instr::Push(Register::Eax)
-                            )
-                        );
-                    },
+                        output.push(Assembly::Instr(Instr::Mov(
+                            Location::Register(Register::Eax),
+                            Source::Integer(i),
+                        )));
+                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                    }
                     _ => {
                         println!("Expected integer");
                     }
@@ -148,26 +200,15 @@ pub mod assembly {
                         Program::traverse(left, output);
                         let right = ast.right.as_ref().unwrap();
                         Program::traverse(right, output);
-                        output.push(
-                            Assembly::Instr(
-                                Instr::Pop(Register::Ebx)
-                            )
-                        );
-                        output.push(
-                            Assembly::Instr(
-                                Instr::Pop(Register::Eax)
-                            )
-                        );
-                        output.push(
-                            Assembly::Instr(Instr::Mul(Register::Eax, Location::Register(Register::Ebx)))
-                        );
-                        output.push(
-                            Assembly::Instr(Instr::Push(Register::Eax))
-                        )
+                        output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
+                        output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
+                        output.push(Assembly::Instr(Instr::Mul(
+                            Register::Eax,
+                            Location::Register(Register::Ebx),
+                        )));
+                        output.push(Assembly::Instr(Instr::Push(Register::Eax)))
                     }
-                    _ => {
-                        println!("Expected an operator")
-                    }
+                    _ => println!("Expected an operator"),
                 }
             }
         }
