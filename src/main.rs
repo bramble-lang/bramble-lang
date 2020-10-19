@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "x := 5 y := 2 + x";
+    let text = "fn test { x := 5 ; y := 2 + x ; return y ; }";
+    //let text = "x := 5 ;";
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
     let tokens = tokens
@@ -29,6 +30,13 @@ pub enum Token {
     Mul,
     Add,
     Assign,
+    Semicolon,
+    Return,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Function,
 }
 
 impl Token {
@@ -42,6 +50,13 @@ impl Token {
                 "*" => Ok(Token::Mul),
                 "+" => Ok(Token::Add),
                 ":=" => Ok(Token::Assign),
+                ";" => Ok(Token::Semicolon),
+                "(" => Ok(Token::LParen),
+                ")" => Ok(Token::RParen),
+                "{" => Ok(Token::LBrace),
+                "}" => Ok(Token::RBrace),
+                "fn" => Ok(Token::Function),
+                "return" => Ok(Token::Return),
                 s if s.is_ascii() => Ok(Token::Identifier(s.into())),
                 _ => Err("Invalid token"),
             },
@@ -69,7 +84,10 @@ impl Node {
         FACTOR := NUMBER | IDENTIFIER | (EXPRESSION)
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
-        BIND := IDENTIFIER := EXPRESSION;
+        BIND := IDENTIFIER := EXPRESSION
+        RETURN := return [EXPRESSION] SEMICOLON
+        STATEMENT := [BIND] SEMICOLON
+        FUNCTION := fn IDENTIFIER LPAREN RPAREN LBRACE STATEMENT* RETURN RBRACE
 
         tokenize - takes a string of text and converts it to a string of tokens
         parse - takes a string of tokens and converts it into an AST
@@ -77,14 +95,89 @@ impl Node {
     */
     pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
         let mut iter = tokens.iter().peekable();
-        let mut stmts = vec![];
-        while iter.peek().is_some() {
-            match Node::bind(&mut iter) {
-                Some(s) => stmts.push(s),
-                None => return None,
+        Node::function(&mut iter)
+    }
+
+    fn function(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Vec<Node>> {
+        match iter.peek() {
+            Some(Token::Function) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Identifier(id)) => {
+                        iter.next();
+                        match iter.peek() {
+                            Some(Token::LBrace) => {
+                                iter.next();
+                                let mut stmts = vec![];
+                                while iter.peek().is_some() {
+                                    match Node::statement(iter) {
+                                        Some(s) => stmts.push(s),
+                                        None => break,
+                                    }
+                                }
+
+                                match Node::return_stmt(iter) {
+                                    Some(ret) => stmts.push(ret),
+                                    None => panic!("Function must end with a return statement"),
+                                }
+
+                                match iter.peek() {
+                                    Some(Token::RBrace) => {
+                                        iter.next();
+                                    }
+                                    _ => panic!("Expected } at end of function definition"),
+                                }
+                                Some(stmts)
+                            }
+                            _ => panic!("Expected { after function declaration"),
+                        }
+                    }
+                    _ => panic!("Expected function name after fn"),
+                }
             }
+            _ => panic!("Expected a function definition"),
         }
-        Some(stmts)
+    }
+
+    fn return_stmt(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::Return) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match iter.peek() {
+                    Some(Token::Semicolon) => iter.next(),
+                    _ => panic!("Expected ; after return statement"),
+                };
+                match exp {
+                    Some(exp) => Some(Node {
+                        value: Token::Return,
+                        left: Some(Box::new(exp)),
+                        right: None,
+                    }),
+                    None => Some(Node {
+                        value: Token::Return,
+                        left: None,
+                        right: None,
+                    }),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn statement(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+        match Node::bind(iter) {
+            Some(b) => match iter.peek() {
+                Some(Token::Semicolon) => {
+                    iter.next();
+                    Some(b)
+                }
+                _ => {
+                    panic!("Expected ; after bind statement");
+                }
+            },
+            None => None,
+        }
     }
 
     fn bind(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
@@ -109,10 +202,7 @@ impl Node {
                     }
                 }
             }
-            None => {
-                println!("Expected an identifier on the LHS");
-                None
-            }
+            None => None,
         }
     }
 
