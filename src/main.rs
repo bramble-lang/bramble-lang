@@ -246,7 +246,7 @@ pub mod assembly {
     #[derive(Debug)]
     enum Location {
         Register(Register),
-        Memory(Memory),
+        Memory(String),
     }
 
     impl std::fmt::Display for Location {
@@ -256,7 +256,10 @@ pub mod assembly {
                     let s = format!("{}", reg);
                     f.write_str(&s)
                 }
-                Location::Memory(_) => f.write_str("mem"),
+                Location::Memory(m) => {
+                    let s = format!("[{}]", m);
+                    f.write_str(&s)
+                }
             }
         }
     }
@@ -264,7 +267,7 @@ pub mod assembly {
     #[derive(Debug)]
     enum Source {
         Register(Register),
-        Memory(Memory),
+        Memory(String),
         Integer(i32),
     }
 
@@ -275,7 +278,10 @@ pub mod assembly {
                     let s = format!("{}", reg);
                     f.write_str(&s)
                 }
-                Source::Memory(_) => f.write_str("mem"),
+                Source::Memory(m) => {
+                    let s = format!("[{}]", m);
+                    f.write_str(&s)
+                }
                 Source::Integer(i) => {
                     let s = format!("{}", i);
                     f.write_str(&s)
@@ -393,6 +399,19 @@ pub mod assembly {
                             Location::Register(Register::Ebx),
                         )));
                         output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                    }
+                    super::Token::Assign => {
+                        let id = match &ast.left.as_ref().unwrap().value {
+                            super::Token::Identifier(id) => id,
+                            _ => panic!("CRITICAL: expected identifier on LHS of bind statement"),
+                        };
+                        let right = ast.right.as_ref().unwrap();
+                        Program::traverse(right, output);
+                        output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
+                        output.push(Assembly::Instr(Instr::Mov(
+                            Location::Memory(id.clone()),
+                            Source::Register(Register::Eax),
+                        )));
                     }
                     _ => println!("Expected an operator"),
                 }
