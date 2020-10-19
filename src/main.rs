@@ -258,24 +258,27 @@ pub mod assembly {
         pub fn print(&self) {
             for inst in self.code.iter() {
                 match inst {
-                    Assembly::Instr(inst) => match inst {
-                        Instr::Mov(l, s) => println!("mov {}, {}", l, s),
-                        Instr::Push(reg) => {
-                            println!("push {}", reg);
+                    Assembly::Instr(inst) => {
+                        print!("\t");
+                        match inst {
+                            Instr::Mov(l, s) => println!("mov {}, {}", l, s),
+                            Instr::Push(reg) => {
+                                println!("push {}", reg);
+                            }
+                            Instr::Pop(reg) => {
+                                println!("pop {}", reg);
+                            }
+                            Instr::IMul(reg, s) => {
+                                println!("imul {}, {}", reg, s);
+                            }
+                            Instr::Add(reg, s) => {
+                                println!("add {}, {}", reg, s);
+                            }
+                            _ => {
+                                println!("{:?}", inst);
+                            }
                         }
-                        Instr::Pop(reg) => {
-                            println!("pop {}", reg);
-                        }
-                        Instr::IMul(reg, s) => {
-                            println!("imul {}, {}", reg, s);
-                        }
-                        Instr::Add(reg, s) => {
-                            println!("add {}, {}", reg, s);
-                        }
-                        _ => {
-                            println!("{:?}", inst);
-                        }
-                    },
+                    }
                     _ => {}
                 }
             }
