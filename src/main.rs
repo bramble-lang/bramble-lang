@@ -7,7 +7,7 @@ fn main() {
     let program = assembly::Program::compile(&ast);
     program.print();
 
-    let text = "2 * 3 + 4";
+    let text = "x := 5";
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
     let tokens = tokens
@@ -116,14 +116,17 @@ impl Node {
                 match pt {
                     Some(Token::Assign) => {
                         iter.next();
-                        let exp = Node::expression(iter).expect("An expression after :=");
+                        let exp = Node::expression(iter).expect("Expected an expression after :=");
                         Some(Node {
                             value: Token::Assign,
                             left: Some(Box::new(n)),
                             right: Some(Box::new(exp)),
                         })
                     }
-                    _ => None,
+                    _ => {
+                        println!("Expected := after identifer in bind statement");
+                        None
+                    }
                 }
             }
             None => {
