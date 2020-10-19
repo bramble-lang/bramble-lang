@@ -1,12 +1,6 @@
 #![allow(dead_code)]
 
 fn main() {
-    println!("Hello, world!");
-    let ast = new_ast();
-    println!("{:?}", ast);
-    let program = assembly::Program::compile(&ast);
-    program.print();
-
     let text = "x := 5";
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -22,7 +16,7 @@ fn main() {
     let vartable = VarTable::generate(&ast);
     println!("VarTable: {:?}", vartable);
 
-    let program = assembly::Program::compile(&ast);
+    let program = assembly::Program::compile(&ast, &vartable);
     program.print();
 }
 
@@ -300,7 +294,8 @@ pub mod assembly {
     enum Instr {
         Jmp(Label),
         Mov(Location, Source),
-        Add(Register, Location),
+        Add(Register, Source),
+        Sub(Register, Source),
         IMul(Register, Location),
         Push(Register),
         Pop(Register),
@@ -336,6 +331,9 @@ pub mod assembly {
                             Instr::Add(reg, s) => {
                                 println!("add {}, {}", reg, s);
                             }
+                            Instr::Sub(reg, s) => {
+                                println!("sub {}, {}", reg, s);
+                            }
                             _ => {
                                 println!("{:?}", inst);
                             }
@@ -346,14 +344,22 @@ pub mod assembly {
             }
         }
 
-        pub fn compile(ast: &super::Node) -> Program {
+        pub fn compile(ast: &super::Node, vars: &super::VarTable) -> Program {
             let mut code = vec![];
             code.push(Assembly::Instr(Instr::Push(Register::Ebp)));
             code.push(Assembly::Instr(Instr::Mov(
                 Location::Register(Register::Ebp),
                 Source::Register(Register::Esp),
             )));
-            Program::traverse(ast, &mut code);
+
+            let total_offset = vars.vars.last().unwrap().2;
+            code.push(Assembly::Instr(Instr::Sub(
+                Register::Esp,
+                Source::Integer(total_offset),
+            )));
+
+            Program::traverse(ast, vars, &mut code);
+
             code.push(Assembly::Instr(Instr::Mov(
                 Location::Register(Register::Esp),
                 Source::Register(Register::Ebp),
@@ -362,7 +368,7 @@ pub mod assembly {
             Program { code }
         }
 
-        fn traverse(ast: &super::Node, output: &mut Vec<Assembly>) {
+        fn traverse(ast: &super::Node, vars: &super::VarTable, output: &mut Vec<Assembly>) {
             if ast.left.is_none() && ast.right.is_none() {
                 match ast.value {
                     super::Token::Integer(i) => {
@@ -380,9 +386,9 @@ pub mod assembly {
                 match ast.value {
                     super::Token::Mul => {
                         let left = ast.left.as_ref().unwrap();
-                        Program::traverse(left, output);
+                        Program::traverse(left, vars, output);
                         let right = ast.right.as_ref().unwrap();
-                        Program::traverse(right, output);
+                        Program::traverse(right, vars, output);
                         output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
                         output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
                         output.push(Assembly::Instr(Instr::IMul(
@@ -393,27 +399,34 @@ pub mod assembly {
                     }
                     super::Token::Add => {
                         let left = ast.left.as_ref().unwrap();
-                        Program::traverse(left, output);
+                        Program::traverse(left, vars, output);
                         let right = ast.right.as_ref().unwrap();
-                        Program::traverse(right, output);
+                        Program::traverse(right, vars, output);
                         output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
                         output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
                         output.push(Assembly::Instr(Instr::Add(
                             Register::Eax,
-                            Location::Register(Register::Ebx),
+                            Source::Register(Register::Ebx),
                         )));
                         output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     }
                     super::Token::Assign => {
-                        let id = match &ast.left.as_ref().unwrap().value {
-                            super::Token::Identifier(id) => id,
+                        let id_offset = match &ast.left.as_ref().unwrap().value {
+                            super::Token::Identifier(id) => {
+                                let var = vars
+                                    .vars
+                                    .iter()
+                                    .find(|v| v.0 == *id)
+                                    .expect("CRITICAL: identifier not found in var table");
+                                var.2
+                            }
                             _ => panic!("CRITICAL: expected identifier on LHS of bind statement"),
                         };
                         let right = ast.right.as_ref().unwrap();
-                        Program::traverse(right, output);
+                        Program::traverse(right, vars, output);
                         output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
                         output.push(Assembly::Instr(Instr::Mov(
-                            Location::Memory(id.clone()),
+                            Location::Memory(format!("ebp-{}", id_offset)),
                             Source::Register(Register::Eax),
                         )));
                     }
@@ -425,40 +438,42 @@ pub mod assembly {
 }
 
 #[derive(Debug)]
-struct VarTable {
-    vars: Vec<(String, i32)>,
+pub struct VarTable {
+    vars: Vec<(String, i32, i32)>,
 }
 
 impl VarTable {
     pub fn generate(ast: &Node) -> VarTable {
         let mut vt = VarTable { vars: vec![] };
-        VarTable::find_bound_identifiers(ast, &mut vt);
+        VarTable::find_bound_identifiers(ast, &mut vt, 0);
         if VarTable::has_duplicates(&vt) {
             panic!("An identifier was defined twice");
         }
         vt
     }
 
-    fn find_bound_identifiers(ast: &Node, output: &mut VarTable) {
-        match ast.value {
+    fn find_bound_identifiers(ast: &Node, output: &mut VarTable, total_offset: i32) -> i32 {
+        let total_offset = match ast.value {
             Token::Assign => {
                 let id = match &ast.left.as_ref().unwrap().value {
                     Token::Identifier(id) => id,
                     _ => panic!("CRITICAL: expected identifer on LHS of bind operator"),
                 };
 
-                output.vars.push((id.clone(), 4));
+                output.vars.push((id.clone(), 4, total_offset + 4));
+                total_offset + 4
             }
-            _ => {}
-        }
-        match &ast.left {
-            Some(n) => VarTable::find_bound_identifiers(n, output),
-            None => (),
-        }
-        match &ast.right {
-            Some(n) => VarTable::find_bound_identifiers(n, output),
-            None => (),
-        }
+            _ => total_offset,
+        };
+        let total_offset = match &ast.left {
+            Some(n) => VarTable::find_bound_identifiers(n, output, total_offset),
+            None => total_offset,
+        };
+        let total_offset = match &ast.right {
+            Some(n) => VarTable::find_bound_identifiers(n, output, total_offset),
+            None => total_offset,
+        };
+        total_offset
     }
 
     fn has_duplicates(var_table: &VarTable) -> bool {
