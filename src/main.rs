@@ -18,7 +18,11 @@ fn main() {
     let ast = Node::parse(tokens);
     println!("AST: {:?}", ast);
 
-    let program = assembly::Program::compile(&ast.unwrap());
+    let ast = ast.unwrap();
+    let vartable = VarTable::generate(&ast);
+    println!("VarTable: {:?}", vartable);
+
+    let program = assembly::Program::compile(&ast);
     program.print();
 }
 
@@ -417,5 +421,47 @@ pub mod assembly {
                 }
             }
         }
+    }
+}
+
+#[derive(Debug)]
+struct VarTable {
+    vars: Vec<(String, i32)>,
+}
+
+impl VarTable {
+    pub fn generate(ast: &Node) -> VarTable {
+        let mut vt = VarTable { vars: vec![] };
+        VarTable::find_bound_identifiers(ast, &mut vt);
+        if VarTable::has_duplicates(&vt) {
+            panic!("An identifier was defined twice");
+        }
+        vt
+    }
+
+    fn find_bound_identifiers(ast: &Node, output: &mut VarTable) {
+        match ast.value {
+            Token::Assign => {
+                let id = match &ast.left.as_ref().unwrap().value {
+                    Token::Identifier(id) => id,
+                    _ => panic!("CRITICAL: expected identifer on LHS of bind operator"),
+                };
+
+                output.vars.push((id.clone(), 4));
+            }
+            _ => {}
+        }
+        match &ast.left {
+            Some(n) => VarTable::find_bound_identifiers(n, output),
+            None => (),
+        }
+        match &ast.right {
+            Some(n) => VarTable::find_bound_identifiers(n, output),
+            None => (),
+        }
+    }
+
+    fn has_duplicates(var_table: &VarTable) -> bool {
+        (1..var_table.vars.len()).any(|i| var_table.vars[i..].contains(&var_table.vars[i - 1]))
     }
 }
