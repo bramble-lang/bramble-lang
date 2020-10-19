@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "x := 5";
+    let text = "x := 5 y := 2 + x";
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
     let tokens = tokens
@@ -18,31 +18,6 @@ fn main() {
 
     let program = assembly::Program::compile(&ast, &vartable);
     program.print();
-}
-
-fn new_ast<'a>() -> Node {
-    let ast = Node {
-        value: Token::Mul,
-        left: Some(Box::new(Node {
-            value: Token::Add,
-            left: Some(Box::new(Node {
-                value: Token::Integer(2),
-                left: None,
-                right: None,
-            })),
-            right: Some(Box::new(Node {
-                value: Token::Integer(4),
-                left: None,
-                right: None,
-            })),
-        })),
-        right: Some(Box::new(Node {
-            value: Token::Integer(4),
-            left: None,
-            right: None,
-        })),
-    };
-    ast
 }
 
 // Token - a type which captures the different types of tokens and which is output
@@ -89,8 +64,9 @@ pub struct Node {
 impl Node {
     /*
         Grammar
+        IDENTIFIER := A-Za-z*
         NUMBER := 0-9*
-        FACTOR := NUMBER | (EXPRESSION)
+        FACTOR := NUMBER | IDENTIFIER | (EXPRESSION)
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
         BIND := IDENTIFIER := EXPRESSION;
@@ -99,10 +75,16 @@ impl Node {
         parse - takes a string of tokens and converts it into an AST
         compile - takes an AST and converts it to assembly
     */
-    pub fn parse(tokens: Vec<Token>) -> Option<Node> {
+    pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
         let mut iter = tokens.iter().peekable();
-        //Node::expression(&mut iter)
-        Node::bind(&mut iter)
+        let mut stmts = vec![];
+        while iter.peek().is_some() {
+            match Node::bind(&mut iter) {
+                Some(s) => stmts.push(s),
+                None => return None,
+            }
+        }
+        Some(stmts)
     }
 
     fn bind(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
@@ -173,7 +155,10 @@ impl Node {
     fn factor(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
         match Node::number(iter) {
             Some(n) => Some(n),
-            None => None,
+            None => match Node::identifier(iter) {
+                Some(n) => Some(n),
+                None => None,
+            },
         }
     }
 
@@ -344,7 +329,7 @@ pub mod assembly {
             }
         }
 
-        pub fn compile(ast: &super::Node, vars: &super::VarTable) -> Program {
+        pub fn compile(ast: &Vec<super::Node>, vars: &super::VarTable) -> Program {
             let mut code = vec![];
             code.push(Assembly::Instr(Instr::Push(Register::Ebp)));
             code.push(Assembly::Instr(Instr::Mov(
@@ -358,7 +343,9 @@ pub mod assembly {
                 Source::Integer(total_offset),
             )));
 
-            Program::traverse(ast, vars, &mut code);
+            for stmt in ast.iter() {
+                Program::traverse(stmt, vars, &mut code);
+            }
 
             code.push(Assembly::Instr(Instr::Mov(
                 Location::Register(Register::Esp),
@@ -370,11 +357,26 @@ pub mod assembly {
 
         fn traverse(ast: &super::Node, vars: &super::VarTable, output: &mut Vec<Assembly>) {
             if ast.left.is_none() && ast.right.is_none() {
-                match ast.value {
+                match &ast.value {
                     super::Token::Integer(i) => {
                         output.push(Assembly::Instr(Instr::Mov(
                             Location::Register(Register::Eax),
-                            Source::Integer(i),
+                            Source::Integer(*i),
+                        )));
+                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                    }
+                    super::Token::Identifier(id) => {
+                        let id_offset = {
+                            let var = vars
+                                .vars
+                                .iter()
+                                .find(|v| v.0 == *id)
+                                .expect("CRITICAL: identifier not found in var table");
+                            var.2
+                        };
+                        output.push(Assembly::Instr(Instr::Mov(
+                            Location::Register(Register::Eax),
+                            Source::Memory(format!("ebp-{}", id_offset)),
                         )));
                         output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     }
@@ -443,9 +445,12 @@ pub struct VarTable {
 }
 
 impl VarTable {
-    pub fn generate(ast: &Node) -> VarTable {
+    pub fn generate(ast: &Vec<Node>) -> VarTable {
         let mut vt = VarTable { vars: vec![] };
-        VarTable::find_bound_identifiers(ast, &mut vt, 0);
+        let mut offset = 0;
+        for n in ast.iter() {
+            offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
+        }
         if VarTable::has_duplicates(&vt) {
             panic!("An identifier was defined twice");
         }
