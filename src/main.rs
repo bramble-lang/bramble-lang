@@ -7,7 +7,7 @@ fn main() {
     let program = assembly::Program::compile(&ast);
     program.print();
 
-    let text = "2 * 3 + 4";
+    let text = "2 + 3 + 4 + 5";
     let tokens = Token::tokenize(&text);
     println!("{:?}", tokens);
     let tokens = tokens
@@ -172,6 +172,8 @@ pub mod assembly {
         Eax,
         Ebx,
         Ecx,
+        Ebp,
+        Esp,
     }
 
     impl std::fmt::Display for Register {
@@ -180,6 +182,8 @@ pub mod assembly {
                 Register::Eax => f.write_str("eax"),
                 Register::Ebx => f.write_str("ebx"),
                 Register::Ecx => f.write_str("ecx"),
+                Register::Ebp => f.write_str("ebp"),
+                Register::Esp => f.write_str("esp"),
             }
         }
     }
@@ -279,7 +283,17 @@ pub mod assembly {
 
         pub fn compile(ast: &super::Node) -> Program {
             let mut code = vec![];
+            code.push(Assembly::Instr(Instr::Push(Register::Ebp)));
+            code.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Ebp),
+                Source::Register(Register::Esp),
+            )));
             Program::traverse(ast, &mut code);
+            code.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Esp),
+                Source::Register(Register::Ebp),
+            )));
+            code.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
             Program { code }
         }
 
