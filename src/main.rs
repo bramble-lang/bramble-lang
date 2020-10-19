@@ -7,16 +7,16 @@ fn main() {
     let program = assembly::Program::compile(&ast);
     program.print();
 
-    let text = "2 + 3 + 4 + 5";
+    let text = "2 * 3 + 4";
     let tokens = Token::tokenize(&text);
-    println!("{:?}", tokens);
+    println!("Tokens: {:?}", tokens);
     let tokens = tokens
         .into_iter()
         .filter(|t| t.is_ok())
         .map(|t| t.unwrap())
         .collect();
     let ast = Node::parse(tokens);
-    println!("{:?}", ast);
+    println!("AST: {:?}", ast);
 
     let program = assembly::Program::compile(&ast.unwrap());
     program.print();
@@ -52,8 +52,10 @@ fn new_ast<'a>() -> Node {
 #[derive(Debug)]
 pub enum Token {
     Integer(i32),
+    Identifier(String),
     Mul,
     Add,
+    Assign,
 }
 
 impl Token {
@@ -66,6 +68,8 @@ impl Token {
             Err(_) => match s {
                 "*" => Ok(Token::Mul),
                 "+" => Ok(Token::Add),
+                ":=" => Ok(Token::Assign),
+                s if s.is_ascii() => Ok(Token::Identifier(s.into())),
                 _ => Err("Invalid token"),
             },
         })
@@ -91,7 +95,7 @@ impl Node {
         FACTOR := NUMBER | (EXPRESSION)
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
-        BIND := let IDENTIFIER = EXPRESSION;
+        BIND := IDENTIFIER := EXPRESSION;
 
         tokenize - takes a string of text and converts it to a string of tokens
         parse - takes a string of tokens and converts it into an AST
@@ -99,7 +103,34 @@ impl Node {
     */
     pub fn parse(tokens: Vec<Token>) -> Option<Node> {
         let mut iter = tokens.iter().peekable();
-        Node::expression(&mut iter)
+        //Node::expression(&mut iter)
+        Node::bind(&mut iter)
+    }
+
+    fn bind(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+        match Node::identifier(iter) {
+            Some(n) => {
+                println!("{:?}", n);
+                let pt = iter.peek();
+                println!("peek: {:?}", pt);
+                match pt {
+                    Some(Token::Assign) => {
+                        iter.next();
+                        let exp = Node::expression(iter).expect("An expression after :=");
+                        Some(Node {
+                            value: Token::Assign,
+                            left: Some(Box::new(n)),
+                            right: Some(Box::new(exp)),
+                        })
+                    }
+                    _ => None,
+                }
+            }
+            None => {
+                println!("Expected an identifier on the LHS");
+                None
+            }
+        }
     }
 
     fn expression(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
@@ -140,10 +171,25 @@ impl Node {
 
     fn factor(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
         match Node::number(iter) {
-            Some(n) => {
-                iter.next();
-                Some(n)
-            }
+            Some(n) => Some(n),
+            None => None,
+        }
+    }
+
+    fn identifier(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+        println!("Identifier");
+        match iter.peek() {
+            Some(token) => match token {
+                Token::Identifier(id) => {
+                    iter.next();
+                    Some(Node {
+                        value: Token::Identifier(id.clone()),
+                        left: None,
+                        right: None,
+                    })
+                }
+                _ => None,
+            },
             None => None,
         }
     }
@@ -151,11 +197,14 @@ impl Node {
     fn number(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
         match iter.peek() {
             Some(token) => match token {
-                Token::Integer(i) => Some(Node {
-                    value: Token::Integer(*i),
-                    left: None,
-                    right: None,
-                }),
+                Token::Integer(i) => {
+                    iter.next();
+                    Some(Node {
+                        value: Token::Integer(*i),
+                        left: None,
+                        right: None,
+                    })
+                }
                 _ => None,
             },
             None => None,
