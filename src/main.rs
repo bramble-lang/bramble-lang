@@ -259,7 +259,7 @@ pub mod assembly {
             for inst in self.code.iter() {
                 match inst {
                     Assembly::Instr(inst) => {
-                        print!("\t");
+                        print!("    ");
                         match inst {
                             Instr::Mov(l, s) => println!("mov {}, {}", l, s),
                             Instr::Push(reg) => {
