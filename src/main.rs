@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn test { x := 5 ; y := 2 + x ; return y ; }";
-    //let text = "x := 5 ;";
+    let text = "fn test { x := 2 * 3 ; return x ; }";
+    println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
     let tokens = tokens
@@ -72,15 +72,11 @@ type NodeOption = Option<Box<Node>>;
 pub enum NodeType {
     Integer(i32),
     Identifier(String),
-    Mul,
+    Mul(Box<Node>, Box<Node>),
     Add,
     Assign,
     Semicolon,
     Return,
-    LParen,
-    RParen,
-    LBrace,
-    RBrace,
     Function,
 }
 
@@ -253,9 +249,9 @@ impl Node {
                     iter.next();
                     let n2 = Node::term(iter).expect("a valid term after *");
                     Some(Node {
-                        value: NodeType::Mul,
-                        left: Some(Box::new(n)),
-                        right: Some(Box::new(n2)),
+                        value: NodeType::Mul(Box::new(n), Box::new(n2)),
+                        left: None,
+                        right: None,
                     })
                 }
                 _ => Some(n),
@@ -468,84 +464,77 @@ pub mod assembly {
         }
 
         fn traverse(ast: &super::Node, vars: &super::VarTable, output: &mut Vec<Assembly>) {
-            if ast.left.is_none() && ast.right.is_none() {
-                match &ast.value {
-                    super::NodeType::Integer(i) => {
-                        output.push(Assembly::Instr(Instr::Mov(
-                            Location::Register(Register::Eax),
-                            Source::Integer(*i),
-                        )));
-                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
-                    }
-                    super::NodeType::Identifier(id) => {
-                        let id_offset = {
+            println!("Compile @ {:?}", ast.value);
+            match &ast.value {
+                super::NodeType::Integer(i) => {
+                    output.push(Assembly::Instr(Instr::Mov(
+                        Location::Register(Register::Eax),
+                        Source::Integer(*i),
+                    )));
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                }
+                super::NodeType::Identifier(id) => {
+                    let id_offset = {
+                        let var = vars
+                            .vars
+                            .iter()
+                            .find(|v| v.0 == *id)
+                            .expect("CRITICAL: identifier not found in var table");
+                        var.2
+                    };
+                    output.push(Assembly::Instr(Instr::Mov(
+                        Location::Register(Register::Eax),
+                        Source::Memory(format!("ebp-{}", id_offset)),
+                    )));
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                }
+                super::NodeType::Mul(l, r) => {
+                    let left = l.as_ref();
+                    Program::traverse(left, vars, output);
+                    let right = r.as_ref();
+                    Program::traverse(right, vars, output);
+                    output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
+                    output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
+                    output.push(Assembly::Instr(Instr::IMul(
+                        Register::Eax,
+                        Location::Register(Register::Ebx),
+                    )));
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                }
+                super::NodeType::Add => {
+                    let left = ast.left.as_ref().unwrap();
+                    Program::traverse(left, vars, output);
+                    let right = ast.right.as_ref().unwrap();
+                    Program::traverse(right, vars, output);
+                    output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
+                    output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
+                    output.push(Assembly::Instr(Instr::Add(
+                        Register::Eax,
+                        Source::Register(Register::Ebx),
+                    )));
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                }
+                super::NodeType::Assign => {
+                    let id_offset = match &ast.left.as_ref().unwrap().value {
+                        super::NodeType::Identifier(id) => {
                             let var = vars
                                 .vars
                                 .iter()
                                 .find(|v| v.0 == *id)
                                 .expect("CRITICAL: identifier not found in var table");
                             var.2
-                        };
-                        output.push(Assembly::Instr(Instr::Mov(
-                            Location::Register(Register::Eax),
-                            Source::Memory(format!("ebp-{}", id_offset)),
-                        )));
-                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
-                    }
-                    _ => {
-                        println!("Expected integer");
-                    }
+                        }
+                        _ => panic!("CRITICAL: expected identifier on LHS of bind statement"),
+                    };
+                    let right = ast.right.as_ref().unwrap();
+                    Program::traverse(right, vars, output);
+                    output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
+                    output.push(Assembly::Instr(Instr::Mov(
+                        Location::Memory(format!("ebp-{}", id_offset)),
+                        Source::Register(Register::Eax),
+                    )));
                 }
-            } else if ast.left.is_some() && ast.right.is_some() {
-                match ast.value {
-                    super::NodeType::Mul => {
-                        let left = ast.left.as_ref().unwrap();
-                        Program::traverse(left, vars, output);
-                        let right = ast.right.as_ref().unwrap();
-                        Program::traverse(right, vars, output);
-                        output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
-                        output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
-                        output.push(Assembly::Instr(Instr::IMul(
-                            Register::Eax,
-                            Location::Register(Register::Ebx),
-                        )));
-                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
-                    }
-                    super::NodeType::Add => {
-                        let left = ast.left.as_ref().unwrap();
-                        Program::traverse(left, vars, output);
-                        let right = ast.right.as_ref().unwrap();
-                        Program::traverse(right, vars, output);
-                        output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
-                        output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
-                        output.push(Assembly::Instr(Instr::Add(
-                            Register::Eax,
-                            Source::Register(Register::Ebx),
-                        )));
-                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
-                    }
-                    super::NodeType::Assign => {
-                        let id_offset = match &ast.left.as_ref().unwrap().value {
-                            super::NodeType::Identifier(id) => {
-                                let var = vars
-                                    .vars
-                                    .iter()
-                                    .find(|v| v.0 == *id)
-                                    .expect("CRITICAL: identifier not found in var table");
-                                var.2
-                            }
-                            _ => panic!("CRITICAL: expected identifier on LHS of bind statement"),
-                        };
-                        let right = ast.right.as_ref().unwrap();
-                        Program::traverse(right, vars, output);
-                        output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
-                        output.push(Assembly::Instr(Instr::Mov(
-                            Location::Memory(format!("ebp-{}", id_offset)),
-                            Source::Register(Register::Eax),
-                        )));
-                    }
-                    _ => println!("Expected an operator"),
-                }
+                _ => println!("Expected an operator"),
             }
         }
     }
