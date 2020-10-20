@@ -66,8 +66,6 @@ impl Token {
 }
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
-type NodeOption = Option<Box<Node>>;
-
 #[derive(Debug)]
 pub enum Node {
     Integer(i32),
