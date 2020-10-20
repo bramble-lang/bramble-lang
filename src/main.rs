@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn main ( ) { x := 1 + 2 * 3 ; return x + 2 ; }";
+    let text = "fn main ( p ) { x := 1 + 2 * 3 ; return x + p ; }";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -14,10 +14,10 @@ fn main() {
     println!("AST: {:?}", ast);
 
     let ast = ast.unwrap();
-    let vartable = VarTable::generate(&ast);
-    println!("VarTable: {:?}", vartable);
+    let func_table = FunctionTable::generate(&ast);
+    println!("FuncTable: {:?}", func_table);
 
-    let program = assembly::Program::compile(&ast, &vartable);
+    let program = assembly::Program::compile(&ast, &func_table);
     program.print();
 }
 
@@ -406,7 +406,7 @@ pub mod assembly {
             for inst in self.code.iter() {
                 match inst {
                     Assembly::Label(label) => {
-                        println!("{}:", label);
+                        println!("\n{}:", label);
                     }
                     Assembly::Instr(inst) => {
                         print!("    ");
@@ -439,7 +439,7 @@ pub mod assembly {
             }
         }
 
-        pub fn compile(ast: &super::Node, vars: &super::VarTable) -> Program {
+        pub fn compile(ast: &super::Node, funcs: &super::FunctionTable) -> Program {
             let mut code = vec![];
             code.push(Assembly::Instr(Instr::Push(Register::Ebp)));
             code.push(Assembly::Instr(Instr::Mov(
@@ -447,11 +447,13 @@ pub mod assembly {
                 Source::Register(Register::Esp),
             )));
 
+            /*
             let total_offset = vars.vars.last().unwrap().2;
             code.push(Assembly::Instr(Instr::Sub(
                 Register::Esp,
                 Source::Integer(total_offset),
             )));
+            */
 
             // Call main function
             code.push(Assembly::Instr(Instr::Call("main".into())));
@@ -464,11 +466,12 @@ pub mod assembly {
             code.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
 
             // Put user code here
-            Program::traverse(ast, vars, &mut code);
+            let global_func = "".into();
+            Program::traverse(ast, &global_func, funcs, &mut code);
             Program { code }
         }
 
-        fn traverse(ast: &super::Node, vars: &super::VarTable, output: &mut Vec<Assembly>) {
+        fn traverse(ast: &super::Node, current_func: &String, funcs: &super::FunctionTable, output: &mut Vec<Assembly>) {
             println!("Compile @ {:?}", ast);
             match ast {
                 super::Node::Integer(i) => {
@@ -479,7 +482,7 @@ pub mod assembly {
                 }
                 super::Node::Identifier(id) => {
                     let id_offset = {
-                        let var = vars
+                        let var = funcs.funcs[current_func]
                             .vars
                             .iter()
                             .find(|v| v.0 == *id)
@@ -493,10 +496,10 @@ pub mod assembly {
                 }
                 super::Node::Mul(l, r) => {
                     let left = l.as_ref();
-                    Program::traverse(left, vars, output);
+                    Program::traverse(left, current_func, funcs, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     let right = r.as_ref();
-                    Program::traverse(right, vars, output);
+                    Program::traverse(right, current_func, funcs, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
 
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
@@ -508,10 +511,10 @@ pub mod assembly {
                 }
                 super::Node::Add(l, r) => {
                     let left = l.as_ref();
-                    Program::traverse(left, vars, output);
+                    Program::traverse(left, current_func, funcs, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     let right = r.as_ref();
-                    Program::traverse(right, vars, output);
+                    Program::traverse(right, current_func, funcs, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
 
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
@@ -523,14 +526,14 @@ pub mod assembly {
                 }
                 super::Node::Bind(id, exp) => {
                     let id_offset = {
-                        let var = vars
+                        let var = funcs.funcs[current_func]
                             .vars
                             .iter()
                             .find(|v| v.0 == *id)
                             .expect("CRITICAL: identifier not found in var table");
                         var.2
                     };
-                    Program::traverse(exp, vars, output);
+                    Program::traverse(exp, current_func, funcs, output);
                     output.push(Assembly::Instr(Instr::Mov(
                         Location::Memory(format!("ebp-{}", id_offset)),
                         Source::Register(Register::Eax),
@@ -538,13 +541,34 @@ pub mod assembly {
                 }
                 super::Node::Function(fn_name, _, stmts) => {
                     output.push(Assembly::Label(fn_name.clone()));
+           
+                    // Prepare stack frame for this function
+                    output.push(Assembly::Instr(Instr::Push(Register::Ebp)));
+                    output.push(Assembly::Instr(Instr::Mov(
+                        Location::Register(Register::Ebp),
+                        Source::Register(Register::Esp),
+                    )));
+                    let total_offset = funcs.funcs[fn_name].vars.last().unwrap().2;
+                    output.push(Assembly::Instr(Instr::Sub(
+                        Register::Esp,
+                        Source::Integer(total_offset),
+                    )));
+
                     for s in stmts.iter() {
-                        Program::traverse(s, vars, output);
+                        Program::traverse(s, fn_name, funcs, output);
                     }
+
+                    // Clean up frame before exiting program
+                    output.push(Assembly::Instr(Instr::Mov(
+                        Location::Register(Register::Esp),
+                        Source::Register(Register::Ebp),
+                    )));
+                    output.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
+
                     output.push(Assembly::Instr(Instr::Ret));
                 }
                 super::Node::Return(exp) => match exp {
-                    Some(e) => Program::traverse(e, vars, output),
+                    Some(e) => Program::traverse(e, current_func, funcs, output),
                     None => (),
                 },
                 _ => println!("Expected an operator"),
@@ -563,7 +587,12 @@ impl VarTable {
         let mut vt = VarTable { vars: vec![] };
         let mut offset = 0;
         match ast {
-            Node::Function(_, _, stmts) => {
+            Node::Function(_, params, stmts) => {
+                for p in params.iter() {
+                    offset += 4;
+                    vt.vars.push((p.clone(), 4, offset));
+                }
+
                 for n in stmts.iter() {
                     offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
                 }
@@ -588,5 +617,30 @@ impl VarTable {
 
     fn has_duplicates(var_table: &VarTable) -> bool {
         (1..var_table.vars.len()).any(|i| var_table.vars[i..].contains(&var_table.vars[i - 1]))
+    }
+}
+
+#[derive(Debug)]
+pub struct FunctionTable {
+    funcs: std::collections::HashMap<String,VarTable>,
+}
+
+impl FunctionTable {
+    pub fn generate(ast: &Node) -> FunctionTable {
+        let mut ft = FunctionTable{funcs: std::collections::HashMap::new()};
+
+        FunctionTable::traverse(ast, &mut ft);
+
+        ft
+    }
+
+    fn traverse(ast: &Node, ft: &mut FunctionTable) {
+        match ast {
+            Node::Function(fn_name, _, _) => {
+                let vt = VarTable::generate(ast);
+                ft.funcs.insert(fn_name.clone(), vt);
+            }
+            _ => panic!("Type analysis: invalid function")
+        }
     }
 }
