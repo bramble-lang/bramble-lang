@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn test { x := 1 + 2 * 3 ; return x + 2 ; }";
+    let text = "fn main { x := 1 + 2 * 3 ; return x + 2 ; }";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -512,6 +512,13 @@ pub mod assembly {
                     output.push(Assembly::Label(fn_name.clone()));
                     for s in stmts.iter() {
                         Program::traverse(s, vars, output);
+                    }
+                    output.push(Assembly::Instr(Instr::Ret));
+                },
+                super::Node::Return(exp) => {
+                    match exp {
+                        Some(e) => Program::traverse(e, vars, output),
+                        None => (),
                     }
                 }
                 _ => println!("Expected an operator"),
