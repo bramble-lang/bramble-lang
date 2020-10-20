@@ -66,6 +66,8 @@ impl Token {
 }
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
+// Each type of node represents an expression and the only requirement is that at the
+// end of computing an expression its result is in EAX
 #[derive(Debug)]
 pub enum Node {
     Integer(i32),
@@ -436,7 +438,6 @@ pub mod assembly {
                         Location::Register(Register::Eax),
                         Source::Integer(*i),
                     )));
-                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
                 super::Node::Identifier(id) => {
                     let id_offset = {
@@ -451,33 +452,36 @@ pub mod assembly {
                         Location::Register(Register::Eax),
                         Source::Memory(format!("ebp-{}", id_offset)),
                     )));
-                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
                 super::Node::Mul(l, r) => {
                     let left = l.as_ref();
                     Program::traverse(left, vars, output);
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     let right = r.as_ref();
                     Program::traverse(right, vars, output);
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
                     output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
                     output.push(Assembly::Instr(Instr::IMul(
                         Register::Eax,
                         Location::Register(Register::Ebx),
                     )));
-                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
                 super::Node::Add(l, r) => {
                     let left = l.as_ref();
                     Program::traverse(left, vars, output);
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     let right = r.as_ref();
                     Program::traverse(right, vars, output);
+                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
                     output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
                     output.push(Assembly::Instr(Instr::Add(
                         Register::Eax,
                         Source::Register(Register::Ebx),
                     )));
-                    output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
                 super::Node::Bind(id, exp) => {
                     let id_offset = {
@@ -489,7 +493,6 @@ pub mod assembly {
                         var.2
                     };
                     Program::traverse(exp, vars, output);
-                    output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
                     output.push(Assembly::Instr(Instr::Mov(
                         Location::Memory(format!("ebp-{}", id_offset)),
                         Source::Register(Register::Eax),
