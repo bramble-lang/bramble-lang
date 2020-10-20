@@ -76,7 +76,7 @@ pub enum Node {
     Add(Box<Node>, Box<Node>),
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
-    Function,
+    Function(String, Vec<Node>),
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -98,12 +98,12 @@ impl Node {
         parse - takes a string of tokens and converts it into an AST
         compile - takes an AST and converts it to assembly
     */
-    pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
+    pub fn parse(tokens: Vec<Token>) -> Option<Node> {
         let mut iter = tokens.iter().peekable();
         Node::function(&mut iter)
     }
 
-    fn function(iter: &mut TokenIter) -> Option<Vec<Node>> {
+    fn function(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(Token::Function) => {
                 iter.next();
@@ -126,7 +126,7 @@ impl Node {
                                     }
                                     _ => panic!("Expected } at end of function definition"),
                                 }
-                                Some(stmts)
+                                Some(Node::Function(id.clone(), stmts))
                             }
                             _ => panic!("Expected { after function declaration"),
                         }
@@ -353,6 +353,8 @@ pub mod assembly {
     #[derive(Debug)]
     enum Instr {
         Jmp(Label),
+        Call(Label),
+        Ret,
         Mov(Location, Source),
         Add(Register, Source),
         Sub(Register, Source),
@@ -375,6 +377,9 @@ pub mod assembly {
         pub fn print(&self) {
             for inst in self.code.iter() {
                 match inst {
+                    Assembly::Label(label) => {
+                        println!("{}:", label);
+                    }
                     Assembly::Instr(inst) => {
                         print!("    ");
                         match inst {
@@ -394,6 +399,8 @@ pub mod assembly {
                             Instr::Sub(reg, s) => {
                                 println!("sub {}, {}", reg, s);
                             }
+                            Instr::Call(label) => println!("call {}", label),
+                            Instr::Ret => println!("ret"),
                             _ => {
                                 println!("{:?}", inst);
                             }
@@ -404,7 +411,7 @@ pub mod assembly {
             }
         }
 
-        pub fn compile(ast: &Vec<super::Node>, vars: &super::VarTable) -> Program {
+        pub fn compile(ast: &super::Node, vars: &super::VarTable) -> Program {
             let mut code = vec![];
             code.push(Assembly::Instr(Instr::Push(Register::Ebp)));
             code.push(Assembly::Instr(Instr::Mov(
@@ -418,15 +425,18 @@ pub mod assembly {
                 Source::Integer(total_offset),
             )));
 
-            for stmt in ast.iter() {
-                Program::traverse(stmt, vars, &mut code);
-            }
+            // Call main function
+            code.push(Assembly::Instr(Instr::Call("main".into())));
 
+            // Clean up frame before exiting program
             code.push(Assembly::Instr(Instr::Mov(
                 Location::Register(Register::Esp),
                 Source::Register(Register::Ebp),
             )));
             code.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
+
+            // Put user code here
+            Program::traverse(ast, vars, &mut code);
             Program { code }
         }
 
@@ -498,6 +508,12 @@ pub mod assembly {
                         Source::Register(Register::Eax),
                     )));
                 }
+                super::Node::Function(fn_name, stmts) => {
+                    output.push(Assembly::Label(fn_name.clone()));
+                    for s in stmts.iter() {
+                        Program::traverse(s, vars, output);
+                    }
+                }
                 _ => println!("Expected an operator"),
             }
         }
@@ -510,11 +526,16 @@ pub struct VarTable {
 }
 
 impl VarTable {
-    pub fn generate(ast: &Vec<Node>) -> VarTable {
+    pub fn generate(ast: &Node) -> VarTable {
         let mut vt = VarTable { vars: vec![] };
         let mut offset = 0;
-        for n in ast.iter() {
-            offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
+        match ast {
+            Node::Function(_, stmts) => {
+                for n in stmts.iter() {
+                    offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
+                }
+            },
+            _ => {},
         }
         if VarTable::has_duplicates(&vt) {
             panic!("An identifier was defined twice");
