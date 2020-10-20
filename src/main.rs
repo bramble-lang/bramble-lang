@@ -76,6 +76,7 @@ pub struct Node {
     right: NodeOption,
 }
 
+type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
 impl Node {
     /*
         Grammar
@@ -99,7 +100,7 @@ impl Node {
         Node::function(&mut iter)
     }
 
-    fn function(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Vec<Node>> {
+    fn function(iter: &mut TokenIter) -> Option<Vec<Node>> {
         match iter.peek() {
             Some(Token::Function) => {
                 iter.next();
@@ -134,7 +135,7 @@ impl Node {
         }
     }
 
-    fn block(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Vec<Node> {
+    fn block(iter: &mut TokenIter) -> Vec<Node> {
         let mut stmts = vec![];
         while iter.peek().is_some() {
             match Node::statement(iter) {
@@ -145,7 +146,7 @@ impl Node {
         stmts
     }
 
-    fn return_stmt(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn return_stmt(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(Token::Return) => {
                 iter.next();
@@ -171,7 +172,7 @@ impl Node {
         }
     }
 
-    fn statement(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn statement(iter: &mut TokenIter) -> Option<Node> {
         match Node::bind(iter) {
             Some(b) => match iter.peek() {
                 Some(Token::Semicolon) => {
@@ -186,7 +187,7 @@ impl Node {
         }
     }
 
-    fn bind(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn bind(iter: &mut TokenIter) -> Option<Node> {
         match Node::identifier(iter) {
             Some(n) => {
                 println!("{:?}", n);
@@ -212,7 +213,7 @@ impl Node {
         }
     }
 
-    fn expression(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn expression(iter: &mut TokenIter) -> Option<Node> {
         match Node::term(iter) {
             Some(n) => match iter.peek() {
                 Some(Token::Add) => {
@@ -230,7 +231,7 @@ impl Node {
         }
     }
 
-    fn term(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn term(iter: &mut TokenIter) -> Option<Node> {
         match Node::factor(iter) {
             Some(n) => match iter.peek() {
                 Some(Token::Mul) => {
@@ -248,7 +249,7 @@ impl Node {
         }
     }
 
-    fn factor(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn factor(iter: &mut TokenIter) -> Option<Node> {
         match Node::number(iter) {
             Some(n) => Some(n),
             None => match Node::identifier(iter) {
@@ -258,7 +259,7 @@ impl Node {
         }
     }
 
-    fn identifier(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn identifier(iter: &mut TokenIter) -> Option<Node> {
         println!("Identifier");
         match iter.peek() {
             Some(token) => match token {
@@ -276,7 +277,7 @@ impl Node {
         }
     }
 
-    fn number(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
+    fn number(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(token) => match token {
                 Token::Integer(i) => {
