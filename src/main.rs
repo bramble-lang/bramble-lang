@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn test { x := 2 * 3 ; return x ; }";
+    let text = "fn test { x := 1 + 2 * 3 ; return x + 2 ; }";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -73,7 +73,7 @@ pub enum NodeType {
     Integer(i32),
     Identifier(String),
     Mul(Box<Node>, Box<Node>),
-    Add,
+    Add(Box<Node>, Box<Node>),
     Assign,
     Semicolon,
     Return,
@@ -231,9 +231,9 @@ impl Node {
                     iter.next();
                     let n2 = Node::expression(iter).expect("An expression after +");
                     Some(Node {
-                        value: NodeType::Add,
-                        left: Some(Box::new(n)),
-                        right: Some(Box::new(n2)),
+                        value: NodeType::Add(Box::new(n), Box::new(n2)),
+                        left: None,
+                        right: None,
                     })
                 }
                 _ => Some(n),
@@ -501,10 +501,10 @@ pub mod assembly {
                     )));
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
-                super::NodeType::Add => {
-                    let left = ast.left.as_ref().unwrap();
+                super::NodeType::Add(l,r) => {
+                    let left = l.as_ref();
                     Program::traverse(left, vars, output);
-                    let right = ast.right.as_ref().unwrap();
+                    let right = r.as_ref();
                     Program::traverse(right, vars, output);
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
                     output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
