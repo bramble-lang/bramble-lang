@@ -1,7 +1,19 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn my_main ( p ) { x := 1 + 2 * 3 ; println x ; return x + p ; }";
+    let text = 
+        "fn my_main ( p ) { 
+            x := 1 + 2 * 3 ; 
+            println x ; 
+            return x + p ; 
+        }
+
+        fn test ( ) {
+            blah := 4 * 3 ;
+            return blah ;
+        }
+
+        ";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -36,7 +48,7 @@ pub enum Token {
     RParen,
     LBrace,
     RBrace,
-    Function,
+    FunctionDef,
     Print,
     Println,
 }
@@ -57,7 +69,7 @@ impl Token {
                 ")" => Ok(Token::RParen),
                 "{" => Ok(Token::LBrace),
                 "}" => Ok(Token::RBrace),
-                "fn" => Ok(Token::Function),
+                "fn" => Ok(Token::FunctionDef),
                 "return" => Ok(Token::Return),
                 "print" => Ok(Token::Print),
                 "println" => Ok(Token::Println),
@@ -80,7 +92,8 @@ pub enum Node {
     Add(Box<Node>, Box<Node>),
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
-    Function(String, Vec<String>, Vec<Node>),
+    FunctionDef(String, Vec<String>, Vec<Node>),
+    Module(Vec<Node>),
     Print(Box<Node>),
     Println(Box<Node>),
 }
@@ -100,6 +113,7 @@ impl Node {
         STATEMENT := [BIND] SEMICOLON
         BLOCK := STATEMENT*
         FUNCTION := fn IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE BLOCK RETURN RBRACE
+        MODULES := [FUNCTION]*
 
         tokenize - takes a string of text and converts it to a string of tokens
         parse - takes a string of tokens and converts it into an AST
@@ -107,12 +121,30 @@ impl Node {
     */
     pub fn parse(tokens: Vec<Token>) -> Option<Node> {
         let mut iter = tokens.iter().peekable();
-        Node::function(&mut iter)
+        //Node::function(&mut iter)
+        Node::module(&mut iter)
+    }
+
+    fn module(iter: &mut TokenIter) -> Option<Node> {
+        let mut functions = vec![];
+
+        while iter.peek().is_some() {
+            match Node::function(iter) {
+                Some(f) => functions.push(f),
+                None => break,
+            }
+        }
+
+        if functions.len() > 0 {
+            Some(Node::Module(functions))
+        } else {
+            None
+        }
     }
 
     fn function(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token::Function) => {
+            Some(Token::FunctionDef) => {
                 iter.next();
                 match iter.peek() {
                     Some(Token::Identifier(id)) => {
@@ -136,7 +168,7 @@ impl Node {
                                     }
                                     _ => panic!("Expected } at end of function definition"),
                                 }
-                                Some(Node::Function(id.clone(), params, stmts))
+                                Some(Node::FunctionDef(id.clone(), params, stmts))
                             }
                             _ => panic!("Expected { after function declaration"),
                         }
@@ -507,7 +539,7 @@ pub mod assembly {
         fn traverse(
             ast: &super::Node,
             current_func: &String,
-            funcs: &super::FunctionTable,
+            function_table: &super::FunctionTable,
             output: &mut Vec<Assembly>,
         ) {
             println!("Compile @ {:?}", ast);
@@ -520,7 +552,7 @@ pub mod assembly {
                 }
                 super::Node::Identifier(id) => {
                     let id_offset = {
-                        let var = funcs.funcs[current_func]
+                        let var = function_table.funcs[current_func]
                             .vars
                             .iter()
                             .find(|v| v.0 == *id)
@@ -534,10 +566,10 @@ pub mod assembly {
                 }
                 super::Node::Mul(l, r) => {
                     let left = l.as_ref();
-                    Program::traverse(left, current_func, funcs, output);
+                    Program::traverse(left, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     let right = r.as_ref();
-                    Program::traverse(right, current_func, funcs, output);
+                    Program::traverse(right, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
 
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
@@ -549,10 +581,10 @@ pub mod assembly {
                 }
                 super::Node::Add(l, r) => {
                     let left = l.as_ref();
-                    Program::traverse(left, current_func, funcs, output);
+                    Program::traverse(left, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     let right = r.as_ref();
-                    Program::traverse(right, current_func, funcs, output);
+                    Program::traverse(right, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
 
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebx)));
@@ -564,20 +596,20 @@ pub mod assembly {
                 }
                 super::Node::Bind(id, exp) => {
                     let id_offset = {
-                        let var = funcs.funcs[current_func]
+                        let var = function_table.funcs[current_func]
                             .vars
                             .iter()
                             .find(|v| v.0 == *id)
                             .expect("CRITICAL: identifier not found in var table");
                         var.2
                     };
-                    Program::traverse(exp, current_func, funcs, output);
+                    Program::traverse(exp, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Mov(
                         Location::Memory(format!("ebp-{}", id_offset)),
                         Source::Register(Register::Eax),
                     )));
                 }
-                super::Node::Function(fn_name, _, stmts) => {
+                super::Node::FunctionDef(fn_name, _, stmts) => {
                     output.push(Assembly::Label(fn_name.clone()));
 
                     // Prepare stack frame for this function
@@ -586,14 +618,14 @@ pub mod assembly {
                         Location::Register(Register::Ebp),
                         Source::Register(Register::Esp),
                     )));
-                    let total_offset = funcs.funcs[fn_name].vars.last().unwrap().2;
+                    let total_offset = function_table.funcs[fn_name].vars.last().unwrap().2;
                     output.push(Assembly::Instr(Instr::Sub(
                         Register::Esp,
                         Source::Integer(total_offset),
                     )));
 
                     for s in stmts.iter() {
-                        Program::traverse(s, fn_name, funcs, output);
+                        Program::traverse(s, fn_name, function_table, output);
                     }
 
                     // Clean up frame before exiting program
@@ -604,13 +636,18 @@ pub mod assembly {
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
 
                     output.push(Assembly::Instr(Instr::Ret));
+                },
+                super::Node::Module(functions) => {
+                    for f in functions.iter() {
+                        Program::traverse(f, current_func, function_table, output);
+                    }
                 }
                 super::Node::Return(exp) => match exp {
-                    Some(e) => Program::traverse(e, current_func, funcs, output),
+                    Some(e) => Program::traverse(e, current_func, function_table, output),
                     None => (),
                 },
                 super::Node::Println(exp) => {
-                    Program::traverse(exp, current_func, funcs, output);
+                    Program::traverse(exp, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Print(Source::Register(Register::Eax))));
                     output.push(Assembly::Instr(Instr::Newline));
                 }
@@ -630,7 +667,7 @@ impl VarTable {
         let mut vt = VarTable { vars: vec![] };
         let mut offset = 0;
         match ast {
-            Node::Function(_, params, stmts) => {
+            Node::FunctionDef(_, params, stmts) => {
                 for p in params.iter() {
                     offset += 4;
                     vt.vars.push((p.clone(), 4, offset));
@@ -674,14 +711,21 @@ impl FunctionTable {
             funcs: std::collections::HashMap::new(),
         };
 
-        FunctionTable::traverse(ast, &mut ft);
+        match ast {
+            Node::Module(functions) => {
+                for f in functions.iter() {
+                    FunctionTable::traverse(f, &mut ft);
+                }
+            },
+            _ => panic!("Type analysis: expected Module at root level of the AST"),
+        }
 
         ft
     }
 
     fn traverse(ast: &Node, ft: &mut FunctionTable) {
         match ast {
-            Node::Function(fn_name, _, _) => {
+            Node::FunctionDef(fn_name, _, _) => {
                 let vt = VarTable::generate(ast);
                 ft.funcs.insert(fn_name.clone(), vt);
             }
