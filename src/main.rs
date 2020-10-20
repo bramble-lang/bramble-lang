@@ -4,12 +4,14 @@ fn main() {
     let text = 
         "fn my_main ( p ) { 
             x := 1 + 2 * 3 ; 
+            y := test ( ) ;
             println x ; 
-            return x + p ; 
+            return x + p + y ; 
         }
 
         fn test ( ) {
             blah := 4 * 3 ;
+            println blah ;
             return blah ;
         }
 
@@ -93,6 +95,7 @@ pub enum Node {
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
     FunctionDef(String, Vec<String>, Vec<Node>),
+    FunctionCall(String),
     Module(Vec<Node>),
     Print(Box<Node>),
     Println(Box<Node>),
@@ -104,7 +107,8 @@ impl Node {
         Grammar
         IDENTIFIER := A-Za-z*
         NUMBER := 0-9*
-        FACTOR := NUMBER | IDENTIFIER | (EXPRESSION)
+        FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION] RPAREN
+        FACTOR := FUNCTION_CALL | NUMBER | IDENTIFIER | (EXPRESSION)
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
         BIND := IDENTIFIER := EXPRESSION
@@ -129,7 +133,7 @@ impl Node {
         let mut functions = vec![];
 
         while iter.peek().is_some() {
-            match Node::function(iter) {
+            match Node::function_def(iter) {
                 Some(f) => functions.push(f),
                 None => break,
             }
@@ -142,7 +146,7 @@ impl Node {
         }
     }
 
-    fn function(iter: &mut TokenIter) -> Option<Node> {
+    fn function_def(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(Token::FunctionDef) => {
                 iter.next();
@@ -291,7 +295,7 @@ impl Node {
                     }
                 }
             }
-            Some(_) => panic!("Parse: invalid LHS in bind expresion"),
+            Some(_) => panic!("Parser: invalid LHS in bind expresion"),
             None => None,
         }
     }
@@ -327,10 +331,31 @@ impl Node {
     fn factor(iter: &mut TokenIter) -> Option<Node> {
         match Node::number(iter) {
             Some(n) => Some(n),
-            None => match Node::identifier(iter) {
+            None => match Node::function_call_or_variable(iter) {
                 Some(n) => Some(n),
                 None => None,
             },
+        }
+    }
+
+    fn function_call_or_variable(iter: &mut TokenIter) -> Option<Node> {
+        println!("Function call");
+        match Node::identifier(iter) {
+            Some(Node::Identifier(id)) => match iter.peek() {
+                Some(Token::LParen) => {
+                    // this is a function call
+                    iter.next();
+
+                    match iter.peek() {
+                        Some(Token::RParen) => {iter.next();},
+                        _ => panic!("Parser: expected ) after function call"),
+                    }
+                    Some(Node::FunctionCall(id))
+                }
+                _ => Some(Node::Identifier(id)),
+            },
+            Some(_) => panic!("Parser: expected identifier"),
+            None => None,
         }
     }
 
@@ -650,7 +675,10 @@ pub mod assembly {
                     Program::traverse(exp, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Print(Source::Register(Register::Eax))));
                     output.push(Assembly::Instr(Instr::Newline));
-                }
+                },
+                super::Node::FunctionCall(fn_name) => {
+                    output.push(Assembly::Instr(Instr::Call(fn_name.clone())));
+                },
                 _ => println!("Expected an operator"),
             }
         }
@@ -687,9 +715,9 @@ impl VarTable {
 
     fn find_bound_identifiers(ast: &Node, output: &mut VarTable, total_offset: i32) -> i32 {
         match ast {
-            Node::Bind(id, exp) => {
+            Node::Bind(id, _) => {
                 output.vars.push((id.clone(), 4, total_offset + 4));
-                total_offset + 4 + VarTable::find_bound_identifiers(exp, output, total_offset)
+                total_offset + 4
             }
             _ => total_offset,
         }
