@@ -69,7 +69,7 @@ impl Token {
 type NodeOption = Option<Box<Node>>;
 
 #[derive(Debug)]
-pub enum NodeType {
+pub enum Node {
     Integer(i32),
     Identifier(String),
     Mul(Box<Node>, Box<Node>),
@@ -77,14 +77,6 @@ pub enum NodeType {
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
     Function,
-}
-
-#[derive(Debug)]
-pub enum StmtType {}
-
-#[derive(Debug)]
-pub struct Node {
-    value: NodeType,
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -167,12 +159,8 @@ impl Node {
                     _ => panic!("Expected ; after return statement"),
                 };
                 match exp {
-                    Some(exp) => Some(Node {
-                        value: NodeType::Return(Some(Box::new(exp))),
-                    }),
-                    None => Some(Node {
-                        value: NodeType::Return(None),
-                    }),
+                    Some(exp) => Some(Node::Return(Some(Box::new(exp)))),
+                    None => Some(Node::Return(None)),
                 }
             }
             _ => None,
@@ -196,9 +184,7 @@ impl Node {
 
     fn bind(iter: &mut TokenIter) -> Option<Node> {
         match Node::identifier(iter) {
-            Some(Node {
-                value: NodeType::Identifier(id),
-            }) => {
+            Some(Node::Identifier(id)) => {
                 println!("Parse: Binding {:?}", id);
                 let pt = iter.peek();
                 println!("peek: {:?}", pt);
@@ -206,9 +192,7 @@ impl Node {
                     Some(Token::Assign) => {
                         iter.next();
                         let exp = Node::expression(iter).expect("Expected an expression after :=");
-                        Some(Node {
-                            value: NodeType::Bind(id, Box::new(exp)),
-                        })
+                        Some(Node::Bind(id, Box::new(exp)))
                     }
                     _ => {
                         println!("Expected := after identifer in bind statement");
@@ -227,9 +211,7 @@ impl Node {
                 Some(Token::Add) => {
                     iter.next();
                     let n2 = Node::expression(iter).expect("An expression after +");
-                    Some(Node {
-                        value: NodeType::Add(Box::new(n), Box::new(n2)),
-                    })
+                    Some(Node::Add(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
             },
@@ -243,9 +225,7 @@ impl Node {
                 Some(Token::Mul) => {
                     iter.next();
                     let n2 = Node::term(iter).expect("a valid term after *");
-                    Some(Node {
-                        value: NodeType::Mul(Box::new(n), Box::new(n2)),
-                    })
+                    Some(Node::Mul(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
             },
@@ -269,9 +249,9 @@ impl Node {
             Some(token) => match token {
                 Token::Identifier(id) => {
                     iter.next();
-                    Some(Node {
-                        value: NodeType::Identifier(id.clone()),
-                    })
+                    Some(
+                        Node::Identifier(id.clone())
+                    )
                 }
                 _ => None,
             },
@@ -284,9 +264,7 @@ impl Node {
             Some(token) => match token {
                 Token::Integer(i) => {
                     iter.next();
-                    Some(Node {
-                        value: NodeType::Integer(*i),
-                    })
+                    Some(Node::Integer(*i))
                 }
                 _ => None,
             },
@@ -453,16 +431,16 @@ pub mod assembly {
         }
 
         fn traverse(ast: &super::Node, vars: &super::VarTable, output: &mut Vec<Assembly>) {
-            println!("Compile @ {:?}", ast.value);
-            match &ast.value {
-                super::NodeType::Integer(i) => {
+            println!("Compile @ {:?}", ast);
+            match ast {
+                super::Node::Integer(i) => {
                     output.push(Assembly::Instr(Instr::Mov(
                         Location::Register(Register::Eax),
                         Source::Integer(*i),
                     )));
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
-                super::NodeType::Identifier(id) => {
+                super::Node::Identifier(id) => {
                     let id_offset = {
                         let var = vars
                             .vars
@@ -477,7 +455,7 @@ pub mod assembly {
                     )));
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
-                super::NodeType::Mul(l, r) => {
+                super::Node::Mul(l, r) => {
                     let left = l.as_ref();
                     Program::traverse(left, vars, output);
                     let right = r.as_ref();
@@ -490,7 +468,7 @@ pub mod assembly {
                     )));
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
-                super::NodeType::Add(l, r) => {
+                super::Node::Add(l, r) => {
                     let left = l.as_ref();
                     Program::traverse(left, vars, output);
                     let right = r.as_ref();
@@ -503,7 +481,7 @@ pub mod assembly {
                     )));
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
-                super::NodeType::Bind(id, exp) => {
+                super::Node::Bind(id, exp) => {
                     let id_offset = {
                         let var = vars
                             .vars
@@ -544,8 +522,8 @@ impl VarTable {
     }
 
     fn find_bound_identifiers(ast: &Node, output: &mut VarTable, total_offset: i32) -> i32 {
-        match &ast.value {
-            NodeType::Bind(id, exp) => {
+        match ast {
+            Node::Bind(id, exp) => {
                 output.vars.push((id.clone(), 4, total_offset + 4));
                 total_offset + 4 + VarTable::find_bound_identifiers(exp, output, total_offset)
             }
