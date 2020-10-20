@@ -85,8 +85,6 @@ pub enum StmtType {}
 #[derive(Debug)]
 pub struct Node {
     value: NodeType,
-    left: NodeOption,
-    right: NodeOption,
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -171,13 +169,9 @@ impl Node {
                 match exp {
                     Some(exp) => Some(Node {
                         value: NodeType::Return(Some(Box::new(exp))),
-                        left: None,
-                        right: None,
                     }),
                     None => Some(Node {
                         value: NodeType::Return(None),
-                        left: None,
-                        right: None,
                     }),
                 }
             }
@@ -204,8 +198,6 @@ impl Node {
         match Node::identifier(iter) {
             Some(Node {
                 value: NodeType::Identifier(id),
-                left: None,
-                right: None,
             }) => {
                 println!("Parse: Binding {:?}", id);
                 let pt = iter.peek();
@@ -216,8 +208,6 @@ impl Node {
                         let exp = Node::expression(iter).expect("Expected an expression after :=");
                         Some(Node {
                             value: NodeType::Bind(id, Box::new(exp)),
-                            left: None,
-                            right: None,
                         })
                     }
                     _ => {
@@ -239,8 +229,6 @@ impl Node {
                     let n2 = Node::expression(iter).expect("An expression after +");
                     Some(Node {
                         value: NodeType::Add(Box::new(n), Box::new(n2)),
-                        left: None,
-                        right: None,
                     })
                 }
                 _ => Some(n),
@@ -257,8 +245,6 @@ impl Node {
                     let n2 = Node::term(iter).expect("a valid term after *");
                     Some(Node {
                         value: NodeType::Mul(Box::new(n), Box::new(n2)),
-                        left: None,
-                        right: None,
                     })
                 }
                 _ => Some(n),
@@ -285,8 +271,6 @@ impl Node {
                     iter.next();
                     Some(Node {
                         value: NodeType::Identifier(id.clone()),
-                        left: None,
-                        right: None,
                     })
                 }
                 _ => None,
@@ -302,8 +286,6 @@ impl Node {
                     iter.next();
                     Some(Node {
                         value: NodeType::Integer(*i),
-                        left: None,
-                        right: None,
                     })
                 }
                 _ => None,
@@ -562,22 +544,13 @@ impl VarTable {
     }
 
     fn find_bound_identifiers(ast: &Node, output: &mut VarTable, total_offset: i32) -> i32 {
-        let total_offset = match &ast.value {
-            NodeType::Bind(id, _) => {
+        match &ast.value {
+            NodeType::Bind(id, exp) => {
                 output.vars.push((id.clone(), 4, total_offset + 4));
-                total_offset + 4
+                total_offset + 4 + VarTable::find_bound_identifiers(exp, output, total_offset)
             }
             _ => total_offset,
-        };
-        let total_offset = match &ast.left {
-            Some(n) => VarTable::find_bound_identifiers(n, output, total_offset),
-            None => total_offset,
-        };
-        let total_offset = match &ast.right {
-            Some(n) => VarTable::find_bound_identifiers(n, output, total_offset),
-            None => total_offset,
-        };
-        total_offset
+        }
     }
 
     fn has_duplicates(var_table: &VarTable) -> bool {
