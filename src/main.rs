@@ -69,8 +69,24 @@ impl Token {
 type NodeOption = Option<Box<Node>>;
 
 #[derive(Debug)]
+pub enum NodeType {
+    Integer(i32),
+    Identifier(String),
+    Mul,
+    Add,
+    Assign,
+    Semicolon,
+    Return,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Function,
+}
+
+#[derive(Debug)]
 pub struct Node {
-    value: Token,
+    value: NodeType,
     left: NodeOption,
     right: NodeOption,
 }
@@ -156,12 +172,12 @@ impl Node {
                 };
                 match exp {
                     Some(exp) => Some(Node {
-                        value: Token::Return,
+                        value: NodeType::Return,
                         left: Some(Box::new(exp)),
                         right: None,
                     }),
                     None => Some(Node {
-                        value: Token::Return,
+                        value: NodeType::Return,
                         left: None,
                         right: None,
                     }),
@@ -197,7 +213,7 @@ impl Node {
                         iter.next();
                         let exp = Node::expression(iter).expect("Expected an expression after :=");
                         Some(Node {
-                            value: Token::Assign,
+                            value: NodeType::Assign,
                             left: Some(Box::new(n)),
                             right: Some(Box::new(exp)),
                         })
@@ -219,7 +235,7 @@ impl Node {
                     iter.next();
                     let n2 = Node::expression(iter).expect("An expression after +");
                     Some(Node {
-                        value: Token::Add,
+                        value: NodeType::Add,
                         left: Some(Box::new(n)),
                         right: Some(Box::new(n2)),
                     })
@@ -237,7 +253,7 @@ impl Node {
                     iter.next();
                     let n2 = Node::term(iter).expect("a valid term after *");
                     Some(Node {
-                        value: Token::Mul,
+                        value: NodeType::Mul,
                         left: Some(Box::new(n)),
                         right: Some(Box::new(n2)),
                     })
@@ -265,7 +281,7 @@ impl Node {
                 Token::Identifier(id) => {
                     iter.next();
                     Some(Node {
-                        value: Token::Identifier(id.clone()),
+                        value: NodeType::Identifier(id.clone()),
                         left: None,
                         right: None,
                     })
@@ -282,7 +298,7 @@ impl Node {
                 Token::Integer(i) => {
                     iter.next();
                     Some(Node {
-                        value: Token::Integer(*i),
+                        value: NodeType::Integer(*i),
                         left: None,
                         right: None,
                     })
@@ -454,14 +470,14 @@ pub mod assembly {
         fn traverse(ast: &super::Node, vars: &super::VarTable, output: &mut Vec<Assembly>) {
             if ast.left.is_none() && ast.right.is_none() {
                 match &ast.value {
-                    super::Token::Integer(i) => {
+                    super::NodeType::Integer(i) => {
                         output.push(Assembly::Instr(Instr::Mov(
                             Location::Register(Register::Eax),
                             Source::Integer(*i),
                         )));
                         output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     }
-                    super::Token::Identifier(id) => {
+                    super::NodeType::Identifier(id) => {
                         let id_offset = {
                             let var = vars
                                 .vars
@@ -482,7 +498,7 @@ pub mod assembly {
                 }
             } else if ast.left.is_some() && ast.right.is_some() {
                 match ast.value {
-                    super::Token::Mul => {
+                    super::NodeType::Mul => {
                         let left = ast.left.as_ref().unwrap();
                         Program::traverse(left, vars, output);
                         let right = ast.right.as_ref().unwrap();
@@ -495,7 +511,7 @@ pub mod assembly {
                         )));
                         output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     }
-                    super::Token::Add => {
+                    super::NodeType::Add => {
                         let left = ast.left.as_ref().unwrap();
                         Program::traverse(left, vars, output);
                         let right = ast.right.as_ref().unwrap();
@@ -508,9 +524,9 @@ pub mod assembly {
                         )));
                         output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                     }
-                    super::Token::Assign => {
+                    super::NodeType::Assign => {
                         let id_offset = match &ast.left.as_ref().unwrap().value {
-                            super::Token::Identifier(id) => {
+                            super::NodeType::Identifier(id) => {
                                 let var = vars
                                     .vars
                                     .iter()
@@ -555,9 +571,9 @@ impl VarTable {
 
     fn find_bound_identifiers(ast: &Node, output: &mut VarTable, total_offset: i32) -> i32 {
         let total_offset = match ast.value {
-            Token::Assign => {
+            NodeType::Assign => {
                 let id = match &ast.left.as_ref().unwrap().value {
-                    Token::Identifier(id) => id,
+                    NodeType::Identifier(id) => id,
                     _ => panic!("CRITICAL: expected identifer on LHS of bind operator"),
                 };
 
