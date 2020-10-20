@@ -74,11 +74,13 @@ pub enum NodeType {
     Identifier(String),
     Mul(Box<Node>, Box<Node>),
     Add(Box<Node>, Box<Node>),
-    Assign,
-    Semicolon,
-    Return,
+    Bind(String, Box<Node>),
+    Return(Option<Box<Node>>),
     Function,
 }
+
+#[derive(Debug)]
+pub enum StmtType {}
 
 #[derive(Debug)]
 pub struct Node {
@@ -168,12 +170,12 @@ impl Node {
                 };
                 match exp {
                     Some(exp) => Some(Node {
-                        value: NodeType::Return,
-                        left: Some(Box::new(exp)),
+                        value: NodeType::Return(Some(Box::new(exp))),
+                        left: None,
                         right: None,
                     }),
                     None => Some(Node {
-                        value: NodeType::Return,
+                        value: NodeType::Return(None),
                         left: None,
                         right: None,
                     }),
@@ -200,8 +202,12 @@ impl Node {
 
     fn bind(iter: &mut TokenIter) -> Option<Node> {
         match Node::identifier(iter) {
-            Some(n) => {
-                println!("{:?}", n);
+            Some(Node {
+                value: NodeType::Identifier(id),
+                left: None,
+                right: None,
+            }) => {
+                println!("Parse: Binding {:?}", id);
                 let pt = iter.peek();
                 println!("peek: {:?}", pt);
                 match pt {
@@ -209,9 +215,9 @@ impl Node {
                         iter.next();
                         let exp = Node::expression(iter).expect("Expected an expression after :=");
                         Some(Node {
-                            value: NodeType::Assign,
-                            left: Some(Box::new(n)),
-                            right: Some(Box::new(exp)),
+                            value: NodeType::Bind(id, Box::new(exp)),
+                            left: None,
+                            right: None,
                         })
                     }
                     _ => {
@@ -219,7 +225,8 @@ impl Node {
                         None
                     }
                 }
-            }
+            },
+            Some(_) => panic!("Parse: invalid LHS in bind expresion"),
             None => None,
         }
     }
@@ -501,7 +508,7 @@ pub mod assembly {
                     )));
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
-                super::NodeType::Add(l,r) => {
+                super::NodeType::Add(l, r) => {
                     let left = l.as_ref();
                     Program::traverse(left, vars, output);
                     let right = r.as_ref();
@@ -514,20 +521,16 @@ pub mod assembly {
                     )));
                     output.push(Assembly::Instr(Instr::Push(Register::Eax)));
                 }
-                super::NodeType::Assign => {
-                    let id_offset = match &ast.left.as_ref().unwrap().value {
-                        super::NodeType::Identifier(id) => {
-                            let var = vars
-                                .vars
-                                .iter()
-                                .find(|v| v.0 == *id)
-                                .expect("CRITICAL: identifier not found in var table");
-                            var.2
-                        }
-                        _ => panic!("CRITICAL: expected identifier on LHS of bind statement"),
+                super::NodeType::Bind(id, exp) => {
+                    let id_offset = {
+                        let var = vars
+                            .vars
+                            .iter()
+                            .find(|v| v.0 == *id)
+                            .expect("CRITICAL: identifier not found in var table");
+                        var.2
                     };
-                    let right = ast.right.as_ref().unwrap();
-                    Program::traverse(right, vars, output);
+                    Program::traverse(exp, vars, output);
                     output.push(Assembly::Instr(Instr::Pop(Register::Eax)));
                     output.push(Assembly::Instr(Instr::Mov(
                         Location::Memory(format!("ebp-{}", id_offset)),
@@ -559,13 +562,8 @@ impl VarTable {
     }
 
     fn find_bound_identifiers(ast: &Node, output: &mut VarTable, total_offset: i32) -> i32 {
-        let total_offset = match ast.value {
-            NodeType::Assign => {
-                let id = match &ast.left.as_ref().unwrap().value {
-                    NodeType::Identifier(id) => id,
-                    _ => panic!("CRITICAL: expected identifer on LHS of bind operator"),
-                };
-
+        let total_offset = match &ast.value {
+            NodeType::Bind(id, _) => {
                 output.vars.push((id.clone(), 4, total_offset + 4));
                 total_offset + 4
             }
