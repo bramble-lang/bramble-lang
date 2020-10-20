@@ -477,19 +477,15 @@ pub mod assembly {
 
         pub fn compile(ast: &super::Node, funcs: &super::FunctionTable) -> Program {
             let mut code = vec![];
+
+            // Setup stack frame for the base/runtime layer
+            // this will create any runtime administrative logic
+            // and also call the users `main` function.
             code.push(Assembly::Instr(Instr::Push(Register::Ebp)));
             code.push(Assembly::Instr(Instr::Mov(
                 Location::Register(Register::Ebp),
                 Source::Register(Register::Esp),
             )));
-
-            /*
-            let total_offset = vars.vars.last().unwrap().2;
-            code.push(Assembly::Instr(Instr::Sub(
-                Register::Esp,
-                Source::Integer(total_offset),
-            )));
-            */
 
             // Call main function
             code.push(Assembly::Instr(Instr::Call("main".into())));
