@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn main { x := 1 + 2 * 3 ; return x + 2 ; }";
+    let text = "fn main ( ) { x := 1 + 2 * 3 ; return x + 2 ; }";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -76,7 +76,7 @@ pub enum Node {
     Add(Box<Node>, Box<Node>),
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
-    Function(String, Vec<Node>),
+    Function(String, Vec<String>, Vec<Node>),
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -92,7 +92,7 @@ impl Node {
         RETURN := return [EXPRESSION] SEMICOLON
         STATEMENT := [BIND] SEMICOLON
         BLOCK := STATEMENT*
-        FUNCTION := fn IDENTIFIER LPAREN RPAREN LBRACE BLOCK RETURN RBRACE
+        FUNCTION := fn IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE BLOCK RETURN RBRACE
 
         tokenize - takes a string of text and converts it to a string of tokens
         parse - takes a string of tokens and converts it into an AST
@@ -110,6 +110,9 @@ impl Node {
                 match iter.peek() {
                     Some(Token::Identifier(id)) => {
                         iter.next();
+
+                        let params = Node::fn_params(iter);
+
                         match iter.peek() {
                             Some(Token::LBrace) => {
                                 iter.next();
@@ -126,7 +129,7 @@ impl Node {
                                     }
                                     _ => panic!("Expected } at end of function definition"),
                                 }
-                                Some(Node::Function(id.clone(), stmts))
+                                Some(Node::Function(id.clone(), params, stmts))
                             }
                             _ => panic!("Expected { after function declaration"),
                         }
@@ -136,6 +139,33 @@ impl Node {
             }
             _ => panic!("Expected a function definition"),
         }
+    }
+
+    fn fn_params(iter: &mut TokenIter) -> Vec<String> {
+        match iter.peek() {
+            Some(Token::LParen) => {
+                iter.next();
+            }
+            _ => panic!("Parser: expected an ( after function name in function definition"),
+        }
+
+        let mut params = vec![];
+
+        while let Some(param) = Node::identifier(iter) {
+            match param {
+                Node::Identifier(id) => params.push(id),
+                _ => panic!("Parser: invalid parameter declaration in function definition"),
+            }
+        }
+
+        match iter.peek() {
+            Some(Token::RParen) => {
+                iter.next();
+            }
+            _ => panic!("Parser: expected )"),
+        }
+
+        params
     }
 
     fn block(iter: &mut TokenIter) -> Vec<Node> {
@@ -199,7 +229,7 @@ impl Node {
                         None
                     }
                 }
-            },
+            }
             Some(_) => panic!("Parse: invalid LHS in bind expresion"),
             None => None,
         }
@@ -249,9 +279,7 @@ impl Node {
             Some(token) => match token {
                 Token::Identifier(id) => {
                     iter.next();
-                    Some(
-                        Node::Identifier(id.clone())
-                    )
+                    Some(Node::Identifier(id.clone()))
                 }
                 _ => None,
             },
@@ -508,19 +536,17 @@ pub mod assembly {
                         Source::Register(Register::Eax),
                     )));
                 }
-                super::Node::Function(fn_name, stmts) => {
+                super::Node::Function(fn_name, _, stmts) => {
                     output.push(Assembly::Label(fn_name.clone()));
                     for s in stmts.iter() {
                         Program::traverse(s, vars, output);
                     }
                     output.push(Assembly::Instr(Instr::Ret));
-                },
-                super::Node::Return(exp) => {
-                    match exp {
-                        Some(e) => Program::traverse(e, vars, output),
-                        None => (),
-                    }
                 }
+                super::Node::Return(exp) => match exp {
+                    Some(e) => Program::traverse(e, vars, output),
+                    None => (),
+                },
                 _ => println!("Expected an operator"),
             }
         }
@@ -537,12 +563,12 @@ impl VarTable {
         let mut vt = VarTable { vars: vec![] };
         let mut offset = 0;
         match ast {
-            Node::Function(_, stmts) => {
+            Node::Function(_, _, stmts) => {
                 for n in stmts.iter() {
                     offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
         if VarTable::has_duplicates(&vt) {
             panic!("An identifier was defined twice");
