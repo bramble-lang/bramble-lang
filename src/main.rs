@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn main ( p ) { x := 1 + 2 * 3 ; return x + p ; }";
+    let text = "fn main ( p ) { x := 1 + 2 * 3 ; println x ; return x + p ; }";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -37,6 +37,8 @@ pub enum Token {
     LBrace,
     RBrace,
     Function,
+    Print,
+    Println,
 }
 
 impl Token {
@@ -57,6 +59,8 @@ impl Token {
                 "}" => Ok(Token::RBrace),
                 "fn" => Ok(Token::Function),
                 "return" => Ok(Token::Return),
+                "print" => Ok(Token::Print),
+                "println" => Ok(Token::Println),
                 s if s.is_ascii() => Ok(Token::Identifier(s.into())),
                 _ => Err("Invalid token"),
             },
@@ -77,6 +81,8 @@ pub enum Node {
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
     Function(String, Vec<String>, Vec<Node>),
+    Print(Box<Node>),
+    Println(Box<Node>),
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -89,6 +95,7 @@ impl Node {
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
         BIND := IDENTIFIER := EXPRESSION
+        PRINTLN := println EXPRESSION ;
         RETURN := return [EXPRESSION] SEMICOLON
         STATEMENT := [BIND] SEMICOLON
         BLOCK := STATEMENT*
@@ -198,17 +205,39 @@ impl Node {
     }
 
     fn statement(iter: &mut TokenIter) -> Option<Node> {
-        match Node::bind(iter) {
-            Some(b) => match iter.peek() {
+        let stm = match Node::bind(iter) {
+            Some(b) => Some(b),
+            None => match Node::println_stmt(iter) {
+                Some(p) => Some(p),
+                _ => None,
+            },
+        };
+
+        if stm.is_some() {
+            match iter.peek() {
                 Some(Token::Semicolon) => {
                     iter.next();
-                    Some(b)
                 }
-                _ => {
-                    panic!("Expected ; after bind statement");
+                _ => panic!("Exected ; after statement"),
+            }
+        }
+
+        stm
+    }
+
+    fn println_stmt(iter: &mut TokenIter) -> Option<Node> {
+        let tk = iter.peek();
+        println!("Parser @ {:?}", tk);
+        match tk {
+            Some(Token::Println) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match exp {
+                    Some(exp) => Some(Node::Println(Box::new(exp))),
+                    None => panic!("Parser: Expected expression after println"),
                 }
-            },
-            None => None,
+            }
+            _ => None,
         }
     }
 
@@ -389,6 +418,8 @@ pub mod assembly {
         IMul(Register, Location),
         Push(Register),
         Pop(Register),
+        Print(Source),
+        Newline,
     }
 
     #[derive(Debug)]
@@ -429,12 +460,17 @@ pub mod assembly {
                             }
                             Instr::Call(label) => println!("call {}", label),
                             Instr::Ret => println!("ret"),
+                            Instr::Print(s) => {
+                                println!("PRINT_DEC 4, {}", s);
+                            }
+                            Instr::Newline => {
+                                println!("NEWLINE");
+                            }
                             _ => {
                                 println!("{:?}", inst);
                             }
                         }
                     }
-                    _ => {}
                 }
             }
         }
@@ -464,6 +500,7 @@ pub mod assembly {
                 Source::Register(Register::Ebp),
             )));
             code.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
+            code.push(Assembly::Instr(Instr::Ret));
 
             // Put user code here
             let global_func = "".into();
@@ -471,7 +508,12 @@ pub mod assembly {
             Program { code }
         }
 
-        fn traverse(ast: &super::Node, current_func: &String, funcs: &super::FunctionTable, output: &mut Vec<Assembly>) {
+        fn traverse(
+            ast: &super::Node,
+            current_func: &String,
+            funcs: &super::FunctionTable,
+            output: &mut Vec<Assembly>,
+        ) {
             println!("Compile @ {:?}", ast);
             match ast {
                 super::Node::Integer(i) => {
@@ -541,7 +583,7 @@ pub mod assembly {
                 }
                 super::Node::Function(fn_name, _, stmts) => {
                     output.push(Assembly::Label(fn_name.clone()));
-           
+
                     // Prepare stack frame for this function
                     output.push(Assembly::Instr(Instr::Push(Register::Ebp)));
                     output.push(Assembly::Instr(Instr::Mov(
@@ -571,6 +613,11 @@ pub mod assembly {
                     Some(e) => Program::traverse(e, current_func, funcs, output),
                     None => (),
                 },
+                super::Node::Println(exp) => {
+                    Program::traverse(exp, current_func, funcs, output);
+                    output.push(Assembly::Instr(Instr::Print(Source::Register(Register::Eax))));
+                    output.push(Assembly::Instr(Instr::Newline));
+                }
                 _ => println!("Expected an operator"),
             }
         }
@@ -622,12 +669,14 @@ impl VarTable {
 
 #[derive(Debug)]
 pub struct FunctionTable {
-    funcs: std::collections::HashMap<String,VarTable>,
+    funcs: std::collections::HashMap<String, VarTable>,
 }
 
 impl FunctionTable {
     pub fn generate(ast: &Node) -> FunctionTable {
-        let mut ft = FunctionTable{funcs: std::collections::HashMap::new()};
+        let mut ft = FunctionTable {
+            funcs: std::collections::HashMap::new(),
+        };
 
         FunctionTable::traverse(ast, &mut ft);
 
@@ -640,7 +689,7 @@ impl FunctionTable {
                 let vt = VarTable::generate(ast);
                 ft.funcs.insert(fn_name.clone(), vt);
             }
-            _ => panic!("Type analysis: invalid function")
+            _ => panic!("Type analysis: invalid function"),
         }
     }
 }
