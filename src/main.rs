@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn main ( p ) { x := 1 + 2 * 3 ; println x ; return x + p ; }";
+    let text = "fn my_main ( p ) { x := 1 + 2 * 3 ; println x ; return x + p ; }";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -488,7 +488,7 @@ pub mod assembly {
             )));
 
             // Call main function
-            code.push(Assembly::Instr(Instr::Call("main".into())));
+            code.push(Assembly::Instr(Instr::Call("my_main".into())));
 
             // Clean up frame before exiting program
             code.push(Assembly::Instr(Instr::Mov(
