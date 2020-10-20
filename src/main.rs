@@ -87,7 +87,8 @@ impl Node {
         BIND := IDENTIFIER := EXPRESSION
         RETURN := return [EXPRESSION] SEMICOLON
         STATEMENT := [BIND] SEMICOLON
-        FUNCTION := fn IDENTIFIER LPAREN RPAREN LBRACE STATEMENT* RETURN RBRACE
+        BLOCK := STATEMENT*
+        FUNCTION := fn IDENTIFIER LPAREN RPAREN LBRACE BLOCK RETURN RBRACE
 
         tokenize - takes a string of text and converts it to a string of tokens
         parse - takes a string of tokens and converts it into an AST
@@ -108,13 +109,7 @@ impl Node {
                         match iter.peek() {
                             Some(Token::LBrace) => {
                                 iter.next();
-                                let mut stmts = vec![];
-                                while iter.peek().is_some() {
-                                    match Node::statement(iter) {
-                                        Some(s) => stmts.push(s),
-                                        None => break,
-                                    }
-                                }
+                                let mut stmts = Node::block(iter);
 
                                 match Node::return_stmt(iter) {
                                     Some(ret) => stmts.push(ret),
@@ -137,6 +132,17 @@ impl Node {
             }
             _ => panic!("Expected a function definition"),
         }
+    }
+
+    fn block(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Vec<Node> {
+        let mut stmts = vec![];
+        while iter.peek().is_some() {
+            match Node::statement(iter) {
+                Some(s) => stmts.push(s),
+                None => break,
+            }
+        }
+        stmts
     }
 
     fn return_stmt(iter: &mut std::iter::Peekable<core::slice::Iter<Token>>) -> Option<Node> {
