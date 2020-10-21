@@ -5,6 +5,7 @@ fn main() {
             x := 1 + 2 * 3 ; 
             y := test ( 1 , 2 * x ) ;
             println x ; 
+            println y ;
             return x + p + y ; 
         }
 
@@ -13,7 +14,6 @@ fn main() {
             println blah ;
             return blah ;
         }
-
         ";
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
@@ -624,6 +624,7 @@ pub mod assembly {
                     let id_offset = {
                         let var = function_table.funcs[current_func]
                             .vars
+                            .vars
                             .iter()
                             .find(|v| v.0 == *id)
                             .expect("CRITICAL: identifier not found in var table");
@@ -668,6 +669,7 @@ pub mod assembly {
                     let id_offset = {
                         let var = function_table.funcs[current_func]
                             .vars
+                            .vars
                             .iter()
                             .find(|v| v.0 == *id)
                             .expect("CRITICAL: identifier not found in var table");
@@ -688,7 +690,7 @@ pub mod assembly {
                         Location::Register(Register::Ebp),
                         Source::Register(Register::Esp),
                     )));
-                    let total_offset = function_table.funcs[fn_name].vars.last().unwrap().2;
+                    let total_offset = function_table.funcs[fn_name].vars.vars.last().unwrap().2;
                     output.push(Assembly::Instr(Instr::Sub(
                         Register::Esp,
                         Source::Integer(total_offset),
@@ -702,6 +704,7 @@ pub mod assembly {
                     }
                     for (param, reg) in params.iter().zip(param_registers.iter()) {
                         let param_offset = function_table.funcs[fn_name]
+                            .vars
                             .vars
                             .iter()
                             .find(|(id, _, _)| id == param)
@@ -743,6 +746,18 @@ pub mod assembly {
                     output.push(Assembly::Instr(Instr::Newline));
                 }
                 super::Node::FunctionCall(fn_name, params) => {
+                    // Check if function exists and if the right number of parameters are being
+                    // passed
+                    if !function_table.funcs.contains_key(fn_name) {
+                        panic!("Compiler: no definition found for function `{}`", fn_name);
+                    }
+
+                    let expected_num_params = function_table.funcs[fn_name].params.len();
+                    let got_num_params = params.len();
+                    if expected_num_params != got_num_params {
+                        panic!("Compiler: expected {} but got {} parameters for function `{}`", expected_num_params, got_num_params, fn_name);
+                    }
+
                     // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                     // calling the function
                     let param_registers =
@@ -810,7 +825,13 @@ impl VarTable {
 
 #[derive(Debug)]
 pub struct FunctionTable {
-    funcs: std::collections::HashMap<String, VarTable>,
+    funcs: std::collections::HashMap<String, FunctionInfo>,
+}
+
+#[derive(Debug)]
+pub struct FunctionInfo {
+    params: Vec<String>,
+    vars: VarTable,
 }
 
 impl FunctionTable {
@@ -833,9 +854,9 @@ impl FunctionTable {
 
     fn traverse(ast: &Node, ft: &mut FunctionTable) {
         match ast {
-            Node::FunctionDef(fn_name, _, _) => {
-                let vt = VarTable::generate(ast);
-                ft.funcs.insert(fn_name.clone(), vt);
+            Node::FunctionDef(fn_name, params, _) => {
+                let vars = VarTable::generate(ast);
+                ft.funcs.insert(fn_name.clone(), FunctionInfo{params: params.clone(), vars});
             }
             _ => panic!("Type analysis: invalid function"),
         }
