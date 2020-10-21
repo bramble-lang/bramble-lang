@@ -9,7 +9,7 @@ fn main() {
         }
 
         fn test ( x , y ) {
-            blah := 4 * 3 ;
+            blah := x * y ;
             println blah ;
             return blah ;
         }
@@ -430,11 +430,12 @@ impl Node {
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
 pub mod assembly {
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     enum Register {
         Eax,
         Ebx,
         Ecx,
+        Edx,
         Ebp,
         Esp,
     }
@@ -445,6 +446,7 @@ pub mod assembly {
                 Register::Eax => f.write_str("eax"),
                 Register::Ebx => f.write_str("ebx"),
                 Register::Ecx => f.write_str("ecx"),
+                Register::Edx => f.write_str("edx"),
                 Register::Ebp => f.write_str("ebp"),
                 Register::Esp => f.write_str("esp"),
             }
@@ -673,7 +675,7 @@ pub mod assembly {
                         Source::Register(Register::Eax),
                     )));
                 }
-                super::Node::FunctionDef(fn_name, _, stmts) => {
+                super::Node::FunctionDef(fn_name, params, stmts) => {
                     output.push(Assembly::Label(fn_name.clone()));
 
                     // Prepare stack frame for this function
@@ -687,6 +689,16 @@ pub mod assembly {
                         Register::Esp,
                         Source::Integer(total_offset),
                     )));
+
+                    // Move function parameters from registers into the stack frame
+                    let param_registers = [Register::Eax, Register::Ebx, Register::Ecx, Register::Edx];
+                    if params.len() > param_registers.len() {
+                        panic!("Compiler: too many parameters in function definition");
+                    }
+                    for (param, reg) in params.iter().zip(param_registers.iter()) {
+                        let param_offset = function_table.funcs[fn_name].vars.iter().find(|(id,_,_)| id == param).unwrap().2;
+                        output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("ebp-{}", param_offset)), Source::Register(*reg))));
+                    }
 
                     for s in stmts.iter() {
                         Program::traverse(s, fn_name, function_table, output);
@@ -717,7 +729,20 @@ pub mod assembly {
                     ))));
                     output.push(Assembly::Instr(Instr::Newline));
                 }
-                super::Node::FunctionCall(fn_name, _) => {
+                super::Node::FunctionCall(fn_name, params) => {
+                    // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
+                    // calling the function
+                    let param_registers = [Register::Eax, Register::Ebx, Register::Ecx, Register::Edx];
+                    if params.len() > param_registers.len() {
+                        panic!("Compiler: too many parameters being passed to function");
+                    }
+                    for param in params.iter() {
+                        Program::traverse(param, current_func, function_table, output);
+                        output.push(Assembly::Instr(Instr::Push(Register::Eax)));
+                    }
+                    for reg in param_registers.iter().take(params.len()).rev() {
+                        output.push(Assembly::Instr(Instr::Pop(*reg)));
+                    }
                     output.push(Assembly::Instr(Instr::Call(fn_name.clone())));
                 }
                 _ => println!("Expected an operator"),
