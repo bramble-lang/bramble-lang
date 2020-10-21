@@ -200,12 +200,14 @@ impl Node {
                 Node::Identifier(id) => {
                     params.push(id);
                     match iter.peek() {
-                        Some(Token::Comma) => {iter.next();},
+                        Some(Token::Comma) => {
+                            iter.next();
+                        }
                         Some(Token::RParen) => break,
                         Some(t) => panic!("Unexpected token in function definition: {:?}", t),
                         None => panic!("Parser: unexpected EOF"),
                     };
-                },
+                }
                 _ => panic!("Parser: invalid parameter declaration in function definition"),
             }
         }
@@ -376,12 +378,14 @@ impl Node {
                         exp => {
                             params.push(exp);
                             match iter.peek() {
-                                Some(Token::Comma) => {iter.next();},
+                                Some(Token::Comma) => {
+                                    iter.next();
+                                }
                                 Some(Token::RParen) => break,
                                 Some(t) => panic!("Unexpected token in function call: {:?}", t),
                                 None => panic!("Parser: unexpected EOF"),
                             };
-                        },
+                        }
                         _ => panic!("Parser: invalid parameter in function call"),
                     }
                 }
@@ -691,13 +695,22 @@ pub mod assembly {
                     )));
 
                     // Move function parameters from registers into the stack frame
-                    let param_registers = [Register::Eax, Register::Ebx, Register::Ecx, Register::Edx];
+                    let param_registers =
+                        [Register::Eax, Register::Ebx, Register::Ecx, Register::Edx];
                     if params.len() > param_registers.len() {
                         panic!("Compiler: too many parameters in function definition");
                     }
                     for (param, reg) in params.iter().zip(param_registers.iter()) {
-                        let param_offset = function_table.funcs[fn_name].vars.iter().find(|(id,_,_)| id == param).unwrap().2;
-                        output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("ebp-{}", param_offset)), Source::Register(*reg))));
+                        let param_offset = function_table.funcs[fn_name]
+                            .vars
+                            .iter()
+                            .find(|(id, _, _)| id == param)
+                            .unwrap()
+                            .2;
+                        output.push(Assembly::Instr(Instr::Mov(
+                            Location::Memory(format!("ebp-{}", param_offset)),
+                            Source::Register(*reg),
+                        )));
                     }
 
                     for s in stmts.iter() {
@@ -732,7 +745,8 @@ pub mod assembly {
                 super::Node::FunctionCall(fn_name, params) => {
                     // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                     // calling the function
-                    let param_registers = [Register::Eax, Register::Ebx, Register::Ecx, Register::Edx];
+                    let param_registers =
+                        [Register::Eax, Register::Ebx, Register::Ecx, Register::Edx];
                     if params.len() > param_registers.len() {
                         panic!("Compiler: too many parameters being passed to function");
                     }
