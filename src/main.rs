@@ -1,15 +1,14 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = 
-        "fn my_main ( p ) { 
+    let text = "fn my_main ( p ) { 
             x := 1 + 2 * 3 ; 
-            y := test ( ) ;
+            y := test ( 1 , 2 * x ) ;
             println x ; 
             return x + p + y ; 
         }
 
-        fn test ( ) {
+        fn test ( x , y ) {
             blah := 4 * 3 ;
             println blah ;
             return blah ;
@@ -45,6 +44,7 @@ pub enum Token {
     Add,
     Assign,
     Semicolon,
+    Comma,
     Return,
     LParen,
     RParen,
@@ -67,6 +67,7 @@ impl Token {
                 "+" => Ok(Token::Add),
                 ":=" => Ok(Token::Assign),
                 ";" => Ok(Token::Semicolon),
+                "," => Ok(Token::Comma),
                 "(" => Ok(Token::LParen),
                 ")" => Ok(Token::RParen),
                 "{" => Ok(Token::LBrace),
@@ -95,7 +96,7 @@ pub enum Node {
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
     FunctionDef(String, Vec<String>, Vec<Node>),
-    FunctionCall(String),
+    FunctionCall(String, Vec<Node>),
     Module(Vec<Node>),
     Print(Box<Node>),
     Println(Box<Node>),
@@ -154,7 +155,7 @@ impl Node {
                     Some(Token::Identifier(id)) => {
                         iter.next();
 
-                        let params = Node::fn_params(iter);
+                        let params = Node::fn_def_params(iter);
 
                         match iter.peek() {
                             Some(Token::LBrace) => {
@@ -184,7 +185,7 @@ impl Node {
         }
     }
 
-    fn fn_params(iter: &mut TokenIter) -> Vec<String> {
+    fn fn_def_params(iter: &mut TokenIter) -> Vec<String> {
         match iter.peek() {
             Some(Token::LParen) => {
                 iter.next();
@@ -196,7 +197,15 @@ impl Node {
 
         while let Some(param) = Node::identifier(iter) {
             match param {
-                Node::Identifier(id) => params.push(id),
+                Node::Identifier(id) => {
+                    params.push(id);
+                    match iter.peek() {
+                        Some(Token::Comma) => {iter.next();},
+                        Some(Token::RParen) => break,
+                        Some(t) => panic!("Unexpected token in function definition: {:?}", t),
+                        None => panic!("Parser: unexpected EOF"),
+                    };
+                },
                 _ => panic!("Parser: invalid parameter declaration in function definition"),
             }
         }
@@ -341,21 +350,51 @@ impl Node {
     fn function_call_or_variable(iter: &mut TokenIter) -> Option<Node> {
         println!("Function call");
         match Node::identifier(iter) {
-            Some(Node::Identifier(id)) => match iter.peek() {
-                Some(Token::LParen) => {
+            Some(Node::Identifier(id)) => match Node::fn_call_params(iter) {
+                Some(params) => {
                     // this is a function call
-                    iter.next();
-
-                    match iter.peek() {
-                        Some(Token::RParen) => {iter.next();},
-                        _ => panic!("Parser: expected ) after function call"),
-                    }
-                    Some(Node::FunctionCall(id))
+                    Some(Node::FunctionCall(id, params))
                 }
                 _ => Some(Node::Identifier(id)),
             },
             Some(_) => panic!("Parser: expected identifier"),
             None => None,
+        }
+    }
+
+    /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
+    fn fn_call_params(iter: &mut TokenIter) -> Option<Vec<Node>> {
+        println!("Parser @ func call params");
+        match iter.peek() {
+            Some(Token::LParen) => {
+                // this is a function call
+                iter.next();
+
+                let mut params = vec![];
+                while let Some(param) = Node::expression(iter) {
+                    match param {
+                        exp => {
+                            params.push(exp);
+                            match iter.peek() {
+                                Some(Token::Comma) => {iter.next();},
+                                Some(Token::RParen) => break,
+                                Some(t) => panic!("Unexpected token in function call: {:?}", t),
+                                None => panic!("Parser: unexpected EOF"),
+                            };
+                        },
+                        _ => panic!("Parser: invalid parameter in function call"),
+                    }
+                }
+
+                match iter.peek() {
+                    Some(Token::RParen) => {
+                        iter.next();
+                    }
+                    _ => panic!("Parser: expected ) after function call"),
+                }
+                Some(params)
+            }
+            _ => None,
         }
     }
 
@@ -661,7 +700,7 @@ pub mod assembly {
                     output.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
 
                     output.push(Assembly::Instr(Instr::Ret));
-                },
+                }
                 super::Node::Module(functions) => {
                     for f in functions.iter() {
                         Program::traverse(f, current_func, function_table, output);
@@ -673,12 +712,14 @@ pub mod assembly {
                 },
                 super::Node::Println(exp) => {
                     Program::traverse(exp, current_func, function_table, output);
-                    output.push(Assembly::Instr(Instr::Print(Source::Register(Register::Eax))));
+                    output.push(Assembly::Instr(Instr::Print(Source::Register(
+                        Register::Eax,
+                    ))));
                     output.push(Assembly::Instr(Instr::Newline));
-                },
-                super::Node::FunctionCall(fn_name) => {
+                }
+                super::Node::FunctionCall(fn_name, _) => {
                     output.push(Assembly::Instr(Instr::Call(fn_name.clone())));
-                },
+                }
                 _ => println!("Expected an operator"),
             }
         }
@@ -744,7 +785,7 @@ impl FunctionTable {
                 for f in functions.iter() {
                     FunctionTable::traverse(f, &mut ft);
                 }
-            },
+            }
             _ => panic!("Type analysis: expected Module at root level of the AST"),
         }
 
