@@ -2,17 +2,9 @@
 
 fn main() {
     let text = "fn my_main ( p ) { 
-            x := 1 + 2 * 3 ; 
-            y := test ( 1 , 2 * x ) ;
+            x := 1 ; 
             println x ; 
-            println y ;
-            return x + p + y ; 
-        }
-
-        fn test ( x , y ) {
-            blah := x * y ;
-            println blah ;
-            return blah ;
+            return x + p ; 
         }
         ";
     println!("Code: {}", text);
@@ -515,6 +507,7 @@ pub mod assembly {
         Call(Label),
         Ret,
         Mov(Location, Source),
+        Lea(Location, Source),
         Add(Register, Source),
         Sub(Register, Source),
         IMul(Register, Location),
@@ -561,6 +554,7 @@ pub mod assembly {
                         print!("    ");
                         match inst {
                             Instr::Mov(l, s) => println!("mov {}, {}", l, s),
+                            Instr::Lea(l, s) => println!("lea {}, {}", l, s),
                             Instr::Push(reg) => {
                                 println!("push {}", reg);
                             }
@@ -597,6 +591,8 @@ pub mod assembly {
             let mut code = vec![];
 
             Program::create_base(&mut code);
+
+            Program::coroutine_init("next_stack_addr".into(), 2 * 1024, &mut code);
 
             // Put user code here
             let global_func = "".into();
@@ -635,6 +631,67 @@ pub mod assembly {
             output.push(Assembly::Instr(Instr::Call("my_main".into())));
 
             // Clean up frame before exiting program
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Esp),
+                Source::Register(Register::Ebp),
+            )));
+            output.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
+            output.push(Assembly::Instr(Instr::Ret));
+        }
+
+        /// Writes the function which will handle initializing a new coroutine
+        fn coroutine_init(ns: String, sinc: i32, output: &mut Vec<Assembly>) {
+            /*
+             * Input:
+             * EAX - address of the coroutine's instructions
+             * EBX - EnX - initialization parameters for the coroutine
+             *
+             * Output:
+             * EAX - address of the new coroutine instance
+             *
+             * Parameter: the IP to the coroutine's actual code.  Along with any init parameters
+             * to be passed to the coroutine.
+             *
+             * Returns a pointer to the new coroutine stack (which contains the coroutine's
+             * metadata)
+             *
+             * use the next stack address variable as the location for the new coroutine, then
+             * increment the next stack address.
+             *
+             * Store the entry address
+             * Compute the initial stack frame: allocating space for meta data, to store the
+             * esp/ebp, and to store initial parameters.
+             *
+             * Store esp/ebp
+             * Store the initial parameters.
+             *
+             * Move the address of the stack into EAX and return
+             */
+
+            // Create new stack frame
+            output.push(Assembly::Label("runtime_init_coroutine".into()));
+            output.push(Assembly::Instr(Instr::Push(Register::Ebp)));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Ebp),
+                Source::Register(Register::Esp),
+            )));
+
+            // Create coroutine's stack
+            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Esp), Source::Memory(ns.clone()))));
+
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-4", Register::Esp)), Source::Register(Register::Eax))));
+            output.push(Assembly::Instr(Instr::Lea(Location::Memory(format!("{}-8", Register::Esp)), Source::Memory(format!("{}-8", Register::Esp)))));
+
+            // Move satck address into EAX for return
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Eax),
+                Source::Register(Register::Esp),
+            )));
+
+            output.push(Assembly::Instr(Instr::Add(Register::Esp, Source::Integer(sinc))));
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(ns.clone()), Source::Register(Register::Esp))));
+
+            // clean up stack frame
             output.push(Assembly::Instr(Instr::Mov(
                 Location::Register(Register::Esp),
                 Source::Register(Register::Ebp),
@@ -792,7 +849,10 @@ pub mod assembly {
                     let expected_num_params = function_table.funcs[fn_name].params.len();
                     let got_num_params = params.len();
                     if expected_num_params != got_num_params {
-                        panic!("Compiler: expected {} but got {} parameters for function `{}`", expected_num_params, got_num_params, fn_name);
+                        panic!(
+                            "Compiler: expected {} but got {} parameters for function `{}`",
+                            expected_num_params, got_num_params, fn_name
+                        );
                     }
 
                     // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
@@ -893,7 +953,13 @@ impl FunctionTable {
         match ast {
             Node::FunctionDef(fn_name, params, _) => {
                 let vars = VarTable::generate(ast);
-                ft.funcs.insert(fn_name.clone(), FunctionInfo{params: params.clone(), vars});
+                ft.funcs.insert(
+                    fn_name.clone(),
+                    FunctionInfo {
+                        params: params.clone(),
+                        vars,
+                    },
+                );
             }
             _ => panic!("Type analysis: invalid function"),
         }
