@@ -528,6 +528,10 @@ pub mod assembly {
     enum Assembly {
         Label(Label),
         Instr(Instr),
+        Include(String),
+        Section(String),
+        Global(String),
+        Data(String, i32),
     }
 
     pub struct Program {
@@ -538,6 +542,18 @@ pub mod assembly {
         pub fn print(&self) {
             for inst in self.code.iter() {
                 match inst {
+                    Assembly::Include(include) => {
+                        println!("%include \"{}\"", include);
+                    }
+                    Assembly::Section(section) => {
+                        println!("\nsection {}", section);
+                    }
+                    Assembly::Global(global) => {
+                        println!("global {}", global);
+                    }
+                    Assembly::Data(label, value) => {
+                        println!("{}: dd {}", label, value);
+                    }
                     Assembly::Label(label) => {
                         println!("\n{}:", label);
                     }
@@ -580,30 +596,51 @@ pub mod assembly {
         pub fn compile(ast: &super::Node, funcs: &super::FunctionTable) -> Program {
             let mut code = vec![];
 
-            // Setup stack frame for the base/runtime layer
-            // this will create any runtime administrative logic
-            // and also call the users `main` function.
-            code.push(Assembly::Instr(Instr::Push(Register::Ebp)));
-            code.push(Assembly::Instr(Instr::Mov(
-                Location::Register(Register::Ebp),
-                Source::Register(Register::Esp),
-            )));
-
-            // Call main function
-            code.push(Assembly::Instr(Instr::Call("my_main".into())));
-
-            // Clean up frame before exiting program
-            code.push(Assembly::Instr(Instr::Mov(
-                Location::Register(Register::Esp),
-                Source::Register(Register::Ebp),
-            )));
-            code.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
-            code.push(Assembly::Instr(Instr::Ret));
+            Program::create_base(&mut code);
 
             // Put user code here
             let global_func = "".into();
             Program::traverse(ast, &global_func, funcs, &mut code);
             Program { code }
+        }
+
+        /// Creates the runtime code that will manage the entire execution of this program.
+        fn create_base(output: &mut Vec<Assembly>) {
+            // %include "io.inc"
+            // section .data
+            // next_stack_addr dd 0
+            // stack_size 2048
+            output.push(Assembly::Include("io.inc".into()));
+            output.push(Assembly::Section(".data".into()));
+            output.push(Assembly::Data("next_stack_addr".into(), 0));
+            output.push(Assembly::Data("stack_size".into(), 2 * 1024));
+
+            // section .text
+            // global CMAIN
+            // CMAIN
+            output.push(Assembly::Section(".text".into()));
+            output.push(Assembly::Global("CMAIN".into()));
+            output.push(Assembly::Label("CMAIN".into()));
+
+            // Setup stack frame for the base/runtime layer
+            // this will create any runtime administrative logic
+            // and also call the users `main` function.
+            output.push(Assembly::Instr(Instr::Push(Register::Ebp)));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Ebp),
+                Source::Register(Register::Esp),
+            )));
+
+            // Call main function
+            output.push(Assembly::Instr(Instr::Call("my_main".into())));
+
+            // Clean up frame before exiting program
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Esp),
+                Source::Register(Register::Ebp),
+            )));
+            output.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
+            output.push(Assembly::Instr(Instr::Ret));
         }
 
         fn traverse(
