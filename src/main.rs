@@ -628,6 +628,7 @@ pub mod assembly {
     enum Source {
         Register(Register),
         Memory(String),
+        Address(String),
         Integer(i32),
     }
 
@@ -640,6 +641,10 @@ pub mod assembly {
                 }
                 Source::Memory(m) => {
                     let s = format!("[{}]", m);
+                    f.write_str(&s)
+                }
+                Source::Address(m) => {
+                    let s = format!("{}", m);
                     f.write_str(&s)
                 }
                 Source::Integer(i) => {
@@ -699,7 +704,10 @@ pub mod assembly {
                         println!("{}: dd {}", label, value);
                     }
                     Assembly::Label(label) => {
-                        println!("\n{}:", label);
+                        if !label.starts_with(".") {
+                            println!();
+                        }
+                        println!("{}:", label);
                     }
                     Assembly::Instr(inst) => {
                         print!("    ");
@@ -707,6 +715,7 @@ pub mod assembly {
                             Instr::Mov(l, Source::Memory(s)) => {
                                 println!("mov {}, DWORD [{}]", l, s)
                             }
+                            Instr::Mov(l, Source::Address(s)) => println!("mov {}, {}", l, s),
                             Instr::Mov(l, Source::Integer(s)) => println!("mov {}, DWORD {}", l, s),
                             Instr::Mov(l, Source::Register(s)) => println!("mov {}, {}", l, s),
                             Instr::Lea(l, s) => println!("lea {}, {}", l, s),
@@ -1144,9 +1153,14 @@ pub mod assembly {
                 }
                 super::Node::Yield(id) => {
                     Program::traverse(id, current_func, function_table, output);
+                    output.push(Assembly::Instr(Instr::Mov(
+                        Location::Register(Register::Ebx),
+                        Source::Address(".lbl_0".into()),
+                    )));
                     output.push(Assembly::Instr(Instr::Jmp(
                         "runtime_yield_into_coroutine".into(),
-                    )))
+                    )));
+                    output.push(Assembly::Label(".lbl_0".into()));
                 }
                 super::Node::YieldReturn(exp) => {
                     if let Some(exp) = exp {
