@@ -7,6 +7,8 @@ fn main() {
             w := yield c ;
             x := 1 ; 
             println x ; 
+            z := yield c ;
+            println z ;
             return x + p ; 
         }
 
@@ -28,10 +30,10 @@ fn main() {
     println!("AST: {:?}", ast);
 
     let ast = ast.unwrap();
-    let func_table = FunctionTable::generate(&ast);
+    let mut func_table = FunctionTable::generate(&ast);
     println!("FuncTable: {:?}", func_table);
 
-    let program = assembly::Program::compile(&ast, &func_table);
+    let program = assembly::Program::compile(&ast, &mut func_table);
     program.print();
 }
 
@@ -754,7 +756,7 @@ pub mod assembly {
             }
         }
 
-        pub fn compile(ast: &super::Node, funcs: &super::FunctionTable) -> Program {
+        pub fn compile(ast: &super::Node, funcs: &mut super::FunctionTable) -> Program {
             let mut code = vec![];
 
             Program::create_base(&mut code);
@@ -1003,7 +1005,7 @@ pub mod assembly {
         fn traverse(
             ast: &super::Node,
             current_func: &String,
-            function_table: &super::FunctionTable,
+            function_table: &mut super::FunctionTable,
             output: &mut Vec<Assembly>,
         ) {
             println!("Compile @ {:?}", ast);
@@ -1149,18 +1151,26 @@ pub mod assembly {
                         Location::Register(Register::Eax),
                         Source::Memory(format!("{}", id)),
                     )));
-                    output.push(Assembly::Instr(Instr::Jmp("runtime_init_coroutine".into())))
+                    output.push(Assembly::Instr(Instr::Call(
+                        "runtime_init_coroutine".into(),
+                    )))
                 }
                 super::Node::Yield(id) => {
                     Program::traverse(id, current_func, function_table, output);
+                    function_table
+                        .funcs
+                        .entry(current_func.clone())
+                        .and_modify(|fi| fi.label_count += 1);
+                    let ret_lbl =
+                        format!(".lbl_{}", function_table.funcs[current_func].label_count);
                     output.push(Assembly::Instr(Instr::Mov(
                         Location::Register(Register::Ebx),
-                        Source::Address(".lbl_0".into()),
+                        Source::Address(ret_lbl.clone()),
                     )));
                     output.push(Assembly::Instr(Instr::Jmp(
                         "runtime_yield_into_coroutine".into(),
                     )));
-                    output.push(Assembly::Label(".lbl_0".into()));
+                    output.push(Assembly::Label(ret_lbl.clone()));
                 }
                 super::Node::YieldReturn(exp) => {
                     if let Some(exp) = exp {
@@ -1265,6 +1275,7 @@ pub struct FunctionTable {
 pub struct FunctionInfo {
     params: Vec<String>,
     vars: VarTable,
+    label_count: u32,
 }
 
 impl FunctionTable {
@@ -1297,6 +1308,7 @@ impl FunctionTable {
                     FunctionInfo {
                         params: params.clone(),
                         vars,
+                        label_count: 0,
                     },
                 );
             }
@@ -1307,6 +1319,7 @@ impl FunctionTable {
                     FunctionInfo {
                         params: vec![],
                         vars,
+                        label_count: 0,
                     },
                 );
             }
