@@ -1157,12 +1157,14 @@ pub mod assembly {
                 }
                 super::Node::Yield(id) => {
                     Program::traverse(id, current_func, function_table, output);
+
                     function_table
                         .funcs
                         .entry(current_func.clone())
                         .and_modify(|fi| fi.label_count += 1);
                     let ret_lbl =
                         format!(".lbl_{}", function_table.funcs[current_func].label_count);
+
                     output.push(Assembly::Instr(Instr::Mov(
                         Location::Register(Register::Ebx),
                         Source::Address(ret_lbl.clone()),
@@ -1176,7 +1178,20 @@ pub mod assembly {
                     if let Some(exp) = exp {
                         Program::traverse(exp, current_func, function_table, output);
                     }
-                    output.push(Assembly::Instr(Instr::Jmp("runtime_yield_return".into())))
+
+                    function_table
+                        .funcs
+                        .entry(current_func.clone())
+                        .and_modify(|fi| fi.label_count += 1);
+                    let ret_lbl =
+                        format!(".lbl_{}", function_table.funcs[current_func].label_count);
+
+                    output.push(Assembly::Instr(Instr::Mov(
+                        Location::Register(Register::Ebx),
+                        Source::Address(ret_lbl.clone()),
+                    )));
+                    output.push(Assembly::Instr(Instr::Jmp("runtime_yield_return".into())));
+                    output.push(Assembly::Label(ret_lbl.clone()));
                 }
                 super::Node::Println(exp) => {
                     Program::traverse(exp, current_func, function_table, output);
