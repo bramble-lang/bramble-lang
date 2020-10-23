@@ -596,7 +596,8 @@ pub mod assembly {
             Program::create_base(&mut code);
 
             Program::coroutine_init("next_stack_addr".into(), 2 * 1024, &mut code);
-            Program::runtime_enter_coroutine(&mut code);
+            Program::runtime_yield_into_coroutine(&mut code);
+            Program::runtime_yield_return(&mut code);
 
             // Put user code here
             let global_func = "".into();
@@ -707,13 +708,13 @@ pub mod assembly {
             output.push(Assembly::Instr(Instr::Ret));
         }
 
-        fn runtime_enter_coroutine(output: &mut Vec<Assembly>) {
+        fn runtime_yield_into_coroutine(output: &mut Vec<Assembly>) {
             /*
              * Input:
              * EAX - address of the coroutine instance
              * EBX - address of the return point
              */
-            output.push(Assembly::Label("runtime_enter_coroutine".into()));
+            output.push(Assembly::Label("runtime_yield_into_coroutine".into()));
 
             // mov ESP into metadata (return ESP)
             // mov EBP into metadata (return EBP)
@@ -733,6 +734,31 @@ pub mod assembly {
 
             // Re/enter the coroutine
             output.push(Assembly::Instr(Instr::Jmp(format!("{}", Source::Memory(format!("{}-4", Register::Ebp))))));
+        }
+
+        fn runtime_yield_return(output: &mut Vec<Assembly>) {
+            /*
+             * Input:
+             * EAX - value being returned (if any)
+             * EBX - re-entry address
+             */
+            // When in a coroutine, return to the calling coroutine
+            output.push(Assembly::Label("runtime_yield_return".into()));
+
+            // Store the current ESP into metadata
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-20", Register::Ebp)), Source::Register(Register::Esp))));
+            // Store the re-entry address into metadata
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-4", Register::Ebp)), Source::Register(Register::Ebx))));
+
+            // Get the return ESP from metadata
+            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Esp), Source::Memory(format!("{}-8", Register::Ebp)))));
+            // Get the return address from metadata
+            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Ebx), Source::Memory(format!("{}-16", Register::Ebp)))));
+            // Get the return EBP from metadata
+            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Ebp), Source::Memory(format!("{}-12", Register::Ebp)))));
+
+            // jmp to the return address
+            output.push(Assembly::Instr(Instr::Jmp(format!("{}", Source::Memory(format!("{}", Register::Ebx))))));
         }
 
         fn traverse(
