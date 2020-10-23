@@ -1,10 +1,18 @@
 #![allow(dead_code)]
 
 fn main() {
-    let text = "fn my_main ( p ) { 
+    let text = "
+        fn my_main ( p ) { 
+            c := init my_co ;
+            w := yield c ;
             x := 1 ; 
             println x ; 
             return x + p ; 
+        }
+
+        co my_co ( ) {
+            yret 1 ;
+            return 2 ;
         }
         ";
     println!("Code: {}", text);
@@ -45,6 +53,10 @@ pub enum Token {
     FunctionDef,
     Print,
     Println,
+    Init,
+    Yield,
+    YieldReturn,
+    CoroutineDef,
 }
 
 impl Token {
@@ -65,6 +77,10 @@ impl Token {
                 "{" => Ok(Token::LBrace),
                 "}" => Ok(Token::RBrace),
                 "fn" => Ok(Token::FunctionDef),
+                "co" => Ok(Token::CoroutineDef),
+                "init" => Ok(Token::Init),
+                "yield" => Ok(Token::Yield),
+                "yret" => Ok(Token::YieldReturn),
                 "return" => Ok(Token::Return),
                 "print" => Ok(Token::Print),
                 "println" => Ok(Token::Println),
@@ -89,6 +105,10 @@ pub enum Node {
     Return(Option<Box<Node>>),
     FunctionDef(String, Vec<String>, Vec<Node>),
     FunctionCall(String, Vec<Node>),
+    CoroutineDef(String, Vec<Node>),
+    CoroutineInit(String),
+    Yield(String),
+    YieldReturn(Box<Node>),
     Module(Vec<Node>),
     Print(Box<Node>),
     Println(Box<Node>),
@@ -101,16 +121,21 @@ impl Node {
         IDENTIFIER := A-Za-z*
         NUMBER := 0-9*
         FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION] RPAREN
-        FACTOR := FUNCTION_CALL | NUMBER | IDENTIFIER | (EXPRESSION)
+        YIELD := yield IDENTIFIER
+        FACTOR := FUNCTION_CALL | YIELD | NUMBER | IDENTIFIER
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
-        BIND := IDENTIFIER := EXPRESSION
+        INIT_CO := init IDENTIFIER
+        BIND := IDENTIFIER := (EXPRESSION|INIT_CO)
         PRINTLN := println EXPRESSION ;
         RETURN := return [EXPRESSION] SEMICOLON
+        YIELD_RETURN := yield return [EXPRESSION] SEMICOLON
         STATEMENT := [BIND] SEMICOLON
         BLOCK := STATEMENT*
+        COBLOCK := [STATEMENT | YIELD_RETURN]*
         FUNCTION := fn IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE BLOCK RETURN RBRACE
-        MODULES := [FUNCTION]*
+        COROUTINE := co IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE COBLOCK RETURN RBRACE
+        MODULES := [FUNCTION|COROUTINE]*
 
         tokenize - takes a string of text and converts it to a string of tokens
         parse - takes a string of tokens and converts it into an AST
@@ -128,7 +153,10 @@ impl Node {
         while iter.peek().is_some() {
             match Node::function_def(iter) {
                 Some(f) => functions.push(f),
-                None => break,
+                None => match Node::coroutine_def(iter) {
+                    Some(co) => println!("coroutine!"),
+                    None => break,
+                },
             }
         }
 
@@ -173,7 +201,46 @@ impl Node {
                     _ => panic!("Expected function name after fn"),
                 }
             }
-            _ => panic!("Expected a function definition"),
+            _ => None,
+        }
+    }
+
+    fn coroutine_def(iter: &mut TokenIter) -> Option<Node> {
+        println!("Parser @ coroutine_def");
+        match iter.peek() {
+            Some(Token::CoroutineDef) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Identifier(id)) => {
+                        iter.next();
+
+                        let _params = Node::fn_def_params(iter);
+
+                        match iter.peek() {
+                            Some(Token::LBrace) => {
+                                iter.next();
+                                let mut stmts = Node::co_block(iter);
+
+                                match Node::return_stmt(iter) {
+                                    Some(ret) => stmts.push(ret),
+                                    None => panic!("Coroutine must end with a return statement"),
+                                }
+
+                                match iter.peek() {
+                                    Some(Token::RBrace) => {
+                                        iter.next();
+                                    }
+                                    _ => panic!("Expected } at end of function definition"),
+                                }
+                                Some(Node::CoroutineDef(id.clone(), stmts))
+                            }
+                            _ => panic!("Expected { after function declaration"),
+                        }
+                    }
+                    _ => panic!("Expected function name after fn"),
+                }
+            }
+            _ => None,
         }
     }
 
@@ -225,9 +292,41 @@ impl Node {
         stmts
     }
 
+    fn co_block(iter: &mut TokenIter) -> Vec<Node> {
+        let mut stmts = vec![];
+        while iter.peek().is_some() {
+            match Node::statement(iter) {
+                Some(s) => stmts.push(s),
+                None => match Node::yield_return_stmt(iter) {
+                    Some(s) => stmts.push(s),
+                    None => break,
+                },
+            }
+        }
+        stmts
+    }
+
     fn return_stmt(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(Token::Return) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match iter.peek() {
+                    Some(Token::Semicolon) => iter.next(),
+                    _ => panic!("Expected ; after return statement"),
+                };
+                match exp {
+                    Some(exp) => Some(Node::Return(Some(Box::new(exp)))),
+                    None => Some(Node::Return(None)),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn yield_return_stmt(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::YieldReturn) => {
                 iter.next();
                 let exp = Node::expression(iter);
                 match iter.peek() {
@@ -257,7 +356,7 @@ impl Node {
                 Some(Token::Semicolon) => {
                     iter.next();
                 }
-                _ => panic!("Exected ; after statement"),
+                _ => panic!(format!("Exected ; after statement, found {:?}", iter.peek())),
             }
         }
 
@@ -289,8 +388,20 @@ impl Node {
                 match pt {
                     Some(Token::Assign) => {
                         iter.next();
-                        let exp = Node::expression(iter).expect("Expected an expression after :=");
-                        Some(Node::Bind(id, Box::new(exp)))
+                        match iter.peek() {
+                            Some(Token::Init) => {
+                                let co_init =
+                                    Node::co_init(iter).expect("Parser: Invalid coroutine init");
+                                Some(Node::Bind(id, Box::new(co_init)))
+                            }
+                            _ => {
+                                let exp = Node::expression(iter).expect(&format!(
+                                    "Expected an expression or coroutine init after :=, found {:?}",
+                                    iter.peek()
+                                ));
+                                Some(Node::Bind(id, Box::new(exp)))
+                            }
+                        }
                     }
                     _ => {
                         println!("Expected := after identifer in bind statement");
@@ -300,6 +411,24 @@ impl Node {
             }
             Some(_) => panic!("Parser: invalid LHS in bind expresion"),
             None => None,
+        }
+    }
+
+    fn co_init(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::Init) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Identifier(id)) => {
+                        iter.next();
+                        Some(Node::CoroutineInit(id.clone()))
+                    }
+                    _ => {
+                        panic!("Parser: expected identifier after init");
+                    }
+                }
+            }
+            _ => None,
         }
     }
 
@@ -336,7 +465,10 @@ impl Node {
             Some(n) => Some(n),
             None => match Node::function_call_or_variable(iter) {
                 Some(n) => Some(n),
-                None => None,
+                None => match Node::co_yield(iter) {
+                    Some(n) => Some(n),
+                    None => None,
+                },
             },
         }
     }
@@ -389,6 +521,23 @@ impl Node {
                     _ => panic!("Parser: expected ) after function call"),
                 }
                 Some(params)
+            }
+            _ => None,
+        }
+    }
+
+    fn co_yield(iter: &mut TokenIter) -> Option<Node> {
+        println!("Identifier");
+        match iter.peek() {
+            Some(Token::Yield) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Identifier(id)) => {
+                        iter.next();
+                        Some(Node::Yield(id.clone()))
+                    },
+                    _ => None,
+                }
             }
             _ => None,
         }
@@ -682,13 +831,31 @@ pub mod assembly {
             )));
 
             // Create coroutine's stack
-            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Esp), Source::Memory(ns.clone()))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Esp),
+                Source::Memory(ns.clone()),
+            )));
 
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-4", Register::Esp)), Source::Register(Register::Eax)))); // Store the coroutine's current next instruction to execute
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-8", Register::Esp)), Source::Integer(0)))); // store the return ESP
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-12", Register::Esp)), Source::Integer(0)))); // store the return EBP
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-16", Register::Esp)), Source::Integer(0)))); // store the return Instruction address
-            output.push(Assembly::Instr(Instr::Lea(Location::Memory(format!("{}-20", Register::Esp)), Source::Memory(format!("{}-20", Register::Esp)))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-4", Register::Esp)),
+                Source::Register(Register::Eax),
+            ))); // Store the coroutine's current next instruction to execute
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-8", Register::Esp)),
+                Source::Integer(0),
+            ))); // store the return ESP
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-12", Register::Esp)),
+                Source::Integer(0),
+            ))); // store the return EBP
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-16", Register::Esp)),
+                Source::Integer(0),
+            ))); // store the return Instruction address
+            output.push(Assembly::Instr(Instr::Lea(
+                Location::Memory(format!("{}-20", Register::Esp)),
+                Source::Memory(format!("{}-20", Register::Esp)),
+            )));
 
             // Move satck address into EAX for return
             output.push(Assembly::Instr(Instr::Mov(
@@ -696,8 +863,14 @@ pub mod assembly {
                 Source::Register(Register::Esp),
             )));
 
-            output.push(Assembly::Instr(Instr::Add(Register::Esp, Source::Integer(sinc))));
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(ns.clone()), Source::Register(Register::Esp))));
+            output.push(Assembly::Instr(Instr::Add(
+                Register::Esp,
+                Source::Integer(sinc),
+            )));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(ns.clone()),
+                Source::Register(Register::Esp),
+            )));
 
             // clean up stack frame
             output.push(Assembly::Instr(Instr::Mov(
@@ -719,9 +892,18 @@ pub mod assembly {
             // mov ESP into metadata (return ESP)
             // mov EBP into metadata (return EBP)
             // mov return address into metadata (return address)
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-8", Register::Eax)), Source::Register(Register::Esp)))); // store the return ESP
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-12", Register::Eax)), Source::Register(Register::Ebp)))); // store the return EBP
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-16", Register::Eax)), Source::Register(Register::Ebx)))); // store the return Instruction address
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-8", Register::Eax)),
+                Source::Register(Register::Esp),
+            ))); // store the return ESP
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-12", Register::Eax)),
+                Source::Register(Register::Ebp),
+            ))); // store the return EBP
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-16", Register::Eax)),
+                Source::Register(Register::Ebx),
+            ))); // store the return Instruction address
 
             // Load the address of the coroutine into EBP (the base of the stack frame)
             output.push(Assembly::Instr(Instr::Mov(
@@ -730,10 +912,16 @@ pub mod assembly {
             )));
 
             // Load the coroutines current stack location into ESP
-            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Esp), Source::Memory(format!("{}-20", Register::Ebp)))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Esp),
+                Source::Memory(format!("{}-20", Register::Ebp)),
+            )));
 
             // Re/enter the coroutine
-            output.push(Assembly::Instr(Instr::Jmp(format!("{}", Source::Memory(format!("{}-4", Register::Ebp))))));
+            output.push(Assembly::Instr(Instr::Jmp(format!(
+                "{}",
+                Source::Memory(format!("{}-4", Register::Ebp))
+            ))));
         }
 
         fn runtime_yield_return(output: &mut Vec<Assembly>) {
@@ -746,19 +934,37 @@ pub mod assembly {
             output.push(Assembly::Label("runtime_yield_return".into()));
 
             // Store the current ESP into metadata
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-20", Register::Ebp)), Source::Register(Register::Esp))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-20", Register::Ebp)),
+                Source::Register(Register::Esp),
+            )));
             // Store the re-entry address into metadata
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-4", Register::Ebp)), Source::Register(Register::Ebx))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-4", Register::Ebp)),
+                Source::Register(Register::Ebx),
+            )));
 
             // Get the return ESP from metadata
-            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Esp), Source::Memory(format!("{}-8", Register::Ebp)))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Esp),
+                Source::Memory(format!("{}-8", Register::Ebp)),
+            )));
             // Get the return address from metadata
-            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Ebx), Source::Memory(format!("{}-16", Register::Ebp)))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Ebx),
+                Source::Memory(format!("{}-16", Register::Ebp)),
+            )));
             // Get the return EBP from metadata
-            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Ebp), Source::Memory(format!("{}-12", Register::Ebp)))));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Ebp),
+                Source::Memory(format!("{}-12", Register::Ebp)),
+            )));
 
             // jmp to the return address
-            output.push(Assembly::Instr(Instr::Jmp(format!("{}", Source::Memory(format!("{}", Register::Ebx))))));
+            output.push(Assembly::Instr(Instr::Jmp(format!(
+                "{}",
+                Source::Memory(format!("{}", Register::Ebx))
+            ))));
         }
 
         fn traverse(
