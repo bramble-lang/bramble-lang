@@ -358,7 +358,10 @@ impl Node {
                 Some(Token::Semicolon) => {
                     iter.next();
                 }
-                _ => panic!(format!("Exected ; after statement, found {:?}", iter.peek())),
+                _ => panic!(format!(
+                    "Exected ; after statement, found {:?}",
+                    iter.peek()
+                )),
             }
         }
 
@@ -534,9 +537,7 @@ impl Node {
             Some(Token::Yield) => {
                 iter.next();
                 match Node::identifier(iter) {
-                    Some(id) => {
-                        Some(Node::Yield(Box::new(id)))
-                    },
+                    Some(id) => Some(Node::Yield(Box::new(id))),
                     _ => panic!("Parser: expected an identifier after yield"),
                 }
             }
@@ -703,7 +704,11 @@ pub mod assembly {
                     Assembly::Instr(inst) => {
                         print!("    ");
                         match inst {
-                            Instr::Mov(l, s) => println!("mov {}, {}", l, s),
+                            Instr::Mov(l, Source::Memory(s)) => {
+                                println!("mov {}, DWORD [{}]", l, s)
+                            }
+                            Instr::Mov(l, Source::Integer(s)) => println!("mov {}, DWORD {}", l, s),
+                            Instr::Mov(l, Source::Register(s)) => println!("mov {}, {}", l, s),
                             Instr::Lea(l, s) => println!("lea {}, {}", l, s),
                             Instr::Push(reg) => {
                                 println!("push {}", reg);
@@ -782,6 +787,19 @@ pub mod assembly {
                 Source::Register(Register::Esp),
             )));
 
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Eax),
+                Source::Register(Register::Esp),
+            )));
+            output.push(Assembly::Instr(Instr::Sub(
+                Register::Eax,
+                Source::Integer(4096),
+            )));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory("next_stack_addr".into()),
+                Source::Register(Register::Eax),
+            )));
+
             // Call main function
             output.push(Assembly::Instr(Instr::Call("my_main".into())));
 
@@ -853,9 +871,14 @@ pub mod assembly {
                 Location::Memory(format!("{}-16", Register::Esp)),
                 Source::Integer(0),
             ))); // store the return Instruction address
+
             output.push(Assembly::Instr(Instr::Lea(
-                Location::Memory(format!("{}-20", Register::Esp)),
+                Location::Register(Register::Eax),
                 Source::Memory(format!("{}-20", Register::Esp)),
+            )));
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Memory(format!("{}-20", Register::Esp)),
+                Source::Register(Register::Eax),
             )));
 
             // Move satck address into EAX for return
@@ -864,7 +887,7 @@ pub mod assembly {
                 Source::Register(Register::Esp),
             )));
 
-            output.push(Assembly::Instr(Instr::Add(
+            output.push(Assembly::Instr(Instr::Sub(
                 Register::Esp,
                 Source::Integer(sinc),
             )));
@@ -1109,25 +1132,28 @@ pub mod assembly {
                     }
                 }
                 super::Node::Return(exp) => match exp {
-                    Some(e) => { 
-                        Program::traverse(e, current_func, function_table, output)
-                    },
+                    Some(e) => Program::traverse(e, current_func, function_table, output),
                     None => (),
                 },
                 super::Node::CoroutineInit(id) => {
-                    output.push(Assembly::Instr(Instr::Lea(Location::Register(Register::Eax), Source::Memory(format!("{}", id)))));
+                    output.push(Assembly::Instr(Instr::Lea(
+                        Location::Register(Register::Eax),
+                        Source::Memory(format!("{}", id)),
+                    )));
                     output.push(Assembly::Instr(Instr::Jmp("runtime_init_coroutine".into())))
-                },
+                }
                 super::Node::Yield(id) => {
                     Program::traverse(id, current_func, function_table, output);
-                    output.push(Assembly::Instr(Instr::Jmp("runtime_yield_into_coroutine".into())))
-                },
+                    output.push(Assembly::Instr(Instr::Jmp(
+                        "runtime_yield_into_coroutine".into(),
+                    )))
+                }
                 super::Node::YieldReturn(exp) => {
                     if let Some(exp) = exp {
                         Program::traverse(exp, current_func, function_table, output);
                     }
                     output.push(Assembly::Instr(Instr::Jmp("runtime_yield_return".into())))
-                },
+                }
                 super::Node::Println(exp) => {
                     Program::traverse(exp, current_func, function_table, output);
                     output.push(Assembly::Instr(Instr::Print(Source::Register(
@@ -1259,7 +1285,7 @@ impl FunctionTable {
                         vars,
                     },
                 );
-            },
+            }
             Node::CoroutineDef(fn_name, _) => {
                 let vars = VarTable::generate(ast);
                 ft.funcs.insert(
