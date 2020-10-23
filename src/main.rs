@@ -987,7 +987,7 @@ pub mod assembly {
             // jmp to the return address
             output.push(Assembly::Instr(Instr::Jmp(format!(
                 "{}",
-                Source::Memory(format!("{}", Register::Ebx))
+                Source::Register(Register::Ebx)
             ))));
         }
 
