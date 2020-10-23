@@ -15,6 +15,7 @@ fn main() {
             return 2 ;
         }
         ";
+
     println!("Code: {}", text);
     let tokens = Token::tokenize(&text);
     println!("Tokens: {:?}", tokens);
@@ -107,9 +108,9 @@ pub enum Node {
     FunctionCall(String, Vec<Node>),
     CoroutineDef(String, Vec<Node>),
     CoroutineInit(String),
-    Yield(String),
-    YieldReturn(Box<Node>),
-    Module(Vec<Node>),
+    Yield(Box<Node>),
+    YieldReturn(Option<Box<Node>>),
+    Module(Vec<Node>, Vec<Node>),
     Print(Box<Node>),
     Println(Box<Node>),
 }
@@ -149,19 +150,20 @@ impl Node {
 
     fn module(iter: &mut TokenIter) -> Option<Node> {
         let mut functions = vec![];
+        let mut coroutines = vec![];
 
         while iter.peek().is_some() {
             match Node::function_def(iter) {
                 Some(f) => functions.push(f),
                 None => match Node::coroutine_def(iter) {
-                    Some(co) => println!("coroutine!"),
+                    Some(co) => coroutines.push(co),
                     None => break,
                 },
             }
         }
 
         if functions.len() > 0 {
-            Some(Node::Module(functions))
+            Some(Node::Module(functions, coroutines))
         } else {
             None
         }
@@ -334,8 +336,8 @@ impl Node {
                     _ => panic!("Expected ; after return statement"),
                 };
                 match exp {
-                    Some(exp) => Some(Node::Return(Some(Box::new(exp)))),
-                    None => Some(Node::Return(None)),
+                    Some(exp) => Some(Node::YieldReturn(Some(Box::new(exp)))),
+                    None => Some(Node::YieldReturn(None)),
                 }
             }
             _ => None,
@@ -531,12 +533,11 @@ impl Node {
         match iter.peek() {
             Some(Token::Yield) => {
                 iter.next();
-                match iter.peek() {
-                    Some(Token::Identifier(id)) => {
-                        iter.next();
-                        Some(Node::Yield(id.clone()))
+                match Node::identifier(iter) {
+                    Some(id) => {
+                        Some(Node::Yield(Box::new(id)))
                     },
-                    _ => None,
+                    _ => panic!("Parser: expected an identifier after yield"),
                 }
             }
             _ => None,
@@ -1090,14 +1091,42 @@ pub mod assembly {
 
                     output.push(Assembly::Instr(Instr::Ret));
                 }
-                super::Node::Module(functions) => {
+                super::Node::CoroutineDef(fn_name, stmts) => {
+                    output.push(Assembly::Label(fn_name.clone()));
+
+                    // Prepare stack frame for this function
+                    for s in stmts.iter() {
+                        Program::traverse(s, fn_name, function_table, output);
+                    }
+                    output.push(Assembly::Instr(Instr::Jmp("runtime_yield_return".into())))
+                }
+                super::Node::Module(functions, coroutines) => {
                     for f in functions.iter() {
                         Program::traverse(f, current_func, function_table, output);
                     }
+                    for co in coroutines.iter() {
+                        Program::traverse(co, current_func, function_table, output);
+                    }
                 }
                 super::Node::Return(exp) => match exp {
-                    Some(e) => Program::traverse(e, current_func, function_table, output),
+                    Some(e) => { 
+                        Program::traverse(e, current_func, function_table, output)
+                    },
                     None => (),
+                },
+                super::Node::CoroutineInit(id) => {
+                    output.push(Assembly::Instr(Instr::Lea(Location::Register(Register::Eax), Source::Memory(format!("{}", id)))));
+                    output.push(Assembly::Instr(Instr::Jmp("runtime_init_coroutine".into())))
+                },
+                super::Node::Yield(id) => {
+                    Program::traverse(id, current_func, function_table, output);
+                    output.push(Assembly::Instr(Instr::Jmp("runtime_yield_into_coroutine".into())))
+                },
+                super::Node::YieldReturn(exp) => {
+                    if let Some(exp) = exp {
+                        Program::traverse(exp, current_func, function_table, output);
+                    }
+                    output.push(Assembly::Instr(Instr::Jmp("runtime_yield_return".into())))
                 },
                 super::Node::Println(exp) => {
                     Program::traverse(exp, current_func, function_table, output);
@@ -1138,7 +1167,7 @@ pub mod assembly {
                     }
                     output.push(Assembly::Instr(Instr::Call(fn_name.clone())));
                 }
-                _ => println!("Expected an operator"),
+                node => println!("Expected an operator, found {:?}", node),
             }
         }
     }
@@ -1205,9 +1234,12 @@ impl FunctionTable {
         };
 
         match ast {
-            Node::Module(functions) => {
+            Node::Module(functions, coroutines) => {
                 for f in functions.iter() {
                     FunctionTable::traverse(f, &mut ft);
+                }
+                for co in coroutines.iter() {
+                    FunctionTable::traverse(co, &mut ft);
                 }
             }
             _ => panic!("Type analysis: expected Module at root level of the AST"),
@@ -1224,6 +1256,16 @@ impl FunctionTable {
                     fn_name.clone(),
                     FunctionInfo {
                         params: params.clone(),
+                        vars,
+                    },
+                );
+            },
+            Node::CoroutineDef(fn_name, _) => {
+                let vars = VarTable::generate(ast);
+                ft.funcs.insert(
+                    fn_name.clone(),
+                    FunctionInfo {
+                        params: vec![],
                         vars,
                     },
                 );
