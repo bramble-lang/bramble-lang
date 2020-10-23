@@ -570,6 +570,9 @@ pub mod assembly {
                             Instr::Sub(reg, s) => {
                                 println!("sub {}, {}", reg, s);
                             }
+                            Instr::Jmp(loc) => {
+                                println!("jmp {}", loc);
+                            }
                             Instr::Call(label) => println!("call {}", label),
                             Instr::Ret => println!("ret"),
                             Instr::Print(s) => {
@@ -593,6 +596,7 @@ pub mod assembly {
             Program::create_base(&mut code);
 
             Program::coroutine_init("next_stack_addr".into(), 2 * 1024, &mut code);
+            Program::runtime_enter_coroutine(&mut code);
 
             // Put user code here
             let global_func = "".into();
@@ -679,8 +683,11 @@ pub mod assembly {
             // Create coroutine's stack
             output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Esp), Source::Memory(ns.clone()))));
 
-            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-4", Register::Esp)), Source::Register(Register::Eax))));
-            output.push(Assembly::Instr(Instr::Lea(Location::Memory(format!("{}-8", Register::Esp)), Source::Memory(format!("{}-8", Register::Esp)))));
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-4", Register::Esp)), Source::Register(Register::Eax)))); // Store the coroutine's current next instruction to execute
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-8", Register::Esp)), Source::Integer(0)))); // store the return ESP
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-12", Register::Esp)), Source::Integer(0)))); // store the return EBP
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-16", Register::Esp)), Source::Integer(0)))); // store the return Instruction address
+            output.push(Assembly::Instr(Instr::Lea(Location::Memory(format!("{}-20", Register::Esp)), Source::Memory(format!("{}-20", Register::Esp)))));
 
             // Move satck address into EAX for return
             output.push(Assembly::Instr(Instr::Mov(
@@ -698,6 +705,34 @@ pub mod assembly {
             )));
             output.push(Assembly::Instr(Instr::Pop(Register::Ebp)));
             output.push(Assembly::Instr(Instr::Ret));
+        }
+
+        fn runtime_enter_coroutine(output: &mut Vec<Assembly>) {
+            /*
+             * Input:
+             * EAX - address of the coroutine instance
+             * EBX - address of the return point
+             */
+            output.push(Assembly::Label("runtime_enter_coroutine".into()));
+
+            // mov ESP into metadata (return ESP)
+            // mov EBP into metadata (return EBP)
+            // mov return address into metadata (return address)
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-8", Register::Eax)), Source::Register(Register::Esp)))); // store the return ESP
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-12", Register::Eax)), Source::Register(Register::Ebp)))); // store the return EBP
+            output.push(Assembly::Instr(Instr::Mov(Location::Memory(format!("{}-16", Register::Eax)), Source::Register(Register::Ebx)))); // store the return Instruction address
+
+            // Load the address of the coroutine into EBP (the base of the stack frame)
+            output.push(Assembly::Instr(Instr::Mov(
+                Location::Register(Register::Ebp),
+                Source::Register(Register::Eax),
+            )));
+
+            // Load the coroutines current stack location into ESP
+            output.push(Assembly::Instr(Instr::Mov(Location::Register(Register::Esp), Source::Memory(format!("{}-20", Register::Ebp)))));
+
+            // Re/enter the coroutine
+            output.push(Assembly::Instr(Instr::Jmp(format!("{}", Source::Memory(format!("{}-4", Register::Ebp))))));
         }
 
         fn traverse(
