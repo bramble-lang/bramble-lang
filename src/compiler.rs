@@ -79,7 +79,7 @@ impl std::fmt::Display for Source {
 type Label = String;
 
 #[derive(Debug)]
-enum Instr {
+enum Instruction {
     Jmp(Label),
     Call(Label),
     Ret,
@@ -97,7 +97,7 @@ enum Instr {
 #[derive(Debug)]
 enum Assembly {
     Label(Label),
-    Instr(Instr),
+    Instr(Instruction),
     Include(String),
     Section(String),
     Global(String),
@@ -133,39 +133,39 @@ impl Compiler {
                 Assembly::Instr(inst) => {
                     write!(output, "    ")?;
                     match inst {
-                        Instr::Mov(l, Source::Memory(s)) => {
+                        Instruction::Mov(l, Source::Memory(s)) => {
                             writeln!(output, "mov {}, DWORD [{}]", l, s)?
                         }
-                        Instr::Mov(l, Source::Address(s)) => writeln!(output, "mov {}, {}", l, s)?,
-                        Instr::Mov(l, Source::Integer(s)) => {
+                        Instruction::Mov(l, Source::Address(s)) => writeln!(output, "mov {}, {}", l, s)?,
+                        Instruction::Mov(l, Source::Integer(s)) => {
                             writeln!(output, "mov {}, DWORD {}", l, s)?
                         }
-                        Instr::Mov(l, Source::Register(s)) => writeln!(output, "mov {}, {}", l, s)?,
-                        Instr::Lea(l, s) => writeln!(output, "lea {}, {}", l, s)?,
-                        Instr::Push(reg) => {
+                        Instruction::Mov(l, Source::Register(s)) => writeln!(output, "mov {}, {}", l, s)?,
+                        Instruction::Lea(l, s) => writeln!(output, "lea {}, {}", l, s)?,
+                        Instruction::Push(reg) => {
                             writeln!(output, "push {}", reg)?;
                         }
-                        Instr::Pop(reg) => {
+                        Instruction::Pop(reg) => {
                             writeln!(output, "pop {}", reg)?;
                         }
-                        Instr::IMul(reg, s) => {
+                        Instruction::IMul(reg, s) => {
                             writeln!(output, "imul {}, {}", reg, s)?;
                         }
-                        Instr::Add(reg, s) => {
+                        Instruction::Add(reg, s) => {
                             writeln!(output, "add {}, {}", reg, s)?;
                         }
-                        Instr::Sub(reg, s) => {
+                        Instruction::Sub(reg, s) => {
                             writeln!(output, "sub {}, {}", reg, s)?;
                         }
-                        Instr::Jmp(loc) => {
+                        Instruction::Jmp(loc) => {
                             writeln!(output, "jmp {}", loc)?;
                         }
-                        Instr::Call(label) => writeln!(output, "call {}", label)?,
-                        Instr::Ret => writeln!(output, "ret")?,
-                        Instr::Print(s) => {
+                        Instruction::Call(label) => writeln!(output, "call {}", label)?,
+                        Instruction::Ret => writeln!(output, "ret")?,
+                        Instruction::Print(s) => {
                             writeln!(output, "PRINT_DEC 4, {}", s)?;
                         }
-                        Instr::Newline => {
+                        Instruction::Newline => {
                             writeln!(output, "NEWLINE")?;
                         }
                     }
@@ -193,59 +193,64 @@ impl Compiler {
     /// Creates the runtime code that will manage the entire execution of this program.
     fn create_base(output: &mut Vec<Assembly>) {
         use Register::*;
+        use Instruction::*;
+        use Assembly::*;
+
         // %include "io.inc"
         // section .data
         // next_stack_addr dd 0
         // stack_size 2048
-        output.push(Assembly::Include("io.inc".into()));
-        output.push(Assembly::Section(".data".into()));
-        output.push(Assembly::Data("next_stack_addr".into(), 0));
-        output.push(Assembly::Data("stack_size".into(), 2 * 1024));
+        output.push(Include("io.inc".into()));
+        output.push(Section(".data".into()));
+        output.push(Data("next_stack_addr".into(), 0));
+        output.push(Data("stack_size".into(), 2 * 1024));
 
         // section .text
         // global CMAIN
         // CMAIN
-        output.push(Assembly::Section(".text".into()));
-        output.push(Assembly::Global("CMAIN".into()));
-        output.push(Assembly::Label("CMAIN".into()));
+        output.push(Section(".text".into()));
+        output.push(Global("CMAIN".into()));
+        output.push(Label("CMAIN".into()));
 
         // Setup stack frame for the base/runtime layer
         // this will create any runtime administrative logic
         // and also call the users `main` function.
-        output.push(Assembly::Instr(Instr::Push(Ebp)));
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Push(Ebp)));
+        output.push(Instr(Mov(
             Location::Register(Ebp),
             Source::Register(Esp),
         )));
 
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Eax),
             Source::Register(Esp),
         )));
-        output.push(Assembly::Instr(Instr::Sub(
+        output.push(Instr(Sub(
             Eax,
             Source::Memory("stack_size".into()),
         )));
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory("next_stack_addr".into()),
             Source::Register(Eax),
         )));
 
         // Call main function
-        output.push(Assembly::Instr(Instr::Call("my_main".into())));
+        output.push(Instr(Call("my_main".into())));
 
         // Clean up frame before exiting program
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Esp),
             Source::Register(Ebp),
         )));
-        output.push(Assembly::Instr(Instr::Pop(Ebp)));
-        output.push(Assembly::Instr(Instr::Ret));
+        output.push(Instr(Pop(Ebp)));
+        output.push(Instr(Ret));
     }
 
     /// Writes the function which will handle initializing a new coroutine
     fn coroutine_init(ns: &str, sinc: &str, output: &mut Vec<Assembly>) {
         use Register::*;
+        use Instruction::*;
+        use Assembly::*;
         /*
          * Input:
          * EAX - address of the coroutine's instructions
@@ -274,108 +279,110 @@ impl Compiler {
          */
 
         // Create new stack frame
-        output.push(Assembly::Label("runtime_init_coroutine".into()));
-        output.push(Assembly::Instr(Instr::Push(Ebp)));
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Label("runtime_init_coroutine".into()));
+        output.push(Instr(Push(Ebp)));
+        output.push(Instr(Mov(
             Location::Register(Ebp),
             Source::Register(Esp),
         )));
 
         // Create coroutine's stack
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Esp),
             Source::Memory(ns.into()),
         )));
 
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-4", Esp)),
             Source::Register(Eax),
         ))); // Store the coroutine's current next instruction to execute
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-8", Esp)),
             Source::Integer(0),
         ))); // store the return ESP
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-12", Esp)),
             Source::Integer(0),
         ))); // store the return EBP
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-16", Esp)),
             Source::Integer(0),
         ))); // store the return Instruction address
 
-        output.push(Assembly::Instr(Instr::Lea(
+        output.push(Instr(Lea(
             Location::Register(Eax),
             Source::Memory(format!("{}-20", Esp)),
         )));
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-20", Esp)),
             Source::Register(Eax),
         )));
 
         // Move satck address into EAX for return
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Eax),
             Source::Register(Esp),
         )));
 
-        output.push(Assembly::Instr(Instr::Sub(
+        output.push(Instr(Sub(
             Esp,
             Source::Memory(sinc.into()),
         )));
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(ns.into()),
             Source::Register(Esp),
         )));
 
         // clean up stack frame
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Esp),
             Source::Register(Ebp),
         )));
-        output.push(Assembly::Instr(Instr::Pop(Ebp)));
-        output.push(Assembly::Instr(Instr::Ret));
+        output.push(Instr(Pop(Ebp)));
+        output.push(Instr(Ret));
     }
 
     fn runtime_yield_into_coroutine(output: &mut Vec<Assembly>) {
         use Register::*;
+        use Instruction::*;
+        use Assembly::*;
         /*
          * Input:
          * EAX - address of the coroutine instance
          * EBX - address of the return point
          */
-        output.push(Assembly::Label("runtime_yield_into_coroutine".into()));
+        output.push(Label("runtime_yield_into_coroutine".into()));
 
         // mov ESP into metadata (return ESP)
         // mov EBP into metadata (return EBP)
         // mov return address into metadata (return address)
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-8", Eax)),
             Source::Register(Esp),
         ))); // store the return ESP
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-12", Eax)),
             Source::Register(Ebp),
         ))); // store the return EBP
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-16", Eax)),
             Source::Register(Ebx),
         ))); // store the return Instruction address
 
         // Load the address of the coroutine into EBP (the base of the stack frame)
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Ebp),
             Source::Register(Eax),
         )));
 
         // Load the coroutines current stack location into ESP
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Esp),
             Source::Memory(format!("{}-20", Ebp)),
         )));
 
         // Re/enter the coroutine
-        output.push(Assembly::Instr(Instr::Jmp(format!(
+        output.push(Instr(Jmp(format!(
             "{}",
             Source::Memory(format!("{}-4", Ebp))
         ))));
@@ -383,43 +390,45 @@ impl Compiler {
 
     fn runtime_yield_return(output: &mut Vec<Assembly>) {
         use Register::*;
+        use Instruction::*;
+        use Assembly::*;
         /*
          * Input:
          * EAX - value being returned (if any)
          * EBX - re-entry address
          */
         // When in a coroutine, return to the calling coroutine
-        output.push(Assembly::Label("runtime_yield_return".into()));
+        output.push(Label("runtime_yield_return".into()));
 
         // Store the current ESP into metadata
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-20", Ebp)),
             Source::Register(Esp),
         )));
         // Store the re-entry address into metadata
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Memory(format!("{}-4", Ebp)),
             Source::Register(Ebx),
         )));
 
         // Get the return ESP from metadata
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Esp),
             Source::Memory(format!("{}-8", Ebp)),
         )));
         // Get the return address from metadata
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Ebx),
             Source::Memory(format!("{}-16", Ebp)),
         )));
         // Get the return EBP from metadata
-        output.push(Assembly::Instr(Instr::Mov(
+        output.push(Instr(Mov(
             Location::Register(Ebp),
             Source::Memory(format!("{}-12", Ebp)),
         )));
 
         // jmp to the return address
-        output.push(Assembly::Instr(Instr::Jmp(format!(
+        output.push(Instr(Jmp(format!(
             "{}",
             Source::Register(Ebx)
         ))));
@@ -432,11 +441,13 @@ impl Compiler {
         output: &mut Vec<Assembly>,
     ) {
         use Register::*;
+        use Instruction::*;
+        use Assembly::*;
 
         println!("Compile @ {:?}", ast);
         match ast {
             super::Node::Integer(i) => {
-                output.push(Assembly::Instr(Instr::Mov(
+                output.push(Instr(Mov(
                     Location::Register(Eax),
                     Source::Integer(*i),
                 )));
@@ -451,7 +462,7 @@ impl Compiler {
                         .expect("CRITICAL: identifier not found in var table");
                     var.2
                 };
-                output.push(Assembly::Instr(Instr::Mov(
+                output.push(Instr(Mov(
                     Location::Register(Eax),
                     Source::Memory(format!("ebp-{}", id_offset)),
                 )));
@@ -459,14 +470,14 @@ impl Compiler {
             super::Node::Mul(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
-                output.push(Assembly::Instr(Instr::Push(Eax)));
+                output.push(Instr(Push(Eax)));
                 let right = r.as_ref();
                 Compiler::traverse(right, current_func, function_table, output);
-                output.push(Assembly::Instr(Instr::Push(Eax)));
+                output.push(Instr(Push(Eax)));
 
-                output.push(Assembly::Instr(Instr::Pop(Ebx)));
-                output.push(Assembly::Instr(Instr::Pop(Eax)));
-                output.push(Assembly::Instr(Instr::IMul(
+                output.push(Instr(Pop(Ebx)));
+                output.push(Instr(Pop(Eax)));
+                output.push(Instr(IMul(
                     Eax,
                     Location::Register(Ebx),
                 )));
@@ -474,14 +485,14 @@ impl Compiler {
             super::Node::Add(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
-                output.push(Assembly::Instr(Instr::Push(Eax)));
+                output.push(Instr(Push(Eax)));
                 let right = r.as_ref();
                 Compiler::traverse(right, current_func, function_table, output);
-                output.push(Assembly::Instr(Instr::Push(Eax)));
+                output.push(Instr(Push(Eax)));
 
-                output.push(Assembly::Instr(Instr::Pop(Ebx)));
-                output.push(Assembly::Instr(Instr::Pop(Eax)));
-                output.push(Assembly::Instr(Instr::Add(
+                output.push(Instr(Pop(Ebx)));
+                output.push(Instr(Pop(Eax)));
+                output.push(Instr(Add(
                     Eax,
                     Source::Register(Ebx),
                 )));
@@ -497,22 +508,22 @@ impl Compiler {
                     var.2
                 };
                 Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Assembly::Instr(Instr::Mov(
+                output.push(Instr(Mov(
                     Location::Memory(format!("ebp-{}", id_offset)),
                     Source::Register(Eax),
                 )));
             }
             super::Node::FunctionDef(fn_name, params, stmts) => {
-                output.push(Assembly::Label(fn_name.clone()));
+                output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
-                output.push(Assembly::Instr(Instr::Push(Ebp)));
-                output.push(Assembly::Instr(Instr::Mov(
+                output.push(Instr(Push(Ebp)));
+                output.push(Instr(Mov(
                     Location::Register(Ebp),
                     Source::Register(Esp),
                 )));
                 let total_offset = function_table.funcs[fn_name].vars.vars.last().unwrap().2;
-                output.push(Assembly::Instr(Instr::Sub(
+                output.push(Instr(Sub(
                     Esp,
                     Source::Integer(total_offset),
                 )));
@@ -530,7 +541,7 @@ impl Compiler {
                         .find(|(id, _, _)| id == param)
                         .unwrap()
                         .2;
-                    output.push(Assembly::Instr(Instr::Mov(
+                    output.push(Instr(Mov(
                         Location::Memory(format!("ebp-{}", param_offset)),
                         Source::Register(*reg),
                     )));
@@ -541,22 +552,22 @@ impl Compiler {
                 }
 
                 // Clean up frame before exiting program
-                output.push(Assembly::Instr(Instr::Mov(
+                output.push(Instr(Mov(
                     Location::Register(Esp),
                     Source::Register(Ebp),
                 )));
-                output.push(Assembly::Instr(Instr::Pop(Ebp)));
+                output.push(Instr(Pop(Ebp)));
 
-                output.push(Assembly::Instr(Instr::Ret));
+                output.push(Instr(Ret));
             }
             super::Node::CoroutineDef(fn_name, stmts) => {
-                output.push(Assembly::Label(fn_name.clone()));
+                output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
                 for s in stmts.iter() {
                     Compiler::traverse(s, fn_name, function_table, output);
                 }
-                output.push(Assembly::Instr(Instr::Jmp("runtime_yield_return".into())))
+                output.push(Instr(Jmp("runtime_yield_return".into())))
             }
             super::Node::Module(functions, coroutines) => {
                 for f in functions.iter() {
@@ -571,11 +582,11 @@ impl Compiler {
                 None => (),
             },
             super::Node::CoroutineInit(id) => {
-                output.push(Assembly::Instr(Instr::Lea(
+                output.push(Instr(Lea(
                     Location::Register(Eax),
                     Source::Memory(format!("{}", id)),
                 )));
-                output.push(Assembly::Instr(Instr::Call(
+                output.push(Instr(Call(
                     "runtime_init_coroutine".into(),
                 )))
             }
@@ -588,14 +599,14 @@ impl Compiler {
                     .and_modify(|fi| fi.label_count += 1);
                 let ret_lbl = format!(".lbl_{}", function_table.funcs[current_func].label_count);
 
-                output.push(Assembly::Instr(Instr::Mov(
+                output.push(Instr(Mov(
                     Location::Register(Ebx),
                     Source::Address(ret_lbl.clone()),
                 )));
-                output.push(Assembly::Instr(Instr::Jmp(
+                output.push(Instr(Jmp(
                     "runtime_yield_into_coroutine".into(),
                 )));
-                output.push(Assembly::Label(ret_lbl.clone()));
+                output.push(Label(ret_lbl.clone()));
             }
             super::Node::YieldReturn(exp) => {
                 if let Some(exp) = exp {
@@ -608,19 +619,19 @@ impl Compiler {
                     .and_modify(|fi| fi.label_count += 1);
                 let ret_lbl = format!(".lbl_{}", function_table.funcs[current_func].label_count);
 
-                output.push(Assembly::Instr(Instr::Mov(
+                output.push(Instr(Mov(
                     Location::Register(Ebx),
                     Source::Address(ret_lbl.clone()),
                 )));
-                output.push(Assembly::Instr(Instr::Jmp("runtime_yield_return".into())));
-                output.push(Assembly::Label(ret_lbl.clone()));
+                output.push(Instr(Jmp("runtime_yield_return".into())));
+                output.push(Label(ret_lbl.clone()));
             }
             super::Node::Println(exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Assembly::Instr(Instr::Print(Source::Register(
+                output.push(Instr(Print(Source::Register(
                     Eax,
                 ))));
-                output.push(Assembly::Instr(Instr::Newline));
+                output.push(Instr(Newline));
             }
             super::Node::FunctionCall(fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
@@ -646,12 +657,12 @@ impl Compiler {
                 }
                 for param in params.iter() {
                     Compiler::traverse(param, current_func, function_table, output);
-                    output.push(Assembly::Instr(Instr::Push(Eax)));
+                    output.push(Instr(Push(Eax)));
                 }
                 for reg in param_registers.iter().take(params.len()).rev() {
-                    output.push(Assembly::Instr(Instr::Pop(*reg)));
+                    output.push(Instr(Pop(*reg)));
                 }
-                output.push(Assembly::Instr(Instr::Call(fn_name.clone())));
+                output.push(Instr(Call(fn_name.clone())));
             }
             node => println!("Expected an operator, found {:?}", node),
         }
