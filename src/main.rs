@@ -770,7 +770,7 @@ pub mod assembly {
 
             Program::create_base(&mut code);
 
-            Program::coroutine_init("next_stack_addr".into(), 2 * 1024, &mut code);
+            Program::coroutine_init("next_stack_addr", "stack_size", &mut code);
             Program::runtime_yield_into_coroutine(&mut code);
             Program::runtime_yield_return(&mut code);
 
@@ -813,7 +813,7 @@ pub mod assembly {
             )));
             output.push(Assembly::Instr(Instr::Sub(
                 Register::Eax,
-                Source::Integer(4096),
+                Source::Memory("stack_size".into()),
             )));
             output.push(Assembly::Instr(Instr::Mov(
                 Location::Memory("next_stack_addr".into()),
@@ -833,7 +833,7 @@ pub mod assembly {
         }
 
         /// Writes the function which will handle initializing a new coroutine
-        fn coroutine_init(ns: String, sinc: i32, output: &mut Vec<Assembly>) {
+        fn coroutine_init(ns: &str, sinc: &str, output: &mut Vec<Assembly>) {
             /*
              * Input:
              * EAX - address of the coroutine's instructions
@@ -872,7 +872,7 @@ pub mod assembly {
             // Create coroutine's stack
             output.push(Assembly::Instr(Instr::Mov(
                 Location::Register(Register::Esp),
-                Source::Memory(ns.clone()),
+                Source::Memory(ns.into()),
             )));
 
             output.push(Assembly::Instr(Instr::Mov(
@@ -909,10 +909,10 @@ pub mod assembly {
 
             output.push(Assembly::Instr(Instr::Sub(
                 Register::Esp,
-                Source::Integer(sinc),
+                Source::Memory(sinc.into()),
             )));
             output.push(Assembly::Instr(Instr::Mov(
-                Location::Memory(ns.clone()),
+                Location::Memory(ns.into()),
                 Source::Register(Register::Esp),
             )));
 
