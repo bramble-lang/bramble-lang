@@ -1,0 +1,481 @@
+// AST - a type(s) which is used to construct an AST representing the logic of the
+// program
+// Each type of node represents an expression and the only requirement is that at the
+// end of computing an expression its result is in EAX
+use crate::Token;
+
+#[derive(Debug)]
+pub enum Node {
+    Integer(i32),
+    Identifier(String),
+    Mul(Box<Node>, Box<Node>),
+    Add(Box<Node>, Box<Node>),
+    Bind(String, Box<Node>),
+    Return(Option<Box<Node>>),
+    FunctionDef(String, Vec<String>, Vec<Node>),
+    FunctionCall(String, Vec<Node>),
+    CoroutineDef(String, Vec<Node>),
+    CoroutineInit(String),
+    Yield(Box<Node>),
+    YieldReturn(Option<Box<Node>>),
+    Module(Vec<Node>, Vec<Node>),
+    Print(Box<Node>),
+    Println(Box<Node>),
+}
+
+type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
+impl Node {
+    /*
+        Grammar
+        IDENTIFIER := A-Za-z*
+        NUMBER := 0-9*
+        FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION] RPAREN
+        YIELD := yield IDENTIFIER
+        FACTOR := FUNCTION_CALL | YIELD | NUMBER | IDENTIFIER
+        TERM := FACTOR [* TERM]
+        EXPRESSION :=  TERM [+ EXPRESSION]
+        INIT_CO := init IDENTIFIER
+        BIND := IDENTIFIER := (EXPRESSION|INIT_CO)
+        PRINTLN := println EXPRESSION ;
+        RETURN := return [EXPRESSION] SEMICOLON
+        YIELD_RETURN := yield return [EXPRESSION] SEMICOLON
+        STATEMENT := [BIND] SEMICOLON
+        BLOCK := STATEMENT*
+        COBLOCK := [STATEMENT | YIELD_RETURN]*
+        FUNCTION := fn IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE BLOCK RETURN RBRACE
+        COROUTINE := co IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE COBLOCK RETURN RBRACE
+        MODULES := [FUNCTION|COROUTINE]*
+
+        tokenize - takes a string of text and converts it to a string of tokens
+        parse - takes a string of tokens and converts it into an AST
+        compile - takes an AST and converts it to assembly
+    */
+    pub fn parse(tokens: Vec<Token>) -> Option<Node> {
+        let mut iter = tokens.iter().peekable();
+        //Node::function(&mut iter)
+        Node::module(&mut iter)
+    }
+
+    fn module(iter: &mut TokenIter) -> Option<Node> {
+        let mut functions = vec![];
+        let mut coroutines = vec![];
+
+        while iter.peek().is_some() {
+            match Node::function_def(iter) {
+                Some(f) => functions.push(f),
+                None => match Node::coroutine_def(iter) {
+                    Some(co) => coroutines.push(co),
+                    None => break,
+                },
+            }
+        }
+
+        if functions.len() > 0 {
+            Some(Node::Module(functions, coroutines))
+        } else {
+            None
+        }
+    }
+
+    fn function_def(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::FunctionDef) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Identifier(id)) => {
+                        iter.next();
+
+                        let params = Node::fn_def_params(iter);
+
+                        match iter.peek() {
+                            Some(Token::LBrace) => {
+                                iter.next();
+                                let mut stmts = Node::block(iter);
+
+                                match Node::return_stmt(iter) {
+                                    Some(ret) => stmts.push(ret),
+                                    None => panic!("Function must end with a return statement"),
+                                }
+
+                                match iter.peek() {
+                                    Some(Token::RBrace) => {
+                                        iter.next();
+                                    }
+                                    _ => panic!("Expected } at end of function definition"),
+                                }
+                                Some(Node::FunctionDef(id.clone(), params, stmts))
+                            }
+                            _ => panic!("Expected { after function declaration"),
+                        }
+                    }
+                    _ => panic!("Expected function name after fn"),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn coroutine_def(iter: &mut TokenIter) -> Option<Node> {
+        println!("Parser @ coroutine_def");
+        match iter.peek() {
+            Some(Token::CoroutineDef) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Identifier(id)) => {
+                        iter.next();
+
+                        let _params = Node::fn_def_params(iter);
+
+                        match iter.peek() {
+                            Some(Token::LBrace) => {
+                                iter.next();
+                                let mut stmts = Node::co_block(iter);
+
+                                match Node::return_stmt(iter) {
+                                    Some(ret) => stmts.push(ret),
+                                    None => panic!("Coroutine must end with a return statement"),
+                                }
+
+                                match iter.peek() {
+                                    Some(Token::RBrace) => {
+                                        iter.next();
+                                    }
+                                    _ => panic!("Expected } at end of function definition"),
+                                }
+                                Some(Node::CoroutineDef(id.clone(), stmts))
+                            }
+                            _ => panic!("Expected { after function declaration"),
+                        }
+                    }
+                    _ => panic!("Expected function name after fn"),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn fn_def_params(iter: &mut TokenIter) -> Vec<String> {
+        match iter.peek() {
+            Some(Token::LParen) => {
+                iter.next();
+            }
+            _ => panic!("Parser: expected an ( after function name in function definition"),
+        }
+
+        let mut params = vec![];
+
+        while let Some(param) = Node::identifier(iter) {
+            match param {
+                Node::Identifier(id) => {
+                    params.push(id);
+                    match iter.peek() {
+                        Some(Token::Comma) => {
+                            iter.next();
+                        }
+                        Some(Token::RParen) => break,
+                        Some(t) => panic!("Unexpected token in function definition: {:?}", t),
+                        None => panic!("Parser: unexpected EOF"),
+                    };
+                }
+                _ => panic!("Parser: invalid parameter declaration in function definition"),
+            }
+        }
+
+        match iter.peek() {
+            Some(Token::RParen) => {
+                iter.next();
+            }
+            _ => panic!("Parser: expected )"),
+        }
+
+        params
+    }
+
+    fn block(iter: &mut TokenIter) -> Vec<Node> {
+        let mut stmts = vec![];
+        while iter.peek().is_some() {
+            match Node::statement(iter) {
+                Some(s) => stmts.push(s),
+                None => break,
+            }
+        }
+        stmts
+    }
+
+    fn co_block(iter: &mut TokenIter) -> Vec<Node> {
+        let mut stmts = vec![];
+        while iter.peek().is_some() {
+            match Node::statement(iter) {
+                Some(s) => stmts.push(s),
+                None => match Node::yield_return_stmt(iter) {
+                    Some(s) => stmts.push(s),
+                    None => break,
+                },
+            }
+        }
+        stmts
+    }
+
+    fn return_stmt(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::Return) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match iter.peek() {
+                    Some(Token::Semicolon) => iter.next(),
+                    _ => panic!("Expected ; after return statement"),
+                };
+                match exp {
+                    Some(exp) => Some(Node::Return(Some(Box::new(exp)))),
+                    None => Some(Node::Return(None)),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn yield_return_stmt(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::YieldReturn) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match iter.peek() {
+                    Some(Token::Semicolon) => iter.next(),
+                    _ => panic!("Expected ; after return statement"),
+                };
+                match exp {
+                    Some(exp) => Some(Node::YieldReturn(Some(Box::new(exp)))),
+                    None => Some(Node::YieldReturn(None)),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn statement(iter: &mut TokenIter) -> Option<Node> {
+        let stm = match Node::bind(iter) {
+            Some(b) => Some(b),
+            None => match Node::println_stmt(iter) {
+                Some(p) => Some(p),
+                _ => None,
+            },
+        };
+
+        if stm.is_some() {
+            match iter.peek() {
+                Some(Token::Semicolon) => {
+                    iter.next();
+                }
+                _ => panic!(format!(
+                    "Exected ; after statement, found {:?}",
+                    iter.peek()
+                )),
+            }
+        }
+
+        stm
+    }
+
+    fn println_stmt(iter: &mut TokenIter) -> Option<Node> {
+        let tk = iter.peek();
+        println!("Parser @ {:?}", tk);
+        match tk {
+            Some(Token::Println) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match exp {
+                    Some(exp) => Some(Node::Println(Box::new(exp))),
+                    None => panic!("Parser: Expected expression after println"),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn bind(iter: &mut TokenIter) -> Option<Node> {
+        match Node::identifier(iter) {
+            Some(Node::Identifier(id)) => {
+                println!("Parse: Binding {:?}", id);
+                let pt = iter.peek();
+                println!("peek: {:?}", pt);
+                match pt {
+                    Some(Token::Assign) => {
+                        iter.next();
+                        match iter.peek() {
+                            Some(Token::Init) => {
+                                let co_init =
+                                    Node::co_init(iter).expect("Parser: Invalid coroutine init");
+                                Some(Node::Bind(id, Box::new(co_init)))
+                            }
+                            _ => {
+                                let exp = Node::expression(iter).expect(&format!(
+                                    "Expected an expression or coroutine init after :=, found {:?}",
+                                    iter.peek()
+                                ));
+                                Some(Node::Bind(id, Box::new(exp)))
+                            }
+                        }
+                    }
+                    _ => {
+                        println!("Expected := after identifer in bind statement");
+                        None
+                    }
+                }
+            }
+            Some(_) => panic!("Parser: invalid LHS in bind expresion"),
+            None => None,
+        }
+    }
+
+    fn co_init(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::Init) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Identifier(id)) => {
+                        iter.next();
+                        Some(Node::CoroutineInit(id.clone()))
+                    }
+                    _ => {
+                        panic!("Parser: expected identifier after init");
+                    }
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn expression(iter: &mut TokenIter) -> Option<Node> {
+        match Node::term(iter) {
+            Some(n) => match iter.peek() {
+                Some(Token::Add) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after +");
+                    Some(Node::Add(Box::new(n), Box::new(n2)))
+                }
+                _ => Some(n),
+            },
+            None => None,
+        }
+    }
+
+    fn term(iter: &mut TokenIter) -> Option<Node> {
+        match Node::factor(iter) {
+            Some(n) => match iter.peek() {
+                Some(Token::Mul) => {
+                    iter.next();
+                    let n2 = Node::term(iter).expect("a valid term after *");
+                    Some(Node::Mul(Box::new(n), Box::new(n2)))
+                }
+                _ => Some(n),
+            },
+            None => None,
+        }
+    }
+
+    fn factor(iter: &mut TokenIter) -> Option<Node> {
+        match Node::number(iter) {
+            Some(n) => Some(n),
+            None => match Node::function_call_or_variable(iter) {
+                Some(n) => Some(n),
+                None => match Node::co_yield(iter) {
+                    Some(n) => Some(n),
+                    None => None,
+                },
+            },
+        }
+    }
+
+    fn function_call_or_variable(iter: &mut TokenIter) -> Option<Node> {
+        println!("Function call");
+        match Node::identifier(iter) {
+            Some(Node::Identifier(id)) => match Node::fn_call_params(iter) {
+                Some(params) => {
+                    // this is a function call
+                    Some(Node::FunctionCall(id, params))
+                }
+                _ => Some(Node::Identifier(id)),
+            },
+            Some(_) => panic!("Parser: expected identifier"),
+            None => None,
+        }
+    }
+
+    /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
+    fn fn_call_params(iter: &mut TokenIter) -> Option<Vec<Node>> {
+        println!("Parser @ func call params");
+        match iter.peek() {
+            Some(Token::LParen) => {
+                // this is a function call
+                iter.next();
+
+                let mut params = vec![];
+                while let Some(param) = Node::expression(iter) {
+                    match param {
+                        exp => {
+                            params.push(exp);
+                            match iter.peek() {
+                                Some(Token::Comma) => {
+                                    iter.next();
+                                }
+                                Some(Token::RParen) => break,
+                                Some(t) => panic!("Unexpected token in function call: {:?}", t),
+                                None => panic!("Parser: unexpected EOF"),
+                            };
+                        }
+                    }
+                }
+
+                match iter.peek() {
+                    Some(Token::RParen) => {
+                        iter.next();
+                    }
+                    _ => panic!("Parser: expected ) after function call"),
+                }
+                Some(params)
+            }
+            _ => None,
+        }
+    }
+
+    fn co_yield(iter: &mut TokenIter) -> Option<Node> {
+        println!("Identifier");
+        match iter.peek() {
+            Some(Token::Yield) => {
+                iter.next();
+                match Node::identifier(iter) {
+                    Some(id) => Some(Node::Yield(Box::new(id))),
+                    _ => panic!("Parser: expected an identifier after yield"),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn identifier(iter: &mut TokenIter) -> Option<Node> {
+        println!("Identifier");
+        match iter.peek() {
+            Some(token) => match token {
+                Token::Identifier(id) => {
+                    iter.next();
+                    Some(Node::Identifier(id.clone()))
+                }
+                _ => None,
+            },
+            None => None,
+        }
+    }
+
+    fn number(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(token) => match token {
+                Token::Integer(i) => {
+                    iter.next();
+                    Some(Node::Integer(*i))
+                }
+                _ => None,
+            },
+            None => None,
+        }
+    }
+}
