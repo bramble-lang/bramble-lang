@@ -6,7 +6,7 @@ mod parser;
 mod type_checker;
 
 use compiler::*;
-use lexer::*;
+use lexer::Token;
 use parser::*;
 use type_checker::*;
 
@@ -29,7 +29,7 @@ fn main() {
         ";
 
     println!("Code: {}", text);
-    let tokens = Token::tokenize(&text);
+    let tokens = lexer::tokenize(&text);
     println!("Tokens: {:?}", tokens);
     let tokens = tokens
         .into_iter()
