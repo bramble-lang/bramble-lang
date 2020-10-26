@@ -395,6 +395,11 @@ impl Compiler {
         use Register::*;
 
         println!("Compile @ {:?}", ast);
+
+        // The registers used for passing function parameters, in the order that parameters are
+        // assigned to registers
+        let param_registers = [Eax, Ebx, Ecx, Edx];
+
         match ast {
             super::Node::Integer(i) => {
                 output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
@@ -464,7 +469,6 @@ impl Compiler {
                 output.push(Sub(Esp, Source::Integer(total_offset)));
 
                 // Move function parameters from registers into the stack frame
-                let param_registers = [Eax, Ebx, Ecx, Edx];
                 if params.len() > param_registers.len() {
                     panic!("Compiler: too many parameters in function definition");
                 }
@@ -577,7 +581,6 @@ impl Compiler {
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
-                let param_registers = [Eax, Ebx, Ecx, Edx];
                 if params.len() > param_registers.len() {
                     panic!("Compiler: too many parameters being passed to function");
                 }
