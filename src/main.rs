@@ -34,9 +34,12 @@ fn main() {
     println!("FuncTable: {:?}", func_table);
 
     let program = assembly::Program::compile(&ast, &mut func_table);
-    let mut output = std::fs::File::create("/tmp/output.asm").expect("Failed to create output file");
+    let mut output =
+        std::fs::File::create("./target/output.asm").expect("Failed to create output file");
     //let mut output = std::io::stdout();
-    program.print(&mut output).expect("Failed to write assembly");
+    program
+        .print(&mut output)
+        .expect("Failed to write assembly");
 }
 
 // Token - a type which captures the different types of tokens and which is output
@@ -719,10 +722,16 @@ pub mod assembly {
                             Instr::Mov(l, Source::Memory(s)) => {
                                 writeln!(output, "mov {}, DWORD [{}]", l, s)?
                             }
-                            Instr::Mov(l, Source::Address(s)) => writeln!(output, "mov {}, {}", l, s)?,
-                            Instr::Mov(l, Source::Integer(s)) => writeln!(output, "mov {}, DWORD {}", l, s)?,
-                            Instr::Mov(l, Source::Register(s)) => writeln!(output, "mov {}, {}", l, s)?,
-                            Instr::Lea(l, s) => println!("lea {}, {}", l, s),
+                            Instr::Mov(l, Source::Address(s)) => {
+                                writeln!(output, "mov {}, {}", l, s)?
+                            }
+                            Instr::Mov(l, Source::Integer(s)) => {
+                                writeln!(output, "mov {}, DWORD {}", l, s)?
+                            }
+                            Instr::Mov(l, Source::Register(s)) => {
+                                writeln!(output, "mov {}, {}", l, s)?
+                            }
+                            Instr::Lea(l, s) => writeln!(output, "lea {}, {}", l, s)?,
                             Instr::Push(reg) => {
                                 writeln!(output, "push {}", reg)?;
                             }
@@ -749,13 +758,10 @@ pub mod assembly {
                             Instr::Newline => {
                                 writeln!(output, "NEWLINE")?;
                             }
-                            _ => {
-                                writeln!(output, "{:?}", inst)?;
-                            }
                         }
                     }
                 }
-            };
+            }
             Ok(())
         }
 
