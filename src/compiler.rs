@@ -1,9 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::FunctionTable;
-use crate::Node;
-
 #[derive(Debug, Copy, Clone)]
 enum Register {
     Eax,
