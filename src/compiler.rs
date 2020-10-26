@@ -213,12 +213,10 @@ impl Compiler {
 
         output.push(Mov(Location::Register(Eax), Source::Register(Esp)));
         output.push(Sub(Eax, Source::Memory("stack_size".into())));
-        output.push(
-            Mov(
-                Location::Memory("next_stack_addr".into()),
-                Source::Register(Eax),
-            ),
-        );
+        output.push(Mov(
+            Location::Memory("next_stack_addr".into()),
+            Source::Register(Eax),
+        ));
 
         // Call main function
         output.push(Call("my_main".into()));
@@ -268,28 +266,31 @@ impl Compiler {
         // Create coroutine's stack
         output.push(Mov(Location::Register(Esp), Source::Memory(ns.into())));
 
-        output.push(
-            Mov(
-                Location::Memory(format!("{}-4", Esp)),
-                Source::Register(Eax),
-            ),
-        ); // Store the coroutine's current next instruction to execute
-        output.push(Mov(Location::Memory(format!("{}-8", Esp)), Source::Integer(0))); // store the return ESP
-        output.push(Mov(Location::Memory(format!("{}-12", Esp)), Source::Integer(0))); // store the return EBP
-        output.push(Mov(Location::Memory(format!("{}-16", Esp)), Source::Integer(0))); // store the return Instruction address
+        output.push(Mov(
+            Location::Memory(format!("{}-4", Esp)),
+            Source::Register(Eax),
+        )); // Store the coroutine's current next instruction to execute
+        output.push(Mov(
+            Location::Memory(format!("{}-8", Esp)),
+            Source::Integer(0),
+        )); // store the return ESP
+        output.push(Mov(
+            Location::Memory(format!("{}-12", Esp)),
+            Source::Integer(0),
+        )); // store the return EBP
+        output.push(Mov(
+            Location::Memory(format!("{}-16", Esp)),
+            Source::Integer(0),
+        )); // store the return Instruction address
 
-        output.push(
-            Lea(
-                Location::Register(Eax),
-                Source::Memory(format!("{}-20", Esp)),
-            ),
-        );
-        output.push(
-            Mov(
-                Location::Memory(format!("{}-20", Esp)),
-                Source::Register(Eax),
-            ),
-        );
+        output.push(Lea(
+            Location::Register(Eax),
+            Source::Memory(format!("{}-20", Esp)),
+        ));
+        output.push(Mov(
+            Location::Memory(format!("{}-20", Esp)),
+            Source::Register(Eax),
+        ));
 
         // Move satck address into EAX for return
         output.push(Mov(Location::Register(Eax), Source::Register(Esp)));
@@ -316,35 +317,27 @@ impl Compiler {
         // mov ESP into metadata (return ESP)
         // mov EBP into metadata (return EBP)
         // mov return address into metadata (return address)
-        output.push(
-            Mov(
-                Location::Memory(format!("{}-8", Eax)),
-                Source::Register(Esp),
-            ),
-        ); // store the return ESP
-        output.push(
-            Mov(
-                Location::Memory(format!("{}-12", Eax)),
-                Source::Register(Ebp),
-            ),
-        ); // store the return EBP
-        output.push(
-            Mov(
-                Location::Memory(format!("{}-16", Eax)),
-                Source::Register(Ebx),
-            ),
-        ); // store the return Instruction address
+        output.push(Mov(
+            Location::Memory(format!("{}-8", Eax)),
+            Source::Register(Esp),
+        )); // store the return ESP
+        output.push(Mov(
+            Location::Memory(format!("{}-12", Eax)),
+            Source::Register(Ebp),
+        )); // store the return EBP
+        output.push(Mov(
+            Location::Memory(format!("{}-16", Eax)),
+            Source::Register(Ebx),
+        )); // store the return Instruction address
 
         // Load the address of the coroutine into EBP (the base of the stack frame)
         output.push(Mov(Location::Register(Ebp), Source::Register(Eax)));
 
         // Load the coroutines current stack location into ESP
-        output.push(
-            Mov(
-                Location::Register(Esp),
-                Source::Memory(format!("{}-20", Ebp)),
-            ),
-        );
+        output.push(Mov(
+            Location::Register(Esp),
+            Source::Memory(format!("{}-20", Ebp)),
+        ));
 
         // Re/enter the coroutine
         output.push(Jmp(format!("{}", Source::Memory(format!("{}-4", Ebp)))));
@@ -362,41 +355,31 @@ impl Compiler {
         output.push(Label("runtime_yield_return".into()));
 
         // Store the current ESP into metadata
-        output.push(
-            Mov(
-                Location::Memory(format!("{}-20", Ebp)),
-                Source::Register(Esp),
-            ),
-        );
+        output.push(Mov(
+            Location::Memory(format!("{}-20", Ebp)),
+            Source::Register(Esp),
+        ));
         // Store the re-entry address into metadata
-        output.push(
-            Mov(
-                Location::Memory(format!("{}-4", Ebp)),
-                Source::Register(Ebx),
-            ),
-        );
+        output.push(Mov(
+            Location::Memory(format!("{}-4", Ebp)),
+            Source::Register(Ebx),
+        ));
 
         // Get the return ESP from metadata
-        output.push(
-            Mov(
-                Location::Register(Esp),
-                Source::Memory(format!("{}-8", Ebp)),
-            ),
-        );
+        output.push(Mov(
+            Location::Register(Esp),
+            Source::Memory(format!("{}-8", Ebp)),
+        ));
         // Get the return address from metadata
-        output.push(
-            Mov(
-                Location::Register(Ebx),
-                Source::Memory(format!("{}-16", Ebp)),
-            ),
-        );
+        output.push(Mov(
+            Location::Register(Ebx),
+            Source::Memory(format!("{}-16", Ebp)),
+        ));
         // Get the return EBP from metadata
-        output.push(
-            Mov(
-                Location::Register(Ebp),
-                Source::Memory(format!("{}-12", Ebp)),
-            ),
-        );
+        output.push(Mov(
+            Location::Register(Ebp),
+            Source::Memory(format!("{}-12", Ebp)),
+        ));
 
         // jmp to the return address
         output.push(Jmp(format!("{}", Source::Register(Ebx))));
@@ -426,12 +409,10 @@ impl Compiler {
                         .expect("CRITICAL: identifier not found in var table");
                     var.2
                 };
-                output.push(
-                    Mov(
-                        Location::Register(Eax),
-                        Source::Memory(format!("ebp-{}", id_offset)),
-                    ),
-                );
+                output.push(Mov(
+                    Location::Register(Eax),
+                    Source::Memory(format!("ebp-{}", id_offset)),
+                ));
             }
             super::Node::Mul(l, r) => {
                 let left = l.as_ref();
@@ -468,12 +449,10 @@ impl Compiler {
                     var.2
                 };
                 Compiler::traverse(exp, current_func, function_table, output);
-                output.push(
-                    Mov(
-                        Location::Memory(format!("ebp-{}", id_offset)),
-                        Source::Register(Eax),
-                    ),
-                );
+                output.push(Mov(
+                    Location::Memory(format!("ebp-{}", id_offset)),
+                    Source::Register(Eax),
+                ));
             }
             super::Node::FunctionDef(fn_name, params, stmts) => {
                 output.push(Label(fn_name.clone()));
@@ -497,12 +476,10 @@ impl Compiler {
                         .find(|(id, _, _)| id == param)
                         .unwrap()
                         .2;
-                    output.push(
-                        Mov(
-                            Location::Memory(format!("ebp-{}", param_offset)),
-                            Source::Register(*reg),
-                        ),
-                    );
+                    output.push(Mov(
+                        Location::Memory(format!("ebp-{}", param_offset)),
+                        Source::Register(*reg),
+                    ));
                 }
 
                 for s in stmts.iter() {
@@ -537,7 +514,10 @@ impl Compiler {
                 None => (),
             },
             super::Node::CoroutineInit(id) => {
-                output.push(Lea(Location::Register(Eax), Source::Memory(format!("{}", id))));
+                output.push(Lea(
+                    Location::Register(Eax),
+                    Source::Memory(format!("{}", id)),
+                ));
                 output.push(Call("runtime_init_coroutine".into()))
             }
             super::Node::Yield(id) => {
@@ -549,7 +529,10 @@ impl Compiler {
                     .and_modify(|fi| fi.label_count += 1);
                 let ret_lbl = format!(".lbl_{}", function_table.funcs[current_func].label_count);
 
-                output.push(Mov(Location::Register(Ebx), Source::Address(ret_lbl.clone())));
+                output.push(Mov(
+                    Location::Register(Ebx),
+                    Source::Address(ret_lbl.clone()),
+                ));
                 output.push(Jmp("runtime_yield_into_coroutine".into()));
                 output.push(Label(ret_lbl.clone()));
             }
@@ -564,7 +547,10 @@ impl Compiler {
                     .and_modify(|fi| fi.label_count += 1);
                 let ret_lbl = format!(".lbl_{}", function_table.funcs[current_func].label_count);
 
-                output.push(Mov(Location::Register(Ebx), Source::Address(ret_lbl.clone())));
+                output.push(Mov(
+                    Location::Register(Ebx),
+                    Source::Address(ret_lbl.clone()),
+                ));
                 output.push(Jmp("runtime_yield_return".into()));
                 output.push(Label(ret_lbl.clone()));
             }
