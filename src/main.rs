@@ -34,7 +34,9 @@ fn main() {
     println!("FuncTable: {:?}", func_table);
 
     let program = assembly::Program::compile(&ast, &mut func_table);
-    program.print();
+    let mut output = std::fs::File::create("/tmp/output.asm").expect("Failed to create output file");
+    //let mut output = std::io::stdout();
+    program.print(&mut output).expect("Failed to write assembly");
 }
 
 // Token - a type which captures the different types of tokens and which is output
@@ -690,70 +692,71 @@ pub mod assembly {
     }
 
     impl Program {
-        pub fn print(&self) {
+        pub fn print(&self, output: &mut dyn std::io::Write) -> std::io::Result<()> {
             for inst in self.code.iter() {
                 match inst {
                     Assembly::Include(include) => {
-                        println!("%include \"{}\"", include);
+                        writeln!(output, "%include \"{}\"", include)?;
                     }
                     Assembly::Section(section) => {
-                        println!("\nsection {}", section);
+                        writeln!(output, "\nsection {}", section)?;
                     }
                     Assembly::Global(global) => {
-                        println!("global {}", global);
+                        writeln!(output, "global {}", global)?;
                     }
                     Assembly::Data(label, value) => {
-                        println!("{}: dd {}", label, value);
+                        writeln!(output, "{}: dd {}", label, value)?;
                     }
                     Assembly::Label(label) => {
                         if !label.starts_with(".") {
-                            println!();
+                            writeln!(output)?;
                         }
-                        println!("{}:", label);
+                        writeln!(output, "{}:", label)?;
                     }
                     Assembly::Instr(inst) => {
-                        print!("    ");
+                        write!(output, "    ")?;
                         match inst {
                             Instr::Mov(l, Source::Memory(s)) => {
-                                println!("mov {}, DWORD [{}]", l, s)
+                                writeln!(output, "mov {}, DWORD [{}]", l, s)?
                             }
-                            Instr::Mov(l, Source::Address(s)) => println!("mov {}, {}", l, s),
-                            Instr::Mov(l, Source::Integer(s)) => println!("mov {}, DWORD {}", l, s),
-                            Instr::Mov(l, Source::Register(s)) => println!("mov {}, {}", l, s),
+                            Instr::Mov(l, Source::Address(s)) => writeln!(output, "mov {}, {}", l, s)?,
+                            Instr::Mov(l, Source::Integer(s)) => writeln!(output, "mov {}, DWORD {}", l, s)?,
+                            Instr::Mov(l, Source::Register(s)) => writeln!(output, "mov {}, {}", l, s)?,
                             Instr::Lea(l, s) => println!("lea {}, {}", l, s),
                             Instr::Push(reg) => {
-                                println!("push {}", reg);
+                                writeln!(output, "push {}", reg)?;
                             }
                             Instr::Pop(reg) => {
-                                println!("pop {}", reg);
+                                writeln!(output, "pop {}", reg)?;
                             }
                             Instr::IMul(reg, s) => {
-                                println!("imul {}, {}", reg, s);
+                                writeln!(output, "imul {}, {}", reg, s)?;
                             }
                             Instr::Add(reg, s) => {
-                                println!("add {}, {}", reg, s);
+                                writeln!(output, "add {}, {}", reg, s)?;
                             }
                             Instr::Sub(reg, s) => {
-                                println!("sub {}, {}", reg, s);
+                                writeln!(output, "sub {}, {}", reg, s)?;
                             }
                             Instr::Jmp(loc) => {
-                                println!("jmp {}", loc);
+                                writeln!(output, "jmp {}", loc)?;
                             }
-                            Instr::Call(label) => println!("call {}", label),
-                            Instr::Ret => println!("ret"),
+                            Instr::Call(label) => writeln!(output, "call {}", label)?,
+                            Instr::Ret => writeln!(output, "ret")?,
                             Instr::Print(s) => {
-                                println!("PRINT_DEC 4, {}", s);
+                                writeln!(output, "PRINT_DEC 4, {}", s)?;
                             }
                             Instr::Newline => {
-                                println!("NEWLINE");
+                                writeln!(output, "NEWLINE")?;
                             }
                             _ => {
-                                println!("{:?}", inst);
+                                writeln!(output, "{:?}", inst)?;
                             }
                         }
                     }
                 }
-            }
+            };
+            Ok(())
         }
 
         pub fn compile(ast: &super::Node, funcs: &mut super::FunctionTable) -> Program {
