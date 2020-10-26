@@ -29,9 +29,6 @@ pub mod assembly {
     }
 
     #[derive(Debug)]
-    enum Memory {}
-
-    #[derive(Debug)]
     enum Location {
         Register(Register),
         Memory(String),
