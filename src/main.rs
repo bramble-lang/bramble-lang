@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
+mod compiler;
 mod lexer;
 mod parser;
-mod compiler;
 mod type_checker;
 
+use compiler::*;
 use lexer::*;
 use parser::*;
-use compiler::*;
 use type_checker::*;
 
 fn main() {
@@ -43,7 +43,7 @@ fn main() {
     let mut func_table = FunctionTable::generate(&ast);
     println!("FuncTable: {:?}", func_table);
 
-    let program = assembly::Program::compile(&ast, &mut func_table);
+    let program = Compiler::compile(&ast, &mut func_table);
     let mut output =
         std::fs::File::create("./target/output.asm").expect("Failed to create output file");
     //let mut output = std::io::stdout();
