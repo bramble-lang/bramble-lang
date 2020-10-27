@@ -161,7 +161,7 @@ impl Compiler {
                         Newline => {
                             writeln!(output, "NEWLINE")?;
                         }
-                        _ => panic!("Compiler: unexpected instruction"),
+                        _ => panic!("Compiler: unexpected instruction: {:?}", inst),
                     }
                 }
             }
