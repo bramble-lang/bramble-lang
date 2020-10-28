@@ -398,7 +398,8 @@ impl Compiler {
 
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
-        let param_registers = [Eax, Ebx, Ecx, Edx];
+        let fn_param_registers = [Eax, Ebx, Ecx, Edx];
+        let co_param_registers = [Ebx, Ecx, Edx];
 
         match ast {
             super::Node::Integer(i) => {
@@ -469,10 +470,10 @@ impl Compiler {
                 output.push(Sub(Esp, Source::Integer(total_offset)));
 
                 // Move function parameters from registers into the stack frame
-                if params.len() > param_registers.len() {
+                if params.len() > fn_param_registers.len() {
                     panic!("Compiler: too many parameters in function definition");
                 }
-                for (param, reg) in params.iter().zip(param_registers.iter()) {
+                for (param, reg) in params.iter().zip(fn_param_registers.iter()) {
                     let param_offset = function_table.funcs[fn_name]
                         .vars
                         .vars
@@ -517,13 +518,6 @@ impl Compiler {
                 Some(e) => Compiler::traverse(e, current_func, function_table, output),
                 None => (),
             },
-            super::Node::CoroutineInit(id) => {
-                output.push(Lea(
-                    Location::Register(Eax),
-                    Source::Memory(format!("{}", id)),
-                ));
-                output.push(Call("runtime_init_coroutine".into()))
-            }
             super::Node::Yield(id) => {
                 Compiler::traverse(id, current_func, function_table, output);
 
@@ -563,6 +557,54 @@ impl Compiler {
                 output.push(Print(Source::Register(Eax)));
                 output.push(Newline);
             }
+            super::Node::CoroutineInit(co, params) => {
+                // Check if function exists and if the right number of parameters are being
+                // passed
+                if !function_table.funcs.contains_key(co) {
+                    panic!("Compiler: no definition found for function `{}`", co);
+                }
+                let expected_num_params = function_table.funcs[co].params.len();
+                let got_num_params = params.len();
+                if expected_num_params != got_num_params {
+                    panic!(
+                        "Compiler: expected {} but got {} parameters for function `{}`",
+                        expected_num_params, got_num_params, co
+                    );
+                }
+
+                // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
+                // calling the function
+                if params.len() > co_param_registers.len() {
+                    panic!("Compiler: too many parameters being passed to function");
+                }
+                for param in params.iter() {
+                    Compiler::traverse(param, current_func, function_table, output);
+                    output.push(Push(Eax));
+                }
+                for reg in co_param_registers.iter().take(params.len()).rev() {
+                    output.push(Pop(*reg));
+                }
+
+                output.push(Lea(
+                    Location::Register(Eax),
+                    Source::Memory(format!("{}", co)),
+                ));
+                output.push(Call("runtime_init_coroutine".into()));
+
+                // Move parameters into the stack frame of the coroutine
+                let mut idx = 0;
+                for (_, reg) in params.iter().zip(co_param_registers.iter()) {
+                    let param_offset = function_table.funcs[co]
+                        .vars
+                        .vars[idx]
+                        .2;
+                    output.push(Mov(
+                        Location::Memory(format!("eax-{}", param_offset)),
+                        Source::Register(*reg),
+                    ));
+                    idx += 1;
+                }
+            }
             super::Node::FunctionCall(fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
@@ -581,14 +623,14 @@ impl Compiler {
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
-                if params.len() > param_registers.len() {
+                if params.len() > fn_param_registers.len() {
                     panic!("Compiler: too many parameters being passed to function");
                 }
                 for param in params.iter() {
                     Compiler::traverse(param, current_func, function_table, output);
                     output.push(Push(Eax));
                 }
-                for reg in param_registers.iter().take(params.len()).rev() {
+                for reg in fn_param_registers.iter().take(params.len()).rev() {
                     output.push(Pop(*reg));
                 }
                 output.push(Call(fn_name.clone()));
