@@ -2,7 +2,7 @@
 // by tokenize
 use std::iter::Peekable;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Integer(i32),
     Identifier(String),
@@ -57,8 +57,8 @@ pub fn tokenize(text: &str) -> Vec<Result<Token, &str>> {
             break;
         }
         match consume_integer(&mut cs) {
-            Some(i) => tokens.push(Ok(i)),
-            None => match consume_identifier(&mut cs) {
+            Ok(Some(i)) => tokens.push(Ok(i)),
+            Ok(None) => match consume_identifier(&mut cs) {
                 Some(id) => {
                     let tok = if_keyword_map(id);
                     tokens.push(Ok(tok));
@@ -68,6 +68,10 @@ pub fn tokenize(text: &str) -> Vec<Result<Token, &str>> {
                     None => println!("Unexpected character: {:?}", cs.next()),
                 },
             },
+            Err(msg) => {
+                tokens.push(Err(msg));
+                break;
+            }
         }
     }
 
@@ -98,7 +102,7 @@ pub fn consume_identifier(iter: &mut Peekable<std::str::Chars>) -> Option<Token>
     }
 }
 
-pub fn consume_integer(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+pub fn consume_integer(iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, &'static str> {
     let mut num = String::new();
     while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
         match iter.next() {
@@ -108,17 +112,16 @@ pub fn consume_integer(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
     }
 
     if num.len() == 0 {
-        None
+        Ok(None)
     } else {
         if let Some(c) = iter.peek() {
             if c.is_alphabetic() {
-                println!("Invalid number");
-                None
+                Err("Invalid integer, should not contain characters")
             } else {
-                Some(Token::Integer(num.parse::<i32>().unwrap()))
+                Ok(Some(Token::Integer(num.parse::<i32>().unwrap())))
             }
         } else {
-            Some(Token::Integer(num.parse::<i32>().unwrap()))
+            Ok(Some(Token::Integer(num.parse::<i32>().unwrap())))
         }
     }
 }
@@ -159,5 +162,75 @@ pub fn if_keyword_map(token: Token) -> Token {
             }
         },
         _ => token,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_integer() {
+        let text = "5";
+        let tokens = tokenize(text);
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::Integer(5));
+    }
+
+    #[test]
+    fn test_identifier() {
+        for text in ["x", "y", "x_5"].iter() {
+            let tokens = tokenize(text);
+            assert_eq!(tokens.len(), 1);
+            let token = tokens[0].clone().expect("Expected valid token");
+            assert_eq!(token, Token::Identifier((*text).into()));
+        }
+    }
+
+    #[test]
+    fn test_invalid_number() {
+        for text in ["5x"].iter() {
+            let tokens = tokenize(text);
+            assert_eq!(tokens.len(), 1);
+            tokens[0].clone().expect_err("Expected error for invalid identifier");
+        }
+    }
+
+    #[test]
+    fn test_operator() {
+        for (text, expected_token) in [
+            ("*", Token::Mul),
+            ("+", Token::Add),
+            ("{", Token::LBrace),
+            ("}", Token::RBrace),
+            ("(", Token::LParen),
+            (")", Token::RParen),
+            ("=", Token::Assign),
+            (",", Token::Comma),
+            (";", Token::Semicolon),
+            ].iter() {
+            let tokens = tokenize(text);
+            assert_eq!(tokens.len(), 1);
+            assert_eq!(tokens[0].clone().unwrap(), *expected_token);
+        }
+    }
+    
+    #[test]
+    fn test_keywords() {
+        for (text, expected_token) in [
+            ("return", Token::Return),
+            ("yield", Token::Yield),
+            ("yret", Token::YieldReturn),
+            ("init", Token::Init),
+            ("co", Token::CoroutineDef),
+            ("fn", Token::FunctionDef),
+            ("print", Token::Print),
+            ("println", Token::Println),
+            ].iter() {
+            let tokens = tokenize(text);
+            assert_eq!(tokens.len(), 1);
+            assert_eq!(tokens[0].clone().unwrap(), *expected_token);
+        }
     }
 }
