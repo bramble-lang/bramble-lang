@@ -233,4 +233,26 @@ mod tests {
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
     }
+
+    #[test]
+    fn test_whitespace_handling() {
+        for text in [
+            "return ( x + 5 )",
+            " return ( x + 5 ) ",
+            "return(x+5)",
+            "return
+            (x+
+                5
+            )",
+            ].iter() {
+            let tokens = tokenize(text);
+            assert_eq!(tokens.len(), 6);
+            assert_eq!(tokens[0].clone().unwrap(), Token::Return);
+            assert_eq!(tokens[1].clone().unwrap(), Token::LParen);
+            assert_eq!(tokens[2].clone().unwrap(), Token::Identifier("x".into()));
+            assert_eq!(tokens[3].clone().unwrap(), Token::Add);
+            assert_eq!(tokens[4].clone().unwrap(), Token::Integer(5));
+            assert_eq!(tokens[5].clone().unwrap(), Token::RParen);
+        }
+    }
 }
