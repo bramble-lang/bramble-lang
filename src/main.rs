@@ -22,8 +22,8 @@ fn main() {
             return x + p; 
         }
 
-        co my_co ( ) {
-            yret 1;
+        co my_co (x) {
+            yret x;
             return 2;
         }
         ";

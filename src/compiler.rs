@@ -496,7 +496,7 @@ impl Compiler {
 
                 output.push(Ret);
             }
-            super::Node::CoroutineDef(fn_name, stmts) => {
+            super::Node::CoroutineDef(fn_name, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function

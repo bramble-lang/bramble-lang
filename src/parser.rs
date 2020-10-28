@@ -14,7 +14,7 @@ pub enum Node {
     Return(Option<Box<Node>>),
     FunctionDef(String, Vec<String>, Vec<Node>),
     FunctionCall(String, Vec<Node>),
-    CoroutineDef(String, Vec<Node>),
+    CoroutineDef(String, Vec<String>, Vec<Node>),
     CoroutineInit(String),
     Yield(Box<Node>),
     YieldReturn(Option<Box<Node>>),
@@ -124,7 +124,7 @@ impl Node {
                     Some(Token::Identifier(id)) => {
                         iter.next();
 
-                        let _params = Node::fn_def_params(iter);
+                        let params = Node::fn_def_params(iter);
 
                         match iter.peek() {
                             Some(Token::LBrace) => {
@@ -142,7 +142,7 @@ impl Node {
                                     }
                                     _ => panic!("Expected } at end of function definition"),
                                 }
-                                Some(Node::CoroutineDef(id.clone(), stmts))
+                                Some(Node::CoroutineDef(id.clone(), params, stmts))
                             }
                             _ => panic!("Expected { after function declaration"),
                         }

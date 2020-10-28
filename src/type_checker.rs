@@ -20,6 +20,17 @@ impl VarTable {
                     offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
                 }
             }
+            Node::CoroutineDef(_, params, stmts) => {
+                offset += 20;
+                for p in params.iter() {
+                    offset += 4;
+                    vt.vars.push((p.clone(), 4, offset));
+                }
+
+                for n in stmts.iter() {
+                    offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
+                }
+            }
             _ => {}
         }
         if VarTable::has_duplicates(&vt) {
@@ -89,12 +100,12 @@ impl FunctionTable {
                     },
                 );
             }
-            Node::CoroutineDef(fn_name, _) => {
+            Node::CoroutineDef(fn_name, params, _) => {
                 let vars = VarTable::generate(ast);
                 ft.funcs.insert(
                     fn_name.clone(),
                     FunctionInfo {
-                        params: vec![],
+                        params: params.clone(),
                         vars,
                         label_count: 0,
                     },
