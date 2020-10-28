@@ -1,5 +1,7 @@
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
+use std::iter::Peekable;
+
 #[derive(Debug)]
 pub enum Token {
     Integer(i32),
@@ -23,33 +25,139 @@ pub enum Token {
     CoroutineDef,
 }
 
-/// Split a string into tokens, first by splitting by whitespace and then
-/// for each substring determining if it is an operator or an integer.
+/*
+    Better Lexer:
+    provide a tokenizer that is more flexible about whitespace (does not tokenize purely on whitespace)
+
+    Starting assumptions:
+    1. Only integers (for now)
+    2. identifiers are made of only letters
+    3. Operators are single characters
+
+    These will change in the future, I just want a quick starting base to improve the Lexer a bit
+
+    high level flow:
+    1. consume any whitespace
+    2. when a non-whitespace character is found
+    3. Is it a number, a letter, or something else
+    4. Number => read until a whitespace or operator character is found
+    5. Letter => read until a whitespace or an operator character is found
+    6. Operator character => read one character and return that as a token
+
+    Repeat the above steps until the end of the string is reached
+*/
 pub fn tokenize(text: &str) -> Vec<Result<Token, &str>> {
-    let ss = text.split_ascii_whitespace();
-    ss.map(|s| match s.parse::<i32>() {
-        Ok(i) => Ok(Token::Integer(i)),
-        Err(_) => match s {
-            "*" => Ok(Token::Mul),
-            "+" => Ok(Token::Add),
-            ":=" => Ok(Token::Assign),
-            ";" => Ok(Token::Semicolon),
-            "," => Ok(Token::Comma),
-            "(" => Ok(Token::LParen),
-            ")" => Ok(Token::RParen),
-            "{" => Ok(Token::LBrace),
-            "}" => Ok(Token::RBrace),
-            "fn" => Ok(Token::FunctionDef),
-            "co" => Ok(Token::CoroutineDef),
-            "init" => Ok(Token::Init),
-            "yield" => Ok(Token::Yield),
-            "yret" => Ok(Token::YieldReturn),
-            "return" => Ok(Token::Return),
-            "print" => Ok(Token::Print),
-            "println" => Ok(Token::Println),
-            s if s.is_ascii() => Ok(Token::Identifier(s.into())),
-            _ => Err("Invalid token"),
+    let mut tokens = vec![];
+
+    let mut cs = text.chars().peekable();
+
+    while cs.peek().is_some() {
+        consume_whitespace(&mut cs);
+        if cs.peek().is_none() {
+            break;
+        }
+        match consume_integer(&mut cs) {
+            Some(i) => tokens.push(Ok(i)),
+            None => match consume_identifier(&mut cs) {
+                Some(id) => {
+                    let tok = if_keyword_map(id);
+                    tokens.push(Ok(tok));
+                },
+                None => match consume_operator(&mut cs) {
+                    Some(op) => tokens.push(Ok(op)),
+                    None => println!("Unexpected character: {:?}", cs.next()),
+                },
+            },
+        }
+    }
+
+    tokens
+}
+
+pub fn consume_whitespace(iter: &mut Peekable<std::str::Chars>) {
+    while iter.peek().map_or_else(|| false, |c| c.is_whitespace()) {
+        iter.next();
+    }
+}
+
+pub fn consume_identifier(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    let mut id = String::new();
+    if iter.peek().map_or_else(|| false, |c| c.is_alphabetic() || *c == '_') {
+        while iter.peek().map_or_else(|| false, |c| c.is_alphanumeric() || *c == '_') {
+            match iter.next() {
+                Some(d) => id.push(d),
+                None => break,
+            }
+        }
+    }
+
+    if id.len() == 0 {
+        None
+    } else {
+        Some(Token::Identifier(id))
+    }
+}
+
+pub fn consume_integer(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    let mut num = String::new();
+    while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
+        match iter.next() {
+            Some(d) => num.push(d),
+            None => break,
+        }
+    }
+
+    if num.len() == 0 {
+        None
+    } else {
+        if let Some(c) = iter.peek() {
+            if c.is_alphabetic() {
+                println!("Invalid number");
+                None
+            } else {
+                Some(Token::Integer(num.parse::<i32>().unwrap()))
+            }
+        } else {
+            Some(Token::Integer(num.parse::<i32>().unwrap()))
+        }
+    }
+}
+
+pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    let token = match iter.peek() {
+        Some('(') => Some(Token::LParen),
+        Some(')') => Some(Token::RParen),
+        Some('{') => Some(Token::LBrace),
+        Some('}') => Some(Token::RBrace),
+        Some('*') => Some(Token::Mul),
+        Some('+') => Some(Token::Add),
+        Some('=') => Some(Token::Assign),
+        Some(';') => Some(Token::Semicolon),
+        Some(',') => Some(Token::Comma),
+        _ => None,
+    };
+
+    if token.is_some() {
+        iter.next();
+    }
+    token
+}
+
+pub fn if_keyword_map(token: Token) -> Token {
+    match token {
+        Token::Identifier(ref id) => {
+            match id.as_str() {
+                "return" => Token::Return,
+                "yield" => Token::Yield,
+                "yret" => Token::YieldReturn,
+                "fn" => Token::FunctionDef,
+                "co" => Token::CoroutineDef,
+                "init" => Token::Init,
+                "print" => Token::Print,
+                "println" => Token::Println,
+                _ => Token::Identifier(id.clone()),
+            }
         },
-    })
-    .collect()
+        _ => token,
+    }
 }
