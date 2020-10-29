@@ -17,6 +17,7 @@ fn main() {
             w = yield c;
             x = 1; 
             println x; 
+            println w; 
             z = yield c;
             println z;
             return x + p; 
