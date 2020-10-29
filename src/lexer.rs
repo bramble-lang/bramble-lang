@@ -142,7 +142,6 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         Some('}') => Some(Token::RBrace),
         Some('*') => Some(Token::Mul),
         Some('+') => Some(Token::Add),
-        //Some('=') => Some(Token::Assign),
         Some(';') => Some(Token::Semicolon),
         Some(',') => Some(Token::Comma),
         Some(':') => {
