@@ -216,6 +216,17 @@ pub mod ops {
                 }
             }
         }
+
+        fn find(&self, operator: &str) -> Option<Token> {
+            if operator.len() == 0 {
+                self.op.clone()
+            } else {
+                let c = &operator[0..1];
+                self.children
+                    .get(c)
+                    .and_then(|child| child.find(&operator[1..]))
+            }
+        }
     }
 
     #[cfg(test)]
@@ -348,6 +359,21 @@ pub mod ops {
             assert_eq!(ggchild.ch, Some(">".into()));
             assert_eq!(ggchild.op, Some(Token::YieldReturn));
             assert_eq!(ggchild.children.len(), 0);
+        }
+
+        #[test]
+        fn test_find() {
+            let mut trie = OperatorTrie::new(None, None);
+            trie.add(":=", Token::Assign);
+            trie.add(":=:", Token::Yield);
+            trie.add(":=>", Token::YieldReturn);
+
+            assert_eq!(trie.find(":="), Some(Token::Assign));
+            assert_eq!(trie.find(":=:"), Some(Token::Yield));
+            assert_eq!(trie.find(":=>"), Some(Token::YieldReturn));
+            assert_eq!(trie.find(":=="), None);
+            assert_eq!(trie.find(":"), None);
+            assert_eq!(trie.find(""), None);
         }
     }
 }
