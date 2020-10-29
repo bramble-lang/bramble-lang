@@ -221,7 +221,7 @@ mod tests {
             ("}", Token::RBrace),
             ("(", Token::LParen),
             (")", Token::RParen),
-            ("=", Token::Assign),
+            (":=", Token::Assign),
             (",", Token::Comma),
             (";", Token::Semicolon),
         ]
