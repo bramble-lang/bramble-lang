@@ -62,7 +62,7 @@ pub fn tokenize(text: &str) -> Vec<Result<Token, &str>> {
                 Some(id) => {
                     let tok = if_keyword_map(id);
                     tokens.push(Ok(tok));
-                },
+                }
                 None => match consume_operator(&mut cs) {
                     Some(op) => tokens.push(Ok(op)),
                     None => println!("Unexpected character: {:?}", cs.next()),
@@ -86,8 +86,14 @@ pub fn consume_whitespace(iter: &mut Peekable<std::str::Chars>) {
 
 pub fn consume_identifier(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
     let mut id = String::new();
-    if iter.peek().map_or_else(|| false, |c| c.is_alphabetic() || *c == '_') {
-        while iter.peek().map_or_else(|| false, |c| c.is_alphanumeric() || *c == '_') {
+    if iter
+        .peek()
+        .map_or_else(|| false, |c| c.is_alphabetic() || *c == '_')
+    {
+        while iter
+            .peek()
+            .map_or_else(|| false, |c| c.is_alphanumeric() || *c == '_')
+        {
             match iter.next() {
                 Some(d) => id.push(d),
                 None => break,
@@ -102,7 +108,9 @@ pub fn consume_identifier(iter: &mut Peekable<std::str::Chars>) -> Option<Token>
     }
 }
 
-pub fn consume_integer(iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, &'static str> {
+pub fn consume_integer(
+    iter: &mut Peekable<std::str::Chars>,
+) -> Result<Option<Token>, &'static str> {
     let mut num = String::new();
     while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
         match iter.next() {
@@ -134,9 +142,16 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         Some('}') => Some(Token::RBrace),
         Some('*') => Some(Token::Mul),
         Some('+') => Some(Token::Add),
-        Some('=') => Some(Token::Assign),
+        //Some('=') => Some(Token::Assign),
         Some(';') => Some(Token::Semicolon),
         Some(',') => Some(Token::Comma),
+        Some(':') => {
+            iter.next();
+            match iter.peek() {
+                Some('=') => Some(Token::Assign),
+                _ => panic!("Lexer: Unexpected character ':'"),
+            }
+        }
         _ => None,
     };
 
@@ -148,18 +163,16 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
 
 pub fn if_keyword_map(token: Token) -> Token {
     match token {
-        Token::Identifier(ref id) => {
-            match id.as_str() {
-                "return" => Token::Return,
-                "yield" => Token::Yield,
-                "yret" => Token::YieldReturn,
-                "fn" => Token::FunctionDef,
-                "co" => Token::CoroutineDef,
-                "init" => Token::Init,
-                "print" => Token::Print,
-                "println" => Token::Println,
-                _ => Token::Identifier(id.clone()),
-            }
+        Token::Identifier(ref id) => match id.as_str() {
+            "return" => Token::Return,
+            "yield" => Token::Yield,
+            "yret" => Token::YieldReturn,
+            "fn" => Token::FunctionDef,
+            "co" => Token::CoroutineDef,
+            "init" => Token::Init,
+            "print" => Token::Print,
+            "println" => Token::Println,
+            _ => Token::Identifier(id.clone()),
         },
         _ => token,
     }
@@ -193,7 +206,9 @@ mod tests {
         for text in ["5x"].iter() {
             let tokens = tokenize(text);
             assert_eq!(tokens.len(), 1);
-            tokens[0].clone().expect_err("Expected error for invalid identifier");
+            tokens[0]
+                .clone()
+                .expect_err("Expected error for invalid identifier");
         }
     }
 
@@ -209,13 +224,15 @@ mod tests {
             ("=", Token::Assign),
             (",", Token::Comma),
             (";", Token::Semicolon),
-            ].iter() {
+        ]
+        .iter()
+        {
             let tokens = tokenize(text);
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
     }
-    
+
     #[test]
     fn test_keywords() {
         for (text, expected_token) in [
@@ -227,7 +244,9 @@ mod tests {
             ("fn", Token::FunctionDef),
             ("print", Token::Print),
             ("println", Token::Println),
-            ].iter() {
+        ]
+        .iter()
+        {
             let tokens = tokenize(text);
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
@@ -244,7 +263,9 @@ mod tests {
             (x+
                 5
             )",
-            ].iter() {
+        ]
+        .iter()
+        {
             let tokens = tokenize(text);
             assert_eq!(tokens.len(), 6);
             assert_eq!(tokens[0].clone().unwrap(), Token::Return);
