@@ -1,4 +1,4 @@
-fn my_main( p: bool ) {
+fn my_main( p: bool) {
     c:i32 := init my_co(5, 13);
     w : i32 := yield c;
     x : i32 := 1;

@@ -508,11 +508,14 @@ impl Node {
                     Some(Token::Colon) => {
                         iter.next();
                         match Node::primitive(iter) {
-                            Some(p) => Some(Node::Identifier(id.clone())),
-                            _ => None,
+                            Some(_) => Some(Node::Identifier(id.clone())),
+                            None => panic!("Parser: Invalid primitive type: {:?}", iter.peek()),
                         }
                     }
-                    _ => None,
+                    _ => panic!(
+                        "Parser: Expected type after variable declaration, found: {:?}",
+                        iter.peek()
+                    ),
                 }
             }
             _ => None,
