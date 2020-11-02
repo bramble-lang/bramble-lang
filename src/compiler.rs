@@ -411,9 +411,9 @@ impl Compiler {
                         .vars
                         .vars
                         .iter()
-                        .find(|v| v.0 == *id)
+                        .find(|v| v.name == *id)
                         .expect("CRITICAL: identifier not found in var table");
-                    var.2
+                    var.frame_offset
                 };
                 output.push(Mov(
                     Location::Register(Eax),
@@ -444,15 +444,15 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Add(Eax, Source::Register(Ebx)));
             }
-            super::Node::Bind(id, exp) => {
+            super::Node::Bind(id, _, exp) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
                         .vars
                         .iter()
-                        .find(|v| v.0 == *id)
+                        .find(|v| v.name == *id)
                         .expect("CRITICAL: identifier not found in var table");
-                    var.2
+                    var.frame_offset
                 };
                 Compiler::traverse(exp, current_func, function_table, output);
                 output.push(Mov(
@@ -466,7 +466,12 @@ impl Compiler {
                 // Prepare stack frame for this function
                 output.push(Push(Ebp));
                 output.push(Mov(Location::Register(Ebp), Source::Register(Esp)));
-                let total_offset = function_table.funcs[fn_name].vars.vars.last().unwrap().2;
+                let total_offset = function_table.funcs[fn_name]
+                    .vars
+                    .vars
+                    .last()
+                    .unwrap()
+                    .frame_offset;
                 output.push(Sub(Esp, Source::Integer(total_offset)));
 
                 // Move function parameters from registers into the stack frame
@@ -478,9 +483,9 @@ impl Compiler {
                         .vars
                         .vars
                         .iter()
-                        .find(|(id, _, _)| id == param)
+                        .find(|var_decl| var_decl.name == *param.0)
                         .unwrap()
-                        .2;
+                        .frame_offset;
                     output.push(Mov(
                         Location::Memory(format!("ebp-{}", param_offset)),
                         Source::Register(*reg),
@@ -594,7 +599,7 @@ impl Compiler {
                 // Move parameters into the stack frame of the coroutine
                 let mut idx = 0;
                 for (_, reg) in params.iter().zip(co_param_registers.iter()) {
-                    let param_offset = function_table.funcs[co].vars.vars[idx].2;
+                    let param_offset = function_table.funcs[co].vars.vars[idx].frame_offset;
                     output.push(Mov(
                         Location::Memory(format!("eax-{}", param_offset)),
                         Source::Register(*reg),

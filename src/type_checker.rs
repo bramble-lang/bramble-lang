@@ -1,8 +1,27 @@
+use crate::parser::Primitive;
 use crate::Node;
 
+#[derive(Debug, PartialEq)]
+pub struct VarDecl {
+    pub name: String,
+    pub size: i32,
+    pub frame_offset: i32,
+    pub ty: Primitive,
+}
+
+impl VarDecl {
+    pub fn new(name: String, ty: Primitive, size: i32, frame_offset: i32) -> VarDecl {
+        VarDecl {
+            name,
+            size,
+            frame_offset,
+            ty,
+        }
+    }
+}
 #[derive(Debug)]
 pub struct VarTable {
-    pub vars: Vec<(String, i32, i32)>,
+    pub vars: Vec<VarDecl>,
 }
 
 impl VarTable {
@@ -11,9 +30,10 @@ impl VarTable {
         let mut offset = 0;
         match ast {
             Node::FunctionDef(_, params, _, stmts) => {
-                for p in params.iter() {
+                for (param_name, param_ty) in params.iter() {
                     offset += 4;
-                    vt.vars.push((p.clone(), 4, offset));
+                    vt.vars
+                        .push(VarDecl::new(param_name.clone(), *param_ty, 4, offset));
                 }
 
                 for n in stmts.iter() {
@@ -22,9 +42,10 @@ impl VarTable {
             }
             Node::CoroutineDef(_, params, _, stmts) => {
                 offset += 20;
-                for p in params.iter() {
+                for (param_name, param_ty) in params.iter() {
                     offset += 4;
-                    vt.vars.push((p.clone(), 4, offset));
+                    vt.vars
+                        .push(VarDecl::new(param_name.clone(), *param_ty, 4, offset));
                 }
 
                 for n in stmts.iter() {
@@ -36,13 +57,22 @@ impl VarTable {
         if VarTable::has_duplicates(&vt) {
             panic!("An identifier was defined twice");
         }
+        let unknowns = VarTable::check_for_unknown_types(&vt);
+        if unknowns.len() > 0 {
+            for v in unknowns {
+                println!("Type Checker: {} has an unknown type", v.name);
+            }
+            panic!("An identifier(s) with an unknown type was found");
+        }
         vt
     }
 
     fn find_bound_identifiers(ast: &Node, output: &mut VarTable, total_offset: i32) -> i32 {
         match ast {
-            Node::Bind(id, _) => {
-                output.vars.push((id.clone(), 4, total_offset + 4));
+            Node::Bind(id, id_type, _) => {
+                output
+                    .vars
+                    .push(VarDecl::new(id.clone(), *id_type, 4, total_offset + 4));
                 total_offset + 4
             }
             _ => total_offset,
@@ -51,6 +81,14 @@ impl VarTable {
 
     fn has_duplicates(var_table: &VarTable) -> bool {
         (1..var_table.vars.len()).any(|i| var_table.vars[i..].contains(&var_table.vars[i - 1]))
+    }
+
+    fn check_for_unknown_types(var_table: &VarTable) -> Vec<&VarDecl> {
+        var_table
+            .vars
+            .iter()
+            .filter(|var_decl| var_decl.ty == Primitive::Unknown)
+            .collect()
     }
 }
 
@@ -61,7 +99,7 @@ pub struct FunctionTable {
 
 #[derive(Debug)]
 pub struct FunctionInfo {
-    pub params: Vec<String>,
+    pub params: Vec<(String, Primitive)>,
     pub vars: VarTable,
     pub label_count: u32,
 }

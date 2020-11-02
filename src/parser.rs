@@ -5,7 +5,7 @@
 use crate::lexer;
 use crate::Token;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Primitive {
     I32,
     Bool,
@@ -20,11 +20,11 @@ pub enum Node {
     Primitive(Primitive),
     Mul(Box<Node>, Box<Node>),
     Add(Box<Node>, Box<Node>),
-    Bind(String, Box<Node>),
+    Bind(String, Primitive, Box<Node>),
     Return(Option<Box<Node>>),
-    FunctionDef(String, Vec<String>, Primitive, Vec<Node>),
+    FunctionDef(String, Vec<(String, Primitive)>, Primitive, Vec<Node>),
     FunctionCall(String, Vec<Node>),
-    CoroutineDef(String, Vec<String>, Primitive, Vec<Node>),
+    CoroutineDef(String, Vec<(String, Primitive)>, Primitive, Vec<Node>),
     CoroutineInit(String, Vec<Node>),
     Yield(Box<Node>),
     YieldReturn(Option<Box<Node>>),
@@ -186,7 +186,7 @@ impl Node {
         }
     }
 
-    fn fn_def_params(iter: &mut TokenIter) -> Vec<String> {
+    fn fn_def_params(iter: &mut TokenIter) -> Vec<(String, Primitive)> {
         match iter.peek() {
             Some(Token::LParen) => {
                 iter.next();
@@ -198,8 +198,8 @@ impl Node {
 
         while let Some(param) = Node::identifier_declare(iter) {
             match param {
-                Node::Identifier(id, _id_type) => {
-                    params.push(id);
+                Node::Identifier(id, id_type) => {
+                    params.push((id, id_type));
                     match iter.peek() {
                         Some(Token::Comma) => {
                             iter.next();
@@ -326,7 +326,7 @@ impl Node {
 
     fn bind(iter: &mut TokenIter) -> Option<Node> {
         match Node::identifier_declare(iter) {
-            Some(Node::Identifier(id, _id_type)) => {
+            Some(Node::Identifier(id, id_type)) => {
                 println!("Parse: Binding {:?}", id);
                 let pt = iter.peek();
                 println!("peek: {:?}", pt);
@@ -337,14 +337,14 @@ impl Node {
                             Some(Token::Init) => {
                                 let co_init =
                                     Node::co_init(iter).expect("Parser: Invalid coroutine init");
-                                Some(Node::Bind(id, Box::new(co_init)))
+                                Some(Node::Bind(id, id_type, Box::new(co_init)))
                             }
                             _ => {
                                 let exp = Node::expression(iter).expect(&format!(
                                     "Expected an expression or coroutine init after :=, found {:?}",
                                     iter.peek()
                                 ));
-                                Some(Node::Bind(id, Box::new(exp)))
+                                Some(Node::Bind(id, id_type, Box::new(exp)))
                             }
                         }
                     }
