@@ -196,7 +196,7 @@ impl Compiler {
         output.push(Include("io.inc".into()));
         output.push(Section(".data".into()));
         output.push(Data("next_stack_addr".into(), 0));
-        output.push(Data("stack_size".into(), 2 * 1024));
+        output.push(Data("stack_size".into(), 4 * 1024));
 
         // section .text
         // global CMAIN
