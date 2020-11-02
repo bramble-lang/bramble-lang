@@ -10,7 +10,7 @@ impl VarTable {
         let mut vt = VarTable { vars: vec![] };
         let mut offset = 0;
         match ast {
-            Node::FunctionDef(_, params, stmts) => {
+            Node::FunctionDef(_, params, _, stmts) => {
                 for p in params.iter() {
                     offset += 4;
                     vt.vars.push((p.clone(), 4, offset));
@@ -20,7 +20,7 @@ impl VarTable {
                     offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
                 }
             }
-            Node::CoroutineDef(_, params, stmts) => {
+            Node::CoroutineDef(_, params, _, stmts) => {
                 offset += 20;
                 for p in params.iter() {
                     offset += 4;
@@ -89,7 +89,7 @@ impl FunctionTable {
 
     fn traverse(ast: &Node, ft: &mut FunctionTable) {
         match ast {
-            Node::FunctionDef(fn_name, params, _) => {
+            Node::FunctionDef(fn_name, params, _, _) => {
                 let vars = VarTable::generate(ast);
                 ft.funcs.insert(
                     fn_name.clone(),
@@ -100,7 +100,7 @@ impl FunctionTable {
                     },
                 );
             }
-            Node::CoroutineDef(fn_name, params, _) => {
+            Node::CoroutineDef(fn_name, params, _, _) => {
                 let vars = VarTable::generate(ast);
                 ft.funcs.insert(
                     fn_name.clone(),

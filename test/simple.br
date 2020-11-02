@@ -1,12 +1,12 @@
-fn my_main( p ) -> i32 {
-    c := init my_co(5, 13);
+fn my_main( p: bool ) {
+    c:i32 := init my_co(5, 13);
     w : i32 := yield c;
     x : i32 := 1;
-    printiln x;
-    printiln w;
+    println x;
+    println w;
     z : i32 := yield c;
-    printiln z;
-    return x + p;
+    println z;
+    return;
 }
 
 co my_co (x: i32, y: i32) -> i32 {

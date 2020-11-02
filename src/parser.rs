@@ -2,19 +2,28 @@
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
+use crate::lexer;
 use crate::Token;
+
+#[derive(Debug)]
+pub enum Primitive {
+    I32,
+    Bool,
+    Unit,
+}
 
 #[derive(Debug)]
 pub enum Node {
     Integer(i32),
     Identifier(String),
+    Primitive(Primitive),
     Mul(Box<Node>, Box<Node>),
     Add(Box<Node>, Box<Node>),
     Bind(String, Box<Node>),
     Return(Option<Box<Node>>),
-    FunctionDef(String, Vec<String>, Vec<Node>),
+    FunctionDef(String, Vec<String>, Primitive, Vec<Node>),
     FunctionCall(String, Vec<Node>),
-    CoroutineDef(String, Vec<String>, Vec<Node>),
+    CoroutineDef(String, Vec<String>, Primitive, Vec<Node>),
     CoroutineInit(String, Vec<Node>),
     Yield(Box<Node>),
     YieldReturn(Option<Box<Node>>),
@@ -89,6 +98,16 @@ impl Node {
 
                         let params = Node::fn_def_params(iter);
 
+                        let fn_type = match iter.peek() {
+                            Some(Token::LArrow) => {
+                                iter.next();
+                                Node::primitive(iter).expect(
+                                    "Expected primitive type after -> in function definition",
+                                )
+                            }
+                            _ => Primitive::Unit,
+                        };
+
                         match iter.peek() {
                             Some(Token::LBrace) => {
                                 iter.next();
@@ -105,7 +124,7 @@ impl Node {
                                     }
                                     _ => panic!("Expected } at end of function definition"),
                                 }
-                                Some(Node::FunctionDef(id.clone(), params, stmts))
+                                Some(Node::FunctionDef(id.clone(), params, fn_type, stmts))
                             }
                             _ => panic!("Expected { after function declaration"),
                         }
@@ -128,6 +147,16 @@ impl Node {
 
                         let params = Node::fn_def_params(iter);
 
+                        let co_type = match iter.peek() {
+                            Some(Token::LArrow) => {
+                                iter.next();
+                                Node::primitive(iter).expect(
+                                    "Expected primitive type after -> in function definition",
+                                )
+                            }
+                            _ => Primitive::Unit,
+                        };
+
                         match iter.peek() {
                             Some(Token::LBrace) => {
                                 iter.next();
@@ -144,7 +173,7 @@ impl Node {
                                     }
                                     _ => panic!("Expected } at end of function definition"),
                                 }
-                                Some(Node::CoroutineDef(id.clone(), params, stmts))
+                                Some(Node::CoroutineDef(id.clone(), params, co_type, stmts))
                             }
                             _ => panic!("Expected { after function declaration"),
                         }
@@ -166,7 +195,7 @@ impl Node {
 
         let mut params = vec![];
 
-        while let Some(param) = Node::identifier(iter) {
+        while let Some(param) = Node::identifier_declare(iter) {
             match param {
                 Node::Identifier(id) => {
                     params.push(id);
@@ -295,7 +324,7 @@ impl Node {
     }
 
     fn bind(iter: &mut TokenIter) -> Option<Node> {
-        match Node::identifier(iter) {
+        match Node::identifier_declare(iter) {
             Some(Node::Identifier(id)) => {
                 println!("Parse: Binding {:?}", id);
                 let pt = iter.peek();
@@ -450,6 +479,40 @@ impl Node {
                 match Node::identifier(iter) {
                     Some(id) => Some(Node::Yield(Box::new(id))),
                     _ => panic!("Parser: expected an identifier after yield"),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
+        println!("Primitive");
+        match iter.peek() {
+            Some(Token::Primitive(primitive)) => {
+                iter.next();
+                match primitive {
+                    lexer::Primitive::I32 => Some(Primitive::I32),
+                    lexer::Primitive::Bool => Some(Primitive::Bool),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn identifier_declare(iter: &mut TokenIter) -> Option<Node> {
+        println!("IdDec");
+        match iter.peek() {
+            Some(Token::Identifier(id)) => {
+                iter.next();
+                match iter.peek() {
+                    Some(Token::Colon) => {
+                        iter.next();
+                        match Node::primitive(iter) {
+                            Some(p) => Some(Node::Identifier(id.clone())),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
                 }
             }
             _ => None,

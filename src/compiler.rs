@@ -460,7 +460,7 @@ impl Compiler {
                     Source::Register(Eax),
                 ));
             }
-            super::Node::FunctionDef(fn_name, params, stmts) => {
+            super::Node::FunctionDef(fn_name, params, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
@@ -497,7 +497,7 @@ impl Compiler {
 
                 output.push(Ret);
             }
-            super::Node::CoroutineDef(fn_name, _, stmts) => {
+            super::Node::CoroutineDef(fn_name, _, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function

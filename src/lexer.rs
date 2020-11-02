@@ -156,15 +156,16 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         Some(',') => Some(Token::Comma),
         Some(':') => {
             iter.next();
-            consume = false;
             match iter.peek() {
                 Some('=') => Some(Token::Assign),
-                _ => Some(Token::Colon),
+                _ => {
+                    consume = false;
+                    Some(Token::Colon)
+                }
             }
         }
         Some('-') => {
             iter.next();
-            consume = false;
             match iter.peek() {
                 Some('>') => Some(Token::LArrow),
                 _ => panic!("Lexer: Unexpected '-' character"),
