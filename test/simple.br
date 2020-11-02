@@ -1,11 +1,11 @@
-fn my_main( p ) {
+fn my_main( p ) -> i32 {
     c := init my_co(5, 13);
     w : i32 := yield c;
     x : i32 := 1;
-    println x;
-    println w;
+    printiln x;
+    printiln w;
     z : i32 := yield c;
-    println z;
+    printiln z;
     return x + p;
 }
 
