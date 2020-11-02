@@ -36,8 +36,8 @@ impl VarTable {
                         .push(VarDecl::new(param_name.clone(), *param_ty, 4, offset));
                 }
 
-                for n in stmts.iter() {
-                    offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
+                for stmt in stmts.iter() {
+                    offset = VarTable::find_bound_identifiers(stmt, &mut vt, offset);
                 }
             }
             Node::CoroutineDef(_, params, _, stmts) => {
