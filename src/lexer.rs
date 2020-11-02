@@ -30,6 +30,7 @@ pub enum Token {
     YieldReturn,
     CoroutineDef,
     Colon,
+    LArrow,
     Primitive(Primitive),
 }
 
@@ -143,6 +144,7 @@ pub fn consume_integer(
 }
 
 pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    let mut consume = true;
     let token = match iter.peek() {
         Some('(') => Some(Token::LParen),
         Some(')') => Some(Token::RParen),
@@ -154,15 +156,24 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         Some(',') => Some(Token::Comma),
         Some(':') => {
             iter.next();
+            consume = false;
             match iter.peek() {
                 Some('=') => Some(Token::Assign),
                 _ => Some(Token::Colon),
             }
         }
+        Some('-') => {
+            iter.next();
+            consume = false;
+            match iter.peek() {
+                Some('>') => Some(Token::LArrow),
+                _ => panic!("Lexer: Unexpected '-' character"),
+            }
+        }
         _ => None,
     };
 
-    if token.is_some() {
+    if token.is_some() && consume {
         iter.next();
     }
     token
@@ -250,6 +261,23 @@ mod tests {
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
+    }
+
+    #[test]
+    fn test_multiple_tokens() {
+        let text = "x:i32;yield";
+        let tokens = tokenize(text);
+        assert_eq!(tokens.len(), 5);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::Identifier("x".into()));
+        let token = tokens[1].clone().expect("Expected valid token");
+        assert_eq!(token, Token::Colon);
+        let token = tokens[2].clone().expect("Expected valid token");
+        assert_eq!(token, Token::Primitive(Primitive::I32));
+        let token = tokens[3].clone().expect("Expected valid token");
+        assert_eq!(token, Token::Semicolon);
+        let token = tokens[4].clone().expect("Expected valid token");
+        assert_eq!(token, Token::Yield);
     }
 
     #[test]

@@ -27,9 +27,9 @@ type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
 impl Node {
     /*
         Grammar
-        TYPE := i32 | bool
+        PRIMITIVE := i32 | bool
         IDENTIFIER := A-Za-z*
-        ID_DEC := IDENTIFIER COLON TYPE
+        ID_DEC := IDENTIFIER COLON PRIMITIVE
         NUMBER := 0-9*
         FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION] RPAREN
         YIELD := yield IDENTIFIER
@@ -44,8 +44,8 @@ impl Node {
         STATEMENT := [BIND] SEMICOLON
         BLOCK := STATEMENT*
         COBLOCK := [STATEMENT | YIELD_RETURN]*
-        FUNCTION := fn IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN  [LARROW TYPE] LBRACE BLOCK RETURN RBRACE
-        COROUTINE := co IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN [LARROW TYPE] LBRACE COBLOCK RETURN RBRACE
+        FUNCTION := fn IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN  [LARROW PRIMITIVE] LBRACE BLOCK RETURN RBRACE
+        COROUTINE := co IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN [LARROW PRIMITIVE] LBRACE COBLOCK RETURN RBRACE
         MODULES := [FUNCTION|COROUTINE]*
 
         tokenize - takes a string of text and converts it to a string of tokens
