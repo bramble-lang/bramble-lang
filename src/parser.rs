@@ -27,7 +27,9 @@ type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
 impl Node {
     /*
         Grammar
+        TYPE := i32 | bool
         IDENTIFIER := A-Za-z*
+        ID_DEC := IDENTIFIER COLON TYPE
         NUMBER := 0-9*
         FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION] RPAREN
         YIELD := yield IDENTIFIER
@@ -35,15 +37,15 @@ impl Node {
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
         INIT_CO := init IDENTIFIER
-        BIND := IDENTIFIER := (EXPRESSION|INIT_CO)
+        BIND := ID_DEC := (EXPRESSION|INIT_CO)
         PRINTLN := println EXPRESSION ;
         RETURN := return [EXPRESSION] SEMICOLON
         YIELD_RETURN := yield return [EXPRESSION] SEMICOLON
         STATEMENT := [BIND] SEMICOLON
         BLOCK := STATEMENT*
         COBLOCK := [STATEMENT | YIELD_RETURN]*
-        FUNCTION := fn IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE BLOCK RETURN RBRACE
-        COROUTINE := co IDENTIFIER LPAREN [IDENTIFIER [, IDENTIFIER]*] RPAREN LBRACE COBLOCK RETURN RBRACE
+        FUNCTION := fn IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN  [LARROW TYPE] LBRACE BLOCK RETURN RBRACE
+        COROUTINE := co IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN [LARROW TYPE] LBRACE COBLOCK RETURN RBRACE
         MODULES := [FUNCTION|COROUTINE]*
 
         tokenize - takes a string of text and converts it to a string of tokens
@@ -334,7 +336,8 @@ impl Node {
                 match iter.peek() {
                     Some(Token::Identifier(id)) => {
                         iter.next();
-                        let params = Node::fn_call_params(iter).expect("Expected parameters after coroutine name");
+                        let params = Node::fn_call_params(iter)
+                            .expect("Expected parameters after coroutine name");
                         Some(Node::CoroutineInit(id.clone(), params))
                     }
                     _ => {

@@ -3,6 +3,12 @@
 use std::iter::Peekable;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Primitive {
+    I32,
+    Bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Integer(i32),
     Identifier(String),
@@ -23,6 +29,8 @@ pub enum Token {
     Yield,
     YieldReturn,
     CoroutineDef,
+    Colon,
+    Primitive(Primitive),
 }
 
 /*
@@ -60,7 +68,7 @@ pub fn tokenize(text: &str) -> Vec<Result<Token, &str>> {
             Ok(Some(i)) => tokens.push(Ok(i)),
             Ok(None) => match consume_identifier(&mut cs) {
                 Some(id) => {
-                    let tok = if_keyword_map(id);
+                    let tok = if_primitive_map(if_keyword_map(id));
                     tokens.push(Ok(tok));
                 }
                 None => match consume_operator(&mut cs) {
@@ -148,7 +156,7 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
             iter.next();
             match iter.peek() {
                 Some('=') => Some(Token::Assign),
-                _ => panic!("Lexer: Unexpected character ':'"),
+                _ => Some(Token::Colon),
             }
         }
         _ => None,
@@ -158,6 +166,17 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         iter.next();
     }
     token
+}
+
+pub fn if_primitive_map(token: Token) -> Token {
+    match token {
+        Token::Identifier(ref id) => match id.as_str() {
+            "i32" => Token::Primitive(Primitive::I32),
+            "bool" => Token::Primitive(Primitive::Bool),
+            _ => Token::Identifier(id.clone()),
+        },
+        _ => token,
+    }
 }
 
 pub fn if_keyword_map(token: Token) -> Token {
@@ -221,6 +240,7 @@ mod tests {
             ("(", Token::LParen),
             (")", Token::RParen),
             (":=", Token::Assign),
+            (":", Token::Colon),
             (",", Token::Comma),
             (";", Token::Semicolon),
         ]
@@ -243,6 +263,20 @@ mod tests {
             ("fn", Token::FunctionDef),
             ("print", Token::Print),
             ("println", Token::Println),
+        ]
+        .iter()
+        {
+            let tokens = tokenize(text);
+            assert_eq!(tokens.len(), 1);
+            assert_eq!(tokens[0].clone().unwrap(), *expected_token);
+        }
+    }
+
+    #[test]
+    fn test_primitives() {
+        for (text, expected_token) in [
+            ("i32", Token::Primitive(Primitive::I32)),
+            ("bool", Token::Primitive(Primitive::Bool)),
         ]
         .iter()
         {
