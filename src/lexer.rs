@@ -251,6 +251,7 @@ mod tests {
             ("(", Token::LParen),
             (")", Token::RParen),
             (":=", Token::Assign),
+            ("->", Token::LArrow),
             (":", Token::Colon),
             (",", Token::Comma),
             (";", Token::Semicolon),
@@ -265,9 +266,9 @@ mod tests {
 
     #[test]
     fn test_multiple_tokens() {
-        let text = "x:i32;yield";
+        let text = "x:i32;->yield";
         let tokens = tokenize(text);
-        assert_eq!(tokens.len(), 5);
+        assert_eq!(tokens.len(), 6);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::Identifier("x".into()));
         let token = tokens[1].clone().expect("Expected valid token");
@@ -277,6 +278,8 @@ mod tests {
         let token = tokens[3].clone().expect("Expected valid token");
         assert_eq!(token, Token::Semicolon);
         let token = tokens[4].clone().expect("Expected valid token");
+        assert_eq!(token, Token::LArrow);
+        let token = tokens[5].clone().expect("Expected valid token");
         assert_eq!(token, Token::Yield);
     }
 
