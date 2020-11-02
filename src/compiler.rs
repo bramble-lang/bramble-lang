@@ -196,7 +196,7 @@ impl Compiler {
         output.push(Include("io.inc".into()));
         output.push(Section(".data".into()));
         output.push(Data("next_stack_addr".into(), 0));
-        output.push(Data("stack_size".into(), 32 * 1024));
+        output.push(Data("stack_size".into(), 8 * 1024));
 
         // section .text
         // global CMAIN
@@ -594,10 +594,7 @@ impl Compiler {
                 // Move parameters into the stack frame of the coroutine
                 let mut idx = 0;
                 for (_, reg) in params.iter().zip(co_param_registers.iter()) {
-                    let param_offset = function_table.funcs[co]
-                        .vars
-                        .vars[idx]
-                        .2;
+                    let param_offset = function_table.funcs[co].vars.vars[idx].2;
                     output.push(Mov(
                         Location::Memory(format!("eax-{}", param_offset)),
                         Source::Register(*reg),
