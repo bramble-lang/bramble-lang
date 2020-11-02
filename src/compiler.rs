@@ -405,7 +405,7 @@ impl Compiler {
             super::Node::Integer(i) => {
                 output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
-            super::Node::Identifier(id) => {
+            super::Node::Identifier(id, _id_type) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars

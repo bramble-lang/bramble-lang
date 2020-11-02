@@ -10,12 +10,13 @@ pub enum Primitive {
     I32,
     Bool,
     Unit,
+    Unknown,
 }
 
 #[derive(Debug)]
 pub enum Node {
     Integer(i32),
-    Identifier(String),
+    Identifier(String, Primitive),
     Primitive(Primitive),
     Mul(Box<Node>, Box<Node>),
     Add(Box<Node>, Box<Node>),
@@ -197,7 +198,7 @@ impl Node {
 
         while let Some(param) = Node::identifier_declare(iter) {
             match param {
-                Node::Identifier(id) => {
+                Node::Identifier(id, _id_type) => {
                     params.push(id);
                     match iter.peek() {
                         Some(Token::Comma) => {
@@ -325,7 +326,7 @@ impl Node {
 
     fn bind(iter: &mut TokenIter) -> Option<Node> {
         match Node::identifier_declare(iter) {
-            Some(Node::Identifier(id)) => {
+            Some(Node::Identifier(id, _id_type)) => {
                 println!("Parse: Binding {:?}", id);
                 let pt = iter.peek();
                 println!("peek: {:?}", pt);
@@ -422,12 +423,12 @@ impl Node {
     fn function_call_or_variable(iter: &mut TokenIter) -> Option<Node> {
         println!("Function call");
         match Node::identifier(iter) {
-            Some(Node::Identifier(id)) => match Node::fn_call_params(iter) {
+            Some(Node::Identifier(id, _id_type)) => match Node::fn_call_params(iter) {
                 Some(params) => {
                     // this is a function call
                     Some(Node::FunctionCall(id, params))
                 }
-                _ => Some(Node::Identifier(id)),
+                _ => Some(Node::Identifier(id, _id_type)),
             },
             Some(_) => panic!("Parser: expected identifier"),
             None => None,
@@ -508,7 +509,7 @@ impl Node {
                     Some(Token::Colon) => {
                         iter.next();
                         match Node::primitive(iter) {
-                            Some(_) => Some(Node::Identifier(id.clone())),
+                            Some(p) => Some(Node::Identifier(id.clone(), p)),
                             None => panic!("Parser: Invalid primitive type: {:?}", iter.peek()),
                         }
                     }
@@ -528,7 +529,7 @@ impl Node {
             Some(token) => match token {
                 Token::Identifier(id) => {
                     iter.next();
-                    Some(Node::Identifier(id.clone()))
+                    Some(Node::Identifier(id.clone(), Primitive::Unknown))
                 }
                 _ => None,
             },
