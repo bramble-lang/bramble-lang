@@ -13,12 +13,12 @@ use type_checker::*;
 fn main() {
     let text = "
         fn my_main( p ) { 
-            c = init my_co(5, 13);
-            w = yield c;
-            x = 1; 
+            c := init my_co(5, 13);
+            w := yield c;
+            x := 1; 
             println x; 
             println w; 
-            z = yield c;
+            z := yield c;
             println z;
             return x + p; 
         }
