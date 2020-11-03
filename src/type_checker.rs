@@ -223,6 +223,30 @@ pub mod checker {
                     }
                 }
             },
+            Yield(exp) => traverse(exp, current_func, ftable),
+            YieldReturn(None) => match current_func {
+                None => Unknown,
+                Some(cf) => {
+                    let fty = ftable.funcs[cf].ty;
+                    if fty == Unit {
+                        Unit
+                    } else {
+                        Unknown
+                    }
+                }
+            },
+            YieldReturn(Some(exp)) => match current_func {
+                None => Unknown,
+                Some(cf) => {
+                    let fty = ftable.funcs[cf].ty;
+                    let yty = traverse(exp, current_func, ftable);
+                    if fty == yty {
+                        fty
+                    } else {
+                        Unknown
+                    }
+                }
+            },
             FunctionDef(_, _, p, _) => *p,
             FunctionCall(fname, params) => {
                 // test that the expressions passed to the function match the functions
@@ -505,6 +529,60 @@ pub mod checker {
             let node = Node::FunctionCall("my_co2".into(), vec![]);
             let ty = traverse(&node, &Some("my_co2".into()), &ft);
             assert_eq!(ty, Unknown);
+        }
+
+        #[test]
+        pub fn test_yield_return() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_co".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: Unit,
+                },
+            );
+            let node = Node::YieldReturn(None);
+            let ty = traverse(&node, &Some("my_co".into()), &ft);
+            assert_eq!(ty, Unit);
+
+            ft.funcs.insert(
+                "my_co2".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: I32,
+                },
+            );
+
+            // test correct type for yield return
+            let node = Node::YieldReturn(Some(Box::new(Node::Integer(5))));
+            let ty = traverse(&node, &Some("my_co2".into()), &ft);
+            assert_eq!(ty, I32);
+
+            // test incorrect type for yield return
+            let node = Node::YieldReturn(None);
+            let ty = traverse(&node, &Some("my_co2".into()), &ft);
+            assert_eq!(ty, Unknown);
+        }
+
+        #[test]
+        fn test_yield() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_co2".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: I32,
+                },
+            );
+            let node = Node::Yield(Box::new(Node::Identifier("my_co2".into(), I32)));
+            let ty = traverse(&node, &None, &ft);
+            assert_eq!(ty, I32);
         }
     }
 }
