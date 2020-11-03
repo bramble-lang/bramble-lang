@@ -1,8 +1,9 @@
 fn my_main() {
     x:i32 := 5;
-    println x;
+    printiln x;
 
     b:bool := my_bool();
+    printbln b;
     return;
 }
 

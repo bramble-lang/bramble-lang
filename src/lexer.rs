@@ -26,6 +26,7 @@ pub enum Token {
     FunctionDef,
     Printi,
     Printiln,
+    Printbln,
     Init,
     Yield,
     YieldReturn,
@@ -214,6 +215,7 @@ pub fn if_keyword_map(token: Token) -> Token {
             "init" => Token::Init,
             "printi" => Token::Printi,
             "printiln" => Token::Printiln,
+            "printbln" => Token::Printbln,
             _ => Token::Identifier(id.clone()),
         },
         _ => token,
@@ -307,6 +309,7 @@ mod tests {
             ("fn", Token::FunctionDef),
             ("printi", Token::Printi),
             ("printiln", Token::Printiln),
+            ("printbln", Token::Printbln),
         ]
         .iter()
         {

@@ -568,6 +568,11 @@ impl Compiler {
                 output.push(Print(Source::Register(Eax)));
                 output.push(Newline);
             }
+            super::Node::Printbln(exp) => {
+                Compiler::traverse(exp, current_func, function_table, output);
+                output.push(Print(Source::Register(Eax)));
+                output.push(Newline);
+            }
             super::Node::CoroutineInit(co, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed

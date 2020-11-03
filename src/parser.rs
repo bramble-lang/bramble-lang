@@ -32,6 +32,7 @@ pub enum Node {
     Module(Vec<Node>, Vec<Node>),
     Printi(Box<Node>),
     Printiln(Box<Node>),
+    Printbln(Box<Node>),
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -318,6 +319,14 @@ impl Node {
                 let exp = Node::expression(iter);
                 match exp {
                     Some(exp) => Some(Node::Printiln(Box::new(exp))),
+                    None => panic!("Parser: Expected expression after println"),
+                }
+            }
+            Some(Token::Printbln) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match exp {
+                    Some(exp) => Some(Node::Printbln(Box::new(exp))),
                     None => panic!("Parser: Expected expression after println"),
                 }
             }
