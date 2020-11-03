@@ -1,0 +1,14 @@
+fn my_main( p: bool) {
+    c:i32 := init my_co(5, 13);
+    c2:i32 := init my_co(17, 27);
+    printiln (yield c);
+    printiln (yield c2);
+    printiln (yield c);
+    printiln (yield c2);
+    return;
+}
+
+co my_co (x: i32, y: i32) -> i32 {
+    yret x;
+    return y;
+}
