@@ -4,6 +4,7 @@
 #[derive(Debug, Copy, Clone)]
 enum Register {
     Eax,
+    Al,
     Ebx,
     Ecx,
     Edx,
@@ -15,6 +16,7 @@ impl std::fmt::Display for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Register::Eax => f.write_str("eax"),
+            Register::Al => f.write_str("al"),
             Register::Ebx => f.write_str("ebx"),
             Register::Ecx => f.write_str("ecx"),
             Register::Edx => f.write_str("edx"),
@@ -85,13 +87,19 @@ enum Instruction {
     Call(Label),
     Ret,
     Mov(Location, Source),
+    Movzx(Location, Source),
     Lea(Location, Source),
     Add(Register, Source),
     Sub(Register, Source),
     IMul(Register, Location),
-    Andl(Register, Source),
-    Orl(Register, Source),
+    And(Register, Source),
+    Or(Register, Source),
     Cmp(Register, Source),
+    Setl(Register),
+    Setle(Register),
+    Setg(Register),
+    Setge(Register),
+    Sete(Register),
     Push(Register),
     Pop(Register),
     Print(Source),
@@ -139,6 +147,12 @@ impl Compiler {
                         Mov(l, Source::Address(s)) => writeln!(output, "mov {}, {}", l, s)?,
                         Mov(l, Source::Integer(s)) => writeln!(output, "mov {}, DWORD {}", l, s)?,
                         Mov(l, Source::Register(s)) => writeln!(output, "mov {}, {}", l, s)?,
+
+                        Movzx(l, Source::Memory(s)) => writeln!(output, "movzx {}, DWORD [{}]", l, s)?,
+                        Movzx(l, Source::Address(s)) => writeln!(output, "movzx {}, {}", l, s)?,
+                        Movzx(l, Source::Integer(s)) => writeln!(output, "movzx {}, DWORD {}", l, s)?,
+                        Movzx(l, Source::Register(s)) => writeln!(output, "movzx {}, {}", l, s)?,
+
                         Lea(l, s) => writeln!(output, "lea {}, {}", l, s)?,
                         Push(reg) => {
                             writeln!(output, "push {}", reg)?;
@@ -149,6 +163,21 @@ impl Compiler {
                         Cmp(reg, s) => {
                             writeln!(output, "cmp {}, {}", reg, s)?;
                         }
+                        Sete(reg) => {
+                            writeln!(output, "sete {}", reg)?;
+                        }
+                        Setl(reg) => {
+                            writeln!(output, "setl {}", reg)?;
+                        }
+                        Setle(reg) => {
+                            writeln!(output, "setle {}", reg)?;
+                        }
+                        Setg(reg) => {
+                            writeln!(output, "setg {}", reg)?;
+                        }
+                        Setge(reg) => {
+                            writeln!(output, "setge {}", reg)?;
+                        }
                         IMul(reg, s) => {
                             writeln!(output, "imul {}, {}", reg, s)?;
                         }
@@ -158,10 +187,10 @@ impl Compiler {
                         Sub(reg, s) => {
                             writeln!(output, "sub {}, {}", reg, s)?;
                         }
-                        Andl(reg, s) => {
+                        And(reg, s) => {
                             writeln!(output, "and {}, {}", reg, s)?;
                         }
-                        Orl(reg, s) => {
+                        Or(reg, s) => {
                             writeln!(output, "or {}, {}", reg, s)?;
                         }
                         Jmp(loc) => {
@@ -495,6 +524,81 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Add(Eax, Source::Register(Ebx)));
             }
+            super::Node::Eq(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
+                output.push(Sete(Register::Al));
+                output.push(And(Register::Al, Source::Integer(1)));
+                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+            }
+            super::Node::Ls(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
+                output.push(Setl(Register::Al));
+                output.push(And(Register::Al, Source::Integer(1)));
+                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+            }
+            super::Node::LsEq(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
+                output.push(Setle(Register::Al));
+                output.push(And(Register::Al, Source::Integer(1)));
+                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+            }
+            super::Node::Gr(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
+                output.push(Setg(Register::Al));
+                output.push(And(Register::Al, Source::Integer(1)));
+                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+            }
+            super::Node::GrEq(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
+                output.push(Setge(Register::Al));
+                output.push(And(Register::Al, Source::Integer(1)));
+                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+            }
             super::Node::BAnd(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
@@ -505,7 +609,7 @@ impl Compiler {
 
                 output.push(Pop(Ebx));
                 output.push(Pop(Eax));
-                output.push(Andl(Eax, Source::Register(Ebx)));
+                output.push(And(Eax, Source::Register(Ebx)));
             }
             super::Node::BOr(l, r) => {
                 let left = l.as_ref();
@@ -517,7 +621,7 @@ impl Compiler {
 
                 output.push(Pop(Ebx));
                 output.push(Pop(Eax));
-                output.push(Orl(Eax, Source::Register(Ebx)));
+                output.push(Or(Eax, Source::Register(Ebx)));
             }
             super::Node::Bind(id, _, exp) => {
                 let id_offset = {

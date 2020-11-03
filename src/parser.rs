@@ -469,13 +469,24 @@ impl Node {
     }
 
     fn factor(iter: &mut TokenIter) -> Option<Node> {
-        match Node::constant(iter) {
-            Some(n) => Some(n),
-            None => match Node::function_call_or_variable(iter) {
+        match iter.peek() {
+            Some(Token::LParen) => {
+                iter.next();
+                let exp = Node::expression(iter);
+                match iter.peek() {
+                    Some(Token::RParen) => iter.next(),
+                    x => panic!("Parser: exected ) but found {:?}", x),
+                };
+                exp
+            }
+            _ => match Node::constant(iter) {
                 Some(n) => Some(n),
-                None => match Node::co_yield(iter) {
+                None => match Node::function_call_or_variable(iter) {
                     Some(n) => Some(n),
-                    None => None,
+                    None => match Node::co_yield(iter) {
+                        Some(n) => Some(n),
+                        None => None,
+                    },
                 },
             },
         }
