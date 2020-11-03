@@ -639,5 +639,59 @@ pub mod checker {
             let ty = traverse(&node, &None, &ft);
             assert_eq!(ty, Ok(I32));
         }
+
+        #[test]
+        fn test_func_def() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_func".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: I32,
+                },
+            );
+
+            let node = Node::FunctionDef(
+                "my_func".into(),
+                vec![],
+                I32,
+                vec![Node::Return(Some(Box::new(Node::Integer(5))))],
+            );
+            let ty = traverse(&node, &None, &ft);
+            assert_eq!(ty, Ok(I32));
+
+            let node = Node::FunctionDef("my_func".into(), vec![], I32, vec![Node::Return(None)]);
+            let ty = traverse(&node, &None, &ft);
+            assert_eq!(ty, Err("Return expected I32 type and got Unit".into()));
+        }
+
+        #[test]
+        fn test_coroutine_def() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_co".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: I32,
+                },
+            );
+
+            let node = Node::CoroutineDef(
+                "my_co".into(),
+                vec![],
+                I32,
+                vec![Node::Return(Some(Box::new(Node::Integer(5))))],
+            );
+            let ty = traverse(&node, &None, &ft);
+            assert_eq!(ty, Ok(I32));
+
+            let node = Node::FunctionDef("my_co".into(), vec![], I32, vec![Node::Return(None)]);
+            let ty = traverse(&node, &None, &ft);
+            assert_eq!(ty, Err("Return expected I32 type and got Unit".into()));
+        }
     }
 }
