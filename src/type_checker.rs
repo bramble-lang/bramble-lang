@@ -242,12 +242,18 @@ pub mod checker {
                     }
                 }
             },
-            Yield(box exp) => {
-                match exp {
-                    Node::Identifier(coname, _) => 
-                    ftable.funcs.get(coname).map(|fi| fi.ty).ok_or(format!("Could not find coroutine: {}", coname)),
+            Yield(box exp) => match current_func {
+                None => Err("Yield appears outside of function".into()),
+                Some(cf) => match exp {
+                    Node::Identifier(coname, _) => ftable
+                        .funcs
+                        .get(cf)
+                        .map(|fi| fi.vars.vars.iter().find(|v| v.name == *coname))
+                        .flatten()
+                        .map(|vd| vd.ty)
+                        .ok_or(format!("Could not find coroutine: {}", coname)),
                     _ => Err("Expected name of coroutine after yield".into()),
-                }
+                },
             },
             YieldReturn(None) => match current_func {
                 None => Err("YRet appears outside of function".into()),
@@ -384,9 +390,13 @@ pub mod checker {
                 "my_main".into(),
                 FunctionInfo {
                     params: vec![],
-                    vars: VarTable{
-                        vars: vec![VarDecl{name: "x".into(), ty: Bool, size: 4, frame_offset: 4}],
-                        
+                    vars: VarTable {
+                        vars: vec![VarDecl {
+                            name: "x".into(),
+                            ty: Bool,
+                            size: 4,
+                            frame_offset: 4,
+                        }],
                     },
                     label_count: 0,
                     ty: Unit,
