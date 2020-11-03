@@ -21,6 +21,8 @@ pub enum Node {
     Primitive(Primitive),
     Mul(Box<Node>, Box<Node>),
     Add(Box<Node>, Box<Node>),
+    BAnd(Box<Node>, Box<Node>),
+    BOr(Box<Node>, Box<Node>),
     Bind(String, Primitive, Box<Node>),
     Return(Option<Box<Node>>),
     FunctionDef(String, Vec<(String, Primitive)>, Primitive, Vec<Node>),
@@ -397,6 +399,11 @@ impl Node {
                     let n2 = Node::expression(iter).expect("An expression after +");
                     Some(Node::Add(Box::new(n), Box::new(n2)))
                 }
+                Some(Token::BOr) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after ||");
+                    Some(Node::BOr(Box::new(n), Box::new(n2)))
+                }
                 _ => Some(n),
             },
             None => None,
@@ -410,6 +417,11 @@ impl Node {
                     iter.next();
                     let n2 = Node::term(iter).expect("a valid term after *");
                     Some(Node::Mul(Box::new(n), Box::new(n2)))
+                }
+                Some(Token::BAnd) => {
+                    iter.next();
+                    let n2 = Node::term(iter).expect("a valid term after &&");
+                    Some(Node::BAnd(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
             },

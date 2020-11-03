@@ -211,6 +211,14 @@ pub mod checker {
                     _ => Err("*/+ expect to have operands of i32".into()),
                 }
             }
+            BAnd(l, r) | BOr(l, r) => {
+                let lty = traverse(l, current_func, ftable);
+                let rty = traverse(r, current_func, ftable);
+                match (lty, rty) {
+                    (Ok(Bool), Ok(Bool)) => Ok(Bool),
+                    _ => Err("&& and || expect to have operands of bool".into()),
+                }
+            }
             Bind(_, p, exp) => {
                 let ety = traverse(exp, current_func, ftable).unwrap();
                 if *p == ety {
@@ -489,6 +497,28 @@ pub mod checker {
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
                 assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
+            }
+        }
+
+        #[test]
+        pub fn test_boolean_ops() {
+            let ft = FunctionTable::new();
+            let tests:Vec<(Node, Result<Primitive, String>)> = vec![
+                (Node::BAnd(Box::new(Node::Boolean(true)), Box::new(Node::Boolean(false))), Ok(Primitive::Bool)),
+                (Node::BAnd(Box::new(Node::Integer(5)), Box::new(Node::Boolean(false))), Err("&& and || expect to have operands of bool".into())),
+                (Node::BAnd(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
+                (Node::BAnd(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
+                
+                (Node::BOr(Box::new(Node::Boolean(true)), Box::new(Node::Boolean(false))), Ok(Primitive::Bool)),
+                (Node::BOr(Box::new(Node::Integer(5)), Box::new(Node::Boolean(false))), Err("&& and || expect to have operands of bool".into())),
+                (Node::BOr(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
+                (Node::BOr(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
+            ];
+
+            for (test, expected) in tests.iter() {
+
+                let ty = traverse(&test, &None, &ft);
+                assert_eq!(ty, *expected);
             }
         }
 
