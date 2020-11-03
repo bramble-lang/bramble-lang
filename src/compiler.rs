@@ -89,6 +89,8 @@ enum Instruction {
     Add(Register, Source),
     Sub(Register, Source),
     IMul(Register, Location),
+    Andl(Register, Source),
+    Orl(Register, Source),
     Cmp(Register, Source),
     Push(Register),
     Pop(Register),
@@ -155,6 +157,12 @@ impl Compiler {
                         }
                         Sub(reg, s) => {
                             writeln!(output, "sub {}, {}", reg, s)?;
+                        }
+                        Andl(reg, s) => {
+                            writeln!(output, "andl {}, {}", reg, s)?;
+                        }
+                        Orl(reg, s) => {
+                            writeln!(output, "orl {}, {}", reg, s)?;
                         }
                         Jmp(loc) => {
                             writeln!(output, "jmp {}", loc)?;
@@ -486,6 +494,30 @@ impl Compiler {
                 output.push(Pop(Ebx));
                 output.push(Pop(Eax));
                 output.push(Add(Eax, Source::Register(Ebx)));
+            }
+            super::Node::BAnd(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Andl(Eax, Source::Register(Ebx)));
+            }
+            super::Node::BOr(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Orl(Eax, Source::Register(Ebx)));
             }
             super::Node::Bind(id, _, exp) => {
                 let id_offset = {

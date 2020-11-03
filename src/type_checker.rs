@@ -699,7 +699,16 @@ pub mod checker {
                 "my_main".into(),
                 FunctionInfo {
                     params: vec![],
-                    vars: VarTable::new(),
+                    vars: VarTable{
+                        vars: vec![
+                            VarDecl{
+                                name: "c".into(),
+                                size: 4,
+                                ty: I32,
+                                frame_offset: 4,
+                            }
+                        ]
+                    },
                     label_count: 0,
                     ty: Unit,
                 },
@@ -713,7 +722,7 @@ pub mod checker {
                     ty: I32,
                 },
             );
-            let node = Node::Yield(Box::new(Node::Identifier("my_co2".into(), I32)));
+            let node = Node::Yield(Box::new(Node::Identifier("c".into(), I32)));
             let ty = traverse(&node, &Some("my_main".into()), &ft);
             assert_eq!(ty, Ok(I32));
         }
