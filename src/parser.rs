@@ -23,6 +23,11 @@ pub enum Node {
     Add(Box<Node>, Box<Node>),
     BAnd(Box<Node>, Box<Node>),
     BOr(Box<Node>, Box<Node>),
+    Gr(Box<Node>, Box<Node>),
+    GrEq(Box<Node>, Box<Node>),
+    Ls(Box<Node>, Box<Node>),
+    LsEq(Box<Node>, Box<Node>),
+    Eq(Box<Node>, Box<Node>),
     Bind(String, Primitive, Box<Node>),
     Return(Option<Box<Node>>),
     FunctionDef(String, Vec<(String, Primitive)>, Primitive, Vec<Node>),
@@ -392,16 +397,50 @@ impl Node {
     }
 
     fn expression(iter: &mut TokenIter) -> Option<Node> {
+        match Node::sum(iter) {
+            Some(n) => match iter.peek() {
+                Some(Token::Eq) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after ==");
+                    Some(Node::Eq(Box::new(n), Box::new(n2)))
+                }
+                Some(Token::Gr) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after >");
+                    Some(Node::Gr(Box::new(n), Box::new(n2)))
+                }
+                Some(Token::GrEq) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after >=");
+                    Some(Node::Gr(Box::new(n), Box::new(n2)))
+                }
+                Some(Token::Ls) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after <");
+                    Some(Node::Ls(Box::new(n), Box::new(n2)))
+                }
+                Some(Token::LsEq) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after <=");
+                    Some(Node::Ls(Box::new(n), Box::new(n2)))
+                }
+                _ => Some(n),
+            },
+            None => None,
+        }
+    }
+
+    fn sum(iter: &mut TokenIter) -> Option<Node> {
         match Node::term(iter) {
             Some(n) => match iter.peek() {
                 Some(Token::Add) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after +");
+                    let n2 = Node::sum(iter).expect("An expression after +");
                     Some(Node::Add(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::BOr) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after ||");
+                    let n2 = Node::sum(iter).expect("An expression after ||");
                     Some(Node::BOr(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),

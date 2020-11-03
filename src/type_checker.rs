@@ -219,6 +219,28 @@ pub mod checker {
                     _ => Err("&& and || expect to have operands of bool".into()),
                 }
             }
+            Node::Eq(l, r) => {
+                let lty = traverse(l, current_func, ftable);
+                let rty = traverse(r, current_func, ftable);
+                match (lty, rty) {
+                    (Ok(lty), Ok(rty)) => {
+                        if lty == rty {
+                            Ok(Bool)
+                        } else {
+                            Err(format!("Expected {:?} after == but got {:?}", lty, rty))
+                        }
+                    }
+                    _ => Err("&& and || expect to have operands of bool".into()),
+                }
+            }
+            GrEq(l, r) | Gr(l, r) | Ls(l, r) | LsEq(l, r) => {
+                let lty = traverse(l, current_func, ftable);
+                let rty = traverse(r, current_func, ftable);
+                match (lty, rty) {
+                    (Ok(I32), Ok(I32)) => Ok(Bool),
+                    _ => Err(">=, > , <, and <= expect to have operands of i32".into()),
+                }
+            }
             Bind(_, p, exp) => {
                 let ety = traverse(exp, current_func, ftable).unwrap();
                 if *p == ety {
@@ -299,8 +321,14 @@ pub mod checker {
                     .iter()
                     .map(|p| traverse(p, current_func, ftable).unwrap())
                     .collect();
-                let fpty: Vec<parser::Primitive> =
-                    ftable.funcs[fname].params.iter().map(|(_, p)| *p).collect();
+                let fpty: Vec<parser::Primitive> = (ftable
+                    .funcs
+                    .get(fname)
+                    .ok_or(format!("Unknown identifer or function: {}", fname))?)
+                .params
+                .iter()
+                .map(|(_, p)| *p)
+                .collect();
                 if pty.len() != fpty.len() {
                     Err(format!(
                         "Incorrect number of parameters passed to function: {}",
@@ -503,20 +531,48 @@ pub mod checker {
         #[test]
         pub fn test_boolean_ops() {
             let ft = FunctionTable::new();
-            let tests:Vec<(Node, Result<Primitive, String>)> = vec![
-                (Node::BAnd(Box::new(Node::Boolean(true)), Box::new(Node::Boolean(false))), Ok(Primitive::Bool)),
-                (Node::BAnd(Box::new(Node::Integer(5)), Box::new(Node::Boolean(false))), Err("&& and || expect to have operands of bool".into())),
-                (Node::BAnd(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
-                (Node::BAnd(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
-                
-                (Node::BOr(Box::new(Node::Boolean(true)), Box::new(Node::Boolean(false))), Ok(Primitive::Bool)),
-                (Node::BOr(Box::new(Node::Integer(5)), Box::new(Node::Boolean(false))), Err("&& and || expect to have operands of bool".into())),
-                (Node::BOr(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
-                (Node::BOr(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))), Err("&& and || expect to have operands of bool".into())),
+            let tests: Vec<(Node, Result<Primitive, String>)> = vec![
+                (
+                    Node::BAnd(
+                        Box::new(Node::Boolean(true)),
+                        Box::new(Node::Boolean(false)),
+                    ),
+                    Ok(Primitive::Bool),
+                ),
+                (
+                    Node::BAnd(Box::new(Node::Integer(5)), Box::new(Node::Boolean(false))),
+                    Err("&& and || expect to have operands of bool".into()),
+                ),
+                (
+                    Node::BAnd(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))),
+                    Err("&& and || expect to have operands of bool".into()),
+                ),
+                (
+                    Node::BAnd(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
+                    Err("&& and || expect to have operands of bool".into()),
+                ),
+                (
+                    Node::BOr(
+                        Box::new(Node::Boolean(true)),
+                        Box::new(Node::Boolean(false)),
+                    ),
+                    Ok(Primitive::Bool),
+                ),
+                (
+                    Node::BOr(Box::new(Node::Integer(5)), Box::new(Node::Boolean(false))),
+                    Err("&& and || expect to have operands of bool".into()),
+                ),
+                (
+                    Node::BOr(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))),
+                    Err("&& and || expect to have operands of bool".into()),
+                ),
+                (
+                    Node::BOr(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
+                    Err("&& and || expect to have operands of bool".into()),
+                ),
             ];
 
             for (test, expected) in tests.iter() {
-
                 let ty = traverse(&test, &None, &ft);
                 assert_eq!(ty, *expected);
             }
@@ -699,15 +755,13 @@ pub mod checker {
                 "my_main".into(),
                 FunctionInfo {
                     params: vec![],
-                    vars: VarTable{
-                        vars: vec![
-                            VarDecl{
-                                name: "c".into(),
-                                size: 4,
-                                ty: I32,
-                                frame_offset: 4,
-                            }
-                        ]
+                    vars: VarTable {
+                        vars: vec![VarDecl {
+                            name: "c".into(),
+                            size: 4,
+                            ty: I32,
+                            frame_offset: 4,
+                        }],
                     },
                     label_count: 0,
                     ty: Unit,

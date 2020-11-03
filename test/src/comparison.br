@@ -1,0 +1,17 @@
+fn my_main() {
+    b2:bool := lesser(3, 5);
+    printbln b2;
+
+    b3:bool := greater(3, 5);
+    printbln b3;
+    
+    return;
+}
+
+fn lesser(a: i32, b: i32) -> bool {
+    return a < b;
+}
+
+fn greater(a: i32, b: i32) -> bool {
+    return a > b;
+}

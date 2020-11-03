@@ -17,6 +17,11 @@ pub enum Token {
     Add,
     BAnd,
     BOr,
+    GrEq,
+    LsEq,
+    Gr,
+    Ls,
+    Eq,
     Assign,
     Semicolon,
     Comma,
@@ -168,6 +173,33 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
                 }
             }
         }
+        Some('=') => {
+            iter.next();
+            match iter.peek() {
+                Some('=') => Some(Token::Eq),
+                _ => panic!("Lexer: Unexpected '=' character"),
+            }
+        }
+        Some('>') => {
+            iter.next();
+            match iter.peek() {
+                Some('=') => Some(Token::GrEq),
+                _ => {
+                    consume = false;
+                    Some(Token::Gr)
+                }
+            }
+        }
+        Some('<') => {
+            iter.next();
+            match iter.peek() {
+                Some('=') => Some(Token::LsEq),
+                _ => {
+                    consume = false;
+                    Some(Token::Ls)
+                }
+            }
+        }
         Some('-') => {
             iter.next();
             match iter.peek() {
@@ -279,6 +311,11 @@ mod tests {
             ("+", Token::Add),
             ("&&", Token::BAnd),
             ("||", Token::BOr),
+            (">", Token::Gr),
+            (">=", Token::GrEq),
+            ("<", Token::Ls),
+            ("<=", Token::LsEq),
+            ("==", Token::Eq),
             ("{", Token::LBrace),
             ("}", Token::RBrace),
             ("(", Token::LParen),

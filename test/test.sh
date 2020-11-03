@@ -2,7 +2,7 @@
 
 function run_test() {
     test=$1
-    rm ./target/*
+    rm -f ./target/*
     cargo run -- -i ./src/${test}.br -o ./target/output.asm 2>&1 > compiler.log
     nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
     gcc -w ./target/output.obj macro.c -g -o ./target/output -m32 2>&1 > gcc.log
@@ -22,3 +22,4 @@ function run_test() {
 run_test "simple"
 run_test "simple_coroutine"
 run_test "boolean"
+run_test "comparison"
