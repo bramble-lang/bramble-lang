@@ -1,0 +1,20 @@
+fn my_main() {
+    b1:bool := my_bool(true, true);
+    printbln b1;
+
+    b2:bool := my_bool(false, true);
+    printbln b2;
+
+    b3:bool := my_or(false, true);
+    printbln b3;
+    
+    return;
+}
+
+fn my_bool(a: bool, b: bool) -> bool {
+    return a && b;
+}
+
+fn my_or(a: bool, b: bool) -> bool {
+    return a || b;
+}
