@@ -398,36 +398,68 @@ impl Node {
     }
 
     fn expression(iter: &mut TokenIter) -> Option<Node> {
+        Node::logical_or(iter)
+    }
+
+    fn logical_or(iter: &mut TokenIter) -> Option<Node> {
+        match Node::logical_and(iter) {
+            Some(n) => match iter.peek() {
+                Some(Token::BOr) => {
+                    iter.next();
+                    let n2 = Node::logical_or(iter).expect("An expression after ||");
+                    Some(Node::BOr(Box::new(n), Box::new(n2)))
+                }
+                _ => Some(n),
+            },
+            None => None,
+        }
+    }
+
+    fn logical_and(iter: &mut TokenIter) -> Option<Node> {
+        match Node::comparison(iter) {
+            Some(n) => match iter.peek() {
+                Some(Token::BAnd) => {
+                    iter.next();
+                    let n2 = Node::logical_and(iter).expect("An expression after ||");
+                    Some(Node::BAnd(Box::new(n), Box::new(n2)))
+                }
+                _ => Some(n),
+            },
+            None => None,
+        }
+    }
+
+    fn comparison(iter: &mut TokenIter) -> Option<Node> {
         match Node::sum(iter) {
             Some(n) => match iter.peek() {
                 Some(Token::Eq) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after ==");
+                    let n2 = Node::comparison(iter).expect("An expression after ==");
                     Some(Node::Eq(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::NEq) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after !=");
+                    let n2 = Node::comparison(iter).expect("An expression after !=");
                     Some(Node::NEq(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::Gr) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after >");
+                    let n2 = Node::comparison(iter).expect("An expression after >");
                     Some(Node::Gr(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::GrEq) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after >=");
+                    let n2 = Node::comparison(iter).expect("An expression after >=");
                     Some(Node::Gr(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::Ls) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after <");
+                    let n2 = Node::comparison(iter).expect("An expression after <");
                     Some(Node::Ls(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::LsEq) => {
                     iter.next();
-                    let n2 = Node::expression(iter).expect("An expression after <=");
+                    let n2 = Node::comparison(iter).expect("An expression after <=");
                     Some(Node::Ls(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
@@ -444,11 +476,6 @@ impl Node {
                     let n2 = Node::sum(iter).expect("An expression after +");
                     Some(Node::Add(Box::new(n), Box::new(n2)))
                 }
-                Some(Token::BOr) => {
-                    iter.next();
-                    let n2 = Node::sum(iter).expect("An expression after ||");
-                    Some(Node::BOr(Box::new(n), Box::new(n2)))
-                }
                 _ => Some(n),
             },
             None => None,
@@ -462,11 +489,6 @@ impl Node {
                     iter.next();
                     let n2 = Node::term(iter).expect("a valid term after *");
                     Some(Node::Mul(Box::new(n), Box::new(n2)))
-                }
-                Some(Token::BAnd) => {
-                    iter.next();
-                    let n2 = Node::term(iter).expect("a valid term after &&");
-                    Some(Node::BAnd(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
             },
