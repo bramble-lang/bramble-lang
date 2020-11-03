@@ -3,11 +3,13 @@ fn my_main() {
     b:bool := 6 < 5 || 7 <= 5 + 1*2;
     c:bool := 2 != 3 && 2 != 4;
     d:bool := 2 < 3 || 3 < 2 && 2 > 4 && 2 <= 1;
-    e:bool := a && b && c && d;
+    e: bool := 2 > 3 || 2 != 2;
+    f:bool := a && b && c && d || e;
     printbln a;
     printbln b;
     printbln c;
     printbln d;
     printbln e;
+    printbln f;
     return;
 }
