@@ -22,6 +22,7 @@ pub enum Token {
     Gr,
     Ls,
     Eq,
+    NEq,
     Assign,
     Semicolon,
     Comma,
@@ -173,6 +174,13 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
                 }
             }
         }
+        Some('!') => {
+            iter.next();
+            match iter.peek() {
+                Some('=') => Some(Token::NEq),
+                _ => panic!("Lexer: Unexpected '!' character"),
+            }
+        }
         Some('=') => {
             iter.next();
             match iter.peek() {
@@ -316,6 +324,7 @@ mod tests {
             ("<", Token::Ls),
             ("<=", Token::LsEq),
             ("==", Token::Eq),
+            ("!=", Token::NEq),
             ("{", Token::LBrace),
             ("}", Token::RBrace),
             ("(", Token::LParen),

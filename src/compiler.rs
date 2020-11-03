@@ -100,6 +100,7 @@ enum Instruction {
     Setg(Register),
     Setge(Register),
     Sete(Register),
+    Setne(Register),
     Push(Register),
     Pop(Register),
     Print(Source),
@@ -165,6 +166,9 @@ impl Compiler {
                         }
                         Sete(reg) => {
                             writeln!(output, "sete {}", reg)?;
+                        }
+                        Setne(reg) => {
+                            writeln!(output, "setne {}", reg)?;
                         }
                         Setl(reg) => {
                             writeln!(output, "setl {}", reg)?;
@@ -536,6 +540,21 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
                 output.push(Sete(Register::Al));
+                output.push(And(Register::Al, Source::Integer(1)));
+                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+            }
+            super::Node::NEq(l, r) => {
+                let left = l.as_ref();
+                Compiler::traverse(left, current_func, function_table, output);
+                output.push(Push(Eax));
+                let right = r.as_ref();
+                Compiler::traverse(right, current_func, function_table, output);
+                output.push(Push(Eax));
+
+                output.push(Pop(Ebx));
+                output.push(Pop(Eax));
+                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
+                output.push(Setne(Register::Al));
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }

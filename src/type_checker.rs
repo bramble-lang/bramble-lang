@@ -219,7 +219,7 @@ pub mod checker {
                     _ => Err("&& and || expect to have operands of bool".into()),
                 }
             }
-            Node::Eq(l, r) => {
+            Node::Eq(l, r) | Node::NEq(l, r) => {
                 let lty = traverse(l, current_func, ftable);
                 let rty = traverse(r, current_func, ftable);
                 match (lty, rty) {

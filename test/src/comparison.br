@@ -13,12 +13,19 @@ fn my_main() {
 
     b4:bool := greater(3, 5);
     printbln b4;
+
+    b5: bool := not_equal(3, 5);
+    printbln b5;
     
     return;
 }
 
 fn simple_eq(a: i32, b: i32) -> bool {
     return a == b;
+}
+
+fn not_equal(a: i32, b: i32) -> bool {
+    return a != b;
 }
 
 fn big_equal(a: i32, b: i32, c: bool) -> bool{

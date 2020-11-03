@@ -28,6 +28,7 @@ pub enum Node {
     Ls(Box<Node>, Box<Node>),
     LsEq(Box<Node>, Box<Node>),
     Eq(Box<Node>, Box<Node>),
+    NEq(Box<Node>, Box<Node>),
     Bind(String, Primitive, Box<Node>),
     Return(Option<Box<Node>>),
     FunctionDef(String, Vec<(String, Primitive)>, Primitive, Vec<Node>),
@@ -403,6 +404,11 @@ impl Node {
                     iter.next();
                     let n2 = Node::expression(iter).expect("An expression after ==");
                     Some(Node::Eq(Box::new(n), Box::new(n2)))
+                }
+                Some(Token::NEq) => {
+                    iter.next();
+                    let n2 = Node::expression(iter).expect("An expression after !=");
+                    Some(Node::NEq(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::Gr) => {
                     iter.next();
