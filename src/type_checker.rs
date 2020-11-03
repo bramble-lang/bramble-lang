@@ -245,6 +245,31 @@ pub mod checker {
                     }
                 }
             }
+            CoroutineDef(_, _, p, _) => *p,
+            CoroutineInit(coname, params) => {
+                // test that the expressions passed to the function match the functions
+                // parameter types
+                let pty: Vec<parser::Primitive> = params
+                    .iter()
+                    .map(|p| traverse(p, current_func, ftable))
+                    .collect();
+                let fpty: Vec<parser::Primitive> = ftable.funcs[coname]
+                    .params
+                    .iter()
+                    .map(|(_, p)| *p)
+                    .collect();
+                if pty.len() != fpty.len() {
+                    Unknown
+                } else {
+                    let z = pty.iter().zip(fpty.iter());
+                    let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
+                    if all_params_match {
+                        ftable.funcs[coname].ty
+                    } else {
+                        Unknown
+                    }
+                }
+            }
             _ => Unknown,
         }
     }
@@ -442,6 +467,43 @@ pub mod checker {
             // test incorrect parameters passed in call
             let node = Node::FunctionCall("my_func2".into(), vec![]);
             let ty = traverse(&node, &Some("my_func2".into()), &ft);
+            assert_eq!(ty, Unknown);
+        }
+
+        #[test]
+        pub fn test_co_init() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_co".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: I32,
+                },
+            );
+            let node = Node::CoroutineInit("my_co".into(), vec![]);
+            let ty = traverse(&node, &Some("my_co".into()), &ft);
+            assert_eq!(ty, I32);
+
+            ft.funcs.insert(
+                "my_co2".into(),
+                FunctionInfo {
+                    params: vec![("x".into(), I32)],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: I32,
+                },
+            );
+
+            // test correct parameters passed in call
+            let node = Node::CoroutineInit("my_co2".into(), vec![Node::Integer(5)]);
+            let ty = traverse(&node, &Some("my_co2".into()), &ft);
+            assert_eq!(ty, I32);
+
+            // test incorrect parameters passed in call
+            let node = Node::FunctionCall("my_co2".into(), vec![]);
+            let ty = traverse(&node, &Some("my_co2".into()), &ft);
             assert_eq!(ty, Unknown);
         }
     }
