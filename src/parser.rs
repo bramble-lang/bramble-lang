@@ -283,7 +283,7 @@ impl Node {
                 let exp = Node::expression(iter);
                 match iter.peek() {
                     Some(Token::Semicolon) => iter.next(),
-                    _ => panic!("Expected ; after return statement"),
+                    _ => panic!("Expected ; after yield return statement"),
                 };
                 match exp {
                     Some(exp) => Some(Node::YieldReturn(Some(Box::new(exp)))),
