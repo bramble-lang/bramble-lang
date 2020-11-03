@@ -176,7 +176,9 @@ pub mod checker {
 
     use super::FunctionTable;
 
-    pub fn type_check(ast: &Node) {}
+    pub fn type_check(ast: &Node, ftable: &FunctionTable) -> Result<Primitive, String> {
+        traverse(ast, &None, ftable)
+    }
 
     fn traverse(
         ast: &Node,
@@ -186,7 +188,18 @@ pub mod checker {
         use Node::*;
         match ast {
             Integer(_) => Ok(I32),
-            Identifier(_, p) => Ok(*p),
+            Identifier(id, _) => match current_func {
+                None => Err(format!("Variable {} appears outside of function", id)),
+                Some(cf) => ftable.funcs[cf]
+                    .vars
+                    .vars
+                    .iter()
+                    .find(|v| v.name == *id)
+                    .map_or_else(
+                        || Err(format!("Variable {} not declared", id)),
+                        |v| Ok(v.ty),
+                    ),
+            },
             Primitive(p) => Ok(*p),
             Mul(l, r) | Add(l, r) => {
                 let lty = traverse(l, current_func, ftable);
@@ -251,7 +264,12 @@ pub mod checker {
                     }
                 }
             },
-            FunctionDef(_, _, p, _) => Ok(*p),
+            FunctionDef(fname, _, p, body) | CoroutineDef(fname, _, p, body) => {
+                for stmt in body.iter() {
+                    traverse(stmt, &Some(fname.clone()), ftable)?;
+                }
+                Ok(*p)
+            }
             FunctionCall(fname, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -279,7 +297,6 @@ pub mod checker {
                     }
                 }
             }
-            CoroutineDef(_, _, p, _) => Ok(*p),
             CoroutineInit(coname, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -315,10 +332,18 @@ pub mod checker {
                 if ty == Ok(I32) {
                     Ok(I32)
                 } else {
-                    Err("Expected i32 for print".into())
+                    Err(format!("Expected i32 for print got {:?}", ty))
                 }
             }
-            Module(_, _) => Ok(Unit),
+            Module(funcs, cors) => {
+                for func in funcs.iter() {
+                    traverse(func, &None, ftable)?;
+                }
+                for cor in cors.iter() {
+                    traverse(cor, &None, ftable)?;
+                }
+                Ok(Unit)
+            }
         }
     }
 

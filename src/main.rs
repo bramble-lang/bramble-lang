@@ -52,6 +52,12 @@ fn main() {
     let mut func_table = FunctionTable::generate(&ast);
     println!("FuncTable: {:?}", func_table);
 
+    // Type Check
+    match checker::type_check(&ast, &func_table) {
+        Ok(_) => (),
+        Err(msg) => panic!(msg),
+    }
+
     let program = Compiler::compile(&ast, &mut func_table);
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
