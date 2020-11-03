@@ -570,6 +570,67 @@ pub mod checker {
                     Node::BOr(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
                     Err("&& and || expect to have operands of bool".into()),
                 ),
+
+                (
+                    Node::Eq(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
+                    Ok(Bool),
+                ),
+                (
+                    Node::Eq(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))),
+                    Err("Expected Bool after == but got I32".into()),
+                ),
+                (
+                    Node::Eq(Box::new(Node::Integer(5)), Box::new(Node::Boolean(true))),
+                    Err("Expected I32 after == but got Bool".into()),
+                ),
+                (
+                    Node::Gr(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
+                    Ok(Bool),
+                ),
+                (
+                    Node::Gr(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
+                (
+                    Node::Gr(Box::new(Node::Integer(5)), Box::new(Node::Boolean(true))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
+                (
+                    Node::GrEq(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
+                    Ok(Bool),
+                ),
+                (
+                    Node::GrEq(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
+                (
+                    Node::GrEq(Box::new(Node::Integer(5)), Box::new(Node::Boolean(true))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
+                (
+                    Node::Ls(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
+                    Ok(Bool),
+                ),
+                (
+                    Node::Ls(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
+                (
+                    Node::Ls(Box::new(Node::Integer(5)), Box::new(Node::Boolean(true))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
+                (
+                    Node::LsEq(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
+                    Ok(Bool),
+                ),
+                (
+                    Node::LsEq(Box::new(Node::Boolean(true)), Box::new(Node::Integer(5))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
+                (
+                    Node::LsEq(Box::new(Node::Integer(5)), Box::new(Node::Boolean(true))),
+                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                ),
             ];
 
             for (test, expected) in tests.iter() {
