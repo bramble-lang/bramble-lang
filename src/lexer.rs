@@ -39,6 +39,8 @@ pub enum Token {
     Yield,
     YieldReturn,
     CoroutineDef,
+    If,
+    Else,
     Colon,
     LArrow,
     Primitive(Primitive),
@@ -272,6 +274,8 @@ pub fn if_keyword_map(token: Token) -> Token {
             "printi" => Token::Printi,
             "printiln" => Token::Printiln,
             "printbln" => Token::Printbln,
+            "if" => Token::If,
+            "else" => Token::Else,
             _ => Token::Identifier(id.clone()),
         },
         _ => token,
@@ -374,6 +378,8 @@ mod tests {
             ("printi", Token::Printi),
             ("printiln", Token::Printiln),
             ("printbln", Token::Printbln),
+            ("if", Token::If),
+            ("else", Token::Else),
         ]
         .iter()
         {

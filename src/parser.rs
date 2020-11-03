@@ -37,6 +37,7 @@ pub enum Node {
     CoroutineInit(String, Vec<Node>),
     Yield(Box<Node>),
     YieldReturn(Option<Box<Node>>),
+    If(Box<Node>, Vec<Node>, Vec<Node>),
     Module(Vec<Node>, Vec<Node>),
     Printi(Box<Node>),
     Printiln(Box<Node>),
@@ -53,7 +54,8 @@ impl Node {
         NUMBER := 0-9*
         FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION] RPAREN
         YIELD := yield IDENTIFIER
-        FACTOR := FUNCTION_CALL | YIELD | NUMBER | IDENTIFIER
+        IF := if EXPRESSION LBRACE EXPRESSION RBRACE else LBRACE EXPRESSION RBRACE
+        FACTOR := FUNCTION_CALL | YIELD | NUMBER | IDENTIFIER | IF
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
         INIT_CO := init IDENTIFIER
@@ -498,6 +500,7 @@ impl Node {
 
     fn factor(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
+            Some(Token::If) => Node::if_expression(iter),
             Some(Token::LParen) => {
                 iter.next();
                 let exp = Node::expression(iter);
@@ -517,6 +520,32 @@ impl Node {
                     },
                 },
             },
+        }
+    }
+
+    fn if_expression(iter: &mut TokenIter) -> Option<Node> {
+        println!("Parser: if expression");
+        match iter.peek() {
+            Some(Token::If) => {
+                iter.next();
+                // expression
+                let cond = Node::expression(iter).expect("Expected conditional expressoin after if");
+                // lbrace
+                iter.next().map(|t| *t == Token::LBrace).expect("Expected {");
+                // expression
+                let true_arm = Node::block(iter);
+                // rbrace
+                iter.next().map(|t| *t == Token::RBrace).expect("Expected {");
+                // else
+                iter.next().map(|t| *t == Token::Else).expect("Expected else arm of if expression");
+                iter.next().map(|t| *t == Token::LBrace).expect("Expected {");
+                // expression
+                let false_arm = Node::block(iter);
+                // rbrace
+                iter.next().map(|t| *t == Token::RBrace).expect("Expected {");
+                Some(Node::If(Box::new(cond), true_arm, false_arm))
+            },
+            _ => None
         }
     }
 
