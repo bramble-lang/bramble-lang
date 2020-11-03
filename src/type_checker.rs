@@ -178,104 +178,114 @@ pub mod checker {
 
     pub fn type_check(ast: &Node) {}
 
-    fn traverse(ast: &Node, current_func: &Option<String>, ftable: &FunctionTable) -> Primitive {
+    fn traverse(
+        ast: &Node,
+        current_func: &Option<String>,
+        ftable: &FunctionTable,
+    ) -> Result<Primitive, String> {
         use Node::*;
         match ast {
-            Integer(_) => I32,
-            Identifier(_, p) => *p,
-            Primitive(p) => *p,
+            Integer(_) => Ok(I32),
+            Identifier(_, p) => Ok(*p),
+            Primitive(p) => Ok(*p),
             Mul(l, r) | Add(l, r) => {
                 let lty = traverse(l, current_func, ftable);
                 let rty = traverse(r, current_func, ftable);
                 match (lty, rty) {
-                    (I32, I32) => I32,
-                    _ => Unknown,
+                    (Ok(I32), Ok(I32)) => Ok(I32),
+                    _ => Err("*/+ expect to have operands of i32".into()),
                 }
             }
             Bind(_, p, exp) => {
-                let ety = traverse(exp, current_func, ftable);
+                let ety = traverse(exp, current_func, ftable).unwrap();
                 if *p == ety {
-                    *p
+                    Ok(*p)
                 } else {
-                    Unknown
+                    Err(format!("Bind expected {:?} but got {:?}", *p, ety))
                 }
             }
             Return(None) => match current_func {
-                None => Unknown,
+                None => Err("Return called outside of a function".into()),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
                     if fty == Unit {
-                        Unit
+                        Ok(Unit)
                     } else {
-                        Unknown
+                        Err(format!("Return expected {:?} type and got Unit", fty))
                     }
                 }
             },
             Return(Some(exp)) => match current_func {
-                None => Unknown,
+                None => Err("Return appears outside of a function".into()),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
-                    let rty = traverse(exp, current_func, ftable);
+                    let rty = traverse(exp, current_func, ftable).unwrap();
                     if fty == rty {
-                        rty
+                        Ok(fty)
                     } else {
-                        Unknown
+                        Err(format!("Return expected {:?} but got {:?}", fty, rty))
                     }
                 }
             },
             Yield(exp) => traverse(exp, current_func, ftable),
             YieldReturn(None) => match current_func {
-                None => Unknown,
+                None => Err("YRet appears outside of function".into()),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
                     if fty == Unit {
-                        Unit
+                        Ok(Unit)
                     } else {
-                        Unknown
+                        Err(format!("Yield return expected {:?} but got Unit", fty))
                     }
                 }
             },
             YieldReturn(Some(exp)) => match current_func {
-                None => Unknown,
+                None => Err("YRet appears outside of function".into()),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
-                    let yty = traverse(exp, current_func, ftable);
+                    let yty = traverse(exp, current_func, ftable).unwrap();
                     if fty == yty {
-                        fty
+                        Ok(fty)
                     } else {
-                        Unknown
+                        Err(format!("Yield return expected {:?} but got {:?}", fty, yty))
                     }
                 }
             },
-            FunctionDef(_, _, p, _) => *p,
+            FunctionDef(_, _, p, _) => Ok(*p),
             FunctionCall(fname, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
                 let pty: Vec<parser::Primitive> = params
                     .iter()
-                    .map(|p| traverse(p, current_func, ftable))
+                    .map(|p| traverse(p, current_func, ftable).unwrap())
                     .collect();
                 let fpty: Vec<parser::Primitive> =
                     ftable.funcs[fname].params.iter().map(|(_, p)| *p).collect();
                 if pty.len() != fpty.len() {
-                    Unknown
+                    Err(format!(
+                        "Incorrect number of parameters passed to function: {}",
+                        fname
+                    ))
                 } else {
                     let z = pty.iter().zip(fpty.iter());
                     let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                     if all_params_match {
-                        ftable.funcs[fname].ty
+                        Ok(ftable.funcs[fname].ty)
                     } else {
-                        Unknown
+                        Err(format!(
+                            "One or more parameters had mismatching types for function {}",
+                            fname
+                        ))
                     }
                 }
             }
-            CoroutineDef(_, _, p, _) => *p,
+            CoroutineDef(_, _, p, _) => Ok(*p),
             CoroutineInit(coname, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
                 let pty: Vec<parser::Primitive> = params
                     .iter()
-                    .map(|p| traverse(p, current_func, ftable))
+                    .map(|p| traverse(p, current_func, ftable).unwrap())
                     .collect();
                 let fpty: Vec<parser::Primitive> = ftable.funcs[coname]
                     .params
@@ -283,26 +293,32 @@ pub mod checker {
                     .map(|(_, p)| *p)
                     .collect();
                 if pty.len() != fpty.len() {
-                    Unknown
+                    Err(format!(
+                        "Incorrect number of parameters passed to coroutine: {}",
+                        coname
+                    ))
                 } else {
                     let z = pty.iter().zip(fpty.iter());
                     let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                     if all_params_match {
-                        ftable.funcs[coname].ty
+                        Ok(ftable.funcs[coname].ty)
                     } else {
-                        Unknown
+                        Err(format!(
+                            "Mismatching parameter types in init for coroutine {}",
+                            coname
+                        ))
                     }
                 }
             }
             Print(exp) | Println(exp) => {
                 let ty = traverse(exp, current_func, ftable);
-                if ty == I32 {
-                    I32
+                if ty == Ok(I32) {
+                    Ok(I32)
                 } else {
-                    Unknown
+                    Err("Expected i32 for print".into())
                 }
             }
-            Module(_, _) => Unit,
+            Module(_, _) => Ok(Unit),
         }
     }
 
@@ -317,7 +333,7 @@ pub mod checker {
             let node = Node::Integer(5);
             let ft = FunctionTable::new();
             let ty = traverse(&node, &None, &ft);
-            assert_eq!(ty, Primitive::I32);
+            assert_eq!(ty, Ok(Primitive::I32));
         }
 
         #[test]
@@ -325,7 +341,7 @@ pub mod checker {
             let node = Node::Identifier("x".into(), Primitive::Bool);
             let ft = FunctionTable::new();
             let ty = traverse(&node, &None, &ft);
-            assert_eq!(ty, Primitive::Bool);
+            assert_eq!(ty, Ok(Primitive::Bool));
         }
 
         #[test]
@@ -335,7 +351,7 @@ pub mod checker {
                 let node = Node::Add(Box::new(Node::Integer(5)), Box::new(Node::Integer(10)));
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::I32);
+                assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // operands are not i32
@@ -346,7 +362,7 @@ pub mod checker {
                 );
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::Unknown);
+                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -356,7 +372,7 @@ pub mod checker {
                 );
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::Unknown);
+                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -366,7 +382,7 @@ pub mod checker {
                 );
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::Unknown);
+                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
         }
 
@@ -377,7 +393,7 @@ pub mod checker {
                 let node = Node::Mul(Box::new(Node::Integer(5)), Box::new(Node::Integer(10)));
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::I32);
+                assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // operands are not i32
@@ -388,7 +404,7 @@ pub mod checker {
                 );
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::Unknown);
+                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -398,7 +414,7 @@ pub mod checker {
                 );
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::Unknown);
+                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -408,7 +424,7 @@ pub mod checker {
                 );
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::Unknown);
+                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
         }
 
@@ -419,7 +435,7 @@ pub mod checker {
                 let node = Node::Bind("x".into(), Primitive::I32, Box::new(Node::Integer(5)));
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::I32);
+                assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // RHS type does not match LHS type
@@ -427,7 +443,7 @@ pub mod checker {
                 let node = Node::Bind("x".into(), Primitive::Bool, Box::new(Node::Integer(5)));
                 let ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &ft);
-                assert_eq!(ty, Primitive::Unknown);
+                assert_eq!(ty, Err("Bind expected Bool but got I32".into()));
             }
         }
 
@@ -445,7 +461,7 @@ pub mod checker {
             );
             let node = Node::Return(None);
             let ty = traverse(&node, &Some("my_func".into()), &ft);
-            assert_eq!(ty, Unit);
+            assert_eq!(ty, Ok(Unit));
         }
 
         #[test]
@@ -462,7 +478,7 @@ pub mod checker {
             );
             let node = Node::Return(Some(Box::new(Node::Integer(5))));
             let ty = traverse(&node, &Some("my_func".into()), &ft);
-            assert_eq!(ty, I32);
+            assert_eq!(ty, Ok(I32));
         }
 
         #[test]
@@ -479,7 +495,7 @@ pub mod checker {
             );
             let node = Node::FunctionCall("my_func".into(), vec![]);
             let ty = traverse(&node, &Some("my_func".into()), &ft);
-            assert_eq!(ty, I32);
+            assert_eq!(ty, Ok(I32));
 
             ft.funcs.insert(
                 "my_func2".into(),
@@ -494,12 +510,15 @@ pub mod checker {
             // test correct parameters passed in call
             let node = Node::FunctionCall("my_func2".into(), vec![Node::Integer(5)]);
             let ty = traverse(&node, &Some("my_func2".into()), &ft);
-            assert_eq!(ty, I32);
+            assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Node::FunctionCall("my_func2".into(), vec![]);
             let ty = traverse(&node, &Some("my_func2".into()), &ft);
-            assert_eq!(ty, Unknown);
+            assert_eq!(
+                ty,
+                Err("Incorrect number of parameters passed to function: my_func2".into())
+            );
         }
 
         #[test]
@@ -516,7 +535,7 @@ pub mod checker {
             );
             let node = Node::CoroutineInit("my_co".into(), vec![]);
             let ty = traverse(&node, &Some("my_co".into()), &ft);
-            assert_eq!(ty, I32);
+            assert_eq!(ty, Ok(I32));
 
             ft.funcs.insert(
                 "my_co2".into(),
@@ -531,12 +550,15 @@ pub mod checker {
             // test correct parameters passed in call
             let node = Node::CoroutineInit("my_co2".into(), vec![Node::Integer(5)]);
             let ty = traverse(&node, &Some("my_co2".into()), &ft);
-            assert_eq!(ty, I32);
+            assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
-            let node = Node::FunctionCall("my_co2".into(), vec![]);
+            let node = Node::CoroutineInit("my_co2".into(), vec![]);
             let ty = traverse(&node, &Some("my_co2".into()), &ft);
-            assert_eq!(ty, Unknown);
+            assert_eq!(
+                ty,
+                Err("Incorrect number of parameters passed to coroutine: my_co2".into())
+            );
         }
 
         #[test]
@@ -553,7 +575,7 @@ pub mod checker {
             );
             let node = Node::YieldReturn(None);
             let ty = traverse(&node, &Some("my_co".into()), &ft);
-            assert_eq!(ty, Unit);
+            assert_eq!(ty, Ok(Unit));
 
             ft.funcs.insert(
                 "my_co2".into(),
@@ -568,12 +590,12 @@ pub mod checker {
             // test correct type for yield return
             let node = Node::YieldReturn(Some(Box::new(Node::Integer(5))));
             let ty = traverse(&node, &Some("my_co2".into()), &ft);
-            assert_eq!(ty, I32);
+            assert_eq!(ty, Ok(I32));
 
             // test incorrect type for yield return
             let node = Node::YieldReturn(None);
             let ty = traverse(&node, &Some("my_co2".into()), &ft);
-            assert_eq!(ty, Unknown);
+            assert_eq!(ty, Err("Yield return expected I32 but got Unit".into()));
         }
 
         #[test]
@@ -590,7 +612,7 @@ pub mod checker {
             );
             let node = Node::Yield(Box::new(Node::Identifier("my_co2".into(), I32)));
             let ty = traverse(&node, &None, &ft);
-            assert_eq!(ty, I32);
+            assert_eq!(ty, Ok(I32));
         }
     }
 }
