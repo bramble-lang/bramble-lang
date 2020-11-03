@@ -81,6 +81,7 @@ type Label = String;
 #[derive(Debug)]
 enum Instruction {
     Jmp(Label),
+    Jz(Label),
     Call(Label),
     Ret,
     Mov(Location, Source),
@@ -88,9 +89,11 @@ enum Instruction {
     Add(Register, Source),
     Sub(Register, Source),
     IMul(Register, Location),
+    Cmp(Register, Source),
     Push(Register),
     Pop(Register),
     Print(Source),
+    PrintStr(String),
     Newline,
     Label(Label),
     Include(String),
@@ -141,6 +144,9 @@ impl Compiler {
                         Pop(reg) => {
                             writeln!(output, "pop {}", reg)?;
                         }
+                        Cmp(reg, s) => {
+                            writeln!(output, "cmp {}, {}", reg, s)?;
+                        }
                         IMul(reg, s) => {
                             writeln!(output, "imul {}, {}", reg, s)?;
                         }
@@ -153,10 +159,16 @@ impl Compiler {
                         Jmp(loc) => {
                             writeln!(output, "jmp {}", loc)?;
                         }
+                        Jz(loc) => {
+                            writeln!(output, "jz {}", loc)?;
+                        }
                         Call(label) => writeln!(output, "call {}", label)?,
                         Ret => writeln!(output, "ret")?,
                         Print(s) => {
                             writeln!(output, "PRINT_DEC 4, {}", s)?;
+                        }
+                        PrintStr(s) => {
+                            writeln!(output, "PRINT_STRING \"{}\"", s)?;
                         }
                         Newline => {
                             writeln!(output, "NEWLINE")?;
@@ -177,6 +189,7 @@ impl Compiler {
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
         Compiler::runtime_yield_into_coroutine(&mut code);
         Compiler::runtime_yield_return(&mut code);
+        Compiler::print_bool(&mut code);
 
         // Put user code here
         let global_func = "".into();
@@ -222,6 +235,30 @@ impl Compiler {
         output.push(Call("my_main".into()));
 
         // Clean up frame before exiting program
+        output.push(Mov(Location::Register(Esp), Source::Register(Ebp)));
+        output.push(Pop(Ebp));
+        output.push(Ret);
+    }
+
+    fn print_bool(output: &mut Vec<Instruction>) {
+        use Instruction::*;
+        use Register::*;
+
+        output.push(Label("print_bool".into()));
+        output.push(Push(Ebp));
+        output.push(Mov(Location::Register(Ebp), Source::Register(Esp)));
+
+        output.push(Cmp(Register::Eax, Source::Integer(0)));
+        output.push(Jz(".false".into()));
+
+        output.push(PrintStr("true".into()));
+        output.push(Jmp(".done".into()));
+
+        output.push(Label(".false".into()));
+        output.push(PrintStr("false".into()));
+
+        // clean up stack frame
+        output.push(Label(".done".into()));
         output.push(Mov(Location::Register(Esp), Source::Register(Ebp)));
         output.push(Pop(Ebp));
         output.push(Ret);
@@ -570,7 +607,8 @@ impl Compiler {
             }
             super::Node::Printbln(exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Print(Source::Register(Eax)));
+                //output.push(Print(Source::Register(Eax)));
+                output.push(Call("print_bool".into()));
                 output.push(Newline);
             }
             super::Node::CoroutineInit(co, params) => {
