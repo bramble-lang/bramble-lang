@@ -563,7 +563,7 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_return".into()));
                 output.push(Label(ret_lbl.clone()));
             }
-            super::Node::Println(exp) => {
+            super::Node::Printiln(exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
                 output.push(Print(Source::Register(Eax)));
                 output.push(Newline);

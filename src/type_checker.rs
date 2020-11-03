@@ -171,6 +171,7 @@ impl FunctionTable {
 }
 
 pub mod checker {
+
     use crate::parser::{self, Node, Primitive};
     use Primitive::*;
 
@@ -241,7 +242,13 @@ pub mod checker {
                     }
                 }
             },
-            Yield(exp) => traverse(exp, current_func, ftable),
+            Yield(box exp) => {
+                match exp {
+                    Node::Identifier(coname, _) => 
+                    ftable.funcs.get(coname).map(|fi| fi.ty).ok_or(format!("Could not find coroutine: {}", coname)),
+                    _ => Err("Expected name of coroutine after yield".into()),
+                }
+            },
             YieldReturn(None) => match current_func {
                 None => Err("YRet appears outside of function".into()),
                 Some(cf) => {
@@ -328,7 +335,7 @@ pub mod checker {
                     }
                 }
             }
-            Print(exp) | Println(exp) => {
+            Printi(exp) | Printiln(exp) => {
                 let ty = traverse(exp, current_func, ftable);
                 if ty == Ok(I32) {
                     Ok(I32)
@@ -364,9 +371,22 @@ pub mod checker {
 
         #[test]
         pub fn test_identifier() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_main".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable{
+                        vars: vec![VarDecl{name: "x".into(), ty: Bool, size: 4, frame_offset: 4}],
+                        
+                    },
+                    label_count: 0,
+                    ty: Unit,
+                },
+            );
+
             let node = Node::Identifier("x".into(), Primitive::Bool);
-            let ft = FunctionTable::new();
-            let ty = traverse(&node, &None, &ft);
+            let ty = traverse(&node, &Some("my_main".into()), &ft);
             assert_eq!(ty, Ok(Primitive::Bool));
         }
 
@@ -628,6 +648,15 @@ pub mod checker {
         fn test_yield() {
             let mut ft = FunctionTable::new();
             ft.funcs.insert(
+                "my_main".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: Unit,
+                },
+            );
+            ft.funcs.insert(
                 "my_co2".into(),
                 FunctionInfo {
                     params: vec![],
@@ -637,7 +666,7 @@ pub mod checker {
                 },
             );
             let node = Node::Yield(Box::new(Node::Identifier("my_co2".into(), I32)));
-            let ty = traverse(&node, &None, &ft);
+            let ty = traverse(&node, &Some("my_main".into()), &ft);
             assert_eq!(ty, Ok(I32));
         }
 

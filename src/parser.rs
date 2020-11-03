@@ -30,8 +30,8 @@ pub enum Node {
     Yield(Box<Node>),
     YieldReturn(Option<Box<Node>>),
     Module(Vec<Node>, Vec<Node>),
-    Print(Box<Node>),
-    Println(Box<Node>),
+    Printi(Box<Node>),
+    Printiln(Box<Node>),
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -313,11 +313,11 @@ impl Node {
         let tk = iter.peek();
         println!("Parser @ {:?}", tk);
         match tk {
-            Some(Token::Println) => {
+            Some(Token::Printiln) => {
                 iter.next();
                 let exp = Node::expression(iter);
                 match exp {
-                    Some(exp) => Some(Node::Println(Box::new(exp))),
+                    Some(exp) => Some(Node::Printiln(Box::new(exp))),
                     None => panic!("Parser: Expected expression after println"),
                 }
             }

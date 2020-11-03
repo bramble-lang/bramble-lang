@@ -24,8 +24,8 @@ pub enum Token {
     LBrace,
     RBrace,
     FunctionDef,
-    Print,
-    Println,
+    Printi,
+    Printiln,
     Init,
     Yield,
     YieldReturn,
@@ -212,8 +212,8 @@ pub fn if_keyword_map(token: Token) -> Token {
             "fn" => Token::FunctionDef,
             "co" => Token::CoroutineDef,
             "init" => Token::Init,
-            "print" => Token::Print,
-            "println" => Token::Println,
+            "printi" => Token::Printi,
+            "printiln" => Token::Printiln,
             _ => Token::Identifier(id.clone()),
         },
         _ => token,
@@ -305,8 +305,8 @@ mod tests {
             ("init", Token::Init),
             ("co", Token::CoroutineDef),
             ("fn", Token::FunctionDef),
-            ("print", Token::Print),
-            ("println", Token::Println),
+            ("printi", Token::Printi),
+            ("printiln", Token::Printiln),
         ]
         .iter()
         {
