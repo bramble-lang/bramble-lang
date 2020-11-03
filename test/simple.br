@@ -5,3 +5,8 @@ fn my_main() {
     b:bool := true;
     return;
 }
+
+fn my_bool() -> bool {
+    b:bool := false;
+    return b;
+}
