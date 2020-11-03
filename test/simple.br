@@ -2,7 +2,7 @@ fn my_main() {
     x:i32 := 5;
     println x;
 
-    b:bool := true;
+    b:bool := my_bool();
     return;
 }
 
