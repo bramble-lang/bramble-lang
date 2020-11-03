@@ -294,7 +294,15 @@ pub mod checker {
                     }
                 }
             }
-            _ => Unknown,
+            Print(exp) | Println(exp) => {
+                let ty = traverse(exp, current_func, ftable);
+                if ty == I32 {
+                    I32
+                } else {
+                    Unknown
+                }
+            }
+            Module(_, _) => Unit,
         }
     }
 
