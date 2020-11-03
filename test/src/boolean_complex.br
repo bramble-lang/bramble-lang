@@ -2,7 +2,7 @@ fn my_main() {
     a:bool := 5 < 6;
     b:bool := 6 < 5 || 7 <= 7;
     c:bool := 2 != 3 && 2 != 4;
-    d:bool := (2 < 3 || 3 < 2) && (2 < 4 && 2 <=2 || (2 > 4));
+    d:bool := 2 < 3 || 3 < 2 && 2 > 4 && 2 <= 1;
     e:bool := a && b && c && d;
     printbln a;
     printbln b;

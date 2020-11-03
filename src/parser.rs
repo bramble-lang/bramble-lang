@@ -450,7 +450,7 @@ impl Node {
                 Some(Token::GrEq) => {
                     iter.next();
                     let n2 = Node::comparison(iter).expect("An expression after >=");
-                    Some(Node::Gr(Box::new(n), Box::new(n2)))
+                    Some(Node::GrEq(Box::new(n), Box::new(n2)))
                 }
                 Some(Token::Ls) => {
                     iter.next();
@@ -460,7 +460,7 @@ impl Node {
                 Some(Token::LsEq) => {
                     iter.next();
                     let n2 = Node::comparison(iter).expect("An expression after <=");
-                    Some(Node::Ls(Box::new(n), Box::new(n2)))
+                    Some(Node::LsEq(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
             },
