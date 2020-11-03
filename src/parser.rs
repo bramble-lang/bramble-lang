@@ -16,6 +16,7 @@ pub enum Primitive {
 #[derive(Debug)]
 pub enum Node {
     Integer(i32),
+    Boolean(bool),
     Identifier(String, Primitive),
     Primitive(Primitive),
     Mul(Box<Node>, Box<Node>),
@@ -408,7 +409,7 @@ impl Node {
     }
 
     fn factor(iter: &mut TokenIter) -> Option<Node> {
-        match Node::number(iter) {
+        match Node::constant(iter) {
             Some(n) => Some(n),
             None => match Node::function_call_or_variable(iter) {
                 Some(n) => Some(n),
@@ -537,6 +538,16 @@ impl Node {
         }
     }
 
+    fn constant(iter: &mut TokenIter) -> Option<Node> {
+        match Node::number(iter) {
+            None => match Node::boolean(iter) {
+                None => None,
+                Some(t) => Some(t),
+            },
+            Some(i) => Some(i),
+        }
+    }
+
     fn number(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(token) => match token {
@@ -547,6 +558,16 @@ impl Node {
                 _ => None,
             },
             None => None,
+        }
+    }
+
+    fn boolean(iter: &mut TokenIter) -> Option<Node> {
+        match iter.peek() {
+            Some(Token::Bool(b)) => {
+                iter.next();
+                Some(Node::Boolean(*b))
+            }
+            _ => None,
         }
     }
 }

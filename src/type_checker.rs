@@ -188,6 +188,7 @@ pub mod checker {
         use Node::*;
         match ast {
             Integer(_) => Ok(I32),
+            Boolean(_) => Ok(Bool),
             Identifier(id, _) => match current_func {
                 None => Err(format!("Variable {} appears outside of function", id)),
                 Some(cf) => ftable.funcs[cf]

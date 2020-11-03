@@ -11,6 +11,7 @@ pub enum Primitive {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Integer(i32),
+    Bool(bool),
     Identifier(String),
     Mul,
     Add,
@@ -69,7 +70,7 @@ pub fn tokenize(text: &str) -> Vec<Result<Token, &str>> {
             Ok(Some(i)) => tokens.push(Ok(i)),
             Ok(None) => match consume_identifier(&mut cs) {
                 Some(id) => {
-                    let tok = if_primitive_map(if_keyword_map(id));
+                    let tok = if_primitive_map(if_keyword_map(if_boolean_map(id)));
                     tokens.push(Ok(tok));
                 }
                 None => match consume_operator(&mut cs) {
@@ -178,6 +179,17 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         iter.next();
     }
     token
+}
+
+pub fn if_boolean_map(token: Token) -> Token {
+    match &token {
+        Token::Identifier(id) => match id.as_str() {
+            "true" => Token::Bool(true),
+            "false" => Token::Bool(false),
+            _ => token,
+        },
+        _ => token,
+    }
 }
 
 pub fn if_primitive_map(token: Token) -> Token {

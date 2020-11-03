@@ -1,5 +1,7 @@
 fn my_main() {
     x:i32 := 5;
     println x;
+
+    b:bool := true;
     return;
 }
