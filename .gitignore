@@ -2,3 +2,5 @@
 *.swp
 *.swap
 .tisk/
+./test/target
+./test/*.log
