@@ -159,10 +159,10 @@ impl Compiler {
                             writeln!(output, "sub {}, {}", reg, s)?;
                         }
                         Andl(reg, s) => {
-                            writeln!(output, "andl {}, {}", reg, s)?;
+                            writeln!(output, "and {}, {}", reg, s)?;
                         }
                         Orl(reg, s) => {
-                            writeln!(output, "orl {}, {}", reg, s)?;
+                            writeln!(output, "or {}, {}", reg, s)?;
                         }
                         Jmp(loc) => {
                             writeln!(output, "jmp {}", loc)?;
