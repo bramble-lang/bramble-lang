@@ -3,7 +3,7 @@ fn my_main() {
 
     printbln (yield c);
     printbln (yield c);
-    printbln (yield c);
+    printbln (yield c == yield c);
 
     return;
 }
@@ -11,5 +11,6 @@ fn my_main() {
 co my_co (b: bool, x: i32, y: i32) -> bool {
     yret b;
     yret x < y;
+    yret true;
     return false;
 }
