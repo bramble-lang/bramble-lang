@@ -1,0 +1,15 @@
+fn my_main() {
+    printiln test(0);
+    printiln test(20);
+    return;
+}
+
+fn test(x: i32) -> i32 {
+    x:i32 := if x < 10 {
+        0
+    } else {
+        1
+    };
+
+    return x;
+}
