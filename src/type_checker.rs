@@ -195,7 +195,7 @@ pub mod checker {
     use crate::parser::{self, Node, Primitive};
     use Primitive::*;
 
-    use super::{FunctionTable};
+    use super::FunctionTable;
 
     pub fn type_check(ast: &Node, ftable: &mut FunctionTable) -> Result<Primitive, String> {
         traverse(ast, &None, ftable)
@@ -212,7 +212,7 @@ pub mod checker {
             Boolean(_) => Ok(Bool),
             Identifier(id, _) => match current_func {
                 None => Err(format!("Variable {} appears outside of function", id)),
-                Some(cf) => ftable.funcs[cf]
+                Some(cf) => ftable.funcs.get(cf).ok_or(format!("Undefined function {}", cf))?
                     .vars
                     .vars
                     .iter()
@@ -511,10 +511,31 @@ pub mod checker {
 
         #[test]
         pub fn test_add() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_func".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: Unit,
+                },
+            );
+            ft.funcs
+                .get_mut("my_func")
+                .unwrap()
+                .vars
+                .add_var("x", I32)
+                .unwrap();
+            ft.funcs
+                .get_mut("my_func")
+                .unwrap()
+                .vars
+                .add_var("b", Bool)
+                .unwrap();
             // both operands are i32
             {
                 let node = Node::Add(Box::new(Node::Integer(5)), Box::new(Node::Integer(10)));
-                let mut ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -522,41 +543,59 @@ pub mod checker {
             // operands are not i32
             {
                 let node = Node::Add(
-                    Box::new(Node::Identifier("x".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
                     Box::new(Node::Integer(10)),
                 );
-                let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
                 let node = Node::Add(
                     Box::new(Node::Integer(10)),
-                    Box::new(Node::Identifier("x".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
                 );
-                let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
                 let node = Node::Add(
-                    Box::new(Node::Identifier("x".into(), Primitive::Bool)),
-                    Box::new(Node::Identifier("y".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
                 );
-                let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
         }
 
         #[test]
         pub fn test_mul() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_func".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable::new(),
+                    label_count: 0,
+                    ty: Unit,
+                },
+            );
+            ft.funcs
+                .get_mut("my_func")
+                .unwrap()
+                .vars
+                .add_var("x", I32)
+                .unwrap();
+            ft.funcs
+                .get_mut("my_func")
+                .unwrap()
+                .vars
+                .add_var("b", Bool)
+                .unwrap();
             // both operands are i32
             {
                 let node = Node::Mul(Box::new(Node::Integer(5)), Box::new(Node::Integer(10)));
-                let mut ft = FunctionTable::new();
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -564,31 +603,28 @@ pub mod checker {
             // operands are not i32
             {
                 let node = Node::Mul(
-                    Box::new(Node::Identifier("x".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
                     Box::new(Node::Integer(10)),
                 );
-                let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
                 let node = Node::Mul(
                     Box::new(Node::Integer(10)),
-                    Box::new(Node::Identifier("x".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
                 );
-                let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
                 let node = Node::Mul(
-                    Box::new(Node::Identifier("x".into(), Primitive::Bool)),
-                    Box::new(Node::Identifier("y".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
+                    Box::new(Node::Identifier("b".into(), Primitive::Bool)),
                 );
-                let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
             }
         }
@@ -709,7 +745,16 @@ pub mod checker {
             {
                 let node = Node::Bind("x".into(), Primitive::I32, Box::new(Node::Integer(5)));
                 let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                ft.funcs.insert(
+                    "my_func".into(),
+                    FunctionInfo {
+                        params: vec![],
+                        vars: VarTable::new(),
+                        label_count: 0,
+                        ty: Unit,
+                    },
+                );
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
@@ -717,7 +762,16 @@ pub mod checker {
             {
                 let node = Node::Bind("x".into(), Primitive::Bool, Box::new(Node::Integer(5)));
                 let mut ft = FunctionTable::new();
-                let ty = traverse(&node, &None, &mut ft);
+                ft.funcs.insert(
+                    "my_func".into(),
+                    FunctionInfo {
+                        params: vec![],
+                        vars: VarTable::new(),
+                        label_count: 0,
+                        ty: Unit,
+                    },
+                );
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("Bind expected Bool but got I32".into()));
             }
         }
