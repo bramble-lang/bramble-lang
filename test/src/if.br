@@ -1,5 +1,7 @@
 fn my_main() {
     printiln if true {1} else {3};
-
+    x:i32 := if 2 < 3 {4} else {5};
+    printiln x;
+    printiln (if (x < 1) {100} else {500});
     return;
 }
