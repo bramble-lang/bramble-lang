@@ -642,6 +642,24 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Or(Eax, Source::Register(Ebx)));
             }
+            super::Node::If(cond, true_arm, false_arm) => {
+                function_table
+                    .funcs
+                    .entry(current_func.clone())
+                    .and_modify(|fi| fi.label_count += 1);
+                let else_lbl = format!(".else_lbl_{}", function_table.funcs[current_func].label_count);
+                let end_lbl = format!(".if_end_lbl_{}", function_table.funcs[current_func].label_count);
+
+                Compiler::traverse(cond, current_func, function_table, output);
+                output.push(Cmp(Register::Eax, Source::Integer(0)));
+                output.push(Jz(else_lbl.clone()));
+                //Compiler::traverse(true_arm, current_func, function_table, output);
+                Compiler::traverse(true_arm, current_func, function_table, output);
+                output.push(Jmp(end_lbl.clone()));
+                output.push(Label(else_lbl));
+                Compiler::traverse(false_arm, current_func, function_table, output);
+                output.push(Label(end_lbl));
+            }
             super::Node::Bind(id, _, exp) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
@@ -668,8 +686,7 @@ impl Compiler {
                     .vars
                     .vars
                     .last()
-                    .unwrap()
-                    .frame_offset;
+                    .map_or(0, |v| v.frame_offset);
                 output.push(Sub(Esp, Source::Integer(total_offset)));
 
                 // Move function parameters from registers into the stack frame
@@ -682,8 +699,7 @@ impl Compiler {
                         .vars
                         .iter()
                         .find(|var_decl| var_decl.name == *param.0)
-                        .unwrap()
-                        .frame_offset;
+                        .map_or(0, |v| v.frame_offset);
                     output.push(Mov(
                         Location::Memory(format!("ebp-{}", param_offset)),
                         Source::Register(*reg),

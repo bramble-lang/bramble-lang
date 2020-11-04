@@ -245,16 +245,12 @@ pub mod checker {
                 let cond_ty = traverse(cond, current_func, ftable);
                 if cond_ty == Ok(Bool) {
                     let true_ty = traverse(
-                        true_arm
-                            .last()
-                            .expect("Expected expression in if's true arm"),
+                        true_arm,
                         current_func,
                         ftable,
                     );
                     let false_ty = traverse(
-                        false_arm
-                            .last()
-                            .expect("Expected expression in if's false arm"),
+                        false_arm,
                         current_func,
                         ftable,
                     );
@@ -959,8 +955,8 @@ pub mod checker {
             {
                 let node = Node::If(
                     Box::new(Node::Boolean(true)),
-                    vec![Node::Integer(5)],
-                    vec![Node::Integer(7)],
+                    Box::new(Node::Integer(5)),
+                    Box::new(Node::Integer(7)),
                 );
                 let ty = traverse(&node, &Some("my_main".into()), &ft);
                 assert_eq!(ty, Ok(I32));
@@ -968,8 +964,8 @@ pub mod checker {
             {
                 let node = Node::If(
                     Box::new(Node::Boolean(true)),
-                    vec![Node::Boolean(true)],
-                    vec![Node::Boolean(false)],
+                    Box::new(Node::Boolean(true)),
+                    Box::new(Node::Boolean(false)),
                 );
                 let ty = traverse(&node, &Some("my_main".into()), &ft);
                 assert_eq!(ty, Ok(Bool));
@@ -977,8 +973,8 @@ pub mod checker {
             {
                 let node = Node::If(
                     Box::new(Node::Integer(5)),
-                    vec![Node::Boolean(true)],
-                    vec![Node::Boolean(false)],
+                    Box::new(Node::Boolean(true)),
+                    Box::new(Node::Boolean(false)),
                 );
                 let ty = traverse(&node, &Some("my_main".into()), &ft);
                 assert_eq!(ty, Err("Expected boolean expression in if conditional, got: Ok(I32)".into()));
@@ -986,8 +982,8 @@ pub mod checker {
             {
                 let node = Node::If(
                     Box::new(Node::Boolean(true)),
-                    vec![Node::Boolean(true)],
-                    vec![Node::Integer(5)],
+                    Box::new(Node::Boolean(true)),
+                    Box::new(Node::Integer(5)),
                 );
                 let ty = traverse(&node, &Some("my_main".into()), &ft);
                 assert_eq!(ty, Err("If expression has mismatching arms: expected Bool got I32".into()));

@@ -37,7 +37,7 @@ pub enum Node {
     CoroutineInit(String, Vec<Node>),
     Yield(Box<Node>),
     YieldReturn(Option<Box<Node>>),
-    If(Box<Node>, Vec<Node>, Vec<Node>),
+    If(Box<Node>, Box<Node>, Box<Node>),
     Module(Vec<Node>, Vec<Node>),
     Printi(Box<Node>),
     Printiln(Box<Node>),
@@ -128,7 +128,7 @@ impl Node {
 
                                 match Node::return_stmt(iter) {
                                     Some(ret) => stmts.push(ret),
-                                    None => panic!("Function must end with a return statement"),
+                                    None => panic!("Function must end with a return statement, got {:?}", iter.peek()),
                                 }
 
                                 match iter.peek() {
@@ -533,17 +533,17 @@ impl Node {
                 // lbrace
                 iter.next().map(|t| *t == Token::LBrace).expect("Expected {");
                 // expression
-                let true_arm = Node::block(iter);
+                let true_arm = Node::expression(iter).expect("Expression in true arm of if expression");
                 // rbrace
-                iter.next().map(|t| *t == Token::RBrace).expect("Expected {");
+                iter.next().map(|t| *t == Token::RBrace).expect("Expected }");
                 // else
                 iter.next().map(|t| *t == Token::Else).expect("Expected else arm of if expression");
                 iter.next().map(|t| *t == Token::LBrace).expect("Expected {");
                 // expression
-                let false_arm = Node::block(iter);
+                let false_arm = Node::expression(iter).expect("Expression in false arm of if expression");
                 // rbrace
-                iter.next().map(|t| *t == Token::RBrace).expect("Expected {");
-                Some(Node::If(Box::new(cond), true_arm, false_arm))
+                iter.next().map(|t| *t == Token::RBrace).expect("Expected }");
+                Some(Node::If(Box::new(cond), Box::new(true_arm), Box::new(false_arm)))
             },
             _ => None
         }
