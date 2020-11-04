@@ -1,0 +1,7 @@
+fn my_main() {
+    x:i32 := 1;
+    printiln x;
+    x:i32 := 13;
+    printiln x;
+    return;
+}
