@@ -1,0 +1,10 @@
+fn my_main() {
+    printiln if_in_conditional(true);
+    printiln if_in_conditional(false);
+    return;
+}
+
+fn if_in_conditional(b:bool) -> i32 {
+    x:i32 := if if b {false} else {true} {0} else {7};
+    return x;
+}
