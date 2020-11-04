@@ -668,7 +668,7 @@ impl Node {
                     _ => panic!(
                         "Parser: L{}: Expected type after variable declaration, found: {:?}",
                         l,
-                        iter.peek()
+                        iter.peek().map(|t| &t.s)
                     ),
                 }
             }
