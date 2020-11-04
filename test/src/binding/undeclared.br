@@ -1,4 +1,4 @@
 fn my_main() {
-    x:i32 := x * x;
+    printiln x;
     return;
 }

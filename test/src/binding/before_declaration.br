@@ -1,0 +1,5 @@
+fn my_main() {
+    printiln x;
+    x: i32 := 5;
+    return;
+}

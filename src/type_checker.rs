@@ -443,16 +443,16 @@ pub mod checker {
                 }
             }
             Printi(exp) | Printiln(exp) => {
-                let ty = traverse(exp, current_func, ftable);
-                if ty == Ok(I32) {
+                let ty = traverse(exp, current_func, ftable)?;
+                if ty == I32 {
                     Ok(I32)
                 } else {
                     Err(format!("Expected i32 for printi got {:?}", ty))
                 }
             }
             Printbln(exp) => {
-                let ty = traverse(exp, current_func, ftable);
-                if ty == Ok(Bool) {
+                let ty = traverse(exp, current_func, ftable)?;
+                if ty == Bool {
                     Ok(Bool)
                 } else {
                     Err(format!("Expected bool for printb got {:?}", ty))
