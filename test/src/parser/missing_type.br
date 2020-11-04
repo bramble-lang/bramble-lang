@@ -1,4 +1,6 @@
 fn my_main() {
+
+    
     x := 1;
     return;
 }

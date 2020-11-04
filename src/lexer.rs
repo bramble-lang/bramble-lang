@@ -53,8 +53,8 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(s: Symbol) -> Token {
-        Token { l: 0, s: s }
+    pub fn new(l: u32, s: Symbol) -> Token {
+        Token { l, s}
     }
 }
 
@@ -86,7 +86,7 @@ pub struct Lexer {
 }
 impl Lexer {
     pub fn new() -> Lexer {
-        Lexer { line: 0 }
+        Lexer { line: 1 }
     }
 
     pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token, &str>> {
@@ -99,16 +99,16 @@ impl Lexer {
             if cs.peek().is_none() {
                 break;
             }
-            match Lexer::consume_integer(&mut cs) {
+            match self.consume_integer(&mut cs) {
                 Ok(Some(i)) => tokens.push(Ok(i)),
-                Ok(None) => match Lexer::consume_identifier(&mut cs) {
+                Ok(None) => match self.consume_identifier(&mut cs) {
                     Some(id) => {
-                        let tok = Lexer::if_primitive_map(Lexer::if_keyword_map(
-                            Lexer::if_boolean_map(id),
+                        let tok = self.if_primitive_map(self.if_keyword_map(
+                            self.if_boolean_map(id),
                         ));
                         tokens.push(Ok(tok));
                     }
-                    None => match Lexer::consume_operator(&mut cs) {
+                    None => match self.consume_operator(&mut cs) {
                         Some(op) => tokens.push(Ok(op)),
                         None => println!("Unexpected character: {:?}", cs.next()),
                     },
@@ -132,7 +132,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_identifier(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    pub fn consume_identifier(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         let mut id = String::new();
         if iter
             .peek()
@@ -152,11 +152,12 @@ impl Lexer {
         if id.len() == 0 {
             None
         } else {
-            Some(Token::new(Symbol::Identifier(id)))
+            Some(Token::new(self.line, Symbol::Identifier(id)))
         }
     }
 
     pub fn consume_integer(
+        &self,
         iter: &mut Peekable<std::str::Chars>,
     ) -> Result<Option<Token>, &'static str> {
         let mut num = String::new();
@@ -174,87 +175,87 @@ impl Lexer {
                 if c.is_alphabetic() {
                     Err("Invalid integer, should not contain characters")
                 } else {
-                    Ok(Some(Token::new(Integer(num.parse::<i32>().unwrap()))))
+                    Ok(Some(Token::new(self.line, Integer(num.parse::<i32>().unwrap()))))
                 }
             } else {
-                Ok(Some(Token::new(Integer(num.parse::<i32>().unwrap()))))
+                Ok(Some(Token::new(self.line, Integer(num.parse::<i32>().unwrap()))))
             }
         }
     }
 
-    pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    pub fn consume_operator(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
         let mut consume = true;
         let token = match iter.peek() {
-            Some('(') => Some(Token::new(LParen)),
-            Some(')') => Some(Token::new(RParen)),
-            Some('{') => Some(Token::new(LBrace)),
-            Some('}') => Some(Token::new(RBrace)),
-            Some('*') => Some(Token::new(Mul)),
-            Some('+') => Some(Token::new(Add)),
-            Some(';') => Some(Token::new(Semicolon)),
-            Some(',') => Some(Token::new(Comma)),
+            Some('(') => Some(Token::new(self.line, LParen)),
+            Some(')') => Some(Token::new(self.line, RParen)),
+            Some('{') => Some(Token::new(self.line, LBrace)),
+            Some('}') => Some(Token::new(self.line, RBrace)),
+            Some('*') => Some(Token::new(self.line, Mul)),
+            Some('+') => Some(Token::new(self.line, Add)),
+            Some(';') => Some(Token::new(self.line, Semicolon)),
+            Some(',') => Some(Token::new(self.line, Comma)),
             Some(':') => {
                 iter.next();
                 match iter.peek() {
-                    Some('=') => Some(Token::new(Assign)),
+                    Some('=') => Some(Token::new(self.line, Assign)),
                     _ => {
                         consume = false;
-                        Some(Token::new(Colon))
+                        Some(Token::new(self.line, Colon))
                     }
                 }
             }
             Some('!') => {
                 iter.next();
                 match iter.peek() {
-                    Some('=') => Some(Token::new(NEq)),
+                    Some('=') => Some(Token::new(self.line, NEq)),
                     _ => panic!("Lexer: Unexpected '!' character"),
                 }
             }
             Some('=') => {
                 iter.next();
                 match iter.peek() {
-                    Some('=') => Some(Token::new(Eq)),
+                    Some('=') => Some(Token::new(self.line, Eq)),
                     _ => panic!("Lexer: Unexpected '=' character"),
                 }
             }
             Some('>') => {
                 iter.next();
                 match iter.peek() {
-                    Some('=') => Some(Token::new(GrEq)),
+                    Some('=') => Some(Token::new(self.line, GrEq)),
                     _ => {
                         consume = false;
-                        Some(Token::new(Gr))
+                        Some(Token::new(self.line, Gr))
                     }
                 }
             }
             Some('<') => {
                 iter.next();
                 match iter.peek() {
-                    Some('=') => Some(Token::new(LsEq)),
+                    Some('=') => Some(Token::new(self.line, LsEq)),
                     _ => {
                         consume = false;
-                        Some(Token::new(Ls))
+                        Some(Token::new(self.line, Ls))
                     }
                 }
             }
             Some('-') => {
                 iter.next();
                 match iter.peek() {
-                    Some('>') => Some(Token::new(LArrow)),
+                    Some('>') => Some(Token::new(self.line, LArrow)),
                     _ => panic!("Lexer: Unexpected '-' character"),
                 }
             }
             Some('&') => {
                 iter.next();
                 match iter.peek() {
-                    Some('&') => Some(Token::new(BAnd)),
+                    Some('&') => Some(Token::new(self.line, BAnd)),
                     _ => panic!("Lexer: Unexpected '-' character"),
                 }
             }
             Some('|') => {
                 iter.next();
                 match iter.peek() {
-                    Some('|') => Some(Token::new(BOr)),
+                    Some('|') => Some(Token::new(self.line, BOr)),
                     _ => panic!("Lexer: Unexpected '-' character"),
                 }
             }
@@ -267,52 +268,52 @@ impl Lexer {
         token
     }
 
-    pub fn if_boolean_map(token: Token) -> Token {
+    pub fn if_boolean_map(&self, token: Token) -> Token {
         match &token {
             Token {
                 l: _,
                 s: Identifier(id),
             } => match id.as_str() {
-                "true" => Token::new(Bool(true)),
-                "false" => Token::new(Bool(false)),
+                "true" => Token::new(self.line, Bool(true)),
+                "false" => Token::new(self.line, Bool(false)),
                 _ => token,
             },
             _ => token,
         }
     }
 
-    pub fn if_primitive_map(token: Token) -> Token {
+    pub fn if_primitive_map(&self, token: Token) -> Token {
         match token {
             Token {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
-                "i32" => Token::new(Primitive(Primitive::I32)),
-                "bool" => Token::new(Primitive(Primitive::Bool)),
-                _ => Token::new(Identifier(id.clone())),
+                "i32" => Token::new(self.line, Primitive(Primitive::I32)),
+                "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
+                _ => Token::new(self.line, Identifier(id.clone())),
             },
             _ => token,
         }
     }
 
-    pub fn if_keyword_map(token: Token) -> Token {
+    pub fn if_keyword_map(&self, token: Token) -> Token {
         match token {
             Token {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
-                "return" => Token::new(Return),
-                "yield" => Token::new(Yield),
-                "yret" => Token::new(YieldReturn),
-                "fn" => Token::new(FunctionDef),
-                "co" => Token::new(CoroutineDef),
-                "init" => Token::new(Init),
-                "printi" => Token::new(Printi),
-                "printiln" => Token::new(Printiln),
-                "printbln" => Token::new(Printbln),
-                "if" => Token::new(If),
-                "else" => Token::new(Else),
-                _ => Token::new(Identifier(id.clone())),
+                "return" => Token::new(self.line, Return),
+                "yield" => Token::new(self.line, Yield),
+                "yret" => Token::new(self.line, YieldReturn),
+                "fn" => Token::new(self.line, FunctionDef),
+                "co" => Token::new(self.line, CoroutineDef),
+                "init" => Token::new(self.line, Init),
+                "printi" => Token::new(self.line, Printi),
+                "printiln" => Token::new(self.line, Printiln),
+                "printbln" => Token::new(self.line, Printbln),
+                "if" => Token::new(self.line, If),
+                "else" => Token::new(self.line, Else),
+                _ => Token::new(self.line, Identifier(id.clone())),
             },
             _ => token,
         }
