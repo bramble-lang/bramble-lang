@@ -774,6 +774,40 @@ pub mod checker {
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("Bind expected Bool but got I32".into()));
             }
+           
+            // recursive definition
+            {
+                let node = Node::Bind("x".into(), Primitive::I32, Box::new(Node::Identifier("x".into(), I32)));
+                let mut ft = FunctionTable::new();
+                ft.funcs.insert(
+                    "my_func".into(),
+                    FunctionInfo {
+                        params: vec![],
+                        vars: VarTable::new(),
+                        label_count: 0,
+                        ty: Unit,
+                    },
+                );
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
+                assert_eq!(ty, Err("Variable x not declared".into()));
+            }
+           
+            // use an unbound variable
+            {
+                let node =  Box::new(Node::Identifier("x".into(), I32));
+                let mut ft = FunctionTable::new();
+                ft.funcs.insert(
+                    "my_func".into(),
+                    FunctionInfo {
+                        params: vec![],
+                        vars: VarTable::new(),
+                        label_count: 0,
+                        ty: Unit,
+                    },
+                );
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
+                assert_eq!(ty, Err("Variable x not declared".into()));
+            }
         }
 
         #[test]
