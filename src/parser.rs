@@ -206,7 +206,7 @@ impl Node {
             Some(Token{l:_, s: Symbol::LParen}) => {
                 iter.next();
             }
-            _ => panic!("Parser: expected an ( after function name in function definition"),
+            _ => panic!("expected an ( after function name in function definition"),
         }
 
         let mut params = vec![];
@@ -221,10 +221,10 @@ impl Node {
                         }
                         Some(Token{l:_, s: Symbol::RParen}) => break,
                         Some(Token{l, s}) => panic!("L{}: Unexpected token in function definition: {:?}", l, s),
-                        None => panic!("Parser: unexpected EOF"),
+                        None => panic!("unexpected EOF"),
                     };
                 }
-                _ => panic!("Parser: invalid parameter declaration in function definition"),
+                _ => panic!("invalid parameter declaration in function definition"),
             }
         }
 
@@ -232,7 +232,7 @@ impl Node {
             Some(Token{l:_, s: Symbol::RParen}) => {
                 iter.next();
             }
-            _ => panic!("Parser: expected )"),
+            _ => panic!("expected )"),
         }
 
         params
@@ -376,7 +376,7 @@ impl Node {
                     }
                 }
             }
-            Some(_) => panic!("Parser: invalid LHS in bind expresion"),
+            Some(_) => panic!("invalid LHS in bind expresion"),
             None => None,
         }
     }
@@ -393,7 +393,7 @@ impl Node {
                         Some(Node::CoroutineInit(id.clone(), params))
                     }
                     _ => {
-                        panic!("Parser: L{}: expected identifier after init", l);
+                        panic!("L{}: expected identifier after init", l);
                     }
                 }
             }
@@ -508,7 +508,7 @@ impl Node {
                 let exp = Node::expression(iter);
                 match iter.peek() {
                     Some(Token{l:_, s: Symbol::RParen}) => iter.next(),
-                    x => panic!("Parser: L{}: exected ) but found {:?}", l, x),
+                    x => panic!("L{}: exected ) but found {:?}", l, x),
                 };
                 exp
             }
@@ -586,7 +586,7 @@ impl Node {
                 }
                 _ => Some(Node::Identifier(id, _id_type)),
             },
-            Some(_) => panic!("Parser: expected identifier"),
+            Some(_) => panic!("expected identifier"),
             None => None,
         }
     }
@@ -609,7 +609,7 @@ impl Node {
                                 }
                                 Some(Token{l:_, s: Symbol::RParen}) => break,
                                 Some(t) => panic!("L{}: Unexpected token in function call: {:?}", t.l, t.s),
-                                None => panic!("L{}: Parser: unexpected EOF", l),
+                                None => panic!("L{}: unexpected EOF", l),
                             };
                         }
                     }
@@ -619,7 +619,7 @@ impl Node {
                     Some(Token{l:_, s: Symbol::RParen}) => {
                         iter.next();
                     }
-                    _ => panic!("Parser: L{}: expected ) after function call", l),
+                    _ => panic!("L{}: expected ) after function call", l),
                 }
                 Some(params)
             }
@@ -633,7 +633,7 @@ impl Node {
                 iter.next();
                 match Node::identifier(iter) {
                     Some(id) => Some(Node::Yield(Box::new(id))),
-                    _ => panic!("Parser: L{}: expected an identifier after yield", l),
+                    _ => panic!("L{}: expected an identifier after yield", l),
                 }
             }
             _ => None,
@@ -662,11 +662,11 @@ impl Node {
                         iter.next();
                         match Node::primitive(iter) {
                             Some(p) => Some(Node::Identifier(id.clone(), p)),
-                            None => panic!("Parser: L{}: Invalid primitive type: {:?}", l, iter.peek()),
+                            None => panic!("L{}: Invalid primitive type: {:?}", l, iter.peek()),
                         }
                     }
                     _ => panic!(
-                        "Parser: L{}: Expected type after variable declaration, found: {:?}",
+                        "L{}: Expected type after variable declaration, found: {:?}",
                         l,
                         iter.peek().map(|t| &t.s)
                     ),
