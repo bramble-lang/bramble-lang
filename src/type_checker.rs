@@ -241,6 +241,48 @@ pub mod checker {
                     _ => Err(">=, > , <, and <= expect to have operands of i32".into()),
                 }
             }
+            If(cond, true_arm, false_arm) => {
+                let cond_ty = traverse(cond, current_func, ftable);
+                if cond_ty == Ok(Bool) {
+                    let true_ty = traverse(
+                        true_arm
+                            .last()
+                            .expect("Expected expression in if's true arm"),
+                        current_func,
+                        ftable,
+                    );
+                    let false_ty = traverse(
+                        false_arm
+                            .last()
+                            .expect("Expected expression in if's false arm"),
+                        current_func,
+                        ftable,
+                    );
+                    match (true_ty, false_ty) {
+                        (Ok(true_ty), Ok(false_ty)) => {
+                            if true_ty == false_ty {
+                                Ok(true_ty)
+                            } else {
+                                Err(format!(
+                                    "If expression has mismatching arms: expected {:?} got {:?}",
+                                    true_ty, false_ty
+                                ))
+                            }
+                        }
+                        (Err(msg), Ok(_)) => Err(format!("True arm of if expression: {:?}", msg)),
+                        (Ok(_), Err(msg)) => Err(format!("False arm of if expression: {:?}", msg)),
+                        (Err(msg1), Err(msg2)) => Err(format!(
+                            "Errors in if expression arms: {:?} and {:?}",
+                            msg1, msg2
+                        )),
+                    }
+                } else {
+                    Err(format!(
+                        "Expected boolean expression in if conditional, got: {:?}",
+                        cond_ty
+                    ))
+                }
+            }
             Bind(_, p, exp) => {
                 let ety = traverse(exp, current_func, ftable).unwrap();
                 if *p == ety {
@@ -570,7 +612,6 @@ pub mod checker {
                     Node::BOr(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
                     Err("&& and || expect to have operands of bool".into()),
                 ),
-
                 (
                     Node::Eq(Box::new(Node::Integer(7)), Box::new(Node::Integer(5))),
                     Ok(Bool),
@@ -894,6 +935,63 @@ pub mod checker {
             let node = Node::FunctionDef("my_co".into(), vec![], I32, vec![Node::Return(None)]);
             let ty = traverse(&node, &None, &ft);
             assert_eq!(ty, Err("Return expected I32 type and got Unit".into()));
+        }
+
+        #[test]
+        fn test_if_expression() {
+            let mut ft = FunctionTable::new();
+            ft.funcs.insert(
+                "my_main".into(),
+                FunctionInfo {
+                    params: vec![],
+                    vars: VarTable {
+                        vars: vec![VarDecl {
+                            name: "c".into(),
+                            size: 4,
+                            ty: I32,
+                            frame_offset: 4,
+                        }],
+                    },
+                    label_count: 0,
+                    ty: Unit,
+                },
+            );
+            {
+                let node = Node::If(
+                    Box::new(Node::Boolean(true)),
+                    vec![Node::Integer(5)],
+                    vec![Node::Integer(7)],
+                );
+                let ty = traverse(&node, &Some("my_main".into()), &ft);
+                assert_eq!(ty, Ok(I32));
+            }
+            {
+                let node = Node::If(
+                    Box::new(Node::Boolean(true)),
+                    vec![Node::Boolean(true)],
+                    vec![Node::Boolean(false)],
+                );
+                let ty = traverse(&node, &Some("my_main".into()), &ft);
+                assert_eq!(ty, Ok(Bool));
+            }
+            {
+                let node = Node::If(
+                    Box::new(Node::Integer(5)),
+                    vec![Node::Boolean(true)],
+                    vec![Node::Boolean(false)],
+                );
+                let ty = traverse(&node, &Some("my_main".into()), &ft);
+                assert_eq!(ty, Err("Expected boolean expression in if conditional, got: Ok(I32)".into()));
+            }
+            {
+                let node = Node::If(
+                    Box::new(Node::Boolean(true)),
+                    vec![Node::Boolean(true)],
+                    vec![Node::Integer(5)],
+                );
+                let ty = traverse(&node, &Some("my_main".into()), &ft);
+                assert_eq!(ty, Err("If expression has mismatching arms: expected Bool got I32".into()));
+            }
         }
     }
 }
