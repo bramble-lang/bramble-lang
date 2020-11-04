@@ -54,10 +54,7 @@ pub struct Token {
 
 impl Token {
     pub fn new(s: Symbol) -> Token {
-        Token{
-            l: 0,
-            s: s,
-        }
+        Token { l: 0, s: s }
     }
 }
 
@@ -84,218 +81,241 @@ use Symbol::*;
 
     Repeat the above steps until the end of the string is reached
 */
-pub fn tokenize(text: &str) -> Vec<Result<Token, &str>> {
-    let mut tokens = vec![];
+pub struct Lexer {
+    line: u32,
+}
+impl Lexer {
+    pub fn new() -> Lexer {
+        Lexer { line: 0 }
+    }
 
-    let mut cs = text.chars().peekable();
+    pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token, &str>> {
+        let mut tokens = vec![];
 
-    while cs.peek().is_some() {
-        consume_whitespace(&mut cs);
-        if cs.peek().is_none() {
-            break;
-        }
-        match consume_integer(&mut cs) {
-            Ok(Some(i)) => tokens.push(Ok(i)),
-            Ok(None) => match consume_identifier(&mut cs) {
-                Some(id) => {
-                    let tok = if_primitive_map(if_keyword_map(if_boolean_map(id)));
-                    tokens.push(Ok(tok));
-                }
-                None => match consume_operator(&mut cs) {
-                    Some(op) => tokens.push(Ok(op)),
-                    None => println!("Unexpected character: {:?}", cs.next()),
-                },
-            },
-            Err(msg) => {
-                tokens.push(Err(msg));
+        let mut cs = text.chars().peekable();
+
+        while cs.peek().is_some() {
+            self.consume_whitespace(&mut cs);
+            if cs.peek().is_none() {
                 break;
+            }
+            match Lexer::consume_integer(&mut cs) {
+                Ok(Some(i)) => tokens.push(Ok(i)),
+                Ok(None) => match Lexer::consume_identifier(&mut cs) {
+                    Some(id) => {
+                        let tok = Lexer::if_primitive_map(Lexer::if_keyword_map(
+                            Lexer::if_boolean_map(id),
+                        ));
+                        tokens.push(Ok(tok));
+                    }
+                    None => match Lexer::consume_operator(&mut cs) {
+                        Some(op) => tokens.push(Ok(op)),
+                        None => println!("Unexpected character: {:?}", cs.next()),
+                    },
+                },
+                Err(msg) => {
+                    tokens.push(Err(msg));
+                    break;
+                }
+            }
+        }
+
+        tokens
+    }
+
+    pub fn consume_whitespace(&mut self, iter: &mut Peekable<std::str::Chars>) {
+        while iter.peek().map_or_else(|| false, |c| c.is_whitespace()) {
+            match iter.next() {
+                Some('\n') => self.line += 1,
+                _ => {},
             }
         }
     }
 
-    tokens
-}
-
-pub fn consume_whitespace(iter: &mut Peekable<std::str::Chars>) {
-    while iter.peek().map_or_else(|| false, |c| c.is_whitespace()) {
-        iter.next();
-    }
-}
-
-pub fn consume_identifier(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
-    let mut id = String::new();
-    if iter
-        .peek()
-        .map_or_else(|| false, |c| c.is_alphabetic() || *c == '_')
-    {
-        while iter
+    pub fn consume_identifier(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+        let mut id = String::new();
+        if iter
             .peek()
-            .map_or_else(|| false, |c| c.is_alphanumeric() || *c == '_')
+            .map_or_else(|| false, |c| c.is_alphabetic() || *c == '_')
         {
+            while iter
+                .peek()
+                .map_or_else(|| false, |c| c.is_alphanumeric() || *c == '_')
+            {
+                match iter.next() {
+                    Some(d) => id.push(d),
+                    None => break,
+                }
+            }
+        }
+
+        if id.len() == 0 {
+            None
+        } else {
+            Some(Token::new(Symbol::Identifier(id)))
+        }
+    }
+
+    pub fn consume_integer(
+        iter: &mut Peekable<std::str::Chars>,
+    ) -> Result<Option<Token>, &'static str> {
+        let mut num = String::new();
+        while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
             match iter.next() {
-                Some(d) => id.push(d),
+                Some(d) => num.push(d),
                 None => break,
             }
         }
-    }
 
-    if id.len() == 0 {
-        None
-    } else {
-        Some(Token::new(Symbol::Identifier(id)))
-    }
-}
-
-pub fn consume_integer(
-    iter: &mut Peekable<std::str::Chars>,
-) -> Result<Option<Token>, &'static str> {
-    let mut num = String::new();
-    while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
-        match iter.next() {
-            Some(d) => num.push(d),
-            None => break,
-        }
-    }
-
-    if num.len() == 0 {
-        Ok(None)
-    } else {
-        if let Some(c) = iter.peek() {
-            if c.is_alphabetic() {
-                Err("Invalid integer, should not contain characters")
+        if num.len() == 0 {
+            Ok(None)
+        } else {
+            if let Some(c) = iter.peek() {
+                if c.is_alphabetic() {
+                    Err("Invalid integer, should not contain characters")
+                } else {
+                    Ok(Some(Token::new(Integer(num.parse::<i32>().unwrap()))))
+                }
             } else {
                 Ok(Some(Token::new(Integer(num.parse::<i32>().unwrap()))))
             }
-        } else {
-            Ok(Some(Token::new(Integer(num.parse::<i32>().unwrap()))))
         }
     }
-}
 
-pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
-    let mut consume = true;
-    let token = match iter.peek() {
-        Some('(') => Some(Token::new(LParen)),
-        Some(')') => Some(Token::new(RParen)),
-        Some('{') => Some(Token::new(LBrace)),
-        Some('}') => Some(Token::new(RBrace)),
-        Some('*') => Some(Token::new(Mul)),
-        Some('+') => Some(Token::new(Add)),
-        Some(';') => Some(Token::new(Semicolon)),
-        Some(',') => Some(Token::new(Comma)),
-        Some(':') => {
-            iter.next();
-            match iter.peek() {
-                Some('=') => Some(Token::new(Assign)),
-                _ => {
-                    consume = false;
-                    Some(Token::new(Colon))
+    pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+        let mut consume = true;
+        let token = match iter.peek() {
+            Some('(') => Some(Token::new(LParen)),
+            Some(')') => Some(Token::new(RParen)),
+            Some('{') => Some(Token::new(LBrace)),
+            Some('}') => Some(Token::new(RBrace)),
+            Some('*') => Some(Token::new(Mul)),
+            Some('+') => Some(Token::new(Add)),
+            Some(';') => Some(Token::new(Semicolon)),
+            Some(',') => Some(Token::new(Comma)),
+            Some(':') => {
+                iter.next();
+                match iter.peek() {
+                    Some('=') => Some(Token::new(Assign)),
+                    _ => {
+                        consume = false;
+                        Some(Token::new(Colon))
+                    }
                 }
             }
-        }
-        Some('!') => {
-            iter.next();
-            match iter.peek() {
-                Some('=') => Some(Token::new(NEq)),
-                _ => panic!("Lexer: Unexpected '!' character"),
-            }
-        }
-        Some('=') => {
-            iter.next();
-            match iter.peek() {
-                Some('=') => Some(Token::new(Eq)),
-                _ => panic!("Lexer: Unexpected '=' character"),
-            }
-        }
-        Some('>') => {
-            iter.next();
-            match iter.peek() {
-                Some('=') => Some(Token::new(GrEq)),
-                _ => {
-                    consume = false;
-                    Some(Token::new(Gr))
+            Some('!') => {
+                iter.next();
+                match iter.peek() {
+                    Some('=') => Some(Token::new(NEq)),
+                    _ => panic!("Lexer: Unexpected '!' character"),
                 }
             }
-        }
-        Some('<') => {
-            iter.next();
-            match iter.peek() {
-                Some('=') => Some(Token::new(LsEq)),
-                _ => {
-                    consume = false;
-                    Some(Token::new(Ls))
+            Some('=') => {
+                iter.next();
+                match iter.peek() {
+                    Some('=') => Some(Token::new(Eq)),
+                    _ => panic!("Lexer: Unexpected '=' character"),
                 }
             }
-        }
-        Some('-') => {
-            iter.next();
-            match iter.peek() {
-                Some('>') => Some(Token::new(LArrow)),
-                _ => panic!("Lexer: Unexpected '-' character"),
+            Some('>') => {
+                iter.next();
+                match iter.peek() {
+                    Some('=') => Some(Token::new(GrEq)),
+                    _ => {
+                        consume = false;
+                        Some(Token::new(Gr))
+                    }
+                }
             }
-        }
-        Some('&') => {
-            iter.next();
-            match iter.peek() {
-                Some('&') => Some(Token::new(BAnd)),
-                _ => panic!("Lexer: Unexpected '-' character"),
+            Some('<') => {
+                iter.next();
+                match iter.peek() {
+                    Some('=') => Some(Token::new(LsEq)),
+                    _ => {
+                        consume = false;
+                        Some(Token::new(Ls))
+                    }
+                }
             }
-        }
-        Some('|') => {
-            iter.next();
-            match iter.peek() {
-                Some('|') => Some(Token::new(BOr)),
-                _ => panic!("Lexer: Unexpected '-' character"),
+            Some('-') => {
+                iter.next();
+                match iter.peek() {
+                    Some('>') => Some(Token::new(LArrow)),
+                    _ => panic!("Lexer: Unexpected '-' character"),
+                }
             }
-        }
-        _ => None,
-    };
+            Some('&') => {
+                iter.next();
+                match iter.peek() {
+                    Some('&') => Some(Token::new(BAnd)),
+                    _ => panic!("Lexer: Unexpected '-' character"),
+                }
+            }
+            Some('|') => {
+                iter.next();
+                match iter.peek() {
+                    Some('|') => Some(Token::new(BOr)),
+                    _ => panic!("Lexer: Unexpected '-' character"),
+                }
+            }
+            _ => None,
+        };
 
-    if token.is_some() && consume {
-        iter.next();
+        if token.is_some() && consume {
+            iter.next();
+        }
+        token
     }
-    token
-}
 
-pub fn if_boolean_map(token: Token) -> Token {
-    match &token {
-        Token{l:_, s: Identifier(id)} => match id.as_str() {
-            "true" => Token::new(Bool(true)),
-            "false" => Token::new(Bool(false)),
+    pub fn if_boolean_map(token: Token) -> Token {
+        match &token {
+            Token {
+                l: _,
+                s: Identifier(id),
+            } => match id.as_str() {
+                "true" => Token::new(Bool(true)),
+                "false" => Token::new(Bool(false)),
+                _ => token,
+            },
             _ => token,
-        },
-        _ => token,
+        }
     }
-}
 
-pub fn if_primitive_map(token: Token) -> Token {
-    match token {
-        Token{l:_, s: Identifier(ref id)} => match id.as_str() {
-            "i32" => Token::new(Primitive(Primitive::I32)),
-            "bool" => Token::new(Primitive(Primitive::Bool)),
-            _ => Token::new(Identifier(id.clone())),
-        },
-        _ => token,
+    pub fn if_primitive_map(token: Token) -> Token {
+        match token {
+            Token {
+                l: _,
+                s: Identifier(ref id),
+            } => match id.as_str() {
+                "i32" => Token::new(Primitive(Primitive::I32)),
+                "bool" => Token::new(Primitive(Primitive::Bool)),
+                _ => Token::new(Identifier(id.clone())),
+            },
+            _ => token,
+        }
     }
-}
 
-pub fn if_keyword_map(token: Token) -> Token {
-    match token {
-        Token{l:_, s: Identifier(ref id)} => match id.as_str() {
-            "return" => Token::new(Return),
-            "yield" => Token::new(Yield),
-            "yret" => Token::new(YieldReturn),
-            "fn" => Token::new(FunctionDef),
-            "co" => Token::new(CoroutineDef),
-            "init" => Token::new(Init),
-            "printi" => Token::new(Printi),
-            "printiln" => Token::new(Printiln),
-            "printbln" => Token::new(Printbln),
-            "if" => Token::new(If),
-            "else" => Token::new(Else),
-            _ => Token::new(Identifier(id.clone())),
-        },
-        _ => token,
+    pub fn if_keyword_map(token: Token) -> Token {
+        match token {
+            Token {
+                l: _,
+                s: Identifier(ref id),
+            } => match id.as_str() {
+                "return" => Token::new(Return),
+                "yield" => Token::new(Yield),
+                "yret" => Token::new(YieldReturn),
+                "fn" => Token::new(FunctionDef),
+                "co" => Token::new(CoroutineDef),
+                "init" => Token::new(Init),
+                "printi" => Token::new(Printi),
+                "printiln" => Token::new(Printiln),
+                "printbln" => Token::new(Printbln),
+                "if" => Token::new(If),
+                "else" => Token::new(Else),
+                _ => Token::new(Identifier(id.clone())),
+            },
+            _ => token,
+        }
     }
 }
 
@@ -306,7 +326,8 @@ mod tests {
     #[test]
     fn test_integer() {
         let text = "5";
-        let tokens = tokenize(text);
+        let mut lexer = Lexer::new();
+        let tokens = lexer.tokenize(text);
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(Integer(5)));
@@ -315,7 +336,8 @@ mod tests {
     #[test]
     fn test_identifier() {
         for text in ["x", "y", "x_5"].iter() {
-            let tokens = tokenize(text);
+            let mut lexer = Lexer::new();
+            let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 1);
             let token = tokens[0].clone().expect("Expected valid token");
             assert_eq!(token, Token::new(Identifier((*text).into())));
@@ -325,7 +347,8 @@ mod tests {
     #[test]
     fn test_invalid_number() {
         for text in ["5x"].iter() {
-            let tokens = tokenize(text);
+            let mut lexer = Lexer::new();
+            let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 1);
             tokens[0]
                 .clone()
@@ -358,7 +381,8 @@ mod tests {
         ]
         .iter()
         {
-            let tokens = tokenize(text);
+            let mut lexer = Lexer::new();
+            let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
@@ -367,7 +391,8 @@ mod tests {
     #[test]
     fn test_multiple_tokens() {
         let text = "x:i32;->yield";
-        let tokens = tokenize(text);
+        let mut lexer = Lexer::new();
+        let tokens = lexer.tokenize(text);
         assert_eq!(tokens.len(), 6);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(Identifier("x".into())));
@@ -400,7 +425,8 @@ mod tests {
         ]
         .iter()
         {
-            let tokens = tokenize(text);
+            let mut lexer = Lexer::new();
+            let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
@@ -414,7 +440,8 @@ mod tests {
         ]
         .iter()
         {
-            let tokens = tokenize(text);
+            let mut lexer = Lexer::new();
+            let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
@@ -435,11 +462,15 @@ mod tests {
         ]
         .iter()
         {
-            let tokens = tokenize(text);
+            let mut lexer = Lexer::new();
+            let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 8);
             assert_eq!(tokens[0].clone().unwrap(), Token::new(Return));
             assert_eq!(tokens[1].clone().unwrap(), Token::new(LParen));
-            assert_eq!(tokens[2].clone().unwrap(), Token::new(Identifier("x".into())));
+            assert_eq!(
+                tokens[2].clone().unwrap(),
+                Token::new(Identifier("x".into()))
+            );
             assert_eq!(tokens[3].clone().unwrap(), Token::new(Add));
             assert_eq!(tokens[4].clone().unwrap(), Token::new(Integer(5)));
             assert_eq!(tokens[5].clone().unwrap(), Token::new(BOr));

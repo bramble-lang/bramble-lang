@@ -38,7 +38,8 @@ fn main() {
         .expect("Expected an input source file to compile");
     let text = std::fs::read_to_string(input).expect("Failed to read input file");
 
-    let tokens = lexer::tokenize(&text);
+    let mut lexer = lexer::Lexer::new();
+    let tokens = lexer.tokenize(&text);
     let tokens = tokens
         .into_iter()
         .filter(|t| t.is_ok())
