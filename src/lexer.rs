@@ -48,13 +48,13 @@ pub enum Symbol {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    pub symbol: Symbol,
+    pub s: Symbol,
 }
 
 impl Token {
     pub fn new(s: Symbol) -> Token {
         Token{
-            symbol: s,
+            s: s,
         }
     }
 }
@@ -257,7 +257,7 @@ pub fn consume_operator(iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
 
 pub fn if_boolean_map(token: Token) -> Token {
     match &token {
-        Token{symbol: Identifier(id)} => match id.as_str() {
+        Token{s: Identifier(id)} => match id.as_str() {
             "true" => Token::new(Bool(true)),
             "false" => Token::new(Bool(false)),
             _ => token,
@@ -268,7 +268,7 @@ pub fn if_boolean_map(token: Token) -> Token {
 
 pub fn if_primitive_map(token: Token) -> Token {
     match token {
-        Token{symbol: Identifier(ref id)} => match id.as_str() {
+        Token{s: Identifier(ref id)} => match id.as_str() {
             "i32" => Token::new(Primitive(Primitive::I32)),
             "bool" => Token::new(Primitive(Primitive::Bool)),
             _ => Token::new(Identifier(id.clone())),
@@ -279,7 +279,7 @@ pub fn if_primitive_map(token: Token) -> Token {
 
 pub fn if_keyword_map(token: Token) -> Token {
     match token {
-        Token{symbol: Identifier(ref id)} => match id.as_str() {
+        Token{s: Identifier(ref id)} => match id.as_str() {
             "return" => Token::new(Return),
             "yield" => Token::new(Yield),
             "yret" => Token::new(YieldReturn),
