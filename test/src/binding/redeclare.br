@@ -1,0 +1,5 @@
+fn my_main() {
+    x: i32 := 5;
+    x: i32 := 10;
+    return;
+}
