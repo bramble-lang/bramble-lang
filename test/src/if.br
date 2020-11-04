@@ -1,0 +1,5 @@
+fn my_main() {
+    printiln if true {1} else {3};
+
+    return;
+}
