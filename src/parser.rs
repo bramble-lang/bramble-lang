@@ -128,7 +128,10 @@ impl Node {
 
                                 match Node::return_stmt(iter) {
                                     Some(ret) => stmts.push(ret),
-                                    None => panic!("Function must end with a return statement, got {:?}", iter.peek()),
+                                    None => panic!(
+                                        "Function must end with a return statement, got {:?}",
+                                        iter.peek()
+                                    ),
                                 }
 
                                 match iter.peek() {
@@ -529,23 +532,50 @@ impl Node {
             Some(Token::If) => {
                 iter.next();
                 // expression
-                let cond = Node::expression(iter).expect("Expected conditional expressoin after if");
+                let cond =
+                    Node::expression(iter).expect("Expected conditional expressoin after if");
                 // lbrace
-                iter.next().map(|t| *t == Token::LBrace).expect("Expected {");
+                iter.next()
+                    .map(|t| *t == Token::LBrace)
+                    .expect("Expected {");
                 // expression
-                let true_arm = Node::expression(iter).expect("Expression in true arm of if expression");
+                let true_arm =
+                    Node::expression(iter).expect("Expression in true arm of if expression");
                 // rbrace
-                iter.next().map(|t| *t == Token::RBrace).expect("Expected }");
+                iter.next()
+                    .map(|t| *t == Token::RBrace)
+                    .expect("Expected }");
                 // else
-                iter.next().map(|t| *t == Token::Else).expect("Expected else arm of if expression");
-                iter.next().map(|t| *t == Token::LBrace).expect("Expected {");
-                // expression
-                let false_arm = Node::expression(iter).expect("Expression in false arm of if expression");
-                // rbrace
-                iter.next().map(|t| *t == Token::RBrace).expect("Expected }");
-                Some(Node::If(Box::new(cond), Box::new(true_arm), Box::new(false_arm)))
-            },
-            _ => None
+                iter.next()
+                    .map(|t| *t == Token::Else)
+                    .expect("Expected else arm of if expression");
+
+                // check for `else if`
+                let false_arm = match iter.peek() {
+                    Some(Token::If) => {
+                        Node::if_expression(iter).expect("Expected if expression after else if")
+                    }
+                    _ => {
+                        iter.next()
+                            .map(|t| *t == Token::LBrace)
+                            .expect("Expected {");
+                        // expression
+                        let false_arm = Node::expression(iter)
+                            .expect("Expression in false arm of if expression");
+                        // rbrace
+                        iter.next()
+                            .map(|t| *t == Token::RBrace)
+                            .expect("Expected }");
+                        false_arm
+                    }
+                };
+                Some(Node::If(
+                    Box::new(cond),
+                    Box::new(true_arm),
+                    Box::new(false_arm),
+                ))
+            }
+            _ => None,
         }
     }
 
