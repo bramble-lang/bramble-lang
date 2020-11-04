@@ -1,0 +1,6 @@
+fn my_main() {
+    x:i32 := x * x;
+    printiln y;
+    y:i32 := 5;
+    return;
+}

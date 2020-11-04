@@ -153,7 +153,6 @@ impl Node {
     }
 
     fn coroutine_def(iter: &mut TokenIter) -> Option<Node> {
-        println!("Parser @ coroutine_def");
         match iter.peek() {
             Some(Token::CoroutineDef) => {
                 iter.next();
@@ -325,7 +324,6 @@ impl Node {
 
     fn println_stmt(iter: &mut TokenIter) -> Option<Node> {
         let tk = iter.peek();
-        println!("Parser @ {:?}", tk);
         match tk {
             Some(Token::Printiln) => {
                 iter.next();
@@ -350,9 +348,7 @@ impl Node {
     fn bind(iter: &mut TokenIter) -> Option<Node> {
         match Node::identifier_declare(iter) {
             Some(Node::Identifier(id, id_type)) => {
-                println!("Parse: Binding {:?}", id);
                 let pt = iter.peek();
-                println!("peek: {:?}", pt);
                 match pt {
                     Some(Token::Assign) => {
                         iter.next();
@@ -372,8 +368,7 @@ impl Node {
                         }
                     }
                     _ => {
-                        println!("Expected := after identifer in bind statement");
-                        None
+                        panic!("Expected := after identifer in bind statement");
                     }
                 }
             }
@@ -527,7 +522,6 @@ impl Node {
     }
 
     fn if_expression(iter: &mut TokenIter) -> Option<Node> {
-        println!("Parser: if expression");
         match iter.peek() {
             Some(Token::If) => {
                 iter.next();
@@ -580,7 +574,6 @@ impl Node {
     }
 
     fn function_call_or_variable(iter: &mut TokenIter) -> Option<Node> {
-        println!("Function call");
         match Node::identifier(iter) {
             Some(Node::Identifier(id, _id_type)) => match Node::fn_call_params(iter) {
                 Some(params) => {
@@ -596,7 +589,6 @@ impl Node {
 
     /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
     fn fn_call_params(iter: &mut TokenIter) -> Option<Vec<Node>> {
-        println!("Parser @ func call params");
         match iter.peek() {
             Some(Token::LParen) => {
                 // this is a function call
@@ -632,7 +624,6 @@ impl Node {
     }
 
     fn co_yield(iter: &mut TokenIter) -> Option<Node> {
-        println!("Identifier");
         match iter.peek() {
             Some(Token::Yield) => {
                 iter.next();
@@ -646,7 +637,6 @@ impl Node {
     }
 
     fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
-        println!("Primitive");
         match iter.peek() {
             Some(Token::Primitive(primitive)) => {
                 iter.next();
@@ -660,7 +650,6 @@ impl Node {
     }
 
     fn identifier_declare(iter: &mut TokenIter) -> Option<Node> {
-        println!("IdDec");
         match iter.peek() {
             Some(Token::Identifier(id)) => {
                 iter.next();
@@ -683,7 +672,6 @@ impl Node {
     }
 
     fn identifier(iter: &mut TokenIter) -> Option<Node> {
-        println!("Identifier");
         match iter.peek() {
             Some(token) => match token {
                 Token::Identifier(id) => {

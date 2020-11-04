@@ -472,8 +472,6 @@ impl Compiler {
         use Instruction::*;
         use Register::*;
 
-        println!("Compile @ {:?}", ast);
-
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
         let fn_param_registers = [Eax, Ebx, Ecx, Edx];
@@ -857,7 +855,7 @@ impl Compiler {
                 }
                 output.push(Call(fn_name.clone()));
             }
-            node => println!("Expected an operator, found {:?}", node),
+            node => panic!("Expected an operator, found {:?}", node),
         }
     }
 }

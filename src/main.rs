@@ -38,25 +38,24 @@ fn main() {
         .expect("Expected an input source file to compile");
     let text = std::fs::read_to_string(input).expect("Failed to read input file");
 
-    println!("Code: {}", text);
     let tokens = lexer::tokenize(&text);
-    println!("Tokens: {:?}", tokens);
     let tokens = tokens
         .into_iter()
         .filter(|t| t.is_ok())
         .map(|t| t.unwrap())
         .collect();
     let ast = Node::parse(tokens);
-    println!("AST: {:?}", ast);
 
     let ast = ast.unwrap();
     let mut func_table = FunctionTable::generate(&ast);
-    println!("FuncTable: {:?}", func_table);
 
     // Type Check
-    match checker::type_check(&ast, &func_table) {
+    match checker::type_check(&ast, &mut func_table) {
         Ok(_) => (),
-        Err(msg) => panic!(msg),
+        Err(msg) => {
+            println!("Error: {}", msg);
+            std::process::exit(1);
+        },
     }
 
     let program = Compiler::compile(&ast, &mut func_table);
