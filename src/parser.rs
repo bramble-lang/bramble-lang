@@ -103,46 +103,47 @@ impl Node {
 
     fn function_def(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::FunctionDef}) => {
+            Some(Token{l:_, s: Symbol::FunctionDef}) => {
                 iter.next();
                 match iter.peek() {
-                    Some(Token{s: Symbol::Identifier(id)}) => {
+                    Some(Token{l, s: Symbol::Identifier(id)}) => {
                         iter.next();
 
                         let params = Node::fn_def_params(iter);
 
                         let fn_type = match iter.peek() {
-                            Some(Token{s: Symbol::LArrow}) => {
+                            Some(Token{l, s: Symbol::LArrow}) => {
                                 iter.next();
                                 Node::primitive(iter).expect(
-                                    "Expected primitive type after -> in function definition",
+                                    &format!("L{}: Expected primitive type after -> in function definition", l),
                                 )
                             }
                             _ => Primitive::Unit,
                         };
 
                         match iter.peek() {
-                            Some(Token{s: Symbol::LBrace}) => {
+                            Some(Token{l, s: Symbol::LBrace}) => {
                                 iter.next();
                                 let mut stmts = Node::block(iter);
 
                                 match Node::return_stmt(iter) {
                                     Some(ret) => stmts.push(ret),
                                     None => panic!(
-                                        "Function must end with a return statement, got {:?}",
+                                        "L{}: Function must end with a return statement, got {:?}",
+                                        l,
                                         iter.peek()
                                     ),
                                 }
 
                                 match iter.peek() {
-                                    Some(Token{s: Symbol::RBrace}) => {
+                                    Some(Token{l:_, s: Symbol::RBrace}) => {
                                         iter.next();
                                     }
                                     _ => panic!("Expected } at end of function definition"),
                                 }
                                 Some(Node::FunctionDef(id.clone(), params, fn_type, stmts))
                             }
-                            _ => panic!("Expected { after function declaration"),
+                            _ => panic!("L{}: Expected {{ after function declaration", l),
                         }
                     }
                     _ => panic!("Expected function name after fn"),
@@ -154,43 +155,43 @@ impl Node {
 
     fn coroutine_def(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::CoroutineDef}) => {
+            Some(Token{l:_, s: Symbol::CoroutineDef}) => {
                 iter.next();
                 match iter.peek() {
-                    Some(Token{s: Symbol::Identifier(id)}) => {
+                    Some(Token{l, s: Symbol::Identifier(id)}) => {
                         iter.next();
 
                         let params = Node::fn_def_params(iter);
 
                         let co_type = match iter.peek() {
-                            Some(Token{s: Symbol::LArrow}) => {
+                            Some(Token{l, s: Symbol::LArrow}) => {
                                 iter.next();
                                 Node::primitive(iter).expect(
-                                    "Expected primitive type after -> in function definition",
+                                    &format!("L{}: Expected primitive type after -> in function definition", l),
                                 )
                             }
                             _ => Primitive::Unit,
                         };
 
                         match iter.peek() {
-                            Some(Token{s: Symbol::LBrace}) => {
+                            Some(Token{l, s: Symbol::LBrace}) => {
                                 iter.next();
                                 let mut stmts = Node::co_block(iter);
 
                                 match Node::return_stmt(iter) {
                                     Some(ret) => stmts.push(ret),
-                                    None => panic!("Coroutine must end with a return statement"),
+                                    None => panic!("L{}: Coroutine must end with a return statement", l),
                                 }
 
                                 match iter.peek() {
-                                    Some(Token{s: Symbol::RBrace}) => {
+                                    Some(Token{l:_, s: Symbol::RBrace}) => {
                                         iter.next();
                                     }
-                                    _ => panic!("Expected } at end of function definition"),
+                                    _ => panic!("L{}: Expected }} at end of function definition", l),
                                 }
                                 Some(Node::CoroutineDef(id.clone(), params, co_type, stmts))
                             }
-                            _ => panic!("Expected { after function declaration"),
+                            _ => panic!("L{}: Expected {{ after function declaration", l),
                         }
                     }
                     _ => panic!("Expected function name after fn"),
@@ -202,7 +203,7 @@ impl Node {
 
     fn fn_def_params(iter: &mut TokenIter) -> Vec<(String, Primitive)> {
         match iter.peek() {
-            Some(Token{s: Symbol::LParen}) => {
+            Some(Token{l:_, s: Symbol::LParen}) => {
                 iter.next();
             }
             _ => panic!("Parser: expected an ( after function name in function definition"),
@@ -215,11 +216,11 @@ impl Node {
                 Node::Identifier(id, id_type) => {
                     params.push((id, id_type));
                     match iter.peek() {
-                        Some(Token{s: Symbol::Comma}) => {
+                        Some(Token{l:_, s: Symbol::Comma}) => {
                             iter.next();
                         }
-                        Some(Token{s: Symbol::RParen}) => break,
-                        Some(t) => panic!("Unexpected token in function definition: {:?}", t),
+                        Some(Token{l:_, s: Symbol::RParen}) => break,
+                        Some(Token{l, s}) => panic!("L{}: Unexpected token in function definition: {:?}", l, s),
                         None => panic!("Parser: unexpected EOF"),
                     };
                 }
@@ -228,7 +229,7 @@ impl Node {
         }
 
         match iter.peek() {
-            Some(Token{s: Symbol::RParen}) => {
+            Some(Token{l:_, s: Symbol::RParen}) => {
                 iter.next();
             }
             _ => panic!("Parser: expected )"),
@@ -264,12 +265,12 @@ impl Node {
 
     fn return_stmt(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::Return}) => {
+            Some(Token{l, s: Symbol::Return}) => {
                 iter.next();
                 let exp = Node::expression(iter);
                 match iter.peek() {
-                    Some(Token{s: Symbol::Semicolon}) => iter.next(),
-                    _ => panic!("Expected ; after return statement"),
+                    Some(Token{l:_, s: Symbol::Semicolon}) => iter.next(),
+                    _ => panic!("L{}: Expected ; after return statement", l),
                 };
                 match exp {
                     Some(exp) => Some(Node::Return(Some(Box::new(exp)))),
@@ -282,12 +283,12 @@ impl Node {
 
     fn yield_return_stmt(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::YieldReturn}) => {
+            Some(Token{l, s: Symbol::YieldReturn}) => {
                 iter.next();
                 let exp = Node::expression(iter);
                 match iter.peek() {
-                    Some(Token{s: Symbol::Semicolon}) => iter.next(),
-                    _ => panic!("Expected ; after yield return statement"),
+                    Some(Token{l:_, s: Symbol::Semicolon}) => iter.next(),
+                    _ => panic!("L{}: Expected ; after yield return statement", l),
                 };
                 match exp {
                     Some(exp) => Some(Node::YieldReturn(Some(Box::new(exp)))),
@@ -299,6 +300,7 @@ impl Node {
     }
 
     fn statement(iter: &mut TokenIter) -> Option<Node> {
+        let line = iter.peek().map_or(0, |t| t.l);
         let stm = match Node::bind(iter) {
             Some(b) => Some(b),
             None => match Node::println_stmt(iter) {
@@ -309,11 +311,12 @@ impl Node {
 
         if stm.is_some() {
             match iter.peek() {
-                Some(Token{s: Symbol::Semicolon}) => {
+                Some(Token{l:_, s: Symbol::Semicolon}) => {
                     iter.next();
                 }
                 _ => panic!(format!(
-                    "Exected ; after statement, found {:?}",
+                    "L{}: Exected ; after statement, found {:?}",
+                    line,
                     iter.peek()
                 )),
             }
@@ -325,20 +328,20 @@ impl Node {
     fn println_stmt(iter: &mut TokenIter) -> Option<Node> {
         let tk = iter.peek();
         match tk {
-            Some(Token{s: Symbol::Printiln}) => {
+            Some(Token{l, s: Symbol::Printiln}) => {
                 iter.next();
                 let exp = Node::expression(iter);
                 match exp {
                     Some(exp) => Some(Node::Printiln(Box::new(exp))),
-                    None => panic!("Parser: Expected expression after println"),
+                    None => panic!("L{}: Expected expression after println", l),
                 }
             }
-            Some(Token{s: Symbol::Printbln}) => {
+            Some(Token{l, s: Symbol::Printbln}) => {
                 iter.next();
                 let exp = Node::expression(iter);
                 match exp {
                     Some(exp) => Some(Node::Printbln(Box::new(exp))),
-                    None => panic!("Parser: Expected expression after println"),
+                    None => panic!("L{}: Expected expression after println", l),
                 }
             }
             _ => None,
@@ -350,17 +353,18 @@ impl Node {
             Some(Node::Identifier(id, id_type)) => {
                 let pt = iter.peek();
                 match pt {
-                    Some(Token{s: Symbol::Assign}) => {
+                    Some(Token{l, s: Symbol::Assign}) => {
                         iter.next();
                         match iter.peek() {
-                            Some(Token{s: Symbol::Init}) => {
+                            Some(Token{l, s: Symbol::Init}) => {
                                 let co_init =
-                                    Node::co_init(iter).expect("Parser: Invalid coroutine init");
+                                    Node::co_init(iter).expect(&format!("L{}: Invalid coroutine init", l));
                                 Some(Node::Bind(id, id_type, Box::new(co_init)))
                             }
                             _ => {
                                 let exp = Node::expression(iter).expect(&format!(
-                                    "Expected an expression or coroutine init after :=, found {:?}",
+                                    "L{}: Expected an expression or coroutine init after :=, found {:?}",
+                                    l,
                                     iter.peek()
                                 ));
                                 Some(Node::Bind(id, id_type, Box::new(exp)))
@@ -379,17 +383,17 @@ impl Node {
 
     fn co_init(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::Init}) => {
+            Some(Token{l, s: Symbol::Init}) => {
                 iter.next();
                 match iter.peek() {
-                    Some(Token{s: Symbol::Identifier(id)}) => {
+                    Some(Token{l, s: Symbol::Identifier(id)}) => {
                         iter.next();
                         let params = Node::fn_call_params(iter)
-                            .expect("Expected parameters after coroutine name");
+                            .expect(&format!("L{}: Expected parameters after coroutine name", l));
                         Some(Node::CoroutineInit(id.clone(), params))
                     }
                     _ => {
-                        panic!("Parser: expected identifier after init");
+                        panic!("Parser: L{}: expected identifier after init", l);
                     }
                 }
             }
@@ -404,9 +408,9 @@ impl Node {
     fn logical_or(iter: &mut TokenIter) -> Option<Node> {
         match Node::logical_and(iter) {
             Some(n) => match iter.peek() {
-                Some(Token{s: Symbol::BOr}) => {
+                Some(Token{l, s: Symbol::BOr}) => {
                     iter.next();
-                    let n2 = Node::logical_or(iter).expect("An expression after ||");
+                    let n2 = Node::logical_or(iter).expect(&format!("L{}: An expression after ||", l));
                     Some(Node::BOr(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
@@ -418,9 +422,9 @@ impl Node {
     fn logical_and(iter: &mut TokenIter) -> Option<Node> {
         match Node::comparison(iter) {
             Some(n) => match iter.peek() {
-                Some(Token{s: Symbol::BAnd}) => {
+                Some(Token{l, s: Symbol::BAnd}) => {
                     iter.next();
-                    let n2 = Node::logical_and(iter).expect("An expression after ||");
+                    let n2 = Node::logical_and(iter).expect(&format!("L{}: An expression after ||", l));
                     Some(Node::BAnd(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
@@ -432,34 +436,34 @@ impl Node {
     fn comparison(iter: &mut TokenIter) -> Option<Node> {
         match Node::sum(iter) {
             Some(n) => match iter.peek() {
-                Some(Token{s: Symbol::Eq}) => {
+                Some(Token{l, s: Symbol::Eq}) => {
                     iter.next();
-                    let n2 = Node::comparison(iter).expect("An expression after ==");
+                    let n2 = Node::comparison(iter).expect(&format!("L{}: An expression after ==", l));
                     Some(Node::Eq(Box::new(n), Box::new(n2)))
                 }
-                Some(Token{s: Symbol::NEq}) => {
+                Some(Token{l, s: Symbol::NEq}) => {
                     iter.next();
-                    let n2 = Node::comparison(iter).expect("An expression after !=");
+                    let n2 = Node::comparison(iter).expect(&format!("L{}: An expression after !=", l));
                     Some(Node::NEq(Box::new(n), Box::new(n2)))
                 }
-                Some(Token{s: Symbol::Gr}) => {
+                Some(Token{l, s: Symbol::Gr}) => {
                     iter.next();
-                    let n2 = Node::comparison(iter).expect("An expression after >");
+                    let n2 = Node::comparison(iter).expect(&format!("L{}: An expression after >", l));
                     Some(Node::Gr(Box::new(n), Box::new(n2)))
                 }
-                Some(Token{s: Symbol::GrEq}) => {
+                Some(Token{l, s: Symbol::GrEq}) => {
                     iter.next();
-                    let n2 = Node::comparison(iter).expect("An expression after >=");
+                    let n2 = Node::comparison(iter).expect(&format!("L{}: An expression after >=", l));
                     Some(Node::GrEq(Box::new(n), Box::new(n2)))
                 }
-                Some(Token{s: Symbol::Ls}) => {
+                Some(Token{l, s: Symbol::Ls}) => {
                     iter.next();
-                    let n2 = Node::comparison(iter).expect("An expression after <");
+                    let n2 = Node::comparison(iter).expect(&format!("L{}: An expression after <", l));
                     Some(Node::Ls(Box::new(n), Box::new(n2)))
                 }
-                Some(Token{s: Symbol::LsEq}) => {
+                Some(Token{l, s: Symbol::LsEq}) => {
                     iter.next();
-                    let n2 = Node::comparison(iter).expect("An expression after <=");
+                    let n2 = Node::comparison(iter).expect(&format!("L{}: An expression after <=", l));
                     Some(Node::LsEq(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
@@ -471,9 +475,9 @@ impl Node {
     fn sum(iter: &mut TokenIter) -> Option<Node> {
         match Node::term(iter) {
             Some(n) => match iter.peek() {
-                Some(Token{s: Symbol::Add}) => {
+                Some(Token{l, s: Symbol::Add}) => {
                     iter.next();
-                    let n2 = Node::sum(iter).expect("An expression after +");
+                    let n2 = Node::sum(iter).expect(&format!("L{}: An expression after +", l));
                     Some(Node::Add(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
@@ -485,9 +489,9 @@ impl Node {
     fn term(iter: &mut TokenIter) -> Option<Node> {
         match Node::factor(iter) {
             Some(n) => match iter.peek() {
-                Some(Token{s: Symbol::Mul}) => {
+                Some(Token{l, s: Symbol::Mul}) => {
                     iter.next();
-                    let n2 = Node::term(iter).expect("a valid term after *");
+                    let n2 = Node::term(iter).expect(&format!("L{}: a valid term after *", l));
                     Some(Node::Mul(Box::new(n), Box::new(n2)))
                 }
                 _ => Some(n),
@@ -498,13 +502,13 @@ impl Node {
 
     fn factor(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::If}) => Node::if_expression(iter),
-            Some(Token{s: Symbol::LParen}) => {
+            Some(Token{l:_, s: Symbol::If}) => Node::if_expression(iter),
+            Some(Token{l, s: Symbol::LParen}) => {
                 iter.next();
                 let exp = Node::expression(iter);
                 match iter.peek() {
-                    Some(Token{s: Symbol::RParen}) => iter.next(),
-                    x => panic!("Parser: exected ) but found {:?}", x),
+                    Some(Token{l:_, s: Symbol::RParen}) => iter.next(),
+                    x => panic!("Parser: L{}: exected ) but found {:?}", l, x),
                 };
                 exp
             }
@@ -523,43 +527,43 @@ impl Node {
 
     fn if_expression(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::If}) => {
+            Some(Token{l, s: Symbol::If}) => {
                 iter.next();
                 // expression
                 let cond =
                     Node::expression(iter).expect("Expected conditional expressoin after if");
                 // lbrace
                 iter.next()
-                    .map(|t| *t == Token{s: Symbol::LBrace})
+                    .map(|t| t.s == Symbol::LBrace)
                     .expect("Expected {");
                 // expression
                 let true_arm =
                     Node::expression(iter).expect("Expression in true arm of if expression");
                 // rbrace
                 iter.next()
-                    .map(|t| *t == Token{s: Symbol::RBrace})
+                    .map(|t| t.s == Symbol::RBrace)
                     .expect("Expected }");
                 // else
                 iter.next()
-                    .map(|t| *t == Token{s: Symbol::Else})
+                    .map(|t| t.s == Symbol::Else)
                     .expect("Expected else arm of if expression");
 
                 // check for `else if`
                 let false_arm = match iter.peek() {
-                    Some(Token{s: Symbol::If}) => {
-                        Node::if_expression(iter).expect("Expected if expression after else if")
+                    Some(Token{l, s: Symbol::If}) => {
+                        Node::if_expression(iter).expect(&format!("L{}: Expected if expression after else if", l))
                     }
                     _ => {
                         iter.next()
-                            .map(|t| *t == Token{s: Symbol::LBrace})
-                            .expect("Expected {");
+                            .map(|t| t.s == Symbol::LBrace)
+                            .expect(&format!("L{}: Expected {{", l));
                         // expression
                         let false_arm = Node::expression(iter)
-                            .expect("Expression in false arm of if expression");
+                            .expect(&format!("L{}: Expression in false arm of if expression", l));
                         // rbrace
                         iter.next()
-                            .map(|t| *t == Token{s: Symbol::RBrace})
-                            .expect("Expected }");
+                            .map(|t| t.s == Symbol::RBrace)
+                            .expect(&format!("L{}: Expected }}", l));
                         false_arm
                     }
                 };
@@ -590,7 +594,7 @@ impl Node {
     /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
     fn fn_call_params(iter: &mut TokenIter) -> Option<Vec<Node>> {
         match iter.peek() {
-            Some(Token{s: Symbol::LParen}) => {
+            Some(Token{l, s: Symbol::LParen}) => {
                 // this is a function call
                 iter.next();
 
@@ -600,22 +604,22 @@ impl Node {
                         exp => {
                             params.push(exp);
                             match iter.peek() {
-                                Some(Token{s: Symbol::Comma}) => {
+                                Some(Token{l:_, s: Symbol::Comma}) => {
                                     iter.next();
                                 }
-                                Some(Token{s: Symbol::RParen}) => break,
-                                Some(t) => panic!("Unexpected token in function call: {:?}", t),
-                                None => panic!("Parser: unexpected EOF"),
+                                Some(Token{l:_, s: Symbol::RParen}) => break,
+                                Some(t) => panic!("L{}: Unexpected token in function call: {:?}", t.l, t.s),
+                                None => panic!("L{}: Parser: unexpected EOF", l),
                             };
                         }
                     }
                 }
 
                 match iter.peek() {
-                    Some(Token{s: Symbol::RParen}) => {
+                    Some(Token{l:_, s: Symbol::RParen}) => {
                         iter.next();
                     }
-                    _ => panic!("Parser: expected ) after function call"),
+                    _ => panic!("Parser: L{}: expected ) after function call", l),
                 }
                 Some(params)
             }
@@ -625,11 +629,11 @@ impl Node {
 
     fn co_yield(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::Yield}) => {
+            Some(Token{l, s: Symbol::Yield}) => {
                 iter.next();
                 match Node::identifier(iter) {
                     Some(id) => Some(Node::Yield(Box::new(id))),
-                    _ => panic!("Parser: expected an identifier after yield"),
+                    _ => panic!("Parser: L{}: expected an identifier after yield", l),
                 }
             }
             _ => None,
@@ -638,7 +642,7 @@ impl Node {
 
     fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
         match iter.peek() {
-            Some(Token{s: Symbol::Primitive(primitive)}) => {
+            Some(Token{l:_, s: Symbol::Primitive(primitive)}) => {
                 iter.next();
                 match primitive {
                     lexer::Primitive::I32 => Some(Primitive::I32),
@@ -651,18 +655,19 @@ impl Node {
 
     fn identifier_declare(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::Identifier(id)}) => {
+            Some(Token{l, s: Symbol::Identifier(id)}) => {
                 iter.next();
                 match iter.peek() {
-                    Some(Token{s: Symbol::Colon}) => {
+                    Some(Token{l, s: Symbol::Colon}) => {
                         iter.next();
                         match Node::primitive(iter) {
                             Some(p) => Some(Node::Identifier(id.clone(), p)),
-                            None => panic!("Parser: Invalid primitive type: {:?}", iter.peek()),
+                            None => panic!("Parser: L{}: Invalid primitive type: {:?}", l, iter.peek()),
                         }
                     }
                     _ => panic!(
-                        "Parser: Expected type after variable declaration, found: {:?}",
+                        "Parser: L{}: Expected type after variable declaration, found: {:?}",
+                        l,
                         iter.peek()
                     ),
                 }
@@ -674,7 +679,7 @@ impl Node {
     fn identifier(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(token) => match token {
-                Token{s: Symbol::Identifier(id)} => {
+                Token{l:_, s: Symbol::Identifier(id)} => {
                     iter.next();
                     Some(Node::Identifier(id.clone(), Primitive::Unknown))
                 }
@@ -697,7 +702,7 @@ impl Node {
     fn number(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
             Some(token) => match token {
-                Token{s: Symbol::Integer(i)} => {
+                Token{l:_, s: Symbol::Integer(i)} => {
                     iter.next();
                     Some(Node::Integer(*i))
                 }
@@ -709,7 +714,7 @@ impl Node {
 
     fn boolean(iter: &mut TokenIter) -> Option<Node> {
         match iter.peek() {
-            Some(Token{s: Symbol::Bool(b)}) => {
+            Some(Token{l:_, s: Symbol::Bool(b)}) => {
                 iter.next();
                 Some(Node::Boolean(*b))
             }
