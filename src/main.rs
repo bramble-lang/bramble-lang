@@ -45,7 +45,7 @@ fn main() {
         .filter(|t| t.is_ok())
         .map(|t| t.unwrap())
         .collect();
-    let ast = Node::parse(tokens);
+    let ast = Parser::parse(tokens);
 
     let ast = ast.unwrap();
     let mut func_table = FunctionTable::generate(&ast);
