@@ -48,7 +48,13 @@ fn main() {
         })
         .map(|t| t.unwrap())
         .collect();
-    let ast = Parser::parse(tokens);
+    let ast = match Parser::parse(tokens) {
+        Ok(ast) => ast,
+        Err(msg) => {
+            println!("{}", msg);
+            std::process::exit(3);
+        }
+    };
 
     if ast.is_none() {
         println!("Critical: failed to parse");

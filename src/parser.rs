@@ -59,6 +59,7 @@ impl AstNode {
 }
 
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
+type PResult = Result<Option<AstNode>, String>;
 pub struct Parser {
 }
 impl Parser {
@@ -90,50 +91,50 @@ impl Parser {
         parse - takes a string of tokens and converts it into an AST
         compile - takes an AST and converts it to assembly
     */
-    pub fn parse(tokens: Vec<Token>) -> Option<AstNode> {
+    pub fn parse(tokens: Vec<Token>) -> PResult {
         let mut iter = tokens.iter().peekable();
         //Node::function(&mut iter)
         Parser::module(&mut iter)
     }
 
-    fn module(iter: &mut TokenIter) -> Option<AstNode> {
+    fn module(iter: &mut TokenIter) -> PResult {
         let mut functions = vec![];
         let mut coroutines = vec![];
 
         let line = iter.peek().map_or(0, |t| t.l);
         while iter.peek().is_some() {
-            match Parser::function_def(iter) {
+            match Parser::function_def(iter)? {
                 Some(f) => functions.push(f),
-                None => match Parser::coroutine_def(iter) {
+                None => match Parser::coroutine_def(iter)? {
                     Some(co) => coroutines.push(co),
                     None => break,
                 },
             }
         }
 
-        if functions.len() > 0 {
+        Ok(if functions.len() > 0 {
             Some(AstNode::new(line, Ast::Module(functions, coroutines)))
         } else {
             None
-        }
+        })
     }
 
-    fn function_def(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn function_def(iter: &mut TokenIter) -> PResult {
+        let syntax = match iter.peek() {
             Some(Token{l:_, s: Lex::FunctionDef}) => {
                 iter.next();
                 match iter.peek() {
                     Some(Token{l, s: Lex::Identifier(id)}) => {
                         iter.next();
 
-                        let params = Parser::fn_def_params(iter);
+                        let params = Parser::fn_def_params(iter)?;
 
                         let fn_type = match iter.peek() {
                             Some(Token{l, s: Lex::LArrow}) => {
                                 iter.next();
-                                Parser::primitive(iter).expect(
+                                Parser::primitive(iter).ok_or(
                                     &format!("L{}: Expected primitive type after -> in function definition", l),
-                                )
+                                )?
                             }
                             _ => Primitive::Unit,
                         };
@@ -141,15 +142,15 @@ impl Parser {
                         match iter.peek() {
                             Some(Token{l, s: Lex::LBrace}) => {
                                 iter.next();
-                                let mut stmts = Parser::block(iter);
+                                let mut stmts = Parser::block(iter).into_iter().collect::<Result<Vec<AstNode>,String>>()?;
 
-                                match Parser::return_stmt(iter) {
+                                match Parser::return_stmt(iter)? {
                                     Some(ret) => stmts.push(ret),
-                                    None => panic!(
+                                    None => return Err(format!(
                                         "L{}: Function must end with a return statement, got {:?}",
                                         l,
-                                        iter.peek()
-                                    ),
+                                        iter.peek(),
+                                    )),
                                 }
 
                                 match iter.peek() {
@@ -167,18 +168,19 @@ impl Parser {
                 }
             }
             _ => None,
-        }
+        };
+        Ok(syntax)
     }
 
-    fn coroutine_def(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn coroutine_def(iter: &mut TokenIter) -> PResult {
+        let syntax = match iter.peek() {
             Some(Token{l:_, s: Lex::CoroutineDef}) => {
                 iter.next();
                 match iter.peek() {
                     Some(Token{l, s: Lex::Identifier(id)}) => {
                         iter.next();
 
-                        let params = Parser::fn_def_params(iter);
+                        let params = Parser::fn_def_params(iter)?;
 
                         let co_type = match iter.peek() {
                             Some(Token{l, s: Lex::LArrow}) => {
@@ -193,32 +195,33 @@ impl Parser {
                         match iter.peek() {
                             Some(Token{l, s: Lex::LBrace}) => {
                                 iter.next();
-                                let mut stmts = Parser::co_block(iter);
+                                let mut stmts = Parser::co_block(iter).into_iter().collect::<Result<Vec<AstNode>, String>>()?;
 
-                                match Parser::return_stmt(iter) {
+                                match Parser::return_stmt(iter)? {
                                     Some(ret) => stmts.push(ret),
-                                    None => panic!("L{}: Coroutine must end with a return statement", l),
+                                    None => return Err(format!("L{}: Coroutine must end with a return statement", l)),
                                 }
 
                                 match iter.peek() {
                                     Some(Token{l:_, s: Lex::RBrace}) => {
                                         iter.next();
                                     }
-                                    _ => panic!("L{}: Expected }} at end of function definition", l),
+                                    _ => return Err(format!("L{}: Expected }} at end of function definition", l)),
                                 }
                                 Some(AstNode::new(*l, Ast::CoroutineDef(id.clone(), params, co_type, stmts)))
                             }
-                            _ => panic!("L{}: Expected {{ after function declaration", l),
+                            _ => return Err(format!("L{}: Expected {{ after function declaration", l)),
                         }
                     }
-                    _ => panic!("Expected function name after fn"),
+                    _ => return Err(format!("Expected function name after fn")),
                 }
             }
             _ => None,
-        }
+        };
+        Ok(syntax)
     }
 
-    fn fn_def_params(iter: &mut TokenIter) -> Vec<(String, Primitive)> {
+    fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, String> {
         match iter.peek() {
             Some(Token{l:_, s: Lex::LParen}) => {
                 iter.next();
@@ -228,7 +231,7 @@ impl Parser {
 
         let mut params = vec![];
 
-        while let Some(param) = Parser::identifier_declare(iter) {
+        while let Some(param) = Parser::identifier_declare(iter)? {
             match param {
                 AstNode{l:_, n: Ast::Identifier(id, id_type)} => {
                     params.push((id, id_type));
@@ -252,42 +255,45 @@ impl Parser {
             _ => panic!("expected )"),
         }
 
-        params
+        Ok(params)
     }
 
-    fn block(iter: &mut TokenIter) -> Vec<AstNode> {
+    fn block(iter: &mut TokenIter) -> Vec<Result<AstNode, String>> {
         let mut stmts = vec![];
         while iter.peek().is_some() {
             match Parser::statement(iter) {
-                Some(s) => stmts.push(s),
-                None => break,
+                Ok(Some(s)) => stmts.push(Ok(s)),
+                Ok(None) => break,
+                Err(msg) => stmts.push(Err(msg))
             }
         }
         stmts
     }
 
-    fn co_block(iter: &mut TokenIter) -> Vec<AstNode> {
+    fn co_block(iter: &mut TokenIter) -> Vec<Result<AstNode, String>> {
         let mut stmts = vec![];
         while iter.peek().is_some() {
             match Parser::statement(iter) {
-                Some(s) => stmts.push(s),
-                None => match Parser::yield_return_stmt(iter) {
-                    Some(s) => stmts.push(s),
-                    None => break,
+                Ok(Some(s)) => stmts.push(Ok(s)),
+                Ok(None) => match Parser::yield_return_stmt(iter) {
+                    Ok(Some(s)) => stmts.push(Ok(s)),
+                    Ok(None) => break,
+                    Err(msg) => stmts.push(Err(msg))
                 },
+                Err(msg) => stmts.push(Err(msg))
             }
         }
         stmts
     }
 
-    fn return_stmt(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn return_stmt(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
             Some(Token{l, s: Lex::Return}) => {
                 iter.next();
-                let exp = Parser::expression(iter);
+                let exp = Parser::expression(iter)?;
                 match iter.peek() {
                     Some(Token{l:_, s: Lex::Semicolon}) => iter.next(),
-                    _ => panic!("L{}: Expected ; after return statement", l),
+                    _ => return Err(format!("L{}: Expected ; after return statement", l)),
                 };
                 match exp {
                     Some(exp) => Some(AstNode::new(*l, Ast::Return(Some(Box::new(exp))))),
@@ -295,17 +301,17 @@ impl Parser {
                 }
             }
             _ => None,
-        }
+        })
     }
 
-    fn yield_return_stmt(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
             Some(Token{l, s: Lex::YieldReturn}) => {
                 iter.next();
-                let exp = Parser::expression(iter);
+                let exp = Parser::expression(iter)?;
                 match iter.peek() {
                     Some(Token{l:_, s: Lex::Semicolon}) => iter.next(),
-                    _ => panic!("L{}: Expected ; after yield return statement", l),
+                    _ => return Err(format!("L{}: Expected ; after yield return statement", l)),
                 };
                 match exp {
                     Some(exp) => Some(AstNode::new(*l, Ast::YieldReturn(Some(Box::new(exp))))),
@@ -313,14 +319,14 @@ impl Parser {
                 }
             }
             _ => None,
-        }
+        })
     }
 
-    fn statement(iter: &mut TokenIter) -> Option<AstNode> {
+    fn statement(iter: &mut TokenIter) -> PResult {
         let line = iter.peek().map_or(0, |t| t.l);
-        let stm = match Parser::bind(iter) {
+        let stm = match Parser::bind(iter)? {
             Some(b) => Some(b),
-            None => match Parser::println_stmt(iter) {
+            None => match Parser::println_stmt(iter)? {
                 Some(p) => Some(p),
                 _ => None,
             },
@@ -339,34 +345,34 @@ impl Parser {
             }
         }
 
-        stm
+        Ok(stm)
     }
 
-    fn println_stmt(iter: &mut TokenIter) -> Option<AstNode> {
+    fn println_stmt(iter: &mut TokenIter) -> PResult {
         let tk = iter.peek();
-        match tk {
+        Ok(match tk {
             Some(Token{l, s: Lex::Printiln}) => {
                 iter.next();
-                let exp = Parser::expression(iter);
+                let exp = Parser::expression(iter)?;
                 match exp {
                     Some(exp) => Some(AstNode::new(*l, Ast::Printiln(Box::new(exp)))),
-                    None => panic!("L{}: Expected expression after println", l),
+                    None => return Err(format!("L{}: Expected expression after println", l)),
                 }
             }
             Some(Token{l, s: Lex::Printbln}) => {
                 iter.next();
-                let exp = Parser::expression(iter);
+                let exp = Parser::expression(iter)?;
                 match exp {
                     Some(exp) => Some(AstNode::new(*l, Ast::Printbln(Box::new(exp)))),
-                    None => panic!("L{}: Expected expression after println", l),
+                    None => return Err(format!("L{}: Expected expression after println", l)),
                 }
             }
             _ => None,
-        }
+        })
     }
 
-    fn bind(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::identifier_declare(iter) {
+    fn bind(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::identifier_declare(iter)? {
             Some(AstNode{l:_, n:Ast::Identifier(id, id_type)}) => {
                 let pt = iter.peek();
                 match pt {
@@ -375,15 +381,15 @@ impl Parser {
                         match iter.peek() {
                             Some(Token{l, s: Lex::Init}) => {
                                 let co_init =
-                                    Parser::co_init(iter).expect(&format!("L{}: Invalid coroutine init", l));
+                                    Parser::co_init(iter)?.ok_or(&format!("L{}: Invalid coroutine init", l))?;
                                 Some(AstNode::new(*l, Ast::Bind(id, id_type, Box::new(co_init))))
                             }
                             _ => {
-                                let exp = Parser::expression(iter).expect(&format!(
+                                let exp = Parser::expression(iter)?.ok_or(&format!(
                                     "L{}: Expected an expression or coroutine init after :=, found {:?}",
                                     l,
                                     iter.peek()
-                                ));
+                                ))?;
                                 Some(AstNode::new(*l, Ast::Bind(id, id_type, Box::new(exp))))
                             }
                         }
@@ -395,192 +401,195 @@ impl Parser {
             }
             Some(_) => panic!("invalid LHS in bind expresion"),
             None => None,
-        }
+        })
     }
 
-    fn co_init(iter: &mut TokenIter) -> Option<AstNode> {
+    fn co_init(iter: &mut TokenIter) -> PResult {
         match iter.peek() {
             Some(Token{l, s: Lex::Init}) => {
                 iter.next();
                 match iter.peek() {
                     Some(Token{l, s: Lex::Identifier(id)}) => {
                         iter.next();
-                        let params = Parser::fn_call_params(iter)
-                            .expect(&format!("L{}: Expected parameters after coroutine name", l));
-                        Some(AstNode::new(*l, Ast::CoroutineInit(id.clone(), params)))
+                        let params = Parser::fn_call_params(iter)?
+                            .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
+                        Ok(Some(AstNode::new(*l, Ast::CoroutineInit(id.clone(), params))))
                     }
                     _ => {
-                        panic!("L{}: expected identifier after init", l);
+                        Err(format!("L{}: expected identifier after init", l))
                     }
                 }
             }
-            _ => None,
+            _ => Ok(None),
         }
     }
 
-    fn expression(iter: &mut TokenIter) -> Option<AstNode> {
+    fn expression(iter: &mut TokenIter) -> PResult {
         Parser::logical_or(iter)
     }
 
-    fn logical_or(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::logical_and(iter) {
+    fn logical_or(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::logical_and(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token{l, s: Lex::BOr}) => {
                     iter.next();
-                    let n2 = Parser::logical_or(iter).expect(&format!("L{}: An expression after ||", l));
+                    let n2 = Parser::logical_or(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
                     Some(AstNode::new(*l, Ast::BOr(Box::new(n), Box::new(n2))))
                 }
                 _ => Some(n),
             },
             None => None,
-        }
+        })
     }
 
-    fn logical_and(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::comparison(iter) {
+    fn logical_and(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::comparison(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token{l, s: Lex::BAnd}) => {
                     iter.next();
-                    let n2 = Parser::logical_and(iter).expect(&format!("L{}: An expression after ||", l));
+                    let n2 = Parser::logical_and(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
                     Some(AstNode::new(*l, Ast::BAnd(Box::new(n), Box::new(n2))))
                 }
                 _ => Some(n),
             },
             None => None,
-        }
+        })
     }
 
-    fn comparison(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::sum(iter) {
+    fn comparison(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::sum(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token{l, s: Lex::Eq}) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter).expect(&format!("L{}: An expression after ==", l));
+                    let n2 = Parser::comparison(iter)?.ok_or(&format!("L{}: An expression after ==", l))?;
                     Some(AstNode::new(*l, Ast::Eq(Box::new(n), Box::new(n2))))
                 }
                 Some(Token{l, s: Lex::NEq}) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter).expect(&format!("L{}: An expression after !=", l));
+                    let n2 = Parser::comparison(iter)?.ok_or(&format!("L{}: An expression after !=", l))?;
                     Some(AstNode::new(*l, Ast::NEq(Box::new(n), Box::new(n2))))
                 }
                 Some(Token{l, s: Lex::Gr}) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter).expect(&format!("L{}: An expression after >", l));
+                    let n2 = Parser::comparison(iter)?.ok_or(&format!("L{}: An expression after >", l))?;
                     Some(AstNode::new(*l, Ast::Gr(Box::new(n), Box::new(n2))))
                 }
                 Some(Token{l, s: Lex::GrEq}) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter).expect(&format!("L{}: An expression after >=", l));
+                    let n2 = Parser::comparison(iter)?.ok_or(&format!("L{}: An expression after >=", l))?;
                     Some(AstNode::new(*l, Ast::GrEq(Box::new(n), Box::new(n2))))
                 }
                 Some(Token{l, s: Lex::Ls}) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter).expect(&format!("L{}: An expression after <", l));
+                    let n2 = Parser::comparison(iter)?.ok_or(&format!("L{}: An expression after <", l))?;
                     Some(AstNode::new(*l, Ast::Ls(Box::new(n), Box::new(n2))))
                 }
                 Some(Token{l, s: Lex::LsEq}) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter).expect(&format!("L{}: An expression after <=", l));
+                    let n2 = Parser::comparison(iter)?.ok_or(&format!("L{}: An expression after <=", l))?;
                     Some(AstNode::new(*l, Ast::LsEq(Box::new(n), Box::new(n2))))
                 }
                 _ => Some(n),
             },
             None => None,
-        }
+        })
     }
 
-    fn sum(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::term(iter) {
+    fn sum(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::term(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token{l, s: Lex::Add}) => {
                     iter.next();
-                    let n2 = Parser::sum(iter).expect(&format!("L{}: An expression after +", l));
+                    let n2 = Parser::sum(iter)?
+                    .ok_or(&format!("L{}: An expression after +", l))?;
                     Some(AstNode::new(*l, Ast::Add(Box::new(n), Box::new(n2))))
                 }
                 _ => Some(n),
             },
             None => None,
-        }
+        })
     }
 
-    fn term(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::factor(iter) {
+    fn term(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::factor(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token{l, s: Lex::Mul}) => {
                     iter.next();
-                    let n2 = Parser::term(iter).expect(&format!("L{}: a valid term after *", l));
+                    let n2 = Parser::term(iter)?
+                    .ok_or(&format!("L{}: a valid term after *", l))?;
                     Some(AstNode::new(*l, Ast::Mul(Box::new(n), Box::new(n2))))
                 }
                 _ => Some(n),
             },
             None => None,
-        }
+        })
     }
 
-    fn factor(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
-            Some(Token{l:_, s: Lex::If}) => Parser::if_expression(iter),
+    fn factor(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
+            Some(Token{l:_, s: Lex::If}) => Parser::if_expression(iter)?,
             Some(Token{l, s: Lex::LParen}) => {
                 iter.next();
-                let exp = Parser::expression(iter);
+                let exp = Parser::expression(iter)?;
                 match iter.peek() {
                     Some(Token{l:_, s: Lex::RParen}) => iter.next(),
                     x => panic!("L{}: exected ) but found {:?}", l, x),
                 };
                 exp
             }
-            _ => match Parser::constant(iter) {
+            _ => match Parser::constant(iter)? {
                 Some(n) => Some(n),
-                None => match Parser::function_call_or_variable(iter) {
+                None => match Parser::function_call_or_variable(iter)? {
                     Some(n) => Some(n),
-                    None => match Parser::co_yield(iter) {
+                    None => match Parser::co_yield(iter)? {
                         Some(n) => Some(n),
                         None => None,
                     },
                 },
             },
-        }
+        })
     }
 
-    fn if_expression(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn if_expression(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
             Some(Token{l, s: Lex::If}) => {
                 iter.next();
                 // expression
                 let cond =
-                    Parser::expression(iter).expect("Expected conditional expressoin after if");
+                    Parser::expression(iter)?.ok_or("Expected conditional expressoin after if")?;
                 // lbrace
                 iter.next()
                     .map(|t| t.s == Lex::LBrace)
-                    .expect("Expected {");
+                    .ok_or("Expected {")?;
                 // expression
                 let true_arm =
-                    Parser::expression(iter).expect("Expression in true arm of if expression");
+                    Parser::expression(iter)?.ok_or("Expression in true arm of if expression")?;
                 // rbrace
                 iter.next()
                     .map(|t| t.s == Lex::RBrace)
-                    .expect("Expected }");
+                    .ok_or("Expected }")?;
                 // else
                 iter.next()
                     .map(|t| t.s == Lex::Else)
-                    .expect("Expected else arm of if expression");
+                    .ok_or("Expected else arm of if expression")?;
 
                 // check for `else if`
                 let false_arm = match iter.peek() {
                     Some(Token{l, s: Lex::If}) => {
-                        Parser::if_expression(iter).expect(&format!("L{}: Expected if expression after else if", l))
+                        Parser::if_expression(iter)?
+                        .ok_or(format!("L{}: Expected if expression after else if", l))?
                     }
                     _ => {
                         iter.next()
                             .map(|t| t.s == Lex::LBrace)
                             .expect(&format!("L{}: Expected {{", l));
                         // expression
-                        let false_arm = Parser::expression(iter)
-                            .expect(&format!("L{}: Expression in false arm of if expression", l));
+                        let false_arm = Parser::expression(iter)?
+                            .ok_or(&format!("L{}: Expression in false arm of if expression", l))?;
                         // rbrace
                         iter.next()
                             .map(|t| t.s == Lex::RBrace)
-                            .expect(&format!("L{}: Expected }}", l));
+                            .ok_or(&format!("L{}: Expected }}", l))?;
                         false_arm
                     }
                 };
@@ -591,32 +600,32 @@ impl Parser {
                 )))
             }
             _ => None,
-        }
+        })
     }
 
-    fn function_call_or_variable(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::identifier(iter) {
-            Some(AstNode{l, n:Ast::Identifier(id, _id_type)}) => match Parser::fn_call_params(iter) {
+    fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::identifier(iter)? {
+            Some(AstNode{l, n:Ast::Identifier(id, _id_type)}) => match Parser::fn_call_params(iter)? {
                 Some(params) => {
                     // this is a function call
                     Some(AstNode::new(l, Ast::FunctionCall(id, params)))
                 }
                 _ => Some(AstNode::new(l, Ast::Identifier(id, _id_type))),
             },
-            Some(_) => panic!("expected identifier"),
+            Some(_) => return Err(format!("expected identifier")),
             None => None,
-        }
+        })
     }
 
     /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-    fn fn_call_params(iter: &mut TokenIter) -> Option<Vec<AstNode>> {
+    fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> {
         match iter.peek() {
             Some(Token{l, s: Lex::LParen}) => {
                 // this is a function call
                 iter.next();
 
                 let mut params = vec![];
-                while let Some(param) = Parser::expression(iter) {
+                while let Some(param) = Parser::expression(iter)? {
                     match param {
                         exp => {
                             params.push(exp);
@@ -638,23 +647,23 @@ impl Parser {
                     }
                     _ => panic!("L{}: expected ) after function call", l),
                 }
-                Some(params)
+                Ok(Some(params))
             }
-            _ => None,
+            _ => Ok(None),
         }
     }
 
-    fn co_yield(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn co_yield(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
             Some(Token{l, s: Lex::Yield}) => {
                 iter.next();
-                match Parser::identifier(iter) {
+                match Parser::identifier(iter)? {
                     Some(id) => Some(AstNode::new(*l, Ast::Yield(Box::new(id)))),
                     _ => panic!("L{}: expected an identifier after yield", l),
                 }
             }
             _ => None,
-        }
+        })
     }
 
     fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
@@ -670,8 +679,8 @@ impl Parser {
         }
     }
 
-    fn identifier_declare(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn identifier_declare(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
             Some(Token{l, s: Lex::Identifier(id)}) => {
                 iter.next();
                 match iter.peek() {
@@ -679,22 +688,22 @@ impl Parser {
                         iter.next();
                         match Parser::primitive(iter) {
                             Some(p) => Some(AstNode::new(*l, Ast::Identifier(id.clone(), p))),
-                            None => panic!("L{}: Invalid primitive type: {:?}", l, iter.peek()),
+                            None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
                         }
                     }
-                    _ => panic!(
+                    _ => return Err(format!(
                         "L{}: Expected type after variable declaration, found: {:?}",
                         l,
                         iter.peek().map(|t| &t.s)
-                    ),
+                    )),
                 }
             }
             _ => None,
-        }
+        })
     }
 
-    fn identifier(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn identifier(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
             Some(token) => match token {
                 Token{l, s: Lex::Identifier(id)} => {
                     iter.next();
@@ -703,21 +712,21 @@ impl Parser {
                 _ => None,
             },
             None => None,
-        }
+        })
     }
 
-    fn constant(iter: &mut TokenIter) -> Option<AstNode> {
-        match Parser::number(iter) {
-            None => match Parser::boolean(iter) {
+    fn constant(iter: &mut TokenIter) -> PResult {
+        Ok(match Parser::number(iter)? {
+            None => match Parser::boolean(iter)? {
                 None => None,
                 Some(t) => Some(t),
             },
             Some(i) => Some(i),
-        }
+        })
     }
 
-    fn number(iter: &mut TokenIter) -> Option<AstNode> {
-        match iter.peek() {
+    fn number(iter: &mut TokenIter) -> PResult {
+        Ok(match iter.peek() {
             Some(token) => match token {
                 Token{l, s: Lex::Integer(i)} => {
                     iter.next();
@@ -726,16 +735,16 @@ impl Parser {
                 _ => None,
             },
             None => None,
-        }
+        })
     }
 
-    fn boolean(iter: &mut TokenIter) -> Option<AstNode> {
+    fn boolean(iter: &mut TokenIter) -> PResult {
         match iter.peek() {
             Some(Token{l, s: Lex::Bool(b)}) => {
                 iter.next();
-                Some(AstNode::new(*l, Ast::Boolean(*b)))
+                Ok(Some(AstNode::new(*l, Ast::Boolean(*b))))
             }
-            _ => None,
+            _ => Ok(None),
         }
     }
 }
