@@ -304,7 +304,7 @@ pub mod checker {
                                 ast.l, cf
                             ))?
                             .vars
-                            .add_var(&name, *p)?;
+                            .add_var(&name, *p).map_err(|msg| format!("L{}: {}", ast.l, msg))?;
                         Ok(*p)
                     } else {
                         Err(format!("L{}: Bind expected {:?} but got {:?}", ast.l, p, ety))
