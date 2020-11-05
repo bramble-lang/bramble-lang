@@ -42,10 +42,18 @@ fn main() {
     let tokens = lexer.tokenize(&text);
     let tokens = tokens
         .into_iter()
-        .filter(|t| t.is_ok())
+        .filter(|t| match t {
+            Ok(_) => true,
+            Err(msg) => {println!("{}", msg); false}
+        })
         .map(|t| t.unwrap())
         .collect();
     let ast = Parser::parse(tokens);
+
+    if ast.is_none() {
+        println!("Critical: failed to parse");
+        std::process::exit(2);
+    }
 
     let ast = ast.unwrap();
     let mut func_table = FunctionTable::generate(&ast);

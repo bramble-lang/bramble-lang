@@ -89,7 +89,7 @@ impl Lexer {
         Lexer { line: 1 }
     }
 
-    pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token, &str>> {
+    pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token, String>> {
         let mut tokens = vec![];
 
         let mut cs = text.chars().peekable();
@@ -99,28 +99,28 @@ impl Lexer {
             if cs.peek().is_none() {
                 break;
             }
-            match self.consume_integer(&mut cs) {
-                Ok(Some(i)) => tokens.push(Ok(i)),
-                Ok(None) => match self.consume_identifier(&mut cs) {
-                    Some(id) => {
-                        let tok = self.if_primitive_map(self.if_keyword_map(
-                            self.if_boolean_map(id),
-                        ));
-                        tokens.push(Ok(tok));
-                    }
-                    None => match self.consume_operator(&mut cs) {
-                        Some(op) => tokens.push(Ok(op)),
-                        None => println!("Unexpected character: {:?}", cs.next()),
-                    },
-                },
-                Err(msg) => {
-                    tokens.push(Err(msg));
-                    break;
-                }
-            }
+            tokens.push(self.next_token(&mut cs));
         }
 
         tokens
+    }
+
+    fn next_token(&mut self, cs: &mut Peekable<std::str::Chars>) -> Result<Token, String> {
+        match self.consume_integer(cs)? {
+            Some(i) => Ok(i),
+            None => match self.consume_identifier(cs) {
+                Some(id) => {
+                    let tok = self.if_primitive_map(self.if_keyword_map(
+                        self.if_boolean_map(id),
+                    ));
+                    Ok(tok)
+                },
+                None => match self.consume_operator(cs) {
+                    Some(op) => Ok(op),
+                    None => Err(format!("Unexpected character: {:?}", cs.next())),
+                },
+            },
+        }
     }
 
     pub fn consume_whitespace(&mut self, iter: &mut Peekable<std::str::Chars>) {
@@ -350,7 +350,7 @@ mod tests {
         for text in ["5x"].iter() {
             let mut lexer = Lexer::new();
             let tokens = lexer.tokenize(text);
-            assert_eq!(tokens.len(), 1);
+            assert_eq!(tokens.len(), 2);
             tokens[0]
                 .clone()
                 .expect_err("Expected error for invalid identifier");
