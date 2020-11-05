@@ -222,7 +222,7 @@ impl Compiler {
         Ok(())
     }
 
-    pub fn compile(ast: &super::Node, funcs: &mut super::FunctionTable) -> Compiler {
+    pub fn compile(ast: &super::Ast, funcs: &mut super::FunctionTable) -> Compiler {
         let mut code = vec![];
 
         Compiler::create_base(&mut code);
@@ -464,7 +464,7 @@ impl Compiler {
     }
 
     fn traverse(
-        ast: &super::Node,
+        ast: &super::Ast,
         current_func: &String,
         function_table: &mut super::FunctionTable,
         output: &mut Vec<Instruction>,
@@ -478,16 +478,16 @@ impl Compiler {
         let co_param_registers = [Ebx, Ecx, Edx];
 
         match ast {
-            super::Node::Integer(i) => {
+            super::Ast::Integer(i) => {
                 output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
-            super::Node::Boolean(b) => {
+            super::Ast::Boolean(b) => {
                 output.push(Mov(
                     Location::Register(Eax),
                     Source::Integer(if *b { 1 } else { 0 }),
                 ));
             }
-            super::Node::Identifier(id, _id_type) => {
+            super::Ast::Identifier(id, _id_type) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
@@ -502,7 +502,7 @@ impl Compiler {
                     Source::Memory(format!("ebp-{}", id_offset)),
                 ));
             }
-            super::Node::Mul(l, r) => {
+            super::Ast::Mul(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -514,7 +514,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(IMul(Eax, Location::Register(Ebx)));
             }
-            super::Node::Add(l, r) => {
+            super::Ast::Add(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -526,7 +526,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Add(Eax, Source::Register(Ebx)));
             }
-            super::Node::Eq(l, r) => {
+            super::Ast::Eq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -541,7 +541,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Node::NEq(l, r) => {
+            super::Ast::NEq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -556,7 +556,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Node::Ls(l, r) => {
+            super::Ast::Ls(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -571,7 +571,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Node::LsEq(l, r) => {
+            super::Ast::LsEq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -586,7 +586,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Node::Gr(l, r) => {
+            super::Ast::Gr(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -601,7 +601,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Node::GrEq(l, r) => {
+            super::Ast::GrEq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -616,7 +616,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Node::BAnd(l, r) => {
+            super::Ast::BAnd(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -628,7 +628,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(And(Eax, Source::Register(Ebx)));
             }
-            super::Node::BOr(l, r) => {
+            super::Ast::BOr(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -640,7 +640,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Or(Eax, Source::Register(Ebx)));
             }
-            super::Node::If(cond, true_arm, false_arm) => {
+            super::Ast::If(cond, true_arm, false_arm) => {
                 function_table
                     .funcs
                     .entry(current_func.clone())
@@ -658,7 +658,7 @@ impl Compiler {
                 Compiler::traverse(false_arm, current_func, function_table, output);
                 output.push(Label(end_lbl));
             }
-            super::Node::Bind(id, _, exp) => {
+            super::Ast::Bind(id, _, exp) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
@@ -674,7 +674,7 @@ impl Compiler {
                     Source::Register(Eax),
                 ));
             }
-            super::Node::FunctionDef(fn_name, params, _, stmts) => {
+            super::Ast::FunctionDef(fn_name, params, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
@@ -714,7 +714,7 @@ impl Compiler {
 
                 output.push(Ret);
             }
-            super::Node::CoroutineDef(fn_name, _, _, stmts) => {
+            super::Ast::CoroutineDef(fn_name, _, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
@@ -723,7 +723,7 @@ impl Compiler {
                 }
                 output.push(Jmp("runtime_yield_return".into()))
             }
-            super::Node::Module(functions, coroutines) => {
+            super::Ast::Module(functions, coroutines) => {
                 for f in functions.iter() {
                     Compiler::traverse(f, current_func, function_table, output);
                 }
@@ -731,11 +731,11 @@ impl Compiler {
                     Compiler::traverse(co, current_func, function_table, output);
                 }
             }
-            super::Node::Return(exp) => match exp {
+            super::Ast::Return(exp) => match exp {
                 Some(e) => Compiler::traverse(e, current_func, function_table, output),
                 None => (),
             },
-            super::Node::Yield(id) => {
+            super::Ast::Yield(id) => {
                 Compiler::traverse(id, current_func, function_table, output);
 
                 function_table
@@ -751,7 +751,7 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_into_coroutine".into()));
                 output.push(Label(ret_lbl.clone()));
             }
-            super::Node::YieldReturn(exp) => {
+            super::Ast::YieldReturn(exp) => {
                 if let Some(exp) = exp {
                     Compiler::traverse(exp, current_func, function_table, output);
                 }
@@ -769,18 +769,18 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_return".into()));
                 output.push(Label(ret_lbl.clone()));
             }
-            super::Node::Printiln(exp) => {
+            super::Ast::Printiln(exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
                 output.push(Print(Source::Register(Eax)));
                 output.push(Newline);
             }
-            super::Node::Printbln(exp) => {
+            super::Ast::Printbln(exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
                 //output.push(Print(Source::Register(Eax)));
                 output.push(Call("print_bool".into()));
                 output.push(Newline);
             }
-            super::Node::CoroutineInit(co, params) => {
+            super::Ast::CoroutineInit(co, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 if !function_table.funcs.contains_key(co) {
@@ -825,7 +825,7 @@ impl Compiler {
                     idx += 1;
                 }
             }
-            super::Node::FunctionCall(fn_name, params) => {
+            super::Ast::FunctionCall(fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 if !function_table.funcs.contains_key(fn_name) {
