@@ -44,7 +44,7 @@ pub enum Node {
     Printbln(Box<Node>),
 }
 
-type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token<Symbol>>>;
+type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
 impl Node {
     /*
         Grammar
@@ -74,7 +74,7 @@ impl Node {
         parse - takes a string of tokens and converts it into an AST
         compile - takes an AST and converts it to assembly
     */
-    pub fn parse(tokens: Vec<Token<Symbol>>) -> Option<Node> {
+    pub fn parse(tokens: Vec<Token>) -> Option<Node> {
         let mut iter = tokens.iter().peekable();
         //Node::function(&mut iter)
         Node::module(&mut iter)
