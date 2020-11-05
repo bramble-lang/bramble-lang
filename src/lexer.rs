@@ -47,13 +47,13 @@ pub enum Symbol {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Token {
+pub struct Token<T> {
     pub l: u32,
-    pub s: Symbol,
+    pub s: T,
 }
 
-impl Token {
-    pub fn new(l: u32, s: Symbol) -> Token {
+impl<T> Token<T> {
+    pub fn new(l: u32, s: T) -> Token<T> {
         Token { l, s}
     }
 }
@@ -89,7 +89,7 @@ impl Lexer {
         Lexer { line: 1 }
     }
 
-    pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token, &str>> {
+    pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token<Symbol>, &str>> {
         let mut tokens = vec![];
 
         let mut cs = text.chars().peekable();
@@ -132,7 +132,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_identifier(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    pub fn consume_identifier(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token<Symbol>> {
         let mut id = String::new();
         if iter
             .peek()
@@ -159,7 +159,7 @@ impl Lexer {
     pub fn consume_integer(
         &self,
         iter: &mut Peekable<std::str::Chars>,
-    ) -> Result<Option<Token>, &'static str> {
+    ) -> Result<Option<Token<Symbol>>, &'static str> {
         let mut num = String::new();
         while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
             match iter.next() {
@@ -183,7 +183,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_operator(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    pub fn consume_operator(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token<Symbol>> {
         let mut consume = true;
         let token = match iter.peek() {
             Some('(') => Some(Token::new(self.line, LParen)),
@@ -268,7 +268,7 @@ impl Lexer {
         token
     }
 
-    pub fn if_boolean_map(&self, token: Token) -> Token {
+    pub fn if_boolean_map(&self, token: Token<Symbol>) -> Token<Symbol> {
         match &token {
             Token {
                 l: _,
@@ -282,7 +282,7 @@ impl Lexer {
         }
     }
 
-    pub fn if_primitive_map(&self, token: Token) -> Token {
+    pub fn if_primitive_map(&self, token: Token<Symbol>) -> Token<Symbol> {
         match token {
             Token {
                 l: _,
@@ -296,7 +296,7 @@ impl Lexer {
         }
     }
 
-    pub fn if_keyword_map(&self, token: Token) -> Token {
+    pub fn if_keyword_map(&self, token: Token<Symbol>) -> Token<Symbol> {
         match token {
             Token {
                 l: _,
@@ -331,7 +331,7 @@ mod tests {
         let tokens = lexer.tokenize(text);
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Integer(5)));
+        assert_eq!(token, Token::new(1, Integer(5)));
     }
 
     #[test]
@@ -341,7 +341,7 @@ mod tests {
             let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 1);
             let token = tokens[0].clone().expect("Expected valid token");
-            assert_eq!(token, Token::new(Identifier((*text).into())));
+            assert_eq!(token, Token::new(1, Identifier((*text).into())));
         }
     }
 
@@ -360,25 +360,25 @@ mod tests {
     #[test]
     fn test_operator() {
         for (text, expected_token) in [
-            ("*", Token::new(Mul)),
-            ("+", Token::new(Add)),
-            ("&&", Token::new(BAnd)),
-            ("||", Token::new(BOr)),
-            (">", Token::new(Gr)),
-            (">=", Token::new(GrEq)),
-            ("<", Token::new(Ls)),
-            ("<=", Token::new(LsEq)),
-            ("==", Token::new(Eq)),
-            ("!=", Token::new(NEq)),
-            ("{", Token::new(LBrace)),
-            ("}", Token::new(RBrace)),
-            ("(", Token::new(LParen)),
-            (")", Token::new(RParen)),
-            (":=", Token::new(Assign)),
-            ("->", Token::new(LArrow)),
-            (":", Token::new(Colon)),
-            (",", Token::new(Comma)),
-            (";", Token::new(Semicolon)),
+            ("*", Token::new(1, Mul)),
+            ("+", Token::new(1, Add)),
+            ("&&", Token::new(1, BAnd)),
+            ("||", Token::new(1, BOr)),
+            (">", Token::new(1, Gr)),
+            (">=", Token::new(1, GrEq)),
+            ("<", Token::new(1, Ls)),
+            ("<=", Token::new(1, LsEq)),
+            ("==", Token::new(1, Eq)),
+            ("!=", Token::new(1, NEq)),
+            ("{", Token::new(1, LBrace)),
+            ("}", Token::new(1, RBrace)),
+            ("(", Token::new(1, LParen)),
+            (")", Token::new(1, RParen)),
+            (":=", Token::new(1, Assign)),
+            ("->", Token::new(1, LArrow)),
+            (":", Token::new(1, Colon)),
+            (",", Token::new(1, Comma)),
+            (";", Token::new(1, Semicolon)),
         ]
         .iter()
         {
@@ -396,33 +396,33 @@ mod tests {
         let tokens = lexer.tokenize(text);
         assert_eq!(tokens.len(), 6);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Identifier("x".into())));
+        assert_eq!(token, Token::new(1, Identifier("x".into())));
         let token = tokens[1].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Colon));
+        assert_eq!(token, Token::new(1, Colon));
         let token = tokens[2].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Primitive(Primitive::I32)));
+        assert_eq!(token, Token::new(1, Primitive(Primitive::I32)));
         let token = tokens[3].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Semicolon));
+        assert_eq!(token, Token::new(1, Semicolon));
         let token = tokens[4].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(LArrow));
+        assert_eq!(token, Token::new(1, LArrow));
         let token = tokens[5].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Yield));
+        assert_eq!(token, Token::new(1, Yield));
     }
 
     #[test]
     fn test_keywords() {
         for (text, expected_token) in [
-            ("return", Token::new(Return)),
-            ("yield", Token::new(Yield)),
-            ("yret", Token::new(YieldReturn)),
-            ("init", Token::new(Init)),
-            ("co", Token::new(CoroutineDef)),
-            ("fn", Token::new(FunctionDef)),
-            ("printi", Token::new(Printi)),
-            ("printiln", Token::new(Printiln)),
-            ("printbln", Token::new(Printbln)),
-            ("if", Token::new(If)),
-            ("else", Token::new(Else)),
+            ("return", Token::new(1, Return)),
+            ("yield", Token::new(1, Yield)),
+            ("yret", Token::new(1, YieldReturn)),
+            ("init", Token::new(1, Init)),
+            ("co", Token::new(1, CoroutineDef)),
+            ("fn", Token::new(1, FunctionDef)),
+            ("printi", Token::new(1, Printi)),
+            ("printiln", Token::new(1, Printiln)),
+            ("printbln", Token::new(1, Printbln)),
+            ("if", Token::new(1, If)),
+            ("else", Token::new(1, Else)),
         ]
         .iter()
         {
@@ -436,8 +436,8 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
-            ("i32", Token::new(Primitive(Primitive::I32))),
-            ("bool", Token::new(Primitive(Primitive::Bool))),
+            ("i32", Token::new(1, Primitive(Primitive::I32))),
+            ("bool", Token::new(1, Primitive(Primitive::Bool))),
         ]
         .iter()
         {
@@ -450,33 +450,33 @@ mod tests {
 
     #[test]
     fn test_whitespace_handling() {
-        for text in [
-            "return ( x + 5 || true )",
-            " return ( x + 5|| true ) ",
-            "return(x+5||true)",
-            "return
+        for (text, t1, t2, t3, t4, t5, t6, t7, t8) in [
+            ("return ( x + 5 || true )", 1, 1, 1, 1, 1, 1, 1, 1),
+            (" return ( x + 5|| true ) ", 1, 1, 1, 1, 1, 1, 1, 1),
+            ("return(x+5||true)", 1, 1, 1, 1, 1, 1, 1, 1),
+            ("return
             (x+
                 5
                 ||
                 true
-            )",
+            )", 1, 2, 2, 2, 3, 4, 5, 6),
         ]
         .iter()
         {
             let mut lexer = Lexer::new();
             let tokens = lexer.tokenize(text);
             assert_eq!(tokens.len(), 8);
-            assert_eq!(tokens[0].clone().unwrap(), Token::new(Return));
-            assert_eq!(tokens[1].clone().unwrap(), Token::new(LParen));
+            assert_eq!(tokens[0].clone().unwrap(), Token::new(*t1, Return));
+            assert_eq!(tokens[1].clone().unwrap(), Token::new(*t2, LParen));
             assert_eq!(
                 tokens[2].clone().unwrap(),
-                Token::new(Identifier("x".into()))
+                Token::new(*t3, Identifier("x".into()))
             );
-            assert_eq!(tokens[3].clone().unwrap(), Token::new(Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(Integer(5)));
-            assert_eq!(tokens[5].clone().unwrap(), Token::new(BOr));
-            assert_eq!(tokens[6].clone().unwrap(), Token::new(Bool(true)));
-            assert_eq!(tokens[7].clone().unwrap(), Token::new(RParen));
+            assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer(5)));
+            assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
+            assert_eq!(tokens[6].clone().unwrap(), Token::new(*t7, Bool(true)));
+            assert_eq!(tokens[7].clone().unwrap(), Token::new(*t8, RParen));
         }
     }
 }
