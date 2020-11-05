@@ -108,16 +108,16 @@ impl Lexer {
     fn next_token(&mut self, cs: &mut Peekable<std::str::Chars>) -> Result<Token, String> {
         match self.consume_integer(cs)? {
             Some(i) => Ok(i),
-            None => match self.consume_identifier(cs) {
+            None => match self.consume_identifier(cs)? {
                 Some(id) => {
                     let tok = self.if_primitive_map(self.if_keyword_map(
                         self.if_boolean_map(id),
                     ));
                     Ok(tok)
                 },
-                None => match self.consume_operator(cs) {
+                None => match self.consume_operator(cs)? {
                     Some(op) => Ok(op),
-                    None => Err(format!("Unexpected character: {:?}", cs.next())),
+                    None => Err(format!("L{}: Unexpected character: {:?}", self.line, cs.next())),
                 },
             },
         }
@@ -132,7 +132,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_identifier(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    pub fn consume_identifier(&self, iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
         let mut id = String::new();
         if iter
             .peek()
@@ -150,16 +150,16 @@ impl Lexer {
         }
 
         if id.len() == 0 {
-            None
+            Ok(None)
         } else {
-            Some(Token::new(self.line, Lex::Identifier(id)))
+            Ok(Some(Token::new(self.line, Lex::Identifier(id))))
         }
     }
 
     pub fn consume_integer(
         &self,
         iter: &mut Peekable<std::str::Chars>,
-    ) -> Result<Option<Token>, &'static str> {
+    ) -> Result<Option<Token>, String> {
         let mut num = String::new();
         while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
             match iter.next() {
@@ -173,7 +173,7 @@ impl Lexer {
         } else {
             if let Some(c) = iter.peek() {
                 if c.is_alphabetic() {
-                    Err("Invalid integer, should not contain characters")
+                    Err(format!("L{}: Invalid integer, should not contain characters", self.line))
                 } else {
                     Ok(Some(Token::new(self.line, Integer(num.parse::<i32>().unwrap()))))
                 }
@@ -183,7 +183,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_operator(&self, iter: &mut Peekable<std::str::Chars>) -> Option<Token> {
+    pub fn consume_operator(&self, iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String>{
         let mut consume = true;
         let token = match iter.peek() {
             Some('(') => Some(Token::new(self.line, LParen)),
@@ -208,14 +208,14 @@ impl Lexer {
                 iter.next();
                 match iter.peek() {
                     Some('=') => Some(Token::new(self.line, NEq)),
-                    _ => panic!("Lexer: Unexpected '!' character"),
+                    _ => return Err(format!("L{}: Unexpected '!' character", self.line)),
                 }
             }
             Some('=') => {
                 iter.next();
                 match iter.peek() {
                     Some('=') => Some(Token::new(self.line, Eq)),
-                    _ => panic!("Lexer: Unexpected '=' character"),
+                    _ =>return Err(format!("L{}: Unexpected '=' character", self.line)),
                 }
             }
             Some('>') => {
@@ -242,21 +242,21 @@ impl Lexer {
                 iter.next();
                 match iter.peek() {
                     Some('>') => Some(Token::new(self.line, LArrow)),
-                    _ => panic!("Lexer: Unexpected '-' character"),
+                    _ => return Err(format!("L{}: Unexpected '-' character", self.line)),
                 }
             }
             Some('&') => {
                 iter.next();
                 match iter.peek() {
                     Some('&') => Some(Token::new(self.line, BAnd)),
-                    _ => panic!("Lexer: Unexpected '-' character"),
+                    _ => return Err(format!("L{}: Unexpected '-' character", self.line)),
                 }
             }
             Some('|') => {
                 iter.next();
                 match iter.peek() {
                     Some('|') => Some(Token::new(self.line, BOr)),
-                    _ => panic!("Lexer: Unexpected '-' character"),
+                    _ => return Err(format!("L{}: Unexpected '-' character", self.line)),
                 }
             }
             _ => None,
@@ -265,7 +265,7 @@ impl Lexer {
         if token.is_some() && consume {
             iter.next();
         }
-        token
+        Ok(token)
     }
 
     pub fn if_boolean_map(&self, token: Token) -> Token {
