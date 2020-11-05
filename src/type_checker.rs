@@ -211,14 +211,14 @@ pub mod checker {
             Integer(_) => Ok(I32),
             Boolean(_) => Ok(Bool),
             Identifier(id, _) => match current_func {
-                None => Err(format!("Variable {} appears outside of function", id)),
-                Some(cf) => ftable.funcs.get(cf).ok_or(format!("Undefined function {}", cf))?
+                None => Err(format!("L{}: Variable {} appears outside of function", ast.l, id)),
+                Some(cf) => ftable.funcs.get(cf).ok_or(format!("L{}: Undefined function {}", ast.l, cf))?
                     .vars
                     .vars
                     .iter()
                     .find(|v| v.name == *id)
                     .map_or_else(
-                        || Err(format!("Variable {} not declared", id)),
+                        || Err(format!("L{}: Variable {} not declared", ast.l, id)),
                         |v| Ok(v.ty),
                     ),
             },
@@ -228,7 +228,7 @@ pub mod checker {
                 let rty = traverse(r, current_func, ftable)?;
                 match (lty, rty) {
                     (I32, I32) => Ok(I32),
-                    _ => Err("*/+ expect to have operands of i32".into()),
+                    _ => Err(format!("L{}: */+ expect to have operands of i32", ast.l)),
                 }
             }
             BAnd(ref l, ref r) | BOr(ref l, ref r) => {
@@ -547,7 +547,7 @@ pub mod checker {
                     Box::new(AstNode::new(1, Ast::Integer(10))),
                 ));
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -556,7 +556,7 @@ pub mod checker {
                     Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
                 ));
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -565,7 +565,7 @@ pub mod checker {
                     Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
                 ));
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
         }
 
@@ -607,7 +607,7 @@ pub mod checker {
                     Box::new(AstNode::new(1, Ast::Integer(10))),
                 ));
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -616,7 +616,7 @@ pub mod checker {
                     Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
                 ));
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
@@ -625,7 +625,7 @@ pub mod checker {
                     Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
                 ));
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("*/+ expect to have operands of i32".into()));
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
         }
 
@@ -877,7 +877,7 @@ pub mod checker {
                     },
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("Variable x not declared".into()));
+                assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
            
             // use an unbound variable
@@ -894,7 +894,7 @@ pub mod checker {
                     },
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("Variable x not declared".into()));
+                assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
         }
 
