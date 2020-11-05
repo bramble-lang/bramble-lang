@@ -236,7 +236,7 @@ pub mod checker {
                 let rty = traverse(r, current_func, ftable)?;
                 match (lty, rty) {
                     (Bool, Bool) => Ok(Bool),
-                    _ => Err("&& and || expect to have operands of bool".into()),
+                    _ => Err(format!("L{}: && and || expect to have operands of bool", ast.l)),
                 }
             }
             Ast::Eq(ref l, ref r) | Ast::NEq(ref l, ref r) => {
@@ -247,10 +247,10 @@ pub mod checker {
                         if lty == rty {
                             Ok(Bool)
                         } else {
-                            Err(format!("Expected {:?} after == but got {:?}", lty, rty))
+                            Err(format!("L{}: Expected {:?} after == but got {:?}", ast.l, lty, rty))
                         }
                     }
-                    _ => Err("&& and || expect to have operands of bool".into()),
+                    _ => Err(format!("L{}: && and || expect to have operands of bool", ast.l)),
                 }
             }
             GrEq(ref l, ref r) | Gr(ref l, ref r) | Ls(ref l, ref r) | LsEq(ref l, ref r) => {
@@ -258,7 +258,7 @@ pub mod checker {
                 let rty = traverse(r, current_func, ftable);
                 match (lty, rty) {
                     (Ok(I32), Ok(I32)) => Ok(Bool),
-                    _ => Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    _ => Err(format!("L{}: >=, > , <, and <= expect to have operands of i32", ast.l)),
                 }
             }
             If(cond, true_arm, false_arm) => {
@@ -272,21 +272,22 @@ pub mod checker {
                                 Ok(true_ty)
                             } else {
                                 Err(format!(
-                                    "If expression has mismatching arms: expected {:?} got {:?}",
-                                    true_ty, false_ty
+                                    "L{}: If expression has mismatching arms: expected {:?} got {:?}",
+                                    ast.l, true_ty, false_ty
                                 ))
                             }
                         }
                         (Err(msg), Ok(_)) => Err(format!("True arm of if expression: {:?}", msg)),
                         (Ok(_), Err(msg)) => Err(format!("False arm of if expression: {:?}", msg)),
                         (Err(msg1), Err(msg2)) => Err(format!(
-                            "Errors in if expression arms: {:?} and {:?}",
-                            msg1, msg2
+                            "L{}: Errors in if expression arms: {:?} and {:?}",
+                            ast.l, msg1, msg2
                         )),
                     }
                 } else {
                     Err(format!(
-                        "Expected boolean expression in if conditional, got: {:?}",
+                        "L{}: Expected boolean expression in if conditional, got: {:?}",
+                        ast.l,
                         cond_ty
                     ))
                 }
@@ -299,46 +300,46 @@ pub mod checker {
                             .funcs
                             .get_mut(cf)
                             .ok_or(format!(
-                                "CRITICAL: Function {} not found in function table",
-                                cf
+                                "L{}: CRITICAL: Function {} not found in function table",
+                                ast.l, cf
                             ))?
                             .vars
                             .add_var(&name, *p)?;
                         Ok(*p)
                     } else {
-                        Err(format!("Bind expected {:?} but got {:?}", p, ety))
+                        Err(format!("L{}: Bind expected {:?} but got {:?}", ast.l, p, ety))
                     }
                 }
                 None => Err(format!(
-                    "Attempting to bind variable {} outside of function",
-                    name
+                    "L{}: Attempting to bind variable {} outside of function",
+                    ast.l, name
                 )),
             },
             Return(None) => match current_func {
-                None => Err("Return called outside of a function".into()),
+                None => Err(format!("L{}: Return called outside of a function", ast.l)),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
                     if fty == Unit {
                         Ok(Unit)
                     } else {
-                        Err(format!("Return expected {:?} type and got Unit", fty))
+                        Err(format!("L{}: Return expected {:?} type and got Unit", ast.l, fty))
                     }
                 }
             },
             Return(Some(exp)) => match current_func {
-                None => Err("Return appears outside of a function".into()),
+                None => Err(format!("L{}: Return appears outside of a function", ast.l)),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
                     let rty = traverse(&exp, current_func, ftable).unwrap();
                     if fty == rty {
                         Ok(fty)
                     } else {
-                        Err(format!("Return expected {:?} but got {:?}", fty, rty))
+                        Err(format!("L{}: Return expected {:?} but got {:?}", ast.l, fty, rty))
                     }
                 }
             },
             Yield(box exp) => match current_func {
-                None => Err("Yield appears outside of function".into()),
+                None => Err(format!("L{}: Yield appears outside of function", ast.l)),
                 Some(cf) => match exp {
                     AstNode{ l, n: Ast::Identifier(coname, _)} => ftable
                         .funcs
@@ -347,29 +348,29 @@ pub mod checker {
                         .flatten()
                         .map(|vd| vd.ty)
                         .ok_or(format!("L{}: Could not find coroutine: {}", l, coname)),
-                    _ => Err("Expected name of coroutine after yield".into()),
+                    _ => Err(format!("L{}: Expected name of coroutine after yield", ast.l)),
                 },
             },
             YieldReturn(None) => match current_func {
-                None => Err("YRet appears outside of function".into()),
+                None => Err(format!("L{}: YRet appears outside of function", ast.l)),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
                     if fty == Unit {
                         Ok(Unit)
                     } else {
-                        Err(format!("Yield return expected {:?} but got Unit", fty))
+                        Err(format!("L{}: Yield return expected {:?} but got Unit", ast.l, fty))
                     }
                 }
             },
             YieldReturn(Some(exp)) => match current_func {
-                None => Err("YRet appears outside of function".into()),
+                None => Err(format!("L{}: YRet appears outside of function", ast.l)),
                 Some(cf) => {
                     let fty = ftable.funcs[cf].ty;
                     let yty = traverse(&exp, current_func, ftable).unwrap();
                     if fty == yty {
                         Ok(fty)
                     } else {
-                        Err(format!("Yield return expected {:?} but got {:?}", fty, yty))
+                        Err(format!("L{}: Yield return expected {:?} but got {:?}", ast.l, fty, yty))
                     }
                 }
             },
@@ -389,15 +390,15 @@ pub mod checker {
                 let fpty: Vec<parser::Primitive> = (ftable
                     .funcs
                     .get(fname)
-                    .ok_or(format!("Unknown identifer or function: {}", fname))?)
+                    .ok_or(format!("L{}: Unknown identifer or function: {}", ast.l, fname))?)
                 .params
                 .iter()
                 .map(|(_, p)| *p)
                 .collect();
                 if pty.len() != fpty.len() {
                     Err(format!(
-                        "Incorrect number of parameters passed to function: {}",
-                        fname
+                        "L{}: Incorrect number of parameters passed to function: {}",
+                        ast.l, fname
                     ))
                 } else {
                     let z = pty.iter().zip(fpty.iter());
@@ -406,8 +407,8 @@ pub mod checker {
                         Ok(ftable.funcs[fname].ty)
                     } else {
                         Err(format!(
-                            "One or more parameters had mismatching types for function {}",
-                            fname
+                            "L{}: One or more parameters had mismatching types for function {}",
+                            ast.l, fname
                         ))
                     }
                 }
@@ -426,8 +427,8 @@ pub mod checker {
                     .collect();
                 if pty.len() != fpty.len() {
                     Err(format!(
-                        "Incorrect number of parameters passed to coroutine: {}",
-                        coname
+                        "L{}: Incorrect number of parameters passed to coroutine: {}",
+                        ast.l, coname
                     ))
                 } else {
                     let z = pty.iter().zip(fpty.iter());
@@ -436,8 +437,8 @@ pub mod checker {
                         Ok(ftable.funcs[coname].ty)
                     } else {
                         Err(format!(
-                            "Mismatching parameter types in init for coroutine {}",
-                            coname
+                            "L{}: Mismatching parameter types in init for coroutine {}",
+                            ast.l, coname
                         ))
                     }
                 }
@@ -447,7 +448,7 @@ pub mod checker {
                 if ty == I32 {
                     Ok(I32)
                 } else {
-                    Err(format!("Expected i32 for printi got {:?}", ty))
+                    Err(format!("L{}: Expected i32 for printi got {:?}", ast.l, ty))
                 }
             }
             Printbln(exp) => {
@@ -455,7 +456,7 @@ pub mod checker {
                 if ty == Bool {
                     Ok(Bool)
                 } else {
-                    Err(format!("Expected bool for printb got {:?}", ty))
+                    Err(format!("L{}: Expected bool for printb got {:?}", ast.l, ty))
                 }
             }
             Module(funcs, cors) => {
@@ -646,7 +647,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Boolean(false))),
                     )),
-                    Err("&& and || expect to have operands of bool".into()),
+                    Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BAnd(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
@@ -654,7 +655,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Boolean(true))),
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                     )),
-                    Err("&& and || expect to have operands of bool".into()),
+                    Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BAnd(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
@@ -662,7 +663,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Integer(7))),
                     )),
-                    Err("&& and || expect to have operands of bool".into()),
+                    Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     /*Ast::BOr(
@@ -681,7 +682,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Boolean(false))),
                     )),
-                    Err("&& and || expect to have operands of bool".into()),
+                    Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BOr(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
@@ -689,7 +690,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Boolean(true))),
                         Box::new(AstNode::new(1, Ast::Integer(7))),
                     )),
-                    Err("&& and || expect to have operands of bool".into()),
+                    Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BOr(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
@@ -697,7 +698,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Integer(7))),
                     )),
-                    Err("&& and || expect to have operands of bool".into()),
+                    Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::Eq(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
@@ -713,7 +714,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Boolean(true))),
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                     )),
-                    Err("Expected Bool after == but got I32".into()),
+                    Err("L1: Expected Bool after == but got I32".into()),
                 ),
                 (
                     //Ast::Eq(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
@@ -721,7 +722,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Boolean(false))),
                     )),
-                    Err("Expected I32 after == but got Bool".into()),
+                    Err("L1: Expected I32 after == but got Bool".into()),
                 ),
                 (
                     //Ast::Gr(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
@@ -737,7 +738,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Boolean(true))),
                         Box::new(AstNode::new(1, Ast::Integer(7))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::Gr(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
@@ -745,7 +746,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Boolean(false))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::GrEq(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
@@ -761,7 +762,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Boolean(true))),
                         Box::new(AstNode::new(1, Ast::Integer(7))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::GrEq(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
@@ -769,7 +770,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Boolean(false))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::Ls(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
@@ -785,7 +786,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Boolean(true))),
                         Box::new(AstNode::new(1, Ast::Integer(7))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::Ls(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
@@ -793,7 +794,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Boolean(false))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::LsEq(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
@@ -809,7 +810,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Boolean(true))),
                         Box::new(AstNode::new(1, Ast::Integer(7))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::LsEq(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
@@ -817,7 +818,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(5))),
                         Box::new(AstNode::new(1, Ast::Boolean(false))),
                     )),
-                    Err(">=, > , <, and <= expect to have operands of i32".into()),
+                    Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
             ];
 
@@ -860,7 +861,7 @@ pub mod checker {
                     },
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("Bind expected Bool but got I32".into()));
+                assert_eq!(ty, Err("L1: Bind expected Bool but got I32".into()));
             }
            
             // recursive definition
@@ -968,7 +969,7 @@ pub mod checker {
             let ty = traverse(&node, &Some("my_func2".into()), &mut ft);
             assert_eq!(
                 ty,
-                Err("Incorrect number of parameters passed to function: my_func2".into())
+                Err("L1: Incorrect number of parameters passed to function: my_func2".into())
             );
         }
 
@@ -1008,7 +1009,7 @@ pub mod checker {
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft);
             assert_eq!(
                 ty,
-                Err("Incorrect number of parameters passed to coroutine: my_co2".into())
+                Err("L1: Incorrect number of parameters passed to coroutine: my_co2".into())
             );
         }
 
@@ -1046,7 +1047,7 @@ pub mod checker {
             // test incorrect type for yield return
             let node = AstNode::new(1, Ast::YieldReturn(None));
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft);
-            assert_eq!(ty, Err("Yield return expected I32 but got Unit".into()));
+            assert_eq!(ty, Err("L1: Yield return expected I32 but got Unit".into()));
         }
 
         #[test]
@@ -1106,7 +1107,7 @@ pub mod checker {
 
             let node = AstNode::new(1, Ast::FunctionDef("my_func".into(), vec![], I32, vec![AstNode::new(1, Ast::Return(None))]));
             let ty = traverse(&node, &None, &mut ft);
-            assert_eq!(ty, Err("Return expected I32 type and got Unit".into()));
+            assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
         }
 
         #[test]
@@ -1133,7 +1134,7 @@ pub mod checker {
 
             let node = AstNode::new(1, Ast::CoroutineDef("my_co".into(), vec![], I32, vec![AstNode::new(1, Ast::Return(None))]));
             let ty = traverse(&node, &None, &mut ft);
-            assert_eq!(ty, Err("Return expected I32 type and got Unit".into()));
+            assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
         }
 
         #[test]
@@ -1158,9 +1159,9 @@ pub mod checker {
             for (c, t, f, ex) in vec![
                 (Ast::Boolean(true), Ast::Integer(5), Ast::Integer(7), Ok(I32)),
                 (Ast::Boolean(true), Ast::Boolean(true), Ast::Boolean(true), Ok(Bool)),
-                (Ast::Integer(13), Ast::Integer(5), Ast::Integer(7), Err("Expected boolean expression in if conditional, got: Ok(I32)".into())),
-                (Ast::Boolean(true), Ast::Integer(5), Ast::Boolean(true), Err("If expression has mismatching arms: expected I32 got Bool".into())),
-                (Ast::Boolean(true), Ast::Boolean(true), Ast::Integer(5), Err("If expression has mismatching arms: expected Bool got I32".into())),
+                (Ast::Integer(13), Ast::Integer(5), Ast::Integer(7), Err("L1: Expected boolean expression in if conditional, got: Ok(I32)".into())),
+                (Ast::Boolean(true), Ast::Integer(5), Ast::Boolean(true), Err("L1: If expression has mismatching arms: expected I32 got Bool".into())),
+                (Ast::Boolean(true), Ast::Boolean(true), Ast::Integer(5), Err("L1: If expression has mismatching arms: expected Bool got I32".into())),
                 ]
                 {
 
