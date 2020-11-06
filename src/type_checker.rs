@@ -513,7 +513,7 @@ pub mod checker {
     mod tests {
         use super::super::*;
         use super::*;
-        use crate::parser::parse::{Ast, Primitive};
+        use crate::parser::{Ast, Primitive};
 
         #[test]
         pub fn test_integer() {
