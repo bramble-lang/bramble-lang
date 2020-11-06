@@ -210,8 +210,14 @@ pub mod checker {
             Integer(_) => Ok(I32),
             Boolean(_) => Ok(Bool),
             Identifier(id, _) => match current_func {
-                None => Err(format!("L{}: Variable {} appears outside of function", ast.l, id)),
-                Some(cf) => ftable.funcs.get(cf).ok_or(format!("L{}: Undefined function {}", ast.l, cf))?
+                None => Err(format!(
+                    "L{}: Variable {} appears outside of function",
+                    ast.l, id
+                )),
+                Some(cf) => ftable
+                    .funcs
+                    .get(cf)
+                    .ok_or(format!("L{}: Undefined function {}", ast.l, cf))?
                     .vars
                     .vars
                     .iter()
@@ -235,7 +241,10 @@ pub mod checker {
                 let rty = traverse(r, current_func, ftable)?;
                 match (lty, rty) {
                     (Bool, Bool) => Ok(Bool),
-                    _ => Err(format!("L{}: && and || expect to have operands of bool", ast.l)),
+                    _ => Err(format!(
+                        "L{}: && and || expect to have operands of bool",
+                        ast.l
+                    )),
                 }
             }
             Ast::Eq(ref l, ref r) | Ast::NEq(ref l, ref r) => {
@@ -246,10 +255,16 @@ pub mod checker {
                         if lty == rty {
                             Ok(Bool)
                         } else {
-                            Err(format!("L{}: Expected {:?} after == but got {:?}", ast.l, lty, rty))
+                            Err(format!(
+                                "L{}: Expected {:?} after == but got {:?}",
+                                ast.l, lty, rty
+                            ))
                         }
                     }
-                    _ => Err(format!("L{}: && and || expect to have operands of bool", ast.l)),
+                    _ => Err(format!(
+                        "L{}: && and || expect to have operands of bool",
+                        ast.l
+                    )),
                 }
             }
             GrEq(ref l, ref r) | Gr(ref l, ref r) | Ls(ref l, ref r) | LsEq(ref l, ref r) => {
@@ -257,7 +272,10 @@ pub mod checker {
                 let rty = traverse(r, current_func, ftable);
                 match (lty, rty) {
                     (Ok(I32), Ok(I32)) => Ok(Bool),
-                    _ => Err(format!("L{}: >=, > , <, and <= expect to have operands of i32", ast.l)),
+                    _ => Err(format!(
+                        "L{}: >=, > , <, and <= expect to have operands of i32",
+                        ast.l
+                    )),
                 }
             }
             If(cond, true_arm, false_arm) => {
@@ -286,8 +304,7 @@ pub mod checker {
                 } else {
                     Err(format!(
                         "L{}: Expected boolean expression in if conditional, got: {:?}",
-                        ast.l,
-                        cond_ty
+                        ast.l, cond_ty
                     ))
                 }
             }
@@ -303,10 +320,14 @@ pub mod checker {
                                 ast.l, cf
                             ))?
                             .vars
-                            .add_var(&name, *p).map_err(|msg| format!("L{}: {}", ast.l, msg))?;
+                            .add_var(&name, *p)
+                            .map_err(|msg| format!("L{}: {}", ast.l, msg))?;
                         Ok(*p)
                     } else {
-                        Err(format!("L{}: Bind expected {:?} but got {:?}", ast.l, p, ety))
+                        Err(format!(
+                            "L{}: Bind expected {:?} but got {:?}",
+                            ast.l, p, ety
+                        ))
                     }
                 }
                 None => Err(format!(
@@ -321,7 +342,10 @@ pub mod checker {
                     if fty == Unit {
                         Ok(Unit)
                     } else {
-                        Err(format!("L{}: Return expected {:?} type and got Unit", ast.l, fty))
+                        Err(format!(
+                            "L{}: Return expected {:?} type and got Unit",
+                            ast.l, fty
+                        ))
                     }
                 }
             },
@@ -333,21 +357,30 @@ pub mod checker {
                     if fty == rty {
                         Ok(fty)
                     } else {
-                        Err(format!("L{}: Return expected {:?} but got {:?}", ast.l, fty, rty))
+                        Err(format!(
+                            "L{}: Return expected {:?} but got {:?}",
+                            ast.l, fty, rty
+                        ))
                     }
                 }
             },
             Yield(box exp) => match current_func {
                 None => Err(format!("L{}: Yield appears outside of function", ast.l)),
                 Some(cf) => match exp {
-                    AstNode{ l, n: Ast::Identifier(coname, _)} => ftable
+                    AstNode {
+                        l,
+                        n: Ast::Identifier(coname, _),
+                    } => ftable
                         .funcs
                         .get(cf)
                         .map(|fi| fi.vars.vars.iter().find(|v| v.name == *coname))
                         .flatten()
                         .map(|vd| vd.ty)
                         .ok_or(format!("L{}: Could not find coroutine: {}", l, coname)),
-                    _ => Err(format!("L{}: Expected name of coroutine after yield", ast.l)),
+                    _ => Err(format!(
+                        "L{}: Expected name of coroutine after yield",
+                        ast.l
+                    )),
                 },
             },
             YieldReturn(None) => match current_func {
@@ -357,7 +390,10 @@ pub mod checker {
                     if fty == Unit {
                         Ok(Unit)
                     } else {
-                        Err(format!("L{}: Yield return expected {:?} but got Unit", ast.l, fty))
+                        Err(format!(
+                            "L{}: Yield return expected {:?} but got Unit",
+                            ast.l, fty
+                        ))
                     }
                 }
             },
@@ -369,7 +405,10 @@ pub mod checker {
                     if fty == yty {
                         Ok(fty)
                     } else {
-                        Err(format!("L{}: Yield return expected {:?} but got {:?}", ast.l, fty, yty))
+                        Err(format!(
+                            "L{}: Yield return expected {:?} but got {:?}",
+                            ast.l, fty, yty
+                        ))
                     }
                 }
             },
@@ -386,10 +425,10 @@ pub mod checker {
                     .iter()
                     .map(|p| traverse(p, current_func, ftable).unwrap())
                     .collect();
-                let fpty: Vec<super::Primitive> = (ftable
-                    .funcs
-                    .get(fname)
-                    .ok_or(format!("L{}: Unknown identifer or function: {}", ast.l, fname))?)
+                let fpty: Vec<super::Primitive> = (ftable.funcs.get(fname).ok_or(format!(
+                    "L{}: Unknown identifer or function: {}",
+                    ast.l, fname
+                ))?)
                 .params
                 .iter()
                 .map(|(_, p)| *p)
@@ -535,35 +574,62 @@ pub mod checker {
                 .unwrap();
             // both operands are i32
             {
-                let node = AstNode::new(1, Ast::Add(Box::new(AstNode::new(1, Ast::Integer(5))), Box::new(AstNode::new(1, Ast::Integer(10)))));
+                let node = AstNode::new(
+                    1,
+                    Ast::Add(
+                        Box::new(AstNode::new(1, Ast::Integer(5))),
+                        Box::new(AstNode::new(1, Ast::Integer(10))),
+                    ),
+                );
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // operands are not i32
             {
-                let node = AstNode::new(1, Ast::Add(
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                    Box::new(AstNode::new(1, Ast::Integer(10))),
-                ));
+                let node = AstNode::new(
+                    1,
+                    Ast::Add(
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                        Box::new(AstNode::new(1, Ast::Integer(10))),
+                    ),
+                );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
-                let node = AstNode::new(1, Ast::Add(
-                    Box::new(AstNode::new(1, Ast::Integer(10))),
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                ));
+                let node = AstNode::new(
+                    1,
+                    Ast::Add(
+                        Box::new(AstNode::new(1, Ast::Integer(10))),
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                    ),
+                );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
-                let node = AstNode::new(1, Ast::Add(
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                ));
+                let node = AstNode::new(
+                    1,
+                    Ast::Add(
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                    ),
+                );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
@@ -595,35 +661,62 @@ pub mod checker {
                 .unwrap();
             // both operands are i32
             {
-                let node = AstNode::new(1, Ast::Mul(Box::new(AstNode::new(1, Ast::Integer(5))), Box::new(AstNode::new(1, Ast::Integer(10)))));
+                let node = AstNode::new(
+                    1,
+                    Ast::Mul(
+                        Box::new(AstNode::new(1, Ast::Integer(5))),
+                        Box::new(AstNode::new(1, Ast::Integer(10))),
+                    ),
+                );
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // operands are not i32
             {
-                let node = AstNode::new(1, Ast::Mul(
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                    Box::new(AstNode::new(1, Ast::Integer(10))),
-                ));
+                let node = AstNode::new(
+                    1,
+                    Ast::Mul(
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                        Box::new(AstNode::new(1, Ast::Integer(10))),
+                    ),
+                );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
-                let node = AstNode::new(1, Ast::Mul(
-                    Box::new(AstNode::new(1, Ast::Integer(10))),
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                ));
+                let node = AstNode::new(
+                    1,
+                    Ast::Mul(
+                        Box::new(AstNode::new(1, Ast::Integer(10))),
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                    ),
+                );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
-                let node = AstNode::new(1, Ast::Mul(
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                    Box::new(AstNode::new(1, Ast::Identifier("b".into(), Primitive::Bool))),
-                ));
+                let node = AstNode::new(
+                    1,
+                    Ast::Mul(
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                        Box::new(AstNode::new(
+                            1,
+                            Ast::Identifier("b".into(), Primitive::Bool),
+                        )),
+                    ),
+                );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
@@ -634,34 +727,46 @@ pub mod checker {
             let mut ft = FunctionTable::new();
             let tests: Vec<(AstNode, Result<Primitive, String>)> = vec![
                 (
-                    AstNode::new(1, Ast::BAnd(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BAnd(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Ok(Primitive::Bool),
                 ),
                 (
                     //Ast::BAnd(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(false))),
-                    AstNode::new(1, Ast::BAnd(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BAnd(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BAnd(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::BAnd(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BAnd(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                        ),
+                    ),
                     Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BAnd(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::BAnd(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BAnd(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
@@ -669,154 +774,211 @@ pub mod checker {
                         Box::new(Ast::Boolean(true)),
                         Box::new(Ast::Boolean(false)),
                     ),*/
-                    AstNode::new(1, Ast::BOr(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BOr(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Ok(Primitive::Bool),
                 ),
                 (
                     //Ast::BOr(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(false))),
-                    AstNode::new(1, Ast::BOr(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BOr(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BOr(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::BOr(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BOr(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::BOr(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::BOr(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::BOr(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Err("L1: && and || expect to have operands of bool".into()),
                 ),
                 (
                     //Ast::Eq(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::Eq(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Eq(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Ok(Bool),
                 ),
                 (
                     //Ast::Eq(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::Eq(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Eq(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                        ),
+                    ),
                     Err("L1: Expected Bool after == but got I32".into()),
                 ),
                 (
                     //Ast::Eq(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
-                    AstNode::new(1, Ast::Eq(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Eq(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Err("L1: Expected I32 after == but got Bool".into()),
                 ),
                 (
                     //Ast::Gr(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::Gr(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Gr(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Ok(Bool),
                 ),
                 (
                     //Ast::Gr(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::Gr(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Gr(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::Gr(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
-                    AstNode::new(1, Ast::Gr(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Gr(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::GrEq(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::GrEq(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::GrEq(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Ok(Bool),
                 ),
                 (
                     //Ast::GrEq(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::GrEq(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::GrEq(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::GrEq(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
-                    AstNode::new(1, Ast::GrEq(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::GrEq(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::Ls(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::Ls(
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Ls(
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                        ),
+                    ),
                     Ok(Bool),
                 ),
                 (
                     //Ast::Ls(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::Ls(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Ls(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::Ls(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
-                    AstNode::new(1, Ast::Ls(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::Ls(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::LsEq(Box::new(Ast::Integer(7)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::LsEq(
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::LsEq(
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                        ),
+                    ),
                     Ok(Bool),
                 ),
                 (
                     //Ast::LsEq(Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
-                    AstNode::new(1, Ast::LsEq(
-                        Box::new(AstNode::new(1, Ast::Boolean(true))),
-                        Box::new(AstNode::new(1, Ast::Integer(7))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::LsEq(
+                            Box::new(AstNode::new(1, Ast::Boolean(true))),
+                            Box::new(AstNode::new(1, Ast::Integer(7))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
                 (
                     //Ast::LsEq(Box::new(Ast::Integer(5)), Box::new(Ast::Boolean(true))),
-                    AstNode::new(1, Ast::LsEq(
-                        Box::new(AstNode::new(1, Ast::Integer(5))),
-                        Box::new(AstNode::new(1, Ast::Boolean(false))),
-                    )),
+                    AstNode::new(
+                        1,
+                        Ast::LsEq(
+                            Box::new(AstNode::new(1, Ast::Integer(5))),
+                            Box::new(AstNode::new(1, Ast::Boolean(false))),
+                        ),
+                    ),
                     Err("L1: >=, > , <, and <= expect to have operands of i32".into()),
                 ),
             ];
@@ -831,7 +993,14 @@ pub mod checker {
         pub fn test_bind() {
             // RHS type matches the LHS type
             {
-                let node = AstNode::new(1, Ast::Bind("x".into(), Primitive::I32, Box::new(AstNode::new(1, Ast::Integer(5)))));
+                let node = AstNode::new(
+                    1,
+                    Ast::Bind(
+                        "x".into(),
+                        Primitive::I32,
+                        Box::new(AstNode::new(1, Ast::Integer(5))),
+                    ),
+                );
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -848,7 +1017,14 @@ pub mod checker {
 
             // RHS type does not match LHS type
             {
-                let node = AstNode::new(1, Ast::Bind("x".into(), Primitive::Bool, Box::new(AstNode::new(1, Ast::Integer(5)))));
+                let node = AstNode::new(
+                    1,
+                    Ast::Bind(
+                        "x".into(),
+                        Primitive::Bool,
+                        Box::new(AstNode::new(1, Ast::Integer(5))),
+                    ),
+                );
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -862,10 +1038,17 @@ pub mod checker {
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: Bind expected Bool but got I32".into()));
             }
-           
+
             // recursive definition
             {
-                let node = AstNode::new(1, Ast::Bind("x".into(), Primitive::I32, Box::new(AstNode::new(1, Ast::Identifier("x".into(), I32)))));
+                let node = AstNode::new(
+                    1,
+                    Ast::Bind(
+                        "x".into(),
+                        Primitive::I32,
+                        Box::new(AstNode::new(1, Ast::Identifier("x".into(), I32))),
+                    ),
+                );
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -879,10 +1062,10 @@ pub mod checker {
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
-           
+
             // use an unbound variable
             {
-                let node =  AstNode::new(1, Ast::Identifier("x".into(), I32));
+                let node = AstNode::new(1, Ast::Identifier("x".into(), I32));
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -927,7 +1110,10 @@ pub mod checker {
                     ty: I32,
                 },
             );
-            let node = AstNode::new(1, Ast::Return(Some(Box::new(AstNode::new(1, Ast::Integer(5))))));
+            let node = AstNode::new(
+                1,
+                Ast::Return(Some(Box::new(AstNode::new(1, Ast::Integer(5))))),
+            );
             let ty = traverse(&node, &Some("my_func".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
         }
@@ -959,7 +1145,10 @@ pub mod checker {
             );
 
             // test correct parameters passed in call
-            let node = AstNode::new(1, Ast::FunctionCall("my_func2".into(), vec![AstNode::new(1, Ast::Integer(5))]));
+            let node = AstNode::new(
+                1,
+                Ast::FunctionCall("my_func2".into(), vec![AstNode::new(1, Ast::Integer(5))]),
+            );
             let ty = traverse(&node, &Some("my_func2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
@@ -999,7 +1188,10 @@ pub mod checker {
             );
 
             // test correct parameters passed in call
-            let node = AstNode::new(1, Ast::CoroutineInit("my_co2".into(), vec![AstNode::new(1, Ast::Integer(5))]));
+            let node = AstNode::new(
+                1,
+                Ast::CoroutineInit("my_co2".into(), vec![AstNode::new(1, Ast::Integer(5))]),
+            );
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
@@ -1039,7 +1231,10 @@ pub mod checker {
             );
 
             // test correct type for yield return
-            let node = AstNode::new(1, Ast::YieldReturn(Some(Box::new(AstNode::new(1, Ast::Integer(5))))));
+            let node = AstNode::new(
+                1,
+                Ast::YieldReturn(Some(Box::new(AstNode::new(1, Ast::Integer(5))))),
+            );
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
@@ -1077,7 +1272,10 @@ pub mod checker {
                     ty: I32,
                 },
             );
-            let node = AstNode::new(1, Ast::Yield(Box::new(AstNode::new(1, Ast::Identifier("c".into(), I32)))));
+            let node = AstNode::new(
+                1,
+                Ast::Yield(Box::new(AstNode::new(1, Ast::Identifier("c".into(), I32)))),
+            );
             let ty = traverse(&node, &Some("my_main".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
         }
@@ -1095,16 +1293,30 @@ pub mod checker {
                 },
             );
 
-            let node = AstNode::new(1, Ast::FunctionDef(
-                "my_func".into(),
-                vec![],
-                I32,
-                vec![AstNode::new(1, Ast::Return(Some(Box::new(AstNode::new(1, Ast::Integer(5))))))],
-            ));
+            let node = AstNode::new(
+                1,
+                Ast::FunctionDef(
+                    "my_func".into(),
+                    vec![],
+                    I32,
+                    vec![AstNode::new(
+                        1,
+                        Ast::Return(Some(Box::new(AstNode::new(1, Ast::Integer(5))))),
+                    )],
+                ),
+            );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Ok(I32));
 
-            let node = AstNode::new(1, Ast::FunctionDef("my_func".into(), vec![], I32, vec![AstNode::new(1, Ast::Return(None))]));
+            let node = AstNode::new(
+                1,
+                Ast::FunctionDef(
+                    "my_func".into(),
+                    vec![],
+                    I32,
+                    vec![AstNode::new(1, Ast::Return(None))],
+                ),
+            );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
         }
@@ -1122,16 +1334,30 @@ pub mod checker {
                 },
             );
 
-            let node = AstNode::new(1, Ast::CoroutineDef(
-                "my_co".into(),
-                vec![],
-                I32,
-                vec![AstNode::new(1, Ast::Return(Some(Box::new(AstNode::new(1, Ast::Integer(5))))))],
-            ));
+            let node = AstNode::new(
+                1,
+                Ast::CoroutineDef(
+                    "my_co".into(),
+                    vec![],
+                    I32,
+                    vec![AstNode::new(
+                        1,
+                        Ast::Return(Some(Box::new(AstNode::new(1, Ast::Integer(5))))),
+                    )],
+                ),
+            );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Ok(I32));
 
-            let node = AstNode::new(1, Ast::CoroutineDef("my_co".into(), vec![], I32, vec![AstNode::new(1, Ast::Return(None))]));
+            let node = AstNode::new(
+                1,
+                Ast::CoroutineDef(
+                    "my_co".into(),
+                    vec![],
+                    I32,
+                    vec![AstNode::new(1, Ast::Return(None))],
+                ),
+            );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
         }
@@ -1156,19 +1382,45 @@ pub mod checker {
                 },
             );
             for (c, t, f, ex) in vec![
-                (Ast::Boolean(true), Ast::Integer(5), Ast::Integer(7), Ok(I32)),
-                (Ast::Boolean(true), Ast::Boolean(true), Ast::Boolean(true), Ok(Bool)),
-                (Ast::Integer(13), Ast::Integer(5), Ast::Integer(7), Err("L1: Expected boolean expression in if conditional, got: Ok(I32)".into())),
-                (Ast::Boolean(true), Ast::Integer(5), Ast::Boolean(true), Err("L1: If expression has mismatching arms: expected I32 got Bool".into())),
-                (Ast::Boolean(true), Ast::Boolean(true), Ast::Integer(5), Err("L1: If expression has mismatching arms: expected Bool got I32".into())),
-                ]
-                {
-
-                let node = AstNode::new(1, Ast::If(
-                    Box::new(AstNode::new(1, c)),
-                    Box::new(AstNode::new(1, t)),
-                    Box::new(AstNode::new(1, f)),
-                ));
+                (
+                    Ast::Boolean(true),
+                    Ast::Integer(5),
+                    Ast::Integer(7),
+                    Ok(I32),
+                ),
+                (
+                    Ast::Boolean(true),
+                    Ast::Boolean(true),
+                    Ast::Boolean(true),
+                    Ok(Bool),
+                ),
+                (
+                    Ast::Integer(13),
+                    Ast::Integer(5),
+                    Ast::Integer(7),
+                    Err("L1: Expected boolean expression in if conditional, got: Ok(I32)".into()),
+                ),
+                (
+                    Ast::Boolean(true),
+                    Ast::Integer(5),
+                    Ast::Boolean(true),
+                    Err("L1: If expression has mismatching arms: expected I32 got Bool".into()),
+                ),
+                (
+                    Ast::Boolean(true),
+                    Ast::Boolean(true),
+                    Ast::Integer(5),
+                    Err("L1: If expression has mismatching arms: expected Bool got I32".into()),
+                ),
+            ] {
+                let node = AstNode::new(
+                    1,
+                    Ast::If(
+                        Box::new(AstNode::new(1, c)),
+                        Box::new(AstNode::new(1, t)),
+                        Box::new(AstNode::new(1, f)),
+                    ),
+                );
                 let ty = traverse(&node, &Some("my_main".into()), &mut ft);
                 assert_eq!(ty, ex);
             }

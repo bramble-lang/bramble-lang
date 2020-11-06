@@ -151,9 +151,13 @@ impl Compiler {
                         Mov(l, Source::Integer(s)) => writeln!(output, "mov {}, DWORD {}", l, s)?,
                         Mov(l, Source::Register(s)) => writeln!(output, "mov {}, {}", l, s)?,
 
-                        Movzx(l, Source::Memory(s)) => writeln!(output, "movzx {}, DWORD [{}]", l, s)?,
+                        Movzx(l, Source::Memory(s)) => {
+                            writeln!(output, "movzx {}, DWORD [{}]", l, s)?
+                        }
                         Movzx(l, Source::Address(s)) => writeln!(output, "movzx {}, {}", l, s)?,
-                        Movzx(l, Source::Integer(s)) => writeln!(output, "movzx {}, DWORD {}", l, s)?,
+                        Movzx(l, Source::Integer(s)) => {
+                            writeln!(output, "movzx {}, DWORD {}", l, s)?
+                        }
                         Movzx(l, Source::Register(s)) => writeln!(output, "movzx {}, {}", l, s)?,
 
                         Lea(l, s) => writeln!(output, "lea {}, {}", l, s)?,
@@ -647,8 +651,14 @@ impl Compiler {
                     .funcs
                     .entry(current_func.clone())
                     .and_modify(|fi| fi.label_count += 1);
-                let else_lbl = format!(".else_lbl_{}", function_table.funcs[current_func].label_count);
-                let end_lbl = format!(".if_end_lbl_{}", function_table.funcs[current_func].label_count);
+                let else_lbl = format!(
+                    ".else_lbl_{}",
+                    function_table.funcs[current_func].label_count
+                );
+                let end_lbl = format!(
+                    ".if_end_lbl_{}",
+                    function_table.funcs[current_func].label_count
+                );
 
                 Compiler::traverse(cond, current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Integer(0)));

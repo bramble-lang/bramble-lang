@@ -54,7 +54,7 @@ pub struct Token {
 
 impl Token {
     pub fn new(l: u32, s: Lex) -> Token {
-        Token { l, s}
+        Token { l, s }
     }
 }
 
@@ -110,14 +110,16 @@ impl Lexer {
             Some(i) => Ok(i),
             None => match self.consume_identifier(cs)? {
                 Some(id) => {
-                    let tok = self.if_primitive_map(self.if_keyword_map(
-                        self.if_boolean_map(id),
-                    ));
+                    let tok = self.if_primitive_map(self.if_keyword_map(self.if_boolean_map(id)));
                     Ok(tok)
-                },
+                }
                 None => match self.consume_operator(cs)? {
                     Some(op) => Ok(op),
-                    None => Err(format!("L{}: Unexpected character: {:?}", self.line, cs.next())),
+                    None => Err(format!(
+                        "L{}: Unexpected character: {:?}",
+                        self.line,
+                        cs.next()
+                    )),
                 },
             },
         }
@@ -127,12 +129,15 @@ impl Lexer {
         while iter.peek().map_or_else(|| false, |c| c.is_whitespace()) {
             match iter.next() {
                 Some('\n') => self.line += 1,
-                _ => {},
+                _ => {}
             }
         }
     }
 
-    pub fn consume_identifier(&self, iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
+    pub fn consume_identifier(
+        &self,
+        iter: &mut Peekable<std::str::Chars>,
+    ) -> Result<Option<Token>, String> {
         let mut id = String::new();
         if iter
             .peek()
@@ -173,17 +178,29 @@ impl Lexer {
         } else {
             if let Some(c) = iter.peek() {
                 if c.is_alphabetic() {
-                    Err(format!("L{}: Invalid integer, should not contain characters", self.line))
+                    Err(format!(
+                        "L{}: Invalid integer, should not contain characters",
+                        self.line
+                    ))
                 } else {
-                    Ok(Some(Token::new(self.line, Integer(num.parse::<i32>().unwrap()))))
+                    Ok(Some(Token::new(
+                        self.line,
+                        Integer(num.parse::<i32>().unwrap()),
+                    )))
                 }
             } else {
-                Ok(Some(Token::new(self.line, Integer(num.parse::<i32>().unwrap()))))
+                Ok(Some(Token::new(
+                    self.line,
+                    Integer(num.parse::<i32>().unwrap()),
+                )))
             }
         }
     }
 
-    pub fn consume_operator(&self, iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String>{
+    pub fn consume_operator(
+        &self,
+        iter: &mut Peekable<std::str::Chars>,
+    ) -> Result<Option<Token>, String> {
         let mut consume = true;
         let token = match iter.peek() {
             Some('(') => Some(Token::new(self.line, LParen)),
@@ -215,7 +232,7 @@ impl Lexer {
                 iter.next();
                 match iter.peek() {
                     Some('=') => Some(Token::new(self.line, Eq)),
-                    _ =>return Err(format!("L{}: Unexpected '=' character", self.line)),
+                    _ => return Err(format!("L{}: Unexpected '=' character", self.line)),
                 }
             }
             Some('>') => {
@@ -454,12 +471,22 @@ mod tests {
             ("return ( x + 5 || true )", 1, 1, 1, 1, 1, 1, 1, 1),
             (" return ( x + 5|| true ) ", 1, 1, 1, 1, 1, 1, 1, 1),
             ("return(x+5||true)", 1, 1, 1, 1, 1, 1, 1, 1),
-            ("return
+            (
+                "return
             (x+
                 5
                 ||
                 true
-            )", 1, 2, 2, 2, 3, 4, 5, 6),
+            )",
+                1,
+                2,
+                2,
+                2,
+                3,
+                4,
+                5,
+                6,
+            ),
         ]
         .iter()
         {
