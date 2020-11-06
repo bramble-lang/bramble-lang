@@ -1,7 +1,7 @@
 use std::collections;
 
-use crate::parser::parse;
-use parse::{Ast, AstNode, Primitive};
+use crate::parser;
+use parser::{Ast, AstNode, Primitive};
 
 #[derive(Debug, PartialEq)]
 pub struct VarDecl {
@@ -191,7 +191,7 @@ impl FunctionTable {
 }
 
 pub mod checker {
-    use crate::parser::parse::{Ast, AstNode, Primitive};
+    use crate::parser::{Ast, AstNode, Primitive};
     use Primitive::*;
 
     use super::FunctionTable;
