@@ -1,6 +1,8 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use super::parse::{Ast, AstNode};
+
 #[derive(Debug, Copy, Clone)]
 enum Register {
     Eax,
@@ -222,7 +224,7 @@ impl Compiler {
         Ok(())
     }
 
-    pub fn compile(ast: &super::AstNode, funcs: &mut super::FunctionTable) -> Compiler {
+    pub fn compile(ast: &AstNode, funcs: &mut super::FunctionTable) -> Compiler {
         let mut code = vec![];
 
         Compiler::create_base(&mut code);
@@ -464,7 +466,7 @@ impl Compiler {
     }
 
     fn traverse(
-        ast: &super::AstNode,
+        ast: &AstNode,
         current_func: &String,
         function_table: &mut super::FunctionTable,
         output: &mut Vec<Instruction>,
@@ -478,16 +480,16 @@ impl Compiler {
         let co_param_registers = [Ebx, Ecx, Edx];
 
         match &ast.n {
-            super::Ast::Integer(i) => {
+            Ast::Integer(i) => {
                 output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
-            super::Ast::Boolean(b) => {
+            Ast::Boolean(b) => {
                 output.push(Mov(
                     Location::Register(Eax),
                     Source::Integer(if *b { 1 } else { 0 }),
                 ));
             }
-            super::Ast::Identifier(id, _id_type) => {
+            Ast::Identifier(id, _id_type) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
@@ -502,7 +504,7 @@ impl Compiler {
                     Source::Memory(format!("ebp-{}", id_offset)),
                 ));
             }
-            super::Ast::Mul(l, r) => {
+            Ast::Mul(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -514,7 +516,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(IMul(Eax, Location::Register(Ebx)));
             }
-            super::Ast::Add(l, r) => {
+            Ast::Add(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -526,7 +528,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Add(Eax, Source::Register(Ebx)));
             }
-            super::Ast::Eq(l, r) => {
+            Ast::Eq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -541,7 +543,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Ast::NEq(l, r) => {
+            Ast::NEq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -556,7 +558,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Ast::Ls(l, r) => {
+            Ast::Ls(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -571,7 +573,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Ast::LsEq(l, r) => {
+            Ast::LsEq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -586,7 +588,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Ast::Gr(l, r) => {
+            Ast::Gr(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -601,7 +603,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Ast::GrEq(l, r) => {
+            Ast::GrEq(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -616,7 +618,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            super::Ast::BAnd(l, r) => {
+            Ast::BAnd(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -628,7 +630,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(And(Eax, Source::Register(Ebx)));
             }
-            super::Ast::BOr(l, r) => {
+            Ast::BOr(l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -640,7 +642,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Or(Eax, Source::Register(Ebx)));
             }
-            super::Ast::If(ref cond, ref true_arm, ref false_arm) => {
+            Ast::If(ref cond, ref true_arm, ref false_arm) => {
                 function_table
                     .funcs
                     .entry(current_func.clone())
@@ -658,7 +660,7 @@ impl Compiler {
                 Compiler::traverse(false_arm, current_func, function_table, output);
                 output.push(Label(end_lbl));
             }
-            super::Ast::Bind(id, _, ref exp) => {
+            Ast::Bind(id, _, ref exp) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
@@ -674,7 +676,7 @@ impl Compiler {
                     Source::Register(Eax),
                 ));
             }
-            super::Ast::FunctionDef(ref fn_name, params, _, stmts) => {
+            Ast::FunctionDef(ref fn_name, params, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
@@ -714,7 +716,7 @@ impl Compiler {
 
                 output.push(Ret);
             }
-            super::Ast::CoroutineDef(ref fn_name, _, _, stmts) => {
+            Ast::CoroutineDef(ref fn_name, _, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
@@ -723,7 +725,7 @@ impl Compiler {
                 }
                 output.push(Jmp("runtime_yield_return".into()))
             }
-            super::Ast::Module(functions, coroutines) => {
+            Ast::Module(functions, coroutines) => {
                 for f in functions.iter() {
                     Compiler::traverse(f, current_func, function_table, output);
                 }
@@ -731,11 +733,11 @@ impl Compiler {
                     Compiler::traverse(co, current_func, function_table, output);
                 }
             }
-            super::Ast::Return(ref exp) => match exp {
+            Ast::Return(ref exp) => match exp {
                 Some(e) => Compiler::traverse(e, current_func, function_table, output),
                 None => (),
             },
-            super::Ast::Yield(ref id) => {
+            Ast::Yield(ref id) => {
                 Compiler::traverse(id, current_func, function_table, output);
 
                 function_table
@@ -751,7 +753,7 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_into_coroutine".into()));
                 output.push(Label(ret_lbl.clone()));
             }
-            super::Ast::YieldReturn(ref exp) => {
+            Ast::YieldReturn(ref exp) => {
                 if let Some(exp) = exp {
                     Compiler::traverse(exp, current_func, function_table, output);
                 }
@@ -769,18 +771,18 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_return".into()));
                 output.push(Label(ret_lbl.clone()));
             }
-            super::Ast::Printiln(ref exp) => {
+            Ast::Printiln(ref exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
                 output.push(Print(Source::Register(Eax)));
                 output.push(Newline);
             }
-            super::Ast::Printbln(ref exp) => {
+            Ast::Printbln(ref exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
                 //output.push(Print(Source::Register(Eax)));
                 output.push(Call("print_bool".into()));
                 output.push(Newline);
             }
-            super::Ast::CoroutineInit(ref co, params) => {
+            Ast::CoroutineInit(ref co, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 if !function_table.funcs.contains_key(co) {
@@ -825,7 +827,7 @@ impl Compiler {
                     idx += 1;
                 }
             }
-            super::Ast::FunctionCall(ref fn_name, params) => {
+            Ast::FunctionCall(ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 if !function_table.funcs.contains_key(fn_name) {

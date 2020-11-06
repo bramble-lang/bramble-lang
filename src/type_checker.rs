@@ -1,7 +1,7 @@
 use std::collections;
 
-use crate::parser::Primitive;
-use crate::{Ast, AstNode};
+use crate::parser::parse;
+use parse::{Ast, AstNode, Primitive};
 
 #[derive(Debug, PartialEq)]
 pub struct VarDecl {
@@ -191,8 +191,7 @@ impl FunctionTable {
 }
 
 pub mod checker {
-
-    use crate::parser::{self, Ast, AstNode, Primitive};
+    use crate::parser::parse::{Ast, AstNode, Primitive};
     use Primitive::*;
 
     use super::FunctionTable;
@@ -383,11 +382,11 @@ pub mod checker {
             FunctionCall(fname, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
-                let pty: Vec<parser::Primitive> = params
+                let pty: Vec<super::Primitive> = params
                     .iter()
                     .map(|p| traverse(p, current_func, ftable).unwrap())
                     .collect();
-                let fpty: Vec<parser::Primitive> = (ftable
+                let fpty: Vec<super::Primitive> = (ftable
                     .funcs
                     .get(fname)
                     .ok_or(format!("L{}: Unknown identifer or function: {}", ast.l, fname))?)
@@ -416,11 +415,11 @@ pub mod checker {
             CoroutineInit(coname, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
-                let pty: Vec<parser::Primitive> = params
+                let pty: Vec<super::Primitive> = params
                     .iter()
                     .map(|p| traverse(p, current_func, ftable).unwrap())
                     .collect();
-                let fpty: Vec<parser::Primitive> = ftable.funcs[coname]
+                let fpty: Vec<super::Primitive> = ftable.funcs[coname]
                     .params
                     .iter()
                     .map(|(_, p)| *p)
@@ -475,7 +474,7 @@ pub mod checker {
     mod tests {
         use super::super::*;
         use super::*;
-        use crate::parser::{Ast, Primitive};
+        use crate::parser::parse::{Ast, Primitive};
 
         #[test]
         pub fn test_integer() {

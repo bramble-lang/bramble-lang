@@ -2,64 +2,64 @@
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use crate::lexer::{self, Lex};
-use crate::Token;
+pub mod parse {
+    use crate::lexer::{self, Lex};
+    use crate::Token;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Primitive {
-    I32,
-    Bool,
-    Unit,
-    Unknown,
-}
+    type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
 
-#[derive(Debug)]
-pub enum Ast {
-    Integer(i32),
-    Boolean(bool),
-    Identifier(String, Primitive),
-    Primitive(Primitive),
-    Mul(Box<AstNode>, Box<AstNode>),
-    Add(Box<AstNode>, Box<AstNode>),
-    BAnd(Box<AstNode>, Box<AstNode>),
-    BOr(Box<AstNode>, Box<AstNode>),
-    Gr(Box<AstNode>, Box<AstNode>),
-    GrEq(Box<AstNode>, Box<AstNode>),
-    Ls(Box<AstNode>, Box<AstNode>),
-    LsEq(Box<AstNode>, Box<AstNode>),
-    Eq(Box<AstNode>, Box<AstNode>),
-    NEq(Box<AstNode>, Box<AstNode>),
-    Bind(String, Primitive, Box<AstNode>),
-    Return(Option<Box<AstNode>>),
-    FunctionDef(String, Vec<(String, Primitive)>, Primitive, Vec<AstNode>),
-    FunctionCall(String, Vec<AstNode>),
-    CoroutineDef(String, Vec<(String, Primitive)>, Primitive, Vec<AstNode>),
-    CoroutineInit(String, Vec<AstNode>),
-    Yield(Box<AstNode>),
-    YieldReturn(Option<Box<AstNode>>),
-    If(Box<AstNode>, Box<AstNode>, Box<AstNode>),
-    Module(Vec<AstNode>, Vec<AstNode>),
-    Printi(Box<AstNode>),
-    Printiln(Box<AstNode>),
-    Printbln(Box<AstNode>),
-}
+    type PResult = Result<Option<AstNode>, String>;
 
-#[derive(Debug)]
-pub struct AstNode {
-    pub l: u32,
-    pub n: Ast,
-}
-
-impl AstNode {
-    pub fn new(l: u32, n: Ast) -> AstNode {
-        AstNode { l, n }
+    #[derive(Debug)]
+    pub struct AstNode {
+        pub l: u32,
+        pub n: Ast,
     }
-}
 
-type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
-type PResult = Result<Option<AstNode>, String>;
-pub struct Parser {}
-impl Parser {
+    impl AstNode {
+        pub fn new(l: u32, n: Ast) -> AstNode {
+            AstNode { l, n }
+        }
+    }
+
+    #[derive(Debug)]
+    pub enum Ast {
+        Integer(i32),
+        Boolean(bool),
+        Identifier(String, Primitive),
+        Primitive(Primitive),
+        Mul(Box<AstNode>, Box<AstNode>),
+        Add(Box<AstNode>, Box<AstNode>),
+        BAnd(Box<AstNode>, Box<AstNode>),
+        BOr(Box<AstNode>, Box<AstNode>),
+        Gr(Box<AstNode>, Box<AstNode>),
+        GrEq(Box<AstNode>, Box<AstNode>),
+        Ls(Box<AstNode>, Box<AstNode>),
+        LsEq(Box<AstNode>, Box<AstNode>),
+        Eq(Box<AstNode>, Box<AstNode>),
+        NEq(Box<AstNode>, Box<AstNode>),
+        Bind(String, Primitive, Box<AstNode>),
+        Return(Option<Box<AstNode>>),
+        FunctionDef(String, Vec<(String, Primitive)>, Primitive, Vec<AstNode>),
+        FunctionCall(String, Vec<AstNode>),
+        CoroutineDef(String, Vec<(String, Primitive)>, Primitive, Vec<AstNode>),
+        CoroutineInit(String, Vec<AstNode>),
+        Yield(Box<AstNode>),
+        YieldReturn(Option<Box<AstNode>>),
+        If(Box<AstNode>, Box<AstNode>, Box<AstNode>),
+        Module(Vec<AstNode>, Vec<AstNode>),
+        Printi(Box<AstNode>),
+        Printiln(Box<AstNode>),
+        Printbln(Box<AstNode>),
+    }
+
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    pub enum Primitive {
+        I32,
+        Bool,
+        Unit,
+        Unknown,
+    }
     /*
         Grammar
         PRIMITIVE := i32 | bool
@@ -73,7 +73,7 @@ impl Parser {
         TERM := FACTOR [* TERM]
         EXPRESSION :=  TERM [+ EXPRESSION]
         INIT_CO := init IDENTIFIER
-        BIND := ID_DEC := (EXPRESSION|INIT_CO)
+         BIND := ID_DEC := (EXPRESSION|INIT_CO)
         PRINTLN := println EXPRESSION ;
         RETURN := return [EXPRESSION] SEMICOLON
         YIELD_RETURN := yield return [EXPRESSION] SEMICOLON
@@ -91,7 +91,7 @@ impl Parser {
     pub fn parse(tokens: Vec<Token>) -> PResult {
         let mut iter = tokens.iter().peekable();
         //Node::function(&mut iter)
-        Parser::module(&mut iter)
+        module(&mut iter)
     }
 
     fn module(iter: &mut TokenIter) -> PResult {
@@ -100,9 +100,9 @@ impl Parser {
 
         let line = iter.peek().map_or(0, |t| t.l);
         while iter.peek().is_some() {
-            match Parser::function_def(iter)? {
+            match function_def(iter)? {
                 Some(f) => functions.push(f),
-                None => match Parser::coroutine_def(iter)? {
+                None => match coroutine_def(iter)? {
                     Some(co) => coroutines.push(co),
                     None => break,
                 },
@@ -130,12 +130,12 @@ impl Parser {
                     }) => {
                         iter.next();
 
-                        let params = Parser::fn_def_params(iter)?;
+                        let params = fn_def_params(iter)?;
 
                         let fn_type = match iter.peek() {
                             Some(Token { l, s: Lex::LArrow }) => {
                                 iter.next();
-                                Parser::primitive(iter).ok_or(&format!(
+                                primitive(iter).ok_or(&format!(
                                     "L{}: Expected primitive type after -> in function definition",
                                     l
                                 ))?
@@ -147,11 +147,11 @@ impl Parser {
                             Some(Token { l, s: Lex::LBrace }) => {
                                 iter.next();
                                 let mut stmts =
-                                    Parser::block(iter)
+                                    block(iter)
                                         .into_iter()
                                         .collect::<Result<Vec<AstNode>, String>>()?;
 
-                                match Parser::return_stmt(iter)? {
+                                match return_stmt(iter)? {
                                     Some(ret) => stmts.push(ret),
                                     None => {
                                         return Err(format!(
@@ -201,12 +201,12 @@ impl Parser {
                     }) => {
                         iter.next();
 
-                        let params = Parser::fn_def_params(iter)?;
+                        let params = fn_def_params(iter)?;
 
                         let co_type = match iter.peek() {
                             Some(Token { l, s: Lex::LArrow }) => {
                                 iter.next();
-                                Parser::primitive(iter).expect(&format!(
+                                primitive(iter).expect(&format!(
                                     "L{}: Expected primitive type after -> in function definition",
                                     l
                                 ))
@@ -217,11 +217,11 @@ impl Parser {
                         match iter.peek() {
                             Some(Token { l, s: Lex::LBrace }) => {
                                 iter.next();
-                                let mut stmts = Parser::co_block(iter)
+                                let mut stmts = co_block(iter)
                                     .into_iter()
                                     .collect::<Result<Vec<AstNode>, String>>()?;
 
-                                match Parser::return_stmt(iter)? {
+                                match return_stmt(iter)? {
                                     Some(ret) => stmts.push(ret),
                                     None => {
                                         return Err(format!(
@@ -279,7 +279,7 @@ impl Parser {
 
         let mut params = vec![];
 
-        while let Some(param) = Parser::identifier_declare(iter)? {
+        while let Some(param) = identifier_declare(iter)? {
             match param {
                 AstNode {
                     l: _,
@@ -323,7 +323,7 @@ impl Parser {
     fn block(iter: &mut TokenIter) -> Vec<Result<AstNode, String>> {
         let mut stmts = vec![];
         while iter.peek().is_some() {
-            match Parser::statement(iter) {
+            match statement(iter) {
                 Ok(Some(s)) => stmts.push(Ok(s)),
                 Ok(None) => break,
                 Err(msg) => stmts.push(Err(msg)),
@@ -335,9 +335,9 @@ impl Parser {
     fn co_block(iter: &mut TokenIter) -> Vec<Result<AstNode, String>> {
         let mut stmts = vec![];
         while iter.peek().is_some() {
-            match Parser::statement(iter) {
+            match statement(iter) {
                 Ok(Some(s)) => stmts.push(Ok(s)),
-                Ok(None) => match Parser::yield_return_stmt(iter) {
+                Ok(None) => match yield_return_stmt(iter) {
                     Ok(Some(s)) => stmts.push(Ok(s)),
                     Ok(None) => break,
                     Err(msg) => stmts.push(Err(msg)),
@@ -352,7 +352,7 @@ impl Parser {
         Ok(match iter.peek() {
             Some(Token { l, s: Lex::Return }) => {
                 iter.next();
-                let exp = Parser::expression(iter)?;
+                let exp = expression(iter)?;
                 match iter.peek() {
                     Some(Token {
                         l: _,
@@ -376,7 +376,7 @@ impl Parser {
                 s: Lex::YieldReturn,
             }) => {
                 iter.next();
-                let exp = Parser::expression(iter)?;
+                let exp = expression(iter)?;
                 match iter.peek() {
                     Some(Token {
                         l: _,
@@ -395,9 +395,9 @@ impl Parser {
 
     fn statement(iter: &mut TokenIter) -> PResult {
         let line = iter.peek().map_or(0, |t| t.l);
-        let stm = match Parser::bind(iter)? {
+        let stm = match bind(iter)? {
             Some(b) => Some(b),
-            None => match Parser::println_stmt(iter)? {
+            None => match println_stmt(iter)? {
                 Some(p) => Some(p),
                 _ => None,
             },
@@ -430,7 +430,7 @@ impl Parser {
                 s: Lex::Printiln,
             }) => {
                 iter.next();
-                let exp = Parser::expression(iter)?;
+                let exp = expression(iter)?;
                 match exp {
                     Some(exp) => Some(AstNode::new(*l, Ast::Printiln(Box::new(exp)))),
                     None => return Err(format!("L{}: Expected expression after println", l)),
@@ -441,7 +441,7 @@ impl Parser {
                 s: Lex::Printbln,
             }) => {
                 iter.next();
-                let exp = Parser::expression(iter)?;
+                let exp = expression(iter)?;
                 match exp {
                     Some(exp) => Some(AstNode::new(*l, Ast::Printbln(Box::new(exp)))),
                     None => return Err(format!("L{}: Expected expression after println", l)),
@@ -452,7 +452,7 @@ impl Parser {
     }
 
     fn bind(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::identifier_declare(iter)? {
+        Ok(match identifier_declare(iter)? {
             Some(AstNode {
                 l: _,
                 n: Ast::Identifier(id, id_type),
@@ -463,12 +463,12 @@ impl Parser {
                         iter.next();
                         match iter.peek() {
                             Some(Token { l, s: Lex::Init }) => {
-                                let co_init = Parser::co_init(iter)?
+                                let co_init = co_init(iter)?
                                     .ok_or(&format!("L{}: Invalid coroutine init", l))?;
                                 Some(AstNode::new(*l, Ast::Bind(id, id_type, Box::new(co_init))))
                             }
                             _ => {
-                                let exp = Parser::expression(iter)?.ok_or(&format!(
+                                let exp = expression(iter)?.ok_or(&format!(
                                     "L{}: Expected an expression or coroutine init after :=, found {:?}",
                                     l,
                                     iter.peek()
@@ -497,7 +497,7 @@ impl Parser {
                         s: Lex::Identifier(id),
                     }) => {
                         iter.next();
-                        let params = Parser::fn_call_params(iter)?
+                        let params = fn_call_params(iter)?
                             .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
                         Ok(Some(AstNode::new(
                             *l,
@@ -512,15 +512,15 @@ impl Parser {
     }
 
     fn expression(iter: &mut TokenIter) -> PResult {
-        Parser::logical_or(iter)
+        logical_or(iter)
     }
 
     fn logical_or(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::logical_and(iter)? {
+        Ok(match logical_and(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token { l, s: Lex::BOr }) => {
                     iter.next();
-                    let n2 = Parser::logical_or(iter)?
+                    let n2 = logical_or(iter)?
                         .ok_or(&format!("L{}: An expression after ||", l))?;
                     Some(AstNode::new(*l, Ast::BOr(Box::new(n), Box::new(n2))))
                 }
@@ -531,11 +531,11 @@ impl Parser {
     }
 
     fn logical_and(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::comparison(iter)? {
+        Ok(match comparison(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token { l, s: Lex::BAnd }) => {
                     iter.next();
-                    let n2 = Parser::logical_and(iter)?
+                    let n2 = logical_and(iter)?
                         .ok_or(&format!("L{}: An expression after ||", l))?;
                     Some(AstNode::new(*l, Ast::BAnd(Box::new(n), Box::new(n2))))
                 }
@@ -546,41 +546,41 @@ impl Parser {
     }
 
     fn comparison(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::sum(iter)? {
+        Ok(match sum(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token { l, s: Lex::Eq }) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter)?
+                    let n2 = comparison(iter)?
                         .ok_or(&format!("L{}: An expression after ==", l))?;
                     Some(AstNode::new(*l, Ast::Eq(Box::new(n), Box::new(n2))))
                 }
                 Some(Token { l, s: Lex::NEq }) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter)?
+                    let n2 = comparison(iter)?
                         .ok_or(&format!("L{}: An expression after !=", l))?;
                     Some(AstNode::new(*l, Ast::NEq(Box::new(n), Box::new(n2))))
                 }
                 Some(Token { l, s: Lex::Gr }) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter)?
+                    let n2 = comparison(iter)?
                         .ok_or(&format!("L{}: An expression after >", l))?;
                     Some(AstNode::new(*l, Ast::Gr(Box::new(n), Box::new(n2))))
                 }
                 Some(Token { l, s: Lex::GrEq }) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter)?
+                    let n2 = comparison(iter)?
                         .ok_or(&format!("L{}: An expression after >=", l))?;
                     Some(AstNode::new(*l, Ast::GrEq(Box::new(n), Box::new(n2))))
                 }
                 Some(Token { l, s: Lex::Ls }) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter)?
+                    let n2 = comparison(iter)?
                         .ok_or(&format!("L{}: An expression after <", l))?;
                     Some(AstNode::new(*l, Ast::Ls(Box::new(n), Box::new(n2))))
                 }
                 Some(Token { l, s: Lex::LsEq }) => {
                     iter.next();
-                    let n2 = Parser::comparison(iter)?
+                    let n2 = comparison(iter)?
                         .ok_or(&format!("L{}: An expression after <=", l))?;
                     Some(AstNode::new(*l, Ast::LsEq(Box::new(n), Box::new(n2))))
                 }
@@ -591,11 +591,11 @@ impl Parser {
     }
 
     fn sum(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::term(iter)? {
+        Ok(match term(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token { l, s: Lex::Add }) => {
                     iter.next();
-                    let n2 = Parser::sum(iter)?.ok_or(&format!("L{}: An expression after +", l))?;
+                    let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after +", l))?;
                     Some(AstNode::new(*l, Ast::Add(Box::new(n), Box::new(n2))))
                 }
                 _ => Some(n),
@@ -605,11 +605,11 @@ impl Parser {
     }
 
     fn term(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::factor(iter)? {
+        Ok(match factor(iter)? {
             Some(n) => match iter.peek() {
                 Some(Token { l, s: Lex::Mul }) => {
                     iter.next();
-                    let n2 = Parser::term(iter)?.ok_or(&format!("L{}: a valid term after *", l))?;
+                    let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after *", l))?;
                     Some(AstNode::new(*l, Ast::Mul(Box::new(n), Box::new(n2))))
                 }
                 _ => Some(n),
@@ -620,10 +620,10 @@ impl Parser {
 
     fn factor(iter: &mut TokenIter) -> PResult {
         Ok(match iter.peek() {
-            Some(Token { l: _, s: Lex::If }) => Parser::if_expression(iter)?,
+            Some(Token { l: _, s: Lex::If }) => if_expression(iter)?,
             Some(Token { l, s: Lex::LParen }) => {
                 iter.next();
-                let exp = Parser::expression(iter)?;
+                let exp = expression(iter)?;
                 match iter.peek() {
                     Some(Token {
                         l: _,
@@ -633,11 +633,11 @@ impl Parser {
                 };
                 exp
             }
-            _ => match Parser::constant(iter)? {
+            _ => match constant(iter)? {
                 Some(n) => Some(n),
-                None => match Parser::function_call_or_variable(iter)? {
+                None => match function_call_or_variable(iter)? {
                     Some(n) => Some(n),
-                    None => match Parser::co_yield(iter)? {
+                    None => match co_yield(iter)? {
                         Some(n) => Some(n),
                         None => None,
                     },
@@ -652,14 +652,14 @@ impl Parser {
                 iter.next();
                 // expression
                 let cond =
-                    Parser::expression(iter)?.ok_or("Expected conditional expressoin after if")?;
+                    expression(iter)?.ok_or("Expected conditional expressoin after if")?;
                 // lbrace
                 iter.next()
                     .map(|t| t.s == Lex::LBrace)
                     .ok_or("Expected {")?;
                 // expression
                 let true_arm =
-                    Parser::expression(iter)?.ok_or("Expression in true arm of if expression")?;
+                    expression(iter)?.ok_or("Expression in true arm of if expression")?;
                 // rbrace
                 iter.next()
                     .map(|t| t.s == Lex::RBrace)
@@ -671,14 +671,14 @@ impl Parser {
 
                 // check for `else if`
                 let false_arm = match iter.peek() {
-                    Some(Token { l, s: Lex::If }) => Parser::if_expression(iter)?
+                    Some(Token { l, s: Lex::If }) => if_expression(iter)?
                         .ok_or(format!("L{}: Expected if expression after else if", l))?,
                     _ => {
                         iter.next()
                             .map(|t| t.s == Lex::LBrace)
                             .expect(&format!("L{}: Expected {{", l));
                         // expression
-                        let false_arm = Parser::expression(iter)?
+                        let false_arm = expression(iter)?
                             .ok_or(&format!("L{}: Expression in false arm of if expression", l))?;
                         // rbrace
                         iter.next()
@@ -697,11 +697,11 @@ impl Parser {
     }
 
     fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::identifier(iter)? {
+        Ok(match identifier(iter)? {
             Some(AstNode {
                 l,
                 n: Ast::Identifier(id, _id_type),
-            }) => match Parser::fn_call_params(iter)? {
+            }) => match fn_call_params(iter)? {
                 Some(params) => {
                     // this is a function call
                     Some(AstNode::new(l, Ast::FunctionCall(id, params)))
@@ -721,7 +721,7 @@ impl Parser {
                 iter.next();
 
                 let mut params = vec![];
-                while let Some(param) = Parser::expression(iter)? {
+                while let Some(param) = expression(iter)? {
                     match param {
                         exp => {
                             params.push(exp);
@@ -764,7 +764,7 @@ impl Parser {
         Ok(match iter.peek() {
             Some(Token { l, s: Lex::Yield }) => {
                 iter.next();
-                match Parser::identifier(iter)? {
+                match identifier(iter)? {
                     Some(id) => Some(AstNode::new(*l, Ast::Yield(Box::new(id)))),
                     _ => panic!("L{}: expected an identifier after yield", l),
                 }
@@ -799,7 +799,7 @@ impl Parser {
                 match iter.peek() {
                     Some(Token { l, s: Lex::Colon }) => {
                         iter.next();
-                        match Parser::primitive(iter) {
+                        match primitive(iter) {
                             Some(p) => Some(AstNode::new(*l, Ast::Identifier(id.clone(), p))),
                             None => {
                                 return Err(format!(
@@ -843,8 +843,8 @@ impl Parser {
     }
 
     fn constant(iter: &mut TokenIter) -> PResult {
-        Ok(match Parser::number(iter)? {
-            None => match Parser::boolean(iter)? {
+        Ok(match number(iter)? {
+            None => match boolean(iter)? {
                 None => None,
                 Some(t) => Some(t),
             },
