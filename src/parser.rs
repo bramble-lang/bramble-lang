@@ -72,7 +72,7 @@ pub enum Primitive {
     TERM := FACTOR [* TERM]
     EXPRESSION :=  TERM [+ EXPRESSION]
     INIT_CO := init IDENTIFIER
-     BIND := ID_DEC := (EXPRESSION|INIT_CO)
+    BIND := ID_DEC := (EXPRESSION|INIT_CO)
     PRINTLN := println EXPRESSION ;
     RETURN := return [EXPRESSION] SEMICOLON
     YIELD_RETURN := yield return [EXPRESSION] SEMICOLON
