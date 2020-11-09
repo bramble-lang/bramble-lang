@@ -142,7 +142,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                 let params = fn_def_params(iter)?;
 
                 let fn_type = match consume_if(iter, Lex::LArrow) {
-                    Some(Token { l, s: Lex::LArrow }) => primitive(iter).ok_or(&format!(
+                    Some(l) => primitive(iter).ok_or(&format!(
                         "L{}: Expected primitive type after -> in function definition",
                         l
                     ))?,
@@ -412,7 +412,7 @@ fn bind(iter: &mut TokenIter) -> PResult {
 
 fn co_init(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Init) {
-        Some(Token { l, s: Lex::Init }) => {
+        Some(l) => {
             match consume_if_id(iter) {
                 Some((l, id)) => {
                     let params = fn_call_params(iter)?
@@ -485,7 +485,7 @@ fn comparison(iter: &mut TokenIter) -> PResult {
 fn sum(iter: &mut TokenIter) -> PResult {
     Ok(match term(iter)? {
         Some(n) => match consume_if(iter, Lex::Add) {
-            Some(Token { l, s: _ }) => {
+            Some(l) => {
                 let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after +", l))?;
                 //Some(AstNode::new(l, Ast::Add(Box::new(n), Box::new(n2))))
                 Some(AstNode::binary_op(l, &Lex::Add, Box::new(n), Box::new(n2))?)
@@ -499,7 +499,7 @@ fn sum(iter: &mut TokenIter) -> PResult {
 fn term(iter: &mut TokenIter) -> PResult {
     Ok(match factor(iter)? {
         Some(n) => match consume_if(iter, Lex::Mul) {
-            Some(Token { l, s: _ }) => {
+            Some(l) => {
                 let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after *", l))?;
                 Some(AstNode::binary_op(l, &Lex::Mul, Box::new(n), Box::new(n2))?)
             }
@@ -536,7 +536,7 @@ fn factor(iter: &mut TokenIter) -> PResult {
 
 fn if_expression(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if(iter, Lex::If) {
-        Some(Token { l, s: _ }) => {
+        Some(l) => {
             let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
             consume_must_be(iter, Lex::LBrace)?;
 
@@ -569,7 +569,7 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> {
     match consume_if(iter, Lex::LParen) {
-        Some(Token { l, s: _ }) => {
+        Some(l) => {
             let mut params = vec![];
             while let Some(param) = expression(iter)? {
                 match param {
@@ -603,11 +603,10 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> 
 }
 
 fn co_yield(iter: &mut TokenIter) -> PResult {
-    Ok(match iter.peek() {
-        Some(Token { l, s: Lex::Yield }) => {
-            iter.next();
+    Ok(match consume_if(iter, Lex::Yield) {
+        Some(l) => {
             match identifier(iter)? {
-                Some(id) => Some(AstNode::new(*l, Ast::Yield(Box::new(id)))),
+                Some(id) => Some(AstNode::new(l, Ast::Yield(Box::new(id)))),
                 _ => panic!("L{}: expected an identifier after yield", l),
             }
         }
@@ -648,7 +647,7 @@ fn identifier_declare(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => {
             match consume_if(iter, Lex::Colon) {
-                Some(Token { l, s: Lex::Colon }) => {
+                Some(l) => {
                     match primitive(iter) {
                         Some(p) => Some(AstNode::new(l, Ast::Identifier(id.clone(), p))),
                         None => {
@@ -721,12 +720,12 @@ fn boolean(iter: &mut TokenIter) -> PResult {
     }
 }
 
-fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<Token> {
+fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<u32> {
     match iter.peek() {
         Some(tok) if tok.s == test => {
-            let tok = tok.clone();
+            let line = tok.l;
             iter.next();
-            Some(tok.clone())
+            Some(line)
         }
         _ => None,
     }

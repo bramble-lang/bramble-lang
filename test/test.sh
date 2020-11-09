@@ -25,18 +25,20 @@ function run_test() {
 }
 
 cargo build
-
-run_test "simple"
-run_test "simple_coroutine"
-run_test "boolean"
-run_test "comparison"
-run_test "boolean_complex"
-run_test "boolean_coroutine"
-run_test "coroutine_two"
-run_test "if_exp/if"
-run_test "if_exp/if_as_conditional"
-run_test "binding/recursive"
-run_test "binding/undeclared"
-run_test "binding/before_declaration"
-run_test "binding/redeclare"
-run_test "fn/recurse"
+if [ $? -eq 0 ]
+then
+    run_test "simple"
+    run_test "simple_coroutine"
+    run_test "boolean"
+    run_test "comparison"
+    run_test "boolean_complex"
+    run_test "boolean_coroutine"
+    run_test "coroutine_two"
+    run_test "if_exp/if"
+    run_test "if_exp/if_as_conditional"
+    run_test "binding/recursive"
+    run_test "binding/undeclared"
+    run_test "binding/before_declaration"
+    run_test "binding/redeclare"
+    run_test "fn/recurse"
+fi
