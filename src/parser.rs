@@ -142,40 +142,28 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                         _ => Primitive::Unit,
                     };
 
-                    match iter.peek() {
-                        Some(Token { l, s: Lex::LBrace }) => {
-                            iter.next();
-                            let mut stmts = block(iter)
-                                .into_iter()
-                                .collect::<Result<Vec<AstNode>, String>>()?;
+                    consume_must_be(iter, Lex::LBrace)?;
+                    let mut stmts = block(iter)
+                        .into_iter()
+                        .collect::<Result<Vec<AstNode>, String>>()?;
 
-                            match return_stmt(iter)? {
-                                Some(ret) => stmts.push(ret),
-                                None => {
-                                    return Err(format!(
-                                        "L{}: Function must end with a return statement, got {:?}",
-                                        l,
-                                        iter.peek(),
-                                    ))
-                                }
-                            }
-
-                            match iter.peek() {
-                                Some(Token {
-                                    l: _,
-                                    s: Lex::RBrace,
-                                }) => {
-                                    iter.next();
-                                }
-                                _ => panic!("Expected } at end of function definition"),
-                            }
-                            Some(AstNode::new(
-                                *l,
-                                Ast::FunctionDef(id.clone(), params, fn_type, stmts),
+                    match return_stmt(iter)? {
+                        Some(ret) => stmts.push(ret),
+                        None => {
+                            return Err(format!(
+                                "L{}: Function must end with a return statement, got {:?}",
+                                l,
+                                iter.peek(),
                             ))
                         }
-                        _ => panic!("L{}: Expected {{ after function declaration", l),
                     }
+
+                    consume_must_be(iter, Lex::RBrace)?;
+
+                    Some(AstNode::new(
+                        *l,
+                        Ast::FunctionDef(id.clone(), params, fn_type, stmts),
+                    ))
                 }
                 _ => panic!("Expected function name after fn"),
             }
@@ -212,45 +200,28 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                         _ => Primitive::Unit,
                     };
 
-                    match iter.peek() {
-                        Some(Token { l, s: Lex::LBrace }) => {
-                            iter.next();
-                            let mut stmts =
-                                co_block(iter)
-                                    .into_iter()
-                                    .collect::<Result<Vec<AstNode>, String>>()?;
+                    consume_must_be(iter, Lex::LBrace)?;
+                    let mut stmts =
+                        co_block(iter)
+                            .into_iter()
+                            .collect::<Result<Vec<AstNode>, String>>()?;
 
-                            match return_stmt(iter)? {
-                                Some(ret) => stmts.push(ret),
-                                None => {
-                                    return Err(format!(
-                                        "L{}: Coroutine must end with a return statement",
-                                        l
-                                    ))
-                                }
-                            }
-
-                            match iter.peek() {
-                                Some(Token {
-                                    l: _,
-                                    s: Lex::RBrace,
-                                }) => {
-                                    iter.next();
-                                }
-                                _ => {
-                                    return Err(format!(
-                                        "L{}: Expected }} at end of function definition",
-                                        l
-                                    ))
-                                }
-                            }
-                            Some(AstNode::new(
-                                *l,
-                                Ast::CoroutineDef(id.clone(), params, co_type, stmts),
+                    match return_stmt(iter)? {
+                        Some(ret) => stmts.push(ret),
+                        None => {
+                            return Err(format!(
+                                "L{}: Coroutine must end with a return statement",
+                                l
                             ))
                         }
-                        _ => return Err(format!("L{}: Expected {{ after function declaration", l)),
                     }
+
+                    consume_must_be(iter, Lex::RBrace)?;
+
+                    Some(AstNode::new(
+                        *l,
+                        Ast::CoroutineDef(id.clone(), params, co_type, stmts),
+                    ))
                 }
                 _ => return Err(format!("Expected function name after fn")),
             }
@@ -574,16 +545,10 @@ fn term(iter: &mut TokenIter) -> PResult {
 fn factor(iter: &mut TokenIter) -> PResult {
     Ok(match iter.peek() {
         Some(Token { l: _, s: Lex::If }) => if_expression(iter)?,
-        Some(Token { l, s: Lex::LParen }) => {
+        Some(Token { l: _, s: Lex::LParen }) => {
             iter.next();
             let exp = expression(iter)?;
-            match iter.peek() {
-                Some(Token {
-                    l: _,
-                    s: Lex::RParen,
-                }) => iter.next(),
-                x => return Err(format!("L{}: exected ) but found {:?}", l, x)),
-            };
+            consume_must_be(iter, Lex::RParen)?;
             exp
         }
         _ => match constant(iter)? {
@@ -599,39 +564,13 @@ fn factor(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn consume_if<'a>(iter: &'a mut TokenIter, test: Lex) -> Option<&'a Token> {
-    match iter.peek() {
-        Some(tok) if tok.s == test => {
-            let tok = iter.next();
-            tok
-        },
-        _ => None,
-    }
-}
-
-fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, String> {
-    match iter.peek() {
-        Some(tok) if tok.s == test => {
-            let tok = iter.next().expect("CRITICAL: failed to go to next token after successful match");
-            Ok(tok)
-        },
-        Some(Token{l, s}) => {
-            Err(format!("L{}: Expected {:?}, but found {:?}", l, test, s))
-        },
-        None => {
-            Err(format!("Expected {:?}, but found EOF", test))
-        }
-    }
-}
-
 fn if_expression(iter: &mut TokenIter) -> PResult {
     Ok(match iter.peek() {
         Some(Token { l, s: Lex::If }) => {
             iter.next();
-            // expression
-            let cond = expression(iter)?.ok_or("Expected conditional expressoin after if")?;
+            let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
             consume_must_be(iter, Lex::LBrace)?;
-            // expression
+            
             let true_arm = expression(iter)?.ok_or("Expression in true arm of if expression")?;
             consume_must_be(iter, Lex::RBrace)?;
             consume_must_be(iter, Lex::Else)?;
@@ -837,5 +776,30 @@ fn boolean(iter: &mut TokenIter) -> PResult {
             Ok(Some(AstNode::new(*l, Ast::Boolean(*b))))
         }
         _ => Ok(None),
+    }
+}
+
+fn consume_if<'a>(iter: &'a mut TokenIter, test: Lex) -> Option<&'a Token> {
+    match iter.peek() {
+        Some(tok) if tok.s == test => {
+            let tok = iter.next();
+            tok
+        },
+        _ => None,
+    }
+}
+
+fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, String> {
+    match iter.peek() {
+        Some(tok) if tok.s == test => {
+            let tok = iter.next().expect("CRITICAL: failed to go to next token after successful match");
+            Ok(tok)
+        },
+        Some(Token{l, s}) => {
+            Err(format!("L{}: Expected {:?}, but found {:?}", l, test, s))
+        },
+        None => {
+            Err(format!("Expected {:?}, but found EOF", test))
+        }
     }
 }
