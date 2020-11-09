@@ -4,7 +4,8 @@ function run_test() {
     test=$1
     rm -f ./target/*
 
-    cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    ../target/debug/braid-lang -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [ $? -eq 0 ]
     then
         nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > ./target/assembler.log
@@ -22,6 +23,8 @@ function run_test() {
         echo ${result}
     fi
 }
+
+cargo build
 
 run_test "simple"
 run_test "simple_coroutine"
