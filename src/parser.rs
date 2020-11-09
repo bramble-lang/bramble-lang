@@ -110,7 +110,6 @@ pub enum Primitive {
 */
 pub fn parse(tokens: Vec<Token>) -> PResult {
     let mut iter = tokens.iter().peekable();
-    //Node::function(&mut iter)
     module(&mut iter)
 }
 
@@ -138,13 +137,8 @@ fn module(iter: &mut TokenIter) -> PResult {
 
 fn function_def(iter: &mut TokenIter) -> PResult {
     let syntax = match consume_if(iter, Lex::FunctionDef) {
-        Some(_) => match iter.peek() {
-            Some(Token {
-                l,
-                s: Lex::Identifier(id),
-            }) => {
-                iter.next();
-
+        Some(_) => match consume_if_id(iter) {
+            Some((l, id)) => {
                 let params = fn_def_params(iter)?;
 
                 let fn_type = match consume_if(iter, Lex::LArrow) {
@@ -174,7 +168,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                 consume_must_be(iter, Lex::RBrace)?;
 
                 Some(AstNode::new(
-                    *l,
+                    l,
                     Ast::FunctionDef(id.clone(), params, fn_type, stmts),
                 ))
             }
@@ -192,13 +186,8 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
             s: Lex::CoroutineDef,
         }) => {
             iter.next();
-            match iter.peek() {
-                Some(Token {
-                    l,
-                    s: Lex::Identifier(id),
-                }) => {
-                    iter.next();
-
+            match consume_if_id(iter) {
+                Some((l, id)) => {
                     let params = fn_def_params(iter)?;
 
                     let co_type = match iter.peek() {
@@ -230,7 +219,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                     consume_must_be(iter, Lex::RBrace)?;
 
                     Some(AstNode::new(
-                        *l,
+                        l,
                         Ast::CoroutineDef(id.clone(), params, co_type, stmts),
                     ))
                 }
@@ -422,23 +411,18 @@ fn bind(iter: &mut TokenIter) -> PResult {
 }
 
 fn co_init(iter: &mut TokenIter) -> PResult {
-    match iter.peek() {
+    match consume_if(iter, Lex::Init) {
         Some(Token { l, s: Lex::Init }) => {
-            iter.next();
-            match iter.peek() {
-                Some(Token {
-                    l,
-                    s: Lex::Identifier(id),
-                }) => {
-                    iter.next();
+            match consume_if_id(iter) {
+                Some((l, id)) => {
                     let params = fn_call_params(iter)?
                         .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
                     Ok(Some(AstNode::new(
-                        *l,
+                        l,
                         Ast::CoroutineInit(id.clone(), params),
                     )))
                 }
-                _ => Err(format!("L{}: expected identifier after init", l)),
+                None => Err(format!("L{}: expected identifier after init", l)),
             }
         }
         _ => Ok(None),
@@ -665,17 +649,12 @@ fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
 }
 
 fn identifier_declare(iter: &mut TokenIter) -> PResult {
-    Ok(match iter.peek() {
-        Some(Token {
-            l,
-            s: Lex::Identifier(id),
-        }) => {
-            iter.next();
-            match iter.peek() {
+    Ok(match consume_if_id(iter) {
+        Some((l, id)) => {
+            match consume_if(iter, Lex::Colon) {
                 Some(Token { l, s: Lex::Colon }) => {
-                    iter.next();
                     match primitive(iter) {
-                        Some(p) => Some(AstNode::new(*l, Ast::Identifier(id.clone(), p))),
+                        Some(p) => Some(AstNode::new(l, Ast::Identifier(id.clone(), p))),
                         None => {
                             return Err(format!(
                                 "L{}: Invalid primitive type: {:?}",
@@ -699,19 +678,12 @@ fn identifier_declare(iter: &mut TokenIter) -> PResult {
 }
 
 fn identifier(iter: &mut TokenIter) -> PResult {
-    Ok(match iter.peek() {
-        Some(token) => match token {
-            Token {
+    Ok(match consume_if_id(iter) {
+        Some((l, id)) => {
+            Some(AstNode::new(
                 l,
-                s: Lex::Identifier(id),
-            } => {
-                iter.next();
-                Some(AstNode::new(
-                    *l,
-                    Ast::Identifier(id.clone(), Primitive::Unknown),
-                ))
-            }
-            _ => None,
+                Ast::Identifier(id.clone(), Primitive::Unknown),
+            ))
         },
         None => None,
     })
@@ -759,6 +731,16 @@ fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<Token> {
             let tok = tok.clone();
             iter.next();
             Some(tok.clone())
+        }
+        _ => None,
+    }
+}
+
+fn consume_if_id(iter: &mut TokenIter) -> Option<(u32, String)> {
+    match iter.peek() {
+        Some(Token{l, s: Lex::Identifier(id)}) => {
+            iter.next();
+            Some((*l, id.clone()))
         }
         _ => None,
     }
