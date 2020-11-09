@@ -309,14 +309,13 @@ fn co_block(iter: &mut TokenIter) -> Vec<Result<AstNode, String>> {
 }
 
 fn return_stmt(iter: &mut TokenIter) -> PResult {
-    Ok(match iter.peek() {
-        Some(Token { l, s: Lex::Return }) => {
-            iter.next();
+    Ok(match consume_if(iter, Lex::Return) {
+        Some(l) => {
             let exp = expression(iter)?;
             consume_must_be(iter, Lex::Semicolon)?;
             match exp {
-                Some(exp) => Some(AstNode::new(*l, Ast::Return(Some(Box::new(exp))))),
-                None => Some(AstNode::new(*l, Ast::Return(None))),
+                Some(exp) => Some(AstNode::new(l, Ast::Return(Some(Box::new(exp))))),
+                None => Some(AstNode::new(l, Ast::Return(None))),
             }
         }
         _ => None,
@@ -324,17 +323,13 @@ fn return_stmt(iter: &mut TokenIter) -> PResult {
 }
 
 fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
-    Ok(match iter.peek() {
-        Some(Token {
-            l,
-            s: Lex::YieldReturn,
-        }) => {
-            iter.next();
+    Ok(match consume_if(iter, Lex::YieldReturn) {
+        Some(l) => {
             let exp = expression(iter)?;
             consume_must_be(iter, Lex::Semicolon)?;
             match exp {
-                Some(exp) => Some(AstNode::new(*l, Ast::YieldReturn(Some(Box::new(exp))))),
-                None => Some(AstNode::new(*l, Ast::YieldReturn(None))),
+                Some(exp) => Some(AstNode::new(l, Ast::YieldReturn(Some(Box::new(exp))))),
+                None => Some(AstNode::new(l, Ast::YieldReturn(None))),
             }
         }
         _ => None,
@@ -387,9 +382,7 @@ fn bind(iter: &mut TokenIter) -> PResult {
             match consume_if(iter, Lex::Assign) {
                 Some(l) => {
                     match co_init(iter)? {
-                        Some(co_init) => {
-                            Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(co_init)))))
-                        }
+                        Some(co_init) => Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(co_init))))),
                         None => {
                             let exp = expression(iter)?.ok_or(&format!(
                                     "L{}: Expected an expression or coroutine init after :=, found {:?}",
@@ -433,12 +426,11 @@ fn expression(iter: &mut TokenIter) -> PResult {
 
 fn logical_or(iter: &mut TokenIter) -> PResult {
     Ok(match logical_and(iter)? {
-        Some(n) => match iter.peek() {
-            Some(Token { l, s: Lex::BOr }) => {
-                iter.next();
+        Some(n) => match consume_if(iter, Lex::BOr) {
+            Some(l) => {
                 let n2 = logical_or(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
                 Some(AstNode::binary_op(
-                    *l,
+                    l,
                     &Lex::BOr,
                     Box::new(n),
                     Box::new(n2),
@@ -452,12 +444,11 @@ fn logical_or(iter: &mut TokenIter) -> PResult {
 
 fn logical_and(iter: &mut TokenIter) -> PResult {
     Ok(match comparison(iter)? {
-        Some(n) => match iter.peek() {
-            Some(Token { l, s: Lex::BAnd }) => {
-                iter.next();
-                let n2 = logical_and(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
+        Some(n) => match consume_if(iter, Lex::BAnd) {
+            Some(l) => {
+                let n2 = logical_and(iter)?.ok_or(&format!("L{}: An expression after &&", l))?;
                 Some(AstNode::binary_op(
-                    *l,
+                    l,
                     &Lex::BAnd,
                     Box::new(n),
                     Box::new(n2),
