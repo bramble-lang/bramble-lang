@@ -261,15 +261,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
 }
 
 fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, String> {
-    match iter.peek() {
-        Some(Token {
-            l: _,
-            s: Lex::LParen,
-        }) => {
-            iter.next();
-        }
-        _ => panic!("expected an ( after function name in function definition"),
-    }
+    consume_must_be(iter, Lex::LParen)?;
 
     let mut params = vec![];
 
@@ -347,13 +339,7 @@ fn return_stmt(iter: &mut TokenIter) -> PResult {
         Some(Token { l, s: Lex::Return }) => {
             iter.next();
             let exp = expression(iter)?;
-            match iter.peek() {
-                Some(Token {
-                    l: _,
-                    s: Lex::Semicolon,
-                }) => iter.next(),
-                _ => return Err(format!("L{}: Expected ; after return statement", l)),
-            };
+            consume_must_be(iter, Lex::Semicolon)?;
             match exp {
                 Some(exp) => Some(AstNode::new(*l, Ast::Return(Some(Box::new(exp))))),
                 None => Some(AstNode::new(*l, Ast::Return(None))),
@@ -371,7 +357,7 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
         }) => {
             iter.next();
             let exp = expression(iter)?;
-            consume_must(iter, Lex::Semicolon)?;
+            consume_must_be(iter, Lex::Semicolon)?;
             match exp {
                 Some(exp) => Some(AstNode::new(*l, Ast::YieldReturn(Some(Box::new(exp))))),
                 None => Some(AstNode::new(*l, Ast::YieldReturn(None))),
@@ -391,7 +377,7 @@ fn statement(iter: &mut TokenIter) -> PResult {
     };
 
     if stm.is_some() {
-        consume_must(iter, Lex::Semicolon)?;
+        consume_must_be(iter, Lex::Semicolon)?;
     }
 
     Ok(stm)
@@ -623,7 +609,7 @@ fn consume_if<'a>(iter: &'a mut TokenIter, test: Lex) -> Option<&'a Token> {
     }
 }
 
-fn consume_must<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, String> {
+fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, String> {
     match iter.peek() {
         Some(tok) if tok.s == test => {
             let tok = iter.next().expect("CRITICAL: failed to go to next token after successful match");
@@ -644,22 +630,22 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
             iter.next();
             // expression
             let cond = expression(iter)?.ok_or("Expected conditional expressoin after if")?;
-            consume_must(iter, Lex::LBrace)?;
+            consume_must_be(iter, Lex::LBrace)?;
             // expression
             let true_arm = expression(iter)?.ok_or("Expression in true arm of if expression")?;
-            consume_must(iter, Lex::RBrace)?;
-            consume_must(iter, Lex::Else)?;
+            consume_must_be(iter, Lex::RBrace)?;
+            consume_must_be(iter, Lex::Else)?;
 
             // check for `else if`
             let false_arm = match iter.peek() {
                 Some(Token { l, s: Lex::If }) => if_expression(iter)?
                     .ok_or(format!("L{}: Expected if expression after else if", l))?,
                 _ => {
-                    consume_must(iter, Lex::LBrace)?;
+                    consume_must_be(iter, Lex::LBrace)?;
                     // expression
                     let false_arm = expression(iter)?
                         .ok_or(&format!("L{}: Expression in false arm of if expression", l))?;
-                    consume_must(iter, Lex::RBrace)?;
+                    consume_must_be(iter, Lex::RBrace)?;
                     false_arm
                 }
             };
