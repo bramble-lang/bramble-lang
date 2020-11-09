@@ -371,13 +371,7 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
         }) => {
             iter.next();
             let exp = expression(iter)?;
-            match iter.peek() {
-                Some(Token {
-                    l: _,
-                    s: Lex::Semicolon,
-                }) => iter.next(),
-                _ => return Err(format!("L{}: Expected ; after yield return statement", l)),
-            };
+            consume_must(iter, Lex::Semicolon)?;
             match exp {
                 Some(exp) => Some(AstNode::new(*l, Ast::YieldReturn(Some(Box::new(exp))))),
                 None => Some(AstNode::new(*l, Ast::YieldReturn(None))),
@@ -388,7 +382,6 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
 }
 
 fn statement(iter: &mut TokenIter) -> PResult {
-    let line = iter.peek().map_or(0, |t| t.l);
     let stm = match bind(iter)? {
         Some(b) => Some(b),
         None => match println_stmt(iter)? {
@@ -398,19 +391,7 @@ fn statement(iter: &mut TokenIter) -> PResult {
     };
 
     if stm.is_some() {
-        match iter.peek() {
-            Some(Token {
-                l: _,
-                s: Lex::Semicolon,
-            }) => {
-                iter.next();
-            }
-            _ => panic!(format!(
-                "L{}: Exected ; after statement, found {:?}",
-                line,
-                iter.peek()
-            )),
-        }
+        consume_must(iter, Lex::Semicolon)?;
     }
 
     Ok(stm)
