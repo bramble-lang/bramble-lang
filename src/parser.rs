@@ -19,6 +19,27 @@ impl AstNode {
     pub fn new(l: u32, n: Ast) -> AstNode {
         AstNode { l, n }
     }
+
+    pub fn binary_op(
+        line: u32,
+        op: &Lex,
+        left: Box<AstNode>,
+        right: Box<AstNode>,
+    ) -> Result<AstNode, String> {
+        match op {
+            Lex::Eq => Ok(AstNode::new(line, Ast::Eq(left, right))),
+            Lex::NEq => Ok(AstNode::new(line, Ast::NEq(left, right))),
+            Lex::Ls => Ok(AstNode::new(line, Ast::Ls(left, right))),
+            Lex::LsEq => Ok(AstNode::new(line, Ast::LsEq(left, right))),
+            Lex::Gr => Ok(AstNode::new(line, Ast::Gr(left, right))),
+            Lex::GrEq => Ok(AstNode::new(line, Ast::GrEq(left, right))),
+            Lex::BAnd => Ok(AstNode::new(line, Ast::BAnd(left, right))),
+            Lex::BOr => Ok(AstNode::new(line, Ast::BOr(left, right))),
+            Lex::Add => Ok(AstNode::new(line, Ast::Add(left, right))),
+            Lex::Mul => Ok(AstNode::new(line, Ast::Mul(left, right))),
+            _ => Err(format!("L{}: {} is not a binary operator", line, op)),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -117,52 +138,48 @@ fn module(iter: &mut TokenIter) -> PResult {
 
 fn function_def(iter: &mut TokenIter) -> PResult {
     let syntax = match consume_if(iter, Lex::FunctionDef) {
-        Some(_) => {
-            match iter.peek() {
-                Some(Token {
-                    l,
-                    s: Lex::Identifier(id),
-                }) => {
-                    iter.next();
+        Some(_) => match iter.peek() {
+            Some(Token {
+                l,
+                s: Lex::Identifier(id),
+            }) => {
+                iter.next();
 
-                    let params = fn_def_params(iter)?;
+                let params = fn_def_params(iter)?;
 
-                    let fn_type = match consume_if(iter, Lex::LArrow) {
-                        Some(Token { l, s: Lex::LArrow }) => {
-                            primitive(iter).ok_or(&format!(
-                                "L{}: Expected primitive type after -> in function definition",
-                                l
-                            ))?
-                        }
-                        _ => Primitive::Unit,
-                    };
+                let fn_type = match consume_if(iter, Lex::LArrow) {
+                    Some(Token { l, s: Lex::LArrow }) => primitive(iter).ok_or(&format!(
+                        "L{}: Expected primitive type after -> in function definition",
+                        l
+                    ))?,
+                    _ => Primitive::Unit,
+                };
 
-                    consume_must_be(iter, Lex::LBrace)?;
-                    let mut stmts = block(iter)
-                        .into_iter()
-                        .collect::<Result<Vec<AstNode>, String>>()?;
+                consume_must_be(iter, Lex::LBrace)?;
+                let mut stmts = block(iter)
+                    .into_iter()
+                    .collect::<Result<Vec<AstNode>, String>>()?;
 
-                    match return_stmt(iter)? {
-                        Some(ret) => stmts.push(ret),
-                        None => {
-                            return Err(format!(
-                                "L{}: Function must end with a return statement, got {:?}",
-                                l,
-                                iter.peek(),
-                            ))
-                        }
+                match return_stmt(iter)? {
+                    Some(ret) => stmts.push(ret),
+                    None => {
+                        return Err(format!(
+                            "L{}: Function must end with a return statement, got {:?}",
+                            l,
+                            iter.peek(),
+                        ))
                     }
-
-                    consume_must_be(iter, Lex::RBrace)?;
-
-                    Some(AstNode::new(
-                        *l,
-                        Ast::FunctionDef(id.clone(), params, fn_type, stmts),
-                    ))
                 }
-                _ => panic!("Expected function name after fn"),
+
+                consume_must_be(iter, Lex::RBrace)?;
+
+                Some(AstNode::new(
+                    *l,
+                    Ast::FunctionDef(id.clone(), params, fn_type, stmts),
+                ))
             }
-        }
+            _ => panic!("Expected function name after fn"),
+        },
         _ => None,
     };
     Ok(syntax)
@@ -248,12 +265,20 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
                         l: _,
                         s: Lex::RParen,
                     }) => break,
-                    Some(Token { l, s }) =>
-                        return Err(format!("L{}: Unexpected token in function definition: {:?}", l, s)),
+                    Some(Token { l, s }) => {
+                        return Err(format!(
+                            "L{}: Unexpected token in function definition: {:?}",
+                            l, s
+                        ))
+                    }
                     None => return Err(format!("unexpected EOF")),
                 };
             }
-            _ => return Err(format!("invalid parameter declaration in function definition")),
+            _ => {
+                return Err(format!(
+                    "invalid parameter declaration in function definition"
+                ))
+            }
         }
     }
 
@@ -430,7 +455,7 @@ fn logical_or(iter: &mut TokenIter) -> PResult {
             Some(Token { l, s: Lex::BOr }) => {
                 iter.next();
                 let n2 = logical_or(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
-                Some(AstNode::new(*l, Ast::BOr(Box::new(n), Box::new(n2))))
+                Some(AstNode::binary_op(*l, &Lex::BOr, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -444,7 +469,7 @@ fn logical_and(iter: &mut TokenIter) -> PResult {
             Some(Token { l, s: Lex::BAnd }) => {
                 iter.next();
                 let n2 = logical_and(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
-                Some(AstNode::new(*l, Ast::BAnd(Box::new(n), Box::new(n2))))
+                Some(AstNode::binary_op(*l, &Lex::BAnd, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -455,35 +480,17 @@ fn logical_and(iter: &mut TokenIter) -> PResult {
 fn comparison(iter: &mut TokenIter) -> PResult {
     Ok(match sum(iter)? {
         Some(n) => match iter.peek() {
-            Some(Token { l, s: Lex::Eq }) => {
+            Some(Token { l, s })
+                if *s == Lex::Eq
+                    || *s == Lex::NEq
+                    || *s == Lex::Ls
+                    || *s == Lex::LsEq
+                    || *s == Lex::Gr
+                    || *s == Lex::GrEq =>
+            {
                 iter.next();
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after ==", l))?;
-                Some(AstNode::new(*l, Ast::Eq(Box::new(n), Box::new(n2))))
-            }
-            Some(Token { l, s: Lex::NEq }) => {
-                iter.next();
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after !=", l))?;
-                Some(AstNode::new(*l, Ast::NEq(Box::new(n), Box::new(n2))))
-            }
-            Some(Token { l, s: Lex::Gr }) => {
-                iter.next();
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after >", l))?;
-                Some(AstNode::new(*l, Ast::Gr(Box::new(n), Box::new(n2))))
-            }
-            Some(Token { l, s: Lex::GrEq }) => {
-                iter.next();
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after >=", l))?;
-                Some(AstNode::new(*l, Ast::GrEq(Box::new(n), Box::new(n2))))
-            }
-            Some(Token { l, s: Lex::Ls }) => {
-                iter.next();
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after <", l))?;
-                Some(AstNode::new(*l, Ast::Ls(Box::new(n), Box::new(n2))))
-            }
-            Some(Token { l, s: Lex::LsEq }) => {
-                iter.next();
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after <=", l))?;
-                Some(AstNode::new(*l, Ast::LsEq(Box::new(n), Box::new(n2))))
+                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after {}", l, s))?;
+                Some(AstNode::binary_op(*l, s, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -496,7 +503,8 @@ fn sum(iter: &mut TokenIter) -> PResult {
         Some(n) => match consume_if(iter, Lex::Add) {
             Some(Token { l, s: _ }) => {
                 let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after +", l))?;
-                Some(AstNode::new(l, Ast::Add(Box::new(n), Box::new(n2))))
+                //Some(AstNode::new(l, Ast::Add(Box::new(n), Box::new(n2))))
+                Some(AstNode::binary_op(l, &Lex::Add, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -509,7 +517,7 @@ fn term(iter: &mut TokenIter) -> PResult {
         Some(n) => match consume_if(iter, Lex::Mul) {
             Some(Token { l, s: _ }) => {
                 let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after *", l))?;
-                Some(AstNode::new(l, Ast::Mul(Box::new(n), Box::new(n2))))
+                Some(AstNode::binary_op(l, &Lex::Mul, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -594,7 +602,7 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> {
     match consume_if(iter, Lex::LParen) {
-        Some(Token { l, s:_}) => {
+        Some(Token { l, s: _ }) => {
             let mut params = vec![];
             while let Some(param) = expression(iter)? {
                 match param {
