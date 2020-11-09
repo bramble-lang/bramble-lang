@@ -379,39 +379,35 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
 }
 
 fn bind(iter: &mut TokenIter) -> PResult {
-    Ok(match identifier_declare(iter)? {
+    match identifier_declare(iter)? {
         Some(AstNode {
             l: _,
             n: Ast::Identifier(id, id_type),
         }) => {
-            let pt = iter.peek();
-            match pt {
-                Some(Token { l, s: Lex::Assign }) => {
-                    iter.next();
-                    match iter.peek() {
-                        Some(Token { l, s: Lex::Init }) => {
-                            let co_init =
-                                co_init(iter)?.ok_or(&format!("L{}: Invalid coroutine init", l))?;
-                            Some(AstNode::new(*l, Ast::Bind(id, id_type, Box::new(co_init))))
+            match consume_if(iter, Lex::Assign) {
+                Some(l) => {
+                    match co_init(iter)? {
+                        Some(co_init) => {
+                            Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(co_init)))))
                         }
-                        _ => {
+                        None => {
                             let exp = expression(iter)?.ok_or(&format!(
                                     "L{}: Expected an expression or coroutine init after :=, found {:?}",
                                     l,
                                     iter.peek()
                                 ))?;
-                            Some(AstNode::new(*l, Ast::Bind(id, id_type, Box::new(exp))))
+                            Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(exp)))))
                         }
                     }
                 }
                 _ => {
-                    panic!("Expected := after identifer in bind statement");
+                    Err(format!("Expected := after identifer in bind statement"))
                 }
             }
         }
-        Some(_) => panic!("invalid LHS in bind expresion"),
-        None => None,
-    })
+        Some(_) => Err(format!("invalid LHS in bind expresion")),
+        None => Ok(None),
+    }
 }
 
 fn co_init(iter: &mut TokenIter) -> PResult {
@@ -475,18 +471,10 @@ fn logical_and(iter: &mut TokenIter) -> PResult {
 
 fn comparison(iter: &mut TokenIter) -> PResult {
     Ok(match sum(iter)? {
-        Some(n) => match iter.peek() {
-            Some(Token { l, s })
-                if *s == Lex::Eq
-                    || *s == Lex::NEq
-                    || *s == Lex::Ls
-                    || *s == Lex::LsEq
-                    || *s == Lex::Gr
-                    || *s == Lex::GrEq =>
-            {
-                iter.next();
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after {}", l, s))?;
-                Some(AstNode::binary_op(*l, s, Box::new(n), Box::new(n2))?)
+        Some(n) => match consume_if_one_of(iter, vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq]) {
+            Some((l, op)) => {
+                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after {}", l, op))?;
+                Some(AstNode::binary_op(l, &op, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -499,7 +487,6 @@ fn sum(iter: &mut TokenIter) -> PResult {
         Some(n) => match consume_if(iter, Lex::Add) {
             Some(l) => {
                 let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after +", l))?;
-                //Some(AstNode::new(l, Ast::Add(Box::new(n), Box::new(n2))))
                 Some(AstNode::binary_op(l, &Lex::Add, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
@@ -581,27 +568,16 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> {
     match consume_if(iter, Lex::LParen) {
-        Some(l) => {
+        Some(_) => {
             let mut params = vec![];
             while let Some(param) = expression(iter)? {
                 match param {
                     exp => {
                         params.push(exp);
-                        match iter.peek() {
-                            Some(Token {
-                                l: _,
-                                s: Lex::Comma,
-                            }) => {
-                                iter.next();
+                        match consume_if(iter, Lex::Comma) {
+                            Some(_) => {
                             }
-                            Some(Token {
-                                l: _,
-                                s: Lex::RParen,
-                            }) => break,
-                            Some(t) => {
-                                return Err(format!("L{}: Unexpected token in function call: {:?}", t.l, t.s))
-                            }
-                            None => return Err(format!("L{}: unexpected EOF", l)),
+                            None => break,
                         };
                     }
                 }
@@ -716,6 +692,34 @@ fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<u32> {
             Some(line)
         }
         _ => None,
+    }
+}
+
+fn consume_if_one_of(iter: &mut TokenIter, tests: Vec<Lex>) -> Option<(u32, Lex)> {
+    match iter.peek() {
+        Some(Token{l, s}) =>{
+            if tests.iter().find(|sym| *sym == s).is_some() {
+                iter.next();
+                Some((*l, s.clone()))
+            } else {
+                None
+            }
+        },
+        None => None,
+    }
+}
+
+fn must_be_one_of(iter: &mut TokenIter, tests: Vec<Lex>) -> Result<(u32, Lex), String> {
+    match iter.peek() {
+        Some(Token{l, s}) =>{
+            if tests.iter().find(|sym| *sym == s).is_some() {
+                iter.next();
+                Ok((*l, s.clone()))
+            } else {
+                Err(format!("L{}: expected one of {:?} but found {}", l, tests, s))
+            }
+        },
+        None => Err(format!("Expected {:?} but found EOF", tests)),
     }
 }
 
