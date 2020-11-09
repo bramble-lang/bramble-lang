@@ -20,6 +20,10 @@ impl AstNode {
         AstNode { l, n }
     }
 
+    pub fn new_yield(line: u32, id_line: u32, id: String) -> AstNode {
+        AstNode::new(line, Ast::Yield(Box::new(AstNode::new(id_line, Ast::Identifier(id, Primitive::Unknown)))))
+    }
+
     pub fn binary_op(
         line: u32,
         op: &Lex,
@@ -412,19 +416,17 @@ fn bind(iter: &mut TokenIter) -> PResult {
 
 fn co_init(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Init) {
-        Some(l) => {
-            match consume_if_id(iter) {
-                Some((l, id)) => {
-                    let params = fn_call_params(iter)?
-                        .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                    Ok(Some(AstNode::new(
-                        l,
-                        Ast::CoroutineInit(id.clone(), params),
-                    )))
-                }
-                None => Err(format!("L{}: expected identifier after init", l)),
+        Some(l) => match consume_if_id(iter) {
+            Some((l, id)) => {
+                let params = fn_call_params(iter)?
+                    .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
+                Ok(Some(AstNode::new(
+                    l,
+                    Ast::CoroutineInit(id.clone(), params),
+                )))
             }
-        }
+            None => Err(format!("L{}: expected identifier after init", l)),
+        },
         _ => Ok(None),
     }
 }
@@ -439,7 +441,12 @@ fn logical_or(iter: &mut TokenIter) -> PResult {
             Some(Token { l, s: Lex::BOr }) => {
                 iter.next();
                 let n2 = logical_or(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
-                Some(AstNode::binary_op(*l, &Lex::BOr, Box::new(n), Box::new(n2))?)
+                Some(AstNode::binary_op(
+                    *l,
+                    &Lex::BOr,
+                    Box::new(n),
+                    Box::new(n2),
+                )?)
             }
             _ => Some(n),
         },
@@ -453,7 +460,12 @@ fn logical_and(iter: &mut TokenIter) -> PResult {
             Some(Token { l, s: Lex::BAnd }) => {
                 iter.next();
                 let n2 = logical_and(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
-                Some(AstNode::binary_op(*l, &Lex::BAnd, Box::new(n), Box::new(n2))?)
+                Some(AstNode::binary_op(
+                    *l,
+                    &Lex::BAnd,
+                    Box::new(n),
+                    Box::new(n2),
+                )?)
             }
             _ => Some(n),
         },
@@ -587,9 +599,9 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> 
                                 s: Lex::RParen,
                             }) => break,
                             Some(t) => {
-                                panic!("L{}: Unexpected token in function call: {:?}", t.l, t.s)
+                                return Err(format!("L{}: Unexpected token in function call: {:?}", t.l, t.s))
                             }
-                            None => panic!("L{}: unexpected EOF", l),
+                            None => return Err(format!("L{}: unexpected EOF", l)),
                         };
                     }
                 }
@@ -603,15 +615,13 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> 
 }
 
 fn co_yield(iter: &mut TokenIter) -> PResult {
-    Ok(match consume_if(iter, Lex::Yield) {
-        Some(l) => {
-            match identifier(iter)? {
-                Some(id) => Some(AstNode::new(l, Ast::Yield(Box::new(id)))),
-                _ => panic!("L{}: expected an identifier after yield", l),
-            }
-        }
-        _ => None,
-    })
+    match consume_if(iter, Lex::Yield) {
+        Some(l) => match consume_if_id(iter) {
+            Some((ll, id)) => Ok(Some(AstNode::new_yield(l, ll, id))),
+            _ => Err(format!("L{}: expected an identifier after yield", l)),
+        },
+        _ => Ok(None),
+    }
 }
 
 fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
@@ -645,42 +655,20 @@ fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
 
 fn identifier_declare(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if_id(iter) {
-        Some((l, id)) => {
-            match consume_if(iter, Lex::Colon) {
-                Some(l) => {
-                    match primitive(iter) {
-                        Some(p) => Some(AstNode::new(l, Ast::Identifier(id.clone(), p))),
-                        None => {
-                            return Err(format!(
-                                "L{}: Invalid primitive type: {:?}",
-                                l,
-                                iter.peek()
-                            ))
-                        }
-                    }
-                }
-                _ => {
-                    return Err(format!(
-                        "L{}: Expected type after variable declaration, found: {:?}",
-                        l,
-                        iter.peek().map(|t| &t.s)
-                    ))
-                }
+        Some((l, id)) => match consume_if(iter, Lex::Colon) {
+            Some(l) => match primitive(iter) {
+                Some(p) => Some(AstNode::new(l, Ast::Identifier(id.clone(), p))),
+                None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
+            },
+            _ => {
+                return Err(format!(
+                    "L{}: Expected type after variable declaration, found: {:?}",
+                    l,
+                    iter.peek().map(|t| &t.s)
+                ))
             }
-        }
-        _ => None,
-    })
-}
-
-fn identifier(iter: &mut TokenIter) -> PResult {
-    Ok(match consume_if_id(iter) {
-        Some((l, id)) => {
-            Some(AstNode::new(
-                l,
-                Ast::Identifier(id.clone(), Primitive::Unknown),
-            ))
         },
-        None => None,
+        _ => None,
     })
 }
 
@@ -733,7 +721,10 @@ fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<u32> {
 
 fn consume_if_id(iter: &mut TokenIter) -> Option<(u32, String)> {
     match iter.peek() {
-        Some(Token{l, s: Lex::Identifier(id)}) => {
+        Some(Token {
+            l,
+            s: Lex::Identifier(id),
+        }) => {
             iter.next();
             Some((*l, id.clone()))
         }
