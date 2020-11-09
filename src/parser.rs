@@ -615,7 +615,7 @@ fn factor(iter: &mut TokenIter) -> PResult {
                     l: _,
                     s: Lex::RParen,
                 }) => iter.next(),
-                x => panic!("L{}: exected ) but found {:?}", l, x),
+                x => return Err(format!("L{}: exected ) but found {:?}", l, x)),
             };
             exp
         }
