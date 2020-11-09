@@ -566,23 +566,6 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
-    Ok(match identifier(iter)? {
-        Some(AstNode {
-            l,
-            n: Ast::Identifier(id, _id_type),
-        }) => match fn_call_params(iter)? {
-            Some(params) => {
-                // this is a function call
-                Some(AstNode::new(l, Ast::FunctionCall(id, params)))
-            }
-            _ => Some(AstNode::new(l, Ast::Identifier(id, _id_type))),
-        },
-        Some(_) => return Err(format!("expected identifier")),
-        None => None,
-    })
-}
-
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> {
     match consume_if(iter, Lex::LParen) {
@@ -629,6 +612,19 @@ fn co_yield(iter: &mut TokenIter) -> PResult {
             }
         }
         _ => None,
+    })
+}
+
+fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
+    Ok(match consume_if_id(iter) {
+        Some((l, id)) => match fn_call_params(iter)? {
+            Some(params) => {
+                // this is a function call
+                Some(AstNode::new(l, Ast::FunctionCall(id, params)))
+            }
+            _ => Some(AstNode::new(l, Ast::Identifier(id, Primitive::Unknown))),
+        },
+        None => None,
     })
 }
 
