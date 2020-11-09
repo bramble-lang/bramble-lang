@@ -253,25 +253,16 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
                         l: _,
                         s: Lex::RParen,
                     }) => break,
-                    Some(Token { l, s }) => {
-                        panic!("L{}: Unexpected token in function definition: {:?}", l, s)
-                    }
-                    None => panic!("unexpected EOF"),
+                    Some(Token { l, s }) =>
+                        return Err(format!("L{}: Unexpected token in function definition: {:?}", l, s)),
+                    None => return Err(format!("unexpected EOF")),
                 };
             }
-            _ => panic!("invalid parameter declaration in function definition"),
+            _ => return Err(format!("invalid parameter declaration in function definition")),
         }
     }
 
-    match iter.peek() {
-        Some(Token {
-            l: _,
-            s: Lex::RParen,
-        }) => {
-            iter.next();
-        }
-        _ => panic!("expected )"),
-    }
+    consume_must_be(iter, Lex::RParen)?;
 
     Ok(params)
 }
