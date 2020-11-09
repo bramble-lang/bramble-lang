@@ -116,12 +116,8 @@ fn module(iter: &mut TokenIter) -> PResult {
 }
 
 fn function_def(iter: &mut TokenIter) -> PResult {
-    let syntax = match iter.peek() {
-        Some(Token {
-            l: _,
-            s: Lex::FunctionDef,
-        }) => {
-            iter.next();
+    let syntax = match consume_if(iter, Lex::FunctionDef) {
+        Some(_) => {
             match iter.peek() {
                 Some(Token {
                     l,
@@ -131,9 +127,8 @@ fn function_def(iter: &mut TokenIter) -> PResult {
 
                     let params = fn_def_params(iter)?;
 
-                    let fn_type = match iter.peek() {
+                    let fn_type = match consume_if(iter, Lex::LArrow) {
                         Some(Token { l, s: Lex::LArrow }) => {
-                            iter.next();
                             primitive(iter).ok_or(&format!(
                                 "L{}: Expected primitive type after -> in function definition",
                                 l
@@ -498,11 +493,10 @@ fn comparison(iter: &mut TokenIter) -> PResult {
 
 fn sum(iter: &mut TokenIter) -> PResult {
     Ok(match term(iter)? {
-        Some(n) => match iter.peek() {
-            Some(Token { l, s: Lex::Add }) => {
-                iter.next();
+        Some(n) => match consume_if(iter, Lex::Add) {
+            Some(Token { l, s: _ }) => {
                 let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after +", l))?;
-                Some(AstNode::new(*l, Ast::Add(Box::new(n), Box::new(n2))))
+                Some(AstNode::new(l, Ast::Add(Box::new(n), Box::new(n2))))
             }
             _ => Some(n),
         },
@@ -512,11 +506,10 @@ fn sum(iter: &mut TokenIter) -> PResult {
 
 fn term(iter: &mut TokenIter) -> PResult {
     Ok(match factor(iter)? {
-        Some(n) => match iter.peek() {
-            Some(Token { l, s: Lex::Mul }) => {
-                iter.next();
+        Some(n) => match consume_if(iter, Lex::Mul) {
+            Some(Token { l, s: _ }) => {
                 let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after *", l))?;
-                Some(AstNode::new(*l, Ast::Mul(Box::new(n), Box::new(n2))))
+                Some(AstNode::new(l, Ast::Mul(Box::new(n), Box::new(n2))))
             }
             _ => Some(n),
         },
@@ -550,9 +543,8 @@ fn factor(iter: &mut TokenIter) -> PResult {
 }
 
 fn if_expression(iter: &mut TokenIter) -> PResult {
-    Ok(match iter.peek() {
-        Some(Token { l, s: Lex::If }) => {
-            iter.next();
+    Ok(match consume_if(iter, Lex::If) {
+        Some(Token { l, s: _ }) => {
             let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
             consume_must_be(iter, Lex::LBrace)?;
 
@@ -574,7 +566,7 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
                 }
             };
             Some(AstNode::new(
-                *l,
+                l,
                 Ast::If(Box::new(cond), Box::new(true_arm), Box::new(false_arm)),
             ))
         }
@@ -601,11 +593,8 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> {
-    match iter.peek() {
-        Some(Token { l, s: Lex::LParen }) => {
-            // this is a function call
-            iter.next();
-
+    match consume_if(iter, Lex::LParen) {
+        Some(Token { l, s:_}) => {
             let mut params = vec![];
             while let Some(param) = expression(iter)? {
                 match param {
@@ -631,15 +620,7 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> 
                 }
             }
 
-            match iter.peek() {
-                Some(Token {
-                    l: _,
-                    s: Lex::RParen,
-                }) => {
-                    iter.next();
-                }
-                _ => panic!("L{}: expected ) after function call", l),
-            }
+            consume_must_be(iter, Lex::RParen)?;
             Ok(Some(params))
         }
         _ => Ok(None),
@@ -730,11 +711,11 @@ fn identifier(iter: &mut TokenIter) -> PResult {
 
 fn constant(iter: &mut TokenIter) -> PResult {
     Ok(match number(iter)? {
-        None => match boolean(iter)? {
-            None => None,
-            Some(t) => Some(t),
-        },
         Some(i) => Some(i),
+        None => match boolean(iter)? {
+            Some(t) => Some(t),
+            None => None,
+        },
     })
 }
 
@@ -764,11 +745,12 @@ fn boolean(iter: &mut TokenIter) -> PResult {
     }
 }
 
-fn consume_if<'a>(iter: &'a mut TokenIter, test: Lex) -> Option<&'a Token> {
+fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<Token> {
     match iter.peek() {
         Some(tok) if tok.s == test => {
-            let tok = iter.next();
-            tok
+            let tok = tok.clone();
+            iter.next();
+            Some(tok.clone())
         }
         _ => None,
     }
