@@ -632,42 +632,53 @@ fn factor(iter: &mut TokenIter) -> PResult {
     })
 }
 
+fn consume_if<'a>(iter: &'a mut TokenIter, test: Lex) -> Option<&'a Token> {
+    match iter.peek() {
+        Some(tok) if tok.s == test => {
+            let tok = iter.next();
+            tok
+        },
+        _ => None,
+    }
+}
+
+fn consume_must<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, String> {
+    match iter.peek() {
+        Some(tok) if tok.s == test => {
+            let tok = iter.next().expect("CRITICAL: failed to go to next token after successful match");
+            Ok(tok)
+        },
+        Some(Token{l, s}) => {
+            Err(format!("L{}: Expected {:?}, but found {:?}", l, test, s))
+        },
+        None => {
+            Err(format!("Expected {:?}, but found EOF", test))
+        }
+    }
+}
+
 fn if_expression(iter: &mut TokenIter) -> PResult {
     Ok(match iter.peek() {
         Some(Token { l, s: Lex::If }) => {
             iter.next();
             // expression
             let cond = expression(iter)?.ok_or("Expected conditional expressoin after if")?;
-            // lbrace
-            iter.next()
-                .map(|t| t.s == Lex::LBrace)
-                .ok_or("Expected {")?;
+            consume_must(iter, Lex::LBrace)?;
             // expression
             let true_arm = expression(iter)?.ok_or("Expression in true arm of if expression")?;
-            // rbrace
-            iter.next()
-                .map(|t| t.s == Lex::RBrace)
-                .ok_or("Expected }")?;
-            // else
-            iter.next()
-                .map(|t| t.s == Lex::Else)
-                .ok_or("Expected else arm of if expression")?;
+            consume_must(iter, Lex::RBrace)?;
+            consume_must(iter, Lex::Else)?;
 
             // check for `else if`
             let false_arm = match iter.peek() {
                 Some(Token { l, s: Lex::If }) => if_expression(iter)?
                     .ok_or(format!("L{}: Expected if expression after else if", l))?,
                 _ => {
-                    iter.next()
-                        .map(|t| t.s == Lex::LBrace)
-                        .expect(&format!("L{}: Expected {{", l));
+                    consume_must(iter, Lex::LBrace)?;
                     // expression
                     let false_arm = expression(iter)?
                         .ok_or(&format!("L{}: Expression in false arm of if expression", l))?;
-                    // rbrace
-                    iter.next()
-                        .map(|t| t.s == Lex::RBrace)
-                        .ok_or(&format!("L{}: Expected }}", l))?;
+                    consume_must(iter, Lex::RBrace)?;
                     false_arm
                 }
             };
