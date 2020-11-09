@@ -201,10 +201,9 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                     };
 
                     consume_must_be(iter, Lex::LBrace)?;
-                    let mut stmts =
-                        co_block(iter)
-                            .into_iter()
-                            .collect::<Result<Vec<AstNode>, String>>()?;
+                    let mut stmts = co_block(iter)
+                        .into_iter()
+                        .collect::<Result<Vec<AstNode>, String>>()?;
 
                     match return_stmt(iter)? {
                         Some(ret) => stmts.push(ret),
@@ -357,26 +356,18 @@ fn statement(iter: &mut TokenIter) -> PResult {
 fn println_stmt(iter: &mut TokenIter) -> PResult {
     let tk = iter.peek();
     Ok(match tk {
-        Some(Token {
-            l,
-            s: Lex::Printiln,
-        }) => {
+        Some(Token { l, s }) if *s == Lex::Printiln || *s == Lex::Printbln => {
             iter.next();
-            let exp = expression(iter)?;
-            match exp {
-                Some(exp) => Some(AstNode::new(*l, Ast::Printiln(Box::new(exp)))),
-                None => return Err(format!("L{}: Expected expression after println", l)),
-            }
-        }
-        Some(Token {
-            l,
-            s: Lex::Printbln,
-        }) => {
-            iter.next();
-            let exp = expression(iter)?;
-            match exp {
-                Some(exp) => Some(AstNode::new(*l, Ast::Printbln(Box::new(exp)))),
-                None => return Err(format!("L{}: Expected expression after println", l)),
+            let exp =
+                expression(iter)?.ok_or(format!("L{}: Expected expression after println", l))?;
+
+            match s {
+                Lex::Printiln => Some(AstNode::new(*l, Ast::Printiln(Box::new(exp)))),
+                Lex::Printbln => Some(AstNode::new(*l, Ast::Printbln(Box::new(exp)))),
+                _ => panic!(
+                    "CRITICAL: already tested for a print token but found {:?}",
+                    s
+                ),
             }
         }
         _ => None,
@@ -545,7 +536,10 @@ fn term(iter: &mut TokenIter) -> PResult {
 fn factor(iter: &mut TokenIter) -> PResult {
     Ok(match iter.peek() {
         Some(Token { l: _, s: Lex::If }) => if_expression(iter)?,
-        Some(Token { l: _, s: Lex::LParen }) => {
+        Some(Token {
+            l: _,
+            s: Lex::LParen,
+        }) => {
             iter.next();
             let exp = expression(iter)?;
             consume_must_be(iter, Lex::RParen)?;
@@ -570,7 +564,7 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
             iter.next();
             let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
             consume_must_be(iter, Lex::LBrace)?;
-            
+
             let true_arm = expression(iter)?.ok_or("Expression in true arm of if expression")?;
             consume_must_be(iter, Lex::RBrace)?;
             consume_must_be(iter, Lex::Else)?;
@@ -784,7 +778,7 @@ fn consume_if<'a>(iter: &'a mut TokenIter, test: Lex) -> Option<&'a Token> {
         Some(tok) if tok.s == test => {
             let tok = iter.next();
             tok
-        },
+        }
         _ => None,
     }
 }
@@ -792,14 +786,12 @@ fn consume_if<'a>(iter: &'a mut TokenIter, test: Lex) -> Option<&'a Token> {
 fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, String> {
     match iter.peek() {
         Some(tok) if tok.s == test => {
-            let tok = iter.next().expect("CRITICAL: failed to go to next token after successful match");
+            let tok = iter
+                .next()
+                .expect("CRITICAL: failed to go to next token after successful match");
             Ok(tok)
-        },
-        Some(Token{l, s}) => {
-            Err(format!("L{}: Expected {:?}, but found {:?}", l, test, s))
-        },
-        None => {
-            Err(format!("Expected {:?}, but found EOF", test))
         }
+        Some(Token { l, s }) => Err(format!("L{}: Expected {:?}, but found {:?}", l, test, s)),
+        None => Err(format!("Expected {:?}, but found EOF", test)),
     }
 }
