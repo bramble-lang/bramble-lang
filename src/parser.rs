@@ -242,25 +242,7 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
                 n: Ast::Identifier(id),
             }, id_type) => {
                 params.push((id, id_type));
-                match iter.peek() {
-                    Some(Token {
-                        l: _,
-                        s: Lex::Comma,
-                    }) => {
-                        iter.next();
-                    }
-                    Some(Token {
-                        l: _,
-                        s: Lex::RParen,
-                    }) => break,
-                    Some(Token { l, s }) => {
-                        return Err(format!(
-                            "L{}: Unexpected token in function definition: {:?}",
-                            l, s
-                        ))
-                    }
-                    None => return Err(format!("unexpected EOF")),
-                };
+                consume_if(iter, Lex::Comma);
             }
             _ => {
                 return Err(format!(
