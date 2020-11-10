@@ -735,6 +735,27 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_nested_arithmetic_expression() {
+        let mut lexer = Lexer::new();
+        let text = "(2 + 4) * 3";
+        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(AstNode{l, n:Ast::Mul(left, right)}) = expression(&mut iter).unwrap() {
+            assert_eq!(l, 1);
+            match left.n {
+                Ast::Add(ll, lr) => {
+                    assert_eq!(ll.n, Ast::Integer(2));
+                    assert_eq!(lr.n, Ast::Integer(4));
+                }
+                _ => panic!("Expected Add syntax")
+            }
+            assert_eq!(right.n, Ast::Integer(3));
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
     fn parse_boolean_expression() {
         let mut lexer = Lexer::new();
         let text = "true || false";
