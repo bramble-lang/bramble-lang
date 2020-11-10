@@ -29,7 +29,7 @@ impl AstNode {
 
     pub fn new_bind(line: u32, id: Box<AstNode>, exp: Box<AstNode>) -> Result<AstNode, String> {
         match id.as_ref() {
-            AstNode{l, n: Ast::IdentifierDeclare(id, prim)} => 
+            AstNode{l:_, n: Ast::IdentifierDeclare(id, prim)} => 
                 Ok(AstNode::new(line, Ast::Bind(id.clone(), *prim, exp))),
             _ => Err(format!("L{}: Expected identifier declaration, found {:?}", line, id))
         }
@@ -880,6 +880,23 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_expression_block_missing_semicolons() {
+        let mut lexer = Lexer::new();
+        for (text,msg) in [
+                    ("{5 10 51}", "L1: Expected RBrace, but found Integer(10)"),
+                    ("{5; 10 51}", "L1: Expected RBrace, but found Semicolon"),
+                ].iter() {
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            assert_eq!(expression_block(&mut iter), Err((*msg).into()));
+        }
+    }
+
+    #[test]
     fn parse_expression_block_multiline() {
         let mut lexer = Lexer::new();
         let text = "{let x:i32 := 5; x * x}";
@@ -899,7 +916,7 @@ pub mod tests {
             match &body[0].n {
                 Ast::Statement(stm) => {
                     match stm.as_ref() {
-                        AstNode{l, n: Ast::Bind(id, p, exp)} => {
+                        AstNode{l:_, n: Ast::Bind(id, p, exp)} => {
                             assert_eq!(id, "x");
                             assert_eq!(*p, Primitive::I32);
                             assert_eq!(exp.n, Ast::Integer(5));
