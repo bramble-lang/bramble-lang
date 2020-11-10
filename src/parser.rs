@@ -29,9 +29,14 @@ impl AstNode {
 
     pub fn new_bind(line: u32, id: Box<AstNode>, exp: Box<AstNode>) -> Result<AstNode, String> {
         match id.as_ref() {
-            AstNode{l:_, n: Ast::IdentifierDeclare(id, prim)} => 
-                Ok(AstNode::new(line, Ast::Bind(id.clone(), *prim, exp))),
-            _ => Err(format!("L{}: Expected identifier declaration, found {:?}", line, id))
+            AstNode {
+                l: _,
+                n: Ast::IdentifierDeclare(id, prim),
+            } => Ok(AstNode::new(line, Ast::Bind(id.clone(), *prim, exp))),
+            _ => Err(format!(
+                "L{}: Expected identifier declaration, found {:?}",
+                line, id
+            )),
         }
     }
 
@@ -252,11 +257,10 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
 
     while let Some(param) = identifier_or_declare(iter)? {
         match param {
-                AstNode {
-                    l: _,
-                    n: Ast::IdentifierDeclare(id, id_type),
-                }
-            => {
+            AstNode {
+                l: _,
+                n: Ast::IdentifierDeclare(id, id_type),
+            } => {
                 params.push((id, id_type));
                 consume_if(iter, Lex::Comma);
             }
@@ -337,10 +341,8 @@ fn statement(iter: &mut TokenIter) -> PResult {
 
     match stm {
         Some(stm) => match consume_must_be(iter, Lex::Semicolon)? {
-            Token{l, s:_} => {
-                Ok(Some(AstNode::new(*l, Ast::Statement(Box::new(stm)))))
-            }
-        }
+            Token { l, s: _ } => Ok(Some(AstNode::new(*l, Ast::Statement(Box::new(stm))))),
+        },
         None => Ok(None),
     }
 }
@@ -356,10 +358,7 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
             match s {
                 Lex::Printiln => Some(AstNode::new(*l, Ast::Printiln(Box::new(exp)))),
                 Lex::Printbln => Some(AstNode::new(*l, Ast::Printbln(Box::new(exp)))),
-                _ => panic!(
-                    "CRITICAL: already tested for a print token but found {:?}",
-                    s
-                ),
+                _ => panic!("CRITICAL: already tested for a print token but found {}", s),
             }
         }
         _ => None,
@@ -369,16 +368,22 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
 fn let_bind(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Let) {
         Some(l) => {
-            let id_decl = identifier_or_declare(iter)?.ok_or(format!("L{}: expected identifier after let", l))?;
+            let id_decl = identifier_or_declare(iter)?
+                .ok_or(format!("L{}: expected identifier after let", l))?;
             consume_must_be(iter, Lex::Assign)?;
             //let exp = expression(iter)?.ok_or(format!("L{}: expected expression on LHS of bind", l))?;
             let exp = match co_init(iter)? {
                 Some(co_init) => co_init,
-                None => expression(iter)?.ok_or(format!("L{}: expected expression on LHS of bind", l))?
+                None => expression(iter)?
+                    .ok_or(format!("L{}: expected expression on LHS of bind", l))?,
             };
-            Ok(Some(AstNode::new_bind(l, Box::new(id_decl), Box::new(exp))?))
-        },
-        None => Ok(None)
+            Ok(Some(AstNode::new_bind(
+                l,
+                Box::new(id_decl),
+                Box::new(exp),
+            )?))
+        }
+        None => Ok(None),
     }
 }
 
@@ -405,24 +410,24 @@ fn expression(iter: &mut TokenIter) -> PResult {
 
 fn expression_block(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::LBrace) {
-        Some(l) =>{
+        Some(l) => {
             let mut stmts = block(iter)?;
             match iter.peek() {
-                Some(Token{l:_, s: Lex::RBrace}) => {
-                    ()
-                }
+                Some(Token {
+                    l: _,
+                    s: Lex::RBrace,
+                }) => (),
                 Some(_) => {
-                    let exp = expression(iter)?.ok_or(format!("L{}: Expected expression at end of block", l))?;
+                    let exp = expression(iter)?
+                        .ok_or(format!("L{}: Expected expression at end of block", l))?;
                     stmts.push(exp);
                 }
-                None => {
-                    return Err(format!("L{}: expected {}, but found EOF", l, Lex::RBrace))
-                }
+                None => return Err(format!("L{}: expected {}, but found EOF", l, Lex::RBrace)),
             };
             consume_must_be(iter, Lex::RBrace)?;
             Ok(Some(AstNode::new(l, Ast::ExpressionBlock(stmts))))
-        },
-        None => Ok(None)
+        }
+        None => Ok(None),
     }
 }
 
@@ -529,7 +534,8 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
         Some(l) => {
             let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
 
-            let true_arm = expression_block(iter)?.ok_or("Expression in true arm of if expression")?;
+            let true_arm =
+                expression_block(iter)?.ok_or("Expression in true arm of if expression")?;
             consume_must_be(iter, Lex::Else)?;
 
             // check for `else if`
@@ -621,8 +627,7 @@ fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<AstNode>, String
                 Some(p) => Some(AstNode::new(l, Ast::IdentifierDeclare(id.clone(), p))),
                 None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
             },
-            _ => 
-                Some(AstNode::new(l, Ast::Identifier(id.clone()))),
+            _ => Some(AstNode::new(l, Ast::Identifier(id.clone()))),
         },
         _ => None,
     })
@@ -697,12 +702,25 @@ fn must_be_one_of(iter: &mut TokenIter, tests: Vec<Lex>) -> Result<(u32, Lex), S
                 Ok((*l, s.clone()))
             } else {
                 Err(format!(
-                    "L{}: expected one of {:?} but found {}",
-                    l, tests, s
+                    "L{}: expected one of {} but found {}",
+                    l,
+                    tests
+                        .iter()
+                        .map(|t| t.to_string())
+                        .collect::<Vec<String>>()
+                        .join(","),
+                    s
                 ))
             }
         }
-        None => Err(format!("Expected {:?} but found EOF", tests)),
+        None => Err(format!(
+            "Expected {} but found EOF",
+            tests
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<String>>()
+                .join(",")
+        )),
     }
 }
 
@@ -869,12 +887,17 @@ pub mod tests {
     #[test]
     fn parse_expression_block_bad() {
         let mut lexer = Lexer::new();
-        for (text,msg) in [
-                    ("{5 10 51}", "L1: Expected }, but found literal 10"),
-                    ("{5; 10 51}", "L1: Expected }, but found ;"),
-                    ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found ;"),
-                    ("{let x: i32 := 10 5}", "L1: Expected ;, but found literal 5"),
-                ].iter() {
+        for (text, msg) in [
+            ("{5 10 51}", "L1: Expected }, but found literal 10"),
+            ("{5; 10 51}", "L1: Expected }, but found ;"),
+            ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found ;"),
+            (
+                "{let x: i32 := 10 5}",
+                "L1: Expected ;, but found literal 5",
+            ),
+        ]
+        .iter()
+        {
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
                 .into_iter()
@@ -903,16 +926,17 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 2);
             match &body[0].n {
-                Ast::Statement(stm) => {
-                    match stm.as_ref() {
-                        AstNode{l:_, n: Ast::Bind(id, p, exp)} => {
-                            assert_eq!(id, "x");
-                            assert_eq!(*p, Primitive::I32);
-                            assert_eq!(exp.n, Ast::Integer(5));
-                        },
-                        _ => panic!("Not a binding statement"),
+                Ast::Statement(stm) => match stm.as_ref() {
+                    AstNode {
+                        l: _,
+                        n: Ast::Bind(id, p, exp),
+                    } => {
+                        assert_eq!(id, "x");
+                        assert_eq!(*p, Primitive::I32);
+                        assert_eq!(exp.n, Ast::Integer(5));
                     }
-                }
+                    _ => panic!("Not a binding statement"),
+                },
                 _ => panic!("No body: {:?}", &body[0].n),
             }
             match &body[1].n {
