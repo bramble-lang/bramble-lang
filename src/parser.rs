@@ -121,22 +121,26 @@ fn module(iter: &mut TokenIter) -> PResult {
     let mut functions = vec![];
     let mut coroutines = vec![];
 
-    let line = iter.peek().map_or(0, |t| t.l);
-    while iter.peek().is_some() {
-        match function_def(iter)? {
-            Some(f) => functions.push(f),
-            None => match coroutine_def(iter)? {
-                Some(co) => coroutines.push(co),
-                None => break,
-            },
-        }
-    }
+    match iter.peek() {
+        Some(Token{l, s:_}) => {
+            while iter.peek().is_some() {
+                match function_def(iter)? {
+                    Some(f) => functions.push(f),
+                    None => match coroutine_def(iter)? {
+                        Some(co) => coroutines.push(co),
+                        None => break,
+                    },
+                }
+            }
 
-    Ok(if functions.len() > 0 {
-        Some(AstNode::new(line, Ast::Module(functions, coroutines)))
-    } else {
-        None
-    })
+            Ok(if functions.len() > 0 {
+                Some(AstNode::new(*l, Ast::Module(functions, coroutines)))
+            } else {
+                None
+            })
+        },
+        None => Ok(None),
+    }
 }
 
 fn function_def(iter: &mut TokenIter) -> PResult {
