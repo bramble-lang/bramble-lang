@@ -9,7 +9,7 @@ type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
 
 type PResult = Result<Option<AstNode>, String>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct AstNode {
     pub l: u32,
     pub n: Ast,
@@ -46,7 +46,7 @@ impl AstNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Ast {
     Integer(i32),
     Boolean(bool),
@@ -711,5 +711,64 @@ fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, 
         }
         Some(Token { l, s }) => Err(format!("L{}: Expected {:?}, but found {:?}", l, test, s)),
         None => Err(format!("Expected {:?}, but found EOF", test)),
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use super::lexer::Lexer;
+
+    #[test]
+    fn parse_arithmetic_expression() {
+        let mut lexer = Lexer::new();
+        let text = "2 + 2";
+        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(AstNode{l, n:Ast::Add(left, right)}) = expression(&mut iter).unwrap() {
+            assert_eq!(l, 1);
+            assert_eq!(left.n, Ast::Integer(2));
+            assert_eq!(right.n, Ast::Integer(2));
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_boolean_expression() {
+        let mut lexer = Lexer::new();
+        let text = "true || false";
+        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(AstNode{l, n:Ast::BOr(left, right)}) = expression(&mut iter).unwrap() {
+            assert_eq!(l, 1);
+            assert_eq!(left.n, Ast::Boolean(true));
+            assert_eq!(right.n, Ast::Boolean(false));
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_function_def() {
+        let mut lexer = Lexer::new();
+        let text = "fn test(x:i32) -> bool {return true;}";
+        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(AstNode{l, n:Ast::FunctionDef(name, params, ty, body)}) = function_def(&mut iter).unwrap() {
+            assert_eq!(l, 1);
+            assert_eq!(name, "test");
+            assert_eq!(params, vec![("x".into(), Primitive::I32)]);
+            assert_eq!(ty, Primitive::Bool);
+            assert_eq!(body.len(), 1);
+            match &body[0].n {
+                Ast::Return(Some(exp)) => {
+                    assert_eq!(exp.n, Ast::Boolean(true));
+                }
+                _ => panic!("No body")
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
     }
 }
