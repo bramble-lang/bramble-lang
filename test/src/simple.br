@@ -1,13 +1,13 @@
 fn my_main() {
-    x:i32 := 5;
+    let x:i32 := 5;
     printiln x;
 
-    b:bool := my_bool();
+    let b:bool := my_bool();
     printbln b;
     return;
 }
 
 fn my_bool() -> bool {
-    b:bool := false;
+    let b:bool := false;
     return b;
 }

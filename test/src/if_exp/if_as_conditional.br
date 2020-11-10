@@ -5,6 +5,6 @@ fn my_main() {
 }
 
 fn if_in_conditional(b:bool) -> i32 {
-    x:i32 := if if b {false} else {true} {0} else {7};
+    let x:i32 := if if b {false} else {true} {0} else {7};
     return x;
 }

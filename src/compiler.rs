@@ -670,6 +670,9 @@ impl Compiler {
                 Compiler::traverse(false_arm, current_func, function_table, output);
                 output.push(Label(end_lbl));
             }
+            Ast::Statement(stm) => {
+                Compiler::traverse(stm, current_func, function_table, output);
+            }
             Ast::Bind(id, _, ref exp) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]

@@ -1,10 +1,10 @@
 fn my_main( p: bool) {
-    c:i32 := init my_co(5, 13);
-    w : i32 := yield c;
-    x : i32 := 1;
+    let c:i32 := init my_co(5, 13);
+    let w : i32 := yield c;
+    let x : i32 := 1;
     printiln x;
     printiln w;
-    z : i32 := yield c;
+    let z : i32 := yield c;
     printiln z;
     return;
 }

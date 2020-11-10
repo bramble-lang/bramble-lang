@@ -209,6 +209,7 @@ pub mod checker {
         match &ast.n {
             Integer(_) => Ok(I32),
             Boolean(_) => Ok(Bool),
+            IdentifierDeclare(_, p) => Ok(*p),
             Identifier(id) => match current_func {
                 None => Err(format!(
                     "L{}: Variable {} appears outside of function",
@@ -228,6 +229,17 @@ pub mod checker {
                     ),
             },
             Primitive(p) => Ok(*p),
+            ExpressionBlock(body) => {
+                let mut ty = Unit;
+                for stmt in body.iter() {
+                    ty = traverse(stmt, current_func, ftable)?;
+                }
+                Ok(ty)
+            }
+            Statement(exp) => {
+                traverse(exp, current_func, ftable)?;
+                Ok(Unit)
+            },
             Mul(ref l, ref r) | Add(ref l, ref r) => {
                 let lty = traverse(l, current_func, ftable)?;
                 let rty = traverse(r, current_func, ftable)?;

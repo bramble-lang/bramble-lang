@@ -5,7 +5,7 @@ fn my_main() {
 }
 
 fn test(x: i32) -> i32 {
-    x:i32 := if x < 10 {
+    let x:i32 := if x < 10 {
         0
     } else {
         1

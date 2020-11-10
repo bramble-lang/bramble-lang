@@ -1,20 +1,20 @@
 fn my_main() {
-    b0 :bool := simple_eq(5, 6);
+    let b0 :bool := simple_eq(5, 6);
     printbln b0;
 
-    b1:bool := big_equal(5, 5, true);
+    let b1:bool := big_equal(5, 5, true);
     printbln b1;
     
-    b2:bool := big_equal(5, 7, true);
+    let b2:bool := big_equal(5, 7, true);
     printbln b2;
     
-    b3:bool := lesser(3, 5);
+    let b3:bool := lesser(3, 5);
     printbln b3;
 
-    b4:bool := greater(3, 5);
+    let b4:bool := greater(3, 5);
     printbln b4;
 
-    b5: bool := not_equal(3, 5);
+    let b5: bool := not_equal(3, 5);
     printbln b5;
     
     return;

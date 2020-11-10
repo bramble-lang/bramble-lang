@@ -1,12 +1,12 @@
 fn my_main() {
-	i:i32 := recurse(0);
+	let i:i32 := recurse(0);
 	printiln i;
 	return;
 }
 
 fn recurse(a: i32) -> i32 {
 	printiln a;
-	i:i32 := if a <= 5 {
+	let i:i32 := if a <= 5 {
 		recurse(a+1)
 	} else {
 		0

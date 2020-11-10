@@ -27,6 +27,14 @@ impl AstNode {
         )
     }
 
+    pub fn new_bind(line: u32, id: Box<AstNode>, exp: Box<AstNode>) -> Result<AstNode, String> {
+        match id.as_ref() {
+            AstNode{l, n: Ast::IdentifierDeclare(id, prim)} => 
+                Ok(AstNode::new(line, Ast::Bind(id.clone(), *prim, exp))),
+            _ => Err(format!("L{}: Expected identifier declaration, found {:?}", line, id))
+        }
+    }
+
     pub fn binary_op(
         line: u32,
         op: &Lex,
@@ -54,7 +62,9 @@ pub enum Ast {
     Integer(i32),
     Boolean(bool),
     Identifier(String),
+    IdentifierDeclare(String, Primitive),
     Primitive(Primitive),
+
     Mul(Box<AstNode>, Box<AstNode>),
     Add(Box<AstNode>, Box<AstNode>),
     BAnd(Box<AstNode>, Box<AstNode>),
@@ -65,19 +75,24 @@ pub enum Ast {
     LsEq(Box<AstNode>, Box<AstNode>),
     Eq(Box<AstNode>, Box<AstNode>),
     NEq(Box<AstNode>, Box<AstNode>),
+    Printi(Box<AstNode>),
+    Printiln(Box<AstNode>),
+    Printbln(Box<AstNode>),
+
+    If(Box<AstNode>, Box<AstNode>, Box<AstNode>),
+    ExpressionBlock(Vec<AstNode>),
+
+    Statement(Box<AstNode>),
     Bind(String, Primitive, Box<AstNode>),
     Return(Option<Box<AstNode>>),
+    Yield(Box<AstNode>),
+    YieldReturn(Option<Box<AstNode>>),
+
     FunctionDef(String, Vec<(String, Primitive)>, Primitive, Vec<AstNode>),
     FunctionCall(String, Vec<AstNode>),
     CoroutineDef(String, Vec<(String, Primitive)>, Primitive, Vec<AstNode>),
     CoroutineInit(String, Vec<AstNode>),
-    Yield(Box<AstNode>),
-    YieldReturn(Option<Box<AstNode>>),
-    If(Box<AstNode>, Box<AstNode>, Box<AstNode>),
     Module(Vec<AstNode>, Vec<AstNode>),
-    Printi(Box<AstNode>),
-    Printiln(Box<AstNode>),
-    Printbln(Box<AstNode>),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -93,12 +108,13 @@ pub enum Primitive {
     IDENTIFIER := A-Za-z*
     ID_DEC := IDENTIFIER COLON PRIMITIVE
     NUMBER := 0-9*
-    FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION] RPAREN
+    FUNCTION_CALL := IDENTIFIER LPAREN EXPRESSION [, EXPRESSION]* RPAREN
     YIELD := yield IDENTIFIER
     IF := if EXPRESSION LBRACE EXPRESSION RBRACE else LBRACE EXPRESSION RBRACE
     FACTOR := FUNCTION_CALL | YIELD | NUMBER | IDENTIFIER | IF
     TERM := FACTOR [* TERM]
-    EXPRESSION :=  TERM [+ EXPRESSION]
+    EXPRESSION_BLOCK := {STATEMENT* [EXPRESSION]}
+    EXPRESSION :=  TERM [+ EXPRESSION] | EXPESSION_BLOCK
     INIT_CO := init IDENTIFIER
     BIND := ID_DEC := (EXPRESSION|INIT_CO)
     PRINTLN := println EXPRESSION ;
@@ -234,15 +250,13 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
 
     let mut params = vec![];
 
-    while let Some(param) = identifier_declare(iter)? {
+    while let Some(param) = identifier_or_declare(iter)? {
         match param {
-            (
                 AstNode {
                     l: _,
-                    n: Ast::Identifier(id),
-                },
-                id_type,
-            ) => {
+                    n: Ast::IdentifierDeclare(id, id_type),
+                }
+            => {
                 params.push((id, id_type));
                 consume_if(iter, Lex::Comma);
             }
@@ -313,7 +327,7 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
 }
 
 fn statement(iter: &mut TokenIter) -> PResult {
-    let stm = match bind(iter)? {
+    let stm = match let_bind(iter)? {
         Some(b) => Some(b),
         None => match println_stmt(iter)? {
             Some(p) => Some(p),
@@ -321,11 +335,13 @@ fn statement(iter: &mut TokenIter) -> PResult {
         },
     };
 
-    if stm.is_some() {
-        consume_must_be(iter, Lex::Semicolon)?;
+    match stm {
+        Some(stm) => match consume_if(iter, Lex::Semicolon) {
+            Some(l) => Ok(Some(AstNode::new(l, Ast::Statement(Box::new(stm))))),
+            None => Ok(Some(stm)),
+        }
+        None => Ok(stm),
     }
-
-    Ok(stm)
 }
 
 fn println_stmt(iter: &mut TokenIter) -> PResult {
@@ -349,33 +365,19 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn bind(iter: &mut TokenIter) -> PResult {
-    match identifier_declare(iter)? {
-        Some((
-            AstNode {
-                l: _,
-                n: Ast::Identifier(id),
-            },
-            id_type,
-        )) => match consume_if(iter, Lex::Assign) {
-            Some(l) => match co_init(iter)? {
-                Some(co_init) => Ok(Some(AstNode::new(
-                    l,
-                    Ast::Bind(id, id_type, Box::new(co_init)),
-                ))),
-                None => {
-                    let exp = expression(iter)?.ok_or(&format!(
-                        "L{}: Expected an expression or coroutine init after :=, found {:?}",
-                        l,
-                        iter.peek()
-                    ))?;
-                    Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(exp)))))
-                }
-            },
-            _ => Err(format!("Expected := after identifer in bind statement")),
+fn let_bind(iter: &mut TokenIter) -> PResult {
+    match consume_if(iter, Lex::Let) {
+        Some(l) => {
+            let id_decl = identifier_or_declare(iter)?.ok_or(format!("L{}: expected identifier after let", l))?;
+            consume_must_be(iter, Lex::Assign)?;
+            //let exp = expression(iter)?.ok_or(format!("L{}: expected expression on LHS of bind", l))?;
+            let exp = match co_init(iter)? {
+                Some(co_init) => co_init,
+                None => expression(iter)?.ok_or(format!("L{}: expected expression on LHS of bind", l))?
+            };
+            Ok(Some(AstNode::new_bind(l, Box::new(id_decl), Box::new(exp))?))
         },
-        Some(_) => Err(format!("invalid LHS in bind expresion")),
-        None => Ok(None),
+        None => Ok(None)
     }
 }
 
@@ -398,6 +400,29 @@ fn co_init(iter: &mut TokenIter) -> PResult {
 
 fn expression(iter: &mut TokenIter) -> PResult {
     logical_or(iter)
+}
+
+fn expression_block(iter: &mut TokenIter) -> PResult {
+    match consume_if(iter, Lex::LBrace) {
+        Some(l) =>{
+            let mut stmts = block(iter)?;
+            match iter.peek() {
+                Some(Token{l:_, s: Lex::RBrace}) => {
+                    ()
+                }
+                Some(_) => {
+                    let exp = expression(iter)?.ok_or(format!("L{}: Expected expression at end of block", l))?;
+                    stmts.push(exp);
+                }
+                None => {
+                    return Err(format!("L{}: expected {}, but found EOF", l, Lex::RBrace))
+                }
+            };
+            consume_must_be(iter, Lex::RBrace)?;
+            Ok(Some(AstNode::new(l, Ast::ExpressionBlock(stmts))))
+        },
+        None => Ok(None)
+    }
 }
 
 fn logical_or(iter: &mut TokenIter) -> PResult {
@@ -593,20 +618,15 @@ fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
     }
 }
 
-fn identifier_declare(iter: &mut TokenIter) -> Result<Option<(AstNode, Primitive)>, String> {
+fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<AstNode>, String> {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => match consume_if(iter, Lex::Colon) {
             Some(l) => match primitive(iter) {
-                Some(p) => Some((AstNode::new(l, Ast::Identifier(id.clone())), p)),
+                Some(p) => Some(AstNode::new(l, Ast::IdentifierDeclare(id.clone(), p))),
                 None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
             },
-            _ => {
-                return Err(format!(
-                    "L{}: Expected type after variable declaration, found: {:?}",
-                    l,
-                    iter.peek().map(|t| &t.s)
-                ))
-            }
+            _ => 
+                Some(AstNode::new(l, Ast::Identifier(id.clone()))),
         },
         _ => None,
     })
@@ -821,6 +841,71 @@ pub mod tests {
                     assert_eq!(exp.n, Ast::Boolean(true));
                 }
                 _ => panic!("No body"),
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_expression_block_oneline() {
+        let mut lexer = Lexer::new();
+        let text = "{5}";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(AstNode {
+            l,
+            n: Ast::ExpressionBlock(body),
+        }) = expression_block(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(body.len(), 1);
+            assert_eq!(body[0].n, Ast::Integer(5));
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_expression_block_multiline() {
+        let mut lexer = Lexer::new();
+        let text = "{let x:i32 := 5; x * x}";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(AstNode {
+            l,
+            n: Ast::ExpressionBlock(body),
+        }) = expression_block(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(body.len(), 2);
+            match &body[0].n {
+                Ast::Statement(stm) => {
+                    match stm.as_ref() {
+                        AstNode{l, n: Ast::Bind(id, p, exp)} => {
+                            assert_eq!(id, "x");
+                            assert_eq!(*p, Primitive::I32);
+                            assert_eq!(exp.n, Ast::Integer(5));
+                        },
+                        _ => panic!("Not a binding statement"),
+                    }
+                }
+                _ => panic!("No body: {:?}", &body[0].n),
+            }
+            match &body[1].n {
+                Ast::Mul(l, r) => {
+                    assert_eq!(l.n, Ast::Identifier("x".into()));
+                    assert_eq!(r.n, Ast::Identifier("x".into()));
+                }
+                _ => panic!("No body: {:?}", &body[0].n),
             }
         } else {
             panic!("No nodes returned by parser")
