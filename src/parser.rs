@@ -336,11 +336,12 @@ fn statement(iter: &mut TokenIter) -> PResult {
     };
 
     match stm {
-        Some(stm) => match consume_if(iter, Lex::Semicolon) {
-            Some(l) => Ok(Some(AstNode::new(l, Ast::Statement(Box::new(stm))))),
-            None => Ok(Some(stm)),
+        Some(stm) => match consume_must_be(iter, Lex::Semicolon)? {
+            Token{l, s:_} => {
+                Ok(Some(AstNode::new(*l, Ast::Statement(Box::new(stm)))))
+            }
         }
-        None => Ok(stm),
+        None => Ok(None),
     }
 }
 
@@ -875,17 +876,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(AstNode {
-            l,
-            n: Ast::ExpressionBlock(body),
-        }) = expression_block(&mut iter).unwrap()
-        {
-            assert_eq!(l, 1);
-            assert_eq!(body.len(), 2);
-            assert_eq!(body[1].n, Ast::Integer(5));
-        } else {
-            panic!("No nodes returned by parser")
-        }
+        assert_eq!(expression_block(&mut iter), Err("L1: Expected Semicolon, but found Integer(5)".into()));
     }
 
     #[test]
