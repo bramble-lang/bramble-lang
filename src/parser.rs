@@ -21,7 +21,10 @@ impl AstNode {
     }
 
     pub fn new_yield(line: u32, id_line: u32, id: String) -> AstNode {
-        AstNode::new(line, Ast::Yield(Box::new(AstNode::new(id_line, Ast::Identifier(id)))))
+        AstNode::new(
+            line,
+            Ast::Yield(Box::new(AstNode::new(id_line, Ast::Identifier(id)))),
+        )
     }
 
     pub fn binary_op(
@@ -122,7 +125,7 @@ fn module(iter: &mut TokenIter) -> PResult {
     let mut coroutines = vec![];
 
     match iter.peek() {
-        Some(Token{l, s:_}) => {
+        Some(Token { l, s: _ }) => {
             while iter.peek().is_some() {
                 match function_def(iter)? {
                     Some(f) => functions.push(f),
@@ -138,7 +141,7 @@ fn module(iter: &mut TokenIter) -> PResult {
             } else {
                 None
             })
-        },
+        }
         None => Ok(None),
     }
 }
@@ -187,44 +190,40 @@ fn function_def(iter: &mut TokenIter) -> PResult {
 
 fn coroutine_def(iter: &mut TokenIter) -> PResult {
     let syntax = match consume_if(iter, Lex::CoroutineDef) {
-        Some(_) => {
-            match consume_if_id(iter) {
-                Some((l, id)) => {
-                    let params = fn_def_params(iter)?;
+        Some(_) => match consume_if_id(iter) {
+            Some((l, id)) => {
+                let params = fn_def_params(iter)?;
 
-                    let co_type = match consume_if(iter, Lex::LArrow) {
-                        Some(l) => {
-                            primitive(iter).expect(&format!(
-                                "L{}: Expected primitive type after -> in function definition",
-                                l
-                            ))
-                        }
-                        _ => Primitive::Unit,
-                    };
+                let co_type = match consume_if(iter, Lex::LArrow) {
+                    Some(l) => primitive(iter).expect(&format!(
+                        "L{}: Expected primitive type after -> in function definition",
+                        l
+                    )),
+                    _ => Primitive::Unit,
+                };
 
-                    consume_must_be(iter, Lex::LBrace)?;
-                    let mut stmts = co_block(iter)?;
+                consume_must_be(iter, Lex::LBrace)?;
+                let mut stmts = co_block(iter)?;
 
-                    match return_stmt(iter)? {
-                        Some(ret) => stmts.push(ret),
-                        None => {
-                            return Err(format!(
-                                "L{}: Coroutine must end with a return statement",
-                                l
-                            ))
-                        }
+                match return_stmt(iter)? {
+                    Some(ret) => stmts.push(ret),
+                    None => {
+                        return Err(format!(
+                            "L{}: Coroutine must end with a return statement",
+                            l
+                        ))
                     }
-
-                    consume_must_be(iter, Lex::RBrace)?;
-
-                    Some(AstNode::new(
-                        l,
-                        Ast::CoroutineDef(id.clone(), params, co_type, stmts),
-                    ))
                 }
-                _ => return Err(format!("Expected function name after fn")),
+
+                consume_must_be(iter, Lex::RBrace)?;
+
+                Some(AstNode::new(
+                    l,
+                    Ast::CoroutineDef(id.clone(), params, co_type, stmts),
+                ))
             }
-        }
+            _ => return Err(format!("Expected function name after fn")),
+        },
         _ => None,
     };
     Ok(syntax)
@@ -237,10 +236,13 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
 
     while let Some(param) = identifier_declare(iter)? {
         match param {
-            (AstNode {
-                l: _,
-                n: Ast::Identifier(id),
-            }, id_type) => {
+            (
+                AstNode {
+                    l: _,
+                    n: Ast::Identifier(id),
+                },
+                id_type,
+            ) => {
                 params.push((id, id_type));
                 consume_if(iter, Lex::Comma);
             }
@@ -276,7 +278,7 @@ fn co_block(iter: &mut TokenIter) -> Result<Vec<AstNode>, String> {
             None => match yield_return_stmt(iter)? {
                 Some(s) => stmts.push(s),
                 None => break,
-            }
+            },
         }
     }
     Ok(stmts)
@@ -349,29 +351,29 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
 
 fn bind(iter: &mut TokenIter) -> PResult {
     match identifier_declare(iter)? {
-        Some((AstNode {
-            l: _,
-            n: Ast::Identifier(id),
-        }, id_type)) => {
-            match consume_if(iter, Lex::Assign) {
-                Some(l) => {
-                    match co_init(iter)? {
-                        Some(co_init) => Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(co_init))))),
-                        None => {
-                            let exp = expression(iter)?.ok_or(&format!(
-                                    "L{}: Expected an expression or coroutine init after :=, found {:?}",
-                                    l,
-                                    iter.peek()
-                                ))?;
-                            Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(exp)))))
-                        }
-                    }
+        Some((
+            AstNode {
+                l: _,
+                n: Ast::Identifier(id),
+            },
+            id_type,
+        )) => match consume_if(iter, Lex::Assign) {
+            Some(l) => match co_init(iter)? {
+                Some(co_init) => Ok(Some(AstNode::new(
+                    l,
+                    Ast::Bind(id, id_type, Box::new(co_init)),
+                ))),
+                None => {
+                    let exp = expression(iter)?.ok_or(&format!(
+                        "L{}: Expected an expression or coroutine init after :=, found {:?}",
+                        l,
+                        iter.peek()
+                    ))?;
+                    Ok(Some(AstNode::new(l, Ast::Bind(id, id_type, Box::new(exp)))))
                 }
-                _ => {
-                    Err(format!("Expected := after identifer in bind statement"))
-                }
-            }
-        }
+            },
+            _ => Err(format!("Expected := after identifer in bind statement")),
+        },
         Some(_) => Err(format!("invalid LHS in bind expresion")),
         None => Ok(None),
     }
@@ -403,12 +405,7 @@ fn logical_or(iter: &mut TokenIter) -> PResult {
         Some(n) => match consume_if(iter, Lex::BOr) {
             Some(l) => {
                 let n2 = logical_or(iter)?.ok_or(&format!("L{}: An expression after ||", l))?;
-                Some(AstNode::binary_op(
-                    l,
-                    &Lex::BOr,
-                    Box::new(n),
-                    Box::new(n2),
-                )?)
+                Some(AstNode::binary_op(l, &Lex::BOr, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -436,7 +433,10 @@ fn logical_and(iter: &mut TokenIter) -> PResult {
 
 fn comparison(iter: &mut TokenIter) -> PResult {
     Ok(match sum(iter)? {
-        Some(n) => match consume_if_one_of(iter, vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq]) {
+        Some(n) => match consume_if_one_of(
+            iter,
+            vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
+        ) {
             Some((l, op)) => {
                 let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after {}", l, op))?;
                 Some(AstNode::binary_op(l, &op, Box::new(n), Box::new(n2))?)
@@ -540,8 +540,7 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<AstNode>>, String> 
                     exp => {
                         params.push(exp);
                         match consume_if(iter, Lex::Comma) {
-                            Some(_) => {
-                            }
+                            Some(_) => {}
                             None => break,
                         };
                     }
@@ -662,28 +661,31 @@ fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<u32> {
 
 fn consume_if_one_of(iter: &mut TokenIter, tests: Vec<Lex>) -> Option<(u32, Lex)> {
     match iter.peek() {
-        Some(Token{l, s}) =>{
+        Some(Token { l, s }) => {
             if tests.iter().find(|sym| *sym == s).is_some() {
                 iter.next();
                 Some((*l, s.clone()))
             } else {
                 None
             }
-        },
+        }
         None => None,
     }
 }
 
 fn must_be_one_of(iter: &mut TokenIter, tests: Vec<Lex>) -> Result<(u32, Lex), String> {
     match iter.peek() {
-        Some(Token{l, s}) =>{
+        Some(Token { l, s }) => {
             if tests.iter().find(|sym| *sym == s).is_some() {
                 iter.next();
                 Ok((*l, s.clone()))
             } else {
-                Err(format!("L{}: expected one of {:?} but found {}", l, tests, s))
+                Err(format!(
+                    "L{}: expected one of {:?} but found {}",
+                    l, tests, s
+                ))
             }
-        },
+        }
         None => Err(format!("Expected {:?} but found EOF", tests)),
     }
 }
@@ -716,16 +718,24 @@ fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, 
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
     use super::lexer::Lexer;
+    use super::*;
 
     #[test]
     fn parse_arithmetic_expression() {
         let mut lexer = Lexer::new();
         let text = "2 + 2";
-        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(AstNode{l, n:Ast::Add(left, right)}) = expression(&mut iter).unwrap() {
+        if let Some(AstNode {
+            l,
+            n: Ast::Add(left, right),
+        }) = expression(&mut iter).unwrap()
+        {
             assert_eq!(l, 1);
             assert_eq!(left.n, Ast::Integer(2));
             assert_eq!(right.n, Ast::Integer(2));
@@ -738,16 +748,24 @@ pub mod tests {
     fn parse_nested_arithmetic_expression() {
         let mut lexer = Lexer::new();
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(AstNode{l, n:Ast::Mul(left, right)}) = expression(&mut iter).unwrap() {
+        if let Some(AstNode {
+            l,
+            n: Ast::Mul(left, right),
+        }) = expression(&mut iter).unwrap()
+        {
             assert_eq!(l, 1);
             match left.n {
                 Ast::Add(ll, lr) => {
                     assert_eq!(ll.n, Ast::Integer(2));
                     assert_eq!(lr.n, Ast::Integer(4));
                 }
-                _ => panic!("Expected Add syntax")
+                _ => panic!("Expected Add syntax"),
             }
             assert_eq!(right.n, Ast::Integer(3));
         } else {
@@ -759,9 +777,17 @@ pub mod tests {
     fn parse_boolean_expression() {
         let mut lexer = Lexer::new();
         let text = "true || false";
-        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(AstNode{l, n:Ast::BOr(left, right)}) = expression(&mut iter).unwrap() {
+        if let Some(AstNode {
+            l,
+            n: Ast::BOr(left, right),
+        }) = expression(&mut iter).unwrap()
+        {
             assert_eq!(l, 1);
             assert_eq!(left.n, Ast::Boolean(true));
             assert_eq!(right.n, Ast::Boolean(false));
@@ -774,9 +800,17 @@ pub mod tests {
     fn parse_function_def() {
         let mut lexer = Lexer::new();
         let text = "fn test(x:i32) -> bool {return true;}";
-        let tokens: Vec<Token>= lexer.tokenize(&text).into_iter().collect::<Result<_,_>>().unwrap();
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(AstNode{l, n:Ast::FunctionDef(name, params, ty, body)}) = function_def(&mut iter).unwrap() {
+        if let Some(AstNode {
+            l,
+            n: Ast::FunctionDef(name, params, ty, body),
+        }) = function_def(&mut iter).unwrap()
+        {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
             assert_eq!(params, vec![("x".into(), Primitive::I32)]);
@@ -786,7 +820,7 @@ pub mod tests {
                 Ast::Return(Some(exp)) => {
                     assert_eq!(exp.n, Ast::Boolean(true));
                 }
-                _ => panic!("No body")
+                _ => panic!("No body"),
             }
         } else {
             panic!("No nodes returned by parser")
