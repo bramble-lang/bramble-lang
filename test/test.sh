@@ -35,6 +35,7 @@ then
     run_test "boolean_coroutine"
     run_test "coroutine_two"
     run_test "if_exp/if"
+    run_test "if_exp/if_block"
     run_test "if_exp/if_as_conditional"
     run_test "binding/recursive"
     run_test "binding/undeclared"
