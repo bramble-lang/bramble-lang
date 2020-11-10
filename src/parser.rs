@@ -866,6 +866,29 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_expression_block_bad() {
+        let mut lexer = Lexer::new();
+        let text = "{let x: i32 := 10 5}";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(AstNode {
+            l,
+            n: Ast::ExpressionBlock(body),
+        }) = expression_block(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(body.len(), 2);
+            assert_eq!(body[1].n, Ast::Integer(5));
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
     fn parse_expression_block_multiline() {
         let mut lexer = Lexer::new();
         let text = "{let x:i32 := 5; x * x}";
