@@ -154,9 +154,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                 };
 
                 consume_must_be(iter, Lex::LBrace)?;
-                let mut stmts = block(iter)
-                    .into_iter()
-                    .collect::<Result<Vec<AstNode>, String>>()?;
+                let mut stmts = block(iter)?;
 
                 match return_stmt(iter)? {
                     Some(ret) => stmts.push(ret),
@@ -190,9 +188,8 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                 Some((l, id)) => {
                     let params = fn_def_params(iter)?;
 
-                    let co_type = match iter.peek() {
-                        Some(Token { l, s: Lex::LArrow }) => {
-                            iter.next();
+                    let co_type = match consume_if(iter, Lex::LArrow) {
+                        Some(l) => {
                             primitive(iter).expect(&format!(
                                 "L{}: Expected primitive type after -> in function definition",
                                 l
@@ -202,9 +199,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                     };
 
                     consume_must_be(iter, Lex::LBrace)?;
-                    let mut stmts = co_block(iter)
-                        .into_iter()
-                        .collect::<Result<Vec<AstNode>, String>>()?;
+                    let mut stmts = co_block(iter)?;
 
                     match return_stmt(iter)? {
                         Some(ret) => stmts.push(ret),
@@ -276,32 +271,29 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
     Ok(params)
 }
 
-fn block(iter: &mut TokenIter) -> Vec<Result<AstNode, String>> {
+fn block(iter: &mut TokenIter) -> Result<Vec<AstNode>, String> {
     let mut stmts = vec![];
     while iter.peek().is_some() {
-        match statement(iter) {
-            Ok(Some(s)) => stmts.push(Ok(s)),
-            Ok(None) => break,
-            Err(msg) => stmts.push(Err(msg)),
+        match statement(iter)? {
+            Some(s) => stmts.push(s),
+            None => break,
         }
     }
-    stmts
+    Ok(stmts)
 }
 
-fn co_block(iter: &mut TokenIter) -> Vec<Result<AstNode, String>> {
+fn co_block(iter: &mut TokenIter) -> Result<Vec<AstNode>, String> {
     let mut stmts = vec![];
     while iter.peek().is_some() {
-        match statement(iter) {
-            Ok(Some(s)) => stmts.push(Ok(s)),
-            Ok(None) => match yield_return_stmt(iter) {
-                Ok(Some(s)) => stmts.push(Ok(s)),
-                Ok(None) => break,
-                Err(msg) => stmts.push(Err(msg)),
-            },
-            Err(msg) => stmts.push(Err(msg)),
+        match statement(iter)? {
+            Some(s) => stmts.push(s),
+            None => match yield_return_stmt(iter)? {
+                Some(s) => stmts.push(s),
+                None => break,
+            }
         }
     }
-    stmts
+    Ok(stmts)
 }
 
 fn return_stmt(iter: &mut TokenIter) -> PResult {
