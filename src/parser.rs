@@ -21,7 +21,7 @@ impl AstNode {
     }
 
     pub fn new_yield(line: u32, id_line: u32, id: String) -> AstNode {
-        AstNode::new(line, Ast::Yield(Box::new(AstNode::new(id_line, Ast::Identifier(id, Primitive::Unknown)))))
+        AstNode::new(line, Ast::Yield(Box::new(AstNode::new(id_line, Ast::Identifier(id)))))
     }
 
     pub fn binary_op(
@@ -50,7 +50,7 @@ impl AstNode {
 pub enum Ast {
     Integer(i32),
     Boolean(bool),
-    Identifier(String, Primitive),
+    Identifier(String),
     Primitive(Primitive),
     Mul(Box<AstNode>, Box<AstNode>),
     Add(Box<AstNode>, Box<AstNode>),
@@ -178,7 +178,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                     Ast::FunctionDef(id.clone(), params, fn_type, stmts),
                 ))
             }
-            _ => panic!("Expected function name after fn"),
+            _ => return Err(format!("Expected function name after fn")),
         },
         _ => None,
     };
@@ -237,10 +237,10 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
 
     while let Some(param) = identifier_declare(iter)? {
         match param {
-            AstNode {
+            (AstNode {
                 l: _,
-                n: Ast::Identifier(id, id_type),
-            } => {
+                n: Ast::Identifier(id),
+            }, id_type) => {
                 params.push((id, id_type));
                 match iter.peek() {
                     Some(Token {
@@ -367,10 +367,10 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
 
 fn bind(iter: &mut TokenIter) -> PResult {
     match identifier_declare(iter)? {
-        Some(AstNode {
+        Some((AstNode {
             l: _,
-            n: Ast::Identifier(id, id_type),
-        }) => {
+            n: Ast::Identifier(id),
+        }, id_type)) => {
             match consume_if(iter, Lex::Assign) {
                 Some(l) => {
                     match co_init(iter)? {
@@ -590,7 +590,7 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
                 // this is a function call
                 Some(AstNode::new(l, Ast::FunctionCall(id, params)))
             }
-            _ => Some(AstNode::new(l, Ast::Identifier(id, Primitive::Unknown))),
+            _ => Some(AstNode::new(l, Ast::Identifier(id))),
         },
         None => None,
     })
@@ -612,11 +612,11 @@ fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
     }
 }
 
-fn identifier_declare(iter: &mut TokenIter) -> PResult {
+fn identifier_declare(iter: &mut TokenIter) -> Result<Option<(AstNode, Primitive)>, String> {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => match consume_if(iter, Lex::Colon) {
             Some(l) => match primitive(iter) {
-                Some(p) => Some(AstNode::new(l, Ast::Identifier(id.clone(), p))),
+                Some(p) => Some((AstNode::new(l, Ast::Identifier(id.clone())), p)),
                 None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
             },
             _ => {

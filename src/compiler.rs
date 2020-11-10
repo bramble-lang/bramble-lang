@@ -493,7 +493,7 @@ impl Compiler {
                     Source::Integer(if *b { 1 } else { 0 }),
                 ));
             }
-            Ast::Identifier(id, _id_type) => {
+            Ast::Identifier(id) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars

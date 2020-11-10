@@ -209,7 +209,7 @@ pub mod checker {
         match &ast.n {
             Integer(_) => Ok(I32),
             Boolean(_) => Ok(Bool),
-            Identifier(id, _) => match current_func {
+            Identifier(id) => match current_func {
                 None => Err(format!(
                     "L{}: Variable {} appears outside of function",
                     ast.l, id
@@ -369,7 +369,7 @@ pub mod checker {
                 Some(cf) => match exp {
                     AstNode {
                         l,
-                        n: Ast::Identifier(coname, _),
+                        n: Ast::Identifier(coname),
                     } => ftable
                         .funcs
                         .get(cf)
@@ -543,7 +543,7 @@ pub mod checker {
                 },
             );
 
-            let node = AstNode::new(1, Ast::Identifier("x".into(), Primitive::Bool));
+            let node = AstNode::new(1, Ast::Identifier("x".into()));
             let ty = traverse(&node, &Some("my_main".into()), &mut ft);
             assert_eq!(ty, Ok(Primitive::Bool));
         }
@@ -592,7 +592,7 @@ pub mod checker {
                     Ast::Add(
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                         Box::new(AstNode::new(1, Ast::Integer(10))),
                     ),
@@ -608,7 +608,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(10))),
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                     ),
                 );
@@ -622,11 +622,11 @@ pub mod checker {
                     Ast::Add(
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                     ),
                 );
@@ -679,7 +679,7 @@ pub mod checker {
                     Ast::Mul(
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                         Box::new(AstNode::new(1, Ast::Integer(10))),
                     ),
@@ -695,7 +695,7 @@ pub mod checker {
                         Box::new(AstNode::new(1, Ast::Integer(10))),
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                     ),
                 );
@@ -709,11 +709,11 @@ pub mod checker {
                     Ast::Mul(
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                         Box::new(AstNode::new(
                             1,
-                            Ast::Identifier("b".into(), Primitive::Bool),
+                            Ast::Identifier("b".into()),
                         )),
                     ),
                 );
@@ -1046,7 +1046,7 @@ pub mod checker {
                     Ast::Bind(
                         "x".into(),
                         Primitive::I32,
-                        Box::new(AstNode::new(1, Ast::Identifier("x".into(), I32))),
+                        Box::new(AstNode::new(1, Ast::Identifier("x".into()))),
                     ),
                 );
                 let mut ft = FunctionTable::new();
@@ -1065,7 +1065,7 @@ pub mod checker {
 
             // use an unbound variable
             {
-                let node = AstNode::new(1, Ast::Identifier("x".into(), I32));
+                let node = AstNode::new(1, Ast::Identifier("x".into()));
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -1274,7 +1274,7 @@ pub mod checker {
             );
             let node = AstNode::new(
                 1,
-                Ast::Yield(Box::new(AstNode::new(1, Ast::Identifier("c".into(), I32)))),
+                Ast::Yield(Box::new(AstNode::new(1, Ast::Identifier("c".into())))),
             );
             let ty = traverse(&node, &Some("my_main".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
