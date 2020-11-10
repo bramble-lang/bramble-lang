@@ -184,12 +184,8 @@ fn function_def(iter: &mut TokenIter) -> PResult {
 }
 
 fn coroutine_def(iter: &mut TokenIter) -> PResult {
-    let syntax = match iter.peek() {
-        Some(Token {
-            l: _,
-            s: Lex::CoroutineDef,
-        }) => {
-            iter.next();
+    let syntax = match consume_if(iter, Lex::CoroutineDef) {
+        Some(_) => {
             match consume_if_id(iter) {
                 Some((l, id)) => {
                     let params = fn_def_params(iter)?;
