@@ -527,10 +527,8 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if(iter, Lex::If) {
         Some(l) => {
             let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
-            consume_must_be(iter, Lex::LBrace)?;
 
-            let true_arm = expression(iter)?.ok_or("Expression in true arm of if expression")?;
-            consume_must_be(iter, Lex::RBrace)?;
+            let true_arm = expression_block(iter)?.ok_or("Expression in true arm of if expression")?;
             consume_must_be(iter, Lex::Else)?;
 
             // check for `else if`
@@ -538,11 +536,8 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
                 Some(Token { l, s: Lex::If }) => if_expression(iter)?
                     .ok_or(format!("L{}: Expected if expression after else if", l))?,
                 _ => {
-                    consume_must_be(iter, Lex::LBrace)?;
-                    // expression
-                    let false_arm = expression(iter)?
+                    let false_arm = expression_block(iter)?
                         .ok_or(&format!("L{}: Expression in false arm of if expression", l))?;
-                    consume_must_be(iter, Lex::RBrace)?;
                     false_arm
                 }
             };

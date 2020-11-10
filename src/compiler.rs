@@ -670,6 +670,11 @@ impl Compiler {
                 Compiler::traverse(false_arm, current_func, function_table, output);
                 output.push(Label(end_lbl));
             }
+            Ast::ExpressionBlock(body) => {
+                for s in body.iter() {
+                    Compiler::traverse(s, current_func, function_table, output);
+                }
+            }
             Ast::Statement(stm) => {
                 Compiler::traverse(stm, current_func, function_table, output);
             }
