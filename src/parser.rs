@@ -727,8 +727,8 @@ fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, 
                 .expect("CRITICAL: failed to go to next token after successful match");
             Ok(tok)
         }
-        Some(Token { l, s }) => Err(format!("L{}: Expected {:?}, but found {:?}", l, test, s)),
-        None => Err(format!("Expected {:?}, but found EOF", test)),
+        Some(Token { l, s }) => Err(format!("L{}: Expected {}, but found {}", l, test, s)),
+        None => Err(format!("Expected {}, but found EOF", test)),
     }
 }
 
@@ -869,22 +869,11 @@ pub mod tests {
     #[test]
     fn parse_expression_block_bad() {
         let mut lexer = Lexer::new();
-        let text = "{let x: i32 := 10 5}";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
-            .into_iter()
-            .collect::<Result<_, _>>()
-            .unwrap();
-        let mut iter = tokens.iter().peekable();
-        assert_eq!(expression_block(&mut iter), Err("L1: Expected Semicolon, but found Integer(5)".into()));
-    }
-
-    #[test]
-    fn parse_expression_block_missing_semicolons() {
-        let mut lexer = Lexer::new();
         for (text,msg) in [
-                    ("{5 10 51}", "L1: Expected RBrace, but found Integer(10)"),
-                    ("{5; 10 51}", "L1: Expected RBrace, but found Semicolon"),
+                    ("{5 10 51}", "L1: Expected }, but found literal 10"),
+                    ("{5; 10 51}", "L1: Expected }, but found ;"),
+                    ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found ;"),
+                    ("{let x: i32 := 10 5}", "L1: Expected ;, but found literal 5"),
                 ].iter() {
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
