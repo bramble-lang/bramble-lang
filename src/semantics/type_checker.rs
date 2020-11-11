@@ -122,20 +122,6 @@ pub mod checker {
                         Ok((idty, Box::new(Identifier(sm(*l, idty), id.clone()))))
                     }
                 },
-                ExpressionBlock(ln, body) => {
-                    let mut ty = Unit;
-                    let mut nbody = vec![];
-                    for stmt in body.iter() {
-                        let r = self.traverse(stmt, current_func, ftable)?;
-                        ty = r.0;
-                        nbody.push(*r.1);
-                    }
-                    Ok((ty, Box::new(ExpressionBlock(sm(*ln, ty), nbody))))
-                }
-                Statement(_, stmt) => {
-                    let (_, stmt) = self.traverse(stmt, current_func, ftable)?;
-                    Ok((Unit, stmt))
-                }
                 Mul(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(I32))?;
@@ -304,6 +290,20 @@ pub mod checker {
                         }
                     }
                 },
+                ExpressionBlock(ln, body) => {
+                    let mut ty = Unit;
+                    let mut nbody = vec![];
+                    for stmt in body.iter() {
+                        let r = self.traverse(stmt, current_func, ftable)?;
+                        ty = r.0;
+                        nbody.push(*r.1);
+                    }
+                    Ok((ty, Box::new(ExpressionBlock(sm(*ln, ty), nbody))))
+                }
+                Statement(_, stmt) => {
+                    let (_, stmt) = self.traverse(stmt, current_func, ftable)?;
+                    Ok((Unit, stmt))
+                }
                 FunctionDef(ln, fname, params, p, body) => {
                     let mut nbody = vec![];
                     for stmt in body.iter() {
