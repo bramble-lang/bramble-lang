@@ -2,17 +2,20 @@ use std::collections::HashMap;
 
 use crate::parser::Primitive;
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     Primitive(Primitive),
     Function(Vec<Primitive>, Primitive),
     Coroutine(Vec<Primitive>, Primitive),
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
     name: String,
     ty: Type,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     sym: HashMap<String, Symbol>,
 }
