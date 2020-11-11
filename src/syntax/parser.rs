@@ -111,16 +111,16 @@ impl<I> Ast<I> {
             Printi(_, _) => "printi".into(),
             Printiln(_, _) => "printiln".into(),
             Printbln(_, _) => "printbln".into(),
-            
+
             If(_, _, _, _) => "if".into(),
             ExpressionBlock(_, _) => "expression block".into(),
-            
+
             Statement(_, _) => "statement".into(),
             Bind(_, _, _, _) => "bind".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
-            
+
             FunctionDef(_, _, _, _, _) => "function definition".into(),
             FunctionCall(_, _, _) => "function call".into(),
             CoroutineDef(_, _, _, _, _) => "coroutine definition".into(),
@@ -139,13 +139,13 @@ pub enum Primitive {
 }
 
 impl std::fmt::Display for Primitive {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(),std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Primitive::*;
         match self {
             I32 => f.write_str("i32"),
             Bool => f.write_str("bool"),
             Unit => f.write_str("unit"),
-            Unknown => f.write_str("unknown")
+            Unknown => f.write_str("unknown"),
         }
     }
 }

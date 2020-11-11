@@ -9,5 +9,5 @@
  * with SemanticMetadata (including the type of each node and the symbol tables).
  */
 
-pub mod vartable;
 pub mod type_checker;
+pub mod vartable;
