@@ -30,14 +30,14 @@ pub mod checker {
                     Ok((lty, lv, rv))
                 }
                 else {
-                    Err(format!("L{}: expected operands of {:?}", ln, lty))
+                    Err(format!("L{}: expected operands of {}", ln, lty))
                 }
             },
             Some(expected) => {
                 if lty == expected && rty == expected {
                     Ok((lty, lv, rv))
                 } else {
-                    Err(format!("L{}: expected operands of {:?}", ln, expected))
+                    Err(format!("L{}: expected operands of {}", ln, expected))
                 }
             }
         }
@@ -137,13 +137,13 @@ pub mod checker {
                         Ok((true_arm.0, Box::new(If(SM{ln:*ln, ty:true_arm.0}, cond_exp, true_arm.1, false_arm.1))))
                     } else {
                         Err(format!(
-                            "L{}: If expression has mismatching arms: expected {:?} got {:?}",
+                            "L{}: If expression has mismatching arms: expected {} got {}",
                             ln, true_arm.0, false_arm.0
                         ))
                     }
                 } else {
                     Err(format!(
-                        "L{}: Expected boolean expression in if conditional, got: {:?}",
+                        "L{}: Expected boolean expression in if conditional, got: {}",
                         ln, cond_ty
                     ))
                 }
@@ -164,7 +164,7 @@ pub mod checker {
                             .map_err(|msg| format!("L{}: {}", l, msg))?;
                         Ok((*p, Box::new(Bind(SM{ln:*l, ty:*p}, name.clone(), *p, rhs.1))))
                     } else {
-                        Err(format!("L{}: Bind expected {:?} but got {:?}", l, p, rhs.0))
+                        Err(format!("L{}: Bind expected {} but got {}", l, p, rhs.0))
                     }
                 }
                 None => Err(format!(
@@ -180,7 +180,7 @@ pub mod checker {
                         Ok((Unit, Box::new(Return(SM{ln:*l, ty: Unit}, None))))
                     } else {
                         Err(format!(
-                            "L{}: Return expected {:?} type and got Unit",
+                            "L{}: Return expected {} type and got unit",
                             l, fty
                         ))
                     }
@@ -195,7 +195,7 @@ pub mod checker {
                         Ok((fty, Box::new(Return(SM{ln:*l, ty:fty}, Some(val.1)))))
                     } else {
                         Err(format!(
-                            "L{}: Return expected {:?} but got {:?}",
+                            "L{}: Return expected {} but got {}",
                             l, fty, val.0
                         ))
                     }
@@ -225,7 +225,7 @@ pub mod checker {
                         Ok((Unit, Box::new(YieldReturn(SM{ln:*l, ty:fty}, None))))
                     } else {
                         Err(format!(
-                            "L{}: Yield return expected {:?} but got Unit",
+                            "L{}: Yield return expected {} but got unit",
                             l, fty
                         ))
                     }
@@ -240,7 +240,7 @@ pub mod checker {
                         Ok((fty, Box::new(YieldReturn(SM{ln:*l, ty:fty}, Some(val.1)))))
                     } else {
                         Err(format!(
-                            "L{}: Yield return expected {:?} but got {:?}",
+                            "L{}: Yield return expected {} but got {}",
                             l, fty, val.0
                         ))
                     }
@@ -342,7 +342,7 @@ pub mod checker {
                 if val.0 == I32 {
                     Ok((Bool, Box::new(Printi(SM{ln:*l, ty:val.0}, val.1))))
                 } else {
-                    Err(format!("L{}: Expected i32 for printi got {:?}", l, val.0))
+                    Err(format!("L{}: Expected i32 for printi got {}", l, val.0))
                 }
             }
             Printiln(l, exp) => {
@@ -350,7 +350,7 @@ pub mod checker {
                 if val.0 == I32 {
                     Ok((Bool, Box::new(Printiln(SM{ln:*l, ty:val.0}, val.1))))
                 } else {
-                    Err(format!("L{}: Expected i32 for printi got {:?}", l, val.0))
+                    Err(format!("L{}: Expected i32 for printi got {}", l, val.0))
                 }
             }
             Printbln(l, exp) => {
@@ -358,7 +358,7 @@ pub mod checker {
                 if val.0 == Bool {
                     Ok((Bool, Box::new(Printbln(SM{ln:*l, ty:val.0}, val.1))))
                 } else {
-                    Err(format!("L{}: Expected bool for printb got {:?}", l, val.0))
+                    Err(format!("L{}: Expected bool for printb got {}", l, val.0))
                 }
             }
             Module(ln, funcs, cors) => {
@@ -456,7 +456,7 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of I32".into()));
+                assert_eq!(ty, Err("L1: expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -466,7 +466,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of I32".into()));
+                assert_eq!(ty, Err("L1: expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -476,7 +476,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of I32".into()));
+                assert_eq!(ty, Err("L1: expected operands of i32".into()));
             }
         }
 
@@ -523,7 +523,7 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of I32".into()));
+                assert_eq!(ty, Err("L1: expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -533,7 +533,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of I32".into()));
+                assert_eq!(ty, Err("L1: expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -543,7 +543,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of I32".into()));
+                assert_eq!(ty, Err("L1: expected operands of i32".into()));
             }
         }
 
@@ -556,7 +556,7 @@ pub mod checker {
                     Box::new(Ast::Boolean(1, true)),
                     Box::new(Ast::Integer(1, 5)),
                 ),
-                Err("L1: expected operands of Bool".into()),
+                Err("L1: expected operands of bool".into()),
             )];
 
             for (test, expected) in tests.iter() {
@@ -586,7 +586,7 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 3)),
                     Box::new(Ast::Boolean(1, true)),
                 ),
-                Err("L1: expected operands of I32".into())),
+                Err("L1: expected operands of i32".into())),
             ];
 
             for (test, expected) in tests.iter() {
@@ -628,7 +628,7 @@ pub mod checker {
                     },
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: Bind expected Bool but got I32".into()));
+                assert_eq!(ty, Err("L1: Bind expected bool but got i32".into()));
             }
 
             // recursive definition
@@ -819,7 +819,7 @@ pub mod checker {
             // test incorrect type for yield return
             let node = Ast::YieldReturn(1, None);
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft).map(|(ty,_)| ty);
-            assert_eq!(ty, Err("L1: Yield return expected I32 but got Unit".into()));
+            assert_eq!(ty, Err("L1: Yield return expected i32 but got unit".into()));
         }
 
         #[test]
@@ -881,7 +881,7 @@ pub mod checker {
             let node =
                 Ast::FunctionDef(1, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
             let ty = traverse(&node, &None, &mut ft);
-            assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
+            assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
         #[test]
@@ -910,7 +910,7 @@ pub mod checker {
             let node =
                 Ast::CoroutineDef(1, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
             let ty = traverse(&node, &None, &mut ft);
-            assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
+            assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
         #[test]
@@ -949,19 +949,19 @@ pub mod checker {
                     Ast::Integer(1, 13),
                     Ast::Integer(1, 5),
                     Ast::Integer(1, 7),
-                    Err("L1: Expected boolean expression in if conditional, got: I32".into()),
+                    Err("L1: Expected boolean expression in if conditional, got: i32".into()),
                 ),
                 (
                     Ast::Boolean(1, true),
                     Ast::Integer(1, 5),
                     Ast::Boolean(1, true),
-                    Err("L1: If expression has mismatching arms: expected I32 got Bool".into()),
+                    Err("L1: If expression has mismatching arms: expected i32 got bool".into()),
                 ),
                 (
                     Ast::Boolean(1, true),
                     Ast::Boolean(1, true),
                     Ast::Integer(1, 5),
-                    Err("L1: If expression has mismatching arms: expected Bool got I32".into()),
+                    Err("L1: If expression has mismatching arms: expected bool got i32".into()),
                 ),
             ] {
                 let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
