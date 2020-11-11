@@ -21,6 +21,7 @@ impl VarDecl {
         }
     }
 }
+
 #[derive(Debug)]
 pub struct VarTable {
     pub vars: Vec<VarDecl>,
