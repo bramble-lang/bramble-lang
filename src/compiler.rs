@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use super::parser::{Ast, AstNode};
+use super::parser::{Ast, PNode};
 
 #[derive(Debug, Copy, Clone)]
 enum Register {
@@ -228,7 +228,7 @@ impl Compiler {
         Ok(())
     }
 
-    pub fn compile(ast: &AstNode, funcs: &mut super::FunctionTable) -> Compiler {
+    pub fn compile(ast: &PNode, funcs: &mut super::FunctionTable) -> Compiler {
         let mut code = vec![];
 
         Compiler::create_base(&mut code);
@@ -470,7 +470,7 @@ impl Compiler {
     }
 
     fn traverse(
-        ast: &AstNode,
+        ast: &PNode,
         current_func: &String,
         function_table: &mut super::FunctionTable,
         output: &mut Vec<Instruction>,
@@ -483,7 +483,7 @@ impl Compiler {
         let fn_param_registers = [Eax, Ebx, Ecx, Edx];
         let co_param_registers = [Ebx, Ecx, Edx];
 
-        match &ast.n {
+        match &ast {
             Ast::Integer(i) => {
                 output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
@@ -493,7 +493,7 @@ impl Compiler {
                     Source::Integer(if *b { 1 } else { 0 }),
                 ));
             }
-            Ast::Identifier(id) => {
+            Ast::Identifier(_, id) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
@@ -508,7 +508,7 @@ impl Compiler {
                     Source::Memory(format!("ebp-{}", id_offset)),
                 ));
             }
-            Ast::Mul(l, r) => {
+            Ast::Mul(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -520,7 +520,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(IMul(Eax, Location::Register(Ebx)));
             }
-            Ast::Add(l, r) => {
+            Ast::Add(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -532,7 +532,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Add(Eax, Source::Register(Ebx)));
             }
-            Ast::Eq(l, r) => {
+            Ast::Eq(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -547,7 +547,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            Ast::NEq(l, r) => {
+            Ast::NEq(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -562,7 +562,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            Ast::Ls(l, r) => {
+            Ast::Ls(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -577,7 +577,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            Ast::LsEq(l, r) => {
+            Ast::LsEq(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -592,7 +592,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            Ast::Gr(l, r) => {
+            Ast::Gr(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -607,7 +607,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            Ast::GrEq(l, r) => {
+            Ast::GrEq(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -622,7 +622,7 @@ impl Compiler {
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
-            Ast::BAnd(l, r) => {
+            Ast::BAnd(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -634,7 +634,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(And(Eax, Source::Register(Ebx)));
             }
-            Ast::BOr(l, r) => {
+            Ast::BOr(_, l, r) => {
                 let left = l.as_ref();
                 Compiler::traverse(left, current_func, function_table, output);
                 output.push(Push(Eax));
@@ -646,7 +646,7 @@ impl Compiler {
                 output.push(Pop(Eax));
                 output.push(Or(Eax, Source::Register(Ebx)));
             }
-            Ast::If(ref cond, ref true_arm, ref false_arm) => {
+            Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
                 function_table
                     .funcs
                     .entry(current_func.clone())
@@ -670,15 +670,15 @@ impl Compiler {
                 Compiler::traverse(false_arm, current_func, function_table, output);
                 output.push(Label(end_lbl));
             }
-            Ast::ExpressionBlock(body) => {
+            Ast::ExpressionBlock(_, body) => {
                 for s in body.iter() {
                     Compiler::traverse(s, current_func, function_table, output);
                 }
             }
-            Ast::Statement(stm) => {
+            Ast::Statement(_, stm) => {
                 Compiler::traverse(stm, current_func, function_table, output);
             }
-            Ast::Bind(id, _, ref exp) => {
+            Ast::Bind(_, id, _, ref exp) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
@@ -694,7 +694,7 @@ impl Compiler {
                     Source::Register(Eax),
                 ));
             }
-            Ast::FunctionDef(ref fn_name, params, _, stmts) => {
+            Ast::FunctionDef(_, ref fn_name, params, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
@@ -734,7 +734,7 @@ impl Compiler {
 
                 output.push(Ret);
             }
-            Ast::CoroutineDef(ref fn_name, _, _, stmts) => {
+            Ast::CoroutineDef(_, ref fn_name, _, _, stmts) => {
                 output.push(Label(fn_name.clone()));
 
                 // Prepare stack frame for this function
@@ -743,7 +743,7 @@ impl Compiler {
                 }
                 output.push(Jmp("runtime_yield_return".into()))
             }
-            Ast::Module(functions, coroutines) => {
+            Ast::Module(_, functions, coroutines) => {
                 for f in functions.iter() {
                     Compiler::traverse(f, current_func, function_table, output);
                 }
@@ -751,11 +751,11 @@ impl Compiler {
                     Compiler::traverse(co, current_func, function_table, output);
                 }
             }
-            Ast::Return(ref exp) => match exp {
+            Ast::Return(_, ref exp) => match exp {
                 Some(e) => Compiler::traverse(e, current_func, function_table, output),
                 None => (),
             },
-            Ast::Yield(ref id) => {
+            Ast::Yield(_, ref id) => {
                 Compiler::traverse(id, current_func, function_table, output);
 
                 function_table
@@ -771,7 +771,7 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_into_coroutine".into()));
                 output.push(Label(ret_lbl.clone()));
             }
-            Ast::YieldReturn(ref exp) => {
+            Ast::YieldReturn(_, ref exp) => {
                 if let Some(exp) = exp {
                     Compiler::traverse(exp, current_func, function_table, output);
                 }
@@ -789,18 +789,18 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_return".into()));
                 output.push(Label(ret_lbl.clone()));
             }
-            Ast::Printiln(ref exp) => {
+            Ast::Printiln(_, ref exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
                 output.push(Print(Source::Register(Eax)));
                 output.push(Newline);
             }
-            Ast::Printbln(ref exp) => {
+            Ast::Printbln(_, ref exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
                 //output.push(Print(Source::Register(Eax)));
                 output.push(Call("print_bool".into()));
                 output.push(Newline);
             }
-            Ast::CoroutineInit(ref co, params) => {
+            Ast::CoroutineInit(_, ref co, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 if !function_table.funcs.contains_key(co) {
@@ -845,7 +845,7 @@ impl Compiler {
                     idx += 1;
                 }
             }
-            Ast::FunctionCall(ref fn_name, params) => {
+            Ast::FunctionCall(_, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 if !function_table.funcs.contains_key(fn_name) {
