@@ -40,7 +40,19 @@ pub mod checker {
             ast: &PNode,
             ftable: &mut FunctionTable,
         ) -> Result<(Primitive, Box<SemanticNode>), String> {
-            self.traverse(ast, &None, ftable)
+            let mut sym = SymbolTable::new();
+            let result = self.traverse(ast, &None, ftable, &mut sym);
+            result
+        }
+
+        pub fn start_traverse(
+            &mut self,
+            ast: &PNode,
+            current_func: &Option<String>,
+            ftable: &mut FunctionTable,
+        ) -> Result<(Primitive, Box<SemanticNode>), String> {
+            let mut sym = SymbolTable::new();
+            self.analyize_node(ast, current_func, ftable, &mut sym)
         }
 
         fn binary_op(
@@ -51,10 +63,11 @@ pub mod checker {
             r: &PNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
+            sym: &mut SymbolTable,
             expected: Option<Primitive>,
         ) -> Result<(Primitive, Box<SemanticNode>, Box<SemanticNode>), String> {
-            let (lty, lv) = self.traverse(l, current_func, ftable)?;
-            let (rty, rv) = self.traverse(r, current_func, ftable)?;
+            let (lty, lv) = self.traverse(l, current_func, ftable, sym)?;
+            let (rty, rv) = self.traverse(r, current_func, ftable, sym)?;
 
             match expected {
                 None => {
@@ -77,22 +90,14 @@ pub mod checker {
             }
         }
 
-        pub fn start_traverse(
-            &mut self,
-            ast: &PNode,
-            current_func: &Option<String>,
-            ftable: &mut FunctionTable,
-        ) -> Result<(Primitive, Box<SemanticNode>), String> {
-            self.analyize_node(ast, current_func, ftable)
-        }
-
         pub fn traverse(
             &mut self,
             ast: &PNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
+            sym: &mut SymbolTable,
         ) -> Result<(Primitive, Box<SemanticNode>), String> {
-            self.analyize_node(ast, current_func, ftable)
+            self.analyize_node(ast, current_func, ftable, sym)
         }
 
         fn analyize_node(
@@ -100,6 +105,7 @@ pub mod checker {
             ast: &PNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
+            sym: &mut SymbolTable,
         ) -> Result<(Primitive, Box<SemanticNode>), String> {
             use Ast::*;
             match ast {
@@ -124,61 +130,61 @@ pub mod checker {
                 },
                 Mul(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(I32))?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(I32))?;
                     Ok((ty, Box::new(Mul(sm(*ln, ty), sl, sr))))
                 }
                 Add(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(I32))?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(I32))?;
                     Ok((ty, Box::new(Add(sm(*ln, ty), sl, sr))))
                 }
                 BAnd(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(Bool))?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(Bool))?;
                     Ok((ty, Box::new(BAnd(sm(*ln, ty), sl, sr))))
                 }
                 BOr(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(Bool))?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(Bool))?;
                     Ok((ty, Box::new(BOr(sm(*ln, ty), sl, sr))))
                 }
                 Eq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, None)?;
                     Ok((Bool, Box::new(Eq(sm(*ln, Bool), sl, sr))))
                 }
                 NEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, None)?;
                     Ok((Bool, Box::new(NEq(sm(*ln, Bool), sl, sr))))
                 }
                 Gr(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, None)?;
                     Ok((Bool, Box::new(Gr(sm(*ln, Bool), sl, sr))))
                 }
                 GrEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, None)?;
                     Ok((Bool, Box::new(GrEq(sm(*ln, Bool), sl, sr))))
                 }
                 Ls(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, None)?;
                     Ok((Bool, Box::new(Ls(sm(*ln, Bool), sl, sr))))
                 }
                 LsEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
+                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, None)?;
                     Ok((Bool, Box::new(LsEq(sm(*ln, Bool), sl, sr))))
                 }
                 If(ln, cond, true_arm, false_arm) => {
                     let (cond_ty, cond_exp) =
-                        self.traverse(&cond, current_func, ftable)?;
+                        self.traverse(&cond, current_func, ftable, sym)?;
                     if cond_ty == Bool {
-                        let true_arm = self.traverse(&true_arm, current_func, ftable)?;
+                        let true_arm = self.traverse(&true_arm, current_func, ftable, sym)?;
                         let false_arm =
-                            self.traverse(&false_arm, current_func, ftable)?;
+                            self.traverse(&false_arm, current_func, ftable, sym)?;
                         if true_arm.0 == false_arm.0 {
                             Ok((
                                 true_arm.0,
@@ -204,11 +210,12 @@ pub mod checker {
                 }
                 Bind(l, name, p, ref exp) => match current_func {
                     Some(cf) => {
-                        let rhs = self.traverse(exp, current_func, ftable)?;
+                        let rhs = self.traverse(exp, current_func, ftable, sym)?;
                         if *p == rhs.0 {
                             ftable
                                 .add_var(cf, name, *p)
                                 .map_err(|e| format!("L{}: {}", l, e))?;
+                            sym.add(name, Type::Primitive(*p))?;
                             Ok((*p, Box::new(Bind(sm(*l, *p), name.clone(), *p, rhs.1))))
                         } else {
                             Err(format!("L{}: Bind expected {} but got {}", l, p, rhs.0))
@@ -234,7 +241,7 @@ pub mod checker {
                     None => Err(format!("L{}: Return appears outside of a function", l)),
                     Some(cf) => {
                         let fty = ftable.funcs[cf].ty;
-                        let val = self.traverse(&exp, current_func, ftable)?;
+                        let val = self.traverse(&exp, current_func, ftable, sym)?;
                         if fty == val.0 {
                             Ok((fty, Box::new(Return(sm(*l, fty), Some(val.1)))))
                         } else {
@@ -279,7 +286,7 @@ pub mod checker {
                     None => Err(format!("L{}: YRet appears outside of function", l)),
                     Some(cf) => {
                         let fty = ftable.funcs[cf].ty;
-                        let val = self.traverse(&exp, current_func, ftable)?;
+                        let val = self.traverse(&exp, current_func, ftable, sym)?;
                         if fty == val.0 {
                             Ok((fty, Box::new(YieldReturn(sm(*l, fty), Some(val.1)))))
                         } else {
@@ -294,26 +301,29 @@ pub mod checker {
                     let mut ty = Unit;
                     let mut nbody = vec![];
                     for stmt in body.iter() {
-                        let r = self.traverse(stmt, current_func, ftable)?;
+                        let r = self.traverse(stmt, current_func, ftable, sym)?;
                         ty = r.0;
                         nbody.push(*r.1);
                     }
                     Ok((ty, Box::new(ExpressionBlock(sm(*ln, ty), nbody))))
                 }
                 Statement(_, stmt) => {
-                    let (_, stmt) = self.traverse(stmt, current_func, ftable)?;
+                    let (_, stmt) = self.traverse(stmt, current_func, ftable, sym)?;
                     Ok((Unit, stmt))
                 }
                 FunctionDef(ln, fname, params, p, body) => {
+                    let mut local_sym = SymbolTable::new();
                     let mut nbody = vec![];
                     for stmt in body.iter() {
-                        let r = self.traverse(stmt, &Some(fname.clone()), ftable)?;
+                        let r = self.traverse(stmt, &Some(fname.clone()), ftable, &mut local_sym)?;
                         nbody.push(*r.1);
                     }
+                    let mut meta = sm(*ln, *p);
+                    meta.sym = local_sym;
                     Ok((
                         *p,
                         Box::new(FunctionDef(
-                            sm(*ln, *p),
+                            meta,
                             fname.clone(),
                             params.clone(),
                             *p,
@@ -322,15 +332,18 @@ pub mod checker {
                     ))
                 }
                 CoroutineDef(ln, coname, params, p, body) => {
+                    let mut local_sym = SymbolTable::new();
                     let mut nbody = vec![];
                     for stmt in body.iter() {
-                        let r = self.traverse(stmt, &Some(coname.clone()), ftable)?;
+                        let r = self.traverse(stmt, &Some(coname.clone()), ftable, &mut local_sym)?;
                         nbody.push(*r.1);
                     }
+                    let mut meta = sm(*ln, *p);
+                    meta.sym = local_sym;
                     Ok((
                         *p,
                         Box::new(CoroutineDef(
-                            sm(*ln, *p),
+                            meta,
                             coname.clone(),
                             params.clone(),
                             *p,
@@ -344,7 +357,7 @@ pub mod checker {
                     let mut pty = vec![];
                     let mut nparams = vec![];
                     for param in params.iter() {
-                        let (ty, np) = self.traverse(param, current_func, ftable)?;
+                        let (ty, np) = self.traverse(param, current_func, ftable, sym)?;
                         pty.push(ty);
                         nparams.push(*np);
                     }
@@ -385,7 +398,7 @@ pub mod checker {
                     let mut pty = vec![];
                     let mut nparams = vec![];
                     for param in params.iter() {
-                        let (ty, np) = self.traverse(param, current_func, ftable)?;
+                        let (ty, np) = self.traverse(param, current_func, ftable, sym)?;
                         pty.push(ty);
                         nparams.push(*np);
                     }
@@ -417,7 +430,7 @@ pub mod checker {
                     }
                 }
                 Printi(l, exp) => {
-                    let val = self.traverse(&exp, current_func, ftable)?;
+                    let val = self.traverse(&exp, current_func, ftable, sym)?;
                     if val.0 == I32 {
                         Ok((Bool, Box::new(Printi(sm(*l, val.0), val.1))))
                     } else {
@@ -425,7 +438,7 @@ pub mod checker {
                     }
                 }
                 Printiln(l, exp) => {
-                    let val = self.traverse(&exp, current_func, ftable)?;
+                    let val = self.traverse(&exp, current_func, ftable, sym)?;
                     if val.0 == I32 {
                         Ok((Bool, Box::new(Printiln(sm(*l, val.0), val.1))))
                     } else {
@@ -433,7 +446,7 @@ pub mod checker {
                     }
                 }
                 Printbln(l, exp) => {
-                    let val = self.traverse(&exp, current_func, ftable)?;
+                    let val = self.traverse(&exp, current_func, ftable, sym)?;
                     if val.0 == Bool {
                         Ok((Bool, Box::new(Printbln(sm(*l, val.0), val.1))))
                     } else {
@@ -443,11 +456,11 @@ pub mod checker {
                 Module(ln, funcs, cors) => {
                     let mut nfuncs = vec![];
                     for func in funcs.iter() {
-                        nfuncs.push(*self.traverse(func, &None, ftable)?.1);
+                        nfuncs.push(*self.traverse(func, &None, ftable, sym)?.1);
                     }
                     let mut ncors = vec![];
                     for cor in cors.iter() {
-                        ncors.push(*self.traverse(cor, &None, ftable)?.1);
+                        ncors.push(*self.traverse(cor, &None, ftable, sym)?.1);
                     }
                     Ok((Unit, Box::new(Module(sm(*ln, Unit), nfuncs, ncors))))
                 }
