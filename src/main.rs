@@ -3,12 +3,13 @@
 
 mod compiler;
 mod lexer;
-mod parser;
+mod syntax;
 mod semantics;
 
 use clap::{App, Arg};
 use compiler::*;
 use lexer::Token;
+use syntax::parser;
 use semantics::type_checker::*;
 use semantics::vartable::*;
 
