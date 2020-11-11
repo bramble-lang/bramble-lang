@@ -22,7 +22,7 @@ pub struct SymbolTable {
 
 impl SymbolTable {
     pub fn new() -> Self {
-        SymbolTable{
+        SymbolTable {
             sym: HashMap::new(),
         }
     }
@@ -31,14 +31,17 @@ impl SymbolTable {
         self.sym.get(name)
     }
 
-    pub fn add(&mut self, name: &str, ty: Type) -> Result<(),String>{
+    pub fn add(&mut self, name: &str, ty: Type) -> Result<(), String> {
         if self.sym.contains_key(name) {
             Err(format!("{} already defined", name))
         } else {
-            self.sym.insert(name.into(), Symbol{
-                name: name.into(),
-                ty,
-            });
+            self.sym.insert(
+                name.into(),
+                Symbol {
+                    name: name.into(),
+                    ty,
+                },
+            );
             Ok(())
         }
     }
@@ -51,9 +54,7 @@ pub struct ScopeStack<'a> {
 
 impl<'a> ScopeStack<'a> {
     pub fn new() -> ScopeStack<'a> {
-        ScopeStack {
-            stack: vec![],
-        }
+        ScopeStack { stack: vec![] }
     }
 
     pub fn push(&mut self, sym: &'a SymbolTable) {

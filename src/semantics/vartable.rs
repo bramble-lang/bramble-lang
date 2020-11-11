@@ -111,28 +111,27 @@ impl FunctionTable {
     }
 
     pub fn get_var(&self, func: &str, id: &str) -> Result<&VarDecl, String> {
-       Ok(self 
-        .funcs
-        .get(func)
-        .ok_or(format!("Undefined function {}", func))?
-        .vars
-        .vars
-        .iter()
-        .find(|v| v.name == id)
-        .ok_or(format!("Variable {} not declared", id))?
-        )
+        Ok(self
+            .funcs
+            .get(func)
+            .ok_or(format!("Undefined function {}", func))?
+            .vars
+            .vars
+            .iter()
+            .find(|v| v.name == id)
+            .ok_or(format!("Variable {} not declared", id))?)
     }
 
     pub fn add_var(&mut self, func: &str, id: &str, ty: Primitive) -> Result<(), String> {
         self.funcs
-        .get_mut(func)
-        .ok_or(format!(
-            "CRITICAL: Function {} not found in function table",
-            func
-        ))?
-        .vars
-        .add_var(id, ty)
-        .map_err(|msg| format!("{}", msg))?;
+            .get_mut(func)
+            .ok_or(format!(
+                "CRITICAL: Function {} not found in function table",
+                func
+            ))?
+            .vars
+            .add_var(id, ty)
+            .map_err(|msg| format!("{}", msg))?;
         Ok(())
     }
 }

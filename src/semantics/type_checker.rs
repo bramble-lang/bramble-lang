@@ -34,7 +34,7 @@ pub mod checker {
 
     impl<'a> SemanticAnalyzer<'a> {
         pub fn new() -> SemanticAnalyzer<'a> {
-            SemanticAnalyzer{
+            SemanticAnalyzer {
                 stack: ScopeStack::new(),
             }
         }
@@ -133,23 +133,55 @@ pub mod checker {
                     }
                 },
                 Mul(ln, ref l, ref r) => {
-                    let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(I32))?;
+                    let (ty, sl, sr) = self.binary_op(
+                        ast.root_str(),
+                        *ln,
+                        l,
+                        r,
+                        current_func,
+                        ftable,
+                        sym,
+                        Some(I32),
+                    )?;
                     Ok((ty, Box::new(Mul(sm(*ln, ty), sl, sr))))
                 }
                 Add(ln, ref l, ref r) => {
-                    let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(I32))?;
+                    let (ty, sl, sr) = self.binary_op(
+                        ast.root_str(),
+                        *ln,
+                        l,
+                        r,
+                        current_func,
+                        ftable,
+                        sym,
+                        Some(I32),
+                    )?;
                     Ok((ty, Box::new(Add(sm(*ln, ty), sl, sr))))
                 }
                 BAnd(ln, ref l, ref r) => {
-                    let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(Bool))?;
+                    let (ty, sl, sr) = self.binary_op(
+                        ast.root_str(),
+                        *ln,
+                        l,
+                        r,
+                        current_func,
+                        ftable,
+                        sym,
+                        Some(Bool),
+                    )?;
                     Ok((ty, Box::new(BAnd(sm(*ln, ty), sl, sr))))
                 }
                 BOr(ln, ref l, ref r) => {
-                    let (ty, sl, sr) =
-                        self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, sym, Some(Bool))?;
+                    let (ty, sl, sr) = self.binary_op(
+                        ast.root_str(),
+                        *ln,
+                        l,
+                        r,
+                        current_func,
+                        ftable,
+                        sym,
+                        Some(Bool),
+                    )?;
                     Ok((ty, Box::new(BOr(sm(*ln, ty), sl, sr))))
                 }
                 Eq(ln, ref l, ref r) => {
@@ -183,12 +215,10 @@ pub mod checker {
                     Ok((Bool, Box::new(LsEq(sm(*ln, Bool), sl, sr))))
                 }
                 If(ln, cond, true_arm, false_arm) => {
-                    let (cond_ty, cond_exp) =
-                        self.traverse(&cond, current_func, ftable, sym)?;
+                    let (cond_ty, cond_exp) = self.traverse(&cond, current_func, ftable, sym)?;
                     if cond_ty == Bool {
                         let true_arm = self.traverse(&true_arm, current_func, ftable, sym)?;
-                        let false_arm =
-                            self.traverse(&false_arm, current_func, ftable, sym)?;
+                        let false_arm = self.traverse(&false_arm, current_func, ftable, sym)?;
                         if true_arm.0 == false_arm.0 {
                             Ok((
                                 true_arm.0,
@@ -319,27 +349,23 @@ pub mod checker {
                     let mut local_sym = SymbolTable::new();
                     let mut nbody = vec![];
                     for stmt in body.iter() {
-                        let r = self.traverse(stmt, &Some(fname.clone()), ftable, &mut local_sym)?;
+                        let r =
+                            self.traverse(stmt, &Some(fname.clone()), ftable, &mut local_sym)?;
                         nbody.push(*r.1);
                     }
                     let mut meta = sm(*ln, *p);
                     meta.sym = local_sym;
                     Ok((
                         *p,
-                        Box::new(FunctionDef(
-                            meta,
-                            fname.clone(),
-                            params.clone(),
-                            *p,
-                            nbody,
-                        )),
+                        Box::new(FunctionDef(meta, fname.clone(), params.clone(), *p, nbody)),
                     ))
                 }
                 CoroutineDef(ln, coname, params, p, body) => {
                     let mut local_sym = SymbolTable::new();
                     let mut nbody = vec![];
                     for stmt in body.iter() {
-                        let r = self.traverse(stmt, &Some(coname.clone()), ftable, &mut local_sym)?;
+                        let r =
+                            self.traverse(stmt, &Some(coname.clone()), ftable, &mut local_sym)?;
                         nbody.push(*r.1);
                     }
                     let mut meta = sm(*ln, *p);
@@ -471,63 +497,91 @@ pub mod checker {
             }
         }
 
-        fn convert_to_semantic_ast(
-            &mut self,
-            ast: &PNode,
-        ) -> Result<Box<SemanticNode>, String> {
+        fn convert_to_semantic_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>, String> {
             use Ast::*;
             match ast {
                 Integer(ln, val) => Ok(Box::new(Integer(sm_from(*ln), *val))),
                 Boolean(ln, val) => Ok(Box::new(Boolean(sm_from(*ln), *val))),
-                IdentifierDeclare(ln, name, p) => Ok(
-                    Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), *p))
-                ),
+                IdentifierDeclare(ln, name, p) => {
+                    Ok(Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), *p)))
+                }
                 Identifier(l, id) => Ok(Box::new(Identifier(sm_from(*l), id.clone()))),
-                Mul(ln, ref l, ref r) => {
-                        Ok(Box::new(Mul(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                Add(ln, ref l, ref r) => {
-                    Ok(Box::new(Add(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                BAnd(ln, ref l, ref r) => {
-                    Ok(Box::new(BAnd(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                BOr(ln, ref l, ref r) => {
-                    Ok(Box::new(BOr(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                Eq(ln, ref l, ref r) => {
-                    Ok(Box::new(Eq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                NEq(ln, ref l, ref r) => {
-                    Ok(Box::new(NEq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                Gr(ln, ref l, ref r) => {
-                    Ok(Box::new(Gr(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                GrEq(ln, ref l, ref r) => {
-                    Ok(Box::new(GrEq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                Ls(ln, ref l, ref r) => {
-                    Ok(Box::new(Ls(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                LsEq(ln, ref l, ref r) => {
-                    Ok(Box::new(LsEq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
-                }
-                If(ln, cond, true_arm, false_arm) => {
-                    Ok(Box::new(If(sm_from(*ln), self.convert_to_semantic_ast(cond)?, self.convert_to_semantic_ast(true_arm)?, self.convert_to_semantic_ast(false_arm)?)))
-                }
-                Bind(ln, name, p, ref exp) => 
-                    Ok(Box::new(Bind(sm_from(*ln), name.clone(), *p, self.convert_to_semantic_ast(exp)?))),
-                Return(l, None) => 
-                    Ok(Box::new(Return(sm_from(*l), None))),
-                Return(l, Some(exp)) => 
-                    Ok(Box::new(Return(sm_from(*l), Some(self.convert_to_semantic_ast(exp)?)))),
-                Yield(l, box exp) => 
-                    Ok(Box::new(Yield(sm_from(*l), self.convert_to_semantic_ast(exp)?))),
-                YieldReturn(l, None) => 
-                    Ok(Box::new(YieldReturn(sm_from(*l), None))),
-                YieldReturn(l, Some(exp)) => 
-                    Ok(Box::new(YieldReturn(sm_from(*l), Some(self.convert_to_semantic_ast(exp)?)))),
+                Mul(ln, ref l, ref r) => Ok(Box::new(Mul(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                Add(ln, ref l, ref r) => Ok(Box::new(Add(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                BAnd(ln, ref l, ref r) => Ok(Box::new(BAnd(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                BOr(ln, ref l, ref r) => Ok(Box::new(BOr(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                Eq(ln, ref l, ref r) => Ok(Box::new(Eq(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                NEq(ln, ref l, ref r) => Ok(Box::new(NEq(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                Gr(ln, ref l, ref r) => Ok(Box::new(Gr(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                GrEq(ln, ref l, ref r) => Ok(Box::new(GrEq(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                Ls(ln, ref l, ref r) => Ok(Box::new(Ls(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                LsEq(ln, ref l, ref r) => Ok(Box::new(LsEq(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(l)?,
+                    self.convert_to_semantic_ast(r)?,
+                ))),
+                If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
+                    sm_from(*ln),
+                    self.convert_to_semantic_ast(cond)?,
+                    self.convert_to_semantic_ast(true_arm)?,
+                    self.convert_to_semantic_ast(false_arm)?,
+                ))),
+                Bind(ln, name, p, ref exp) => Ok(Box::new(Bind(
+                    sm_from(*ln),
+                    name.clone(),
+                    *p,
+                    self.convert_to_semantic_ast(exp)?,
+                ))),
+                Return(l, None) => Ok(Box::new(Return(sm_from(*l), None))),
+                Return(l, Some(exp)) => Ok(Box::new(Return(
+                    sm_from(*l),
+                    Some(self.convert_to_semantic_ast(exp)?),
+                ))),
+                Yield(l, box exp) => Ok(Box::new(Yield(
+                    sm_from(*l),
+                    self.convert_to_semantic_ast(exp)?,
+                ))),
+                YieldReturn(l, None) => Ok(Box::new(YieldReturn(sm_from(*l), None))),
+                YieldReturn(l, Some(exp)) => Ok(Box::new(YieldReturn(
+                    sm_from(*l),
+                    Some(self.convert_to_semantic_ast(exp)?),
+                ))),
                 ExpressionBlock(ln, body) => {
                     let mut nbody = vec![];
                     for stmt in body.iter() {
@@ -536,24 +590,20 @@ pub mod checker {
                     }
                     Ok(Box::new(ExpressionBlock(sm_from(*ln), nbody)))
                 }
-                Statement(_, stmt) => {
-                    Ok(self.convert_to_semantic_ast(stmt)?)
-                }
+                Statement(_, stmt) => Ok(self.convert_to_semantic_ast(stmt)?),
                 FunctionDef(ln, fname, params, p, body) => {
                     let mut nbody = vec![];
                     for stmt in body.iter() {
                         let r = self.convert_to_semantic_ast(stmt)?;
                         nbody.push(*r);
                     }
-                    Ok(
-                        Box::new(FunctionDef(
-                            sm_from(*ln),
-                            fname.clone(),
-                            params.clone(),
-                            *p,
-                            nbody,
-                        )),
-                    )
+                    Ok(Box::new(FunctionDef(
+                        sm_from(*ln),
+                        fname.clone(),
+                        params.clone(),
+                        *p,
+                        nbody,
+                    )))
                 }
                 CoroutineDef(ln, coname, params, p, body) => {
                     let mut nbody = vec![];
@@ -561,15 +611,13 @@ pub mod checker {
                         let r = self.convert_to_semantic_ast(stmt)?;
                         nbody.push(*r);
                     }
-                    Ok(
-                        Box::new(CoroutineDef(
-                            sm_from(*ln),
-                            coname.clone(),
-                            params.clone(),
-                            *p,
-                            nbody,
-                        )),
-                    )
+                    Ok(Box::new(CoroutineDef(
+                        sm_from(*ln),
+                        coname.clone(),
+                        params.clone(),
+                        *p,
+                        nbody,
+                    )))
                 }
                 FunctionCall(l, fname, params) => {
                     // test that the expressions passed to the function match the functions
@@ -579,9 +627,7 @@ pub mod checker {
                         let np = self.convert_to_semantic_ast(param)?;
                         nparams.push(*np);
                     }
-                    Ok(
-                        Box::new(FunctionCall(sm_from(*l), fname.clone(), nparams)),
-                    )
+                    Ok(Box::new(FunctionCall(sm_from(*l), fname.clone(), nparams)))
                 }
                 CoroutineInit(l, coname, params) => {
                     // test that the expressions passed to the function match the functions
@@ -591,19 +637,24 @@ pub mod checker {
                         let np = self.convert_to_semantic_ast(param)?;
                         nparams.push(*np);
                     }
-                    Ok(
-                        Box::new(CoroutineInit(sm_from(*l), coname.clone(), nparams)),
-                    )
+                    Ok(Box::new(CoroutineInit(
+                        sm_from(*l),
+                        coname.clone(),
+                        nparams,
+                    )))
                 }
-                Printi(l, exp) => {
-                    Ok(Box::new(Printi(sm_from(*l), self.convert_to_semantic_ast(exp)?)))
-                }
-                Printiln(l, exp) => {
-                    Ok(Box::new(Printiln(sm_from(*l), self.convert_to_semantic_ast(exp)?)))
-                }
-                Printbln(l, exp) => {
-                    Ok(Box::new(Printbln(sm_from(*l), self.convert_to_semantic_ast(exp)?)))
-                }
+                Printi(l, exp) => Ok(Box::new(Printi(
+                    sm_from(*l),
+                    self.convert_to_semantic_ast(exp)?,
+                ))),
+                Printiln(l, exp) => Ok(Box::new(Printiln(
+                    sm_from(*l),
+                    self.convert_to_semantic_ast(exp)?,
+                ))),
+                Printbln(l, exp) => Ok(Box::new(Printbln(
+                    sm_from(*l),
+                    self.convert_to_semantic_ast(exp)?,
+                ))),
                 Module(ln, funcs, cors) => {
                     let mut nfuncs = vec![];
                     for func in funcs.iter() {
@@ -655,7 +706,8 @@ pub mod checker {
 
             let node = Ast::Identifier(1, "x".into());
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_main".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_main".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(Primitive::Bool));
         }
@@ -704,7 +756,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -716,7 +769,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -728,7 +782,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -778,7 +833,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -790,7 +846,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -802,7 +859,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -880,7 +938,8 @@ pub mod checker {
                     },
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -899,7 +958,8 @@ pub mod checker {
                     },
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: Bind expected bool but got i32".into()));
             }
@@ -923,7 +983,8 @@ pub mod checker {
                     },
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
@@ -942,7 +1003,8 @@ pub mod checker {
                     },
                 );
                 let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+                let ty = sa
+                    .start_traverse(&node, &Some("my_func".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
@@ -962,7 +1024,8 @@ pub mod checker {
             );
             let node = Ast::Return(1, None);
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_func".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(Unit));
         }
@@ -981,7 +1044,8 @@ pub mod checker {
             );
             let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_func".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(I32));
         }
@@ -1000,7 +1064,8 @@ pub mod checker {
             );
             let node = Ast::FunctionCall(1, "my_func".into(), vec![]);
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_func".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_func".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(I32));
 
@@ -1017,14 +1082,16 @@ pub mod checker {
             // test correct parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1, 5)]);
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_func2".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_func2".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![]);
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_func2".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_func2".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(
                 ty,
@@ -1046,8 +1113,9 @@ pub mod checker {
             );
             let node = Ast::CoroutineInit(1, "my_co".into(), vec![]);
             let mut sa = SemanticAnalyzer::new();
-            let ty =
-                sa.start_traverse(&node, &Some("my_co".into()), &mut ft).map(|(ty, _)| ty);
+            let ty = sa
+                .start_traverse(&node, &Some("my_co".into()), &mut ft)
+                .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(I32));
 
             ft.funcs.insert(
@@ -1063,14 +1131,16 @@ pub mod checker {
             // test correct parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1, 5)]);
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_co2".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_co2".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![]);
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_co2".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_co2".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(
                 ty,
@@ -1092,8 +1162,9 @@ pub mod checker {
             );
             let node = Ast::YieldReturn(1, None);
             let mut sa = SemanticAnalyzer::new();
-            let ty =
-                sa.start_traverse(&node, &Some("my_co".into()), &mut ft).map(|(ty, _)| ty);
+            let ty = sa
+                .start_traverse(&node, &Some("my_co".into()), &mut ft)
+                .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(Unit));
 
             ft.funcs.insert(
@@ -1108,13 +1179,15 @@ pub mod checker {
 
             // test correct type for yield return
             let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
-            let ty = sa.start_traverse(&node, &Some("my_co2".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_co2".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(I32));
 
             // test incorrect type for yield return
             let node = Ast::YieldReturn(1, None);
-            let ty = sa.start_traverse(&node, &Some("my_co2".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_co2".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Err("L1: Yield return expected i32 but got unit".into()));
         }
@@ -1149,7 +1222,8 @@ pub mod checker {
             );
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
             let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&node, &Some("my_main".into()), &mut ft)
+            let ty = sa
+                .start_traverse(&node, &Some("my_main".into()), &mut ft)
                 .map(|(ty, _)| ty);
             assert_eq!(ty, Ok(I32));
         }
@@ -1269,7 +1343,8 @@ pub mod checker {
             ] {
                 let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
                 let mut sa = SemanticAnalyzer::new();
-                let result = sa.start_traverse(&node, &Some("my_main".into()), &mut ft)
+                let result = sa
+                    .start_traverse(&node, &Some("my_main".into()), &mut ft)
                     .map(|(ty, _)| ty);
                 assert_eq!(result, ex);
             }
