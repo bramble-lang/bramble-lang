@@ -6,7 +6,16 @@ pub mod checker {
     use crate::semantics::vartable::*;
     use Primitive::*;
 
-    pub fn type_check(ast: &PNode, ftable: &mut FunctionTable) -> Result<Primitive, String> {
+    pub struct SemanticMetadata {
+        pub ln: u32,
+        pub ty: Primitive,
+    }
+
+    pub type SemanticNode = Ast<SemanticMetadata>;
+
+    type SM = SemanticMetadata;
+
+    pub fn type_check(ast: &PNode, ftable: &mut FunctionTable) -> Result<(Primitive, SemanticNode), String> {
         traverse(ast, &None, ftable)
     }
 
@@ -14,7 +23,7 @@ pub mod checker {
         ast: &PNode,
         current_func: &Option<String>,
         ftable: &mut FunctionTable,
-    ) -> Result<Primitive, String> {
+    ) -> Result<(Primitive, SemanticNode), String> {
         use Ast::*;
         match &ast {
             Integer(_, _) => Ok(I32),
@@ -38,20 +47,23 @@ pub mod checker {
                         |v| Ok(v.ty),
                     ),
             },
-            ExpressionBlock(_, body) => {
+            ExpressionBlock(ln, body) => {
                 let mut ty = Unit;
+                let mut nbody = vec![];
                 for stmt in body.iter() {
-                    ty = traverse(stmt, current_func, ftable)?;
+                    let r = traverse(stmt, current_func, ftable)?;
+                    ty = r.0;
+                    nbody.push(r.1);
                 }
-                Ok(ty)
+                Ok((ty, ExpressionBlock(SM{ln:*ln,ty},nbody)))
             }
-            Statement(_, exp) => {
-                traverse(exp, current_func, ftable)?;
-                Ok(Unit)
+            Statement(_, stmt) => {
+                let (_, stmt) = traverse(stmt, current_func, ftable)?;
+                Ok((Unit, stmt))
             }
             Mul(ln, ref l, ref r) | Add(ln, ref l, ref r) => {
-                let lty = traverse(l, current_func, ftable)?;
-                let rty = traverse(r, current_func, ftable)?;
+                let (lty,lv) = traverse(l, current_func, ftable)?;
+                let (rty,rv) = traverse(r, current_func, ftable)?;
                 match (lty, rty) {
                     (I32, I32) => Ok(I32),
                     _ => Err(format!("L{}: */+ expect to have operands of i32", ln)),
