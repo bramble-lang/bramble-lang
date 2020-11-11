@@ -76,17 +76,7 @@ pub mod checker {
                 )),
                 Some(cf) => {
                     let idty = ftable
-                        .funcs
-                        .get(cf)
-                        .ok_or(format!("L{}: Undefined function {}", l, cf))?
-                        .vars
-                        .vars
-                        .iter()
-                        .find(|v| v.name == *id)
-                        .map_or_else(
-                            || Err(format!("L{}: Variable {} not declared", l, id)),
-                            |v| Ok(v.ty),
-                        )?;
+                        .get_var(cf, id).map_err(|e| format!("L{}: {}", l, e))?.ty;
                     Ok((
                         idty,
                         Box::new(Identifier(SM { ln: *l, ty: idty }, id.clone())),
@@ -192,16 +182,7 @@ pub mod checker {
                 Some(cf) => {
                     let rhs = traverse(exp, current_func, ftable)?;
                     if *p == rhs.0 {
-                        ftable
-                            .funcs
-                            .get_mut(cf)
-                            .ok_or(format!(
-                                "L{}: CRITICAL: Function {} not found in function table",
-                                l, cf
-                            ))?
-                            .vars
-                            .add_var(&name, *p)
-                            .map_err(|msg| format!("L{}: {}", l, msg))?;
+                        ftable.add_var(cf, name, *p).map_err(|e| format!("L{}: {}", l, e))?;
                         Ok((
                             *p,
                             Box::new(Bind(SM { ln: *l, ty: *p }, name.clone(), *p, rhs.1)),
@@ -242,13 +223,7 @@ pub mod checker {
                 None => Err(format!("L{}: Yield appears outside of function", l)),
                 Some(cf) => match exp {
                     Ast::Identifier(l, coname) => {
-                        let coty = ftable
-                            .funcs
-                            .get(cf)
-                            .map(|fi| fi.vars.vars.iter().find(|v| v.name == *coname))
-                            .flatten()
-                            .map(|vd| vd.ty)
-                            .ok_or(format!("L{}: Could not find coroutine: {}", l, coname))?;
+                        let coty = ftable.get_var(cf, coname).map_err(|e| format!("L{}: {}", l, e))?.ty;
                         Ok((
                             coty,
                             Box::new(Yield(
