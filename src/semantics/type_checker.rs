@@ -20,7 +20,7 @@ pub mod checker {
         traverse(ast, &None, ftable)
     }
 
-    fn binary_op(ln: u32, l: &PNode, r: &PNode, current_func: &Option<String>, ftable: &mut FunctionTable, expected: Option<Primitive>) -> Result<(Primitive, Box<SemanticNode>, Box<SemanticNode>), String> {
+    fn binary_op(op: String, ln: u32, l: &PNode, r: &PNode, current_func: &Option<String>, ftable: &mut FunctionTable, expected: Option<Primitive>) -> Result<(Primitive, Box<SemanticNode>, Box<SemanticNode>), String> {
         let (lty,lv) = traverse(l, current_func, ftable)?;
         let (rty,rv) = traverse(r, current_func, ftable)?;
 
@@ -30,14 +30,14 @@ pub mod checker {
                     Ok((lty, lv, rv))
                 }
                 else {
-                    Err(format!("L{}: expected operands of {}", ln, lty))
+                    Err(format!("L{}: {} expected {} but found {}", ln, op, lty, rty))
                 }
             },
             Some(expected) => {
                 if lty == expected && rty == expected {
                     Ok((lty, lv, rv))
                 } else {
-                    Err(format!("L{}: expected operands of {}", ln, expected))
+                    Err(format!("L{}: {} expected operands of {}", ln, op, expected))
                 }
             }
         }
@@ -89,43 +89,43 @@ pub mod checker {
                 Ok((Unit, stmt))
             }
             Mul(ln, ref l, ref r) => {
-                let (ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, Some(I32))?;
+                let (ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(I32))?;
                 Ok((ty, Box::new(Mul(SM{ln:*ln, ty}, sl, sr))))
             }
             Add(ln, ref l, ref r) => {
-                let (ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, Some(I32))?;
+                let (ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(I32))?;
                 Ok((ty, Box::new(Add(SM{ln:*ln, ty}, sl, sr))))
             }
             BAnd(ln, ref l, ref r) => {
-                let (ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, Some(Bool))?;
+                let (ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(Bool))?;
                 Ok((ty, Box::new(BAnd(SM{ln:*ln, ty}, sl, sr))))
             }
             BOr(ln, ref l, ref r) => {
-                let (ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, Some(Bool))?;
+                let (ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(Bool))?;
                 Ok((ty, Box::new(BOr(SM{ln:*ln, ty}, sl, sr))))
             }
             Ast::Eq(ln, ref l, ref r) => {
-                let (_ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, None)?;
+                let (_ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                 Ok((Bool, Box::new(Eq(SM{ln:*ln, ty: Bool}, sl, sr))))
             }
             Ast::NEq(ln, ref l, ref r) => {
-                let (_ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, None)?;
+                let (_ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                 Ok((Bool, Box::new(NEq(SM{ln:*ln, ty: Bool}, sl, sr))))
             }
             Ast::Gr(ln, ref l, ref r) => {
-                let (_ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, None)?;
+                let (_ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                 Ok((Bool, Box::new(Gr(SM{ln:*ln, ty: Bool}, sl, sr))))
             }
             Ast::GrEq(ln, ref l, ref r) => {
-                let (_ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, None)?;
+                let (_ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                 Ok((Bool, Box::new(GrEq(SM{ln:*ln, ty: Bool}, sl, sr))))
             }
             Ast::Ls(ln, ref l, ref r) => {
-                let (_ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, None)?;
+                let (_ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                 Ok((Bool, Box::new(Ls(SM{ln:*ln, ty: Bool}, sl, sr))))
             }
             Ast::LsEq(ln, ref l, ref r) => {
-                let (_ty, sl, sr) = binary_op(*ln, l, r, current_func, ftable, None)?;
+                let (_ty, sl, sr) = binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                 Ok((Bool, Box::new(LsEq(SM{ln:*ln, ty: Bool}, sl, sr))))
             }
             If(ln, cond, true_arm, false_arm) => {
@@ -456,7 +456,7 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -466,7 +466,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -476,7 +476,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
         }
 
@@ -523,7 +523,7 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -533,7 +533,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
             // operands are not i32
             {
@@ -543,7 +543,7 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft).map(|(ty,_)| ty);
-                assert_eq!(ty, Err("L1: expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
         }
 
@@ -556,7 +556,7 @@ pub mod checker {
                     Box::new(Ast::Boolean(1, true)),
                     Box::new(Ast::Integer(1, 5)),
                 ),
-                Err("L1: expected operands of bool".into()),
+                Err("L1: && expected operands of bool".into()),
             )];
 
             for (test, expected) in tests.iter() {
@@ -586,7 +586,7 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 3)),
                     Box::new(Ast::Boolean(1, true)),
                 ),
-                Err("L1: expected operands of i32".into())),
+                Err("L1: == expected i32 but found bool".into())),
             ];
 
             for (test, expected) in tests.iter() {
