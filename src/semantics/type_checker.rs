@@ -69,6 +69,14 @@ pub mod checker {
         current_func: &Option<String>,
         ftable: &mut FunctionTable,
     ) -> Result<(Primitive, Box<SemanticNode>), String> {
+        analyize_node(ast, current_func, ftable)
+    }
+
+    fn analyize_node(
+        ast: &PNode,
+        current_func: &Option<String>,
+        ftable: &mut FunctionTable,
+    ) -> Result<(Primitive, Box<SemanticNode>), String> {
         use Ast::*;
         match ast {
             Integer(ln, val) => Ok((I32, Box::new(Integer(SM(*ln, I32 ), *val)))),
