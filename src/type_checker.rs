@@ -239,7 +239,7 @@ pub mod checker {
             Statement(_, exp) => {
                 traverse(exp, current_func, ftable)?;
                 Ok(Unit)
-            },
+            }
             Mul(ln, ref l, ref r) | Add(ln, ref l, ref r) => {
                 let lty = traverse(l, current_func, ftable)?;
                 let rty = traverse(r, current_func, ftable)?;
@@ -279,7 +279,10 @@ pub mod checker {
                     )),
                 }
             }
-            GrEq(ln, ref l, ref r) | Gr(ln, ref l, ref r) | Ls(ln, ref l, ref r) | LsEq(ln, ref l, ref r) => {
+            GrEq(ln, ref l, ref r)
+            | Gr(ln, ref l, ref r)
+            | Ls(ln, ref l, ref r)
+            | LsEq(ln, ref l, ref r) => {
                 let lty = traverse(l, current_func, ftable);
                 let rty = traverse(r, current_func, ftable);
                 match (lty, rty) {
@@ -336,10 +339,7 @@ pub mod checker {
                             .map_err(|msg| format!("L{}: {}", l, msg))?;
                         Ok(*p)
                     } else {
-                        Err(format!(
-                            "L{}: Bind expected {:?} but got {:?}",
-                            l, p, ety
-                        ))
+                        Err(format!("L{}: Bind expected {:?} but got {:?}", l, p, ety))
                     }
                 }
                 None => Err(format!(
@@ -379,18 +379,14 @@ pub mod checker {
             Yield(l, box exp) => match current_func {
                 None => Err(format!("L{}: Yield appears outside of function", l)),
                 Some(cf) => match exp {
-                        Ast::Identifier(l, coname)
-                    => ftable
+                    Ast::Identifier(l, coname) => ftable
                         .funcs
                         .get(cf)
                         .map(|fi| fi.vars.vars.iter().find(|v| v.name == *coname))
                         .flatten()
                         .map(|vd| vd.ty)
                         .ok_or(format!("L{}: Could not find coroutine: {}", l, coname)),
-                    _ => Err(format!(
-                        "L{}: Expected name of coroutine after yield",
-                        l
-                    )),
+                    _ => Err(format!("L{}: Expected name of coroutine after yield", l)),
                 },
             },
             YieldReturn(l, None) => match current_func {
@@ -435,10 +431,10 @@ pub mod checker {
                     .iter()
                     .map(|p| traverse(p, current_func, ftable).unwrap())
                     .collect();
-                let fpty: Vec<super::Primitive> = (ftable.funcs.get(fname).ok_or(format!(
-                    "L{}: Unknown identifer or function: {}",
-                    l, fname
-                ))?)
+                let fpty: Vec<super::Primitive> = (ftable
+                    .funcs
+                    .get(fname)
+                    .ok_or(format!("L{}: Unknown identifer or function: {}", l, fname))?)
                 .params
                 .iter()
                 .map(|(_, p)| *p)
@@ -584,51 +580,37 @@ pub mod checker {
                 .unwrap();
             // both operands are i32
             {
-                let node =
-                    Ast::Add(1, 
-                        Box::new(Ast::Integer(5)),
-                        Box::new(Ast::Integer(10)),
-                );
+                let node = Ast::Add(1, Box::new(Ast::Integer(5)), Box::new(Ast::Integer(10)));
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // operands are not i32
             {
-                let node =
-                    Ast::Add(
-                        1,
-                        Box::new(
-                            Ast::Identifier(1, "b".into()),
-                        ),
-                        Box::new(Ast::Integer(10)),
-                );
-                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
-            }
-            // operands are not i32
-            {
-                let node =
-                    Ast::Add(1,
-                        Box::new( Ast::Integer(10)),
-                        Box::new(
-                            Ast::Identifier(1, "b".into(),
-                        )),
-                );
-                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
-                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
-            }
-            // operands are not i32
-            {
-                let node =
-                    Ast::Add(
+                let node = Ast::Add(
                     1,
-                        Box::new(
-                            Ast::Identifier(1, "b".into()),
-                        ),
-                        Box::new(
-                            Ast::Identifier(1, "b".into()),
-                        ),
+                    Box::new(Ast::Identifier(1, "b".into())),
+                    Box::new(Ast::Integer(10)),
+                );
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
+            }
+            // operands are not i32
+            {
+                let node = Ast::Add(
+                    1,
+                    Box::new(Ast::Integer(10)),
+                    Box::new(Ast::Identifier(1, "b".into())),
+                );
+                let ty = traverse(&node, &Some("my_func".into()), &mut ft);
+                assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
+            }
+            // operands are not i32
+            {
+                let node = Ast::Add(
+                    1,
+                    Box::new(Ast::Identifier(1, "b".into())),
+                    Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
@@ -661,52 +643,37 @@ pub mod checker {
                 .unwrap();
             // both operands are i32
             {
-                let node =
-                    Ast::Mul(
-                    1,
-                        Box::new(Ast::Integer(5)),
-                        Box::new(Ast::Integer(10)),
-                );
+                let node = Ast::Mul(1, Box::new(Ast::Integer(5)), Box::new(Ast::Integer(10)));
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // operands are not i32
             {
-                let node = 
-                    Ast::Mul(
+                let node = Ast::Mul(
                     1,
-                        Box::new(
-                            Ast::Identifier(1, "b".into()),
-                        ),
-                        Box::new(Ast::Integer(10)),
+                    Box::new(Ast::Identifier(1, "b".into())),
+                    Box::new(Ast::Integer(10)),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
-                let node =
-                    Ast::Mul(
+                let node = Ast::Mul(
                     1,
-                        Box::new(Ast::Integer(10)),
-                        Box::new(
-                            Ast::Identifier(1, "b".into())),
+                    Box::new(Ast::Integer(10)),
+                    Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
             }
             // operands are not i32
             {
-                let node =
-                    Ast::Mul(
+                let node = Ast::Mul(
                     1,
-                        Box::new(
-                            Ast::Identifier(1, "b".into()),
-                        ),
-                        Box::new(
-                            Ast::Identifier(1, "b".into()),
-                        ),
+                    Box::new(Ast::Identifier(1, "b".into())),
+                    Box::new(Ast::Identifier(1, "b".into())),
                 );
                 let ty = traverse(&node, &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: */+ expect to have operands of i32".into()));
@@ -716,17 +683,10 @@ pub mod checker {
         #[test]
         pub fn test_boolean_ops() {
             let mut ft = FunctionTable::new();
-            let tests: Vec<(PNode, Result<Primitive, String>)> = 
-                vec![
-                (
-                        Ast::BAnd(
-                        1,
-                            Box::new(Ast::Boolean(true)),
-                            Box::new(Ast::Integer(5)),
-                        ),
-                    Err("L1: && and || expect to have operands of bool".into()),
-                ),
-            ];
+            let tests: Vec<(PNode, Result<Primitive, String>)> = vec![(
+                Ast::BAnd(1, Box::new(Ast::Boolean(true)), Box::new(Ast::Integer(5))),
+                Err("L1: && and || expect to have operands of bool".into()),
+            )];
 
             for (test, expected) in tests.iter() {
                 let ty = traverse(&test, &None, &mut ft);
@@ -738,13 +698,7 @@ pub mod checker {
         pub fn test_bind() {
             // RHS type matches the LHS type
             {
-                let node =
-                    Ast::Bind(
-                    1,
-                        "x".into(),
-                        Primitive::I32,
-                        Box::new(Ast::Integer(5)),
-                );
+                let node = Ast::Bind(1, "x".into(), Primitive::I32, Box::new(Ast::Integer(5)));
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -761,13 +715,7 @@ pub mod checker {
 
             // RHS type does not match LHS type
             {
-                let node = 
-                    Ast::Bind(
-                    1,
-                        "x".into(),
-                        Primitive::Bool,
-                        Box::new( Ast::Integer(5)),
-                );
+                let node = Ast::Bind(1, "x".into(), Primitive::Bool, Box::new(Ast::Integer(5)));
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -784,12 +732,11 @@ pub mod checker {
 
             // recursive definition
             {
-                let node =
-                    Ast::Bind(
+                let node = Ast::Bind(
                     1,
-                        "x".into(),
-                        Primitive::I32,
-                        Box::new(Ast::Identifier(1, "x".into())),
+                    "x".into(),
+                    Primitive::I32,
+                    Box::new(Ast::Identifier(1, "x".into())),
                 );
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
@@ -852,8 +799,7 @@ pub mod checker {
                     ty: I32,
                 },
             );
-            let node =
-                Ast::Return(1, Some(Box::new(Ast::Integer(5))));
+            let node = Ast::Return(1, Some(Box::new(Ast::Integer(5))));
             let ty = traverse(&node, &Some("my_func".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
         }
@@ -965,8 +911,7 @@ pub mod checker {
             );
 
             // test correct type for yield return
-            let node =
-                Ast::YieldReturn(1, Some(Box::new(Ast::Integer(5))));
+            let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(5))));
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
@@ -1004,9 +949,7 @@ pub mod checker {
                     ty: I32,
                 },
             );
-            let node =
-                Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into()))
-            );
+            let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
             let ty = traverse(&node, &Some("my_main".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
         }
@@ -1024,27 +967,18 @@ pub mod checker {
                 },
             );
 
-            let node =
-                Ast::FunctionDef(
+            let node = Ast::FunctionDef(
                 1,
-                    "my_func".into(),
-                    vec![],
-                    I32,
-                    vec![
-                        Ast::Return(1, Some(Box::new(Ast::Integer(5)))),
-                    ],
+                "my_func".into(),
+                vec![],
+                I32,
+                vec![Ast::Return(1, Some(Box::new(Ast::Integer(5))))],
             );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::FunctionDef(
-                1,
-                    "my_func".into(),
-                    vec![],
-                    I32,
-                    vec![Ast::Return(1, None)],
-            );
+                Ast::FunctionDef(1, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
         }
@@ -1062,27 +996,18 @@ pub mod checker {
                 },
             );
 
-            let node =
-                Ast::CoroutineDef(
+            let node = Ast::CoroutineDef(
                 1,
-                    "my_co".into(),
-                    vec![],
-                    I32,
-                    vec![
-                        Ast::Return(1, Some(Box::new(Ast::Integer(5)))),
-                    ],
+                "my_co".into(),
+                vec![],
+                I32,
+                vec![Ast::Return(1, Some(Box::new(Ast::Integer(5))))],
             );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::CoroutineDef(
-                1,
-                    "my_co".into(),
-                    vec![],
-                    I32,
-                    vec![Ast::Return(1, None)],
-            );
+                Ast::CoroutineDef(1, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Err("L1: Return expected I32 type and got Unit".into()));
         }
@@ -1138,13 +1063,7 @@ pub mod checker {
                     Err("L1: If expression has mismatching arms: expected Bool got I32".into()),
                 ),
             ] {
-                let node =
-                    Ast::If(
-                    1,
-                        Box::new(c),
-                        Box::new(t),
-                        Box::new(f),
-                );
+                let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
                 let ty = traverse(&node, &Some("my_main".into()), &mut ft);
                 assert_eq!(ty, ex);
             }

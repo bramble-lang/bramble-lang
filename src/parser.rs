@@ -19,7 +19,7 @@ impl PNode {
     pub fn new_bind(line: u32, id: Box<Self>, exp: Box<Self>) -> Result<Self, String> {
         let i = line; //ParserInfo{l: line};
         match id.as_ref() {
-            Ast::IdentifierDeclare(_, id, prim)=> Ok(Ast::Bind(i, id.clone(), *prim, exp)),
+            Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), *prim, exp)),
             _ => Err(format!(
                 "L{}: Expected identifier declaration, found {:?}",
                 line, id
@@ -191,9 +191,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(
-                    Ast::FunctionDef(l, id.clone(), params, fn_type, stmts),
-                )
+                Some(Ast::FunctionDef(l, id.clone(), params, fn_type, stmts))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -231,9 +229,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(
-                    Ast::CoroutineDef(l, id.clone(), params, co_type, stmts),
-                )
+                Some(Ast::CoroutineDef(l, id.clone(), params, co_type, stmts))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -249,8 +245,7 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
 
     while let Some(param) = identifier_or_declare(iter)? {
         match param {
-            Ast::IdentifierDeclare(_, id, id_type)
-             => {
+            Ast::IdentifierDeclare(_, id, id_type) => {
                 params.push((id, id_type));
                 consume_if(iter, Lex::Comma);
             }
@@ -367,11 +362,7 @@ fn let_bind(iter: &mut TokenIter) -> PResult {
                 None => expression(iter)?
                     .ok_or(format!("L{}: expected expression on LHS of bind", l))?,
             };
-            Ok(Some(PNode::new_bind(
-                l,
-                Box::new(id_decl),
-                Box::new(exp),
-            )?))
+            Ok(Some(PNode::new_bind(l, Box::new(id_decl), Box::new(exp))?))
         }
         None => Ok(None),
     }
@@ -383,8 +374,7 @@ fn co_init(iter: &mut TokenIter) -> PResult {
             Some((l, id)) => {
                 let params = fn_call_params(iter)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Ast::CoroutineInit(l, id.clone(), params),
-                ))
+                Ok(Some(Ast::CoroutineInit(l, id.clone(), params)))
             }
             None => Err(format!("L{}: expected identifier after init", l)),
         },
@@ -437,12 +427,7 @@ fn logical_and(iter: &mut TokenIter) -> PResult {
         Some(n) => match consume_if(iter, Lex::BAnd) {
             Some(l) => {
                 let n2 = logical_and(iter)?.ok_or(&format!("L{}: An expression after &&", l))?;
-                Some(PNode::binary_op(
-                    l,
-                    &Lex::BAnd,
-                    Box::new(n),
-                    Box::new(n2),
-                )?)
+                Some(PNode::binary_op(l, &Lex::BAnd, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -536,9 +521,12 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
                     false_arm
                 }
             };
-            Some(
-                Ast::If(l, Box::new(cond), Box::new(true_arm), Box::new(false_arm)),
-            )
+            Some(Ast::If(
+                l,
+                Box::new(cond),
+                Box::new(true_arm),
+                Box::new(false_arm),
+            ))
         }
         _ => None,
     })
@@ -634,7 +622,7 @@ fn number(iter: &mut TokenIter) -> PResult {
     Ok(match iter.peek() {
         Some(token) => match token {
             Token {
-                l:_,
+                l: _,
                 s: Lex::Integer(i),
             } => {
                 iter.next();
@@ -648,7 +636,10 @@ fn number(iter: &mut TokenIter) -> PResult {
 
 fn boolean(iter: &mut TokenIter) -> PResult {
     match iter.peek() {
-        Some(Token { l:_, s: Lex::Bool(b) }) => {
+        Some(Token {
+            l: _,
+            s: Lex::Bool(b),
+        }) => {
             iter.next();
             Ok(Some(Ast::Boolean(*b)))
         }
@@ -752,10 +743,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(
-            Ast::Add(l, left, right),
-        ) = expression(&mut iter).unwrap()
-        {
+        if let Some(Ast::Add(l, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(*left, Ast::Integer(2));
             assert_eq!(*right, Ast::Integer(2));
@@ -774,10 +762,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(
-            Ast::Mul(l, left, right),
-        ) = expression(&mut iter).unwrap()
-        {
+        if let Some(Ast::Mul(l, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             match left.as_ref() {
                 Ast::Add(_, ll, lr) => {
@@ -802,10 +787,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(
-            Ast::BOr(l, left, right),
-        ) = expression(&mut iter).unwrap()
-        {
+        if let Some(Ast::BOr(l, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(*left, Ast::Boolean(true));
             assert_eq!(*right, Ast::Boolean(false));
@@ -824,9 +806,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(
-            Ast::FunctionDef(l, name, params, ty, body),
-        ) = function_def(&mut iter).unwrap()
+        if let Some(Ast::FunctionDef(l, name, params, ty, body)) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -854,10 +834,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(
-            Ast::ExpressionBlock(l, body),
-        ) = expression_block(&mut iter).unwrap()
-        {
+        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 1);
             assert_eq!(body[0], Ast::Integer(5));
@@ -900,16 +877,12 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(
-             Ast::ExpressionBlock(l, body),
-        ) = expression_block(&mut iter).unwrap()
-        {
+        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 2);
             match &body[0] {
                 Ast::Statement(_, stm) => match stm.as_ref() {
-                    Ast::Bind(_, id, p, exp)
-                    => {
+                    Ast::Bind(_, id, p, exp) => {
                         assert_eq!(id, "x");
                         assert_eq!(*p, Primitive::I32);
                         assert_eq!(*exp, Box::new(PNode::Integer(5)));
