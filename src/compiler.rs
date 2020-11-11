@@ -484,10 +484,10 @@ impl Compiler {
         let co_param_registers = [Ebx, Ecx, Edx];
 
         match &ast {
-            Ast::Integer(i) => {
+            Ast::Integer(_, i) => {
                 output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
-            Ast::Boolean(b) => {
+            Ast::Boolean(_, b) => {
                 output.push(Mov(
                     Location::Register(Eax),
                     Source::Integer(if *b { 1 } else { 0 }),

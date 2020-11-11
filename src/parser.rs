@@ -52,8 +52,8 @@ impl PNode {
 
 #[derive(Debug, PartialEq)]
 pub enum Ast<I> {
-    Integer(i32),
-    Boolean(bool),
+    Integer(I, i32),
+    Boolean(I, bool),
     Identifier(I, String),
     IdentifierDeclare(I, String, Primitive),
     Primitive(Primitive),
@@ -622,11 +622,11 @@ fn number(iter: &mut TokenIter) -> PResult {
     Ok(match iter.peek() {
         Some(token) => match token {
             Token {
-                l: _,
+                l,
                 s: Lex::Integer(i),
             } => {
                 iter.next();
-                Some(Ast::Integer(*i))
+                Some(Ast::Integer(*l, *i))
             }
             _ => None,
         },
@@ -637,11 +637,11 @@ fn number(iter: &mut TokenIter) -> PResult {
 fn boolean(iter: &mut TokenIter) -> PResult {
     match iter.peek() {
         Some(Token {
-            l: _,
+            l,
             s: Lex::Bool(b),
         }) => {
             iter.next();
-            Ok(Some(Ast::Boolean(*b)))
+            Ok(Some(Ast::Boolean(*l, *b)))
         }
         _ => Ok(None),
     }
@@ -745,8 +745,8 @@ pub mod tests {
         let mut iter = tokens.iter().peekable();
         if let Some(Ast::Add(l, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
-            assert_eq!(*left, Ast::Integer(2));
-            assert_eq!(*right, Ast::Integer(2));
+            assert_eq!(*left, Ast::Integer(1,2));
+            assert_eq!(*right, Ast::Integer(1,2));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -766,12 +766,12 @@ pub mod tests {
             assert_eq!(l, 1);
             match left.as_ref() {
                 Ast::Add(_, ll, lr) => {
-                    assert_eq!(**ll, Ast::Integer(2));
-                    assert_eq!(**lr, Ast::Integer(4));
+                    assert_eq!(**ll, Ast::Integer(1,2));
+                    assert_eq!(**lr, Ast::Integer(1,4));
                 }
                 _ => panic!("Expected Add syntax"),
             }
-            assert_eq!(*right, Ast::Integer(3));
+            assert_eq!(*right, Ast::Integer(1,3));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -789,8 +789,8 @@ pub mod tests {
         let mut iter = tokens.iter().peekable();
         if let Some(Ast::BOr(l, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
-            assert_eq!(*left, Ast::Boolean(true));
-            assert_eq!(*right, Ast::Boolean(false));
+            assert_eq!(*left, Ast::Boolean(1, true));
+            assert_eq!(*right, Ast::Boolean(1, false));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -815,7 +815,7 @@ pub mod tests {
             assert_eq!(body.len(), 1);
             match &body[0] {
                 Ast::Return(_, Some(exp)) => {
-                    assert_eq!(*exp.as_ref(), Ast::Boolean(true));
+                    assert_eq!(*exp.as_ref(), Ast::Boolean(1, true));
                 }
                 _ => panic!("No body"),
             }
@@ -837,7 +837,7 @@ pub mod tests {
         if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 1);
-            assert_eq!(body[0], Ast::Integer(5));
+            assert_eq!(body[0], Ast::Integer(1, 5));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -885,7 +885,7 @@ pub mod tests {
                     Ast::Bind(_, id, p, exp) => {
                         assert_eq!(id, "x");
                         assert_eq!(*p, Primitive::I32);
-                        assert_eq!(*exp, Box::new(PNode::Integer(5)));
+                        assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                     }
                     _ => panic!("Not a binding statement"),
                 },
