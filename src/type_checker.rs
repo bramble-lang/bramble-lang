@@ -523,7 +523,7 @@ pub mod checker {
 
         #[test]
         pub fn test_integer() {
-            let node = Ast::Integer(1,5);
+            let node = Ast::Integer(1, 5);
             let mut ft = FunctionTable::new();
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Ok(Primitive::I32));
@@ -580,7 +580,11 @@ pub mod checker {
                 .unwrap();
             // both operands are i32
             {
-                let node = Ast::Add(1, Box::new(Ast::Integer(1,5)), Box::new(Ast::Integer(1, 10)));
+                let node = Ast::Add(
+                    1,
+                    Box::new(Ast::Integer(1, 5)),
+                    Box::new(Ast::Integer(1, 10)),
+                );
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -643,7 +647,11 @@ pub mod checker {
                 .unwrap();
             // both operands are i32
             {
-                let node = Ast::Mul(1, Box::new(Ast::Integer(1,5)), Box::new(Ast::Integer(1, 10)));
+                let node = Ast::Mul(
+                    1,
+                    Box::new(Ast::Integer(1, 5)),
+                    Box::new(Ast::Integer(1, 10)),
+                );
                 let ty = traverse(&node, &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -684,7 +692,11 @@ pub mod checker {
         pub fn test_boolean_ops() {
             let mut ft = FunctionTable::new();
             let tests: Vec<(PNode, Result<Primitive, String>)> = vec![(
-                Ast::BAnd(1, Box::new(Ast::Boolean(1, true)), Box::new(Ast::Integer(1,5))),
+                Ast::BAnd(
+                    1,
+                    Box::new(Ast::Boolean(1, true)),
+                    Box::new(Ast::Integer(1, 5)),
+                ),
                 Err("L1: && and || expect to have operands of bool".into()),
             )];
 
@@ -698,7 +710,7 @@ pub mod checker {
         pub fn test_bind() {
             // RHS type matches the LHS type
             {
-                let node = Ast::Bind(1, "x".into(), Primitive::I32, Box::new(Ast::Integer(1,5)));
+                let node = Ast::Bind(1, "x".into(), Primitive::I32, Box::new(Ast::Integer(1, 5)));
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -715,7 +727,7 @@ pub mod checker {
 
             // RHS type does not match LHS type
             {
-                let node = Ast::Bind(1, "x".into(), Primitive::Bool, Box::new(Ast::Integer(1,5)));
+                let node = Ast::Bind(1, "x".into(), Primitive::Bool, Box::new(Ast::Integer(1, 5)));
                 let mut ft = FunctionTable::new();
                 ft.funcs.insert(
                     "my_func".into(),
@@ -799,7 +811,7 @@ pub mod checker {
                     ty: I32,
                 },
             );
-            let node = Ast::Return(1, Some(Box::new(Ast::Integer(1,5))));
+            let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
             let ty = traverse(&node, &Some("my_func".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
         }
@@ -831,7 +843,7 @@ pub mod checker {
             );
 
             // test correct parameters passed in call
-            let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1,5)]);
+            let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1, 5)]);
             let ty = traverse(&node, &Some("my_func2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
@@ -871,7 +883,7 @@ pub mod checker {
             );
 
             // test correct parameters passed in call
-            let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1,5)]);
+            let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1, 5)]);
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
@@ -911,7 +923,7 @@ pub mod checker {
             );
 
             // test correct type for yield return
-            let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1,5))));
+            let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
             let ty = traverse(&node, &Some("my_co2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
@@ -972,7 +984,7 @@ pub mod checker {
                 "my_func".into(),
                 vec![],
                 I32,
-                vec![Ast::Return(1, Some(Box::new(Ast::Integer(1,5))))],
+                vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Ok(I32));
@@ -1001,7 +1013,7 @@ pub mod checker {
                 "my_co".into(),
                 vec![],
                 I32,
-                vec![Ast::Return(1, Some(Box::new(Ast::Integer(1,5))))],
+                vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
             let ty = traverse(&node, &None, &mut ft);
             assert_eq!(ty, Ok(I32));
@@ -1034,7 +1046,7 @@ pub mod checker {
             for (c, t, f, ex) in vec![
                 (
                     Ast::Boolean(1, true),
-                    Ast::Integer(1,5),
+                    Ast::Integer(1, 5),
                     Ast::Integer(1, 7),
                     Ok(I32),
                 ),
@@ -1046,20 +1058,20 @@ pub mod checker {
                 ),
                 (
                     Ast::Integer(1, 13),
-                    Ast::Integer(1,5),
+                    Ast::Integer(1, 5),
                     Ast::Integer(1, 7),
                     Err("L1: Expected boolean expression in if conditional, got: Ok(I32)".into()),
                 ),
                 (
                     Ast::Boolean(1, true),
-                    Ast::Integer(1,5),
+                    Ast::Integer(1, 5),
                     Ast::Boolean(1, true),
                     Err("L1: If expression has mismatching arms: expected I32 got Bool".into()),
                 ),
                 (
                     Ast::Boolean(1, true),
                     Ast::Boolean(1, true),
-                    Ast::Integer(1,5),
+                    Ast::Integer(1, 5),
                     Err("L1: If expression has mismatching arms: expected Bool got I32".into()),
                 ),
             ] {

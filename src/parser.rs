@@ -636,10 +636,7 @@ fn number(iter: &mut TokenIter) -> PResult {
 
 fn boolean(iter: &mut TokenIter) -> PResult {
     match iter.peek() {
-        Some(Token {
-            l,
-            s: Lex::Bool(b),
-        }) => {
+        Some(Token { l, s: Lex::Bool(b) }) => {
             iter.next();
             Ok(Some(Ast::Boolean(*l, *b)))
         }
@@ -745,8 +742,8 @@ pub mod tests {
         let mut iter = tokens.iter().peekable();
         if let Some(Ast::Add(l, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
-            assert_eq!(*left, Ast::Integer(1,2));
-            assert_eq!(*right, Ast::Integer(1,2));
+            assert_eq!(*left, Ast::Integer(1, 2));
+            assert_eq!(*right, Ast::Integer(1, 2));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -766,12 +763,12 @@ pub mod tests {
             assert_eq!(l, 1);
             match left.as_ref() {
                 Ast::Add(_, ll, lr) => {
-                    assert_eq!(**ll, Ast::Integer(1,2));
-                    assert_eq!(**lr, Ast::Integer(1,4));
+                    assert_eq!(**ll, Ast::Integer(1, 2));
+                    assert_eq!(**lr, Ast::Integer(1, 4));
                 }
                 _ => panic!("Expected Add syntax"),
             }
-            assert_eq!(*right, Ast::Integer(1,3));
+            assert_eq!(*right, Ast::Integer(1, 3));
         } else {
             panic!("No nodes returned by parser")
         }
