@@ -38,7 +38,6 @@ pub mod checker {
                         |v| Ok(v.ty),
                     ),
             },
-            Primitive(p) => Ok(*p),
             ExpressionBlock(_, body) => {
                 let mut ty = Unit;
                 for stmt in body.iter() {

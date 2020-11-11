@@ -56,7 +56,6 @@ pub enum Ast<I> {
     Boolean(I, bool),
     Identifier(I, String),
     IdentifierDeclare(I, String, Primitive),
-    Primitive(Primitive),
 
     Mul(I, Box<Ast<I>>, Box<Ast<I>>),
     Add(I, Box<Ast<I>>, Box<Ast<I>>),
