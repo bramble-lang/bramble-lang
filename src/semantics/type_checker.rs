@@ -566,6 +566,36 @@ pub mod checker {
         }
 
         #[test]
+        pub fn test_comparison_ops() {
+            let mut ft = FunctionTable::new();
+            let tests: Vec<(PNode, Result<Primitive, String>)> = vec![
+                (Ast::Eq(
+                    1,
+                    Box::new(Ast::Integer(1, 3)),
+                    Box::new(Ast::Integer(1, 5)),
+                ),
+                Ok(Bool)),
+                (Ast::Eq(
+                    1,
+                    Box::new(Ast::Boolean(1, true)),
+                    Box::new(Ast::Boolean(1, false)),
+                ),
+                Ok(Bool)),
+                (Ast::Eq(
+                    1,
+                    Box::new(Ast::Integer(1, 3)),
+                    Box::new(Ast::Boolean(1, true)),
+                ),
+                Err("L1: expected operands of I32".into())),
+            ];
+
+            for (test, expected) in tests.iter() {
+                let ty = traverse(&test, &None, &mut ft).map(|(ty,_)| ty);
+                assert_eq!(ty, *expected);
+            }
+        }
+
+        #[test]
         pub fn test_bind() {
             // RHS type matches the LHS type
             {
