@@ -156,32 +156,32 @@ pub mod checker {
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(Bool))?;
                     Ok((ty, Box::new(BOr(sm(*ln, ty), sl, sr))))
                 }
-                Ast::Eq(ln, ref l, ref r) => {
+                Eq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                     Ok((Bool, Box::new(Eq(sm(*ln, Bool), sl, sr))))
                 }
-                Ast::NEq(ln, ref l, ref r) => {
+                NEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                     Ok((Bool, Box::new(NEq(sm(*ln, Bool), sl, sr))))
                 }
-                Ast::Gr(ln, ref l, ref r) => {
+                Gr(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                     Ok((Bool, Box::new(Gr(sm(*ln, Bool), sl, sr))))
                 }
-                Ast::GrEq(ln, ref l, ref r) => {
+                GrEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                     Ok((Bool, Box::new(GrEq(sm(*ln, Bool), sl, sr))))
                 }
-                Ast::Ls(ln, ref l, ref r) => {
+                Ls(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                     Ok((Bool, Box::new(Ls(sm(*ln, Bool), sl, sr))))
                 }
-                Ast::LsEq(ln, ref l, ref r) => {
+                LsEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
                     Ok((Bool, Box::new(LsEq(sm(*ln, Bool), sl, sr))))
