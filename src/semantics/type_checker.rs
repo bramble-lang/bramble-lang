@@ -16,7 +16,7 @@ pub mod checker {
 
     pub type SemanticNode = Ast<SemanticMetadata>;
 
-    fn SM(ln: u32, ty: Primitive) -> SemanticMetadata {
+    fn sm(ln: u32, ty: Primitive) -> SemanticMetadata {
         SemanticMetadata {
             ln,
             ty,
@@ -103,11 +103,11 @@ pub mod checker {
         ) -> Result<(Primitive, Box<SemanticNode>), String> {
             use Ast::*;
             match ast {
-                Integer(ln, val) => Ok((I32, Box::new(Integer(SM(*ln, I32), *val)))),
-                Boolean(ln, val) => Ok((Bool, Box::new(Boolean(SM(*ln, Bool), *val)))),
+                Integer(ln, val) => Ok((I32, Box::new(Integer(sm(*ln, I32), *val)))),
+                Boolean(ln, val) => Ok((Bool, Box::new(Boolean(sm(*ln, Bool), *val)))),
                 IdentifierDeclare(ln, name, p) => Ok((
                     *p,
-                    Box::new(IdentifierDeclare(SM(*ln, *p), name.clone(), *p)),
+                    Box::new(IdentifierDeclare(sm(*ln, *p), name.clone(), *p)),
                 )),
                 Identifier(l, id) => match current_func {
                     None => Err(format!(
@@ -119,7 +119,7 @@ pub mod checker {
                             .get_var(cf, id)
                             .map_err(|e| format!("L{}: {}", l, e))?
                             .ty;
-                        Ok((idty, Box::new(Identifier(SM(*l, idty), id.clone()))))
+                        Ok((idty, Box::new(Identifier(sm(*l, idty), id.clone()))))
                     }
                 },
                 ExpressionBlock(ln, body) => {
@@ -130,7 +130,7 @@ pub mod checker {
                         ty = r.0;
                         nbody.push(*r.1);
                     }
-                    Ok((ty, Box::new(ExpressionBlock(SM(*ln, ty), nbody))))
+                    Ok((ty, Box::new(ExpressionBlock(sm(*ln, ty), nbody))))
                 }
                 Statement(_, stmt) => {
                     let (_, stmt) = self.traverse(stmt, current_func, ftable)?;
@@ -139,52 +139,52 @@ pub mod checker {
                 Mul(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(I32))?;
-                    Ok((ty, Box::new(Mul(SM(*ln, ty), sl, sr))))
+                    Ok((ty, Box::new(Mul(sm(*ln, ty), sl, sr))))
                 }
                 Add(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(I32))?;
-                    Ok((ty, Box::new(Add(SM(*ln, ty), sl, sr))))
+                    Ok((ty, Box::new(Add(sm(*ln, ty), sl, sr))))
                 }
                 BAnd(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(Bool))?;
-                    Ok((ty, Box::new(BAnd(SM(*ln, ty), sl, sr))))
+                    Ok((ty, Box::new(BAnd(sm(*ln, ty), sl, sr))))
                 }
                 BOr(ln, ref l, ref r) => {
                     let (ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, Some(Bool))?;
-                    Ok((ty, Box::new(BOr(SM(*ln, ty), sl, sr))))
+                    Ok((ty, Box::new(BOr(sm(*ln, ty), sl, sr))))
                 }
                 Ast::Eq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
-                    Ok((Bool, Box::new(Eq(SM(*ln, Bool), sl, sr))))
+                    Ok((Bool, Box::new(Eq(sm(*ln, Bool), sl, sr))))
                 }
                 Ast::NEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
-                    Ok((Bool, Box::new(NEq(SM(*ln, Bool), sl, sr))))
+                    Ok((Bool, Box::new(NEq(sm(*ln, Bool), sl, sr))))
                 }
                 Ast::Gr(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
-                    Ok((Bool, Box::new(Gr(SM(*ln, Bool), sl, sr))))
+                    Ok((Bool, Box::new(Gr(sm(*ln, Bool), sl, sr))))
                 }
                 Ast::GrEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
-                    Ok((Bool, Box::new(GrEq(SM(*ln, Bool), sl, sr))))
+                    Ok((Bool, Box::new(GrEq(sm(*ln, Bool), sl, sr))))
                 }
                 Ast::Ls(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
-                    Ok((Bool, Box::new(Ls(SM(*ln, Bool), sl, sr))))
+                    Ok((Bool, Box::new(Ls(sm(*ln, Bool), sl, sr))))
                 }
                 Ast::LsEq(ln, ref l, ref r) => {
                     let (_ty, sl, sr) =
                         self.binary_op(ast.root_str(), *ln, l, r, current_func, ftable, None)?;
-                    Ok((Bool, Box::new(LsEq(SM(*ln, Bool), sl, sr))))
+                    Ok((Bool, Box::new(LsEq(sm(*ln, Bool), sl, sr))))
                 }
                 If(ln, cond, true_arm, false_arm) => {
                     let (cond_ty, cond_exp) =
@@ -197,7 +197,7 @@ pub mod checker {
                             Ok((
                                 true_arm.0,
                                 Box::new(If(
-                                    SM(*ln, true_arm.0),
+                                    sm(*ln, true_arm.0),
                                     cond_exp,
                                     true_arm.1,
                                     false_arm.1,
@@ -223,7 +223,7 @@ pub mod checker {
                             ftable
                                 .add_var(cf, name, *p)
                                 .map_err(|e| format!("L{}: {}", l, e))?;
-                            Ok((*p, Box::new(Bind(SM(*l, *p), name.clone(), *p, rhs.1))))
+                            Ok((*p, Box::new(Bind(sm(*l, *p), name.clone(), *p, rhs.1))))
                         } else {
                             Err(format!("L{}: Bind expected {} but got {}", l, p, rhs.0))
                         }
@@ -238,7 +238,7 @@ pub mod checker {
                     Some(cf) => {
                         let fty = ftable.funcs[cf].ty;
                         if fty == Unit {
-                            Ok((Unit, Box::new(Return(SM(*l, Unit), None))))
+                            Ok((Unit, Box::new(Return(sm(*l, Unit), None))))
                         } else {
                             Err(format!("L{}: Return expected {} type and got unit", l, fty))
                         }
@@ -250,7 +250,7 @@ pub mod checker {
                         let fty = ftable.funcs[cf].ty;
                         let val = self.traverse(&exp, current_func, ftable)?;
                         if fty == val.0 {
-                            Ok((fty, Box::new(Return(SM(*l, fty), Some(val.1)))))
+                            Ok((fty, Box::new(Return(sm(*l, fty), Some(val.1)))))
                         } else {
                             Err(format!("L{}: Return expected {} but got {}", l, fty, val.0))
                         }
@@ -267,8 +267,8 @@ pub mod checker {
                             Ok((
                                 coty,
                                 Box::new(Yield(
-                                    SM(*l, coty),
-                                    Box::new(Identifier(SM(*l, coty), coname.clone())),
+                                    sm(*l, coty),
+                                    Box::new(Identifier(sm(*l, coty), coname.clone())),
                                 )),
                             ))
                         }
@@ -280,7 +280,7 @@ pub mod checker {
                     Some(cf) => {
                         let fty = ftable.funcs[cf].ty;
                         if fty == Unit {
-                            Ok((Unit, Box::new(YieldReturn(SM(*l, fty), None))))
+                            Ok((Unit, Box::new(YieldReturn(sm(*l, fty), None))))
                         } else {
                             Err(format!(
                                 "L{}: Yield return expected {} but got unit",
@@ -295,7 +295,7 @@ pub mod checker {
                         let fty = ftable.funcs[cf].ty;
                         let val = self.traverse(&exp, current_func, ftable)?;
                         if fty == val.0 {
-                            Ok((fty, Box::new(YieldReturn(SM(*l, fty), Some(val.1)))))
+                            Ok((fty, Box::new(YieldReturn(sm(*l, fty), Some(val.1)))))
                         } else {
                             Err(format!(
                                 "L{}: Yield return expected {} but got {}",
@@ -313,7 +313,7 @@ pub mod checker {
                     Ok((
                         *p,
                         Box::new(FunctionDef(
-                            SM(*ln, *p),
+                            sm(*ln, *p),
                             fname.clone(),
                             params.clone(),
                             *p,
@@ -330,7 +330,7 @@ pub mod checker {
                     Ok((
                         *p,
                         Box::new(CoroutineDef(
-                            SM(*ln, *p),
+                            sm(*ln, *p),
                             coname.clone(),
                             params.clone(),
                             *p,
@@ -369,7 +369,7 @@ pub mod checker {
 
                             Ok((
                                 fty,
-                                Box::new(FunctionCall(SM(*l, fty), fname.clone(), nparams)),
+                                Box::new(FunctionCall(sm(*l, fty), fname.clone(), nparams)),
                             ))
                         } else {
                             Err(format!(
@@ -406,7 +406,7 @@ pub mod checker {
                             let fty = ftable.funcs[coname].ty;
                             Ok((
                                 fty,
-                                Box::new(CoroutineInit(SM(*l, fty), coname.clone(), nparams)),
+                                Box::new(CoroutineInit(sm(*l, fty), coname.clone(), nparams)),
                             ))
                         } else {
                             Err(format!(
@@ -419,7 +419,7 @@ pub mod checker {
                 Printi(l, exp) => {
                     let val = self.traverse(&exp, current_func, ftable)?;
                     if val.0 == I32 {
-                        Ok((Bool, Box::new(Printi(SM(*l, val.0), val.1))))
+                        Ok((Bool, Box::new(Printi(sm(*l, val.0), val.1))))
                     } else {
                         Err(format!("L{}: Expected i32 for printi got {}", l, val.0))
                     }
@@ -427,7 +427,7 @@ pub mod checker {
                 Printiln(l, exp) => {
                     let val = self.traverse(&exp, current_func, ftable)?;
                     if val.0 == I32 {
-                        Ok((Bool, Box::new(Printiln(SM(*l, val.0), val.1))))
+                        Ok((Bool, Box::new(Printiln(sm(*l, val.0), val.1))))
                     } else {
                         Err(format!("L{}: Expected i32 for printi got {}", l, val.0))
                     }
@@ -435,7 +435,7 @@ pub mod checker {
                 Printbln(l, exp) => {
                     let val = self.traverse(&exp, current_func, ftable)?;
                     if val.0 == Bool {
-                        Ok((Bool, Box::new(Printbln(SM(*l, val.0), val.1))))
+                        Ok((Bool, Box::new(Printbln(sm(*l, val.0), val.1))))
                     } else {
                         Err(format!("L{}: Expected bool for printb got {}", l, val.0))
                     }
@@ -449,7 +449,7 @@ pub mod checker {
                     for cor in cors.iter() {
                         ncors.push(*self.traverse(cor, &None, ftable)?.1);
                     }
-                    Ok((Unit, Box::new(Module(SM(*ln, Unit), nfuncs, ncors))))
+                    Ok((Unit, Box::new(Module(sm(*ln, Unit), nfuncs, ncors))))
                 }
             }
         }
