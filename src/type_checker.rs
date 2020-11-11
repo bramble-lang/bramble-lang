@@ -60,10 +60,6 @@ impl VarTable {
                     vt.vars
                         .push(VarDecl::new(param_name.clone(), *param_ty, 4, offset));
                 }
-
-                /*for stmt in stmts.iter() {
-                    offset = VarTable::find_bound_identifiers(stmt, &mut vt, offset);
-                }*/
             }
             Ast::CoroutineDef(_, _, params, _, _stmts) => {
                 offset += 20;
@@ -72,10 +68,6 @@ impl VarTable {
                     vt.vars
                         .push(VarDecl::new(param_name.clone(), *param_ty, 4, offset));
                 }
-
-                /*for n in stmts.iter() {
-                    offset = VarTable::find_bound_identifiers(n, &mut vt, offset);
-                }*/
             }
             _ => {}
         }
@@ -90,18 +82,6 @@ impl VarTable {
             panic!("An identifier(s) with an unknown type was found");
         }
         vt
-    }
-
-    fn find_bound_identifiers(ast: &PNode, output: &mut VarTable, total_offset: i32) -> i32 {
-        match ast {
-            Ast::Bind(_, id, id_type, _) => {
-                output
-                    .vars
-                    .push(VarDecl::new(id.clone(), *id_type, 4, total_offset + 4));
-                total_offset + 4
-            }
-            _ => total_offset,
-        }
     }
 
     fn has_duplicates(var_table: &VarTable) -> bool {
