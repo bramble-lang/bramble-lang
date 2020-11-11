@@ -43,3 +43,24 @@ impl SymbolTable {
         }
     }
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScopeStack<'a> {
+    stack: Vec<&'a SymbolTable>,
+}
+
+impl<'a> ScopeStack<'a> {
+    pub fn new() -> ScopeStack<'a> {
+        ScopeStack {
+            stack: vec![],
+        }
+    }
+
+    pub fn push(&mut self, sym: &'a SymbolTable) {
+        self.stack.push(sym);
+    }
+
+    pub fn pop(&mut self) {
+        self.stack.pop();
+    }
+}
