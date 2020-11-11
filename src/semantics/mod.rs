@@ -8,3 +8,6 @@
  * These functions will take an AST that has ParserInfo metadata and will output the AST updated
  * with SemanticMetadata (including the type of each node and the symbol tables).
  */
+
+pub mod vartable;
+pub mod type_checker;

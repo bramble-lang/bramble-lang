@@ -4,12 +4,13 @@
 mod compiler;
 mod lexer;
 mod parser;
-mod type_checker;
+mod semantics;
 
 use clap::{App, Arg};
 use compiler::*;
 use lexer::Token;
-use type_checker::*;
+use semantics::type_checker::*;
+use semantics::vartable::*;
 
 fn main() {
     let matches = App::new("Braid Compiler")
