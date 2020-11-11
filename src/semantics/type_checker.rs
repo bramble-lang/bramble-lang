@@ -24,6 +24,10 @@ pub mod checker {
         }
     }
 
+    fn sm_from(l: u32) -> SemanticMetadata {
+        sm(l, Primitive::Unknown)
+    }
+
     pub struct SemanticAnalyzer<'a> {
         stack: ScopeStack<'a>,
     }
@@ -463,6 +467,153 @@ pub mod checker {
                         ncors.push(*self.traverse(cor, &None, ftable, sym)?.1);
                     }
                     Ok((Unit, Box::new(Module(sm(*ln, Unit), nfuncs, ncors))))
+                }
+            }
+        }
+
+        fn convert_to_semantic_ast(
+            &mut self,
+            ast: &PNode,
+        ) -> Result<Box<SemanticNode>, String> {
+            use Ast::*;
+            match ast {
+                Integer(ln, val) => Ok(Box::new(Integer(sm_from(*ln), *val))),
+                Boolean(ln, val) => Ok(Box::new(Boolean(sm_from(*ln), *val))),
+                IdentifierDeclare(ln, name, p) => Ok(
+                    Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), *p))
+                ),
+                Identifier(l, id) => Ok(Box::new(Identifier(sm_from(*l), id.clone()))),
+                Mul(ln, ref l, ref r) => {
+                        Ok(Box::new(Mul(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                Add(ln, ref l, ref r) => {
+                    Ok(Box::new(Add(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                BAnd(ln, ref l, ref r) => {
+                    Ok(Box::new(BAnd(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                BOr(ln, ref l, ref r) => {
+                    Ok(Box::new(BOr(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                Eq(ln, ref l, ref r) => {
+                    Ok(Box::new(Eq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                NEq(ln, ref l, ref r) => {
+                    Ok(Box::new(NEq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                Gr(ln, ref l, ref r) => {
+                    Ok(Box::new(Gr(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                GrEq(ln, ref l, ref r) => {
+                    Ok(Box::new(GrEq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                Ls(ln, ref l, ref r) => {
+                    Ok(Box::new(Ls(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                LsEq(ln, ref l, ref r) => {
+                    Ok(Box::new(LsEq(sm_from(*ln), self.convert_to_semantic_ast(l)?, self.convert_to_semantic_ast(r)?)))
+                }
+                If(ln, cond, true_arm, false_arm) => {
+                    Ok(Box::new(If(sm_from(*ln), self.convert_to_semantic_ast(cond)?, self.convert_to_semantic_ast(true_arm)?, self.convert_to_semantic_ast(false_arm)?)))
+                }
+                Bind(ln, name, p, ref exp) => 
+                    Ok(Box::new(Bind(sm_from(*ln), name.clone(), *p, self.convert_to_semantic_ast(exp)?))),
+                Return(l, None) => 
+                    Ok(Box::new(Return(sm_from(*l), None))),
+                Return(l, Some(exp)) => 
+                    Ok(Box::new(Return(sm_from(*l), Some(self.convert_to_semantic_ast(exp)?)))),
+                Yield(l, box exp) => 
+                    Ok(Box::new(Yield(sm_from(*l), self.convert_to_semantic_ast(exp)?))),
+                YieldReturn(l, None) => 
+                    Ok(Box::new(YieldReturn(sm_from(*l), None))),
+                YieldReturn(l, Some(exp)) => 
+                    Ok(Box::new(YieldReturn(sm_from(*l), Some(self.convert_to_semantic_ast(exp)?)))),
+                ExpressionBlock(ln, body) => {
+                    let mut nbody = vec![];
+                    for stmt in body.iter() {
+                        let r = self.convert_to_semantic_ast(stmt)?;
+                        nbody.push(*r);
+                    }
+                    Ok(Box::new(ExpressionBlock(sm_from(*ln), nbody)))
+                }
+                Statement(_, stmt) => {
+                    Ok(self.convert_to_semantic_ast(stmt)?)
+                }
+                FunctionDef(ln, fname, params, p, body) => {
+                    let mut nbody = vec![];
+                    for stmt in body.iter() {
+                        let r = self.convert_to_semantic_ast(stmt)?;
+                        nbody.push(*r);
+                    }
+                    Ok(
+                        Box::new(FunctionDef(
+                            sm_from(*ln),
+                            fname.clone(),
+                            params.clone(),
+                            *p,
+                            nbody,
+                        )),
+                    )
+                }
+                CoroutineDef(ln, coname, params, p, body) => {
+                    let mut nbody = vec![];
+                    for stmt in body.iter() {
+                        let r = self.convert_to_semantic_ast(stmt)?;
+                        nbody.push(*r);
+                    }
+                    Ok(
+                        Box::new(CoroutineDef(
+                            sm_from(*ln),
+                            coname.clone(),
+                            params.clone(),
+                            *p,
+                            nbody,
+                        )),
+                    )
+                }
+                FunctionCall(l, fname, params) => {
+                    // test that the expressions passed to the function match the functions
+                    // parameter types
+                    let mut nparams = vec![];
+                    for param in params.iter() {
+                        let np = self.convert_to_semantic_ast(param)?;
+                        nparams.push(*np);
+                    }
+                    Ok(
+                        Box::new(FunctionCall(sm_from(*l), fname.clone(), nparams)),
+                    )
+                }
+                CoroutineInit(l, coname, params) => {
+                    // test that the expressions passed to the function match the functions
+                    // parameter types
+                    let mut nparams = vec![];
+                    for param in params.iter() {
+                        let np = self.convert_to_semantic_ast(param)?;
+                        nparams.push(*np);
+                    }
+                    Ok(
+                        Box::new(CoroutineInit(sm_from(*l), coname.clone(), nparams)),
+                    )
+                }
+                Printi(l, exp) => {
+                    Ok(Box::new(Printi(sm_from(*l), self.convert_to_semantic_ast(exp)?)))
+                }
+                Printiln(l, exp) => {
+                    Ok(Box::new(Printiln(sm_from(*l), self.convert_to_semantic_ast(exp)?)))
+                }
+                Printbln(l, exp) => {
+                    Ok(Box::new(Printbln(sm_from(*l), self.convert_to_semantic_ast(exp)?)))
+                }
+                Module(ln, funcs, cors) => {
+                    let mut nfuncs = vec![];
+                    for func in funcs.iter() {
+                        nfuncs.push(*self.convert_to_semantic_ast(func)?);
+                    }
+                    let mut ncors = vec![];
+                    for cor in cors.iter() {
+                        ncors.push(*self.convert_to_semantic_ast(cor)?);
+                    }
+                    Ok(Box::new(Module(sm_from(*ln), nfuncs, ncors)))
                 }
             }
         }
