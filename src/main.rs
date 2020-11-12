@@ -10,7 +10,7 @@ use clap::{App, Arg};
 use compiler::compiler::*;
 use lexer::Token;
 use semantics::type_checker::*;
-use semantics::vartable::*;
+use compiler::vartable::*;
 use syntax::parser;
 use syntax::ast;
 

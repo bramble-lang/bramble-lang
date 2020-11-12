@@ -11,5 +11,4 @@
 
 pub mod symbol_table;
 pub mod type_checker;
-pub mod vartable;
 pub mod semanticnode;

@@ -1,9 +1,8 @@
 use std::collections;
 
-use crate::parser;
 use crate::semantics::symbol_table::*;
 use crate::semantics::semanticnode::SemanticNode;
-use parser::{PNode};
+use crate::syntax::parser::{PNode};
 use crate::ast::*;
 
 #[derive(Debug, PartialEq)]
