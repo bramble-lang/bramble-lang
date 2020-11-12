@@ -1,4 +1,7 @@
 use crate::parser::Primitive;
+use crate::parser::Ast;
+use crate::semantics::type_checker::checker::SemanticNode;
+use crate::semantics::type_checker::checker::SemanticMetadata;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
@@ -42,6 +45,36 @@ impl SymbolTable {
             );
             Ok(())
         }
+    }
+    
+    pub fn generate(ast: &mut SemanticNode) -> Result<(), String>{
+        match ast {
+            Ast::Module(sym, functions, coroutines) => {
+                for f in functions.iter_mut() {
+                    SymbolTable::traverse(f, sym)?;
+                }
+                for co in coroutines.iter_mut() {
+                    SymbolTable::traverse(co, sym)?;
+                }
+            }
+            _ => panic!("Type analysis: expected Module at root level of the AST"),
+        }
+
+        Ok(())
+    }
+
+    fn traverse(ast: &mut SemanticNode, sym: &mut SemanticMetadata) -> Result<(), String> {
+        match &ast {
+            Ast::FunctionDef(_, name, params, ty, _) => {
+                sym.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *ty))?;
+            }
+            Ast::CoroutineDef(_, name, params, ty, _) => {
+                sym.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *ty))?;
+            }
+            _ => panic!("Type analysis: expected function or coroutine in module, found {}", ast.root_str()),
+        }
+
+        Ok(())
     }
 }
 

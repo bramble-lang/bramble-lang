@@ -211,12 +211,13 @@ pub mod checker {
         let mut sym = SymbolTable::new();
 
         // add functions to the symbol table: this is just a test
-        for (f, fi) in ftable.funcs.iter() {
+        /*for (f, fi) in ftable.funcs.iter() {
             let params = fi.params.iter().map(|(_, pty)| *pty).collect::<Vec<Primitive>>();
             sym.add(f, Type::Function(params, fi.ty))?;
-        }
+        }*/
 
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
+        SymbolTable::generate(&mut sm_ast)?;
         let mut semantic = SemanticAnalyzer::new();
         semantic.traverse(&mut sm_ast, &None, ftable, &mut sym)?;
         Ok(sm_ast)
@@ -477,35 +478,10 @@ pub mod checker {
                         }
                     }
                 },
-                ExpressionBlock(meta, body) => {
-                    let mut ty = Unit;
-                    let tmp_sym = sym.clone();
-                    self.stack.push(tmp_sym);
-                    for stmt in body.iter_mut() {
-                        ty = self.traverse(stmt, current_func, ftable, &mut meta.sym)?;
-                    }
-                    self.stack.pop();
-                    meta.ty = ty;
-                    Ok(ty)
-                }
                 Statement(meta, stmt) => {
                     self.traverse(stmt, current_func, ftable, sym)?;
                     meta.ty = Unit;
                     Ok(Unit)
-                }
-                FunctionDef(meta, name, params, p, body)
-                | CoroutineDef(meta, name, params, p, body) => {
-                    for (pname, pty) in params.iter() {
-                        meta.sym.add(pname, Type::Primitive(*pty))?;
-                    }
-                    //meta.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *p))?;
-                    let tmp_sym = sym.clone();
-                    self.stack.push(tmp_sym);
-                    for stmt in body.iter_mut() {
-                        self.traverse(stmt, &Some(name.clone()), ftable, &mut meta.sym)?;
-                    }
-                    self.stack.pop();
-                    Ok(*p)
                 }
                 FunctionCall(meta, fname, params) => {
                     // test that the expressions passed to the function match the functions
@@ -613,13 +589,42 @@ pub mod checker {
                         ))
                     }
                 }
+
+                ExpressionBlock(meta, body) => {
+                    let mut ty = Unit;
+                    let tmp_sym = sym.clone();
+                    self.stack.push(tmp_sym);
+                    for stmt in body.iter_mut() {
+                        ty = self.traverse(stmt, current_func, ftable, &mut meta.sym)?;
+                    }
+                    self.stack.pop();
+                    meta.ty = ty;
+                    Ok(ty)
+                }
+                FunctionDef(meta, name, params, p, body)
+                | CoroutineDef(meta, name, params, p, body) => {
+                    for (pname, pty) in params.iter() {
+                        meta.sym.add(pname, Type::Primitive(*pty))?;
+                    }
+                    //meta.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *p))?;
+                    let tmp_sym = sym.clone();
+                    self.stack.push(tmp_sym);
+                    for stmt in body.iter_mut() {
+                        self.traverse(stmt, &Some(name.clone()), ftable, &mut meta.sym)?;
+                    }
+                    self.stack.pop();
+                    Ok(*p)
+                }
                 Module(meta, funcs, cors) => {
+                    let tmp_sym = sym.clone();
+                    self.stack.push(tmp_sym);
                     for func in funcs.iter_mut() {
-                        self.traverse(func, &None, ftable, sym)?;
+                        self.traverse(func, &None, ftable, &mut meta.sym)?;
                     }
                     for cor in cors.iter_mut() {
-                        self.traverse(cor, &None, ftable, sym)?;
+                        self.traverse(cor, &None, ftable, &mut meta.sym)?;
                     }
+                    self.stack.pop();
                     meta.ty = Unit;
                     Ok(Unit)
                 }
@@ -643,7 +648,7 @@ pub mod checker {
                 }
                 None => {}
             };
-
+            
             // add functions to the symbol table: this is just a test
             for (f, fi) in ftable.funcs.iter() {
                 let params = fi.params.iter().map(|(_, pty)| *pty).collect::<Vec<Primitive>>();
