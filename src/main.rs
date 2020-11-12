@@ -60,7 +60,7 @@ fn main() {
             std::process::exit(2);
         }
         Err(msg) => {
-            println!("{}", msg);
+            println!("Error: {}", msg);
             std::process::exit(3);
         }
     };

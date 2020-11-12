@@ -43,4 +43,5 @@ then
     run_test "binding/redeclare"
     run_test "fn/recurse"
     run_test "scope/out_of_scope"
+    run_test "parser/missing_type"
 fi

@@ -21,8 +21,8 @@ impl PNode {
         match id.as_ref() {
             Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), *prim, exp)),
             _ => Err(format!(
-                "L{}: Expected identifier declaration, found {:?}",
-                line, id
+                "L{}: Expected type specification after {}",
+                line, id.root_str()
             )),
         }
     }
@@ -186,7 +186,7 @@ pub struct ParserInfo {
 */
 pub fn parse(tokens: Vec<Token>) -> PResult {
     let mut iter = tokens.iter().peekable();
-    module(&mut iter)
+    module(&mut iter).map_err(|e| format!("Parser: {}", e))
 }
 
 fn module(iter: &mut TokenIter) -> PResult {
