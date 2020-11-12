@@ -1,5 +1,6 @@
 pub mod checker {
-    use crate::parser::{Ast, PNode, Primitive};
+    use crate::parser::{PNode};
+    use crate::ast::*;
     use crate::semantics::symbol_table::*;
     use crate::semantics::semanticnode::SemanticNode;
     use Primitive::*;
@@ -476,6 +477,8 @@ pub mod checker {
     #[cfg(test)]
     mod tests {
         use crate::semantics::vartable::*;
+        use super::*;
+        use crate::ast::{Ast, Primitive};
 
         pub fn start_traverse(
             ast: &mut SemanticNode,
@@ -509,9 +512,6 @@ pub mod checker {
             let mut semantic = SemanticAnalyzer::new();
             semantic.traverse(ast, current_func, &mut sym)
         }
-
-        use super::*;
-        use crate::parser::{Ast, Primitive};
 
         #[test]
         pub fn test_integer() {

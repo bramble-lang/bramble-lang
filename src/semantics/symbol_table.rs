@@ -1,5 +1,4 @@
-use crate::parser::Ast;
-use crate::parser::Primitive;
+use crate::ast::*;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
 

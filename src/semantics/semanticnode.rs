@@ -1,4 +1,5 @@
-use crate::parser::{Ast, PNode, Primitive};
+use crate::parser::{PNode};
+use crate::ast::*;
 use crate::semantics::symbol_table::*;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -202,7 +203,6 @@ fn sm_from(l: u32) -> SemanticMetadata {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::*;
 
     #[test]
     fn test_single_node() {

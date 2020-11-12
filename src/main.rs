@@ -12,6 +12,7 @@ use lexer::Token;
 use semantics::type_checker::*;
 use semantics::vartable::*;
 use syntax::parser;
+use syntax::ast;
 
 fn main() {
     let matches = App::new("Braid Compiler")

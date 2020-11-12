@@ -3,7 +3,8 @@ use std::collections;
 use crate::parser;
 use crate::semantics::symbol_table::*;
 use crate::semantics::semanticnode::SemanticNode;
-use parser::{Ast, PNode, Primitive};
+use parser::{PNode};
+use crate::ast::*;
 
 #[derive(Debug, PartialEq)]
 pub struct VarDecl {
