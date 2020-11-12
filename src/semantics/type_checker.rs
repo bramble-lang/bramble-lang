@@ -206,18 +206,12 @@ pub mod checker {
     pub fn type_check(
         ast: &PNode,
     ) -> Result<Box<SemanticNode>, String> {
-        let mut sym = SymbolTable::new();
-
-        // add functions to the symbol table: this is just a test
-        /*for (f, fi) in ftable.funcs.iter() {
-            let params = fi.params.iter().map(|(_, pty)| *pty).collect::<Vec<Primitive>>();
-            sym.add(f, Type::Function(params, fi.ty))?;
-        }*/
-
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
         SymbolTable::generate(&mut sm_ast)?;
+        
+        let mut root_table = SymbolTable::new();
         let mut semantic = SemanticAnalyzer::new();
-        semantic.traverse(&mut sm_ast, &None, &mut sym)?;
+        semantic.traverse(&mut sm_ast, &None, &mut root_table).map_err(|e| format!("Semantic: {}", e))?;
         Ok(sm_ast)
     }
 
