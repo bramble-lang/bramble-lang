@@ -68,8 +68,7 @@ fn main() {
     let mut func_table = FunctionTable::generate(&ast);
 
     // Type Check
-    let mut sa = checker::SemanticAnalyzer::new();
-    match sa.type_check(&ast, &mut func_table) {
+    match checker::type_check(&ast, &mut func_table) {
         Ok(_) => (),
         Err(msg) => {
             println!("Error: {}", msg);

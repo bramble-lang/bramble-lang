@@ -202,6 +202,27 @@ pub mod checker {
         sm(l, Primitive::Unknown)
     }
 
+    pub fn type_check(
+        ast: &PNode,
+        ftable: &mut FunctionTable,
+    ) -> Result<Box<SemanticNode>, String> {
+        let mut sym = SymbolTable::new();
+        let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
+        let mut semantic = SemanticAnalyzer::new();
+        semantic.traverse(&mut sm_ast, &None, ftable, &mut sym)?;
+        Ok(sm_ast)
+    }
+
+    pub fn start_traverse(
+        ast: &mut SemanticNode,
+        current_func: &Option<String>,
+        ftable: &mut FunctionTable,
+    ) -> Result<Primitive, String> {
+        let mut sym = SymbolTable::new();
+        let mut semantic = SemanticAnalyzer::new();
+        semantic.traverse(ast, current_func, ftable, &mut sym)
+    }
+
     pub struct SemanticAnalyzer<'a> {
         stack: ScopeStack<'a>,
     }
@@ -213,32 +234,12 @@ pub mod checker {
             }
         }
 
-        pub fn type_check(
-            &mut self,
-            ast: &PNode,
-            ftable: &mut FunctionTable,
-        ) -> Result<Primitive, String> {
-            let mut sym = SymbolTable::new();
-            let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
-            self.traverse(&mut sm_ast, &None, ftable, &mut sym)
-        }
-
-        pub fn start_traverse(
-            &mut self,
-            ast: &mut SemanticNode,
-            current_func: &Option<String>,
-            ftable: &mut FunctionTable,
-        ) -> Result<Primitive, String> {
-            let mut sym = SymbolTable::new();
-            self.analyize_node(ast, current_func, ftable, &mut sym)
-        }
-
         fn binary_op(
             &mut self,
             op: String,
             ln: u32,
-            l: &mut SemanticNode,
-            r: &mut SemanticNode,
+            l: &'a mut SemanticNode,
+            r: &'a mut SemanticNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
@@ -270,7 +271,7 @@ pub mod checker {
 
         pub fn traverse(
             &mut self,
-            ast: &mut SemanticNode,
+            ast: &'a mut SemanticNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
@@ -280,7 +281,7 @@ pub mod checker {
 
         fn analyize_node(
             &mut self,
-            ast: &mut SemanticNode,
+            ast: &'a mut SemanticNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
@@ -715,8 +716,8 @@ pub mod checker {
         pub fn test_integer() {
             let node = Ast::Integer(1, 5);
             let mut ft = FunctionTable::new();
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
             assert_eq!(ty, Ok(Primitive::I32));
         }
 
@@ -741,9 +742,8 @@ pub mod checker {
             );
 
             let node = Ast::Identifier(1, "x".into());
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
             assert_eq!(ty, Ok(Primitive::Bool));
         }
 
@@ -778,8 +778,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
@@ -790,9 +790,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -803,9 +802,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -816,9 +814,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -855,8 +852,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
@@ -867,9 +864,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -880,9 +876,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -893,9 +888,8 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -914,8 +908,8 @@ pub mod checker {
             )];
 
             for (test, expected) in tests.iter() {
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&test).unwrap(), &None, &mut ft);
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&test).unwrap(), &None, &mut ft);
                 assert_eq!(ty, *expected);
             }
         }
@@ -951,8 +945,8 @@ pub mod checker {
             ];
 
             for (test, expected) in tests.iter() {
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&test).unwrap(), &None, &mut ft);
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&test).unwrap(), &None, &mut ft);
                 assert_eq!(ty, *expected);
             }
         }
@@ -972,9 +966,8 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -992,9 +985,8 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: Bind expected bool but got i32".into()));
             }
@@ -1017,9 +1009,8 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
@@ -1037,9 +1028,8 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                let mut sa = SemanticAnalyzer::new();
-                let ty = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+                
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                     ;
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
@@ -1058,9 +1048,8 @@ pub mod checker {
                 },
             );
             let node = Ast::Return(1, None);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                 ;
             assert_eq!(ty, Ok(Unit));
         }
@@ -1078,9 +1067,8 @@ pub mod checker {
                 },
             );
             let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                 ;
             assert_eq!(ty, Ok(I32));
         }
@@ -1098,9 +1086,8 @@ pub mod checker {
                 },
             );
             let node = Ast::FunctionCall(1, "my_func".into(), vec![]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
                 ;
             assert_eq!(ty, Ok(I32));
 
@@ -1116,17 +1103,15 @@ pub mod checker {
 
             // test correct parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1, 5)]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func2".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func2".into()), &mut ft)
                 ;
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func2".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func2".into()), &mut ft)
                 ;
             assert_eq!(
                 ty,
@@ -1147,9 +1132,8 @@ pub mod checker {
                 },
             );
             let node = Ast::CoroutineInit(1, "my_co".into(), vec![]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co".into()), &mut ft)
                 ;
             assert_eq!(ty, Ok(I32));
 
@@ -1165,17 +1149,15 @@ pub mod checker {
 
             // test correct parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1, 5)]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft)
                 ;
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft)
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft)
                 ;
             assert_eq!(
                 ty,
@@ -1196,9 +1178,8 @@ pub mod checker {
                 },
             );
             let node = Ast::YieldReturn(1, None);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co".into()), &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co".into()), &mut ft);
             assert_eq!(ty, Ok(Unit));
 
             ft.funcs.insert(
@@ -1213,14 +1194,12 @@ pub mod checker {
 
             // test correct type for yield return
             let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft);
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
 
             // test incorrect type for yield return
             let node = Ast::YieldReturn(1, None);
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft);
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft);
             assert_eq!(ty, Err("L1: Yield return expected i32 but got unit".into()));
         }
 
@@ -1253,9 +1232,8 @@ pub mod checker {
                 },
             );
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa
-                .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
             assert_eq!(ty, Ok(I32));
         }
 
@@ -1279,14 +1257,14 @@ pub mod checker {
                 I32,
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
             assert_eq!(ty, Ok(I32));
 
             let node =
                 Ast::FunctionDef(1, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
@@ -1310,14 +1288,14 @@ pub mod checker {
                 I32,
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
             assert_eq!(ty, Ok(I32));
 
             let node =
                 Ast::CoroutineDef(1, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
-            let mut sa = SemanticAnalyzer::new();
-            let ty = sa.start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+            
+            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
@@ -1373,9 +1351,8 @@ pub mod checker {
                 ),
             ] {
                 let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
-                let mut sa = SemanticAnalyzer::new();
-                let result = sa
-                    .start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
+                
+                let result = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
                 assert_eq!(result, ex);
             }
         }
