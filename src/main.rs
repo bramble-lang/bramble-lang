@@ -65,13 +65,12 @@ fn main() {
         }
     };
 
-    let mut func_table = FunctionTable::generate(&ast);
+    let mut func_table;
 
     // Type Check
-    match checker::type_check(&ast, &mut func_table) {
+    match checker::type_check(&ast) {
         Ok(ast) => {
             func_table = FunctionTable::from_semantic_ast(&ast);
-            //println!("{:?}", func_table);
         },
         Err(msg) => {
             println!("Error: {}", msg);
@@ -82,7 +81,6 @@ fn main() {
     let program = Compiler::compile(&ast, &mut func_table);
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
-    //let mut output = std::io::stdout();
     program
         .print(&mut output)
         .expect("Failed to write assembly");

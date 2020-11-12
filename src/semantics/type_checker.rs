@@ -1,7 +1,6 @@
 pub mod checker {
     use crate::parser::{Ast, PNode, Primitive};
     use crate::semantics::symbol_table::*;
-    use crate::semantics::vartable::*;
     use Primitive::*;
 
     #[derive(Clone, Debug, PartialEq)]
@@ -206,7 +205,6 @@ pub mod checker {
 
     pub fn type_check(
         ast: &PNode,
-        ftable: &mut FunctionTable,
     ) -> Result<Box<SemanticNode>, String> {
         let mut sym = SymbolTable::new();
 
@@ -219,7 +217,7 @@ pub mod checker {
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
         SymbolTable::generate(&mut sm_ast)?;
         let mut semantic = SemanticAnalyzer::new();
-        semantic.traverse(&mut sm_ast, &None, ftable, &mut sym)?;
+        semantic.traverse(&mut sm_ast, &None, &mut sym)?;
         Ok(sm_ast)
     }
 
@@ -241,12 +239,11 @@ pub mod checker {
             l: &mut SemanticNode,
             r: &mut SemanticNode,
             current_func: &Option<String>,
-            ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
             expected: Option<Primitive>,
         ) -> Result<Primitive, String> {
-            let lty = self.traverse(l, current_func, ftable, sym)?;
-            let rty = self.traverse(r, current_func, ftable, sym)?;
+            let lty = self.traverse(l, current_func, sym)?;
+            let rty = self.traverse(r, current_func, sym)?;
 
             match expected {
                 None => {
@@ -273,10 +270,9 @@ pub mod checker {
             &mut self,
             ast: &mut SemanticNode,
             current_func: &Option<String>,
-            ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
         ) -> Result<Primitive, String> {
-            self.analyize_node(ast, current_func, ftable, sym)
+            self.analyize_node(ast, current_func, sym)
         }
 
         fn lookup<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Option<&'a Symbol>{
@@ -335,7 +331,6 @@ pub mod checker {
             &mut self,
             ast: &mut SemanticNode,
             current_func: &Option<String>,
-            ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
         ) -> Result<Primitive, String> {
             use Ast::*;
@@ -376,7 +371,7 @@ pub mod checker {
                         l,
                         r,
                         current_func,
-                        ftable,
+                        
                         sym,
                         Some(I32),
                     )?;
@@ -390,7 +385,7 @@ pub mod checker {
                         l,
                         r,
                         current_func,
-                        ftable,
+                        
                         sym,
                         Some(Bool),
                     )?;
@@ -403,15 +398,15 @@ pub mod checker {
                 | GrEq(meta, l, r)
                 | Ls(meta, l, r)
                 | LsEq(meta, l, r) => {
-                    self.binary_op(root_str, meta.ln, l, r, current_func, ftable, sym, None)?;
+                    self.binary_op(root_str, meta.ln, l, r, current_func, sym, None)?;
                     meta.ty = Bool;
                     Ok(meta.ty)
                 }
                 If(meta, cond, true_arm, false_arm) => {
-                    let cond_ty = self.traverse(cond, current_func, ftable, sym)?;
+                    let cond_ty = self.traverse(cond, current_func, sym)?;
                     if cond_ty == Bool {
-                        let true_arm = self.traverse(true_arm, current_func, ftable, sym)?;
-                        let false_arm = self.traverse(false_arm, current_func, ftable, sym)?;
+                        let true_arm = self.traverse(true_arm, current_func, sym)?;
+                        let false_arm = self.traverse(false_arm, current_func, sym)?;
                         if true_arm == false_arm {
                             meta.ty = true_arm;
                             Ok(true_arm)
@@ -430,7 +425,7 @@ pub mod checker {
                 }
                 Bind(meta, name, p, exp) => match current_func {
                     Some(_) => {
-                        let rhs = self.traverse(exp, current_func, ftable, sym)?;
+                        let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {
                             /*ftable
                                 .add_var(cf, name, *p)
@@ -469,7 +464,7 @@ pub mod checker {
                         meta.ln
                     )),
                     Some(cf) => {
-                        let val = self.traverse(exp, current_func, ftable, sym)?;
+                        let val = self.traverse(exp, current_func, sym)?;
                         let (_, fty) = self.lookup_func_or_cor(sym, cf).map_err(|e| format!("L{}: {}", meta.ln, e))?;
                         if *fty == val {
                             meta.ty = *fty;
@@ -514,7 +509,7 @@ pub mod checker {
                 YieldReturn(meta, Some(exp)) => match current_func {
                     None => Err(format!("L{}: YRet appears outside of function", meta.ln)),
                     Some(cf) => {
-                        let val = self.traverse(exp, current_func, ftable, sym)?;
+                        let val = self.traverse(exp, current_func, sym)?;
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
                         if *ret_ty == val {
                             meta.ty = *ret_ty;
@@ -528,7 +523,7 @@ pub mod checker {
                     }
                 },
                 Statement(meta, stmt) => {
-                    self.traverse(stmt, current_func, ftable, sym)?;
+                    self.traverse(stmt, current_func, sym)?;
                     meta.ty = Unit;
                     Ok(Unit)
                 }
@@ -537,7 +532,7 @@ pub mod checker {
                     // parameter types
                     let mut pty = vec![];
                     for param in params.iter_mut() {
-                        let ty = self.traverse(param, current_func, ftable, sym)?;
+                        let ty = self.traverse(param, current_func, sym)?;
                         pty.push(ty);
                     }
                     let (expected_tys, ret_ty) = match sym.get(fname).or(self.stack.get(fname)) {
@@ -574,7 +569,7 @@ pub mod checker {
                     // parameter types
                     let mut pty = vec![];
                     for param in params.iter_mut() {
-                        let ty = self.traverse(param, current_func, ftable, sym)?;
+                        let ty = self.traverse(param, current_func, sym)?;
                         pty.push(ty);
                     }
                     let (expected_tys, ret_ty) = match sym.get(coname).or(self.stack.get(coname)) {
@@ -606,7 +601,7 @@ pub mod checker {
                     }
                 }
                 Printi(meta, exp) => {
-                    let ty = self.traverse(exp, current_func, ftable, sym)?;
+                    let ty = self.traverse(exp, current_func, sym)?;
                     if ty == I32 {
                         meta.ty = Unit;
                         Ok(Unit)
@@ -615,7 +610,7 @@ pub mod checker {
                     }
                 }
                 Printiln(meta, exp) => {
-                    let ty = self.traverse(exp, current_func, ftable, sym)?;
+                    let ty = self.traverse(exp, current_func, sym)?;
                     if ty == I32 {
                         meta.ty = Unit;
                         Ok(Unit)
@@ -627,7 +622,7 @@ pub mod checker {
                     }
                 }
                 Printbln(meta, exp) => {
-                    let ty = self.traverse(exp, current_func, ftable, sym)?;
+                    let ty = self.traverse(exp, current_func, sym)?;
                     if ty == Bool {
                         meta.ty = Unit;
                         Ok(Unit)
@@ -644,7 +639,7 @@ pub mod checker {
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
                     for stmt in body.iter_mut() {
-                        ty = self.traverse(stmt, current_func, ftable, &mut meta.sym)?;
+                        ty = self.traverse(stmt, current_func, &mut meta.sym)?;
                     }
                     self.stack.pop();
                     meta.ty = ty;
@@ -659,7 +654,7 @@ pub mod checker {
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
                     for stmt in body.iter_mut() {
-                        self.traverse(stmt, &Some(name.clone()), ftable, &mut meta.sym)?;
+                        self.traverse(stmt, &Some(name.clone()), &mut meta.sym)?;
                     }
                     self.stack.pop();
                     Ok(*p)
@@ -668,10 +663,10 @@ pub mod checker {
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
                     for func in funcs.iter_mut() {
-                        self.traverse(func, &None, ftable, &mut meta.sym)?;
+                        self.traverse(func, &None, &mut meta.sym)?;
                     }
                     for cor in cors.iter_mut() {
-                        self.traverse(cor, &None, ftable, &mut meta.sym)?;
+                        self.traverse(cor, &None, &mut meta.sym)?;
                     }
                     self.stack.pop();
                     meta.ty = Unit;
@@ -683,6 +678,8 @@ pub mod checker {
 
     #[cfg(test)]
     mod tests {
+        use crate::semantics::vartable::*;
+
         pub fn start_traverse(
             ast: &mut SemanticNode,
             current_func: &Option<String>,
@@ -709,7 +706,7 @@ pub mod checker {
             }
 
             let mut semantic = SemanticAnalyzer::new();
-            semantic.traverse(ast, current_func, ftable, &mut sym)
+            semantic.traverse(ast, current_func, &mut sym)
         }
 
         use super::*;
