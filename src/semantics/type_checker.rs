@@ -288,9 +288,15 @@ pub mod checker {
             use Ast::*;
             let root_str = ast.root_str();
             match ast {
-                Integer(meta, val) => Ok(I32),
-                Boolean(meta, val) => Ok(Bool),
-                IdentifierDeclare(meta, name, p) => {
+                Integer(meta, _) => {
+                    meta.ty = I32;
+                    Ok(I32)
+                }
+                Boolean(meta, _) => {
+                    meta.ty = Bool;
+                    Ok(Bool)
+                },
+                IdentifierDeclare(meta, _, p) => {
                     meta.ty = *p;
                     Ok(*p)
                 },
@@ -393,7 +399,7 @@ pub mod checker {
                     Ok(meta.ty)
                 }
                 Gr(meta, l, r) => {
-                    let ty = self.binary_op(
+                    self.binary_op(
                         root_str,
                         meta.ln,
                         l,
@@ -403,11 +409,11 @@ pub mod checker {
                         sym,
                         None,
                     )?;
-                    meta.ty = ty;
-                    Ok(ty)
+                    meta.ty = Bool;
+                    Ok(meta.ty)
                 }
                 GrEq(meta, l, r) => {
-                    let ty = self.binary_op(
+                    self.binary_op(
                         root_str,
                         meta.ln,
                         l,
@@ -417,11 +423,11 @@ pub mod checker {
                         sym,
                         None,
                     )?;
-                    meta.ty = ty;
-                    Ok(ty)
+                    meta.ty = Bool;
+                    Ok(meta.ty)
                 }
                 Ls(meta, l, r) => {
-                    let ty = self.binary_op(
+                    self.binary_op(
                         root_str,
                         meta.ln,
                         l,
@@ -431,11 +437,11 @@ pub mod checker {
                         sym,
                         None,
                     )?;
-                    meta.ty = ty;
-                    Ok(ty)
+                    meta.ty = Bool;
+                    Ok(meta.ty)
                 }
                 LsEq(meta, l, r) => {
-                    let ty = self.binary_op(
+                    self.binary_op(
                         root_str,
                         meta.ln,
                         l,
@@ -445,8 +451,8 @@ pub mod checker {
                         sym,
                         None,
                     )?;
-                    meta.ty = ty;
-                    Ok(ty)
+                    meta.ty = Bool;
+                    Ok(meta.ty)
                 }
                 If(meta, cond, true_arm, false_arm) => {
                     let cond_ty = self.traverse(cond, current_func, ftable, sym)?;
@@ -572,17 +578,15 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                FunctionDef(meta, fname, params, p, body) => {
+                FunctionDef(meta, fname, _, p, body) => {
                     for stmt in body.iter_mut() {
-                        let r =
-                            self.traverse(stmt, &Some(fname.clone()), ftable, &mut meta.sym)?;
+                        self.traverse(stmt, &Some(fname.clone()), ftable, &mut meta.sym)?;
                     }
                     Ok(*p)
                 }
-                CoroutineDef(meta, coname, params, p, body) => {
+                CoroutineDef(meta, coname, _, p, body) => {
                     for stmt in body.iter_mut() {
-                        let r =
-                            self.traverse(stmt, &Some(coname.clone()), ftable, &mut meta.sym)?;
+                        self.traverse(stmt, &Some(coname.clone()), ftable, &mut meta.sym)?;
                     }
                     Ok(*p)
                 }
@@ -682,13 +686,14 @@ pub mod checker {
                         Err(format!("L{}: Expected i32 for printbln got {}", meta.ln, ty))
                     }
                 }
-                Module(ln, funcs, cors) => {
+                Module(meta, funcs, cors) => {
                     for func in funcs.iter_mut() {
                         self.traverse(func, &None, ftable, sym)?;
                     }
                     for cor in cors.iter_mut() {
                         self.traverse(cor, &None, ftable, sym)?;
                     }
+                    meta.ty = Unit;
                     Ok(Unit)
                 }
             }
