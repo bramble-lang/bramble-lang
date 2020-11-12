@@ -286,11 +286,11 @@ pub mod checker {
                 Boolean(meta, _) => {
                     meta.ty = Bool;
                     Ok(Bool)
-                },
+                }
                 IdentifierDeclare(meta, _, p) => {
                     meta.ty = *p;
                     Ok(*p)
-                },
+                }
                 Identifier(meta, id) => match current_func {
                     None => Err(format!(
                         "L{}: Variable {} appears outside of function",
@@ -302,14 +302,17 @@ pub mod checker {
                             .map_err(|e| format!("L{}: {}", meta.ln, e))?
                             .ty;
                         match sym.get(id).or(self.stack.get(id)) {
-                            Some(Symbol{ty:Type::Primitive(p),..}) => meta.ty = *p,
-                            _ => return Err(format!("L{}: unknown identifier {}", meta.ln, id))
+                            Some(Symbol {
+                                ty: Type::Primitive(p),
+                                ..
+                            }) => meta.ty = *p,
+                            _ => return Err(format!("L{}: unknown identifier {}", meta.ln, id)),
                         };
                         meta.ty = idty;
                         Ok(idty)
                     }
                 },
-                Mul(meta, l, r) | Add(meta, l, r)=> {
+                Mul(meta, l, r) | Add(meta, l, r) => {
                     let ty = self.binary_op(
                         root_str,
                         meta.ln,
@@ -323,7 +326,7 @@ pub mod checker {
                     meta.ty = ty;
                     Ok(ty)
                 }
-                BAnd(meta, l, r) | BOr(meta, l, r)=> {
+                BAnd(meta, l, r) | BOr(meta, l, r) => {
                     let ty = self.binary_op(
                         root_str,
                         meta.ln,
@@ -337,19 +340,13 @@ pub mod checker {
                     meta.ty = ty;
                     Ok(ty)
                 }
-                Eq(meta, l, r) | NEq(meta, l, r)
-                    | Gr(meta, l, r) | GrEq(meta, l, r)
-                    | Ls(meta, l, r) | LsEq(meta, l, r)=> {
-                    self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        None,
-                    )?;
+                Eq(meta, l, r)
+                | NEq(meta, l, r)
+                | Gr(meta, l, r)
+                | GrEq(meta, l, r)
+                | Ls(meta, l, r)
+                | LsEq(meta, l, r) => {
+                    self.binary_op(root_str, meta.ln, l, r, current_func, ftable, sym, None)?;
                     meta.ty = Bool;
                     Ok(meta.ty)
                 }
@@ -402,12 +399,18 @@ pub mod checker {
                             meta.ty = Unit;
                             Ok(Unit)
                         } else {
-                            Err(format!("L{}: Return expected {} type and got unit", meta.ln, fty))
+                            Err(format!(
+                                "L{}: Return expected {} type and got unit",
+                                meta.ln, fty
+                            ))
                         }
                     }
                 },
                 Return(meta, Some(exp)) => match current_func {
-                    None => Err(format!("L{}: Return appears outside of a function", meta.ln)),
+                    None => Err(format!(
+                        "L{}: Return appears outside of a function",
+                        meta.ln
+                    )),
                     Some(cf) => {
                         let fty = ftable.funcs[cf].ty;
                         let val = self.traverse(exp, current_func, ftable, sym)?;
@@ -415,7 +418,10 @@ pub mod checker {
                             meta.ty = fty;
                             Ok(fty)
                         } else {
-                            Err(format!("L{}: Return expected {} but got {}", meta.ln, fty, val))
+                            Err(format!(
+                                "L{}: Return expected {} but got {}",
+                                meta.ln, fty, val
+                            ))
                         }
                     }
                 },
@@ -430,7 +436,10 @@ pub mod checker {
                             meta.ty = coty;
                             Ok(coty)
                         }
-                        _ => Err(format!("L{}: Expected name of coroutine after yield", meta.ln)),
+                        _ => Err(format!(
+                            "L{}: Expected name of coroutine after yield",
+                            meta.ln
+                        )),
                     },
                 },
                 YieldReturn(meta, None) => match current_func {
@@ -480,7 +489,8 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                FunctionDef(meta, name, params, p, body) | CoroutineDef(meta, name, params, p, body) => {
+                FunctionDef(meta, name, params, p, body)
+                | CoroutineDef(meta, name, params, p, body) => {
                     for (pname, pty) in params.iter() {
                         meta.sym.add(pname, Type::Primitive(*pty))?;
                     }
@@ -500,10 +510,10 @@ pub mod checker {
                         let ty = self.traverse(param, current_func, ftable, sym)?;
                         pty.push(ty);
                     }
-                    let fpty: Vec<super::Primitive> = (ftable
-                        .funcs
-                        .get(fname)
-                        .ok_or(format!("L{}: Unknown identifer or function: {}", meta.ln, fname))?)
+                    let fpty: Vec<super::Primitive> = (ftable.funcs.get(fname).ok_or(format!(
+                        "L{}: Unknown identifer or function: {}",
+                        meta.ln, fname
+                    ))?)
                     .params
                     .iter()
                     .map(|(_, p)| *p)
@@ -576,7 +586,10 @@ pub mod checker {
                         meta.ty = Unit;
                         Ok(Unit)
                     } else {
-                        Err(format!("L{}: Expected i32 for printiln got {}", meta.ln, ty))
+                        Err(format!(
+                            "L{}: Expected i32 for printiln got {}",
+                            meta.ln, ty
+                        ))
                     }
                 }
                 Printbln(meta, exp) => {
@@ -585,7 +598,10 @@ pub mod checker {
                         meta.ty = Unit;
                         Ok(Unit)
                     } else {
-                        Err(format!("L{}: Expected i32 for printbln got {}", meta.ln, ty))
+                        Err(format!(
+                            "L{}: Expected i32 for printbln got {}",
+                            meta.ln, ty
+                        ))
                     }
                 }
                 Module(meta, funcs, cors) => {
@@ -629,8 +645,12 @@ pub mod checker {
         pub fn test_integer() {
             let node = Ast::Integer(1, 5);
             let mut ft = FunctionTable::new();
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &None,
+                &mut ft,
+            );
             assert_eq!(ty, Ok(Primitive::I32));
         }
 
@@ -655,8 +675,12 @@ pub mod checker {
             );
 
             let node = Ast::Identifier(1, "x".into());
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_main".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(Primitive::Bool));
         }
 
@@ -691,8 +715,12 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &None,
+                    &mut ft,
+                );
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
@@ -703,9 +731,12 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
             // operands are not i32
@@ -715,9 +746,12 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
             // operands are not i32
@@ -727,9 +761,12 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
         }
@@ -765,8 +802,12 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &None,
+                    &mut ft,
+                );
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
@@ -777,8 +818,12 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft);
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
             // operands are not i32
@@ -788,9 +833,12 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
             // operands are not i32
@@ -800,9 +848,12 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
         }
@@ -820,8 +871,11 @@ pub mod checker {
             )];
 
             for (test, expected) in tests.iter() {
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&test).unwrap(), &None, &mut ft);
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&test).unwrap(),
+                    &None,
+                    &mut ft,
+                );
                 assert_eq!(ty, *expected);
             }
         }
@@ -857,8 +911,11 @@ pub mod checker {
             ];
 
             for (test, expected) in tests.iter() {
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&test).unwrap(), &None, &mut ft);
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&test).unwrap(),
+                    &None,
+                    &mut ft,
+                );
                 assert_eq!(ty, *expected);
             }
         }
@@ -878,9 +935,12 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
@@ -897,9 +957,12 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: Bind expected bool but got i32".into()));
             }
 
@@ -921,9 +984,12 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
 
@@ -940,9 +1006,12 @@ pub mod checker {
                         ty: Unit,
                     },
                 );
-                
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+
+                let ty = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &mut ft,
+                );
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
         }
@@ -960,9 +1029,12 @@ pub mod checker {
                 },
             );
             let node = Ast::Return(1, None);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_func".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(Unit));
         }
 
@@ -979,9 +1051,12 @@ pub mod checker {
                 },
             );
             let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_func".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
         }
 
@@ -998,9 +1073,12 @@ pub mod checker {
                 },
             );
             let node = Ast::FunctionCall(1, "my_func".into(), vec![]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_func".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
 
             ft.funcs.insert(
@@ -1015,16 +1093,22 @@ pub mod checker {
 
             // test correct parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1, 5)]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func2".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_func2".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func2".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_func2".into()),
+                &mut ft,
+            );
             assert_eq!(
                 ty,
                 Err("L1: Incorrect number of parameters passed to function: my_func2".into())
@@ -1044,9 +1128,12 @@ pub mod checker {
                 },
             );
             let node = Ast::CoroutineInit(1, "my_co".into(), vec![]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_co".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
 
             ft.funcs.insert(
@@ -1061,16 +1148,22 @@ pub mod checker {
 
             // test correct parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1, 5)]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_co2".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft)
-                ;
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_co2".into()),
+                &mut ft,
+            );
             assert_eq!(
                 ty,
                 Err("L1: Incorrect number of parameters passed to coroutine: my_co2".into())
@@ -1090,8 +1183,12 @@ pub mod checker {
                 },
             );
             let node = Ast::YieldReturn(1, None);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co".into()), &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_co".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(Unit));
 
             ft.funcs.insert(
@@ -1106,12 +1203,20 @@ pub mod checker {
 
             // test correct type for yield return
             let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft);
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_co2".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
 
             // test incorrect type for yield return
             let node = Ast::YieldReturn(1, None);
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_co2".into()), &mut ft);
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_co2".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Err("L1: Yield return expected i32 but got unit".into()));
         }
 
@@ -1144,8 +1249,12 @@ pub mod checker {
                 },
             );
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &Some("my_main".into()),
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
         }
 
@@ -1169,14 +1278,22 @@ pub mod checker {
                 I32,
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &None,
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
 
             let node =
                 Ast::FunctionDef(1, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &None,
+                &mut ft,
+            );
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
@@ -1200,14 +1317,22 @@ pub mod checker {
                 I32,
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &None,
+                &mut ft,
+            );
             assert_eq!(ty, Ok(I32));
 
             let node =
                 Ast::CoroutineDef(1, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
-            
-            let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &None, &mut ft);
+
+            let ty = start_traverse(
+                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &None,
+                &mut ft,
+            );
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
@@ -1263,8 +1388,12 @@ pub mod checker {
                 ),
             ] {
                 let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
-                
-                let result = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_main".into()), &mut ft);
+
+                let result = start_traverse(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_main".into()),
+                    &mut ft,
+                );
                 assert_eq!(result, ex);
             }
         }
