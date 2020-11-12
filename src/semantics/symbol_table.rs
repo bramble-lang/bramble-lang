@@ -64,4 +64,14 @@ impl<'a> ScopeStack<'a> {
     pub fn pop(&mut self) {
         self.stack.pop();
     }
+
+    pub fn get(&self, name: &str) -> Option<&Symbol> {
+        for scope in self.stack.iter().rev() {
+            match scope.get(name) {
+                Some(v) => return Some(v),
+                None => {}
+            };
+        }
+        None
+    }
 }
