@@ -1,8 +1,8 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::parser::{PNode};
 use crate::ast::Ast;
+use crate::semantics::semanticnode::SemanticNode;
 use super::vartable::*;
 
 #[derive(Debug, Copy, Clone)]
@@ -230,7 +230,8 @@ impl Compiler {
         Ok(())
     }
 
-    pub fn compile(ast: &PNode, funcs: &mut FunctionTable) -> Compiler {
+    pub fn compile(ast: &SemanticNode) -> Compiler {
+        let mut func_table = FunctionTable::from_semantic_ast(&ast);
         let mut code = vec![];
 
         Compiler::create_base(&mut code);
@@ -242,7 +243,7 @@ impl Compiler {
 
         // Put user code here
         let global_func = "".into();
-        Compiler::traverse(ast, &global_func, funcs, &mut code);
+        Compiler::traverse(ast, &global_func, &mut func_table, &mut code);
         Compiler { code }
     }
 
@@ -472,7 +473,7 @@ impl Compiler {
     }
 
     fn traverse(
-        ast: &PNode,
+        ast: &SemanticNode,
         current_func: &String,
         function_table: &mut FunctionTable,
         output: &mut Vec<Instruction>,
@@ -689,7 +690,7 @@ impl Compiler {
                         .find(|v| v.name == *id)
                         .expect(&format!(
                             "L{}: CRITICAL: identifier {} not found in var table",
-                            meta, id
+                            meta.ln, id
                         ));
                     var.frame_offset
                 };

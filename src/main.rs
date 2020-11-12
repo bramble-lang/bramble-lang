@@ -10,7 +10,6 @@ use clap::{App, Arg};
 use compiler::compiler::*;
 use lexer::Token;
 use semantics::type_checker::*;
-use compiler::vartable::*;
 use syntax::parser;
 use syntax::ast;
 
@@ -66,20 +65,19 @@ fn main() {
         }
     };
 
-    let mut func_table;
-
     // Type Check
-    match checker::type_check(&ast) {
+    let semantic_ast = match checker::type_check(&ast) {
         Ok(ast) => {
-            func_table = FunctionTable::from_semantic_ast(&ast);
+            //func_table = FunctionTable::from_semantic_ast(&ast);
+            ast
         }
         Err(msg) => {
             println!("Error: {}", msg);
             std::process::exit(1);
         }
-    }
+    };
 
-    let program = Compiler::compile(&ast, &mut func_table);
+    let program = Compiler::compile(&semantic_ast);
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
     program
