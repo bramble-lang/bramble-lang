@@ -476,36 +476,75 @@ pub mod checker {
 
     #[cfg(test)]
     mod tests {
-        use crate::semantics::vartable::*;
         use super::*;
         use crate::ast::{Ast, Primitive};
+        use std::collections::HashMap;
 
-        pub fn start_traverse(
+        /*
+         * map: function name -> (params, ret, vars)
+         */
+        struct FunInfo {
+            params: Vec<(&'static str,Primitive)>,
+            ret: Primitive,
+            vars: Vec<(&'static str,Primitive)>,
+        }
+
+        impl FunInfo {
+            pub fn new(params: Vec<(&'static str, Primitive)>, ret: Primitive, vars: Vec<(&'static str, Primitive)>) -> FunInfo {
+                FunInfo{
+                    params: params,
+                    ret: ret,
+                    vars: vars,
+                }
+            }
+        }
+
+        struct Scope {
+            func: HashMap<String,FunInfo>,
+        }
+
+        impl Scope {
+            pub fn new() -> Scope {
+                Scope {
+                    func: HashMap::new(),
+                }
+            }
+
+            pub fn add(&mut self, name: &'static str, params: Vec<(&'static str, Primitive)>, ret: Primitive, vars: Vec<(&'static str, Primitive)>) {
+                self.func.insert(
+                    name.into(), 
+                    FunInfo::new(params, ret, vars),
+                    );
+            }
+        }
+
+        fn start(
             ast: &mut SemanticNode,
             current_func: &Option<String>,
-            ftable: &mut FunctionTable,
+            scope: &Scope,
         ) -> Result<Primitive, String> {
             let mut sym = SymbolTable::new();
             match current_func {
                 Some(cf) => {
-                    for var in ftable.funcs[cf].vars.vars.iter() {
-                        sym.add(&var.name, Type::Primitive(var.ty))?;
+                    for (vname, vty) in scope.func.get(cf).ok_or(format!("could not find: {}", cf))?.vars.iter() {
+                        sym.add(&vname, Type::Primitive(*vty))?;
                     }
                 }
                 None => {}
             };
 
             // add functions to the symbol table: this is just a test
-            for (f, fi) in ftable.funcs.iter() {
+            for (f, fi) in scope.func.iter() {
                 let params = fi
                     .params
                     .iter()
                     .map(|(_, pty)| *pty)
                     .collect::<Vec<Primitive>>();
+
                 if f.starts_with("my_co") {
-                    sym.add(f, Type::Coroutine(params, fi.ty))?;
+                    sym.add(f, Type::Coroutine(params, fi.ret))?;
                 } else {
-                    sym.add(f, Type::Function(params, fi.ty))?;
+                    sym.add(f, Type::Function(params, fi.ret))?;
                 }
             }
 
@@ -516,70 +555,35 @@ pub mod checker {
         #[test]
         pub fn test_integer() {
             let node = Ast::Integer(1, 5);
-            let mut ft = FunctionTable::new();
+            let scope = Scope::new();
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &None,
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(Primitive::I32));
         }
 
         #[test]
         pub fn test_identifier() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_main".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable {
-                        vars: vec![VarDecl {
-                            name: "x".into(),
-                            ty: Bool,
-                            size: 4,
-                            frame_offset: 4,
-                        }],
-                    },
-                    label_count: 0,
-                    ty: Unit,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_main", vec![], Unit, vec![("x", Bool)]);
 
             let node = Ast::Identifier(1, "x".into());
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_main".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(Primitive::Bool));
         }
 
         #[test]
         pub fn test_add() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_func".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: Unit,
-                },
-            );
-            ft.funcs
-                .get_mut("my_func")
-                .unwrap()
-                .vars
-                .add_var("x", I32)
-                .unwrap();
-            ft.funcs
-                .get_mut("my_func")
-                .unwrap()
-                .vars
-                .add_var("b", Bool)
-                .unwrap();
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
             // both operands are i32
             {
                 let node = Ast::Add(
@@ -588,10 +592,10 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &None,
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -604,10 +608,10 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -619,10 +623,10 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -634,10 +638,10 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: + expected operands of i32".into()));
             }
@@ -645,28 +649,8 @@ pub mod checker {
 
         #[test]
         pub fn test_mul() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_func".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: Unit,
-                },
-            );
-            ft.funcs
-                .get_mut("my_func")
-                .unwrap()
-                .vars
-                .add_var("x", I32)
-                .unwrap();
-            ft.funcs
-                .get_mut("my_func")
-                .unwrap()
-                .vars
-                .add_var("b", Bool)
-                .unwrap();
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
             // both operands are i32
             {
                 let node = Ast::Mul(
@@ -675,10 +659,10 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &None,
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -691,10 +675,10 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -706,10 +690,10 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -721,10 +705,10 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
@@ -732,7 +716,8 @@ pub mod checker {
 
         #[test]
         pub fn test_boolean_ops() {
-            let mut ft = FunctionTable::new();
+            let scope = Scope::new();
+
             let tests: Vec<(PNode, Result<Primitive, String>)> = vec![(
                 Ast::BAnd(
                     1,
@@ -743,10 +728,10 @@ pub mod checker {
             )];
 
             for (test, expected) in tests.iter() {
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&test).unwrap(),
                     &None,
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, *expected);
             }
@@ -754,7 +739,7 @@ pub mod checker {
 
         #[test]
         pub fn test_comparison_ops() {
-            let mut ft = FunctionTable::new();
+            let scope = Scope::new();
             let tests: Vec<(PNode, Result<Primitive, String>)> = vec![
                 (
                     Ast::Eq(
@@ -783,10 +768,10 @@ pub mod checker {
             ];
 
             for (test, expected) in tests.iter() {
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&test).unwrap(),
                     &None,
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, *expected);
             }
@@ -796,93 +781,62 @@ pub mod checker {
         pub fn test_bind() {
             // RHS type matches the LHS type
             {
-                let node = Ast::Bind(1, "x".into(), Primitive::I32, Box::new(Ast::Integer(1, 5)));
-                let mut ft = FunctionTable::new();
-                ft.funcs.insert(
-                    "my_func".into(),
-                    FunctionInfo {
-                        params: vec![],
-                        vars: VarTable::new(),
-                        label_count: 0,
-                        ty: Unit,
-                    },
-                );
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![]);
 
-                let ty = start_traverse(
+                let node = Ast::Bind(1, "x".into(), Primitive::I32, Box::new(Ast::Integer(1, 5)));
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope
                 );
                 assert_eq!(ty, Ok(Primitive::I32));
             }
 
             // RHS type does not match LHS type
             {
-                let node = Ast::Bind(1, "x".into(), Primitive::Bool, Box::new(Ast::Integer(1, 5)));
-                let mut ft = FunctionTable::new();
-                ft.funcs.insert(
-                    "my_func".into(),
-                    FunctionInfo {
-                        params: vec![],
-                        vars: VarTable::new(),
-                        label_count: 0,
-                        ty: Unit,
-                    },
-                );
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![]);
 
-                let ty = start_traverse(
+                let node = Ast::Bind(1, "x".into(), Primitive::Bool, Box::new(Ast::Integer(1, 5)));
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: Bind expected bool but got i32".into()));
             }
 
             // recursive definition
             {
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![]);
+
                 let node = Ast::Bind(
                     1,
                     "x".into(),
                     Primitive::I32,
                     Box::new(Ast::Identifier(1, "x".into())),
                 );
-                let mut ft = FunctionTable::new();
-                ft.funcs.insert(
-                    "my_func".into(),
-                    FunctionInfo {
-                        params: vec![],
-                        vars: VarTable::new(),
-                        label_count: 0,
-                        ty: Unit,
-                    },
-                );
 
-                let ty = start_traverse(
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
 
             // use an unbound variable
             {
-                let node = Ast::Identifier(1, "x".into());
-                let mut ft = FunctionTable::new();
-                ft.funcs.insert(
-                    "my_func".into(),
-                    FunctionInfo {
-                        params: vec![],
-                        vars: VarTable::new(),
-                        label_count: 0,
-                        ty: Unit,
-                    },
-                );
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![]);
 
-                let ty = start_traverse(
+                let node = Ast::Identifier(1, "x".into());
+                let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(ty, Err("L1: Variable x not declared".into()));
             }
@@ -890,96 +844,64 @@ pub mod checker {
 
         #[test]
         pub fn test_return_unit() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_func".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: Unit,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], Unit, vec![]);
+
             let node = Ast::Return(1, None);
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(Unit));
         }
 
         #[test]
         pub fn test_return_i32() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_func".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], I32, vec![]);
+            
             let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
-
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
         }
 
         #[test]
         pub fn test_fn_call() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_func".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], I32, vec![]);
+            
             let node = Ast::FunctionCall(1, "my_func".into(), vec![]);
-
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
 
-            ft.funcs.insert(
-                "my_func2".into(),
-                FunctionInfo {
-                    params: vec![("x".into(), I32)],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
-
+            scope.add("my_func2", vec![("x", I32)], I32, vec![]);
             // test correct parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1, 5)]);
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func2".into()),
-                &mut ft,
+                &scope
             );
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::FunctionCall(1, "my_func2".into(), vec![]);
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func2".into()),
-                &mut ft,
+                &scope
             );
             assert_eq!(
                 ty,
@@ -989,52 +911,35 @@ pub mod checker {
 
         #[test]
         pub fn test_co_init() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_co".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
-            let node = Ast::CoroutineInit(1, "my_co".into(), vec![]);
+            let mut scope = Scope::new();
+            scope.add("my_co", vec![], I32, vec![]);
+            scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
-            let ty = start_traverse(
+            let node = Ast::CoroutineInit(1, "my_co".into(), vec![]);
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
-                &mut ft,
+                &scope
             );
             assert_eq!(ty, Ok(I32));
-
-            ft.funcs.insert(
-                "my_co2".into(),
-                FunctionInfo {
-                    params: vec![("x".into(), I32)],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
 
             // test correct parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1, 5)]);
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
             let node = Ast::CoroutineInit(1, "my_co2".into(), vec![]);
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(
                 ty,
@@ -1044,104 +949,56 @@ pub mod checker {
 
         #[test]
         pub fn test_yield_return() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_co".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: Unit,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_co", vec![], Unit, vec![]);
+            scope.add("my_co2", vec![], I32, vec![]);
+            
             let node = Ast::YieldReturn(1, None);
-
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(Unit));
 
-            ft.funcs.insert(
-                "my_co2".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
-
             // test correct type for yield return
             let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
-                &mut ft,
+                &scope
             );
             assert_eq!(ty, Ok(I32));
 
             // test incorrect type for yield return
             let node = Ast::YieldReturn(1, None);
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Err("L1: Yield return expected i32 but got unit".into()));
         }
 
         #[test]
         fn test_yield() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_main".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable {
-                        vars: vec![VarDecl {
-                            name: "c".into(),
-                            size: 4,
-                            ty: I32,
-                            frame_offset: 4,
-                        }],
-                    },
-                    label_count: 0,
-                    ty: Unit,
-                },
-            );
-            ft.funcs.insert(
-                "my_co2".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_main", vec![], Unit, vec![("c", I32)]);
+            scope.add("my_co2", vec![], I32, vec![]);
+            
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
-
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_main".into()),
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
         }
 
         #[test]
         fn test_func_def() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_func".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], I32, vec![]);
 
             let node = Ast::FunctionDef(
                 1,
@@ -1151,36 +1008,28 @@ pub mod checker {
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &None,
-                &mut ft,
+                &scope
             );
             assert_eq!(ty, Ok(I32));
 
             let node =
                 Ast::FunctionDef(1, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &None,
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
         #[test]
         fn test_coroutine_def() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_co".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable::new(),
-                    label_count: 0,
-                    ty: I32,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_co", vec![], I32, vec![]);
 
             let node = Ast::CoroutineDef(
                 1,
@@ -1190,43 +1039,29 @@ pub mod checker {
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &None,
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
 
             let node =
                 Ast::CoroutineDef(1, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
-            let ty = start_traverse(
+            let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &None,
-                &mut ft,
+                &scope,
             );
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
         #[test]
         fn test_if_expression() {
-            let mut ft = FunctionTable::new();
-            ft.funcs.insert(
-                "my_main".into(),
-                FunctionInfo {
-                    params: vec![],
-                    vars: VarTable {
-                        vars: vec![VarDecl {
-                            name: "c".into(),
-                            size: 4,
-                            ty: I32,
-                            frame_offset: 4,
-                        }],
-                    },
-                    label_count: 0,
-                    ty: Unit,
-                },
-            );
+            let mut scope = Scope::new();
+            scope.add("my_main", vec![], I32, vec![("c", I32)]);
+
             for (c, t, f, ex) in vec![
                 (
                     Ast::Boolean(1, true),
@@ -1261,10 +1096,10 @@ pub mod checker {
             ] {
                 let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
 
-                let result = start_traverse(
+                let result = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_main".into()),
-                    &mut ft,
+                    &scope,
                 );
                 assert_eq!(result, ex);
             }

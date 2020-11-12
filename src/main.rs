@@ -7,7 +7,7 @@ mod semantics;
 mod syntax;
 
 use clap::{App, Arg};
-use compiler::*;
+use compiler::compiler::*;
 use lexer::Token;
 use semantics::type_checker::*;
 use semantics::vartable::*;
