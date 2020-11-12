@@ -568,7 +568,7 @@ pub mod checker {
                 ExpressionBlock(meta, body) => {
                     let mut ty = Unit;
                     for stmt in body.iter_mut() {
-                        ty = self.traverse(stmt, current_func, ftable, sym)?;
+                        ty = self.traverse(stmt, current_func, ftable, &mut meta.sym)?;
                     }
                     meta.ty = ty;
                     Ok(ty)
@@ -578,13 +578,19 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                FunctionDef(meta, fname, _, p, body) => {
+                FunctionDef(meta, fname, params, p, body) => {
+                    for (pname, pty) in params.iter() {
+                        meta.sym.add(pname, Type::Primitive(*pty))?;
+                    }
                     for stmt in body.iter_mut() {
                         self.traverse(stmt, &Some(fname.clone()), ftable, &mut meta.sym)?;
                     }
                     Ok(*p)
                 }
-                CoroutineDef(meta, coname, _, p, body) => {
+                CoroutineDef(meta, coname, params, p, body) => {
+                    for (pname, pty) in params.iter() {
+                        meta.sym.add(pname, Type::Primitive(*pty))?;
+                    }
                     for stmt in body.iter_mut() {
                         self.traverse(stmt, &Some(coname.clone()), ftable, &mut meta.sym)?;
                     }
