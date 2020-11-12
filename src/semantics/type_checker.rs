@@ -309,7 +309,7 @@ pub mod checker {
                         Ok(idty)
                     }
                 },
-                Mul(meta, l, r) => {
+                Mul(meta, l, r) | Add(meta, l, r)=> {
                     let ty = self.binary_op(
                         root_str,
                         meta.ln,
@@ -323,21 +323,7 @@ pub mod checker {
                     meta.ty = ty;
                     Ok(ty)
                 }
-                Add(meta, l, r) => {
-                    let ty = self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        Some(I32),
-                    )?;
-                    meta.ty = ty;
-                    Ok(ty)
-                }
-                BAnd(meta, l, r) => {
+                BAnd(meta, l, r) | BOr(meta, l, r)=> {
                     let ty = self.binary_op(
                         root_str,
                         meta.ln,
@@ -351,91 +337,9 @@ pub mod checker {
                     meta.ty = ty;
                     Ok(ty)
                 }
-                BOr(meta, l, r) => {
-                    let ty = self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        Some(Bool),
-                    )?;
-                    meta.ty = ty;
-                    Ok(ty)
-                }
-                Eq(meta, l, r) => {
-                    self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        None,
-                    )?;
-                    meta.ty = Bool;
-                    Ok(meta.ty)
-                }
-                NEq(meta,l, r) => {
-                    self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        None,
-                    )?;
-                    meta.ty = Bool;
-                    Ok(meta.ty)
-                }
-                Gr(meta, l, r) => {
-                    self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        None,
-                    )?;
-                    meta.ty = Bool;
-                    Ok(meta.ty)
-                }
-                GrEq(meta, l, r) => {
-                    self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        None,
-                    )?;
-                    meta.ty = Bool;
-                    Ok(meta.ty)
-                }
-                Ls(meta, l, r) => {
-                    self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        ftable,
-                        sym,
-                        None,
-                    )?;
-                    meta.ty = Bool;
-                    Ok(meta.ty)
-                }
-                LsEq(meta, l, r) => {
+                Eq(meta, l, r) | NEq(meta, l, r)
+                    | Gr(meta, l, r) | GrEq(meta, l, r)
+                    | Ls(meta, l, r) | LsEq(meta, l, r)=> {
                     self.binary_op(
                         root_str,
                         meta.ln,
