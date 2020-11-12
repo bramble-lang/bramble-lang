@@ -1,7 +1,7 @@
 use crate::parser::Ast;
 use crate::parser::Primitive;
-use crate::semantics::type_checker::checker::SemanticMetadata;
-use crate::semantics::type_checker::checker::SemanticNode;
+use crate::semantics::semanticnode::SemanticMetadata;
+use crate::semantics::semanticnode::SemanticNode;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
