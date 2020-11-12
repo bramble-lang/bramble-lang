@@ -283,6 +283,24 @@ pub mod checker {
             sym.get(id).or(self.stack.get(id))
         }
 
+        fn lookup_func_or_cor<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Primitive>, &Primitive), String> {
+            match self.lookup(sym, id) {
+                Some(Symbol {
+                    ty: Type::Coroutine(params, p),
+                    ..
+                }) | Some(Symbol {
+                    ty: Type::Function(params, p),
+                    ..
+                })=> Ok((params, p)),
+                Some(_) => {
+                    return Err(format!("{} is not a function or coroutine", id))
+                }
+                None => {
+                    return Err(format!("label {} not found in symbol table", id))
+                }
+            }
+        }
+
         fn lookup_coroutine<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Primitive>, &Primitive), String> {
             match self.lookup(sym, id) {
                 Some(Symbol {
@@ -293,7 +311,22 @@ pub mod checker {
                     return Err(format!("{} is not a coroutine", id))
                 }
                 None => {
-                    return Err(format!("coroutine {} not found in symbol table", id))
+                    return Err(format!("label {} not found in symbol table", id))
+                }
+            }
+        }
+
+        fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Primitive, String> {
+            match self.lookup(sym, id) {
+                Some(Symbol {
+                    ty: Type::Primitive(p),
+                    ..
+                }) => Ok(p),
+                Some(_) => {
+                    return Err(format!("{} is not a variable", id))
+                }
+                None => {
+                    return Err(format!("label {} not found in symbol table", id))
                 }
             }
         }
@@ -418,8 +451,8 @@ pub mod checker {
                 Return(meta, None) => match current_func {
                     None => Err(format!("L{}: Return called outside of a function", meta.ln)),
                     Some(cf) => {
-                        let fty = ftable.funcs[cf].ty;
-                        if fty == Unit {
+                        let (_, fty) = self.lookup_func_or_cor(sym, cf).map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                        if *fty == Unit {
                             meta.ty = Unit;
                             Ok(Unit)
                         } else {
@@ -436,11 +469,11 @@ pub mod checker {
                         meta.ln
                     )),
                     Some(cf) => {
-                        let fty = ftable.funcs[cf].ty;
                         let val = self.traverse(exp, current_func, ftable, sym)?;
-                        if fty == val {
-                            meta.ty = fty;
-                            Ok(fty)
+                        let (_, fty) = self.lookup_func_or_cor(sym, cf).map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                        if *fty == val {
+                            meta.ty = *fty;
+                            Ok(meta.ty)
                         } else {
                             Err(format!(
                                 "L{}: Return expected {} but got {}",
@@ -451,14 +484,11 @@ pub mod checker {
                 },
                 Yield(meta, exp) => match current_func {
                     None => Err(format!("L{}: Yield appears outside of function", meta.ln)),
-                    Some(cf) => match exp.as_ref() {
+                    Some(_) => match exp.as_ref() {
                         Ast::Identifier(id_meta, coname) => {
-                            let coty = ftable
-                                .get_var(cf, coname)
-                                .map_err(|e| format!("L{}: {}", id_meta.ln, e))?
-                                .ty;
-                            meta.ty = coty;
-                            Ok(coty)
+                            let ty = self.lookup_var(sym, coname).map_err(|e| format!("L{}: {}", id_meta.ln, e))?;
+                            meta.ty = *ty;
+                            Ok(meta.ty)
                         }
                         _ => Err(format!(
                             "L{}: Expected name of coroutine after yield",
