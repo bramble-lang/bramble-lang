@@ -235,6 +235,18 @@ mod tests {
                 Ast::Integer(sm(1, Primitive::Unknown), 3),
                 Ast::Integer(sm(1, Primitive::Unknown), 3),
             ),
+        ), (
+            (Ast::Identifier(1, "x".into()), Ast::Identifier(1, "y".into())),
+            (
+                Ast::Identifier(sm(1, Primitive::Unknown), "x".into()),
+                Ast::Identifier(sm(1, Primitive::Unknown), "y".into()),
+            ),
+        ), (
+            (Ast::Boolean(1, true), Ast::Boolean(1, false)),
+            (
+                Ast::Boolean(sm(1, Primitive::Unknown), true),
+                Ast::Boolean(sm(1, Primitive::Unknown), false),
+            ),
         )]
         .iter()
         {
