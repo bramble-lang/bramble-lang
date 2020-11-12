@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::parser::Primitive;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -17,26 +15,26 @@ pub struct Symbol {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
-    sym: HashMap<String, Symbol>,
+    sym: Vec<Symbol>,
 }
 
 impl SymbolTable {
     pub fn new() -> Self {
         SymbolTable {
-            sym: HashMap::new(),
+            sym: vec![],
         }
     }
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
-        self.sym.get(name)
+        //self.sym.get(name)
+        self.sym.iter().find(|s| s.name == name)
     }
 
     pub fn add(&mut self, name: &str, ty: Type) -> Result<(), String> {
-        if self.sym.contains_key(name) {
+        if self.get(name).is_some() {
             Err(format!("{} already defined", name))
         } else {
-            self.sym.insert(
-                name.into(),
+            self.sym.push(
                 Symbol {
                     name: name.into(),
                     ty,
