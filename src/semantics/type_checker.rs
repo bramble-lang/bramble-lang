@@ -279,6 +279,25 @@ pub mod checker {
             self.analyize_node(ast, current_func, ftable, sym)
         }
 
+        fn lookup<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Option<&'a Symbol>{
+            sym.get(id).or(self.stack.get(id))
+        }
+
+        fn lookup_coroutine<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Primitive>, &Primitive), String> {
+            match self.lookup(sym, id) {
+                Some(Symbol {
+                    ty: Type::Coroutine(params, p),
+                    ..
+                }) => Ok((params, p)),
+                Some(_) => {
+                    return Err(format!("{} is not a coroutine", id))
+                }
+                None => {
+                    return Err(format!("coroutine {} not found in symbol table", id))
+                }
+            }
+        }
+
         fn analyize_node(
             &mut self,
             ast: &mut SemanticNode,
@@ -307,7 +326,7 @@ pub mod checker {
                         meta.ln, id
                     )),
                     Some(_) => {
-                        match sym.get(id).or(self.stack.get(id)) {
+                        match self.lookup(sym, id) {
                             Some(Symbol {
                                 ty: Type::Primitive(p),
                                 ..
@@ -450,14 +469,14 @@ pub mod checker {
                 YieldReturn(meta, None) => match current_func {
                     None => Err(format!("L{}: YRet appears outside of function", meta.ln)),
                     Some(cf) => {
-                        let fty = ftable.funcs[cf].ty;
-                        if fty == Unit {
+                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        if *ret_ty == Unit {
                             meta.ty = Unit;
                             Ok(Unit)
                         } else {
                             Err(format!(
                                 "L{}: Yield return expected {} but got unit",
-                                meta.ln, fty
+                                meta.ln, ret_ty
                             ))
                         }
                     }
@@ -465,15 +484,15 @@ pub mod checker {
                 YieldReturn(meta, Some(exp)) => match current_func {
                     None => Err(format!("L{}: YRet appears outside of function", meta.ln)),
                     Some(cf) => {
-                        let fty = ftable.funcs[cf].ty;
                         let val = self.traverse(exp, current_func, ftable, sym)?;
-                        if fty == val {
-                            meta.ty = fty;
-                            Ok(fty)
+                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        if *ret_ty == val {
+                            meta.ty = *ret_ty;
+                            Ok(meta.ty)
                         } else {
                             Err(format!(
                                 "L{}: Yield return expected {} but got {}",
-                                meta.ln, fty, val
+                                meta.ln, ret_ty, val
                             ))
                         }
                     }
@@ -530,7 +549,7 @@ pub mod checker {
                     }
                     let (expected_tys, ret_ty) = match sym.get(coname).or(self.stack.get(coname)) {
                         Some(Symbol {
-                            ty: Type::Function(pty, rty),
+                            ty: Type::Coroutine(pty, rty),
                             ..
                         }) => {(pty, rty)}
                         Some(_) => return Err(format!("L{}: {} found but was not a function", meta.ln, coname)),
@@ -652,7 +671,11 @@ pub mod checker {
             // add functions to the symbol table: this is just a test
             for (f, fi) in ftable.funcs.iter() {
                 let params = fi.params.iter().map(|(_, pty)| *pty).collect::<Vec<Primitive>>();
-                sym.add(f, Type::Function(params, fi.ty))?;
+                if f.starts_with("my_co") {
+                    sym.add(f, Type::Coroutine(params, fi.ty))?;
+                } else {
+                    sym.add(f, Type::Function(params, fi.ty))?;
+                }
             }
 
             let mut semantic = SemanticAnalyzer::new();

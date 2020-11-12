@@ -69,7 +69,7 @@ impl SymbolTable {
                 sym.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *ty))?;
             }
             Ast::CoroutineDef(_, name, params, ty, _) => {
-                sym.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *ty))?;
+                sym.sym.add(name, Type::Coroutine(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *ty))?;
             }
             _ => panic!("Type analysis: expected function or coroutine in module, found {}", ast.root_str()),
         }
