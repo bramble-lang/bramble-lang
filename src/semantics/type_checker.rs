@@ -700,23 +700,23 @@ pub mod checker {
 
     #[cfg(test)]
     mod tests {
-    pub fn start_traverse(
-        ast: &mut SemanticNode,
-        current_func: &Option<String>,
-        ftable: &mut FunctionTable,
-    ) -> Result<Primitive, String> {
-        let mut sym = SymbolTable::new();
-        match current_func {
-            Some(cf) => {
-                for var in ftable.funcs[cf].vars.vars.iter() {
-                    sym.add(&var.name, Type::Primitive(var.ty))?;
+        pub fn start_traverse(
+            ast: &mut SemanticNode,
+            current_func: &Option<String>,
+            ftable: &mut FunctionTable,
+        ) -> Result<Primitive, String> {
+            let mut sym = SymbolTable::new();
+            match current_func {
+                Some(cf) => {
+                    for var in ftable.funcs[cf].vars.vars.iter() {
+                        sym.add(&var.name, Type::Primitive(var.ty))?;
+                    }
                 }
-            }
-            None => {}
-        };
-        let mut semantic = SemanticAnalyzer::new();
-        semantic.traverse(ast, current_func, ftable, &mut sym)
-    }
+                None => {}
+            };
+            let mut semantic = SemanticAnalyzer::new();
+            semantic.traverse(ast, current_func, ftable, &mut sym)
+        }
 
         use super::*;
         use crate::parser::{Ast, Primitive};
