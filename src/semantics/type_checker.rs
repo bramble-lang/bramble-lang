@@ -1,6 +1,3 @@
-use crate::parser;
-use parser::Primitive;
-
 pub mod checker {
     use crate::parser::{Ast, PNode, Primitive};
     use crate::semantics::symbol_table::*;
@@ -188,6 +185,11 @@ pub mod checker {
                 }
             }
         }
+
+        /// Analyze the AST and add functions to symbol tables
+        pub fn extract_routines(&mut self) {
+
+        }
     }
 
     fn sm(ln: u32, ty: Primitive) -> SemanticMetadata {
@@ -207,6 +209,13 @@ pub mod checker {
         ftable: &mut FunctionTable,
     ) -> Result<Box<SemanticNode>, String> {
         let mut sym = SymbolTable::new();
+
+        // add functions to the symbol table: this is just a test
+        for (f, fi) in ftable.funcs.iter() {
+            let params = fi.params.iter().map(|(_, pty)| *pty).collect::<Vec<Primitive>>();
+            sym.add(f, Type::Function(params, fi.ty))?;
+        }
+
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
         let mut semantic = SemanticAnalyzer::new();
         semantic.traverse(&mut sm_ast, &None, ftable, &mut sym)?;
@@ -499,13 +508,6 @@ pub mod checker {
                     Ok(*p)
                 }
                 FunctionCall(meta, fname, params) => {
-                    match sym.get(fname).or(self.stack.get(fname)) {
-                        Some(Symbol {
-                            ty: Type::Function(_, _),
-                            ..
-                        }) => {}
-                        _ => println!("L{}: Function {} not declared", meta.ln, fname),
-                    };
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];
@@ -513,26 +515,27 @@ pub mod checker {
                         let ty = self.traverse(param, current_func, ftable, sym)?;
                         pty.push(ty);
                     }
-                    let fpty: Vec<super::Primitive> = (ftable.funcs.get(fname).ok_or(format!(
-                        "L{}: Unknown identifer or function: {}",
-                        meta.ln, fname
-                    ))?)
-                    .params
-                    .iter()
-                    .map(|(_, p)| *p)
-                    .collect();
-                    if pty.len() != fpty.len() {
+                    let (expected_tys, ret_ty) = match sym.get(fname).or(self.stack.get(fname)) {
+                        Some(Symbol {
+                            ty: Type::Function(pty, rty),
+                            ..
+                        }) => {(pty, rty)}
+                        Some(_) => return Err(format!("L{}: {} found but was not a function", meta.ln, fname)),
+                        None => return Err(format!("L{}: function {} not declared", meta.ln, fname)),
+                    };
+
+                    if pty.len() != expected_tys.len() {
                         Err(format!(
                             "L{}: Incorrect number of parameters passed to function: {}",
                             meta.ln, fname
                         ))
                     } else {
-                        let z = pty.iter().zip(fpty.iter());
+                        let z = pty.iter().zip(expected_tys.iter());
                         let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                         if all_params_match {
-                            let fty = ftable.funcs[fname].ty;
-                            meta.ty = fty;
-                            Ok(fty)
+                            //let fty = ftable.funcs[fname].ty;
+                            meta.ty = *ret_ty;
+                            Ok(*ret_ty)
                         } else {
                             Err(format!(
                                 "L{}: One or more parameters had mismatching types for function {}",
@@ -549,23 +552,26 @@ pub mod checker {
                         let ty = self.traverse(param, current_func, ftable, sym)?;
                         pty.push(ty);
                     }
-                    let fpty: Vec<super::Primitive> = ftable.funcs[coname]
-                        .params
-                        .iter()
-                        .map(|(_, p)| *p)
-                        .collect();
-                    if pty.len() != fpty.len() {
+                    let (expected_tys, ret_ty) = match sym.get(coname).or(self.stack.get(coname)) {
+                        Some(Symbol {
+                            ty: Type::Function(pty, rty),
+                            ..
+                        }) => {(pty, rty)}
+                        Some(_) => return Err(format!("L{}: {} found but was not a function", meta.ln, coname)),
+                        None => return Err(format!("L{}: function {} not declared", meta.ln, coname)),
+                    };
+
+                    if pty.len() != expected_tys.len() {
                         Err(format!(
                             "L{}: Incorrect number of parameters passed to coroutine: {}",
                             meta.ln, coname
                         ))
                     } else {
-                        let z = pty.iter().zip(fpty.iter());
+                        let z = pty.iter().zip(expected_tys.iter());
                         let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                         if all_params_match {
-                            let fty = ftable.funcs[coname].ty;
-                            meta.ty = fty;
-                            Ok(fty)
+                            meta.ty = *ret_ty;
+                            Ok(*ret_ty)
                         } else {
                             Err(format!(
                                 "L{}: Mismatching parameter types in init for coroutine {}",
@@ -637,6 +643,13 @@ pub mod checker {
                 }
                 None => {}
             };
+
+            // add functions to the symbol table: this is just a test
+            for (f, fi) in ftable.funcs.iter() {
+                let params = fi.params.iter().map(|(_, pty)| *pty).collect::<Vec<Primitive>>();
+                sym.add(f, Type::Function(params, fi.ty))?;
+            }
+
             let mut semantic = SemanticAnalyzer::new();
             semantic.traverse(ast, current_func, ftable, &mut sym)
         }
