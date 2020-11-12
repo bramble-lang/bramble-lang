@@ -6,9 +6,11 @@ use crate::lexer::{self, Lex};
 use crate::Token;
 use super::ast::*;
 
-type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
-pub type PNode = Ast<ParserInfo>;
 type PResult = Result<Option<PNode>, String>;
+type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
+
+type ParserInfo = u32;
+pub type PNode = Ast<ParserInfo>;
 
 impl PNode {
     pub fn new_yield(line: u32, id_line: u32, id: String) -> Self {
@@ -52,12 +54,6 @@ impl PNode {
     }
 }
 
-
-type ParserInfo = u32;
-/*#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ParserInfo {
-    pub l: u32,
-}*/
 /*
     Grammar
     PRIMITIVE := i32 | bool
