@@ -11,8 +11,8 @@ pub enum Type {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
-    name: String,
-    ty: Type,
+    pub name: String,
+    pub ty: Type,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -48,16 +48,16 @@ impl SymbolTable {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ScopeStack<'a> {
-    stack: Vec<&'a SymbolTable>,
+pub struct ScopeStack {
+    stack: Vec<SymbolTable>,
 }
 
-impl<'a> ScopeStack<'a> {
-    pub fn new() -> ScopeStack<'a> {
+impl ScopeStack {
+    pub fn new() -> ScopeStack {
         ScopeStack { stack: vec![] }
     }
 
-    pub fn push(&mut self, sym: &'a SymbolTable) {
+    pub fn push(&mut self, sym: SymbolTable) {
         self.stack.push(sym);
     }
 

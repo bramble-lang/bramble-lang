@@ -213,22 +213,12 @@ pub mod checker {
         Ok(sm_ast)
     }
 
-    pub fn start_traverse(
-        ast: &mut SemanticNode,
-        current_func: &Option<String>,
-        ftable: &mut FunctionTable,
-    ) -> Result<Primitive, String> {
-        let mut sym = SymbolTable::new();
-        let mut semantic = SemanticAnalyzer::new();
-        semantic.traverse(ast, current_func, ftable, &mut sym)
+    pub struct SemanticAnalyzer {
+        stack: ScopeStack,
     }
 
-    pub struct SemanticAnalyzer<'a> {
-        stack: ScopeStack<'a>,
-    }
-
-    impl<'a> SemanticAnalyzer<'a> {
-        pub fn new() -> SemanticAnalyzer<'a> {
+    impl SemanticAnalyzer {
+        pub fn new() -> SemanticAnalyzer {
             SemanticAnalyzer {
                 stack: ScopeStack::new(),
             }
@@ -238,8 +228,8 @@ pub mod checker {
             &mut self,
             op: String,
             ln: u32,
-            l: &'a mut SemanticNode,
-            r: &'a mut SemanticNode,
+            l: &mut SemanticNode,
+            r: &mut SemanticNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
@@ -271,7 +261,7 @@ pub mod checker {
 
         pub fn traverse(
             &mut self,
-            ast: &'a mut SemanticNode,
+            ast: &mut SemanticNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
@@ -281,7 +271,7 @@ pub mod checker {
 
         fn analyize_node(
             &mut self,
-            ast: &'a mut SemanticNode,
+            ast: &mut SemanticNode,
             current_func: &Option<String>,
             ftable: &mut FunctionTable,
             sym: &mut SymbolTable,
@@ -311,6 +301,10 @@ pub mod checker {
                             .get_var(cf, id)
                             .map_err(|e| format!("L{}: {}", meta.ln, e))?
                             .ty;
+                        match sym.get(id).or(self.stack.get(id)) {
+                            Some(Symbol{ty:Type::Primitive(p),..}) => meta.ty = *p,
+                            _ => return Err(format!("L{}: unknown identifier {}", meta.ln, id))
+                        };
                         meta.ty = idty;
                         Ok(idty)
                     }
@@ -568,9 +562,12 @@ pub mod checker {
                 },
                 ExpressionBlock(meta, body) => {
                     let mut ty = Unit;
+                    let tmp_sym = sym.clone();
+                    self.stack.push(tmp_sym);
                     for stmt in body.iter_mut() {
                         ty = self.traverse(stmt, current_func, ftable, &mut meta.sym)?;
                     }
+                    self.stack.pop();
                     meta.ty = ty;
                     Ok(ty)
                 }
@@ -579,22 +576,16 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                FunctionDef(meta, fname, params, p, body) => {
+                FunctionDef(meta, name, params, p, body) | CoroutineDef(meta, name, params, p, body) => {
                     for (pname, pty) in params.iter() {
                         meta.sym.add(pname, Type::Primitive(*pty))?;
                     }
+                    let tmp_sym = sym.clone();
+                    self.stack.push(tmp_sym);
                     for stmt in body.iter_mut() {
-                        self.traverse(stmt, &Some(fname.clone()), ftable, &mut meta.sym)?;
+                        self.traverse(stmt, &Some(name.clone()), ftable, &mut meta.sym)?;
                     }
-                    Ok(*p)
-                }
-                CoroutineDef(meta, coname, params, p, body) => {
-                    for (pname, pty) in params.iter() {
-                        meta.sym.add(pname, Type::Primitive(*pty))?;
-                    }
-                    for stmt in body.iter_mut() {
-                        self.traverse(stmt, &Some(coname.clone()), ftable, &mut meta.sym)?;
-                    }
+                    self.stack.pop();
                     Ok(*p)
                 }
                 FunctionCall(meta, fname, params) => {
@@ -709,6 +700,24 @@ pub mod checker {
 
     #[cfg(test)]
     mod tests {
+    pub fn start_traverse(
+        ast: &mut SemanticNode,
+        current_func: &Option<String>,
+        ftable: &mut FunctionTable,
+    ) -> Result<Primitive, String> {
+        let mut sym = SymbolTable::new();
+        match current_func {
+            Some(cf) => {
+                for var in ftable.funcs[cf].vars.vars.iter() {
+                    sym.add(&var.name, Type::Primitive(var.ty))?;
+                }
+            }
+            None => {}
+        };
+        let mut semantic = SemanticAnalyzer::new();
+        semantic.traverse(ast, current_func, ftable, &mut sym)
+    }
+
         use super::*;
         use crate::parser::{Ast, Primitive};
 
@@ -865,8 +874,7 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
                 
-                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft)
-                    ;
+                let ty = start_traverse(&mut SemanticNode::from_parser_ast(&node).unwrap(), &Some("my_func".into()), &mut ft);
                 assert_eq!(ty, Err("L1: * expected operands of i32".into()));
             }
             // operands are not i32
