@@ -296,20 +296,15 @@ pub mod checker {
                         "L{}: Variable {} appears outside of function",
                         meta.ln, id
                     )),
-                    Some(cf) => {
-                        let idty = ftable
-                            .get_var(cf, id)
-                            .map_err(|e| format!("L{}: {}", meta.ln, e))?
-                            .ty;
+                    Some(_) => {
                         match sym.get(id).or(self.stack.get(id)) {
                             Some(Symbol {
                                 ty: Type::Primitive(p),
                                 ..
                             }) => meta.ty = *p,
-                            _ => return Err(format!("L{}: unknown identifier {}", meta.ln, id)),
+                            _ => return Err(format!("L{}: Variable {} not declared", meta.ln, id)),
                         };
-                        meta.ty = idty;
-                        Ok(idty)
+                        Ok(meta.ty)
                     }
                 },
                 Mul(meta, l, r) | Add(meta, l, r) => {
@@ -494,6 +489,7 @@ pub mod checker {
                     for (pname, pty) in params.iter() {
                         meta.sym.add(pname, Type::Primitive(*pty))?;
                     }
+                    //meta.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *p))?;
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
                     for stmt in body.iter_mut() {
@@ -503,6 +499,13 @@ pub mod checker {
                     Ok(*p)
                 }
                 FunctionCall(meta, fname, params) => {
+                    match sym.get(fname).or(self.stack.get(fname)) {
+                        Some(Symbol {
+                            ty: Type::Function(_, _),
+                            ..
+                        }) => {}
+                        _ => println!("L{}: Function {} not declared", meta.ln, fname),
+                    };
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];
