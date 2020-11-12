@@ -1,9 +1,9 @@
 use std::collections;
 
 use crate::parser;
+use crate::semantics::symbol_table::*;
+use crate::semantics::type_checker::checker::SemanticNode;
 use parser::{Ast, PNode, Primitive};
-use crate::semantics::type_checker::checker::{SemanticNode};
-    use crate::semantics::symbol_table::*;
 
 #[derive(Debug, PartialEq)]
 pub struct VarDecl {
@@ -215,10 +215,13 @@ impl FunctionTable {
         }
 
         ft
-
     }
 
-    fn traverse_semantic_ast(ast: &SemanticNode, ft: &mut FunctionTable, current_func: Option<&str>) {
+    fn traverse_semantic_ast(
+        ast: &SemanticNode,
+        ft: &mut FunctionTable,
+        current_func: Option<&str>,
+    ) {
         match ast {
             Ast::FunctionDef(meta, name, params, ret_ty, body) => {
                 let vars = VarTable::new();
@@ -251,10 +254,11 @@ impl FunctionTable {
                 for sym in meta.sym.table().iter() {
                     match sym.ty {
                         Type::Primitive(p) => ft.add_var(cf, &sym.name, p).unwrap(),
-                        _ => ()
+                        _ => (),
                     };
                 }
-                body.iter().for_each(|exp| FunctionTable::traverse_semantic_ast(exp, ft, current_func));
+                body.iter()
+                    .for_each(|exp| FunctionTable::traverse_semantic_ast(exp, ft, current_func));
             }
             Ast::Bind(_, _, _, exp) => {
                 FunctionTable::traverse_semantic_ast(exp, ft, current_func);
@@ -264,14 +268,21 @@ impl FunctionTable {
                 FunctionTable::traverse_semantic_ast(true_arm, ft, current_func);
                 FunctionTable::traverse_semantic_ast(false_arm, ft, current_func);
             }
-            Ast::FunctionCall(_, _, params) | Ast::CoroutineInit(_, _, params)=> {
-                params.iter().for_each(|exp| FunctionTable::traverse_semantic_ast(exp, ft, current_func));
+            Ast::FunctionCall(_, _, params) | Ast::CoroutineInit(_, _, params) => {
+                params
+                    .iter()
+                    .for_each(|exp| FunctionTable::traverse_semantic_ast(exp, ft, current_func));
             }
-            Ast::Mul(_, l, r) | Ast::Add(_, l, r) | 
-                Ast::BAnd(_, l, r) | Ast::BOr(_, l, r) |
-                Ast::Eq(_, l, r) | Ast::NEq(_, l, r) | 
-                Ast::Gr(_, l, r) | Ast::GrEq(_, l, r) |
-                Ast::Ls(_, l, r) | Ast::LsEq(_, l, r) => {
+            Ast::Mul(_, l, r)
+            | Ast::Add(_, l, r)
+            | Ast::BAnd(_, l, r)
+            | Ast::BOr(_, l, r)
+            | Ast::Eq(_, l, r)
+            | Ast::NEq(_, l, r)
+            | Ast::Gr(_, l, r)
+            | Ast::GrEq(_, l, r)
+            | Ast::Ls(_, l, r)
+            | Ast::LsEq(_, l, r) => {
                 FunctionTable::traverse_semantic_ast(l, ft, current_func);
                 FunctionTable::traverse_semantic_ast(r, ft, current_func);
             }
@@ -281,18 +292,21 @@ impl FunctionTable {
             Ast::Return(_, Some(exp)) | Ast::Yield(_, exp) | Ast::YieldReturn(_, Some(exp)) => {
                 FunctionTable::traverse_semantic_ast(exp, ft, current_func);
             }
-            Ast::Return(_, None) | Ast::YieldReturn(_, None) => {
-            }
-            Ast::Identifier(_, _) | Ast::Integer(_, _) | Ast::Boolean(_, _) => {},
+            Ast::Return(_, None) | Ast::YieldReturn(_, None) => {}
+            Ast::Identifier(_, _) | Ast::Integer(_, _) | Ast::Boolean(_, _) => {}
             _ => println!("Dunno: {}", ast.root_str()), //panic!("Type analysis: invalid function, coroutine, or expression block: {}", ast.root_str()),
         }
     }
 
-    fn add_symbol_table(ft: &mut FunctionTable, func: &str, table: &SymbolTable) -> Result<(), String> {
+    fn add_symbol_table(
+        ft: &mut FunctionTable,
+        func: &str,
+        table: &SymbolTable,
+    ) -> Result<(), String> {
         for sym in table.table().iter() {
             match sym.ty {
                 Type::Primitive(p) => ft.add_var(func, &sym.name, p)?,
-                _ => ()
+                _ => (),
             };
         }
         Ok(())

@@ -685,7 +685,10 @@ impl Compiler {
                         .vars
                         .iter()
                         .find(|v| v.name == *id)
-                        .expect(&format!("L{}: CRITICAL: identifier {} not found in var table", meta, id));
+                        .expect(&format!(
+                            "L{}: CRITICAL: identifier {} not found in var table",
+                            meta, id
+                        ));
                     var.frame_offset
                 };
                 Compiler::traverse(exp, current_func, function_table, output);

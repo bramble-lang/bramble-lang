@@ -1,7 +1,7 @@
-use crate::parser::Primitive;
 use crate::parser::Ast;
-use crate::semantics::type_checker::checker::SemanticNode;
+use crate::parser::Primitive;
 use crate::semantics::type_checker::checker::SemanticMetadata;
+use crate::semantics::type_checker::checker::SemanticNode;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
@@ -23,9 +23,7 @@ pub struct SymbolTable {
 
 impl SymbolTable {
     pub fn new() -> Self {
-        SymbolTable {
-            sym: vec![],
-        }
+        SymbolTable { sym: vec![] }
     }
 
     pub fn table(&self) -> &Vec<Symbol> {
@@ -41,17 +39,15 @@ impl SymbolTable {
         if self.get(name).is_some() {
             Err(format!("{} already declared", name))
         } else {
-            self.sym.push(
-                Symbol {
-                    name: name.into(),
-                    ty,
-                },
-            );
+            self.sym.push(Symbol {
+                name: name.into(),
+                ty,
+            });
             Ok(())
         }
     }
-    
-    pub fn generate(ast: &mut SemanticNode) -> Result<(), String>{
+
+    pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
         match ast {
             Ast::Module(sym, functions, coroutines) => {
                 for f in functions.iter_mut() {
@@ -70,12 +66,27 @@ impl SymbolTable {
     fn traverse(ast: &mut SemanticNode, sym: &mut SemanticMetadata) -> Result<(), String> {
         match &ast {
             Ast::FunctionDef(_, name, params, ty, _) => {
-                sym.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *ty))?;
+                sym.sym.add(
+                    name,
+                    Type::Function(
+                        params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
+                        *ty,
+                    ),
+                )?;
             }
             Ast::CoroutineDef(_, name, params, ty, _) => {
-                sym.sym.add(name, Type::Coroutine(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *ty))?;
+                sym.sym.add(
+                    name,
+                    Type::Coroutine(
+                        params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
+                        *ty,
+                    ),
+                )?;
             }
-            _ => panic!("Type analysis: expected function or coroutine in module, found {}", ast.root_str()),
+            _ => panic!(
+                "Type analysis: expected function or coroutine in module, found {}",
+                ast.root_str()
+            ),
         }
 
         Ok(())

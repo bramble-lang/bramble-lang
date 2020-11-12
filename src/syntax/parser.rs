@@ -22,7 +22,8 @@ impl PNode {
             Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), *prim, exp)),
             _ => Err(format!(
                 "L{}: Expected type specification after {}",
-                line, id.root_str()
+                line,
+                id.root_str()
             )),
         }
     }

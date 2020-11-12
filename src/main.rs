@@ -71,7 +71,7 @@ fn main() {
     match checker::type_check(&ast) {
         Ok(ast) => {
             func_table = FunctionTable::from_semantic_ast(&ast);
-        },
+        }
         Err(msg) => {
             println!("Error: {}", msg);
             std::process::exit(1);

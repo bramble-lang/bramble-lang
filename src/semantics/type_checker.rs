@@ -186,9 +186,7 @@ pub mod checker {
         }
 
         /// Analyze the AST and add functions to symbol tables
-        pub fn extract_routines(&mut self) {
-
-        }
+        pub fn extract_routines(&mut self) {}
     }
 
     fn sm(ln: u32, ty: Primitive) -> SemanticMetadata {
@@ -203,15 +201,15 @@ pub mod checker {
         sm(l, Primitive::Unknown)
     }
 
-    pub fn type_check(
-        ast: &PNode,
-    ) -> Result<Box<SemanticNode>, String> {
+    pub fn type_check(ast: &PNode) -> Result<Box<SemanticNode>, String> {
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
         SymbolTable::generate(&mut sm_ast)?;
-        
+
         let mut root_table = SymbolTable::new();
         let mut semantic = SemanticAnalyzer::new();
-        semantic.traverse(&mut sm_ast, &None, &mut root_table).map_err(|e| format!("Semantic: {}", e))?;
+        semantic
+            .traverse(&mut sm_ast, &None, &mut root_table)
+            .map_err(|e| format!("Semantic: {}", e))?;
         Ok(sm_ast)
     }
 
@@ -269,40 +267,41 @@ pub mod checker {
             self.analyize_node(ast, current_func, sym)
         }
 
-        fn lookup<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Option<&'a Symbol>{
+        fn lookup<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Option<&'a Symbol> {
             sym.get(id).or(self.stack.get(id))
         }
 
-        fn lookup_func_or_cor<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Primitive>, &Primitive), String> {
+        fn lookup_func_or_cor<'a>(
+            &'a self,
+            sym: &'a SymbolTable,
+            id: &str,
+        ) -> Result<(&Vec<Primitive>, &Primitive), String> {
             match self.lookup(sym, id) {
                 Some(Symbol {
                     ty: Type::Coroutine(params, p),
                     ..
-                }) | Some(Symbol {
+                })
+                | Some(Symbol {
                     ty: Type::Function(params, p),
                     ..
-                })=> Ok((params, p)),
-                Some(_) => {
-                    return Err(format!("{} is not a function or coroutine", id))
-                }
-                None => {
-                    return Err(format!("label {} not found in symbol table", id))
-                }
+                }) => Ok((params, p)),
+                Some(_) => return Err(format!("{} is not a function or coroutine", id)),
+                None => return Err(format!("label {} not found in symbol table", id)),
             }
         }
 
-        fn lookup_coroutine<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Primitive>, &Primitive), String> {
+        fn lookup_coroutine<'a>(
+            &'a self,
+            sym: &'a SymbolTable,
+            id: &str,
+        ) -> Result<(&Vec<Primitive>, &Primitive), String> {
             match self.lookup(sym, id) {
                 Some(Symbol {
                     ty: Type::Coroutine(params, p),
                     ..
                 }) => Ok((params, p)),
-                Some(_) => {
-                    return Err(format!("{} is not a coroutine", id))
-                }
-                None => {
-                    return Err(format!("label {} not found in symbol table", id))
-                }
+                Some(_) => return Err(format!("{} is not a coroutine", id)),
+                None => return Err(format!("label {} not found in symbol table", id)),
             }
         }
 
@@ -312,12 +311,8 @@ pub mod checker {
                     ty: Type::Primitive(p),
                     ..
                 }) => Ok(p),
-                Some(_) => {
-                    return Err(format!("{} is not a variable", id))
-                }
-                None => {
-                    return Err(format!("label {} not found in symbol table", id))
-                }
+                Some(_) => return Err(format!("{} is not a variable", id)),
+                None => return Err(format!("label {} not found in symbol table", id)),
             }
         }
 
@@ -359,30 +354,14 @@ pub mod checker {
                     }
                 },
                 Mul(meta, l, r) | Add(meta, l, r) => {
-                    let ty = self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        
-                        sym,
-                        Some(I32),
-                    )?;
+                    let ty =
+                        self.binary_op(root_str, meta.ln, l, r, current_func, sym, Some(I32))?;
                     meta.ty = ty;
                     Ok(ty)
                 }
                 BAnd(meta, l, r) | BOr(meta, l, r) => {
-                    let ty = self.binary_op(
-                        root_str,
-                        meta.ln,
-                        l,
-                        r,
-                        current_func,
-                        
-                        sym,
-                        Some(Bool),
-                    )?;
+                    let ty =
+                        self.binary_op(root_str, meta.ln, l, r, current_func, sym, Some(Bool))?;
                     meta.ty = ty;
                     Ok(ty)
                 }
@@ -422,10 +401,11 @@ pub mod checker {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {
                             /*ftable
-                                .add_var(cf, name, *p)
-                                .map_err(|e| format!("L{}: {}", meta.ln, e))?;*/
+                            .add_var(cf, name, *p)
+                            .map_err(|e| format!("L{}: {}", meta.ln, e))?;*/
 
-                            sym.add(name, Type::Primitive(*p)).map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                            sym.add(name, Type::Primitive(*p))
+                                .map_err(|e| format!("L{}: {}", meta.ln, e))?;
                             meta.ty = *p;
                             Ok(rhs)
                         } else {
@@ -440,7 +420,9 @@ pub mod checker {
                 Return(meta, None) => match current_func {
                     None => Err(format!("L{}: Return called outside of a function", meta.ln)),
                     Some(cf) => {
-                        let (_, fty) = self.lookup_func_or_cor(sym, cf).map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                        let (_, fty) = self
+                            .lookup_func_or_cor(sym, cf)
+                            .map_err(|e| format!("L{}: {}", meta.ln, e))?;
                         if *fty == Unit {
                             meta.ty = Unit;
                             Ok(Unit)
@@ -459,7 +441,9 @@ pub mod checker {
                     )),
                     Some(cf) => {
                         let val = self.traverse(exp, current_func, sym)?;
-                        let (_, fty) = self.lookup_func_or_cor(sym, cf).map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                        let (_, fty) = self
+                            .lookup_func_or_cor(sym, cf)
+                            .map_err(|e| format!("L{}: {}", meta.ln, e))?;
                         if *fty == val {
                             meta.ty = *fty;
                             Ok(meta.ty)
@@ -475,7 +459,9 @@ pub mod checker {
                     None => Err(format!("L{}: Yield appears outside of function", meta.ln)),
                     Some(_) => match exp.as_ref() {
                         Ast::Identifier(id_meta, coname) => {
-                            let ty = self.lookup_var(sym, coname).map_err(|e| format!("L{}: {}", id_meta.ln, e))?;
+                            let ty = self
+                                .lookup_var(sym, coname)
+                                .map_err(|e| format!("L{}: {}", id_meta.ln, e))?;
                             meta.ty = *ty;
                             Ok(meta.ty)
                         }
@@ -533,9 +519,16 @@ pub mod checker {
                         Some(Symbol {
                             ty: Type::Function(pty, rty),
                             ..
-                        }) => {(pty, rty)}
-                        Some(_) => return Err(format!("L{}: {} found but was not a function", meta.ln, fname)),
-                        None => return Err(format!("L{}: function {} not declared", meta.ln, fname)),
+                        }) => (pty, rty),
+                        Some(_) => {
+                            return Err(format!(
+                                "L{}: {} found but was not a function",
+                                meta.ln, fname
+                            ))
+                        }
+                        None => {
+                            return Err(format!("L{}: function {} not declared", meta.ln, fname))
+                        }
                     };
 
                     if pty.len() != expected_tys.len() {
@@ -570,9 +563,16 @@ pub mod checker {
                         Some(Symbol {
                             ty: Type::Coroutine(pty, rty),
                             ..
-                        }) => {(pty, rty)}
-                        Some(_) => return Err(format!("L{}: {} found but was not a function", meta.ln, coname)),
-                        None => return Err(format!("L{}: function {} not declared", meta.ln, coname)),
+                        }) => (pty, rty),
+                        Some(_) => {
+                            return Err(format!(
+                                "L{}: {} found but was not a function",
+                                meta.ln, coname
+                            ))
+                        }
+                        None => {
+                            return Err(format!("L{}: function {} not declared", meta.ln, coname))
+                        }
                     };
 
                     if pty.len() != expected_tys.len() {
@@ -688,10 +688,14 @@ pub mod checker {
                 }
                 None => {}
             };
-            
+
             // add functions to the symbol table: this is just a test
             for (f, fi) in ftable.funcs.iter() {
-                let params = fi.params.iter().map(|(_, pty)| *pty).collect::<Vec<Primitive>>();
+                let params = fi
+                    .params
+                    .iter()
+                    .map(|(_, pty)| *pty)
+                    .collect::<Vec<Primitive>>();
                 if f.starts_with("my_co") {
                     sym.add(f, Type::Coroutine(params, fi.ty))?;
                 } else {
