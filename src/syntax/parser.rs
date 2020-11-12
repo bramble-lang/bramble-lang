@@ -51,7 +51,7 @@ impl PNode {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
     Boolean(I, bool),
