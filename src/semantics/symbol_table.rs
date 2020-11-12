@@ -28,6 +28,10 @@ impl SymbolTable {
         }
     }
 
+    pub fn table(&self) -> &Vec<Symbol> {
+        &self.sym
+    }
+
     pub fn get(&self, name: &str) -> Option<&Symbol> {
         //self.sym.get(name)
         self.sym.iter().find(|s| s.name == name)
@@ -35,7 +39,7 @@ impl SymbolTable {
 
     pub fn add(&mut self, name: &str, ty: Type) -> Result<(), String> {
         if self.get(name).is_some() {
-            Err(format!("{} already defined", name))
+            Err(format!("{} already declared", name))
         } else {
             self.sym.push(
                 Symbol {

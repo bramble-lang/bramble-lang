@@ -429,14 +429,14 @@ pub mod checker {
                     }
                 }
                 Bind(meta, name, p, exp) => match current_func {
-                    Some(cf) => {
+                    Some(_) => {
                         let rhs = self.traverse(exp, current_func, ftable, sym)?;
                         if *p == rhs {
-                            ftable
+                            /*ftable
                                 .add_var(cf, name, *p)
-                                .map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                                .map_err(|e| format!("L{}: {}", meta.ln, e))?;*/
 
-                            sym.add(name, Type::Primitive(*p))?;
+                            sym.add(name, Type::Primitive(*p)).map_err(|e| format!("L{}: {}", meta.ln, e))?;
                             meta.ty = *p;
                             Ok(rhs)
                         } else {

@@ -69,7 +69,10 @@ fn main() {
 
     // Type Check
     match checker::type_check(&ast, &mut func_table) {
-        Ok(_) => (),
+        Ok(ast) => {
+            func_table = FunctionTable::from_semantic_ast(&ast);
+            //println!("{:?}", func_table);
+        },
         Err(msg) => {
             println!("Error: {}", msg);
             std::process::exit(1);

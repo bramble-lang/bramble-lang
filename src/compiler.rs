@@ -678,14 +678,14 @@ impl Compiler {
             Ast::Statement(_, stm) => {
                 Compiler::traverse(stm, current_func, function_table, output);
             }
-            Ast::Bind(_, id, _, ref exp) => {
+            Ast::Bind(meta, id, _, ref exp) => {
                 let id_offset = {
                     let var = function_table.funcs[current_func]
                         .vars
                         .vars
                         .iter()
                         .find(|v| v.name == *id)
-                        .expect("CRITICAL: identifier not found in var table");
+                        .expect(&format!("L{}: CRITICAL: identifier {} not found in var table", meta, id));
                     var.frame_offset
                 };
                 Compiler::traverse(exp, current_func, function_table, output);
