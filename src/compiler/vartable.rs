@@ -1,9 +1,9 @@
 use std::collections;
 
-use crate::semantics::symbol_table::*;
-use crate::semantics::semanticnode::SemanticNode;
-use crate::syntax::parser::{PNode};
 use crate::ast::*;
+use crate::semantics::semanticnode::SemanticNode;
+use crate::semantics::symbol_table::*;
+use crate::syntax::parser::PNode;
 
 #[derive(Debug, PartialEq)]
 pub struct VarDecl {

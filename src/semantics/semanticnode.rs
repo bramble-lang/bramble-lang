@@ -1,5 +1,5 @@
-use crate::parser::{PNode};
 use crate::ast::*;
+use crate::parser::PNode;
 use crate::semantics::symbol_table::*;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -229,52 +229,100 @@ mod tests {
 
     #[test]
     fn test_multi_nodes() {
-        for ((l, r), (el, er)) in [(
-            (Ast::Integer(1, 3), Ast::Integer(1, 3)),
+        for ((l, r), (el, er)) in [
             (
-                Ast::Integer(sm(1, Primitive::Unknown), 3),
-                Ast::Integer(sm(1, Primitive::Unknown), 3),
+                (Ast::Integer(1, 3), Ast::Integer(1, 3)),
+                (
+                    Ast::Integer(sm(1, Primitive::Unknown), 3),
+                    Ast::Integer(sm(1, Primitive::Unknown), 3),
+                ),
             ),
-        ), (
-            (Ast::Identifier(1, "x".into()), Ast::Identifier(1, "y".into())),
             (
-                Ast::Identifier(sm(1, Primitive::Unknown), "x".into()),
-                Ast::Identifier(sm(1, Primitive::Unknown), "y".into()),
+                (
+                    Ast::Identifier(1, "x".into()),
+                    Ast::Identifier(1, "y".into()),
+                ),
+                (
+                    Ast::Identifier(sm(1, Primitive::Unknown), "x".into()),
+                    Ast::Identifier(sm(1, Primitive::Unknown), "y".into()),
+                ),
             ),
-        ), (
-            (Ast::Boolean(1, true), Ast::Boolean(1, false)),
             (
-                Ast::Boolean(sm(1, Primitive::Unknown), true),
-                Ast::Boolean(sm(1, Primitive::Unknown), false),
+                (Ast::Boolean(1, true), Ast::Boolean(1, false)),
+                (
+                    Ast::Boolean(sm(1, Primitive::Unknown), true),
+                    Ast::Boolean(sm(1, Primitive::Unknown), false),
+                ),
             ),
-        )]
+        ]
         .iter()
         {
-            for (tree, expected) in [(
-                Ast::Mul(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::Mul(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            ), (
-                Ast::Add(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::Add(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            ), (
-                Ast::Eq(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::Eq(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            ), (
-                Ast::NEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::NEq(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            ), (
-                Ast::Ls(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::Ls(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            ), (
-                Ast::LsEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::LsEq(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            ), (
-                Ast::Gr(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::Gr(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            ), (
-                Ast::GrEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                Ast::GrEq(sm(1, Primitive::Unknown), Box::new(el.clone()), Box::new(er.clone())),
-            )]
+            for (tree, expected) in [
+                (
+                    Ast::Mul(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::Mul(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+                (
+                    Ast::Add(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::Add(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+                (
+                    Ast::Eq(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::Eq(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+                (
+                    Ast::NEq(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::NEq(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+                (
+                    Ast::Ls(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::Ls(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+                (
+                    Ast::LsEq(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::LsEq(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+                (
+                    Ast::Gr(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::Gr(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+                (
+                    Ast::GrEq(1, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::GrEq(
+                        sm(1, Primitive::Unknown),
+                        Box::new(el.clone()),
+                        Box::new(er.clone()),
+                    ),
+                ),
+            ]
             .iter()
             {
                 let snode = SemanticNode::from_parser_ast(tree).unwrap();

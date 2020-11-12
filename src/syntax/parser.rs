@@ -2,9 +2,9 @@
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
+use super::ast::*;
 use crate::lexer::{self, Lex};
 use crate::Token;
-use super::ast::*;
 
 type PResult = Result<Option<PNode>, String>;
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;

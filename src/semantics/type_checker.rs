@@ -1,8 +1,8 @@
 pub mod checker {
-    use crate::parser::{PNode};
     use crate::ast::*;
-    use crate::semantics::symbol_table::*;
+    use crate::parser::PNode;
     use crate::semantics::semanticnode::SemanticNode;
+    use crate::semantics::symbol_table::*;
     use Primitive::*;
 
     pub fn type_check(ast: &PNode) -> Result<Box<SemanticNode>, String> {
@@ -484,14 +484,18 @@ pub mod checker {
          * map: function name -> (params, ret, vars)
          */
         struct FunInfo {
-            params: Vec<(&'static str,Primitive)>,
+            params: Vec<(&'static str, Primitive)>,
             ret: Primitive,
-            vars: Vec<(&'static str,Primitive)>,
+            vars: Vec<(&'static str, Primitive)>,
         }
 
         impl FunInfo {
-            pub fn new(params: Vec<(&'static str, Primitive)>, ret: Primitive, vars: Vec<(&'static str, Primitive)>) -> FunInfo {
-                FunInfo{
+            pub fn new(
+                params: Vec<(&'static str, Primitive)>,
+                ret: Primitive,
+                vars: Vec<(&'static str, Primitive)>,
+            ) -> FunInfo {
+                FunInfo {
                     params: params,
                     ret: ret,
                     vars: vars,
@@ -500,7 +504,7 @@ pub mod checker {
         }
 
         struct Scope {
-            func: HashMap<String,FunInfo>,
+            func: HashMap<String, FunInfo>,
         }
 
         impl Scope {
@@ -510,11 +514,15 @@ pub mod checker {
                 }
             }
 
-            pub fn add(&mut self, name: &'static str, params: Vec<(&'static str, Primitive)>, ret: Primitive, vars: Vec<(&'static str, Primitive)>) {
-                self.func.insert(
-                    name.into(), 
-                    FunInfo::new(params, ret, vars),
-                    );
+            pub fn add(
+                &mut self,
+                name: &'static str,
+                params: Vec<(&'static str, Primitive)>,
+                ret: Primitive,
+                vars: Vec<(&'static str, Primitive)>,
+            ) {
+                self.func
+                    .insert(name.into(), FunInfo::new(params, ret, vars));
             }
         }
 
@@ -526,7 +534,13 @@ pub mod checker {
             let mut sym = SymbolTable::new();
             match current_func {
                 Some(cf) => {
-                    for (vname, vty) in scope.func.get(cf).ok_or(format!("could not find: {}", cf))?.vars.iter() {
+                    for (vname, vty) in scope
+                        .func
+                        .get(cf)
+                        .ok_or(format!("could not find: {}", cf))?
+                        .vars
+                        .iter()
+                    {
                         sym.add(&vname, Type::Primitive(*vty))?;
                     }
                 }
@@ -788,7 +802,7 @@ pub mod checker {
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
-                    &scope
+                    &scope,
                 );
                 assert_eq!(ty, Ok(Primitive::I32));
             }
@@ -861,7 +875,7 @@ pub mod checker {
         pub fn test_return_i32() {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], I32, vec![]);
-            
+
             let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -875,7 +889,7 @@ pub mod checker {
         pub fn test_fn_call() {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], I32, vec![]);
-            
+
             let node = Ast::FunctionCall(1, "my_func".into(), vec![]);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -891,7 +905,7 @@ pub mod checker {
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func2".into()),
-                &scope
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
 
@@ -901,7 +915,7 @@ pub mod checker {
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func2".into()),
-                &scope
+                &scope,
             );
             assert_eq!(
                 ty,
@@ -919,7 +933,7 @@ pub mod checker {
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
-                &scope
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
 
@@ -952,7 +966,7 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_co", vec![], Unit, vec![]);
             scope.add("my_co2", vec![], I32, vec![]);
-            
+
             let node = Ast::YieldReturn(1, None);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -966,7 +980,7 @@ pub mod checker {
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
-                &scope
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
 
@@ -985,7 +999,7 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_main", vec![], Unit, vec![("c", I32)]);
             scope.add("my_co2", vec![], I32, vec![]);
-            
+
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1011,7 +1025,7 @@ pub mod checker {
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &None,
-                &scope
+                &scope,
             );
             assert_eq!(ty, Ok(I32));
 

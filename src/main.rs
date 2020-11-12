@@ -10,8 +10,8 @@ use clap::{App, Arg};
 use compiler::compiler::*;
 use lexer::Token;
 use semantics::type_checker::*;
-use syntax::parser;
 use syntax::ast;
+use syntax::parser;
 
 fn main() {
     let matches = App::new("Braid Compiler")

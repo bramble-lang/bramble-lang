@@ -1,9 +1,9 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use super::vartable::*;
 use crate::ast::Ast;
 use crate::semantics::semanticnode::SemanticNode;
-use super::vartable::*;
 
 #[derive(Debug, Copy, Clone)]
 enum Register {
