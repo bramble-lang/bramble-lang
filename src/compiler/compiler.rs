@@ -93,7 +93,7 @@ impl Compiler {
     }
 
     /// Writes the function which will handle initializing a new coroutine
-    fn coroutine_init(next_stack_data: &str, stack_increment_data: &str, code2: &mut Vec<Inst>) {
+    fn coroutine_init(next_stack_variable: &str, stack_increment_variable: &str, code2: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - address of the coroutine's instructions
@@ -126,7 +126,7 @@ impl Compiler {
                 @runtime_init_coroutine:
                     push %ebp;
                     mov %ebp, %esp;
-                    mov %esp, [@{next_stack_data}];
+                    mov %esp, [@{next_stack_variable}];
                     mov [%esp-4], %eax;
                     mov [%esp-8], 0;
                     mov [%esp-12], 0;
@@ -134,8 +134,8 @@ impl Compiler {
                     lea %eax, [%esp-20];
                     mov [%esp-20], %eax;
                     mov %eax, %esp;
-                    sub %esp, [@{stack_increment_data}];
-                    mov [@{next_stack_data}], %esp;
+                    sub %esp, [@{stack_increment_variable}];
+                    mov [@{next_stack_variable}], %esp;
                     mov %esp, %ebp;
                     pop %ebp;
                     ret;
