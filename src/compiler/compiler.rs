@@ -46,76 +46,28 @@ impl Compiler {
 
     /// Creates the runtime code that will manage the entire execution of this program.
     fn create_base(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
-        use Instruction::*;
-        use Register::*;
-
-        // %include "io.inc"
-        // section .data
-        // next_stack_addr dd 0
-        // stack_size 2048
-        output.push(Include("io.inc".into()));
-        output.push(Section(".data".into()));
-        output.push(Data("next_stack_addr".into(), 0));
-        output.push(Data("stack_size".into(), 8 * 1024));
-
         assembly!{
             (code2) {
                 include "io.inc";
+
                 section ".data";
                 data next_stack_addr: dd 0;
                 data stack_size: dd 8*1024;
-            }
-        };
 
-        // section .text
-        // global CMAIN
-        // CMAIN
-        output.push(Section(".text".into()));
-        output.push(Global("CMAIN".into()));
-        output.push(Label("CMAIN".into()));
-
-        assembly! {
-            (code2) {
                 section ".text";
                 global CMAIN;
                 @CMAIN:
-            }
-        }
+                    push %ebp;
+                    mov %ebp, %esp;
+                    mov %eax, %esp;
+                    sub %eax, [@stack_size];
+                    mov [@next_stack_addr], %eax;
 
-        // Setup stack frame for the base/runtime layer
-        // this will create any runtime administrative logic
-        // and also call the users `main` function.
-        output.push(Push(Ebp));
-        output.push(Mov(Location::Register(Ebp), Source::Register(Esp)));
+                    call @my_main;
 
-        output.push(Mov(Location::Register(Eax), Source::Register(Esp)));
-        output.push(Sub(Eax, Source::Memory("stack_size".into())));
-        output.push(Mov(
-            Location::Memory("next_stack_addr".into()),
-            Source::Register(Eax),
-        ));
-
-        // Call main function
-        output.push(Call("my_main".into()));
-
-        // Clean up frame before exiting program
-        output.push(Mov(Location::Register(Esp), Source::Register(Ebp)));
-        output.push(Pop(Ebp));
-        output.push(Ret);
-
-        assembly!{
-            (code2){
-                push %ebp;
-                mov %ebp, %esp;
-                mov %eax, %esp;
-                sub %eax, [@stack_size];
-                mov [@next_stack_addr], %eax;
-
-                call @my_main;
-
-                mov %esp, %ebp;
-                pop %ebp;
-                ret;
+                    mov %esp, %ebp;
+                    pop %ebp;
+                    ret;
             }
         };
     }

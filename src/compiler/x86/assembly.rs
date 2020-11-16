@@ -204,7 +204,7 @@ macro_rules! unary_op {
         Inst::Jmp
     };
     (call) => {
-        Inst::Jmp
+        Inst::Call
     };
     (push) => {
         Inst::Push
