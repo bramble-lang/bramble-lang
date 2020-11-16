@@ -31,12 +31,12 @@ impl Compiler {
         let mut code = vec![];
         let mut code2 = vec![];
 
-        Compiler::create_base(&mut code, &mut code2);
+        Compiler::create_base(&mut code2);
 
-        Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code, &mut code2);
-        Compiler::runtime_yield_into_coroutine(&mut code, &mut code2);
-        Compiler::runtime_yield_return(&mut code, &mut code2);
-        Compiler::print_bool(&mut code, &mut code2);
+        Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code2);
+        Compiler::runtime_yield_into_coroutine( &mut code2);
+        Compiler::runtime_yield_return( &mut code2);
+        Compiler::print_bool( &mut code2);
 
         // Put user code here
         let global_func = "".into();
@@ -45,7 +45,7 @@ impl Compiler {
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
-    fn create_base(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
+    fn create_base(code2: &mut Vec<Inst>) {
         assembly!{
             (code2) {
                 include "io.inc";
@@ -72,7 +72,7 @@ impl Compiler {
         };
     }
 
-    fn print_bool(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
+    fn print_bool(code2: &mut Vec<Inst>) {
         assembly!{
             (code2) {
                 @print_bool:
@@ -93,9 +93,7 @@ impl Compiler {
     }
 
     /// Writes the function which will handle initializing a new coroutine
-    fn coroutine_init(ns: &str, sinc: &str, output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
-        use Instruction::*;
-        use Register::*;
+    fn coroutine_init(ns: &str, sinc: &str, code2: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - address of the coroutine's instructions
@@ -145,9 +143,7 @@ impl Compiler {
         }
     }
 
-    fn runtime_yield_into_coroutine(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
-        use Instruction::*;
-        use Register::*;
+    fn runtime_yield_into_coroutine(code2: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - address of the coroutine instance
@@ -166,9 +162,7 @@ impl Compiler {
         }
     }
 
-    fn runtime_yield_return(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
-        use Instruction::*;
-        use Register::*;
+    fn runtime_yield_return(code2: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - value being returned (if any)
