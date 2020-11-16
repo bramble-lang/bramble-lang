@@ -455,18 +455,6 @@ impl Compiler {
             Ast::FunctionCall(_, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                /*if !function_table.funcs.contains_key(fn_name) {
-                    panic!("Compiler: no definition found for function `{}`", fn_name);
-                }
-
-                let expected_num_params = function_table.funcs[fn_name].params.len();
-                let got_num_params = params.len();
-                if expected_num_params != got_num_params {
-                    panic!(
-                        "Compiler: expected {} but got {} parameters for function `{}`",
-                        expected_num_params, got_num_params, fn_name
-                    );
-                }*/
                 Compiler::validate_routine_call(function_table, fn_name, params).unwrap();
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
