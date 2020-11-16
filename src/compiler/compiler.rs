@@ -218,8 +218,8 @@ impl Compiler {
 
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
-        let fn_param_registers = [Eax, Ebx, Ecx, Edx];
-        let co_param_registers = [Ebx, Ecx, Edx];
+        let fn_param_registers = vec![Eax, Ebx, Ecx, Edx];
+        let co_param_registers = vec![Ebx, Ecx, Edx];
 
         match &ast {
             Ast::Integer(_, i) => {
@@ -387,22 +387,8 @@ impl Compiler {
                 output.push(Jmp("runtime_yield_return".into()))
             }
             Ast::CoroutineInit(_, ref co, params) => {
-                // Check if function exists and if the right number of parameters are being
-                // passed
                 Compiler::validate_routine_call(co, params, function_table).unwrap();
-
-                // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
-                // calling the function
-                if params.len() > co_param_registers.len() {
-                    panic!("Compiler: too many parameters being passed to function");
-                }
-                for param in params.iter() {
-                    Compiler::traverse(param, current_func, function_table, output);
-                    output.push(Push(Eax));
-                }
-                for reg in co_param_registers.iter().take(params.len()).rev() {
-                    output.push(Pop(*reg));
-                }
+                Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table, output).unwrap();
 
                 output.push(Lea(
                     Location::Register(Eax),
@@ -410,16 +396,18 @@ impl Compiler {
                 ));
                 output.push(Call("runtime_init_coroutine".into()));
 
+                // Move into coroutine's stack frame
+                output.push(Push(Ebp));
+                output.push(Mov(
+                    Location::Register(Ebp),
+                    Source::Register(Eax),
+                ));
+
                 // Move parameters into the stack frame of the coroutine
-                let mut idx = 0;
-                for (_, reg) in params.iter().zip(co_param_registers.iter()) {
-                    let param_offset = function_table.funcs[co].vars.vars[idx].frame_offset;
-                    output.push(Mov(
-                        Location::Memory(format!("eax-{}", param_offset)),
-                        Source::Register(*reg),
-                    ));
-                    idx += 1;
-                }
+                Compiler::move_params_into_stackframe(co, params.len(), &co_param_registers, function_table, output).unwrap();
+
+                // Leave coroutine's stack frame
+                output.push(Pop(Ebp));
             }
             Ast::FunctionDef(_, ref fn_name, params, _, stmts) => {
                 output.push(Label(fn_name.clone()));
@@ -431,16 +419,7 @@ impl Compiler {
                 output.push(Sub(Esp, Source::Integer(total_offset)));
 
                 // Move function parameters from registers into the stack frame
-                if params.len() > fn_param_registers.len() {
-                    panic!("Compiler: too many parameters in function definition");
-                }
-                for (param, reg) in params.iter().zip(fn_param_registers.iter()) {
-                    let param_offset = function_table.get_param_offset(fn_name, &param.0).unwrap_or(0);
-                    output.push(Mov(
-                        Location::Memory(format!("ebp-{}", param_offset)),
-                        Source::Register(*reg),
-                    ));
-                }
+                Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table, output).unwrap();
 
                 for s in stmts.iter() {
                     Compiler::traverse(s, fn_name, function_table, output);
@@ -459,20 +438,47 @@ impl Compiler {
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
-                if params.len() > fn_param_registers.len() {
-                    panic!("Compiler: too many parameters being passed to function");
-                }
-                for param in params.iter() {
-                    Compiler::traverse(param, current_func, function_table, output);
-                    output.push(Push(Eax));
-                }
-                for reg in fn_param_registers.iter().take(params.len()).rev() {
-                    output.push(Pop(*reg));
-                }
+                Compiler::evaluate_routine_params(params, &fn_param_registers, current_func, function_table, output).unwrap();
                 output.push(Call(fn_name.clone()));
             }
             node => panic!("Expected an operator, found {:?}", node),
         }
+    }
+
+    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Register>, function_table: &FunctionTable, output: &mut Vec<Instruction>) -> Result<(), String>{
+        use Instruction::*;
+
+        if num_params > param_registers.len() {
+            return Err(format!("Compiler: too many parameters in function definition"));
+        }
+
+        for idx in 0..num_params {
+            let param_offset = function_table.funcs[func].vars.vars[idx].frame_offset;
+            output.push(Mov(
+                Location::Memory(format!("ebp-{}", param_offset)),
+                Source::Register(param_registers[idx]),
+            ));
+        }
+        Ok(())
+    }
+
+    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Register>, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Instruction>) -> Result<(), String> {
+        use Instruction::*;
+        use Register::*;
+
+        // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
+        // calling the function
+        if params.len() > param_registers.len() {
+            return Err(format!("Compiler: too many parameters being passed to function"));
+        }
+        for param in params.iter() {
+            Compiler::traverse(param, current_func, function_table, output);
+            output.push(Push(Eax));
+        }
+        for reg in param_registers.iter().take(params.len()).rev() {
+            output.push(Pop(*reg));
+        }
+        Ok(())
     }
 
     fn validate_routine_call(func: &str, params: &Vec<SemanticNode>, function_table: &FunctionTable) -> Result<(),String>{
