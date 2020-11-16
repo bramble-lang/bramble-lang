@@ -234,10 +234,6 @@ impl Compiler {
     }
 
     pub fn compile(ast: &SemanticNode) -> Compiler {
-        let mut v = vec![];
-        assembly!{(v) {
-            sete %al;
-        }};
         let mut func_table = FunctionTable::from_semantic_ast(&ast);
         let mut code = vec![];
 
