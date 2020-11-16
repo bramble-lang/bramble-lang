@@ -296,7 +296,6 @@ impl Compiler {
                 Compiler::traverse(cond, current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Integer(0)));
                 output.push(Jz(else_lbl.clone()));
-                //Compiler::traverse(true_arm, current_func, function_table, output);
                 Compiler::traverse(true_arm, current_func, function_table, output);
                 output.push(Jmp(end_lbl.clone()));
                 output.push(Label(else_lbl));
