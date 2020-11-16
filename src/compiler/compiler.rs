@@ -194,6 +194,18 @@ impl Compiler {
         output.push(Pop(Ebx));
         output.push(Pop(Eax));
     }
+    
+    fn comparison_op(op: Instruction, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Instruction>) {
+        use Instruction::*;
+        use Register::*;
+
+        Compiler::handle_binary_operands(left, right, current_func, function_table, output);
+
+        output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
+        output.push(op);
+        output.push(And(Register::Al, Source::Integer(1)));
+        output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+    }
 
     fn traverse(
         ast: &SemanticNode,
@@ -243,46 +255,22 @@ impl Compiler {
                 output.push(Add(Eax, Source::Register(Ebx)));
             }
             Ast::Eq(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
-                output.push(Sete(Register::Al));
-                output.push(And(Register::Al, Source::Integer(1)));
-                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+                Compiler::comparison_op(Sete(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output);
             }
             Ast::NEq(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
-                output.push(Setne(Register::Al));
-                output.push(And(Register::Al, Source::Integer(1)));
-                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+                Compiler::comparison_op(Setne(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output);
             }
             Ast::Ls(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
-                output.push(Setl(Register::Al));
-                output.push(And(Register::Al, Source::Integer(1)));
-                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+                Compiler::comparison_op(Setl(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output);
             }
             Ast::LsEq(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
-                output.push(Setle(Register::Al));
-                output.push(And(Register::Al, Source::Integer(1)));
-                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+                Compiler::comparison_op(Setle(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output);
             }
             Ast::Gr(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
-                output.push(Setg(Register::Al));
-                output.push(And(Register::Al, Source::Integer(1)));
-                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+                Compiler::comparison_op(Setg(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output);
             }
             Ast::GrEq(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
-                output.push(Setge(Register::Al));
-                output.push(And(Register::Al, Source::Integer(1)));
-                output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+                Compiler::comparison_op(Setge(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output);
             }
             Ast::BAnd(_, l, r) => {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
