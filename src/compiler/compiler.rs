@@ -272,6 +272,16 @@ impl Compiler {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Or(Eax, Source::Register(Ebx)));
             }
+            Ast::Printiln(_, ref exp) => {
+                Compiler::traverse(exp, current_func, function_table, output);
+                output.push(Print(Source::Register(Eax)));
+                output.push(Newline);
+            }
+            Ast::Printbln(_, ref exp) => {
+                Compiler::traverse(exp, current_func, function_table, output);
+                output.push(Call("print_bool".into()));
+                output.push(Newline);
+            }
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
                 let label_id = function_table.inc_label_count(current_func);
                 let else_lbl = format!(
@@ -348,16 +358,6 @@ impl Compiler {
                 ));
                 output.push(Jmp("runtime_yield_return".into()));
                 output.push(Label(ret_lbl.clone()));
-            }
-            Ast::Printiln(_, ref exp) => {
-                Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Print(Source::Register(Eax)));
-                output.push(Newline);
-            }
-            Ast::Printbln(_, ref exp) => {
-                Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Call("print_bool".into()));
-                output.push(Newline);
             }
             Ast::CoroutineDef(_, ref fn_name, _, _, stmts) => {
                 output.push(Label(fn_name.clone()));
