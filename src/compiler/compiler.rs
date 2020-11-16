@@ -182,6 +182,19 @@ impl Compiler {
         }
     }
 
+    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Instruction>) {
+        use Instruction::*;
+        use Register::*;
+
+        Compiler::traverse(left, current_func, function_table, output);
+        output.push(Push(Eax));
+        Compiler::traverse(right, current_func, function_table, output);
+        output.push(Push(Eax));
+
+        output.push(Pop(Ebx));
+        output.push(Pop(Eax));
+    }
+
     fn traverse(
         ast: &SemanticNode,
         current_func: &String,
@@ -222,141 +235,61 @@ impl Compiler {
                 ));
             }
             Ast::Mul(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(IMul(Eax, Location::Register(Ebx)));
             }
             Ast::Add(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Add(Eax, Source::Register(Ebx)));
             }
             Ast::Eq(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
                 output.push(Sete(Register::Al));
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
             Ast::NEq(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
                 output.push(Setne(Register::Al));
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
             Ast::Ls(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
                 output.push(Setl(Register::Al));
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
             Ast::LsEq(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
                 output.push(Setle(Register::Al));
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
             Ast::Gr(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
                 output.push(Setg(Register::Al));
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
             Ast::GrEq(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
                 output.push(Setge(Register::Al));
                 output.push(And(Register::Al, Source::Integer(1)));
                 output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
             }
             Ast::BAnd(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(And(Eax, Source::Register(Ebx)));
             }
             Ast::BOr(_, l, r) => {
-                let left = l.as_ref();
-                Compiler::traverse(left, current_func, function_table, output);
-                output.push(Push(Eax));
-                let right = r.as_ref();
-                Compiler::traverse(right, current_func, function_table, output);
-                output.push(Push(Eax));
-
-                output.push(Pop(Ebx));
-                output.push(Pop(Eax));
+                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
                 output.push(Or(Eax, Source::Register(Ebx)));
             }
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
