@@ -35,7 +35,7 @@ impl Compiler {
 
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code, &mut code2);
         Compiler::runtime_yield_into_coroutine(&mut code, &mut code2);
-        Compiler::runtime_yield_return(&mut code);
+        Compiler::runtime_yield_return(&mut code, &mut code2);
         Compiler::print_bool(&mut code, &mut code2);
 
         // Put user code here
@@ -166,7 +166,7 @@ impl Compiler {
         }
     }
 
-    fn runtime_yield_return(output: &mut Vec<Instruction>) {
+    fn runtime_yield_return(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
         use Instruction::*;
         use Register::*;
         /*
@@ -175,37 +175,17 @@ impl Compiler {
          * EBX - re-entry address
          */
         // When in a coroutine, return to the calling coroutine
-        output.push(Label("runtime_yield_return".into()));
-
-        // Store the current ESP into metadata
-        output.push(Mov(
-            Location::Memory(format!("{}-20", Ebp)),
-            Source::Register(Esp),
-        ));
-        // Store the re-entry address into metadata
-        output.push(Mov(
-            Location::Memory(format!("{}-4", Ebp)),
-            Source::Register(Ebx),
-        ));
-
-        // Get the return ESP from metadata
-        output.push(Mov(
-            Location::Register(Esp),
-            Source::Memory(format!("{}-8", Ebp)),
-        ));
-        // Get the return address from metadata
-        output.push(Mov(
-            Location::Register(Ebx),
-            Source::Memory(format!("{}-16", Ebp)),
-        ));
-        // Get the return EBP from metadata
-        output.push(Mov(
-            Location::Register(Ebp),
-            Source::Memory(format!("{}-12", Ebp)),
-        ));
-
-        // jmp to the return address
-        output.push(Jmp(format!("{}", Source::Register(Ebx))));
+        assembly!{
+            (code2) {
+                @runtime_yield_return:
+                    mov [%ebp-20], %esp;
+                    mov [%ebp-4], %ebx;
+                    mov %esp, [%ebp-8];
+                    mov %ebx, [%ebp-16];
+                    mov %ebp, [%ebp-12];
+                    jmp %ebx;
+            }
+        }
     }
 
     fn traverse(
