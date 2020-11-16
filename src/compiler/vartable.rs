@@ -136,6 +136,31 @@ impl FunctionTable {
             .map_err(|msg| format!("{}", msg))?;
         Ok(())
     }
+
+    pub fn get_total_offset(&self, func: &str) -> Option<i32> {
+        self.funcs[func]
+            .vars
+            .vars
+            .last()
+            .map(|f| f.frame_offset)
+    }
+
+    pub fn get_param_offset(&self, func: &str, param: &str) -> Option<i32> {
+        self.funcs[func]
+            .vars
+            .vars
+            .iter()
+            .find(|var_decl| var_decl.name == *param)
+            .map(|v| v.frame_offset)
+    }
+
+    pub fn inc_label_count(&mut self, func: &str) -> u32 {
+        self
+            .funcs
+            .entry(func.into())
+            .and_modify(|fi| fi.label_count += 1);
+        self.funcs[func].label_count
+    }
 }
 
 #[derive(Debug)]
