@@ -233,12 +233,7 @@ impl Compiler {
             }
             Ast::Identifier(_, id) => {
                 let id_offset = {
-                    let var = function_table.funcs[current_func]
-                        .vars
-                        .vars
-                        .iter()
-                        .find(|v| v.name == *id)
-                        .expect("CRITICAL: identifier not found in var table");
+                    let var = function_table.get_var(current_func, id).expect("Could not find variable");
                     var.frame_offset
                 };
                 output.push(Mov(
@@ -281,17 +276,14 @@ impl Compiler {
                 output.push(Or(Eax, Source::Register(Ebx)));
             }
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
-                function_table
-                    .funcs
-                    .entry(current_func.clone())
-                    .and_modify(|fi| fi.label_count += 1);
+                let label_id = function_table.inc_label_count(current_func);
                 let else_lbl = format!(
                     ".else_lbl_{}",
-                    function_table.funcs[current_func].label_count
+                    label_id,
                 );
                 let end_lbl = format!(
                     ".if_end_lbl_{}",
-                    function_table.funcs[current_func].label_count
+                    label_id,
                 );
 
                 Compiler::traverse(cond, current_func, function_table, output);
@@ -338,11 +330,8 @@ impl Compiler {
             Ast::Yield(_, ref id) => {
                 Compiler::traverse(id, current_func, function_table, output);
 
-                function_table
-                    .funcs
-                    .entry(current_func.clone())
-                    .and_modify(|fi| fi.label_count += 1);
-                let ret_lbl = format!(".lbl_{}", function_table.funcs[current_func].label_count);
+                let label_id = function_table.inc_label_count(current_func);
+                let ret_lbl = format!(".lbl_{}", label_id);
 
                 output.push(Mov(
                     Location::Register(Ebx),
