@@ -389,7 +389,7 @@ impl Compiler {
             Ast::CoroutineInit(_, ref co, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                Compiler::validate_routine_call(function_table, co, params).unwrap();
+                Compiler::validate_routine_call(co, params, function_table).unwrap();
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
@@ -455,7 +455,7 @@ impl Compiler {
             Ast::FunctionCall(_, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                Compiler::validate_routine_call(function_table, fn_name, params).unwrap();
+                Compiler::validate_routine_call(fn_name, params, function_table).unwrap();
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
@@ -475,7 +475,7 @@ impl Compiler {
         }
     }
 
-    fn validate_routine_call(function_table: &FunctionTable, func: &str, params: &Vec<SemanticNode>) -> Result<(),String>{
+    fn validate_routine_call(func: &str, params: &Vec<SemanticNode>, function_table: &FunctionTable) -> Result<(),String>{
         // Check if function exists and if the right number of parameters are being
         // passed
         if !function_table.funcs.contains_key(func) {
