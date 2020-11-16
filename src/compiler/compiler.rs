@@ -33,8 +33,8 @@ impl Compiler {
 
         Compiler::create_base(&mut code, &mut code2);
 
-        Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
-        Compiler::runtime_yield_into_coroutine(&mut code);
+        Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code, &mut code2);
+        Compiler::runtime_yield_into_coroutine(&mut code, &mut code2);
         Compiler::runtime_yield_return(&mut code);
         Compiler::print_bool(&mut code, &mut code2);
 
@@ -93,7 +93,7 @@ impl Compiler {
     }
 
     /// Writes the function which will handle initializing a new coroutine
-    fn coroutine_init(ns: &str, sinc: &str, output: &mut Vec<Instruction>) {
+    fn coroutine_init(ns: &str, sinc: &str, output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
         use Instruction::*;
         use Register::*;
         /*
@@ -123,53 +123,29 @@ impl Compiler {
          * Move the address of the stack into EAX and return
          */
 
-        // Create new stack frame
-        output.push(Label("runtime_init_coroutine".into()));
-        output.push(Push(Ebp));
-        output.push(Mov(Location::Register(Ebp), Source::Register(Esp)));
-
-        // Create coroutine's stack
-        output.push(Mov(Location::Register(Esp), Source::Memory(ns.into())));
-
-        output.push(Mov(
-            Location::Memory(format!("{}-4", Esp)),
-            Source::Register(Eax),
-        )); // Store the coroutine's current next instruction to execute
-        output.push(Mov(
-            Location::Memory(format!("{}-8", Esp)),
-            Source::Integer(0),
-        )); // store the return ESP
-        output.push(Mov(
-            Location::Memory(format!("{}-12", Esp)),
-            Source::Integer(0),
-        )); // store the return EBP
-        output.push(Mov(
-            Location::Memory(format!("{}-16", Esp)),
-            Source::Integer(0),
-        )); // store the return Instruction address
-
-        output.push(Lea(
-            Location::Register(Eax),
-            Source::Memory(format!("{}-20", Esp)),
-        ));
-        output.push(Mov(
-            Location::Memory(format!("{}-20", Esp)),
-            Source::Register(Eax),
-        ));
-
-        // Move satck address into EAX for return
-        output.push(Mov(Location::Register(Eax), Source::Register(Esp)));
-
-        output.push(Sub(Esp, Source::Memory(sinc.into())));
-        output.push(Mov(Location::Memory(ns.into()), Source::Register(Esp)));
-
-        // clean up stack frame
-        output.push(Mov(Location::Register(Esp), Source::Register(Ebp)));
-        output.push(Pop(Ebp));
-        output.push(Ret);
+        assembly!{
+            (code2) {
+                @runtime_init_coroutine:
+                    push %ebp;
+                    mov %ebp, %esp;
+                    mov %esp, [@{ns}];
+                    mov [%esp-4], %eax;
+                    mov [%esp-8], 0;
+                    mov [%esp-12], 0;
+                    mov [%esp-16], 0;
+                    lea %eax, [%esp-20];
+                    mov [%esp-20], %eax;
+                    mov %eax, %esp;
+                    sub %esp, [@{sinc}];
+                    mov [@{ns}], %esp;
+                    mov %esp, %ebp;
+                    pop %ebp;
+                    ret;
+            }
+        }
     }
 
-    fn runtime_yield_into_coroutine(output: &mut Vec<Instruction>) {
+    fn runtime_yield_into_coroutine(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
         use Instruction::*;
         use Register::*;
         /*
@@ -177,35 +153,17 @@ impl Compiler {
          * EAX - address of the coroutine instance
          * EBX - address of the return point
          */
-        output.push(Label("runtime_yield_into_coroutine".into()));
-
-        // mov ESP into metadata (return ESP)
-        // mov EBP into metadata (return EBP)
-        // mov return address into metadata (return address)
-        output.push(Mov(
-            Location::Memory(format!("{}-8", Eax)),
-            Source::Register(Esp),
-        )); // store the return ESP
-        output.push(Mov(
-            Location::Memory(format!("{}-12", Eax)),
-            Source::Register(Ebp),
-        )); // store the return EBP
-        output.push(Mov(
-            Location::Memory(format!("{}-16", Eax)),
-            Source::Register(Ebx),
-        )); // store the return Instruction address
-
-        // Load the address of the coroutine into EBP (the base of the stack frame)
-        output.push(Mov(Location::Register(Ebp), Source::Register(Eax)));
-
-        // Load the coroutines current stack location into ESP
-        output.push(Mov(
-            Location::Register(Esp),
-            Source::Memory(format!("{}-20", Ebp)),
-        ));
-
-        // Re/enter the coroutine
-        output.push(Jmp(format!("{}", Source::Memory(format!("{}-4", Ebp)))));
+        assembly!{
+            (code2) {
+                @runtime_yield_into_coroutine:
+                    mov [%eax-8], %esp;
+                    mov [%eax-12], %ebp;
+                    mov [%eax-16], %ebx;
+                    mov %ebp, %eax;
+                    mov %esp, [%ebp-20];
+                    jmp [%ebp-4];
+            }
+        }
     }
 
     fn runtime_yield_return(output: &mut Vec<Instruction>) {

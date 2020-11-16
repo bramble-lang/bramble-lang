@@ -128,6 +128,7 @@ impl Display for DirectOperand {
 pub enum Operand {
     Direct(DirectOperand),
     Memory(DirectOperand),
+    MemoryExpr(Reg, u32),
 }
 
 impl Display for Operand {
@@ -136,6 +137,7 @@ impl Display for Operand {
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
             Memory(mem) => f.write_fmt(format_args!("[{}]", mem)),
+            MemoryExpr(mem, d) => f.write_fmt(format_args!("[{}-{}]", mem, d)),
         }
     }
 }
@@ -148,27 +150,40 @@ pub enum Inst {
     Label(String),
 
     Jmp(Operand),
+    Jz(Operand),
     Call(Operand),
     Ret,
 
     Push(Operand),
     Pop(Operand),
     Mov(Operand, Operand),
+    Lea(Operand, Operand),
 
     Add(Operand, Operand),
     Sub(Operand, Operand),
+    
+    Cmp(Operand, Operand),
 
     Sete(Reg8),
+
+    PrintStr(String),
 }
 
 impl Display for Inst {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         use Inst::*;
+        // Add separating newline?
         match self {
             Label(lbl) if !lbl.starts_with(".") => f.write_str("\n")?,
-            Include(_) | Global(_) | Section(_) => (),
+            _ => f.write_str("")?,
+        };
+
+        // Indent instruction?
+        match self {
+            Label(_) | Include(_) | Global(_) | Section(_) => (),
             _ => f.write_str("    ")?,
         };
+
         match self {
             Include(inc) => f.write_fmt(format_args!("%include \"{}\"", inc)),
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
@@ -176,17 +191,25 @@ impl Display for Inst {
             Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),
 
             Jmp(a) => f.write_fmt(format_args!("jmp {}", a)),
+            Jz(a) => f.write_fmt(format_args!("jz {}", a)),
             Call(a) => f.write_fmt(format_args!("call {}", a)),
             Ret => f.write_fmt(format_args!("ret")),
 
             Push(a) => f.write_fmt(format_args!("push {}", a)),
             Pop(a) => f.write_fmt(format_args!("pop {}", a)),
 
-            Mov(a, b) => f.write_fmt(format_args!("mov {}, {}", a, b)),
+            Mov(a, b) => f.write_fmt(format_args!("mov {}, {}", a, match b {
+                Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
+                _ => format!("{}", b),
+            })),
+            Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
             Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
             Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
+            Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
             Sete(a) => f.write_fmt(format_args!("sete {}", a)),
             Label(lbl) => f.write_fmt(format_args!("{}:", lbl)),
+
+            PrintStr(str) => f.write_fmt(format_args!("PRINT_STRING \"{}\"", str)),
         }
     }
 }
@@ -202,6 +225,9 @@ macro_rules! unit_op {
 macro_rules! unary_op {
     (jmp) => {
         Inst::Jmp
+    };
+    (jz) => {
+        Inst::Jz
     };
     (call) => {
         Inst::Call
@@ -219,8 +245,14 @@ macro_rules! binary_op {
     (mov) => {
         Inst::Mov
     };
+    (lea) => {
+        Inst::Lea
+    };
     (sub) => {
         Inst::Sub
+    };
+    (cmp) => {
+        Inst::Cmp
     };
 }
 
@@ -262,8 +294,14 @@ macro_rules! operand {
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))
     };
+    ([%$e:tt-$d:literal]) => {
+        Operand::MemoryExpr(register!($e), $d)
+    };
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))
+    };
+    ([@ {$e:expr}]) => {
+        Operand::Memory(DirectOperand::Label($e.into()))
     };
     ([@ $e:tt]) => {
         Operand::Memory(DirectOperand::Label(stringify!($e).into()))
@@ -330,6 +368,10 @@ macro_rules! assembly {
 
     (($buf:expr) {sete % $a:tt; $($tail:tt)*}) => {
         $buf.push(Inst::Sete(reg8!($a)));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {print_str $a:literal; $($tail:tt)*}) => {
+        $buf.push(Inst::PrintStr($a.into()));
         assembly!(($buf) {$($tail)*})
     };
 
