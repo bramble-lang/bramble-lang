@@ -221,7 +221,7 @@ impl Compiler {
         let fn_param_registers = vec![Eax, Ebx, Ecx, Edx];
         let co_param_registers = vec![Ebx, Ecx, Edx];
 
-        match &ast {
+        match ast {
             Ast::Integer(_, i) => {
                 output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
@@ -232,10 +232,7 @@ impl Compiler {
                 ));
             }
             Ast::Identifier(_, id) => {
-                let id_offset = {
-                    let var = function_table.get_var(current_func, id).expect("Could not find variable");
-                    var.frame_offset
-                };
+                let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
                 output.push(Mov(
                     Location::Register(Eax),
                     Source::Memory(format!("ebp-{}", id_offset)),
@@ -305,10 +302,7 @@ impl Compiler {
                 Compiler::traverse(stm, current_func, function_table, output);
             }
             Ast::Bind(_, id, _, ref exp) => {
-                let id_offset = {
-                    let var = function_table.get_var(current_func, id).expect("Could not find variable");
-                    var.frame_offset
-                };
+                let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
                 Compiler::traverse(exp, current_func, function_table, output);
                 output.push(Mov(
                     Location::Memory(format!("ebp-{}", id_offset)),
@@ -362,7 +356,6 @@ impl Compiler {
             }
             Ast::Printbln(_, ref exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
-                //output.push(Print(Source::Register(Eax)));
                 output.push(Call("print_bool".into()));
                 output.push(Newline);
             }

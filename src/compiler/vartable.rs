@@ -145,12 +145,12 @@ impl FunctionTable {
             .map(|f| f.frame_offset)
     }
 
-    pub fn get_param_offset(&self, func: &str, param: &str) -> Option<i32> {
+    pub fn get_var_offset(&self, func: &str, var: &str) -> Option<i32> {
         self.funcs[func]
             .vars
             .vars
             .iter()
-            .find(|var_decl| var_decl.name == *param)
+            .find(|var_decl| var_decl.name == *var)
             .map(|v| v.frame_offset)
     }
 
