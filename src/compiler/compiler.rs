@@ -312,7 +312,7 @@ impl Compiler {
             Ast::Statement(_, stm) => {
                 Compiler::traverse(stm, current_func, function_table, output);
             }
-            Ast::Bind(meta, id, _, ref exp) => {
+            Ast::Bind(_, id, _, ref exp) => {
                 let id_offset = {
                     let var = function_table.get_var(current_func, id).expect("Could not find variable");
                     var.frame_offset
