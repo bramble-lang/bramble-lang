@@ -5,21 +5,33 @@ use super::vartable::*;
 use crate::ast::Ast;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::compiler::tmp_asm::*;
+use crate::compiler::x86::assembly::*;
+use crate::assembly;
+use crate::unit_op;
+use crate::unary_op;
+use crate::binary_op;
+use crate::operand;
+use crate::register;
 
 pub struct Compiler {
     code: Vec<Instruction>,
+    code2: Vec<Inst>,
 }
 
 impl Compiler {
     pub fn print(&self, output: &mut dyn std::io::Write) -> std::io::Result<()> {
+        for i in self.code2.iter() {
+            writeln!(output, "{}", i)?;
+        }
         print_x86(&self.code, output)
     }
 
     pub fn compile(ast: &SemanticNode) -> Compiler {
         let mut func_table = FunctionTable::from_semantic_ast(&ast);
         let mut code = vec![];
+        let mut code2 = vec![];
 
-        Compiler::create_base(&mut code);
+        Compiler::create_base(&mut code, &mut code2);
 
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
         Compiler::runtime_yield_into_coroutine(&mut code);
@@ -29,11 +41,11 @@ impl Compiler {
         // Put user code here
         let global_func = "".into();
         Compiler::traverse(ast, &global_func, &mut func_table, &mut code);
-        Compiler { code }
+        Compiler { code, code2 }
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
-    fn create_base(output: &mut Vec<Instruction>) {
+    fn create_base(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
         use Instruction::*;
         use Register::*;
 
@@ -46,12 +58,29 @@ impl Compiler {
         output.push(Data("next_stack_addr".into(), 0));
         output.push(Data("stack_size".into(), 8 * 1024));
 
+        assembly!{
+            (code2) {
+                include "io.inc";
+                section ".data";
+                data next_stack_addr: dd 0;
+                data stack_size: dd 8*1024;
+            }
+        };
+
         // section .text
         // global CMAIN
         // CMAIN
         output.push(Section(".text".into()));
         output.push(Global("CMAIN".into()));
         output.push(Label("CMAIN".into()));
+
+        assembly! {
+            (code2) {
+                section ".text";
+                global CMAIN;
+                @CMAIN:
+            }
+        }
 
         // Setup stack frame for the base/runtime layer
         // this will create any runtime administrative logic
@@ -73,6 +102,22 @@ impl Compiler {
         output.push(Mov(Location::Register(Esp), Source::Register(Ebp)));
         output.push(Pop(Ebp));
         output.push(Ret);
+
+        assembly!{
+            (code2){
+                push %ebp;
+                mov %ebp, %esp;
+                mov %eax, %esp;
+                sub %eax, [@stack_size];
+                mov [@next_stack_addr], %eax;
+
+                call @my_main;
+
+                mov %esp, %ebp;
+                pop %ebp;
+                ret;
+            }
+        };
     }
 
     fn print_bool(output: &mut Vec<Instruction>) {

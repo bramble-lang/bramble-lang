@@ -141,11 +141,23 @@ impl Display for Operand {
 }
 
 pub enum Inst {
-    Jmp(Operand),
-    Mov(Operand, Operand),
-    Add(Operand, Operand),
-    Ret,
+    Include(String),
+    Section(String),
+    Global(String),
+    Data(String, i32),
     Label(String),
+
+    Jmp(Operand),
+    Call(Operand),
+    Ret,
+
+    Push(Operand),
+    Pop(Operand),
+    Mov(Operand, Operand),
+
+    Add(Operand, Operand),
+    Sub(Operand, Operand),
+
     Sete(Reg8),
 }
 
@@ -153,15 +165,27 @@ impl Display for Inst {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         use Inst::*;
         match self {
-            Label(_) => (),
+            Label(lbl) if !lbl.starts_with(".") => f.write_str("\n")?,
+            Include(_) | Global(_) | Section(_) => (),
             _ => f.write_str("    ")?,
         };
         match self {
+            Include(inc) => f.write_fmt(format_args!("%include \"{}\"", inc)),
+            Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
+            Global(global) => f.write_fmt(format_args!("global {}", global)),
+            Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),
+
             Jmp(a) => f.write_fmt(format_args!("jmp {}", a)),
+            Call(a) => f.write_fmt(format_args!("call {}", a)),
+            Ret => f.write_fmt(format_args!("ret")),
+
+            Push(a) => f.write_fmt(format_args!("push {}", a)),
+            Pop(a) => f.write_fmt(format_args!("pop {}", a)),
+
             Mov(a, b) => f.write_fmt(format_args!("mov {}, {}", a, b)),
             Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
+            Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
             Sete(a) => f.write_fmt(format_args!("sete {}", a)),
-            Ret => f.write_fmt(format_args!("ret")),
             Label(lbl) => f.write_fmt(format_args!("{}:", lbl)),
         }
     }
@@ -179,12 +203,24 @@ macro_rules! unary_op {
     (jmp) => {
         Inst::Jmp
     };
+    (call) => {
+        Inst::Jmp
+    };
+    (push) => {
+        Inst::Push
+    };
+    (pop) => {
+        Inst::Pop
+    };
 }
 
 #[macro_export]
 macro_rules! binary_op {
     (mov) => {
         Inst::Mov
+    };
+    (sub) => {
+        Inst::Sub
     };
 }
 
@@ -229,6 +265,9 @@ macro_rules! operand {
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))
     };
+    ([@ $e:tt]) => {
+        Operand::Memory(DirectOperand::Label(stringify!($e).into()))
+    };
 
     (%$reg:tt) => {
         Operand::Direct(DirectOperand::Register(register!($reg)))
@@ -272,6 +311,23 @@ macro_rules! assembly {
     /********************/
     /* Special Ops      */
     /********************/
+    (($buf:expr) {include $inc:literal; $($tail:tt)*}) => {
+        $buf.push(Inst::Include($inc.into()));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {section $inc:literal; $($tail:tt)*}) => {
+        $buf.push(Inst::Section($inc.into()));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {global $glbl:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::Global(stringify!($glbl).into()));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {data $lbl:tt: dd $val:expr; $($tail:tt)*}) => {
+        $buf.push(Inst::Data(stringify!($lbl).into(), $val));
+        assembly!(($buf) {$($tail)*})
+    };
+
     (($buf:expr) {sete % $a:tt; $($tail:tt)*}) => {
         $buf.push(Inst::Sete(reg8!($a)));
         assembly!(($buf) {$($tail)*})
