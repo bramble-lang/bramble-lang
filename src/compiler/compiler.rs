@@ -36,7 +36,7 @@ impl Compiler {
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
         Compiler::runtime_yield_into_coroutine(&mut code);
         Compiler::runtime_yield_return(&mut code);
-        Compiler::print_bool(&mut code);
+        Compiler::print_bool(&mut code, &mut code2);
 
         // Put user code here
         let global_func = "".into();
@@ -72,28 +72,24 @@ impl Compiler {
         };
     }
 
-    fn print_bool(output: &mut Vec<Instruction>) {
-        use Instruction::*;
-        use Register::*;
-
-        output.push(Label("print_bool".into()));
-        output.push(Push(Ebp));
-        output.push(Mov(Location::Register(Ebp), Source::Register(Esp)));
-
-        output.push(Cmp(Register::Eax, Source::Integer(0)));
-        output.push(Jz(".false".into()));
-
-        output.push(PrintStr("true".into()));
-        output.push(Jmp(".done".into()));
-
-        output.push(Label(".false".into()));
-        output.push(PrintStr("false".into()));
-
-        // clean up stack frame
-        output.push(Label(".done".into()));
-        output.push(Mov(Location::Register(Esp), Source::Register(Ebp)));
-        output.push(Pop(Ebp));
-        output.push(Ret);
+    fn print_bool(output: &mut Vec<Instruction>, code2: &mut Vec<Inst>) {
+        assembly!{
+            (code2) {
+                @print_bool:
+                    push %ebp;
+                    mov %ebp, %esp;
+                    cmp %eax, 0;
+                    jz ^false;
+                    print_str "true";
+                    jmp ^done;
+                    ^false:
+                    print_str "false";
+                    ^done:
+                    mov %esp, %ebp;
+                    pop %ebp;
+                    ret;
+            }
+        }
     }
 
     /// Writes the function which will handle initializing a new coroutine
