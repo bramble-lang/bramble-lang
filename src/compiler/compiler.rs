@@ -13,8 +13,32 @@ use crate::binary_op;
 use crate::operand;
 use crate::register;
 
+/// Temporary Union type: this allows the old x86 model and the new macro based x86 model
+/// to be interleaved together, this will allow me to convert the complex traverse function
+/// part by part
+enum Converter {
+    Instruction(Instruction),
+    Inst(Inst),
+}
+
+struct Intermediate {
+    code: Vec<Converter>,
+}
+
+impl Intermediate {
+    fn new() -> Self {
+        Intermediate {
+            code: vec![],
+        }
+    }
+
+    fn push(&mut self, inst: Instruction) {
+        self.code.push(Converter::Instruction(inst))
+    }
+}
+
 pub struct Compiler {
-    code: Vec<Instruction>,
+    code: Intermediate,
     code2: Vec<Inst>,
 }
 
@@ -23,12 +47,17 @@ impl Compiler {
         for i in self.code2.iter() {
             writeln!(output, "{}", i)?;
         }
-        print_x86(&self.code, output)
+        for inst in self.code.code.iter() {
+            match inst {
+                Converter::Instruction(old) => print_x86(&old, output)?,
+                Converter::Inst(n) => writeln!(output, "{}", n)?,
+            }
+        }
+        Ok(())
     }
 
     pub fn compile(ast: &SemanticNode) -> Compiler {
         let mut func_table = FunctionTable::from_semantic_ast(&ast);
-        let mut code = vec![];
         let mut code2 = vec![];
 
         Compiler::create_base(&mut code2);
@@ -39,6 +68,7 @@ impl Compiler {
         Compiler::print_bool( &mut code2);
 
         // Put user code here
+        let mut code = Intermediate::new();
         let global_func = "".into();
         Compiler::traverse(ast, &global_func, &mut func_table, &mut code);
         Compiler { code, code2 }
@@ -182,7 +212,7 @@ impl Compiler {
         }
     }
 
-    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Instruction>) {
+    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) {
         use Instruction::*;
         use Register::*;
 
@@ -195,7 +225,7 @@ impl Compiler {
         output.push(Pop(Eax));
     }
     
-    fn comparison_op(op: Instruction, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Instruction>) {
+    fn comparison_op(op: Instruction, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) {
         use Instruction::*;
         use Register::*;
 
@@ -211,7 +241,8 @@ impl Compiler {
         ast: &SemanticNode,
         current_func: &String,
         function_table: &mut FunctionTable,
-        output: &mut Vec<Instruction>,
+        //output: &mut Vec<Instruction>,
+        output: &mut Intermediate,
     ) {
         use Instruction::*;
         use Register::*;
@@ -426,7 +457,7 @@ impl Compiler {
         }
     }
 
-    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Register>, function_table: &FunctionTable, output: &mut Vec<Instruction>) -> Result<(), String>{
+    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Register>, function_table: &FunctionTable, output: &mut Intermediate) -> Result<(), String>{
         use Instruction::*;
 
         if num_params > param_registers.len() {
@@ -443,7 +474,7 @@ impl Compiler {
         Ok(())
     }
 
-    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Register>, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Instruction>) -> Result<(), String> {
+    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Register>, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) -> Result<(), String> {
         use Instruction::*;
         use Register::*;
 
