@@ -218,30 +218,34 @@ impl Compiler {
     }
 
     fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) -> Result<(), String> {
-        use Instruction::*;
-        use Register::*;
-
         Compiler::traverse(left, current_func, function_table, output)?;
-        output.push(Push(Eax));
-        Compiler::traverse(right, current_func, function_table, output)?;
-        output.push(Push(Eax));
+        let mut code = vec![];
+        assembly!{(code){
+            push %eax;
+        }}
+        output.append(&mut code);
 
-        output.push(Pop(Ebx));
-        output.push(Pop(Eax));
+        Compiler::traverse(right, current_func, function_table, output)?;
+        let mut code = vec![];
+        assembly!{(code){
+            push %eax;
+            pop %ebx;
+            pop %eax;
+        }}
+        output.append(&mut code);
 
         Ok(())
     }
     
-    fn comparison_op(op: Instruction, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) -> Result<(), String> {
-        use Instruction::*;
-        use Register::*;
-
+    fn comparison_op(op: Inst, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) -> Result<(), String> {
         Compiler::handle_binary_operands(left, right, current_func, function_table, output)?;
-
-        output.push(Cmp(Register::Eax, Source::Register(Register::Ebx)));
-        output.push(op);
-        output.push(And(Register::Al, Source::Integer(1)));
-        output.push(Movzx(Location::Register(Eax), Source::Register(Al)));
+        let mut code = vec![];
+        assembly!{(code){
+            cmp %eax, %ebx;
+            {{[op]}}
+            and %al, 1;
+        }}
+        output.append(&mut code);
 
         Ok(())
     }
@@ -253,13 +257,10 @@ impl Compiler {
         //output: &mut Vec<Instruction>,
         output: &mut Intermediate,
     ) -> Result<(),String> {
-        use Instruction::*;
-        use Register::*;
-
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
-        let fn_param_registers = vec![Eax, Ebx, Ecx, Edx];
-        let co_param_registers = vec![Ebx, Ecx, Edx];
+        let fn_param_registers = vec![Reg::R32(Reg32::Eax), Reg::R32(Reg32::Ebx), Reg::R32(Reg32::Ecx), Reg::R32(Reg32::Edx)];
+        let co_param_registers = vec![Reg::R32(Reg32::Ebx), Reg::R32(Reg32::Ecx), Reg::R32(Reg32::Edx)];
 
         match ast {
             Ast::Integer(_, i) => {
@@ -294,22 +295,22 @@ impl Compiler {
                 //output.push(Add(Eax, Source::Register(Ebx)));
             }
             Ast::Eq(_, l, r) => {
-                Compiler::comparison_op(Sete(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
             }
             Ast::NEq(_, l, r) => {
-                Compiler::comparison_op(Setne(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setne(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
             }
             Ast::Ls(_, l, r) => {
-                Compiler::comparison_op(Setl(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setl(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
             }
             Ast::LsEq(_, l, r) => {
-                Compiler::comparison_op(Setle(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setle(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
             }
             Ast::Gr(_, l, r) => {
-                Compiler::comparison_op(Setg(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setg(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
             }
             Ast::GrEq(_, l, r) => {
-                Compiler::comparison_op(Setge(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
             }
             Ast::BAnd(_, l, r) => {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output)?;
@@ -524,7 +525,6 @@ impl Compiler {
                     call @{fn_name};
                 }};
                 output.append(&mut code);
-                //output.push(Call(fn_name.clone()));
             }
             node => panic!("Expected an operator, found {:?}", node),
         };
@@ -532,27 +532,23 @@ impl Compiler {
         Ok(())
     }
 
-    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Register>, function_table: &FunctionTable, output: &mut Intermediate) -> Result<(), String>{
-        use Instruction::*;
-
+    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Reg>, function_table: &FunctionTable, output: &mut Intermediate) -> Result<(), String>{
         if num_params > param_registers.len() {
             return Err(format!("Compiler: too many parameters in function definition"));
         }
 
+        let mut code = vec![];
         for idx in 0..num_params {
             let param_offset = function_table.funcs[func].vars.vars[idx].frame_offset;
-            output.push(Mov(
-                Location::Memory(format!("ebp-{}", param_offset)),
-                Source::Register(param_registers[idx]),
-            ));
+            assembly!{(code){
+                mov [%ebp-{param_offset as u32}], %{param_registers[idx]};
+            }};
         }
+        output.append(&mut code);
         Ok(())
     }
 
-    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Register>, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) -> Result<(), String> {
-        use Instruction::*;
-        use Register::*;
-
+    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable, output: &mut Intermediate) -> Result<(), String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
         if params.len() > param_registers.len() {
@@ -560,11 +556,19 @@ impl Compiler {
         }
         for param in params.iter() {
             Compiler::traverse(param, current_func, function_table, output)?;
-            output.push(Push(Eax));
+            let mut code = vec![];
+            assembly!{(code){
+                push %eax;
+            }};
+            output.append(&mut code);
         }
+        let mut code = vec![];
         for reg in param_registers.iter().take(params.len()).rev() {
-            output.push(Pop(*reg));
+            assembly!{(code){
+                pop %{*reg};
+            }};
         }
+        output.append(&mut code);
         Ok(())
     }
 

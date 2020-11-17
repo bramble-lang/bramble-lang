@@ -57,7 +57,7 @@ _
 
 */
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Reg8 {
     Al,
 }
@@ -71,7 +71,7 @@ impl Display for Reg8 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Reg32 {
     Eax,
     Ecx,
@@ -95,7 +95,7 @@ impl Display for Reg32 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Reg {
     R8(Reg8),
     R32(Reg32),
@@ -116,6 +116,16 @@ pub enum DirectOperand {
     Integer(i32),
     Register(Reg),
     Label(String),
+}
+
+impl DirectOperand {
+    pub fn from_string(s: &str) -> DirectOperand {
+        use DirectOperand::*;
+        match s {
+            "eax" => Register(Reg::R32(Reg32::Eax)),
+            _ => panic!("Invalid register: {}", s),
+        }
+    }
 }
 
 impl Display for DirectOperand {
@@ -176,6 +186,11 @@ pub enum Inst {
     Or(Operand, Operand),
 
     Sete(Reg8),
+    Setne(Reg8),
+    Setl(Reg8),
+    Setle(Reg8),
+    Setg(Reg8),
+    Setge(Reg8),
 
     PrintStr(String),
     PrintDec(Operand),
@@ -223,7 +238,14 @@ impl Display for Inst {
             Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
             And(a, b) => f.write_fmt(format_args!("and {}, {}", a, b)),
             Or(a, b) => f.write_fmt(format_args!("or {}, {}", a, b)),
+
             Sete(a) => f.write_fmt(format_args!("sete {}", a)),
+            Setne(a) => f.write_fmt(format_args!("setne {}", a)),
+            Setl(a) => f.write_fmt(format_args!("setl {}", a)),
+            Setle(a) => f.write_fmt(format_args!("setle {}", a)),
+            Setg(a) => f.write_fmt(format_args!("setg {}", a)),
+            Setge(a) => f.write_fmt(format_args!("setge {}", a)),
+
             Label(lbl) => f.write_fmt(format_args!("{}:", lbl)),
 
             PrintStr(str) => f.write_fmt(format_args!("PRINT_STRING \"{}\"", str)),
@@ -356,7 +378,11 @@ macro_rules! operand {
     ({$e:expr}) => {
         Operand::Direct(DirectOperand::Integer($e))
     };
-
+    
+    // register
+    (%{$reg:expr}) => {
+        Operand::Direct(DirectOperand::Register($reg))
+    };
     (%$reg:tt) => {
         Operand::Direct(DirectOperand::Register(register!($reg)))
     };
@@ -381,6 +407,18 @@ macro_rules! operand {
 macro_rules! assembly {
     (($buf:expr) {}) => {
     };
+
+    /********************/
+    /*  MACRO OPERATIONS */
+    /********************/
+    // Append another set of instructions
+    (($buf:expr) {{{$is:expr}} $($tail:tt)*}) => {
+        for inst in $is.iter() {
+            $buf.push(inst.clone());
+        }
+        assembly!(($buf) {$($tail)*})
+    };
+    
 
     /********************/
     /*     COMMENTS       */
