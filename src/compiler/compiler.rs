@@ -214,7 +214,7 @@ impl Compiler {
         current_func: &String,
         function_table: &mut FunctionTable,
         //output: &mut Vec<Instruction>,
-        output: &mut Vec<Inst>,
+        code: &mut Vec<Inst>,
     ) -> Result<(),String> {
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
@@ -223,90 +223,72 @@ impl Compiler {
 
         match ast {
             Ast::Integer(_, i) => {
-                let mut code = vec![];
                 assembly!{(code) {mov %eax, {*i};}}
-                output.append(&mut code);
             }
             Ast::Boolean(_, b) => {
-                let mut code = vec![];
                 assembly!{(code) {mov %eax, {if *b {1} else {0}};}}
-                output.append(&mut code);
             }
             Ast::Identifier(_, id) => {
                 let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
-                let mut code = vec![];
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
-                output.append(&mut code);
             }
             Ast::Mul(_, l, r) => {
-                let mut code = vec![];
                 assembly!{(code) {
                     {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     imul %eax, %ebx;
                 }}
-                output.append(&mut code);
             }
             Ast::Add(_, l, r) => {
-                let mut code = vec![];
                 assembly!{(code) {
                     {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     add %eax, %ebx;
                 }}
-                output.append(&mut code);
             }
             Ast::Eq(_, l, r) => {
-                Compiler::comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::NEq(_, l, r) => {
-                Compiler::comparison_op(Inst::Setne(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setne(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::Ls(_, l, r) => {
-                Compiler::comparison_op(Inst::Setl(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setl(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::LsEq(_, l, r) => {
-                Compiler::comparison_op(Inst::Setle(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setle(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::Gr(_, l, r) => {
-                Compiler::comparison_op(Inst::Setg(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setg(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::GrEq(_, l, r) => {
-                Compiler::comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
+                Compiler::comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::BAnd(_, l, r) => {
-                let mut code = vec![];
                 assembly!{(code) {
                     {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     and %eax, %ebx;
                 }}
-                output.append(&mut code);
             }
             Ast::BOr(_, l, r) => {
-                let mut code = vec![];
                 assembly!{(code) {
                     {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     or %eax, %ebx;
                 }}
-                output.append(&mut code);
             }
             Ast::Printiln(_, ref exp) => {
-                Compiler::traverse(exp, current_func, function_table, output)?;
+                Compiler::traverse(exp, current_func, function_table, code)?;
                 
-                let mut code = vec![];
                 assembly!{(code) {
                     print_dec %eax;
                     newline;
                 }}
-                output.append(&mut code);
             }
             Ast::Printbln(_, ref exp) => {
-                Compiler::traverse(exp, current_func, function_table, output)?;
+                Compiler::traverse(exp, current_func, function_table, code)?;
                 
-                let mut code = vec![];
                 assembly!{(code) {
                     call @print_bool;
                     newline;
                 }}
-                output.append(&mut code);
             }
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
                 let label_id = function_table.inc_label_count(current_func);
@@ -319,111 +301,94 @@ impl Compiler {
                     label_id,
                 );
 
-                Compiler::traverse(cond, current_func, function_table, output)?;
+                Compiler::traverse(cond, current_func, function_table, code)?;
                 
-                let mut code = vec![];
                 assembly!{(code) {
                     cmp %eax, 0;
                     jz ^{else_lbl};
                 }};
-                output.append(&mut code);
-                Compiler::traverse(true_arm, current_func, function_table, output)?;
+                Compiler::traverse(true_arm, current_func, function_table, code)?;
                 
-                let mut code = vec![];
                 assembly!{(code) {
                     jmp ^{end_lbl};
                 ^{else_lbl}:
                 }};
-                output.append(&mut code);
-                Compiler::traverse(false_arm, current_func, function_table, output)?;
+                Compiler::traverse(false_arm, current_func, function_table, code)?;
                
-                let mut code = vec![];
                 assembly!{(code) {
                 ^{end_lbl}:
                 }};
-                output.append(&mut code);
             }
             Ast::ExpressionBlock(_, body) => {
                 for s in body.iter() {
-                    Compiler::traverse(s, current_func, function_table, output)?;
+                    Compiler::traverse(s, current_func, function_table, code)?;
                 }
             }
             Ast::Statement(_, stm) => {
-                Compiler::traverse(stm, current_func, function_table, output)?;
+                Compiler::traverse(stm, current_func, function_table, code)?;
             }
             Ast::Bind(_, id, _, ref exp) => {
                 let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
-                Compiler::traverse(exp, current_func, function_table, output)?;
-                let mut code = vec![];
+                Compiler::traverse(exp, current_func, function_table, code)?;
                 assembly!{(code) {
                     mov [%ebp-{id_offset as u32}], %eax;
                 }};
-                output.append(&mut code);
             }
             Ast::Module(_, functions, coroutines) => {
                 for f in functions.iter() {
-                    Compiler::traverse(f, current_func, function_table, output)?;
+                    Compiler::traverse(f, current_func, function_table, code)?;
                 }
                 for co in coroutines.iter() {
-                    Compiler::traverse(co, current_func, function_table, output)?;
+                    Compiler::traverse(co, current_func, function_table, code)?;
                 }
             }
             Ast::Return(_, ref exp) => match exp {
-                Some(e) => Compiler::traverse(e, current_func, function_table, output)?,
+                Some(e) => Compiler::traverse(e, current_func, function_table, code)?,
                 None => (),
             },
             Ast::Yield(_, ref id) => {
-                Compiler::traverse(id, current_func, function_table, output)?;
+                Compiler::traverse(id, current_func, function_table, code)?;
 
                 let label_id = function_table.inc_label_count(current_func);
                 let ret_lbl = format!("lbl_{}", label_id);
                 
-                let mut code = vec![];
                 assembly!{(code) {
                     mov %ebx, ^{ret_lbl};
                     jmp @runtime_yield_into_coroutine;
                     ^{ret_lbl}:
                 }};
-                output.append(&mut code);
             }
             Ast::YieldReturn(_, ref exp) => {
                 if let Some(exp) = exp {
-                    Compiler::traverse(exp, current_func, function_table, output)?;
+                    Compiler::traverse(exp, current_func, function_table, code)?;
                 }
 
                 let label_id = function_table.inc_label_count(current_func);
                 let ret_lbl = format!("lbl_{}", label_id);
 
-                let mut code = vec![];
                 assembly!{(code) {
                     mov %ebx, ^{ret_lbl};
                     jmp @runtime_yield_return;
                     ^{ret_lbl}:
                 }};
-                output.append(&mut code);
             }
             Ast::CoroutineDef(_, ref fn_name, _, _, stmts) => {
-                let mut code = vec![];
                 assembly!{(code) {
                 @{fn_name}:
                 }};
-                output.append(&mut code);
 
                 // Prepare stack frame for this function
                 for s in stmts.iter() {
-                    Compiler::traverse(s, fn_name, function_table, output)?;
+                    Compiler::traverse(s, fn_name, function_table, code)?;
                 }
-                let mut code = vec![];
                 assembly!{(code) {
                     jmp @runtime_yield_return;
                 }};
-                output.append(&mut code);
             }
             Ast::CoroutineInit(_, ref co, params) => {
                 Compiler::validate_routine_call(co, params, function_table).unwrap();
-                Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table, output).unwrap();
+                Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table, code).unwrap();
                 
-                let mut code = vec![];
                 assembly!{(code) {
                     lea %eax, [@{co}];
                     call @runtime_init_coroutine;
@@ -431,23 +396,18 @@ impl Compiler {
                     push %ebp;
                     mov %ebp, %eax;
                 }};
-                output.append(&mut code);
 
                 // Move parameters into the stack frame of the coroutine
-                Compiler::move_params_into_stackframe(co, params.len(), &co_param_registers, function_table, output).unwrap();
+                Compiler::move_params_into_stackframe(co, params.len(), &co_param_registers, function_table, code).unwrap();
                 
-                let mut code = vec![];
                 assembly!{(code) {
                     ; "leave coroutine's stack frame"
                     pop %ebp;
                 }};
-                output.append(&mut code);
-
             }
             Ast::FunctionDef(_, ref fn_name, params, _, stmts) => {
                 let total_offset = function_table.get_total_offset(fn_name).unwrap_or(0);
 
-                let mut code = vec![];
                 assembly!{(code) {
                 @{fn_name}:
                     ;"Prepare stack frame for this function"
@@ -455,23 +415,20 @@ impl Compiler {
                     mov %ebp, %esp;
                     sub %esp, {total_offset};
                 }};
-                output.append(&mut code);
 
                 // Move function parameters from registers into the stack frame
-                Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table, output).unwrap();
+                Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table, code).unwrap();
 
                 for s in stmts.iter() {
-                    Compiler::traverse(s, fn_name, function_table, output)?;
+                    Compiler::traverse(s, fn_name, function_table, code)?;
                 }
 
-                let mut code = vec![];
                 assembly!{(code) {
                     ; "Clean up frame before leaving function"
                     mov %esp, %ebp;
                     pop %ebp;
                     ret;
                 }};
-                output.append(&mut code);
 
             }
             Ast::FunctionCall(_, ref fn_name, params) => {
@@ -481,12 +438,10 @@ impl Compiler {
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
-                Compiler::evaluate_routine_params(params, &fn_param_registers, current_func, function_table, output).unwrap();
-                let mut code = vec![];
+                Compiler::evaluate_routine_params(params, &fn_param_registers, current_func, function_table, code).unwrap();
                 assembly!{(code) {
                     call @{fn_name};
                 }};
-                output.append(&mut code);
             }
             node => panic!("Expected an operator, found {:?}", node),
         };
