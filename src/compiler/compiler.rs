@@ -229,7 +229,7 @@ impl Compiler {
                 assembly!{(code) {mov %eax, {if *b {1} else {0}};}}
             }
             Ast::Identifier(_, id) => {
-                let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
+                let id_offset = function_table.get_var_offset(current_func, id).ok_or(format!("Could not find variable {}", id))?;
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
             }
             Ast::Mul(_, l, r) => {
@@ -301,21 +301,21 @@ impl Compiler {
                     label_id,
                 );
 
-                Compiler::traverse(cond, current_func, function_table, code)?;
+                let mut cond_code = vec![];
+                Compiler::traverse(cond, current_func, function_table, &mut cond_code)?;
+                let mut true_code = vec![];
+                Compiler::traverse(true_arm, current_func, function_table, &mut true_code)?;
+                let mut false_code = vec![];
+                Compiler::traverse(false_arm, current_func, function_table, &mut false_code)?;
                 
                 assembly!{(code) {
+                    {{cond_code}}
                     cmp %eax, 0;
                     jz ^{else_lbl};
-                }};
-                Compiler::traverse(true_arm, current_func, function_table, code)?;
-                
-                assembly!{(code) {
+                    {{true_code}}
                     jmp ^{end_lbl};
                 ^{else_lbl}:
-                }};
-                Compiler::traverse(false_arm, current_func, function_table, code)?;
-               
-                assembly!{(code) {
+                    {{false_code}}
                 ^{end_lbl}:
                 }};
             }
@@ -328,7 +328,7 @@ impl Compiler {
                 Compiler::traverse(stm, current_func, function_table, code)?;
             }
             Ast::Bind(_, id, _, ref exp) => {
-                let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
+                let id_offset = function_table.get_var_offset(current_func, id).ok_or(format!("Could not find variable {}", id))?;
                 Compiler::traverse(exp, current_func, function_table, code)?;
                 assembly!{(code) {
                     mov [%ebp-{id_offset as u32}], %eax;
@@ -347,11 +347,10 @@ impl Compiler {
                 None => (),
             },
             Ast::Yield(_, ref id) => {
-                Compiler::traverse(id, current_func, function_table, code)?;
-
                 let label_id = function_table.inc_label_count(current_func);
                 let ret_lbl = format!("lbl_{}", label_id);
                 
+                Compiler::traverse(id, current_func, function_table, code)?;
                 assembly!{(code) {
                     mov %ebx, ^{ret_lbl};
                     jmp @runtime_yield_into_coroutine;
@@ -387,20 +386,16 @@ impl Compiler {
             }
             Ast::CoroutineInit(_, ref co, params) => {
                 Compiler::validate_routine_call(co, params, function_table).unwrap();
-                Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table, code).unwrap();
                 
                 assembly!{(code) {
+                    {{Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table)?}}
                     lea %eax, [@{co}];
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
                     push %ebp;
                     mov %ebp, %eax;
-                }};
-
-                // Move parameters into the stack frame of the coroutine
-                Compiler::move_params_into_stackframe(co, params.len(), &co_param_registers, function_table, code).unwrap();
-                
-                assembly!{(code) {
+                    ; "move parameters into the stack frame of the coroutine"
+                    {{Compiler::move_params_into_stackframe(co, params.len(), &co_param_registers, function_table)?}}
                     ; "leave coroutine's stack frame"
                     pop %ebp;
                 }};
@@ -414,10 +409,10 @@ impl Compiler {
                     push %ebp;
                     mov %ebp, %esp;
                     sub %esp, {total_offset};
+                    ; "Move function parameters from registers into the stack frame"
+                    {{Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table)?}}
                 }};
 
-                // Move function parameters from registers into the stack frame
-                Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table, code).unwrap();
 
                 for s in stmts.iter() {
                     Compiler::traverse(s, fn_name, function_table, code)?;
@@ -438,8 +433,8 @@ impl Compiler {
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
-                Compiler::evaluate_routine_params(params, &fn_param_registers, current_func, function_table, code).unwrap();
                 assembly!{(code) {
+                    {{Compiler::evaluate_routine_params(params, &fn_param_registers, current_func, function_table)?}}
                     call @{fn_name};
                 }};
             }
@@ -449,28 +444,30 @@ impl Compiler {
         Ok(())
     }
 
-    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Reg>, function_table: &FunctionTable, code: &mut Vec<Inst>) -> Result<(), String>{
+    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Reg>, function_table: &FunctionTable) -> Result<Vec<Inst>, String>{
         if num_params > param_registers.len() {
             return Err(format!("Compiler: too many parameters in function definition"));
         }
 
+        let mut code = vec![];
         for idx in 0..num_params {
             let param_offset = function_table.funcs[func].vars.vars[idx].frame_offset;
             assembly!{(code){
                 mov [%ebp-{param_offset as u32}], %{param_registers[idx]};
             }};
         }
-        Ok(())
+        Ok(code)
     }
 
-    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
+    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
         if params.len() > param_registers.len() {
             return Err(format!("Compiler: too many parameters being passed to function"));
         }
+        let mut code = vec![];
         for param in params.iter() {
-            Compiler::traverse(param, current_func, function_table, code)?;
+            Compiler::traverse(param, current_func, function_table, &mut code)?;
             assembly!{(code){
                 push %eax;
             }};
@@ -480,7 +477,7 @@ impl Compiler {
                 pop %{*reg};
             }};
         }
-        Ok(())
+        Ok(code)
     }
 
     fn validate_routine_call(func: &str, params: &Vec<SemanticNode>, function_table: &FunctionTable) -> Result<(),String>{
