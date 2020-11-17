@@ -69,6 +69,7 @@
 7. `{{iterable of instructions}}` - injects any iterable which contains `Inst`. This
     allows x86 code generated in helper functions to be easily injected into an
     assembly macro.
+8. `; "comment"` - will create a comment in the generated x86 code.
  */
 
 
