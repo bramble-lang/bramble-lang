@@ -35,6 +35,11 @@ impl Intermediate {
     fn push(&mut self, inst: Instruction) {
         self.code.push(Converter::Instruction(inst))
     }
+
+    fn append(&mut self, inst: &mut Vec<Inst>) {
+        let mut tmp = inst.iter_mut().map(|i| Converter::Inst(i.clone())).collect();
+        self.code.append(&mut tmp);
+    }
 }
 
 pub struct Compiler {
@@ -254,20 +259,31 @@ impl Compiler {
 
         match ast {
             Ast::Integer(_, i) => {
-                output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
+                let mut code = vec![];
+                assembly!{(code) {mov %eax, {*i};}}
+                output.append(&mut code);
+                //output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
             Ast::Boolean(_, b) => {
-                output.push(Mov(
+                let mut code = vec![];
+                assembly!{(code) {mov %eax, {if *b {1} else {0}};}}
+                output.append(&mut code);
+                
+                /*output.push(Mov(
                     Location::Register(Eax),
                     Source::Integer(if *b { 1 } else { 0 }),
-                ));
+                ));*/
             }
             Ast::Identifier(_, id) => {
                 let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
-                output.push(Mov(
+                let mut code = vec![];
+                assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
+                output.append(&mut code);
+
+                /*output.push(Mov(
                     Location::Register(Eax),
                     Source::Memory(format!("ebp-{}", id_offset)),
-                ));
+                ));*/
             }
             Ast::Mul(_, l, r) => {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);

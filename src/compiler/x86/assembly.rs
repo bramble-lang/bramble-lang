@@ -57,6 +57,7 @@ _
 
 */
 
+#[derive(Clone)]
 pub enum Reg8 {
     Al,
 }
@@ -70,6 +71,7 @@ impl Display for Reg8 {
     }
 }
 
+#[derive(Clone)]
 pub enum Reg32 {
     Eax,
     Ecx,
@@ -93,6 +95,7 @@ impl Display for Reg32 {
     }
 }
 
+#[derive(Clone)]
 pub enum Reg {
     R8(Reg8),
     R32(Reg32),
@@ -108,6 +111,7 @@ impl Display for Reg {
     }
 }
 
+#[derive(Clone)]
 pub enum DirectOperand {
     Integer(i32),
     Register(Reg),
@@ -125,6 +129,7 @@ impl Display for DirectOperand {
     }
 }
 
+#[derive(Clone)]
 pub enum Operand {
     Direct(DirectOperand),
     Memory(DirectOperand),
@@ -142,6 +147,7 @@ impl Display for Operand {
     }
 }
 
+#[derive(Clone)]
 pub enum Inst {
     Include(String),
     Section(String),
@@ -294,8 +300,11 @@ macro_rules! operand {
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))
     };
-    ([%$e:tt-$d:literal]) => {
-        Operand::MemoryExpr(register!($e), $d)
+    ([%$reg:tt-$d:literal]) => {
+        Operand::MemoryExpr(register!($reg), $d)
+    };
+    ([%$reg:tt-{$e:expr}]) => {
+        Operand::MemoryExpr(register!($reg), $e)
     };
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))
@@ -305,6 +314,9 @@ macro_rules! operand {
     };
     ([@ $e:tt]) => {
         Operand::Memory(DirectOperand::Label(stringify!($e).into()))
+    };
+    ({$e:expr}) => {
+        Operand::Direct(DirectOperand::Integer($e))
     };
 
     (%$reg:tt) => {
