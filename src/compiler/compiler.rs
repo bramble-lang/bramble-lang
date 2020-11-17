@@ -425,55 +425,70 @@ impl Compiler {
                 }
 
                 let label_id = function_table.inc_label_count(current_func);
-                let ret_lbl = format!(".lbl_{}", label_id);
+                let ret_lbl = format!("lbl_{}", label_id);
 
-                output.push(Mov(
-                    Location::Register(Ebx),
-                    Source::Address(ret_lbl.clone()),
-                ));
-                output.push(Jmp("runtime_yield_return".into()));
-                output.push(Label(ret_lbl.clone()));
+                let mut code = vec![];
+                assembly!{(code) {
+                    mov %ebx, ^{ret_lbl};
+                    jmp @runtime_yield_return;
+                    ^{ret_lbl}:
+                }};
+                output.append(&mut code);
             }
             Ast::CoroutineDef(_, ref fn_name, _, _, stmts) => {
-                output.push(Label(fn_name.clone()));
+                let mut code = vec![];
+                assembly!{(code) {
+                @{fn_name}:
+                }};
+                output.append(&mut code);
 
                 // Prepare stack frame for this function
                 for s in stmts.iter() {
                     Compiler::traverse(s, fn_name, function_table, output);
                 }
-                output.push(Jmp("runtime_yield_return".into()))
+                let mut code = vec![];
+                assembly!{(code) {
+                    jmp @runtime_yield_return;
+                }};
+                output.append(&mut code);
             }
             Ast::CoroutineInit(_, ref co, params) => {
                 Compiler::validate_routine_call(co, params, function_table).unwrap();
                 Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table, output).unwrap();
-
-                output.push(Lea(
-                    Location::Register(Eax),
-                    Source::Memory(format!("{}", co)),
-                ));
-                output.push(Call("runtime_init_coroutine".into()));
-
-                // Move into coroutine's stack frame
-                output.push(Push(Ebp));
-                output.push(Mov(
-                    Location::Register(Ebp),
-                    Source::Register(Eax),
-                ));
+                
+                let mut code = vec![];
+                assembly!{(code) {
+                    lea %eax, [@{co}];
+                    call @runtime_init_coroutine;
+                    ; "move into coroutine's stack frame"
+                    push %ebp;
+                    mov %ebp, %eax;
+                }};
+                output.append(&mut code);
 
                 // Move parameters into the stack frame of the coroutine
                 Compiler::move_params_into_stackframe(co, params.len(), &co_param_registers, function_table, output).unwrap();
+                
+                let mut code = vec![];
+                assembly!{(code) {
+                    ; "leave coroutine's stack frame"
+                    pop %ebp;
+                }};
+                output.append(&mut code);
 
-                // Leave coroutine's stack frame
-                output.push(Pop(Ebp));
             }
             Ast::FunctionDef(_, ref fn_name, params, _, stmts) => {
-                output.push(Label(fn_name.clone()));
-
-                // Prepare stack frame for this function
-                output.push(Push(Ebp));
-                output.push(Mov(Location::Register(Ebp), Source::Register(Esp)));
                 let total_offset = function_table.get_total_offset(fn_name).unwrap_or(0);
-                output.push(Sub(Esp, Source::Integer(total_offset)));
+
+                let mut code = vec![];
+                assembly!{(code) {
+                @{fn_name}:
+                    ;"Prepare stack frame for this function"
+                    push %ebp;
+                    mov %ebp, %esp;
+                    sub %esp, {total_offset};
+                }};
+                output.append(&mut code);
 
                 // Move function parameters from registers into the stack frame
                 Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table, output).unwrap();
@@ -482,11 +497,15 @@ impl Compiler {
                     Compiler::traverse(s, fn_name, function_table, output);
                 }
 
-                // Clean up frame before exiting program
-                output.push(Mov(Location::Register(Esp), Source::Register(Ebp)));
-                output.push(Pop(Ebp));
+                let mut code = vec![];
+                assembly!{(code) {
+                    ; "Clean up frame before leaving function"
+                    mov %esp, %ebp;
+                    pop %ebp;
+                    ret;
+                }};
+                output.append(&mut code);
 
-                output.push(Ret);
             }
             Ast::FunctionCall(_, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
@@ -496,7 +515,12 @@ impl Compiler {
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
                 Compiler::evaluate_routine_params(params, &fn_param_registers, current_func, function_table, output).unwrap();
-                output.push(Call(fn_name.clone()));
+                let mut code = vec![];
+                assembly!{(code) {
+                    call @{fn_name};
+                }};
+                output.append(&mut code);
+                //output.push(Call(fn_name.clone()));
             }
             node => panic!("Expected an operator, found {:?}", node),
         }

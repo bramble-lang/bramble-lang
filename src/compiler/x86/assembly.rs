@@ -149,6 +149,7 @@ impl Display for Operand {
 
 #[derive(Clone)]
 pub enum Inst {
+    Comment(String),
     Include(String),
     Section(String),
     Global(String),
@@ -197,6 +198,7 @@ impl Display for Inst {
         };
 
         match self {
+            Comment(comment) => f.write_fmt(format_args!("; {}", comment)),
             Include(inc) => f.write_fmt(format_args!("%include \"{}\"", inc)),
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
             Global(global) => f.write_fmt(format_args!("global {}", global)),
@@ -361,6 +363,9 @@ macro_rules! operand {
     ($e:literal) => {
         Operand::Direct(DirectOperand::Integer($e))
     };
+    (@{$e:expr}) => {
+        Operand::Direct(DirectOperand::Label($e.into()))
+    };
     (@$e:tt) => {
         Operand::Direct(DirectOperand::Label(stringify!($e).into()))
     };
@@ -378,6 +383,14 @@ macro_rules! assembly {
     };
 
     /********************/
+    /*     COMMENTS       */
+    /********************/
+    (($buf:expr) {;$comment:literal $($tail:tt)*}) => {
+        $buf.push(Inst::Comment($comment.into()));
+        assembly!(($buf) {$($tail)*})
+    };
+
+    /********************/
     /*     LABELS       */
     /********************/
     (($buf:expr) {^{$label:expr}: $($tail:tt)*}) => {
@@ -386,6 +399,10 @@ macro_rules! assembly {
     };
     (($buf:expr) {^$label:tt: $($tail:tt)*}) => {
         $buf.push(Inst::Label(format!(".{}", stringify!($label))));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {@{$label:expr}: $($tail:tt)*}) => {
+        $buf.push(Inst::Label($label.into()));
         assembly!(($buf) {$($tail)*})
     };
     (($buf:expr) {@$label:tt: $($tail:tt)*}) => {
