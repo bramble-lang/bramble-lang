@@ -179,12 +179,13 @@ impl Compiler {
         }
     }
 
-    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
+    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         let mut left_code = vec![];
         Compiler::traverse(left, current_func, function_table, &mut left_code)?;
         let mut right_code = vec![];
         Compiler::traverse(right, current_func, function_table, &mut right_code)?;
 
+        let mut code = vec![];
         assembly!{(code){
             {{left_code}}
             push %eax;
@@ -194,15 +195,12 @@ impl Compiler {
             pop %eax;
         }}
 
-        Ok(())
+        Ok(code)
     }
     
     fn comparison_op(op: Inst, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
-        let mut operand_code = vec![];
-        Compiler::handle_binary_operands(left, right, current_func, function_table, &mut operand_code)?;
-
         assembly!{(code){
-            {{operand_code}}
+            {{Compiler::handle_binary_operands(left, right, current_func, function_table)?}}
             cmp %eax, %ebx;
             {{[op]}}
             and %al, 1;
@@ -241,19 +239,20 @@ impl Compiler {
                 output.append(&mut code);
             }
             Ast::Mul(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output)?;
-                
                 let mut code = vec![];
-                assembly!{(code) {imul %eax, %ebx;}}
+                assembly!{(code) {
+                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    imul %eax, %ebx;
+                }}
                 output.append(&mut code);
             }
             Ast::Add(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output)?;
-                
                 let mut code = vec![];
-                assembly!{(code) {add %eax, %ebx;}}
+                assembly!{(code) {
+                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    add %eax, %ebx;
+                }}
                 output.append(&mut code);
-                //output.push(Add(Eax, Source::Register(Ebx)));
             }
             Ast::Eq(_, l, r) => {
                 Compiler::comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
@@ -274,17 +273,19 @@ impl Compiler {
                 Compiler::comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, output)?;
             }
             Ast::BAnd(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output)?;
-                
                 let mut code = vec![];
-                assembly!{(code) {and %eax, %ebx;}}
+                assembly!{(code) {
+                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    and %eax, %ebx;
+                }}
                 output.append(&mut code);
             }
             Ast::BOr(_, l, r) => {
-                Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output)?;
-                
                 let mut code = vec![];
-                assembly!{(code) {or %eax, %ebx;}}
+                assembly!{(code) {
+                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    or %eax, %ebx;
+                }}
                 output.append(&mut code);
             }
             Ast::Printiln(_, ref exp) => {
