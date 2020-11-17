@@ -357,6 +357,9 @@ macro_rules! operand {
     (@$e:tt) => {
         Operand::Direct(DirectOperand::Label(stringify!($e).into()))
     };
+    (^{$e:expr}) => {
+        Operand::Direct(DirectOperand::Label(format!(".{}", $e)))
+    };
     (^$e:tt) => {
         Operand::Direct(DirectOperand::Label(format!(".{}", stringify!($e)).into()))
     };
@@ -370,6 +373,10 @@ macro_rules! assembly {
     /********************/
     /*     LABELS       */
     /********************/
+    (($buf:expr) {^{$label:expr}: $($tail:tt)*}) => {
+        $buf.push(Inst::Label(format!(".{}", $label)));
+        assembly!(($buf) {$($tail)*})
+    };
     (($buf:expr) {^$label:tt: $($tail:tt)*}) => {
         $buf.push(Inst::Label(format!(".{}", stringify!($label))));
         assembly!(($buf) {$($tail)*})

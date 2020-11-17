@@ -344,22 +344,37 @@ impl Compiler {
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
                 let label_id = function_table.inc_label_count(current_func);
                 let else_lbl = format!(
-                    ".else_lbl_{}",
+                    "if_false_{}",
                     label_id,
                 );
                 let end_lbl = format!(
-                    ".if_end_lbl_{}",
+                    "if_end_{}",
                     label_id,
                 );
 
                 Compiler::traverse(cond, current_func, function_table, output);
-                output.push(Cmp(Register::Eax, Source::Integer(0)));
-                output.push(Jz(else_lbl.clone()));
+                
+                let mut code = vec![];
+                assembly!{(code) {
+                    cmp %eax, 0;
+                    jz ^{else_lbl};
+                }};
+                output.append(&mut code);
                 Compiler::traverse(true_arm, current_func, function_table, output);
-                output.push(Jmp(end_lbl.clone()));
-                output.push(Label(else_lbl));
+                
+                let mut code = vec![];
+                assembly!{(code) {
+                    jmp ^{end_lbl};
+                ^{else_lbl}:
+                }};
+                output.append(&mut code);
                 Compiler::traverse(false_arm, current_func, function_table, output);
-                output.push(Label(end_lbl));
+               
+                let mut code = vec![];
+                assembly!{(code) {
+                ^{end_lbl}:
+                }};
+                output.append(&mut code);
             }
             Ast::ExpressionBlock(_, body) => {
                 for s in body.iter() {
@@ -372,10 +387,11 @@ impl Compiler {
             Ast::Bind(_, id, _, ref exp) => {
                 let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
                 Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Mov(
-                    Location::Memory(format!("ebp-{}", id_offset)),
-                    Source::Register(Eax),
-                ));
+                let mut code = vec![];
+                assembly!{(code) {
+                    mov [%ebp-{id_offset as u32}], %eax;
+                }};
+                output.append(&mut code);
             }
             Ast::Module(_, functions, coroutines) => {
                 for f in functions.iter() {
