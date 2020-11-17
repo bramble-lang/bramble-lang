@@ -6,6 +6,7 @@ use crate::ast::Ast;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::compiler::x86::assembly::*;
 use crate::assembly;
+use crate::assembly2;
 use crate::unit_op;
 use crate::unary_op;
 use crate::binary_op;
@@ -291,16 +292,6 @@ impl Compiler {
                 }}
             }
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
-                let label_id = function_table.inc_label_count(current_func);
-                let else_lbl = format!(
-                    "if_false_{}",
-                    label_id,
-                );
-                let end_lbl = format!(
-                    "if_end_{}",
-                    label_id,
-                );
-
                 let mut cond_code = vec![];
                 Compiler::traverse(cond, current_func, function_table, &mut cond_code)?;
                 let mut true_code = vec![];
@@ -308,15 +299,15 @@ impl Compiler {
                 let mut false_code = vec![];
                 Compiler::traverse(false_arm, current_func, function_table, &mut false_code)?;
                 
-                assembly!{(code) {
+                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap(), vec![]) {
                     {{cond_code}}
                     cmp %eax, 0;
-                    jz ^{else_lbl};
+                    jz ^else_lbl;
                     {{true_code}}
-                    jmp ^{end_lbl};
-                ^{else_lbl}:
+                    jmp ^end_lbl;
+                ^else_lbl:
                     {{false_code}}
-                ^{end_lbl}:
+                ^end_lbl:
                 }};
             }
             Ast::ExpressionBlock(_, body) => {

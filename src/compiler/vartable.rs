@@ -169,6 +169,14 @@ pub struct FunctionInfo {
     pub vars: VarTable,
     pub label_count: u32,
     pub ty: Primitive,
+    pub label_cache: collections::HashMap<String,u32>,
+}
+
+impl FunctionInfo {
+    pub fn inc_label_count(&mut self) -> u32 {
+        self.label_count += 1;
+        self.label_count
+    }
 }
 
 impl FunctionTable {
@@ -203,6 +211,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ty,
+                        label_cache: collections::HashMap::new(),
                     },
                 );
             }
@@ -215,6 +224,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ty,
+                        label_cache: collections::HashMap::new(),
                     },
                 );
             }
@@ -257,6 +267,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ret_ty,
+                        label_cache: collections::HashMap::new(),
                     },
                 );
                 FunctionTable::add_symbol_table(ft, name, &meta.sym).unwrap();
@@ -271,6 +282,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ret_ty,
+                        label_cache: collections::HashMap::new(),
                     },
                 );
             }
