@@ -449,43 +449,37 @@ impl Compiler {
         Ok(())
     }
 
-    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Reg>, function_table: &FunctionTable, output: &mut Vec<Inst>) -> Result<(), String>{
+    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Reg>, function_table: &FunctionTable, code: &mut Vec<Inst>) -> Result<(), String>{
         if num_params > param_registers.len() {
             return Err(format!("Compiler: too many parameters in function definition"));
         }
 
-        let mut code = vec![];
         for idx in 0..num_params {
             let param_offset = function_table.funcs[func].vars.vars[idx].frame_offset;
             assembly!{(code){
                 mov [%ebp-{param_offset as u32}], %{param_registers[idx]};
             }};
         }
-        output.append(&mut code);
         Ok(())
     }
 
-    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Inst>) -> Result<(), String> {
+    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
         if params.len() > param_registers.len() {
             return Err(format!("Compiler: too many parameters being passed to function"));
         }
         for param in params.iter() {
-            Compiler::traverse(param, current_func, function_table, output)?;
-            let mut code = vec![];
+            Compiler::traverse(param, current_func, function_table, code)?;
             assembly!{(code){
                 push %eax;
             }};
-            output.append(&mut code);
         }
-        let mut code = vec![];
         for reg in param_registers.iter().take(params.len()).rev() {
             assembly!{(code){
                 pop %{*reg};
             }};
         }
-        output.append(&mut code);
         Ok(())
     }
 
