@@ -169,13 +169,25 @@ pub struct FunctionInfo {
     pub vars: VarTable,
     pub label_count: u32,
     pub ty: Primitive,
-    pub label_cache: collections::HashMap<String,u32>,
+    pub label_cache: collections::HashSet<String>,
 }
 
 impl FunctionInfo {
     pub fn inc_label_count(&mut self) -> u32 {
         self.label_count += 1;
         self.label_count
+    }
+
+    pub fn clear_cache(&mut self) {
+        self.label_cache.clear();
+    }
+
+    pub fn in_cache(&self, label: &str) -> bool {
+        self.label_cache.contains(label)
+    }
+
+    pub fn cache(&mut self, label: String) -> bool {
+        self.label_cache.insert(label)
     }
 }
 
@@ -211,7 +223,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ty,
-                        label_cache: collections::HashMap::new(),
+                        label_cache: collections::HashSet::new(),
                     },
                 );
             }
@@ -224,7 +236,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ty,
-                        label_cache: collections::HashMap::new(),
+                        label_cache: collections::HashSet::new(),
                     },
                 );
             }
@@ -267,7 +279,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ret_ty,
-                        label_cache: collections::HashMap::new(),
+                        label_cache: collections::HashSet::new(),
                     },
                 );
                 FunctionTable::add_symbol_table(ft, name, &meta.sym).unwrap();
@@ -282,7 +294,7 @@ impl FunctionTable {
                         vars,
                         label_count: 0,
                         ty: *ret_ty,
-                        label_cache: collections::HashMap::new(),
+                        label_cache: collections::HashSet::new(),
                     },
                 );
             }

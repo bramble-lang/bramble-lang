@@ -591,13 +591,19 @@ macro_rules! assembly2 {
     /********************/
     // local
     (($buf:expr, $info:expr) {^{$label:expr}: $($tail:tt)*}) => {
-        $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label_count)));
+        if $info.cache($label) {
+            $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label_count)));
+        } else {
+            panic!("Label {} has already been used within this macro scope", $label);
+        }
         assembly2!(($buf, $info) {$($tail)*})
     };
     (($buf:expr, $info:expr) {^$label:tt: $($tail:tt)*}) => {
-        {
-            let lbl = stringify!($label);
+        let lbl = stringify!($label);
+        if $info.cache(lbl.into()) {
             $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.label_count)));
+        } else {
+            panic!("Label {} has already been used within this macro scope", lbl);
         }
         assembly2!(($buf, $info) {$($tail)*})
     };

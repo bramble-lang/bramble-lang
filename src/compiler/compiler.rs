@@ -370,7 +370,7 @@ impl Compiler {
                 }};
             }
             Ast::CoroutineInit(_, ref co, params) => {
-                Compiler::validate_routine_call(co, params, function_table).unwrap();
+                Compiler::validate_routine_call(co, params, function_table)?;
                 
                 assembly!{(code) {
                     {{Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table)?}}
