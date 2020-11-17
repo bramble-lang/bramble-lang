@@ -167,12 +167,18 @@ pub enum Inst {
 
     Add(Operand, Operand),
     Sub(Operand, Operand),
+    IMul(Operand, Operand),
     
     Cmp(Operand, Operand),
+    
+    And(Operand, Operand),
+    Or(Operand, Operand),
 
     Sete(Reg8),
 
     PrintStr(String),
+    PrintDec(Operand),
+    NewLine,
 }
 
 impl Display for Inst {
@@ -211,11 +217,16 @@ impl Display for Inst {
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
             Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
             Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
+            IMul(a, b) => f.write_fmt(format_args!("imul {}, {}", a, b)),
             Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
+            And(a, b) => f.write_fmt(format_args!("and {}, {}", a, b)),
+            Or(a, b) => f.write_fmt(format_args!("or {}, {}", a, b)),
             Sete(a) => f.write_fmt(format_args!("sete {}", a)),
             Label(lbl) => f.write_fmt(format_args!("{}:", lbl)),
 
             PrintStr(str) => f.write_fmt(format_args!("PRINT_STRING \"{}\"", str)),
+            PrintDec(val) => f.write_fmt(format_args!("PRINT_DEC 4, {}", val)),
+            NewLine => f.write_fmt(format_args!("NEWLINE")),
         }
     }
 }
@@ -225,6 +236,9 @@ macro_rules! unit_op {
     (ret) => {
         Inst::Ret
     };
+    (newline) => {
+        Inst::NewLine
+    }
 }
 
 #[macro_export]
@@ -244,6 +258,9 @@ macro_rules! unary_op {
     (pop) => {
         Inst::Pop
     };
+    (print_dec) => {
+        Inst::PrintDec
+    };
 }
 
 #[macro_export]
@@ -254,11 +271,23 @@ macro_rules! binary_op {
     (lea) => {
         Inst::Lea
     };
+    (add) => {
+        Inst::Add
+    };
     (sub) => {
         Inst::Sub
     };
+    (imul) => {
+        Inst::IMul
+    };
     (cmp) => {
         Inst::Cmp
+    };
+    (and) => {
+        Inst::And
+    };
+    (or) => {
+        Inst::Or
     };
 }
 

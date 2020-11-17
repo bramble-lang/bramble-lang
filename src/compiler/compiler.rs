@@ -262,36 +262,32 @@ impl Compiler {
                 let mut code = vec![];
                 assembly!{(code) {mov %eax, {*i};}}
                 output.append(&mut code);
-                //output.push(Mov(Location::Register(Eax), Source::Integer(*i)));
             }
             Ast::Boolean(_, b) => {
                 let mut code = vec![];
                 assembly!{(code) {mov %eax, {if *b {1} else {0}};}}
                 output.append(&mut code);
-                
-                /*output.push(Mov(
-                    Location::Register(Eax),
-                    Source::Integer(if *b { 1 } else { 0 }),
-                ));*/
             }
             Ast::Identifier(_, id) => {
                 let id_offset = function_table.get_var_offset(current_func, id).expect("Could not find variable");
                 let mut code = vec![];
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
                 output.append(&mut code);
-
-                /*output.push(Mov(
-                    Location::Register(Eax),
-                    Source::Memory(format!("ebp-{}", id_offset)),
-                ));*/
             }
             Ast::Mul(_, l, r) => {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(IMul(Eax, Location::Register(Ebx)));
+                
+                let mut code = vec![];
+                assembly!{(code) {imul %eax, %ebx;}}
+                output.append(&mut code);
             }
             Ast::Add(_, l, r) => {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Add(Eax, Source::Register(Ebx)));
+                
+                let mut code = vec![];
+                assembly!{(code) {add %eax, %ebx;}}
+                output.append(&mut code);
+                //output.push(Add(Eax, Source::Register(Ebx)));
             }
             Ast::Eq(_, l, r) => {
                 Compiler::comparison_op(Sete(Register::Al), l.as_ref(), r.as_ref(), current_func, function_table, output);
@@ -313,21 +309,37 @@ impl Compiler {
             }
             Ast::BAnd(_, l, r) => {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(And(Eax, Source::Register(Ebx)));
+                
+                let mut code = vec![];
+                assembly!{(code) {and %eax, %ebx;}}
+                output.append(&mut code);
             }
             Ast::BOr(_, l, r) => {
                 Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table, output);
-                output.push(Or(Eax, Source::Register(Ebx)));
+                
+                let mut code = vec![];
+                assembly!{(code) {or %eax, %ebx;}}
+                output.append(&mut code);
             }
             Ast::Printiln(_, ref exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Print(Source::Register(Eax)));
-                output.push(Newline);
+                
+                let mut code = vec![];
+                assembly!{(code) {
+                    print_dec %eax;
+                    newline;
+                }}
+                output.append(&mut code);
             }
             Ast::Printbln(_, ref exp) => {
                 Compiler::traverse(exp, current_func, function_table, output);
-                output.push(Call("print_bool".into()));
-                output.push(Newline);
+                
+                let mut code = vec![];
+                assembly!{(code) {
+                    call @print_bool;
+                    newline;
+                }}
+                output.append(&mut code);
             }
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
                 let label_id = function_table.inc_label_count(current_func);
