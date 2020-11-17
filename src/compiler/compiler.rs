@@ -409,14 +409,15 @@ impl Compiler {
                 Compiler::traverse(id, current_func, function_table, output);
 
                 let label_id = function_table.inc_label_count(current_func);
-                let ret_lbl = format!(".lbl_{}", label_id);
-
-                output.push(Mov(
-                    Location::Register(Ebx),
-                    Source::Address(ret_lbl.clone()),
-                ));
-                output.push(Jmp("runtime_yield_into_coroutine".into()));
-                output.push(Label(ret_lbl.clone()));
+                let ret_lbl = format!("lbl_{}", label_id);
+                
+                let mut code = vec![];
+                assembly!{(code) {
+                    mov %ebx, ^{ret_lbl};
+                    jmp @runtime_yield_into_coroutine;
+                    ^{ret_lbl}:
+                }};
+                output.append(&mut code);
             }
             Ast::YieldReturn(_, ref exp) => {
                 if let Some(exp) = exp {

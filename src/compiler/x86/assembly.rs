@@ -344,6 +344,13 @@ macro_rules! operand {
     ([@ $e:tt]) => {
         Operand::Memory(DirectOperand::Label(stringify!($e).into()))
     };
+    ([^ {$e:expr}]) => {
+        Operand::Memory(DirectOperand::Label(format!(".{}", $e)))
+    };
+    ([^ $e:tt]) => {
+        let label = format!(".{}", stringify!($e));
+        Operand::Memory(DirectOperand::Label(label))
+    };
     ({$e:expr}) => {
         Operand::Direct(DirectOperand::Integer($e))
     };
