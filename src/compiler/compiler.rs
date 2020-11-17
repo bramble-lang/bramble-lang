@@ -179,35 +179,34 @@ impl Compiler {
         }
     }
 
-    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Inst>) -> Result<(), String> {
-        Compiler::traverse(left, current_func, function_table, output)?;
-        let mut code = vec![];
-        assembly!{(code){
-            push %eax;
-        }}
-        output.append(&mut code);
+    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
+        let mut left_code = vec![];
+        Compiler::traverse(left, current_func, function_table, &mut left_code)?;
+        let mut right_code = vec![];
+        Compiler::traverse(right, current_func, function_table, &mut right_code)?;
 
-        Compiler::traverse(right, current_func, function_table, output)?;
-        let mut code = vec![];
         assembly!{(code){
+            {{left_code}}
+            push %eax;
+            {{right_code}}
             push %eax;
             pop %ebx;
             pop %eax;
         }}
-        output.append(&mut code);
 
         Ok(())
     }
     
-    fn comparison_op(op: Inst, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, output: &mut Vec<Inst>) -> Result<(), String> {
-        Compiler::handle_binary_operands(left, right, current_func, function_table, output)?;
-        let mut code = vec![];
+    fn comparison_op(op: Inst, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
+        let mut operand_code = vec![];
+        Compiler::handle_binary_operands(left, right, current_func, function_table, &mut operand_code)?;
+
         assembly!{(code){
+            {{operand_code}}
             cmp %eax, %ebx;
             {{[op]}}
             and %al, 1;
         }}
-        output.append(&mut code);
 
         Ok(())
     }
