@@ -561,7 +561,8 @@ macro_rules! assembly {
 
 #[macro_export]
 macro_rules! assembly2 {
-    (($buf:expr, $info:expr, $labels:expr) {}) => {
+    (($buf:expr, $info:expr) {}) => {
+        $info.inc_label_count();
         $info.label_cache.clear();
     };
 
@@ -569,194 +570,168 @@ macro_rules! assembly2 {
     /*  MACRO OPERATIONS */
     /********************/
     // Append another set of instructions
-    (($buf:expr, $info:expr, $labels:expr) {{{$is:expr}} $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {{{$is:expr}} $($tail:tt)*}) => {
         for inst in $is.iter() {
             $buf.push(inst.clone());
         }
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     
 
     /********************/
     /*     COMMENTS       */
     /********************/
-    (($buf:expr, $info:expr, $labels:expr) {;$comment:literal $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {;$comment:literal $($tail:tt)*}) => {
         $buf.push(Inst::Comment($comment.into()));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
     /********************/
     /*     LABELS       */
     /********************/
     // local
-    (($buf:expr, $info:expr, $labels:expr) {^{$label:expr}: $($tail:tt)*}) => {
-        if $info.label_cache.contains_key($label) {
-            $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label_cache[$label])));
-        } else {
-            let x = $info.inc_label_count();
-            $info.label_cache.insert($label.into(), x);
-            $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label_cache[$label])));
-        }
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+    (($buf:expr, $info:expr) {^{$label:expr}: $($tail:tt)*}) => {
+        $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label_count)));
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {^$label:tt: $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {^$label:tt: $($tail:tt)*}) => {
         {
             let lbl = stringify!($label);
-            if $info.label_cache.contains_key(lbl) {
-                $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.label_cache[lbl])));
-            } else {
-                let x = $info.inc_label_count();
-                $info.label_cache.insert(lbl.into(), x);
-                $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.label_cache[lbl])));
-            }
+            $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.label_count)));
         }
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
     // global
-    (($buf:expr, $info:expr, $labels:expr) {@{$label:expr}: $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {@{$label:expr}: $($tail:tt)*}) => {
         $buf.push(Inst::Label($label.into()));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {@$label:tt: $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {@$label:tt: $($tail:tt)*}) => {
         $buf.push(Inst::Label(stringify!($label).into()));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
     /********************/
     /* UNIT OPERATORS */
     /********************/
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt; $($tail:tt)*}) => {
         $buf.push(unit_op!($inst));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     
     /********************/
     /* Special Ops      */
     /********************/
-    (($buf:expr, $info:expr, $labels:expr) {include $inc:literal; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {include $inc:literal; $($tail:tt)*}) => {
         $buf.push(Inst::Include($inc.into()));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {section $inc:literal; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {section $inc:literal; $($tail:tt)*}) => {
         $buf.push(Inst::Section($inc.into()));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {global $glbl:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {global $glbl:tt; $($tail:tt)*}) => {
         $buf.push(Inst::Global(stringify!($glbl).into()));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {data $lbl:tt: dd $val:expr; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {data $lbl:tt: dd $val:expr; $($tail:tt)*}) => {
         $buf.push(Inst::Data(stringify!($lbl).into(), $val));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
-    (($buf:expr, $info:expr, $labels:expr) {sete % $a:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {sete % $a:tt; $($tail:tt)*}) => {
         $buf.push(Inst::Sete(reg8!($a)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {print_str $a:literal; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {print_str $a:literal; $($tail:tt)*}) => {
         $buf.push(Inst::PrintStr($a.into()));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
     /********************/
     /* UNARY OPERATORS */
     /********************/
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt $a:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt $a:tt; $($tail:tt)*}) => {
         $buf.push(unary_op!($inst)(operand!($a)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt % $a:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt % $a:tt; $($tail:tt)*}) => {
         $buf.push(unary_op!($inst)(operand!(%$a)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt [ $($mem:tt)+ ]; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt [ $($mem:tt)+ ]; $($tail:tt)*}) => {
         $buf.push(unary_op!($inst)(operand!([$($mem)+])));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt @ $a:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt @ $a:tt; $($tail:tt)*}) => {
         $buf.push(unary_op!($inst)(operand!(@$a)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt ^{$a:expr}; $($tail:tt)*}) => {
-        if $info.label_cache.contains_key($a) {
-            let id = $info.label_cache[$a];
-            let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, id)));
-            $buf.push(unary_op!($inst)(lbl));
-        } else {
-            let id = $info.inc_label_count();
-            $info.label_cache.insert($a.into(), id);
-            let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, id)));
-            $buf.push(unary_op!($inst)(lbl));
-        }
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+    (($buf:expr, $info:expr) {$inst:tt ^{$a:expr}; $($tail:tt)*}) => {
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, $info.label_count)));
+        $buf.push(unary_op!($inst)(lbl));
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt ^ $a:tt; $($tail:tt)*}) => {
-        {
-            let lbl = stringify!($a);
-            if $info.label_cache.contains_key(lbl) {
-                let id = $info.label_cache[lbl];
-                let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, id)));
-                $buf.push(unary_op!($inst)(lbl));
-            } else {
-                let id = $info.inc_label_count();
-                $info.label_cache.insert(lbl.into(), id);
-                let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, id)));
-                $buf.push(unary_op!($inst)(lbl));
-            }
-        }
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+    (($buf:expr, $info:expr) {$inst:tt ^ $a:tt; $($tail:tt)*}) => {
+        let lbl = stringify!($a);
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label_count)));
+        $buf.push(unary_op!($inst)(lbl));
+        assembly2!(($buf, $info) {$($tail)*})
     };
 
     /********************/
     /* BINARY OPERATORS */
     /********************/
     // reg, literal
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt % $a:tt, $b:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt % $a:tt, $b:tt; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!(% $a), operand!($b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     // reg, reg
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt % $a:tt, % $b:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt % $a:tt, % $b:tt; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!(% $a), operand!(% $b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     // reg, global label
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt % $a:tt, @ $b:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt % $a:tt, @ $b:tt; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!(% $a), operand!(@ $b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
+
     // reg, local label
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt % $a:tt, ^ $b:tt; $($tail:tt)*}) => {
-        $buf.push(binary_op!($inst)(operand!(% $a), operand!(^ $b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+    (($buf:expr, $info:expr) {$inst:tt % $a:tt, ^ $b:tt; $($tail:tt)*}) => {
+        let lbl = stringify!($b);
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label_count)));
+        $buf.push(binary_op!($inst)(operand!(% $a), lbl));
+        assembly2!(($buf, $info) {$($tail)*})
     };
+
     // reg, mem
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt % $a:tt, [ $($mem:tt)+ ]; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt % $a:tt, [ $($mem:tt)+ ]; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!(%$a),  operand!([$($mem)+])));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     // mem, literal
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt [$($a:tt)+], $b:literal; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt [$($a:tt)+], $b:literal; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!([$($a)+]), operand!($b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     // mem, reg
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt [$($a:tt)+], % $b:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt [$($a:tt)+], % $b:tt; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!([$($a)+]), operand!(% $b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     // mem, global label
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt [$($a:tt)+], @ $b:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt [$($a:tt)+], @ $b:tt; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!([$($a)+]), operand!(@ $b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
     // mem, local label
-    (($buf:expr, $info:expr, $labels:expr) {$inst:tt [$($a:tt)+], ^ $b:tt; $($tail:tt)*}) => {
+    (($buf:expr, $info:expr) {$inst:tt [$($a:tt)+], ^ $b:tt; $($tail:tt)*}) => {
         $buf.push(binary_op!($inst)(operand!([$($a)+]), operand!(^ $b)));
-        assembly2!(($buf, $info, $labels) {$($tail)*})
+        assembly2!(($buf, $info) {$($tail)*})
     };
 }

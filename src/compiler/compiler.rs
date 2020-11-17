@@ -299,7 +299,7 @@ impl Compiler {
                 let mut false_code = vec![];
                 Compiler::traverse(false_arm, current_func, function_table, &mut false_code)?;
                 
-                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap(), vec![]) {
+                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
                     {{cond_code}}
                     cmp %eax, 0;
                     jz ^else_lbl;
@@ -338,28 +338,22 @@ impl Compiler {
                 None => (),
             },
             Ast::Yield(_, ref id) => {
-                let label_id = function_table.inc_label_count(current_func);
-                let ret_lbl = format!("lbl_{}", label_id);
-                
                 Compiler::traverse(id, current_func, function_table, code)?;
-                assembly!{(code) {
-                    mov %ebx, ^{ret_lbl};
+                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
+                    mov %ebx, ^ret_lbl;
                     jmp @runtime_yield_into_coroutine;
-                    ^{ret_lbl}:
+                    ^ret_lbl:
                 }};
             }
             Ast::YieldReturn(_, ref exp) => {
                 if let Some(exp) = exp {
                     Compiler::traverse(exp, current_func, function_table, code)?;
                 }
-
-                let label_id = function_table.inc_label_count(current_func);
-                let ret_lbl = format!("lbl_{}", label_id);
-
-                assembly!{(code) {
-                    mov %ebx, ^{ret_lbl};
+                
+                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
+                    mov %ebx, ^ret_lbl;
                     jmp @runtime_yield_return;
-                    ^{ret_lbl}:
+                    ^ret_lbl:
                 }};
             }
             Ast::CoroutineDef(_, ref fn_name, _, _, stmts) => {
