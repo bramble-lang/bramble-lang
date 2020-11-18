@@ -32,7 +32,7 @@ impl<'a> ScopeStack<'a> {
             }
             match scope.ty {
                 Type::Block => (),
-                Type::Function{..} => return None,
+                Type::Routine{..} => return None,
             }
         }
 
@@ -54,7 +54,7 @@ impl Scope {
     }
 
     pub fn insert(&mut self, name: &str, size: i32, offset: i32) -> i32 {
-        self.symbols.table.insert(name.into(), Symbol::new(name, size, offset));
+        self.symbols.table.insert(name.into(), Symbol::new(name, size, offset + size));
         offset + size
     }
 
@@ -65,7 +65,7 @@ impl Scope {
 
 pub enum Type {
     Block,
-    Function{
+    Routine{
         next_label: i32,
         allocation: i32,
     }
@@ -114,7 +114,7 @@ mod tests {
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
         assert_eq!(sym.size, 4);
-        assert_eq!(sym.offset, 4);
+        assert_eq!(sym.offset, 8);
     }
 
     #[test]
@@ -131,7 +131,7 @@ mod tests {
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
         assert_eq!(sym.size, 4);
-        assert_eq!(sym.offset, 4);
+        assert_eq!(sym.offset, 8);
     }
 
     #[test]
@@ -143,13 +143,13 @@ mod tests {
         stack.push(&outer_scope);
         
         let mut inner_scope = Scope::new(Type::Block);
-        inner_scope.insert("x", 4, 8);
+        inner_scope.insert("x", 4, 16);
         stack.push(&inner_scope);
 
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
         assert_eq!(sym.size, 4);
-        assert_eq!(sym.offset, 8);
+        assert_eq!(sym.offset, 20);
     }
 
     #[test]
@@ -174,7 +174,7 @@ mod tests {
         outer_scope.insert("nope", 4, 4);
         stack.push(&outer_scope);
         
-        let mut fun_scope = Scope::new(Type::Function{next_label: 0, allocation: 8});
+        let mut fun_scope = Scope::new(Type::Routine{next_label: 0, allocation: 8});
         fun_scope.insert("y", 4, 4);
         fun_scope.insert("z", 4, 8);
         stack.push(&fun_scope);
