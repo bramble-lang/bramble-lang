@@ -1,0 +1,10 @@
+fn my_main() {
+    let x: i32 := if true {
+        let y: i32 := 5;
+        y
+    } else {
+        let y: i32 := 10;
+        y
+    };
+    return;
+}
