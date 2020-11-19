@@ -40,8 +40,10 @@ impl Compiler {
         // Put user code here
         let global_func = "".into();
         let (compiler_ast, _) = CompilerNode::from(ast, 0);
-        Compiler::traverse(&compiler_ast, &global_func, &mut func_table, &mut code).unwrap();
-        Compiler { code }
+        let mut compiler = Compiler { code:vec![] };
+        compiler.traverse(&compiler_ast, &global_func, &mut func_table, &mut code).unwrap();
+        compiler.code = code;
+        compiler
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
@@ -182,11 +184,11 @@ impl Compiler {
         }
     }
 
-    fn handle_binary_operands(left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
+    fn handle_binary_operands(&mut self, left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         let mut left_code = vec![];
-        Compiler::traverse(left, current_func, function_table, &mut left_code)?;
+        self.traverse(left, current_func, function_table, &mut left_code)?;
         let mut right_code = vec![];
-        Compiler::traverse(right, current_func, function_table, &mut right_code)?;
+        self.traverse(right, current_func, function_table, &mut right_code)?;
 
         let mut code = vec![];
         assembly!{(code){
@@ -201,9 +203,9 @@ impl Compiler {
         Ok(code)
     }
     
-    fn comparison_op(op: Inst, left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
+    fn comparison_op(&mut self, op: Inst, left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
         assembly!{(code){
-            {{Compiler::handle_binary_operands(left, right, current_func, function_table)?}}
+            {{self.handle_binary_operands(left, right, current_func, function_table)?}}
             cmp %eax, %ebx;
             {{[op]}}
             and %al, 1;
@@ -213,6 +215,7 @@ impl Compiler {
     }
 
     fn traverse(
+        &mut self,
         ast: &CompilerNode,
         current_func: &String,
         function_table: &mut FunctionTable,
@@ -237,48 +240,48 @@ impl Compiler {
             }
             Ast::Mul(_, l, r) => {
                 assembly!{(code) {
-                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     imul %eax, %ebx;
                 }}
             }
             Ast::Add(_, l, r) => {
                 assembly!{(code) {
-                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     add %eax, %ebx;
                 }}
             }
             Ast::Eq(_, l, r) => {
-                Compiler::comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
+                self.comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::NEq(_, l, r) => {
-                Compiler::comparison_op(Inst::Setne(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
+                self.comparison_op(Inst::Setne(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::Ls(_, l, r) => {
-                Compiler::comparison_op(Inst::Setl(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
+                self.comparison_op(Inst::Setl(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::LsEq(_, l, r) => {
-                Compiler::comparison_op(Inst::Setle(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
+                self.comparison_op(Inst::Setle(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::Gr(_, l, r) => {
-                Compiler::comparison_op(Inst::Setg(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
+                self.comparison_op(Inst::Setg(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::GrEq(_, l, r) => {
-                Compiler::comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
+                self.comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, function_table, code)?;
             }
             Ast::BAnd(_, l, r) => {
                 assembly!{(code) {
-                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     and %eax, %ebx;
                 }}
             }
             Ast::BOr(_, l, r) => {
                 assembly!{(code) {
-                    {{Compiler::handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
+                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func, function_table)?}}
                     or %eax, %ebx;
                 }}
             }
             Ast::Printiln(_, ref exp) => {
-                Compiler::traverse(exp, current_func, function_table, code)?;
+                self.traverse(exp, current_func, function_table, code)?;
                 
                 assembly!{(code) {
                     print_dec %eax;
@@ -286,7 +289,7 @@ impl Compiler {
                 }}
             }
             Ast::Printbln(_, ref exp) => {
-                Compiler::traverse(exp, current_func, function_table, code)?;
+                self.traverse(exp, current_func, function_table, code)?;
                 
                 assembly!{(code) {
                     call @print_bool;
@@ -295,11 +298,11 @@ impl Compiler {
             }
             Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
                 let mut cond_code = vec![];
-                Compiler::traverse(cond, current_func, function_table, &mut cond_code)?;
+                self.traverse(cond, current_func, function_table, &mut cond_code)?;
                 let mut true_code = vec![];
-                Compiler::traverse(true_arm, current_func, function_table, &mut true_code)?;
+                self.traverse(true_arm, current_func, function_table, &mut true_code)?;
                 let mut false_code = vec![];
-                Compiler::traverse(false_arm, current_func, function_table, &mut false_code)?;
+                self.traverse(false_arm, current_func, function_table, &mut false_code)?;
                 
                 assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
                     {{cond_code}}
@@ -314,33 +317,33 @@ impl Compiler {
             }
             Ast::ExpressionBlock(_, body) => {
                 for s in body.iter() {
-                    Compiler::traverse(s, current_func, function_table, code)?;
+                    self.traverse(s, current_func, function_table, code)?;
                 }
             }
             Ast::Statement(_, stm) => {
-                Compiler::traverse(stm, current_func, function_table, code)?;
+                self.traverse(stm, current_func, function_table, code)?;
             }
             Ast::Bind(_, id, _, ref exp) => {
                 let id_offset = function_table.get_var_offset(current_func, id).ok_or(format!("Could not find variable {}", id))?;
-                Compiler::traverse(exp, current_func, function_table, code)?;
+                self.traverse(exp, current_func, function_table, code)?;
                 assembly!{(code) {
                     mov [%ebp-{id_offset as u32}], %eax;
                 }};
             }
             Ast::Module(_, functions, coroutines) => {
                 for f in functions.iter() {
-                    Compiler::traverse(f, current_func, function_table, code)?;
+                    self.traverse(f, current_func, function_table, code)?;
                 }
                 for co in coroutines.iter() {
-                    Compiler::traverse(co, current_func, function_table, code)?;
+                    self.traverse(co, current_func, function_table, code)?;
                 }
             }
             Ast::Return(_, ref exp) => match exp {
-                Some(e) => Compiler::traverse(e, current_func, function_table, code)?,
+                Some(e) => self.traverse(e, current_func, function_table, code)?,
                 None => (),
             },
             Ast::Yield(_, ref id) => {
-                Compiler::traverse(id, current_func, function_table, code)?;
+                self.traverse(id, current_func, function_table, code)?;
                 assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
                     mov %ebx, ^ret_lbl;
                     jmp @runtime_yield_into_coroutine;
@@ -349,7 +352,7 @@ impl Compiler {
             }
             Ast::YieldReturn(_, ref exp) => {
                 if let Some(exp) = exp {
-                    Compiler::traverse(exp, current_func, function_table, code)?;
+                    self.traverse(exp, current_func, function_table, code)?;
                 }
                 
                 assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
@@ -365,7 +368,7 @@ impl Compiler {
 
                 // Prepare stack frame for this function
                 for s in stmts.iter() {
-                    Compiler::traverse(s, fn_name, function_table, code)?;
+                    self.traverse(s, fn_name, function_table, code)?;
                 }
                 assembly!{(code) {
                     jmp @runtime_yield_return;
@@ -375,7 +378,7 @@ impl Compiler {
                 Compiler::validate_routine_call(co, params, function_table)?;
                 
                 assembly!{(code) {
-                    {{Compiler::evaluate_routine_params(params, &co_param_registers, current_func, function_table)?}}
+                    {{self.evaluate_routine_params(params, &co_param_registers, current_func, function_table)?}}
                     lea %eax, [@{co}];
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
@@ -402,7 +405,7 @@ impl Compiler {
 
 
                 for s in stmts.iter() {
-                    Compiler::traverse(s, fn_name, function_table, code)?;
+                    self.traverse(s, fn_name, function_table, code)?;
                 }
 
                 assembly!{(code) {
@@ -421,7 +424,7 @@ impl Compiler {
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
                 assembly!{(code) {
-                    {{Compiler::evaluate_routine_params(params, &fn_param_registers, current_func, function_table)?}}
+                    {{self.evaluate_routine_params(params, &fn_param_registers, current_func, function_table)?}}
                     call @{fn_name};
                 }};
             }
@@ -446,7 +449,7 @@ impl Compiler {
         Ok(code)
     }
 
-    fn evaluate_routine_params(params: &Vec<CompilerNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
+    fn evaluate_routine_params(&mut self, params: &Vec<CompilerNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
         if params.len() > param_registers.len() {
@@ -454,7 +457,7 @@ impl Compiler {
         }
         let mut code = vec![];
         for param in params.iter() {
-            Compiler::traverse(param, current_func, function_table, &mut code)?;
+            self.traverse(param, current_func, function_table, &mut code)?;
             assembly!{(code){
                 push %eax;
             }};
