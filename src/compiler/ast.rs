@@ -38,7 +38,8 @@ impl CompilerNode {
                 )
             }
             CoroutineDef(m, name, params, ret_ty, body) => {
-                let (mut meta, offset2) = Scope::routine_from(m, 0);
+                let coroutine_metadata_size = 20;
+                let (mut meta, offset2) = Scope::routine_from(m, coroutine_metadata_size);
                 let mut nbody = vec![];
                 let mut noffset = offset2;
                 for e in body.iter() {
@@ -543,9 +544,16 @@ mod ast_tests {
                 assert_eq!(name, "coroutine");
                 assert_eq!(m.symbols.table.len(), 2);
                 assert_eq!(m.symbols.table["x"].size, 4);
-                assert_eq!(m.symbols.table["x"].offset, 4);
+                assert_eq!(m.symbols.table["x"].offset, 24);
                 assert_eq!(m.symbols.table["y"].size, 4);
-                assert_eq!(m.symbols.table["y"].offset, 8);
+                assert_eq!(m.symbols.table["y"].offset, 28);
+
+                match m.ty {
+                    Type::Routine{allocation,..} => {
+                        assert_eq!(allocation, 28)
+                    }
+                    _ => assert!(false),
+                }
             }
             _ => assert!(false),
         }
@@ -602,6 +610,10 @@ impl Scope {
             ty,
             symbols: SymbolTable::new(),
         }
+    }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
     }
 
     pub fn insert(&mut self, name: &str, size: i32, offset: i32) -> i32 {

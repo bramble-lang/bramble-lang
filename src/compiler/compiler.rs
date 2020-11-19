@@ -1,6 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::compiler::ast::Type::Routine;
 use crate::compiler::ast::ScopeStack;
 use super::vartable::*;
 use crate::ast::Ast;
@@ -240,7 +241,6 @@ impl<'a> Compiler<'a> {
         ast: &'a CompilerNode,
         current_func: &String,
         function_table: &mut FunctionTable,
-        //output: &mut Vec<Instruction>,
         code: &mut Vec<Inst>,
     ) -> Result<(),String> {
         // The registers used for passing function parameters, in the order that parameters are
@@ -258,7 +258,10 @@ impl<'a> Compiler<'a> {
                 assembly!{(code) {mov %eax, {if *b {1} else {0}};}}
             }
             Ast::Identifier(_, id) => {
-                let id_offset = function_table.get_var_offset(current_func, id).ok_or(format!("Could not find variable {}", id))?;
+                let var = self.scope.find(id).unwrap();
+                let id_offset = var.offset;
+                //let id_offset = function_table.get_var_offset(current_func, id).ok_or(format!("Could not find variable {}", id))?;
+                //assert_eq!(var_offset, id_offset);
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
             }
             Ast::Mul(_, l, r) => {
@@ -413,15 +416,20 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::FunctionDef(_, ref fn_name, params, _, stmts) => {
-                let total_offset = function_table.get_total_offset(fn_name).unwrap_or(0);
+            Ast::FunctionDef(scope, ref fn_name, params, _, stmts) => {
+                let total_offset = match scope.ty() {
+                    Routine{allocation,..} => {
+                        allocation
+                    },
+                    _ => panic!("Invalid scope for function definition"),
+                };
 
                 assembly!{(code) {
                 @{fn_name}:
                     ;"Prepare stack frame for this function"
                     push %ebp;
                     mov %ebp, %esp;
-                    sub %esp, {total_offset};
+                    sub %esp, {*total_offset};
                     ; "Move function parameters from registers into the stack frame"
                     {{Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table)?}}
                 }};
