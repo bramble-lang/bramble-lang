@@ -80,7 +80,6 @@ fn main() {
     let program = Compiler::compile(&semantic_ast);
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
-    program
-        .print(&mut output)
+    Compiler::print(&program, &mut output)
         .expect("Failed to write assembly");
 }

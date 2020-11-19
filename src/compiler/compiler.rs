@@ -1,6 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::compiler::ast::ScopeStack;
 use super::vartable::*;
 use crate::ast::Ast;
 use crate::semantics::semanticnode::SemanticNode;
@@ -14,19 +15,20 @@ use crate::operand;
 use crate::register;
 use crate::compiler::ast::CompilerNode;
 
-pub struct Compiler {
+pub struct Compiler<'a> {
     code: Vec<Inst>,
+    scope: ScopeStack<'a>,
 }
 
-impl Compiler {
-    pub fn print(&self, output: &mut dyn std::io::Write) -> std::io::Result<()> {
-        for inst in self.code.iter() {
+impl<'a> Compiler<'a> {
+    pub fn print(code: &Vec<Inst>, output: &mut dyn std::io::Write) -> std::io::Result<()> {
+        for inst in code.iter() {
             writeln!(output, "{}", inst)?;
         }
         Ok(())
     }
 
-    pub fn compile(ast: &SemanticNode) -> Compiler {
+    pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
         let mut func_table = FunctionTable::from_semantic_ast(&ast);
         let mut code = vec![];
 
@@ -40,10 +42,9 @@ impl Compiler {
         // Put user code here
         let global_func = "".into();
         let (compiler_ast, _) = CompilerNode::from(ast, 0);
-        let mut compiler = Compiler { code:vec![] };
+        let mut compiler = Compiler { code:vec![], scope: ScopeStack::new() };
         compiler.traverse(&compiler_ast, &global_func, &mut func_table, &mut code).unwrap();
-        compiler.code = code;
-        compiler
+        code
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
@@ -184,7 +185,7 @@ impl Compiler {
         }
     }
 
-    fn handle_binary_operands(&mut self, left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
+    fn handle_binary_operands(&mut self, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         let mut left_code = vec![];
         self.traverse(left, current_func, function_table, &mut left_code)?;
         let mut right_code = vec![];
@@ -203,7 +204,7 @@ impl Compiler {
         Ok(code)
     }
     
-    fn comparison_op(&mut self, op: Inst, left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
+    fn comparison_op(&mut self, op: Inst, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
         assembly!{(code){
             {{self.handle_binary_operands(left, right, current_func, function_table)?}}
             cmp %eax, %ebx;
@@ -214,9 +215,29 @@ impl Compiler {
         Ok(())
     }
 
+    fn push_scope(&mut self, ast: &'a CompilerNode) {
+        use crate::syntax::ast::Ast::*;
+
+        match ast {
+            Integer(s, ..) | Boolean(s,..) | Identifier(s, ..) | IdentifierDeclare(s,..)
+            | Mul(s,..) | Add(s,..) | BAnd(s,..) | BOr(s,..) 
+            | Eq(s,..) | NEq(s,..) | Ls(s,..) | LsEq(s, ..) 
+            | Gr(s,..) | GrEq(s,..)
+            | Printi(s,..) | Printiln(s,..) | Printbln(s,..)
+            | If(s,..) | Yield(s,..) | YieldReturn(s,..) | Return(s,..)
+            | Bind(s,..) | Statement(s,..) | ExpressionBlock(s,..) 
+            | FunctionCall(s,..) | FunctionDef(s,..) | CoroutineDef(s,..) | CoroutineInit(s,..)
+            | Module(s,..)  => self.scope.push(s),
+        };
+    }
+
+    fn pop(&mut self) {
+        self.scope.pop();
+    }
+
     fn traverse(
         &mut self,
-        ast: &CompilerNode,
+        ast: &'a CompilerNode,
         current_func: &String,
         function_table: &mut FunctionTable,
         //output: &mut Vec<Instruction>,
@@ -226,6 +247,8 @@ impl Compiler {
         // assigned to registers
         let fn_param_registers = vec![Reg::R32(Reg32::Eax), Reg::R32(Reg32::Ebx), Reg::R32(Reg32::Ecx), Reg::R32(Reg32::Edx)];
         let co_param_registers = vec![Reg::R32(Reg32::Ebx), Reg::R32(Reg32::Ecx), Reg::R32(Reg32::Edx)];
+
+        self.push_scope(ast);
 
         match ast {
             Ast::Integer(_, i) => {
@@ -431,6 +454,8 @@ impl Compiler {
             node => panic!("Expected an operator, found {:?}", node),
         };
 
+        self.pop();
+
         Ok(())
     }
 
@@ -449,7 +474,7 @@ impl Compiler {
         Ok(code)
     }
 
-    fn evaluate_routine_params(&mut self, params: &Vec<CompilerNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
+    fn evaluate_routine_params(&mut self, params: &'a Vec<CompilerNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
         if params.len() > param_registers.len() {
