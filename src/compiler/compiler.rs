@@ -12,6 +12,7 @@ use crate::unary_op;
 use crate::binary_op;
 use crate::operand;
 use crate::register;
+use crate::compiler::ast::CompilerNode;
 
 pub struct Compiler {
     code: Vec<Inst>,
@@ -38,7 +39,8 @@ impl Compiler {
 
         // Put user code here
         let global_func = "".into();
-        Compiler::traverse(ast, &global_func, &mut func_table, &mut code).unwrap();
+        let (compiler_ast, _) = CompilerNode::from(ast, 0);
+        Compiler::traverse(&compiler_ast, &global_func, &mut func_table, &mut code).unwrap();
         Compiler { code }
     }
 
@@ -180,7 +182,7 @@ impl Compiler {
         }
     }
 
-    fn handle_binary_operands(left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
+    fn handle_binary_operands(left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         let mut left_code = vec![];
         Compiler::traverse(left, current_func, function_table, &mut left_code)?;
         let mut right_code = vec![];
@@ -199,7 +201,7 @@ impl Compiler {
         Ok(code)
     }
     
-    fn comparison_op(op: Inst, left: &SemanticNode, right: &SemanticNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
+    fn comparison_op(op: Inst, left: &CompilerNode, right: &CompilerNode, current_func: &String, function_table: &mut FunctionTable, code: &mut Vec<Inst>) -> Result<(), String> {
         assembly!{(code){
             {{Compiler::handle_binary_operands(left, right, current_func, function_table)?}}
             cmp %eax, %ebx;
@@ -211,7 +213,7 @@ impl Compiler {
     }
 
     fn traverse(
-        ast: &SemanticNode,
+        ast: &CompilerNode,
         current_func: &String,
         function_table: &mut FunctionTable,
         //output: &mut Vec<Instruction>,
@@ -444,7 +446,7 @@ impl Compiler {
         Ok(code)
     }
 
-    fn evaluate_routine_params(params: &Vec<SemanticNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
+    fn evaluate_routine_params(params: &Vec<CompilerNode>, param_registers: &Vec<Reg>, current_func: &String, function_table: &mut FunctionTable) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
         if params.len() > param_registers.len() {
@@ -465,7 +467,7 @@ impl Compiler {
         Ok(code)
     }
 
-    fn validate_routine_call(func: &str, params: &Vec<SemanticNode>, function_table: &FunctionTable) -> Result<(),String>{
+    fn validate_routine_call(func: &str, params: &Vec<CompilerNode>, function_table: &FunctionTable) -> Result<(),String>{
         // Check if function exists and if the right number of parameters are being
         // passed
         if !function_table.funcs.contains_key(func) {
