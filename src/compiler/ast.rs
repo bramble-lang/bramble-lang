@@ -201,7 +201,7 @@ impl CompilerNode {
                     noffset = poffset;
                     nparams.push(np);
                 }
-                (FunctionCall(meta, name.clone(), nparams), noffset)
+                (CoroutineInit(meta, name.clone(), nparams), noffset)
             }
             Module(m, funcs, cors) => {
                 let (meta, offset) = Scope::block_from(m, offset);
