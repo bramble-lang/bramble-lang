@@ -23,7 +23,7 @@ impl CompilerNode {
                 (ExpressionBlock(meta, nbody), noffset)
             }
             FunctionDef(m, name, params, ret_ty, body) => {
-                let (meta, offset2) = Scope::routine_from(m, 0);
+                let (mut meta, offset2) = Scope::routine_from(m, 0);
                 let mut nbody = vec![];
                 let mut noffset = offset2;
                 for e in body.iter() {
@@ -31,13 +31,14 @@ impl CompilerNode {
                     noffset = offset;
                     nbody.push(e);
                 }
+                meta.ty = Type::Routine{next_label: 0, allocation: noffset};
                 (
                     FunctionDef(meta, name.clone(), params.clone(), *ret_ty, nbody),
                     offset,
                 )
             }
             CoroutineDef(m, name, params, ret_ty, body) => {
-                let (meta, offset2) = Scope::routine_from(m, 0);
+                let (mut meta, offset2) = Scope::routine_from(m, 0);
                 let mut nbody = vec![];
                 let mut noffset = offset2;
                 for e in body.iter() {
@@ -45,6 +46,7 @@ impl CompilerNode {
                     noffset = offset;
                     nbody.push(e);
                 }
+                meta.ty = Type::Routine{next_label: 0, allocation: noffset};
                 (
                     CoroutineDef(meta, name.clone(), params.clone(), *ret_ty, nbody),
                     offset,
@@ -436,6 +438,14 @@ mod ast_tests {
                 assert_eq!(m.symbols.table["x"].offset, 4);
                 assert_eq!(m.symbols.table["y"].size, 4);
                 assert_eq!(m.symbols.table["y"].offset, 8);
+
+                match m.ty {
+                    Type::Routine{next_label, allocation} => {
+                        assert_eq!(next_label, 0);
+                        assert_eq!(allocation, 8);
+                    }
+                    _ => assert!(false)
+                }
             }
             _ => assert!(false),
         }
