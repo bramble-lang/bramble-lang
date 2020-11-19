@@ -1,6 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::ast::Primitive;
 use crate::compiler::ast::Type::Routine;
 use crate::compiler::ast::ScopeStack;
 use super::vartable::*;
@@ -258,10 +259,7 @@ impl<'a> Compiler<'a> {
                 assembly!{(code) {mov %eax, {if *b {1} else {0}};}}
             }
             Ast::Identifier(_, id) => {
-                let var = self.scope.find(id).unwrap();
-                let id_offset = var.offset;
-                //let id_offset = function_table.get_var_offset(current_func, id).ok_or(format!("Could not find variable {}", id))?;
-                //assert_eq!(var_offset, id_offset);
+                let id_offset = self.scope.find(id).unwrap().offset;
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
             }
             Ast::Mul(_, l, r) => {
@@ -350,7 +348,7 @@ impl<'a> Compiler<'a> {
                 self.traverse(stm, current_func, function_table, code)?;
             }
             Ast::Bind(_, id, _, ref exp) => {
-                let id_offset = function_table.get_var_offset(current_func, id).ok_or(format!("Could not find variable {}", id))?;
+                let id_offset = self.scope.find(id).ok_or(format!("Could not find variable {}", id))?.offset;
                 self.traverse(exp, current_func, function_table, code)?;
                 assembly!{(code) {
                     mov [%ebp-{id_offset as u32}], %eax;
@@ -402,7 +400,8 @@ impl<'a> Compiler<'a> {
             }
             Ast::CoroutineInit(_, ref co, params) => {
                 Compiler::validate_routine_call(co, params, function_table)?;
-                
+
+
                 assembly!{(code) {
                     {{self.evaluate_routine_params(params, &co_param_registers, current_func, function_table)?}}
                     lea %eax, [@{co}];
@@ -411,7 +410,10 @@ impl<'a> Compiler<'a> {
                     push %ebp;
                     mov %ebp, %eax;
                     ; "move parameters into the stack frame of the coroutine"
-                    {{Compiler::move_params_into_stackframe(co, params.len(), &co_param_registers, function_table)?}}
+                    {{{
+                        let codef = &function_table.funcs[co].params;
+                        self.move_params_into_stackframe(co, codef, &co_param_registers, function_table)?
+                    }}}
                     ; "leave coroutine's stack frame"
                     pop %ebp;
                 }};
@@ -431,7 +433,7 @@ impl<'a> Compiler<'a> {
                     mov %ebp, %esp;
                     sub %esp, {*total_offset};
                     ; "Move function parameters from registers into the stack frame"
-                    {{Compiler::move_params_into_stackframe(fn_name, params.len(), &fn_param_registers, function_table)?}}
+                    {{self.move_params_into_stackframe(fn_name, &params, &fn_param_registers, function_table)?}}
                 }};
 
 
@@ -467,13 +469,13 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn move_params_into_stackframe(func: &str, num_params: usize, param_registers: &Vec<Reg>, function_table: &FunctionTable) -> Result<Vec<Inst>, String>{
-        if num_params > param_registers.len() {
+    fn move_params_into_stackframe(&self, func: &str, params: &Vec<(String,Primitive)>, param_registers: &Vec<Reg>, function_table: &FunctionTable) -> Result<Vec<Inst>, String>{
+        if params.len() > param_registers.len() {
             return Err(format!("Compiler: too many parameters in function definition"));
         }
 
         let mut code = vec![];
-        for idx in 0..num_params {
+        for idx in 0..params.len() {
             let param_offset = function_table.funcs[func].vars.vars[idx].frame_offset;
             assembly!{(code){
                 mov [%ebp-{param_offset as u32}], %{param_registers[idx]};

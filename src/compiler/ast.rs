@@ -560,6 +560,7 @@ mod ast_tests {
     }
 }
 
+#[derive(Debug)]
 pub struct ScopeStack<'a> {
     stack: Vec<&'a Scope>,
 }
