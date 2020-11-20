@@ -218,19 +218,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn push_scope(&mut self, ast: &'a CompilerNode) {
-        use crate::syntax::ast::Ast::*;
-
-        match ast {
-            Integer(s, ..) | Boolean(s,..) | Identifier(s, ..) | IdentifierDeclare(s,..)
-            | Mul(s,..) | Add(s,..) | BAnd(s,..) | BOr(s,..) 
-            | Eq(s,..) | NEq(s,..) | Ls(s,..) | LsEq(s, ..) 
-            | Gr(s,..) | GrEq(s,..)
-            | Printi(s,..) | Printiln(s,..) | Printbln(s,..)
-            | If(s,..) | Yield(s,..) | YieldReturn(s,..) | Return(s,..)
-            | Bind(s,..) | Statement(s,..) | ExpressionBlock(s,..) 
-            | FunctionCall(s,..) | FunctionDef(s,..) | CoroutineDef(s,..) | CoroutineInit(s,..)
-            | Module(s,..)  => self.scope.push(s),
-        };
+        self.scope.push(ast)
     }
 
     fn pop(&mut self) {
