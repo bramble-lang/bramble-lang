@@ -91,6 +91,18 @@ impl<I> Ast<I> {
             => m
         }
     }
+
+    /// If a node is a function or a coroutine this will return its parameter vector.  If
+    /// the node is not a function or coroutine, this will return None.
+    pub fn get_params(&self) -> Option<&Vec<(String,Primitive)>> {
+        match self {
+            Ast::FunctionDef(_, _, params, ..)
+            | Ast::CoroutineDef(_, _, params,..) => {
+                Some(params)
+            }
+            _ => None
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
