@@ -3,7 +3,7 @@
 // instructions
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Type::Routine;
-use crate::compiler::ast::scope::ScopeStack;
+use crate::compiler::ast::stack::ScopeStack;
 use crate::ast::Primitive;
 use super::vartable::*;
 use crate::ast::Ast;
