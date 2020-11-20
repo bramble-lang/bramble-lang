@@ -39,6 +39,35 @@ impl<'a> ScopeStack<'a> {
 
         None
     }
+
+    /// Searched from the top of the stack to the bottom for a Node whose symbol table
+    /// contains the given name.  If found it will return a reference to that node.
+    /// Unlike `find` this function will not stop at Function boundaries. This allows
+    /// it to be used for searching for functions defined in parent scopes all the way up
+    /// to the module containing the current node.
+    fn find_global(&self, name: &str) -> Option<&'a CompilerNode> {
+        for node in self.stack.iter().rev() {
+            let scope = node.get_metadata();
+            if scope.get(name).is_some() {
+                return Some(node);
+            }
+        }
+
+        None
+    }
+
+    pub fn find_func(&self, name: &str) -> Option<&CompilerNode> {
+        match self.find_global(name) {
+            Some(ref node) => {
+                match node {
+                    CompilerNode::Module(_, funcs, _) =>
+                        funcs.iter().find(|v| match v {CompilerNode::FunctionDef(_, n, _, _, _) => n == name, _ => false}),
+                    _ => None,
+                }
+            },
+            None => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -140,5 +169,46 @@ mod tests {
         assert_eq!(stack.find("x").is_some(), true);
         assert_eq!(stack.find("y").is_some(), true);
         assert_eq!(stack.find("nope").is_some(), false);
+    }
+
+    #[test]
+    fn test_get_routine_parameters() {
+        use crate::syntax::ast::Primitive;
+
+        let mut stack = ScopeStack::new();
+
+        let mut fun_scope = Scope::new(Type::Routine {
+            next_label: 0,
+            allocation: 8,
+        });
+        fun_scope.insert("y", 4, 0);
+        fun_scope.insert("z", 4, 4);
+        let fun_node = CompilerNode::FunctionDef(fun_scope, "func".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
+
+        let mut module_scope = Scope::new(Type::Block);
+        module_scope.insert("func", 0, 0);
+        let module_node = CompilerNode::Module(module_scope, vec![fun_node], vec![]);
+        stack.push(&module_node);
+
+        let fun2_scope = Scope::new(Type::Routine {
+            next_label: 0,
+            allocation: 0,
+        });
+        let fun2_node = CompilerNode::FunctionDef(fun2_scope, "func2".into(), vec![], Primitive::I32, vec![]);
+        stack.push(&fun2_node);
+        
+        assert_eq!(stack.find("func").is_none(), true);
+
+        let node = stack.find_func("func").unwrap();
+        match node {
+            CompilerNode::FunctionDef(meta, name, params, _, _) => {
+                assert_eq!(name, "func");
+                assert_eq!(params.len(), 1);
+                let y_param = meta.get("y").unwrap();
+                assert_eq!(y_param.offset, 4);
+                assert_eq!(y_param.size, 4);
+            },
+            _ => assert!(false),
+        }
     }
 }
