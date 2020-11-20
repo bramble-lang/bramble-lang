@@ -24,7 +24,7 @@ function run_test() {
     fi
 }
 
-cargo build
+cargo test
 if [ $? -eq 0 ]
 then
     run_test "simple"
