@@ -76,6 +76,21 @@ impl<I> Ast<I> {
             Module(_, _, _) => "module".into(),
         }
     }
+
+    pub fn get_metadata(&self) -> &I {
+        use Ast::*;
+        match self {
+            Integer(m,..) | Boolean(m,..) | Identifier(m,..) | IdentifierDeclare(m,..)
+            | Mul(m,..) | Add(m,..) | BAnd(m,..) | BOr(m,..)
+            | Eq(m,..) | NEq(m,..) | Ls(m,..) | LsEq(m,..) | Gr(m,..) | GrEq(m,..)
+            | Printi(m,..) | Printiln(m,..) | Printbln(m,..)
+            | If(m,..) | ExpressionBlock(m,..) | Statement(m,..)
+            | Bind(m,..) | Return(m,..) | Yield(m,..) | YieldReturn(m,..)
+            | FunctionDef(m,..) | FunctionCall(m,..) | CoroutineDef(m,..) | CoroutineInit(m,..)
+            | Module(m,..)
+            => m
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
