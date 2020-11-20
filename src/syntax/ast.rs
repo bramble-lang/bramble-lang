@@ -103,6 +103,18 @@ impl<I> Ast<I> {
             _ => None
         }
     }
+
+    /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
+    pub fn get_name(&self) -> Option<&str> {
+        match self {
+            Ast::FunctionDef(_, name, _, ..)
+            | Ast::CoroutineDef(_, name, _,..)
+            | Ast::Identifier(_, name) => {
+                Some(name)
+            }
+            _ => None
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

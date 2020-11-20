@@ -68,6 +68,19 @@ impl<'a> ScopeStack<'a> {
             None => None,
         }
     }
+
+    pub fn find_coroutine(&self, name: &str) -> Option<&CompilerNode> {
+        match self.find_global(name) {
+            Some(ref node) => {
+                match node {
+                    CompilerNode::Module(_, _, cors) =>
+                        cors.iter().find(|v| match v {CompilerNode::CoroutineDef(_, n, _, _, _) => n == name, _ => false}),
+                    _ => None,
+                }
+            },
+            None => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -206,6 +219,45 @@ mod tests {
                 assert_eq!(params.len(), 1);
                 let y_param = meta.get("y").unwrap();
                 assert_eq!(y_param.offset, 4);
+                assert_eq!(y_param.size, 4);
+            },
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_get_coroutine_parameters() {
+        use crate::syntax::ast::Primitive;
+
+        let mut stack = ScopeStack::new();
+
+        let mut cor_scope = Scope::new(Type::Routine {
+            next_label: 0,
+            allocation: 8,
+        });
+        cor_scope.insert("y", 4, 20);
+        cor_scope.insert("z", 4, 24);
+        let cor_node = CompilerNode::CoroutineDef(cor_scope, "cor".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
+
+        let mut module_scope = Scope::new(Type::Block);
+        module_scope.insert("cor", 0, 0);
+        let module_node = CompilerNode::Module(module_scope, vec![], vec![cor_node]);
+        stack.push(&module_node);
+
+        let fun2_scope = Scope::new(Type::Routine {
+            next_label: 0,
+            allocation: 0,
+        });
+        let fun2_node = CompilerNode::FunctionDef(fun2_scope, "func2".into(), vec![], Primitive::I32, vec![]);
+        stack.push(&fun2_node);
+
+        let node = stack.find_coroutine("cor").unwrap();
+        match node {
+            CompilerNode::CoroutineDef(meta, name, params, _, _) => {
+                assert_eq!(name, "cor");
+                assert_eq!(params.len(), 1);
+                let y_param = meta.get("y").unwrap();
+                assert_eq!(y_param.offset, 24);
                 assert_eq!(y_param.size, 4);
             },
             _ => assert!(false),

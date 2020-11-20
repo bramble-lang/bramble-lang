@@ -4,7 +4,6 @@
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Type::Routine;
 use crate::compiler::ast::stack::ScopeStack;
-use crate::ast::Primitive;
 use super::vartable::*;
 use crate::ast::Ast;
 use crate::semantics::semanticnode::SemanticNode;
@@ -387,7 +386,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::CoroutineInit(_, ref co, params) => {
-                Compiler::validate_routine_call(co, params, function_table)?;
+                self.validate_routine_call(co, params)?;
 
 
                 assembly!{(code) {
@@ -399,14 +398,14 @@ impl<'a> Compiler<'a> {
                     mov %ebp, %eax;
                     ; "move parameters into the stack frame of the coroutine"
                     {{{
-                        let codef = &function_table.funcs[co].params;
-                        self.move_params_into_stackframe(co, codef, &co_param_registers, function_table)?
+                        let codef = self.scope.find_coroutine(co).ok_or(format!("Could not find {} when looking up parameter offsets", co))?;
+                        self.move_params_into_stackframe(codef, &co_param_registers)?
                     }}}
                     ; "leave coroutine's stack frame"
                     pop %ebp;
                 }};
             }
-            Ast::FunctionDef(scope, ref fn_name, params, _, stmts) => {
+            Ast::FunctionDef(scope, ref fn_name, _, _, stmts) => {
                 let total_offset = match scope.ty() {
                     Routine{allocation,..} => {
                         allocation
@@ -421,7 +420,7 @@ impl<'a> Compiler<'a> {
                     mov %ebp, %esp;
                     sub %esp, {*total_offset};
                     ; "Move function parameters from registers into the stack frame"
-                    {{self.move_params_into_stackframe(fn_name, &params, &fn_param_registers, function_table)?}}
+                    {{self.move_params_into_stackframe(ast, &fn_param_registers)?}}
                 }};
 
 
@@ -440,7 +439,7 @@ impl<'a> Compiler<'a> {
             Ast::FunctionCall(_, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                Compiler::validate_routine_call(fn_name, params, function_table).unwrap();
+                self.validate_routine_call(fn_name, params)?;
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
@@ -457,14 +456,17 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn move_params_into_stackframe(&self, func: &str, params: &Vec<(String,Primitive)>, param_registers: &Vec<Reg>, function_table: &FunctionTable) -> Result<Vec<Inst>, String>{
+    fn move_params_into_stackframe(&self, routine: &CompilerNode, param_registers: &Vec<Reg>) -> Result<Vec<Inst>, String>{
+        let routine_name = routine.get_name().ok_or("Critical: treating a node without a name as a routine node")?;
+        let params = routine.get_params().ok_or(format!("Critical: node for {} does not have a params field", routine_name))?;
         if params.len() > param_registers.len() {
             return Err(format!("Compiler: too many parameters in function definition"));
         }
 
         let mut code = vec![];
+        let routine_sym_table = routine.get_metadata();
         for idx in 0..params.len() {
-            let param_offset = function_table.funcs[func].vars.vars[idx].frame_offset;
+            let param_offset = routine_sym_table.get(&params[idx].0).ok_or(format!("Critical: could not find parameter {} in symbol table for {}", params[idx].0, routine_name))?.offset;
             assembly!{(code){
                 mov [%ebp-{param_offset as u32}], %{param_registers[idx]};
             }};
@@ -493,19 +495,16 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn validate_routine_call(func: &str, params: &Vec<CompilerNode>, function_table: &FunctionTable) -> Result<(),String>{
-        // Check if function exists and if the right number of parameters are being
-        // passed
-        if !function_table.funcs.contains_key(func) {
-            return Err(format!("Compiler: no definition found for function `{}`", func));
-        }
+    fn validate_routine_call(&self, routine_name: &str, params: &Vec<CompilerNode>) -> Result<(),String>{
+        let routine = self.scope.find_func(routine_name).or_else(|| self.scope.find_coroutine(routine_name)).expect("Could not find routine in any symbol table in the scope stack");
+        let expected_params = routine.get_params().ok_or(format!("Critical: node for {} does not have a params field", routine_name))?;
 
-        let expected_num_params = function_table.funcs[func].params.len();
+        let expected_num_params = expected_params.len();
         let got_num_params = params.len();
         if expected_num_params != got_num_params {
             Err(format!(
-                "Compiler: expected {} but got {} parameters for function `{}`",
-                expected_num_params, got_num_params, func
+                "Compiler: expected {} but got {} parameters for function/coroutine `{}`",
+                expected_num_params, got_num_params, routine_name
             ))
         } else {
             Ok(())
