@@ -1,10 +1,9 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::compiler::ast::ast;
-use ast::Type::Routine;
-use ast::ScopeStack;
-use ast::CompilerNode;
+use crate::compiler::ast::ast::CompilerNode;
+use crate::compiler::ast::scope::Type::Routine;
+use crate::compiler::ast::scope::ScopeStack;
 use crate::ast::Primitive;
 use super::vartable::*;
 use crate::ast::Ast;
