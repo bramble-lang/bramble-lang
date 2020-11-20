@@ -1,9 +1,11 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::compiler::ast::ast;
+use ast::Type::Routine;
+use ast::ScopeStack;
+use ast::CompilerNode;
 use crate::ast::Primitive;
-use crate::compiler::ast::Type::Routine;
-use crate::compiler::ast::ScopeStack;
 use super::vartable::*;
 use crate::ast::Ast;
 use crate::semantics::semanticnode::SemanticNode;
@@ -15,7 +17,6 @@ use crate::unary_op;
 use crate::binary_op;
 use crate::operand;
 use crate::register;
-use crate::compiler::ast::CompilerNode;
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,
