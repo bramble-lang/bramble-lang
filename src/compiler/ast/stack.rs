@@ -1,5 +1,5 @@
 use crate::compiler::ast::ast::CompilerNode;
-use crate::compiler::ast::scope::{Scope, Symbol, Type};
+use crate::compiler::ast::scope::{Symbol, Type};
 
 #[derive(Debug)]
 pub struct ScopeStack<'a> {
@@ -43,6 +43,7 @@ impl<'a> ScopeStack<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::compiler::ast::scope::Scope;
     use super::*;
 
     #[test]
