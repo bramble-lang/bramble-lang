@@ -112,9 +112,6 @@ impl SemanticNode {
             }
         }
     }
-
-    /// Analyze the AST and add functions to symbol tables
-    pub fn extract_routines(&mut self) {}
 }
 
 fn sm(ln: u32, ty: Primitive) -> SemanticMetadata {
