@@ -113,7 +113,7 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            RoutineDef(_, def, ..) => format!("{}", def),
+            RoutineDef(_, def, name,..) => format!("{} for {}", def, name),
             RoutineCall(_, call, ..) => format!("{}", call),
 
             Module(_, _, _) => "module".into(),
