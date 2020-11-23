@@ -16,6 +16,7 @@ use crate::unary_op;
 use crate::binary_op;
 use crate::operand;
 use crate::register;
+use crate::reg8;
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,
@@ -217,6 +218,48 @@ impl<'a> Compiler<'a> {
                 BinaryOperator::Mul => {assembly!{(op_asm) {imul %eax, %ebx;}}},
                 BinaryOperator::BAnd => {assembly!{(op_asm) {and %eax, %ebx;}}},
                 BinaryOperator::BOr => {assembly!{(op_asm) {or %eax, %ebx;}}},
+                BinaryOperator::Eq => {
+                    assembly!{(op_asm){
+                        cmp %eax, %ebx;
+                        sete %al;
+                        and %al, 1;
+                    }}
+                }
+                BinaryOperator::NEq => {
+                    assembly!{(op_asm){
+                        cmp %eax, %ebx;
+                        setne %al;
+                        and %al, 1;
+                    }}
+                }
+                BinaryOperator::Ls => {
+                    assembly!{(op_asm){
+                        cmp %eax, %ebx;
+                        setl %al;
+                        and %al, 1;
+                    }}
+                }
+                BinaryOperator::LsEq => {
+                    assembly!{(op_asm){
+                        cmp %eax, %ebx;
+                        setle %al;
+                        and %al, 1;
+                    }}
+                }
+                BinaryOperator::Gr => {
+                    assembly!{(op_asm){
+                        cmp %eax, %ebx;
+                        setg %al;
+                        and %al, 1;
+                    }}
+                }
+                BinaryOperator::GrEq => {
+                    assembly!{(op_asm){
+                        cmp %eax, %ebx;
+                        setge %al;
+                        and %al, 1;
+                    }}
+                }
         };
 
         let mut code = vec![];

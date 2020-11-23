@@ -158,7 +158,12 @@ pub mod checker {
                     }
                 },
                 BinaryOp(meta, op, l, r) => {
-                    let expected_ty = match op {BinaryOperator::Mul|BinaryOperator::Add => Some(I32), BinaryOperator::BAnd|BinaryOperator::BOr => Some(Bool)};
+                    let expected_ty = match op {
+                        BinaryOperator::Mul | BinaryOperator::Add => Some(I32),
+                        BinaryOperator::BAnd | BinaryOperator::BOr => Some(Bool),
+                        BinaryOperator::Eq | BinaryOperator::NEq | BinaryOperator::Ls | BinaryOperator::LsEq 
+                        | BinaryOperator::Gr | BinaryOperator::GrEq => None,
+                    };
                     let ty =
                         self.binary_op(root_str, meta.ln, l, r, current_func, sym, expected_ty)?;
                     meta.ty = ty;

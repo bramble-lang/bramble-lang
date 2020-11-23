@@ -39,19 +39,15 @@ impl PNode {
     ) -> Result<Self, String> {
         let i = line; //ParserInfo{l: line};
         match op {
-            Lex::Eq => Ok(Ast::Eq(i, left, right)),
-            Lex::NEq => Ok(Ast::NEq(i, left, right)),
-            Lex::Ls => Ok(Ast::Ls(i, left, right)),
-            Lex::LsEq => Ok(Ast::LsEq(i, left, right)),
-            Lex::Gr => Ok(Ast::Gr(i, left, right)),
-            Lex::GrEq => Ok(Ast::GrEq(i, left, right)),
-            //Lex::BAnd => Ok(Ast::BAnd(i, left, right)),
+            Lex::Eq => Ok(Ast::BinaryOp(i, BinaryOperator::Eq, left, right)),
+            Lex::NEq => Ok(Ast::BinaryOp(i, BinaryOperator::NEq, left, right)),
+            Lex::Ls => Ok(Ast::BinaryOp(i, BinaryOperator::Ls, left, right)),
+            Lex::LsEq => Ok(Ast::BinaryOp(i, BinaryOperator::LsEq, left, right)),
+            Lex::Gr => Ok(Ast::BinaryOp(i, BinaryOperator::Gr, left, right)),
+            Lex::GrEq => Ok(Ast::BinaryOp(i, BinaryOperator::GrEq, left, right)),
             Lex::BAnd => Ok(Ast::BinaryOp(i, BinaryOperator::BAnd, left, right)),
-            //Lex::BOr => Ok(Ast::BOr(i, left, right)),
             Lex::BOr => Ok(Ast::BinaryOp(i, BinaryOperator::BOr, left, right)),
-            //Lex::Add => Ok(Ast::Add(i, left, right)),
             Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
-            //Lex::Mul => Ok(Ast::Mul(i, left, right)),
             Lex::Mul => Ok(Ast::BinaryOp(i, BinaryOperator::Mul, left, right)),
             _ => Err(format!("L{}: {} is not a binary operator", line, op)),
         }

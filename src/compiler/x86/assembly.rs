@@ -480,6 +480,26 @@ macro_rules! assembly {
         $buf.push(Inst::Sete(reg8!($a)));
         assembly!(($buf) {$($tail)*})
     };
+    (($buf:expr) {setne % $a:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::Setne(reg8!($a)));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {setl % $a:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::Setl(reg8!($a)));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {setle % $a:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::Setle(reg8!($a)));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {setg % $a:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::Setg(reg8!($a)));
+        assembly!(($buf) {$($tail)*})
+    };
+    (($buf:expr) {setge % $a:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::Setge(reg8!($a)));
+        assembly!(($buf) {$($tail)*})
+    };
     (($buf:expr) {print_str $a:literal; $($tail:tt)*}) => {
         $buf.push(Inst::PrintStr($a.into()));
         assembly!(($buf) {$($tail)*})

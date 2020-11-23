@@ -4,6 +4,12 @@ pub enum BinaryOperator{
     Mul,
     BAnd,
     BOr,
+    Eq,
+    NEq,
+    Ls,
+    LsEq,
+    Gr,
+    GrEq,
 }
 
 impl std::fmt::Display for BinaryOperator {
@@ -14,6 +20,12 @@ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::f
         Mul => f.write_str("*"),
         BAnd => f.write_str("&&"),
         BOr => f.write_str("||"),
+        Eq => f.write_str("=="),
+        NEq => f.write_str("!="),
+        Ls => f.write_str("<"),
+        LsEq => f.write_str("<="),
+        Gr => f.write_str(">"),
+        GrEq => f.write_str(">="),
     }
  }
 }
