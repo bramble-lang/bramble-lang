@@ -2,6 +2,7 @@
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
 use crate::ast::BinaryOperator;
+use crate::ast::RoutineDef;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::LayoutData;
 use crate::compiler::ast::scope::Type::Routine;
@@ -324,48 +325,6 @@ impl<'a> Compiler<'a> {
                     {{self.handle_binary_operands2(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
-            /*Ast::Mul(_, l, r) => {
-                assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    imul %eax, %ebx;
-                }}
-            }
-            Ast::Add(_, l, r) => {
-                assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    add %eax, %ebx;
-                }}
-            }
-            Ast::Eq(_, l, r) => {
-                self.comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::NEq(_, l, r) => {
-                self.comparison_op(Inst::Setne(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::Ls(_, l, r) => {
-                self.comparison_op(Inst::Setl(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::LsEq(_, l, r) => {
-                self.comparison_op(Inst::Setle(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::Gr(_, l, r) => {
-                self.comparison_op(Inst::Setg(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::GrEq(_, l, r) => {
-                self.comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::BAnd(_, l, r) => {
-                assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    and %eax, %ebx;
-                }}
-            }
-            Ast::BOr(_, l, r) => {
-                assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    or %eax, %ebx;
-                }}
-            }*/
             Ast::Printiln(_, ref exp) => {
                 self.traverse(exp, current_func, code)?;
                 
@@ -447,7 +406,7 @@ impl<'a> Compiler<'a> {
                     ^ret_lbl:
                 }};
             }
-            Ast::CoroutineDef(_, ref fn_name, _, _, stmts) => {
+            Ast::RoutineDef(_, RoutineDef::Coroutine, ref fn_name, _, _, stmts) => {
                 assembly!{(code) {
                 @{fn_name}:
                 }};
@@ -480,7 +439,7 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::FunctionDef(scope, ref fn_name, _, _, stmts) => {
+            Ast::RoutineDef(scope, RoutineDef::Function, ref fn_name, _, _, stmts) => {
                 let total_offset = match scope.ty() {
                     Routine{allocation,..} => {
                         allocation

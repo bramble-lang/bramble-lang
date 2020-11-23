@@ -30,6 +30,22 @@ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::f
  }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RoutineDef{
+    Function,
+    Coroutine,
+}
+
+impl std::fmt::Display for RoutineDef {
+fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> { 
+    use RoutineDef::*;
+    match self {
+        Coroutine => f.write_str("coroutine def"),
+        Function => f.write_str("function def"),
+    }
+ }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
@@ -51,9 +67,8 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    FunctionDef(I, String, Vec<(String, Primitive)>, Primitive, Vec<Ast<I>>),
+    RoutineDef(I, RoutineDef, String, Vec<(String, Primitive)>, Primitive, Vec<Ast<I>>),
     FunctionCall(I, String, Vec<Ast<I>>),
-    CoroutineDef(I, String, Vec<(String, Primitive)>, Primitive, Vec<Ast<I>>),
     CoroutineInit(I, String, Vec<Ast<I>>),
     Module(I, Vec<Ast<I>>, Vec<Ast<I>>),
 }
@@ -82,9 +97,9 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            FunctionDef(_, _, _, _, _) => "function definition".into(),
+            RoutineDef(_, def, ..) => format!("{}", def),
+
             FunctionCall(_, _, _) => "function call".into(),
-            CoroutineDef(_, _, _, _, _) => "coroutine definition".into(),
             CoroutineInit(_, _, _) => "coroutine init".into(),
             Module(_, _, _) => "module".into(),
         }
@@ -98,7 +113,8 @@ impl<I> Ast<I> {
             | Printi(m,..) | Printiln(m,..) | Printbln(m,..)
             | If(m,..) | ExpressionBlock(m,..) | Statement(m,..)
             | Bind(m,..) | Return(m,..) | Yield(m,..) | YieldReturn(m,..)
-            | FunctionDef(m,..) | FunctionCall(m,..) | CoroutineDef(m,..) | CoroutineInit(m,..)
+            | RoutineDef(m,..)
+            | FunctionCall(m,..) | CoroutineInit(m,..)
             | Module(m,..)
             => m
         }
@@ -108,8 +124,7 @@ impl<I> Ast<I> {
     /// the node is not a function or coroutine, this will return None.
     pub fn get_params(&self) -> Option<&Vec<(String,Primitive)>> {
         match self {
-            Ast::FunctionDef(_, _, params, ..)
-            | Ast::CoroutineDef(_, _, params,..) => {
+            Ast::RoutineDef(_, _, _, params, ..) => {
                 Some(params)
             }
             _ => None
@@ -119,8 +134,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::FunctionDef(_, name, _, ..)
-            | Ast::CoroutineDef(_, name, _,..)
+            Ast::RoutineDef(_, _, name, _, ..)
             | Ast::Identifier(_, name) => {
                 Some(name)
             }

@@ -65,26 +65,6 @@ pub mod checker {
                     }
                 }
             }
-
-            /*match expected {
-                None => {
-                    if lty == rty {
-                        Ok(lty)
-                    } else {
-                        Err(format!(
-                            "L{}: {} expected {} but found {}",
-                            ln, op, lty, rty
-                        ))
-                    }
-                }
-                Some(expected) => {
-                    if lty == expected && rty == expected {
-                        Ok(lty)
-                    } else {
-                        Err(format!("L{}: {} expected operands of {}", ln, op, expected))
-                    }
-                }
-            }*/
         }
 
         pub fn traverse(
@@ -451,12 +431,10 @@ pub mod checker {
                     meta.ty = ty;
                     Ok(ty)
                 }
-                FunctionDef(meta, name, params, p, body)
-                | CoroutineDef(meta, name, params, p, body) => {
+                RoutineDef(meta, _, name, params, p, body) => {
                     for (pname, pty) in params.iter() {
                         meta.sym.add(pname, Type::Primitive(*pty))?;
                     }
-                    //meta.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *p))?;
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
                     for stmt in body.iter_mut() {
@@ -1034,8 +1012,9 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], I32, vec![]);
 
-            let node = Ast::FunctionDef(
+            let node = Ast::RoutineDef(
                 1,
+                RoutineDef::Function,
                 "my_func".into(),
                 vec![],
                 I32,
@@ -1050,7 +1029,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::FunctionDef(1, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
+                Ast::RoutineDef(1, RoutineDef::Function, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1065,8 +1044,9 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_co", vec![], I32, vec![]);
 
-            let node = Ast::CoroutineDef(
+            let node = Ast::RoutineDef(
                 1,
+                RoutineDef::Coroutine,
                 "my_co".into(),
                 vec![],
                 I32,
@@ -1081,7 +1061,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::CoroutineDef(1, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
+                Ast::RoutineDef(1, RoutineDef::Coroutine, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),

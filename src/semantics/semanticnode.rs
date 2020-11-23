@@ -27,56 +27,6 @@ impl SemanticNode {
                 SemanticNode::from_parser_ast(l)?,
                 SemanticNode::from_parser_ast(r)?,
             ))),
-            /*Mul(ln, ref l, ref r) => Ok(Box::new(Mul(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Add(ln, ref l, ref r) => Ok(Box::new(Add(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            BAnd(ln, ref l, ref r) => Ok(Box::new(BAnd(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            BOr(ln, ref l, ref r) => Ok(Box::new(BOr(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Eq(ln, ref l, ref r) => Ok(Box::new(Eq(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            NEq(ln, ref l, ref r) => Ok(Box::new(NEq(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Gr(ln, ref l, ref r) => Ok(Box::new(Gr(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            GrEq(ln, ref l, ref r) => Ok(Box::new(GrEq(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Ls(ln, ref l, ref r) => Ok(Box::new(Ls(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            LsEq(ln, ref l, ref r) => Ok(Box::new(LsEq(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),*/
             If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
                 sm_from(*ln),
                 SemanticNode::from_parser_ast(cond)?,
@@ -112,29 +62,16 @@ impl SemanticNode {
                 Ok(Box::new(ExpressionBlock(sm_from(*ln), nbody)))
             }
             Statement(_, stmt) => Ok(SemanticNode::from_parser_ast(stmt)?),
-            FunctionDef(ln, fname, params, p, body) => {
+            RoutineDef(ln, def, fname, params, p, body) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
                     let r = SemanticNode::from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Box::new(FunctionDef(
+                Ok(Box::new(RoutineDef(
                     sm_from(*ln),
+                    *def,
                     fname.clone(),
-                    params.clone(),
-                    *p,
-                    nbody,
-                )))
-            }
-            CoroutineDef(ln, coname, params, p, body) => {
-                let mut nbody = vec![];
-                for stmt in body.iter() {
-                    let r = SemanticNode::from_parser_ast(stmt)?;
-                    nbody.push(*r);
-                }
-                Ok(Box::new(CoroutineDef(
-                    sm_from(*ln),
-                    coname.clone(),
                     params.clone(),
                     *p,
                     nbody,
@@ -273,62 +210,6 @@ mod tests {
                         Box::new(er.clone()),
                     ),
                 ),
-                /*(
-                    Ast::Add(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Add(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::Eq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Eq(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::NEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::NEq(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::Ls(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Ls(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::LsEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::LsEq(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::Gr(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Gr(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::GrEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::GrEq(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),*/
             ]
             .iter()
             {

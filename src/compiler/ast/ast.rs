@@ -3,6 +3,7 @@ use crate::compiler::ast::scope::{LayoutData, Scope, Type};
 use crate::{
     semantics::semanticnode::SemanticNode,
     syntax::ast::Ast,
+    syntax,
 };
 
 pub type CompilerNode = Ast<Scope>;
@@ -21,8 +22,12 @@ impl CompilerNode {
                 }
                 (ExpressionBlock(meta, nbody), nlayout)
             }
-            FunctionDef(m, name, params, ret_ty, body) => {
-                let (mut meta, offset2) = Scope::routine_from(m, 0);
+            RoutineDef(m, def, name, params, ret_ty, body) => {
+                let initial_frame_size = match def { 
+                    syntax::ast::RoutineDef::Function => 0, 
+                    syntax::ast::RoutineDef::Coroutine => 20
+                };
+                let (mut meta, offset2) = Scope::routine_from(m, initial_frame_size);
                 let mut nbody = vec![];
                 let mut nlayout = LayoutData::new(offset2);
                 for e in body.iter() {
@@ -32,23 +37,7 @@ impl CompilerNode {
                 }
                 meta.ty = Type::Routine{next_label: 0, allocation: nlayout.offset};
                 (
-                    FunctionDef(meta, name.clone(), params.clone(), *ret_ty, nbody),
-                    layout,
-                )
-            }
-            CoroutineDef(m, name, params, ret_ty, body) => {
-                let coroutine_metadata_size = 20;
-                let (mut meta, offset2) = Scope::routine_from(m, coroutine_metadata_size);
-                let mut nbody = vec![];
-                let mut nlayout = LayoutData::new(offset2);
-                for e in body.iter() {
-                    let (e, layout) = CompilerNode::from(e, nlayout);
-                    nlayout = layout;
-                    nbody.push(e);
-                }
-                meta.ty = Type::Routine{next_label: 0, allocation: nlayout.offset};
-                (
-                    CoroutineDef(meta, name.clone(), params.clone(), *ret_ty, nbody),
+                    RoutineDef(meta, *def, name.clone(), params.clone(), *ret_ty, nbody),
                     layout,
                 )
             }
@@ -74,66 +63,6 @@ impl CompilerNode {
                 let (meta, layout) = Scope::block_from(m, layout);
                 (Ast::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
             }
-            /*Mul(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (Ast::Mul(meta, Box::new(l), Box::new(r)), layout)
-            }
-            Add(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (Ast::Add(meta, Box::new(l), Box::new(r)), layout)
-            }
-            BAnd(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (Ast::BAnd(meta, Box::new(l), Box::new(r)), layout)
-            }
-            BOr(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (Ast::BOr(meta, Box::new(l), Box::new(r)), layout)
-            }
-            Eq(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (Ast::Eq(meta, Box::new(l), Box::new(r)), layout)
-            }
-            NEq(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (NEq(meta, Box::new(l), Box::new(r)), layout)
-            }
-            Ls(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (Ls(meta, Box::new(l), Box::new(r)), layout)
-            }
-            LsEq(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (LsEq(meta, Box::new(l), Box::new(r)), layout)
-            }
-            Gr(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (Gr(meta, Box::new(l), Box::new(r)), layout)
-            }
-            GrEq(m, ref l, ref r) => {
-                let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
-                (GrEq(meta, Box::new(l), Box::new(r)), layout)
-            }*/
             Printi(m, ref e) => {
                 let (meta, layout) = Scope::block_from(m, layout);
                 let (e, layout) = CompilerNode::from(e, layout);
@@ -243,6 +172,7 @@ use crate::{
     use crate::semantics::symbol_table;
     use crate::syntax::ast::Primitive;
     use crate::syntax::ast::BinaryOperator;
+    use crate::syntax::ast::RoutineDef;
 
     use super::*;
 
@@ -435,12 +365,13 @@ use crate::{
         semantic_table
             .add("y", symbol_table::Type::Primitive(Primitive::I32))
             .unwrap();
-        let sn = SemanticNode::FunctionDef(
+        let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
                 ty: Primitive::I32,
                 sym: semantic_table,
             },
+            RoutineDef::Function,
             "func".into(),
             vec![],
             crate::syntax::ast::Primitive::I32,
@@ -449,7 +380,7 @@ use crate::{
         let cn = CompilerNode::from(&sn, LayoutData::new(0));
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::FunctionDef(m, name, ..) => {
+            CompilerNode::RoutineDef(m, RoutineDef::Function, name, ..) => {
                 assert_eq!(name, "func");
                 assert_eq!(m.symbols.table.len(), 2);
                 assert_eq!(m.symbols.table["x"].size, 4);
@@ -478,12 +409,13 @@ use crate::{
         semantic_table
             .add("y", symbol_table::Type::Primitive(Primitive::I32))
             .unwrap();
-        let sn = SemanticNode::FunctionDef(
+        let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
                 ty: crate::syntax::ast::Primitive::I32,
                 sym: semantic_table,
             },
+            RoutineDef::Function,
             "func".into(),
             vec![],
             crate::syntax::ast::Primitive::I32,
@@ -497,12 +429,13 @@ use crate::{
         semantic_table
             .add("y", symbol_table::Type::Primitive(Primitive::I32))
             .unwrap();
-        let sn = SemanticNode::FunctionDef(
+        let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
                 ty: crate::syntax::ast::Primitive::I32,
                 sym: semantic_table,
             },
+            RoutineDef::Function,
             "outer_func".into(),
             vec![],
             crate::syntax::ast::Primitive::I32,
@@ -512,7 +445,7 @@ use crate::{
         let cn = CompilerNode::from(&sn, LayoutData::new(0));
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::FunctionDef(m, .., body) => {
+            CompilerNode::RoutineDef(m, RoutineDef::Function, .., body) => {
                 assert_eq!(m.symbols.table.len(), 2);
                 assert_eq!(m.symbols.table["x"].size, 4);
                 assert_eq!(m.symbols.table["x"].offset, 4);
@@ -520,7 +453,7 @@ use crate::{
                 assert_eq!(m.symbols.table["y"].offset, 8);
 
                 match body.iter().nth(0) {
-                    Some(CompilerNode::FunctionDef(m, ..)) => {
+                    Some(CompilerNode::RoutineDef(m, RoutineDef::Function, ..)) => {
                         assert_eq!(m.symbols.table.len(), 2);
                         assert_eq!(m.symbols.table["x"].size, 4);
                         assert_eq!(m.symbols.table["x"].offset, 4);
@@ -543,12 +476,13 @@ use crate::{
         semantic_table
             .add("y", symbol_table::Type::Primitive(Primitive::I32))
             .unwrap();
-        let sn = SemanticNode::CoroutineDef(
+        let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
                 ty: Primitive::I32,
                 sym: semantic_table,
             },
+            RoutineDef::Coroutine,
             "coroutine".into(),
             vec![],
             Primitive::I32,
@@ -557,7 +491,7 @@ use crate::{
         let cn = CompilerNode::from(&sn, LayoutData::new(0));
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::CoroutineDef(m, name, _, _, _) => {
+            CompilerNode::RoutineDef(m, RoutineDef::Coroutine, name, _, _, _) => {
                 assert_eq!(name, "coroutine");
                 assert_eq!(m.symbols.table.len(), 2);
                 assert_eq!(m.symbols.table["x"].size, 4);

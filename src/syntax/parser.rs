@@ -144,7 +144,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(Ast::FunctionDef(l, id.clone(), params, fn_type, stmts))
+                Some(Ast::RoutineDef(l, RoutineDef::Function, id.clone(), params, fn_type, stmts))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -182,7 +182,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(Ast::CoroutineDef(l, id.clone(), params, co_type, stmts))
+                Some(Ast::RoutineDef(l, RoutineDef::Coroutine, id.clone(), params, co_type, stmts))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -756,7 +756,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::FunctionDef(l, name, params, ty, body)) = function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
