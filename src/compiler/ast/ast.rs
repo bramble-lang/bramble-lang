@@ -10,9 +10,10 @@ pub type CompilerNode = Ast<Scope>;
 impl CompilerNode {
     pub fn from(ast: &SemanticNode, layout: LayoutData) -> (CompilerNode, LayoutData) {
         use Ast::*;
+        let mut layout = layout;
         match ast {
             ExpressionBlock(m, body) => {
-                let (meta, mut nlayout) = Scope::block_from(m, layout);
+                let (meta, mut nlayout) = Scope::block_from(m, &mut layout);
                 let mut nbody = vec![];
                 for e in body.iter() {
                     let (e, layout) = CompilerNode::from(e, nlayout);
@@ -53,138 +54,138 @@ impl CompilerNode {
                 )
             }
             Ast::Integer(m, i) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::Integer(meta, *i), layout)
             }
             Ast::Boolean(m, b) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::Boolean(meta, *b), layout)
             }
             Ast::Identifier(m, id) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::Identifier(meta, id.clone()), layout)
             }
             Ast::IdentifierDeclare(m, id, p) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::IdentifierDeclare(meta, id.clone(), *p), layout)
             }
             Mul(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::Mul(meta, Box::new(l), Box::new(r)), layout)
             }
             Add(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::Add(meta, Box::new(l), Box::new(r)), layout)
             }
             BAnd(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::BAnd(meta, Box::new(l), Box::new(r)), layout)
             }
             BOr(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::BOr(meta, Box::new(l), Box::new(r)), layout)
             }
             Eq(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ast::Eq(meta, Box::new(l), Box::new(r)), layout)
             }
             NEq(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (NEq(meta, Box::new(l), Box::new(r)), layout)
             }
             Ls(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Ls(meta, Box::new(l), Box::new(r)), layout)
             }
             LsEq(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (LsEq(meta, Box::new(l), Box::new(r)), layout)
             }
             Gr(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Gr(meta, Box::new(l), Box::new(r)), layout)
             }
             GrEq(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
-                let (r, layout) = CompilerNode::from(r, layout);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (r, mut layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (GrEq(meta, Box::new(l), Box::new(r)), layout)
             }
             Printi(m, ref e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Printi(meta, Box::new(e)), layout)
             }
             Printiln(m, ref e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Printiln(meta, Box::new(e)), layout)
             }
             Printbln(m, ref e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Printbln(meta, Box::new(e)), layout)
             }
             If(m, ref cond, ref tb, ref fb) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (cond, layout) = CompilerNode::from(cond, layout);
                 let (tb, layout) = CompilerNode::from(tb, layout);
                 let (fb, layout) = CompilerNode::from(fb, layout);
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
             Bind(m, id, p, e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Bind(meta, id.clone(), *p, Box::new(e)), layout)
             }
             Yield(m, e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Yield(meta, Box::new(e)), layout)
             }
             Return(m, None) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (Return(meta, None), layout)
             }
             Return(m, Some(e)) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Return(meta, Some(Box::new(e))), layout)
             }
             YieldReturn(m, None) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 (YieldReturn(meta, None), layout)
             }
             YieldReturn(m, Some(e)) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (YieldReturn(meta, Some(Box::new(e))), layout)
             }
             Statement(m, e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Statement(meta, Box::new(e)), layout)
             }
             FunctionCall(m, name, params) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let mut nlayout = layout;
                 let mut nparams = vec![];
                 for p in params.iter() {
@@ -195,7 +196,7 @@ impl CompilerNode {
                 (FunctionCall(meta, name.clone(), nparams), nlayout)
             }
             CoroutineInit(m, name, params) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let mut nlayout = layout;
                 let mut nparams = vec![];
                 for p in params.iter() {
@@ -206,7 +207,7 @@ impl CompilerNode {
                 (CoroutineInit(meta, name.clone(), nparams), nlayout)
             }
             Module(m, funcs, cors) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, &mut layout);
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];
                 for f in funcs.iter() {
@@ -230,7 +231,8 @@ impl CompilerNode {
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::{
+    use crate::compiler::ast::scope::SymbolTable;
+use crate::{
         semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode,
     };
     use crate::semantics::symbol_table;
@@ -290,14 +292,20 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::Mul(m, l, r) => {
-                assert_eq!(m, Scope::new(Type::Block));
+                assert_eq!(m, Scope{ty: Type::Block, symbols: SymbolTable::new(), label: 2});
 
                 match *l {
-                    CompilerNode::Integer(_, v) => assert_eq!(v, 1),
+                    CompilerNode::Integer(m, v) => {
+                        assert_eq!(m.label, 0);
+                        assert_eq!(v, 1);
+                    }
                     _ => assert!(false),
                 }
                 match *r {
-                    CompilerNode::Integer(_, v) => assert_eq!(v, 2),
+                    CompilerNode::Integer(m, v) => {
+                        assert_eq!(m.label, 1);
+                        assert_eq!(v, 2);
+                    }
                     _ => assert!(false),
                 }
             }
