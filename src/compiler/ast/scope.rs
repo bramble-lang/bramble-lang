@@ -71,11 +71,9 @@ impl Scope {
         let mut layout = current_layout;
         let mut scope = Scope::new(Type::Block);
         scope.label = layout.get_label();
-        let mut current_offset = layout.offset;
         for s in m.sym.table().iter() {
-            current_offset = scope.insert(&s.name, s.ty.size(), current_offset);
+            layout.offset = scope.insert(&s.name, s.ty.size(), layout.offset);
         }
-        layout.offset = current_offset;
         (scope, layout)
     }
 
