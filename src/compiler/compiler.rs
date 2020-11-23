@@ -18,7 +18,6 @@ use crate::unary_op;
 use crate::binary_op;
 use crate::operand;
 use crate::register;
-use crate::reg8;
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,
@@ -190,6 +189,8 @@ impl<'a> Compiler<'a> {
     }
 
     fn handle_binary_operands2(&mut self, op: BinaryOperator, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+        use BinaryOperator::*;
+
         let mut left_code = vec![];
         self.traverse(left, current_func, &mut left_code)?;
         let mut right_code = vec![];
@@ -201,45 +202,19 @@ impl<'a> Compiler<'a> {
                 BinaryOperator::Mul => {assembly!{(op_asm) {imul %eax, %ebx;}}},
                 BinaryOperator::BAnd => {assembly!{(op_asm) {and %eax, %ebx;}}},
                 BinaryOperator::BOr => {assembly!{(op_asm) {or %eax, %ebx;}}},
-                BinaryOperator::Eq => {
+                cond => {
+                    let set = match cond {
+                        Eq => Inst::Sete(Reg8::Al),
+                        NEq => Inst::Setne(Reg8::Al),
+                        Ls => Inst::Setl(Reg8::Al),
+                        LsEq => Inst::Setle(Reg8::Al),
+                        Gr => Inst::Setg(Reg8::Al),
+                        GrEq => Inst::Setge(Reg8::Al),
+                        _ => panic!("Invalid conditional operator: {}", cond)
+                    };
                     assembly!{(op_asm){
                         cmp %eax, %ebx;
-                        sete %al;
-                        and %al, 1;
-                    }}
-                }
-                BinaryOperator::NEq => {
-                    assembly!{(op_asm){
-                        cmp %eax, %ebx;
-                        setne %al;
-                        and %al, 1;
-                    }}
-                }
-                BinaryOperator::Ls => {
-                    assembly!{(op_asm){
-                        cmp %eax, %ebx;
-                        setl %al;
-                        and %al, 1;
-                    }}
-                }
-                BinaryOperator::LsEq => {
-                    assembly!{(op_asm){
-                        cmp %eax, %ebx;
-                        setle %al;
-                        and %al, 1;
-                    }}
-                }
-                BinaryOperator::Gr => {
-                    assembly!{(op_asm){
-                        cmp %eax, %ebx;
-                        setg %al;
-                        and %al, 1;
-                    }}
-                }
-                BinaryOperator::GrEq => {
-                    assembly!{(op_asm){
-                        cmp %eax, %ebx;
-                        setge %al;
+                        {{[set]}}
                         and %al, 1;
                     }}
                 }
