@@ -67,14 +67,16 @@ impl Scope {
         self.label
     }
 
-    pub fn block_from(m: &SemanticMetadata, current_layout: &mut LayoutData) -> (Scope, LayoutData) {
+    pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
+        let mut layout = current_layout;
         let mut scope = Scope::new(Type::Block);
-        scope.label = current_layout.get_label();
-        let mut current_offset = current_layout.offset;
+        scope.label = layout.get_label();
+        let mut current_offset = layout.offset;
         for s in m.sym.table().iter() {
             current_offset = scope.insert(&s.name, s.ty.size(), current_offset);
         }
-        (scope, LayoutData::new2(current_offset, current_layout.next_label))
+        layout.offset = current_offset;
+        (scope, layout)
     }
 
     pub fn routine_from(m: &SemanticMetadata, current_offset: i32) -> (Scope, i32) {
