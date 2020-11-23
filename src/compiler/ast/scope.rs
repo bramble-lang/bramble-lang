@@ -5,6 +5,19 @@ use crate::{
 };
 
 #[derive(Debug, PartialEq)]
+pub struct LayoutData {
+    pub(super) offset: i32,
+}
+
+impl LayoutData {
+    pub fn new(offset:i32) -> LayoutData {
+        LayoutData{
+            offset,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Scope {
     pub(super) ty: Type,
     pub(super) symbols: SymbolTable,
@@ -33,13 +46,13 @@ impl Scope {
         self.symbols.table.get(name)
     }
 
-    pub fn block_from(m: &SemanticMetadata, current_offset: i32) -> (Scope, i32) {
+    pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
         let mut scope = Scope::new(Type::Block);
-        let mut current_offset = current_offset;
+        let mut current_offset = current_layout.offset;
         for s in m.sym.table().iter() {
             current_offset = scope.insert(&s.name, s.ty.size(), current_offset);
         }
-        (scope, current_offset)
+        (scope, LayoutData::new(current_offset))
     }
 
     pub fn routine_from(m: &SemanticMetadata, current_offset: i32) -> (Scope, i32) {
