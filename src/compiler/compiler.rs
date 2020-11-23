@@ -1,6 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::compiler::ast::ast::LayoutData;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Type::Routine;
 use crate::compiler::ast::stack::ScopeStack;
@@ -42,7 +43,7 @@ impl<'a> Compiler<'a> {
 
         // Put user code here
         let global_func = "".into();
-        let (compiler_ast, _) = CompilerNode::from(ast, 0);
+        let (compiler_ast, _) = CompilerNode::from(ast, LayoutData::new(0));
         let mut compiler = Compiler { code:vec![], scope: ScopeStack::new() };
         compiler.traverse(&compiler_ast, &global_func, &mut func_table, &mut code).unwrap();
         code
