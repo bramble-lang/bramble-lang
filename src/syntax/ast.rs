@@ -38,16 +38,6 @@ pub enum Ast<I> {
     IdentifierDeclare(I, String, Primitive),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
-    Mul(I, Box<Ast<I>>, Box<Ast<I>>),
-    Add(I, Box<Ast<I>>, Box<Ast<I>>),
-    BAnd(I, Box<Ast<I>>, Box<Ast<I>>),
-    BOr(I, Box<Ast<I>>, Box<Ast<I>>),
-    Gr(I, Box<Ast<I>>, Box<Ast<I>>),
-    GrEq(I, Box<Ast<I>>, Box<Ast<I>>),
-    Ls(I, Box<Ast<I>>, Box<Ast<I>>),
-    LsEq(I, Box<Ast<I>>, Box<Ast<I>>),
-    Eq(I, Box<Ast<I>>, Box<Ast<I>>),
-    NEq(I, Box<Ast<I>>, Box<Ast<I>>),
     Printi(I, Box<Ast<I>>),
     Printiln(I, Box<Ast<I>>),
     Printbln(I, Box<Ast<I>>),
@@ -79,18 +69,6 @@ impl<I> Ast<I> {
 
             BinaryOp(_, op, _, _) => format!("{}", op),
 
-            Mul(_, _, _) => "*".into(),
-            Add(_, _, _) => "+".into(),
-            BAnd(_, _, _) => "&&".into(),
-            BOr(_, _, _) => "||".into(),
-
-            Eq(_, _, _) => "==".into(),
-            NEq(_, _, _) => "!=".into(),
-            Ls(_, _, _) => "<".into(),
-            LsEq(_, _, _) => "<=".into(),
-            Gr(_, _, _) => ">".into(),
-            GrEq(_, _, _) => ">=".into(),
-
             Printi(_, _) => "printi".into(),
             Printiln(_, _) => "printiln".into(),
             Printbln(_, _) => "printbln".into(),
@@ -117,8 +95,6 @@ impl<I> Ast<I> {
         match self {
             Integer(m,..) | Boolean(m,..) | Identifier(m,..) | IdentifierDeclare(m,..)
             | BinaryOp(m, ..)
-            | Mul(m,..) | Add(m,..) | BAnd(m,..) | BOr(m,..)
-            | Eq(m,..) | NEq(m,..) | Ls(m,..) | LsEq(m,..) | Gr(m,..) | GrEq(m,..)
             | Printi(m,..) | Printiln(m,..) | Printbln(m,..)
             | If(m,..) | ExpressionBlock(m,..) | Statement(m,..)
             | Bind(m,..) | Return(m,..) | Yield(m,..) | YieldReturn(m,..)

@@ -74,7 +74,7 @@ impl CompilerNode {
                 let (meta, layout) = Scope::block_from(m, layout);
                 (Ast::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
             }
-            Mul(m, ref l, ref r) => {
+            /*Mul(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
                 let (r, layout) = CompilerNode::from(r, layout);
                 let (meta, layout) = Scope::block_from(m, layout);
@@ -133,7 +133,7 @@ impl CompilerNode {
                 let (r, layout) = CompilerNode::from(r, layout);
                 let (meta, layout) = Scope::block_from(m, layout);
                 (GrEq(meta, Box::new(l), Box::new(r)), layout)
-            }
+            }*/
             Printi(m, ref e) => {
                 let (meta, layout) = Scope::block_from(m, layout);
                 let (e, layout) = CompilerNode::from(e, layout);
@@ -242,6 +242,7 @@ use crate::{
     };
     use crate::semantics::symbol_table;
     use crate::syntax::ast::Primitive;
+    use crate::syntax::ast::BinaryOperator;
 
     use super::*;
 
@@ -284,19 +285,20 @@ use crate::{
             },
             2,
         );
-        let snmul = SemanticNode::Mul(
+        let snmul = SemanticNode::BinaryOp(
             SemanticMetadata {
                 ln: 0,
                 ty: crate::syntax::ast::Primitive::I32,
                 sym: symbol_table::SymbolTable::new(),
             },
+            BinaryOperator::Mul,
             Box::new(sn1),
             Box::new(sn2),
         );
         let cn = CompilerNode::from(&snmul, LayoutData::new(8));
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
-            CompilerNode::Mul(m, l, r) => {
+            CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
                 assert_eq!(m, Scope{ty: Type::Block, symbols: SymbolTable::new(), label: 2});
 
                 match *l {

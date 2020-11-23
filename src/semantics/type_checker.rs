@@ -30,18 +30,43 @@ pub mod checker {
 
         fn binary_op(
             &mut self,
-            op: String,
+            op: BinaryOperator,
             ln: u32,
             l: &mut SemanticNode,
             r: &mut SemanticNode,
             current_func: &Option<String>,
             sym: &mut SymbolTable,
-            expected: Option<Primitive>,
         ) -> Result<Primitive, String> {
+            use BinaryOperator::*;
+
             let lty = self.traverse(l, current_func, sym)?;
             let rty = self.traverse(r, current_func, sym)?;
 
-            match expected {
+            match op {
+                Add | Mul => {
+                    if lty == I32 && rty == I32 {
+                        Ok(I32)
+                    } else {
+                        Err(format!("L{}: {} expected i32 but found {} and {}", ln, op, lty, rty))
+                    }
+                },
+                BAnd | BOr => {
+                    if lty == Bool && rty == Bool {
+                        Ok(Bool)
+                    } else {
+                        Err(format!("L{}: {} expected bool but found {} and {}", ln, op, lty, rty))
+                    }
+                }
+                Eq | NEq | Ls | LsEq | Gr | GrEq => {
+                    if lty == rty {
+                        Ok(Bool)
+                    } else {
+                        Err(format!("L{}: {} expected {} but found {}", ln, op, lty, rty))
+                    }
+                }
+            }
+
+            /*match expected {
                 None => {
                     if lty == rty {
                         Ok(lty)
@@ -59,7 +84,7 @@ pub mod checker {
                         Err(format!("L{}: {} expected operands of {}", ln, op, expected))
                     }
                 }
-            }
+            }*/
         }
 
         pub fn traverse(
@@ -127,7 +152,6 @@ pub mod checker {
             sym: &mut SymbolTable,
         ) -> Result<Primitive, String> {
             use Ast::*;
-            let root_str = ast.root_str();
             match ast {
                 Integer(meta, _) => {
                     meta.ty = I32;
@@ -158,38 +182,10 @@ pub mod checker {
                     }
                 },
                 BinaryOp(meta, op, l, r) => {
-                    let expected_ty = match op {
-                        BinaryOperator::Mul | BinaryOperator::Add => Some(I32),
-                        BinaryOperator::BAnd | BinaryOperator::BOr => Some(Bool),
-                        BinaryOperator::Eq | BinaryOperator::NEq | BinaryOperator::Ls | BinaryOperator::LsEq 
-                        | BinaryOperator::Gr | BinaryOperator::GrEq => None,
-                    };
                     let ty =
-                        self.binary_op(root_str, meta.ln, l, r, current_func, sym, expected_ty)?;
+                        self.binary_op(*op, meta.ln, l, r, current_func, sym)?;
                     meta.ty = ty;
                     Ok(ty)
-                }
-                Mul(meta, l, r) | Add(meta, l, r) => {
-                    let ty =
-                        self.binary_op(root_str, meta.ln, l, r, current_func, sym, Some(I32))?;
-                    meta.ty = ty;
-                    Ok(ty)
-                }
-                BAnd(meta, l, r) | BOr(meta, l, r) => {
-                    let ty =
-                        self.binary_op(root_str, meta.ln, l, r, current_func, sym, Some(Bool))?;
-                    meta.ty = ty;
-                    Ok(ty)
-                }
-                Eq(meta, l, r)
-                | NEq(meta, l, r)
-                | Gr(meta, l, r)
-                | GrEq(meta, l, r)
-                | Ls(meta, l, r)
-                | LsEq(meta, l, r) => {
-                    self.binary_op(root_str, meta.ln, l, r, current_func, sym, None)?;
-                    meta.ty = Bool;
-                    Ok(meta.ty)
                 }
                 If(meta, cond, true_arm, false_arm) => {
                     let cond_ty = self.traverse(cond, current_func, sym)?;
@@ -612,8 +608,9 @@ pub mod checker {
             scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
             // both operands are i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -628,8 +625,9 @@ pub mod checker {
 
             // operands are not i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -639,12 +637,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected i32 but found bool and i32".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -654,12 +653,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected i32 but found i32 and bool".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -669,7 +669,7 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected i32 but found bool and bool".into()));
             }
         }
 
@@ -679,8 +679,9 @@ pub mod checker {
             scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
             // both operands are i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -695,8 +696,9 @@ pub mod checker {
 
             // operands are not i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -706,12 +708,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected i32 but found bool and i32".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -721,12 +724,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected i32 but found i32 and bool".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -736,7 +740,7 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected i32 but found bool and bool".into()));
             }
         }
 
@@ -745,12 +749,13 @@ pub mod checker {
             let scope = Scope::new();
 
             let tests: Vec<(PNode, Result<Primitive, String>)> = vec![(
-                Ast::BAnd(
+                Ast::BinaryOp(
                     1,
+                    BinaryOperator::BAnd,
                     Box::new(Ast::Boolean(1, true)),
                     Box::new(Ast::Integer(1, 5)),
                 ),
-                Err("L1: && expected operands of bool".into()),
+                Err("L1: && expected bool but found bool and i32".into()),
             )];
 
             for (test, expected) in tests.iter() {
@@ -768,24 +773,27 @@ pub mod checker {
             let scope = Scope::new();
             let tests: Vec<(PNode, Result<Primitive, String>)> = vec![
                 (
-                    Ast::Eq(
+                    Ast::BinaryOp(
                         1,
+                        BinaryOperator::Eq,
                         Box::new(Ast::Integer(1, 3)),
                         Box::new(Ast::Integer(1, 5)),
                     ),
                     Ok(Bool),
                 ),
                 (
-                    Ast::Eq(
+                    Ast::BinaryOp(
                         1,
+                        BinaryOperator::Eq,
                         Box::new(Ast::Boolean(1, true)),
                         Box::new(Ast::Boolean(1, false)),
                     ),
                     Ok(Bool),
                 ),
                 (
-                    Ast::Eq(
+                    Ast::BinaryOp(
                         1,
+                        BinaryOperator::Eq,
                         Box::new(Ast::Integer(1, 3)),
                         Box::new(Ast::Boolean(1, true)),
                     ),

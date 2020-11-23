@@ -324,7 +324,7 @@ impl<'a> Compiler<'a> {
                     {{self.handle_binary_operands2(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
-            Ast::Mul(_, l, r) => {
+            /*Ast::Mul(_, l, r) => {
                 assembly!{(code) {
                     {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
                     imul %eax, %ebx;
@@ -365,7 +365,7 @@ impl<'a> Compiler<'a> {
                     {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
                     or %eax, %ebx;
                 }}
-            }
+            }*/
             Ast::Printiln(_, ref exp) => {
                 self.traverse(exp, current_func, code)?;
                 

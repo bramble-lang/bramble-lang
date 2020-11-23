@@ -27,7 +27,7 @@ impl SemanticNode {
                 SemanticNode::from_parser_ast(l)?,
                 SemanticNode::from_parser_ast(r)?,
             ))),
-            Mul(ln, ref l, ref r) => Ok(Box::new(Mul(
+            /*Mul(ln, ref l, ref r) => Ok(Box::new(Mul(
                 sm_from(*ln),
                 SemanticNode::from_parser_ast(l)?,
                 SemanticNode::from_parser_ast(r)?,
@@ -76,7 +76,7 @@ impl SemanticNode {
                 sm_from(*ln),
                 SemanticNode::from_parser_ast(l)?,
                 SemanticNode::from_parser_ast(r)?,
-            ))),
+            ))),*/
             If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
                 sm_from(*ln),
                 SemanticNode::from_parser_ast(cond)?,
@@ -265,14 +265,15 @@ mod tests {
         {
             for (tree, expected) in [
                 (
-                    Ast::Mul(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Mul(
+                    Ast::BinaryOp(1, BinaryOperator::Mul, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::BinaryOp(
                         sm(1, Primitive::Unknown),
+                        BinaryOperator::Mul,
                         Box::new(el.clone()),
                         Box::new(er.clone()),
                     ),
                 ),
-                (
+                /*(
                     Ast::Add(1, Box::new(l.clone()), Box::new(r.clone())),
                     Ast::Add(
                         sm(1, Primitive::Unknown),
@@ -327,7 +328,7 @@ mod tests {
                         Box::new(el.clone()),
                         Box::new(er.clone()),
                     ),
-                ),
+                ),*/
             ]
             .iter()
             {
