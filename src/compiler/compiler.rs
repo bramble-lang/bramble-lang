@@ -188,7 +188,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn handle_binary_operands2(&mut self, op: BinaryOperator, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+    fn handle_binary_operands(&mut self, op: BinaryOperator, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
 
         let mut left_code = vec![];
@@ -268,7 +268,7 @@ impl<'a> Compiler<'a> {
             }
             Ast::BinaryOp(_, op, l, r) => {
                 assembly!{(code) {
-                    {{self.handle_binary_operands2(*op, l.as_ref(), r.as_ref(), current_func)?}}
+                    {{self.handle_binary_operands(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
             Ast::Printiln(_, ref exp) => {
