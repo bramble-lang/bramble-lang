@@ -21,6 +21,12 @@ impl SemanticNode {
                 Ok(Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), *p)))
             }
             Identifier(l, id) => Ok(Box::new(Identifier(sm_from(*l), id.clone()))),
+            BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
+                sm_from(*ln),
+                *op,
+                SemanticNode::from_parser_ast(l)?,
+                SemanticNode::from_parser_ast(r)?,
+            ))),
             Mul(ln, ref l, ref r) => Ok(Box::new(Mul(
                 sm_from(*ln),
                 SemanticNode::from_parser_ast(l)?,

@@ -68,6 +68,12 @@ impl CompilerNode {
                 let (meta, layout) = Scope::block_from(m, layout);
                 (Ast::IdentifierDeclare(meta, id.clone(), *p), layout)
             }
+            BinaryOp(m, op, ref l, ref r) => {
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
+            }
             Mul(m, ref l, ref r) => {
                 let (l, layout) = CompilerNode::from(l, layout);
                 let (r, layout) = CompilerNode::from(r, layout);

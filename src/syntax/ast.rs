@@ -1,3 +1,19 @@
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BinaryOperator{
+    Add,
+    Mul,
+}
+
+impl std::fmt::Display for BinaryOperator {
+fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> { 
+    use BinaryOperator::*;
+    match self {
+        Add => f.write_str("+"),
+        Mul => f.write_str("*"),
+    }
+ }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
@@ -5,6 +21,7 @@ pub enum Ast<I> {
     Identifier(I, String),
     IdentifierDeclare(I, String, Primitive),
 
+    BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     Mul(I, Box<Ast<I>>, Box<Ast<I>>),
     Add(I, Box<Ast<I>>, Box<Ast<I>>),
     BAnd(I, Box<Ast<I>>, Box<Ast<I>>),
@@ -44,6 +61,8 @@ impl<I> Ast<I> {
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
 
+            BinaryOp(_, op, _, _) => format!("{}", op),
+
             Mul(_, _, _) => "*".into(),
             Add(_, _, _) => "+".into(),
             BAnd(_, _, _) => "&&".into(),
@@ -81,6 +100,7 @@ impl<I> Ast<I> {
         use Ast::*;
         match self {
             Integer(m,..) | Boolean(m,..) | Identifier(m,..) | IdentifierDeclare(m,..)
+            | BinaryOp(m, ..)
             | Mul(m,..) | Add(m,..) | BAnd(m,..) | BOr(m,..)
             | Eq(m,..) | NEq(m,..) | Ls(m,..) | LsEq(m,..) | Gr(m,..) | GrEq(m,..)
             | Printi(m,..) | Printiln(m,..) | Printbln(m,..)

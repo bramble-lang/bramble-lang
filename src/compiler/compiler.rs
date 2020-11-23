@@ -1,6 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::ast::BinaryOperator;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::LayoutData;
 use crate::compiler::ast::scope::Type::Routine;
@@ -203,6 +204,32 @@ impl<'a> Compiler<'a> {
 
         Ok(code)
     }
+
+    fn handle_binary_operands2(&mut self, op: BinaryOperator, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+        let mut left_code = vec![];
+        self.traverse(left, current_func, &mut left_code)?;
+        let mut right_code = vec![];
+        self.traverse(right, current_func, &mut right_code)?;
+
+        let mut op_asm = vec![];
+        match op {
+                BinaryOperator::Add => {assembly!{(op_asm) {add %eax, %ebx;}}},
+                BinaryOperator::Mul => {assembly!{(op_asm) {imul %eax, %ebx;}}},
+        };
+
+        let mut code = vec![];
+        assembly!{(code){
+            {{left_code}}
+            push %eax;
+            {{right_code}}
+            push %eax;
+            pop %ebx;
+            pop %eax;
+            {{op_asm}}
+        }}
+
+        Ok(code)
+    }
     
     fn comparison_op(&mut self, op: Inst, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String, code: &mut Vec<Inst>) -> Result<(), String> {
         assembly!{(code){
@@ -246,6 +273,11 @@ impl<'a> Compiler<'a> {
             Ast::Identifier(_, id) => {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
+            }
+            Ast::BinaryOp(_, op, l, r) => {
+                assembly!{(code) {
+                    {{self.handle_binary_operands2(*op, l.as_ref(), r.as_ref(), current_func)?}}
+                }}
             }
             Ast::Mul(_, l, r) => {
                 assembly!{(code) {
