@@ -189,25 +189,6 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn handle_binary_operands(&mut self, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
-        let mut left_code = vec![];
-        self.traverse(left, current_func, &mut left_code)?;
-        let mut right_code = vec![];
-        self.traverse(right, current_func, &mut right_code)?;
-
-        let mut code = vec![];
-        assembly!{(code){
-            {{left_code}}
-            push %eax;
-            {{right_code}}
-            push %eax;
-            pop %ebx;
-            pop %eax;
-        }}
-
-        Ok(code)
-    }
-
     fn handle_binary_operands2(&mut self, op: BinaryOperator, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
         let mut left_code = vec![];
         self.traverse(left, current_func, &mut left_code)?;
@@ -276,17 +257,6 @@ impl<'a> Compiler<'a> {
         }}
 
         Ok(code)
-    }
-    
-    fn comparison_op(&mut self, op: Inst, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String, code: &mut Vec<Inst>) -> Result<(), String> {
-        assembly!{(code){
-            {{self.handle_binary_operands(left, right, current_func)?}}
-            cmp %eax, %ebx;
-            {{[op]}}
-            and %al, 1;
-        }}
-
-        Ok(())
     }
 
     fn push_scope(&mut self, ast: &'a CompilerNode) {
