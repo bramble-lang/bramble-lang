@@ -63,6 +63,10 @@ impl Scope {
         self.symbols.table.get(name)
     }
 
+    pub fn label(&self) -> i32 {
+        self.label
+    }
+
     pub fn block_from(m: &SemanticMetadata, current_layout: &mut LayoutData) -> (Scope, LayoutData) {
         let mut scope = Scope::new(Type::Block);
         scope.label = current_layout.get_label();

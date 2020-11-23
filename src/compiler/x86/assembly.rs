@@ -562,8 +562,6 @@ macro_rules! assembly {
 #[macro_export]
 macro_rules! assembly2 {
     (($buf:expr, $info:expr) {}) => {
-        $info.inc_label_count();
-        $info.label_cache.clear();
     };
 
     /********************/
@@ -591,20 +589,12 @@ macro_rules! assembly2 {
     /********************/
     // local
     (($buf:expr, $info:expr) {^{$label:expr}: $($tail:tt)*}) => {
-        if $info.cache($label) {
-            $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label_count)));
-        } else {
-            panic!("Label {} has already been used within this macro scope", $label);
-        }
+        $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label())));
         assembly2!(($buf, $info) {$($tail)*})
     };
     (($buf:expr, $info:expr) {^$label:tt: $($tail:tt)*}) => {
         let lbl = stringify!($label);
-        if $info.cache(lbl.into()) {
-            $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.label_count)));
-        } else {
-            panic!("Label {} has already been used within this macro scope", lbl);
-        }
+        $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.label())));
         assembly2!(($buf, $info) {$($tail)*})
     };
 
@@ -676,14 +666,14 @@ macro_rules! assembly2 {
     };
 
     (($buf:expr, $info:expr) {$inst:tt ^{$a:expr}; $($tail:tt)*}) => {
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, $info.label_count)));
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, $info.label())));
         $buf.push(unary_op!($inst)(lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };
 
     (($buf:expr, $info:expr) {$inst:tt ^ $a:tt; $($tail:tt)*}) => {
         let lbl = stringify!($a);
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label_count)));
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label())));
         $buf.push(unary_op!($inst)(lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };
@@ -710,7 +700,7 @@ macro_rules! assembly2 {
     // reg, local label
     (($buf:expr, $info:expr) {$inst:tt % $a:tt, ^ $b:tt; $($tail:tt)*}) => {
         let lbl = stringify!($b);
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label_count)));
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label())));
         $buf.push(binary_op!($inst)(operand!(% $a), lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };

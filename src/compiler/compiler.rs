@@ -308,7 +308,7 @@ impl<'a> Compiler<'a> {
                     newline;
                 }}
             }
-            Ast::If(_, ref cond, ref true_arm, ref false_arm) => {
+            Ast::If(meta, ref cond, ref true_arm, ref false_arm) => {
                 let mut cond_code = vec![];
                 self.traverse(cond, current_func, function_table, &mut cond_code)?;
                 let mut true_code = vec![];
@@ -316,7 +316,7 @@ impl<'a> Compiler<'a> {
                 let mut false_code = vec![];
                 self.traverse(false_arm, current_func, function_table, &mut false_code)?;
                 
-                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
+                assembly2!{(code, meta) {
                     {{cond_code}}
                     cmp %eax, 0;
                     jz ^else_lbl;
@@ -354,20 +354,20 @@ impl<'a> Compiler<'a> {
                 Some(e) => self.traverse(e, current_func, function_table, code)?,
                 None => (),
             },
-            Ast::Yield(_, ref id) => {
+            Ast::Yield(meta, ref id) => {
                 self.traverse(id, current_func, function_table, code)?;
-                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
+                assembly2!{(code, meta) {
                     mov %ebx, ^ret_lbl;
                     jmp @runtime_yield_into_coroutine;
                     ^ret_lbl:
                 }};
             }
-            Ast::YieldReturn(_, ref exp) => {
+            Ast::YieldReturn(meta, ref exp) => {
                 if let Some(exp) = exp {
                     self.traverse(exp, current_func, function_table, code)?;
                 }
                 
-                assembly2!{(code, function_table.funcs.get_mut(current_func).unwrap()) {
+                assembly2!{(code, meta) {
                     mov %ebx, ^ret_lbl;
                     jmp @runtime_yield_return;
                     ^ret_lbl:
