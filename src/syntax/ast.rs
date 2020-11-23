@@ -46,6 +46,22 @@ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::f
  }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RoutineCall{
+    Function,
+    CoroutineInit,
+}
+
+impl std::fmt::Display for RoutineCall {
+fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> { 
+    use RoutineCall::*;
+    match self {
+        CoroutineInit => f.write_str("coroutine init"),
+        Function => f.write_str("function call"),
+    }
+ }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
@@ -68,6 +84,8 @@ pub enum Ast<I> {
     YieldReturn(I, Option<Box<Ast<I>>>),
 
     RoutineDef(I, RoutineDef, String, Vec<(String, Primitive)>, Primitive, Vec<Ast<I>>),
+    RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
+    
     FunctionCall(I, String, Vec<Ast<I>>),
     CoroutineInit(I, String, Vec<Ast<I>>),
     Module(I, Vec<Ast<I>>, Vec<Ast<I>>),
@@ -98,6 +116,7 @@ impl<I> Ast<I> {
             YieldReturn(_, _) => "yret".into(),
 
             RoutineDef(_, def, ..) => format!("{}", def),
+            RoutineCall(_, call, ..) => format!("{}", call),
 
             FunctionCall(_, _, _) => "function call".into(),
             CoroutineInit(_, _, _) => "coroutine init".into(),
@@ -114,6 +133,7 @@ impl<I> Ast<I> {
             | If(m,..) | ExpressionBlock(m,..) | Statement(m,..)
             | Bind(m,..) | Return(m,..) | Yield(m,..) | YieldReturn(m,..)
             | RoutineDef(m,..)
+            | RoutineCall(m,..)
             | FunctionCall(m,..) | CoroutineInit(m,..)
             | Module(m,..)
             => m

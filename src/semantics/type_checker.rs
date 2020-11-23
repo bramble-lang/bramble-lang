@@ -299,7 +299,7 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                FunctionCall(meta, fname, params) => {
+                FunctionCall(meta, fname, params) | RoutineCall(meta, crate::syntax::ast::RoutineCall::Function, fname, params)=> {
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];
@@ -332,7 +332,6 @@ pub mod checker {
                         let z = pty.iter().zip(expected_tys.iter());
                         let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                         if all_params_match {
-                            //let fty = ftable.funcs[fname].ty;
                             meta.ty = *ret_ty;
                             Ok(*ret_ty)
                         } else {
@@ -343,7 +342,7 @@ pub mod checker {
                         }
                     }
                 }
-                CoroutineInit(meta, coname, params) => {
+                CoroutineInit(meta, coname, params) | RoutineCall(meta, crate::syntax::ast::RoutineCall::CoroutineInit, coname, params) => {
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];

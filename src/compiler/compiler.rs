@@ -3,6 +3,7 @@
 // instructions
 use crate::ast::BinaryOperator;
 use crate::ast::RoutineDef;
+use crate::ast::RoutineCall;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::LayoutData;
 use crate::compiler::ast::scope::Type::Routine;
@@ -419,7 +420,7 @@ impl<'a> Compiler<'a> {
                     jmp @runtime_yield_return;
                 }};
             }
-            Ast::CoroutineInit(_, ref co, params) => {
+            Ast::CoroutineInit(_, ref co, params) | Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
                 self.validate_routine_call(co, params)?;
 
 
@@ -470,7 +471,7 @@ impl<'a> Compiler<'a> {
                 }};
 
             }
-            Ast::FunctionCall(_, ref fn_name, params) => {
+            Ast::FunctionCall(_, ref fn_name, params) | Ast::RoutineCall(_, RoutineCall::Function, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 self.validate_routine_call(fn_name, params)?;

@@ -118,6 +118,17 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::from(e, layout);
                 (Statement(meta, Box::new(e)), layout)
             }
+            RoutineCall(m, call, name, params) => {
+                let (meta, layout) = Scope::block_from(m, layout);
+                let mut nlayout = layout;
+                let mut nparams = vec![];
+                for p in params.iter() {
+                    let (np, playout) = CompilerNode::from(p, nlayout);
+                    nlayout = playout;
+                    nparams.push(np);
+                }
+                (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
+            }
             FunctionCall(m, name, params) => {
                 let (meta, layout) = Scope::block_from(m, layout);
                 let mut nlayout = layout;

@@ -77,6 +77,16 @@ impl SemanticNode {
                     nbody,
                 )))
             }
+            RoutineCall(l, call, name, params) => {
+                // test that the expressions passed to the function match the functions
+                // parameter types
+                let mut nparams = vec![];
+                for param in params.iter() {
+                    let np = SemanticNode::from_parser_ast(param)?;
+                    nparams.push(*np);
+                }
+                Ok(Box::new(RoutineCall(sm_from(*l), *call, name.clone(), nparams)))
+            }
             FunctionCall(l, fname, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
