@@ -47,7 +47,8 @@ impl PNode {
             Lex::GrEq => Ok(Ast::GrEq(i, left, right)),
             Lex::BAnd => Ok(Ast::BAnd(i, left, right)),
             Lex::BOr => Ok(Ast::BOr(i, left, right)),
-            Lex::Add => Ok(Ast::Add(i, left, right)),
+            //Lex::Add => Ok(Ast::Add(i, left, right)),
+            Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
             //Lex::Mul => Ok(Ast::Mul(i, left, right)),
             Lex::Mul => Ok(Ast::BinaryOp(i, BinaryOperator::Mul, left, right)),
             _ => Err(format!("L{}: {} is not a binary operator", line, op)),
@@ -694,7 +695,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::Add(l, left, right)) = expression(&mut iter).unwrap() {
+        if let Some(Ast::BinaryOp(l, BinaryOperator::Add, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(*left, Ast::Integer(1, 2));
             assert_eq!(*right, Ast::Integer(1, 2));
@@ -716,7 +717,7 @@ pub mod tests {
         if let Some(Ast::BinaryOp(l, BinaryOperator::Mul, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             match left.as_ref() {
-                Ast::Add(_, ll, lr) => {
+                Ast::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
                     assert_eq!(**ll, Ast::Integer(1, 2));
                     assert_eq!(**lr, Ast::Integer(1, 4));
                 }
