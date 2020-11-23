@@ -17,13 +17,6 @@ impl LayoutData {
             next_label: 0,
         }
     }
-    
-    pub fn new2(offset:i32, next_label: i32) -> LayoutData {
-        LayoutData{
-            offset,
-            next_label,
-        }
-    }
 
     pub fn get_label(&mut self) -> i32 {
         let label = self.next_label;
