@@ -39,16 +39,16 @@ impl PNode {
     ) -> Result<Self, String> {
         let i = line; //ParserInfo{l: line};
         match op {
-            Lex::Eq => Ok(Ast::Eq(i, left, right)),
-            Lex::NEq => Ok(Ast::NEq(i, left, right)),
-            Lex::Ls => Ok(Ast::Ls(i, left, right)),
-            Lex::LsEq => Ok(Ast::LsEq(i, left, right)),
-            Lex::Gr => Ok(Ast::Gr(i, left, right)),
-            Lex::GrEq => Ok(Ast::GrEq(i, left, right)),
-            Lex::BAnd => Ok(Ast::BAnd(i, left, right)),
-            Lex::BOr => Ok(Ast::BOr(i, left, right)),
-            Lex::Add => Ok(Ast::Add(i, left, right)),
-            Lex::Mul => Ok(Ast::Mul(i, left, right)),
+            Lex::Eq => Ok(Ast::BinaryOp(i, BinaryOperator::Eq, left, right)),
+            Lex::NEq => Ok(Ast::BinaryOp(i, BinaryOperator::NEq, left, right)),
+            Lex::Ls => Ok(Ast::BinaryOp(i, BinaryOperator::Ls, left, right)),
+            Lex::LsEq => Ok(Ast::BinaryOp(i, BinaryOperator::LsEq, left, right)),
+            Lex::Gr => Ok(Ast::BinaryOp(i, BinaryOperator::Gr, left, right)),
+            Lex::GrEq => Ok(Ast::BinaryOp(i, BinaryOperator::GrEq, left, right)),
+            Lex::BAnd => Ok(Ast::BinaryOp(i, BinaryOperator::BAnd, left, right)),
+            Lex::BOr => Ok(Ast::BinaryOp(i, BinaryOperator::BOr, left, right)),
+            Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
+            Lex::Mul => Ok(Ast::BinaryOp(i, BinaryOperator::Mul, left, right)),
             _ => Err(format!("L{}: {} is not a binary operator", line, op)),
         }
     }
@@ -144,7 +144,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(Ast::FunctionDef(l, id.clone(), params, fn_type, stmts))
+                Some(Ast::RoutineDef(l, RoutineDef::Function, id.clone(), params, fn_type, stmts))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -182,7 +182,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(Ast::CoroutineDef(l, id.clone(), params, co_type, stmts))
+                Some(Ast::RoutineDef(l, RoutineDef::Coroutine, id.clone(), params, co_type, stmts))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -327,7 +327,7 @@ fn co_init(iter: &mut TokenIter) -> PResult {
             Some((l, id)) => {
                 let params = fn_call_params(iter)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Ast::CoroutineInit(l, id.clone(), params)))
+                Ok(Some(Ast::RoutineCall(l, RoutineCall::CoroutineInit, id.clone(), params)))
             }
             None => Err(format!("L{}: expected identifier after init", l)),
         },
@@ -524,7 +524,7 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
         Some((l, id)) => match fn_call_params(iter)? {
             Some(params) => {
                 // this is a function call
-                Some(Ast::FunctionCall(l, id, params))
+                Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
             }
             _ => Some(Ast::Identifier(l, id)),
         },
@@ -693,7 +693,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::Add(l, left, right)) = expression(&mut iter).unwrap() {
+        if let Some(Ast::BinaryOp(l, BinaryOperator::Add, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(*left, Ast::Integer(1, 2));
             assert_eq!(*right, Ast::Integer(1, 2));
@@ -712,10 +712,10 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::Mul(l, left, right)) = expression(&mut iter).unwrap() {
+        if let Some(Ast::BinaryOp(l, BinaryOperator::Mul, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             match left.as_ref() {
-                Ast::Add(_, ll, lr) => {
+                Ast::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
                     assert_eq!(**ll, Ast::Integer(1, 2));
                     assert_eq!(**lr, Ast::Integer(1, 4));
                 }
@@ -737,7 +737,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::BOr(l, left, right)) = expression(&mut iter).unwrap() {
+        if let Some(Ast::BinaryOp(l, BinaryOperator::BOr, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(*left, Ast::Boolean(1, true));
             assert_eq!(*right, Ast::Boolean(1, false));
@@ -756,7 +756,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::FunctionDef(l, name, params, ty, body)) = function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -842,7 +842,7 @@ pub mod tests {
                 _ => panic!("No body: {:?}", &body[0]),
             }
             match &body[1] {
-                Ast::Mul(_, l, r) => {
+                Ast::BinaryOp(_, BinaryOperator::Mul, l, r) => {
                     assert_eq!(*l.as_ref(), Ast::Identifier(1, "x".into()));
                     assert_eq!(*r.as_ref(), Ast::Identifier(1, "x".into()));
                 }

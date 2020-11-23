@@ -1,3 +1,4 @@
+use crate::ast::RoutineDef;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::{Symbol, Type};
 
@@ -61,7 +62,7 @@ impl<'a> ScopeStack<'a> {
             Some(ref node) => {
                 match node {
                     CompilerNode::Module(_, funcs, _) =>
-                        funcs.iter().find(|v| match v {CompilerNode::FunctionDef(_, n, _, _, _) => n == name, _ => false}),
+                        funcs.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Function, n, _, _, _) => n == name, _ => false}),
                     _ => None,
                 }
             },
@@ -74,7 +75,7 @@ impl<'a> ScopeStack<'a> {
             Some(ref node) => {
                 match node {
                     CompilerNode::Module(_, _, cors) =>
-                        cors.iter().find(|v| match v {CompilerNode::CoroutineDef(_, n, _, _, _) => n == name, _ => false}),
+                        cors.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Coroutine, n, _, _, _) => n == name, _ => false}),
                     _ => None,
                 }
             },
@@ -171,7 +172,7 @@ mod tests {
         });
         fun_scope.insert("y", 4, 4);
         fun_scope.insert("z", 4, 8);
-        let outer_node = CompilerNode::FunctionDef(fun_scope, "func".into(), vec![], Primitive::I32, vec![]);
+        let outer_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![], Primitive::I32, vec![]);
         stack.push(&outer_node);
 
         let mut inner_scope = Scope::new(Type::Block);
@@ -196,7 +197,7 @@ mod tests {
         });
         fun_scope.insert("y", 4, 0);
         fun_scope.insert("z", 4, 4);
-        let fun_node = CompilerNode::FunctionDef(fun_scope, "func".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
+        let fun_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("func", 0, 0);
@@ -207,14 +208,14 @@ mod tests {
             next_label: 0,
             allocation: 0,
         });
-        let fun2_node = CompilerNode::FunctionDef(fun2_scope, "func2".into(), vec![], Primitive::I32, vec![]);
+        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Function, "func2".into(), vec![], Primitive::I32, vec![]);
         stack.push(&fun2_node);
         
         assert_eq!(stack.find("func").is_none(), true);
 
         let node = stack.find_func("func").unwrap();
         match node {
-            CompilerNode::FunctionDef(meta, name, params, _, _) => {
+            CompilerNode::RoutineDef(meta, RoutineDef::Function, name, params, _, _) => {
                 assert_eq!(name, "func");
                 assert_eq!(params.len(), 1);
                 let y_param = meta.get("y").unwrap();
@@ -237,7 +238,7 @@ mod tests {
         });
         cor_scope.insert("y", 4, 20);
         cor_scope.insert("z", 4, 24);
-        let cor_node = CompilerNode::CoroutineDef(cor_scope, "cor".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
+        let cor_node = CompilerNode::RoutineDef(cor_scope, RoutineDef::Coroutine, "cor".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("cor", 0, 0);
@@ -248,12 +249,12 @@ mod tests {
             next_label: 0,
             allocation: 0,
         });
-        let fun2_node = CompilerNode::FunctionDef(fun2_scope, "func2".into(), vec![], Primitive::I32, vec![]);
+        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Coroutine, "func2".into(), vec![], Primitive::I32, vec![]);
         stack.push(&fun2_node);
 
         let node = stack.find_coroutine("cor").unwrap();
         match node {
-            CompilerNode::CoroutineDef(meta, name, params, _, _) => {
+            CompilerNode::RoutineDef(meta, RoutineDef::Coroutine, name, params, _, _) => {
                 assert_eq!(name, "cor");
                 assert_eq!(params.len(), 1);
                 let y_param = meta.get("y").unwrap();

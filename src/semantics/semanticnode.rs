@@ -21,53 +21,9 @@ impl SemanticNode {
                 Ok(Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), *p)))
             }
             Identifier(l, id) => Ok(Box::new(Identifier(sm_from(*l), id.clone()))),
-            Mul(ln, ref l, ref r) => Ok(Box::new(Mul(
+            BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
                 sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Add(ln, ref l, ref r) => Ok(Box::new(Add(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            BAnd(ln, ref l, ref r) => Ok(Box::new(BAnd(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            BOr(ln, ref l, ref r) => Ok(Box::new(BOr(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Eq(ln, ref l, ref r) => Ok(Box::new(Eq(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            NEq(ln, ref l, ref r) => Ok(Box::new(NEq(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Gr(ln, ref l, ref r) => Ok(Box::new(Gr(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            GrEq(ln, ref l, ref r) => Ok(Box::new(GrEq(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            Ls(ln, ref l, ref r) => Ok(Box::new(Ls(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
-            ))),
-            LsEq(ln, ref l, ref r) => Ok(Box::new(LsEq(
-                sm_from(*ln),
+                *op,
                 SemanticNode::from_parser_ast(l)?,
                 SemanticNode::from_parser_ast(r)?,
             ))),
@@ -106,35 +62,22 @@ impl SemanticNode {
                 Ok(Box::new(ExpressionBlock(sm_from(*ln), nbody)))
             }
             Statement(_, stmt) => Ok(SemanticNode::from_parser_ast(stmt)?),
-            FunctionDef(ln, fname, params, p, body) => {
+            RoutineDef(ln, def, fname, params, p, body) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
                     let r = SemanticNode::from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Box::new(FunctionDef(
+                Ok(Box::new(RoutineDef(
                     sm_from(*ln),
+                    *def,
                     fname.clone(),
                     params.clone(),
                     *p,
                     nbody,
                 )))
             }
-            CoroutineDef(ln, coname, params, p, body) => {
-                let mut nbody = vec![];
-                for stmt in body.iter() {
-                    let r = SemanticNode::from_parser_ast(stmt)?;
-                    nbody.push(*r);
-                }
-                Ok(Box::new(CoroutineDef(
-                    sm_from(*ln),
-                    coname.clone(),
-                    params.clone(),
-                    *p,
-                    nbody,
-                )))
-            }
-            FunctionCall(l, fname, params) => {
+            RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
                 let mut nparams = vec![];
@@ -142,21 +85,7 @@ impl SemanticNode {
                     let np = SemanticNode::from_parser_ast(param)?;
                     nparams.push(*np);
                 }
-                Ok(Box::new(FunctionCall(sm_from(*l), fname.clone(), nparams)))
-            }
-            CoroutineInit(l, coname, params) => {
-                // test that the expressions passed to the function match the functions
-                // parameter types
-                let mut nparams = vec![];
-                for param in params.iter() {
-                    let np = SemanticNode::from_parser_ast(param)?;
-                    nparams.push(*np);
-                }
-                Ok(Box::new(CoroutineInit(
-                    sm_from(*l),
-                    coname.clone(),
-                    nparams,
-                )))
+                Ok(Box::new(RoutineCall(sm_from(*l), *call, name.clone(), nparams)))
             }
             Printi(l, exp) => Ok(Box::new(Printi(
                 sm_from(*l),
@@ -183,9 +112,6 @@ impl SemanticNode {
             }
         }
     }
-
-    /// Analyze the AST and add functions to symbol tables
-    pub fn extract_routines(&mut self) {}
 }
 
 fn sm(ln: u32, ty: Primitive) -> SemanticMetadata {
@@ -259,65 +185,10 @@ mod tests {
         {
             for (tree, expected) in [
                 (
-                    Ast::Mul(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Mul(
+                    Ast::BinaryOp(1, BinaryOperator::Mul, Box::new(l.clone()), Box::new(r.clone())),
+                    Ast::BinaryOp(
                         sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::Add(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Add(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::Eq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Eq(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::NEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::NEq(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::Ls(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Ls(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::LsEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::LsEq(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::Gr(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::Gr(
-                        sm(1, Primitive::Unknown),
-                        Box::new(el.clone()),
-                        Box::new(er.clone()),
-                    ),
-                ),
-                (
-                    Ast::GrEq(1, Box::new(l.clone()), Box::new(r.clone())),
-                    Ast::GrEq(
-                        sm(1, Primitive::Unknown),
+                        BinaryOperator::Mul,
                         Box::new(el.clone()),
                         Box::new(er.clone()),
                     ),

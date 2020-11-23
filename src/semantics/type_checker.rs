@@ -30,33 +30,38 @@ pub mod checker {
 
         fn binary_op(
             &mut self,
-            op: String,
+            op: BinaryOperator,
             ln: u32,
             l: &mut SemanticNode,
             r: &mut SemanticNode,
             current_func: &Option<String>,
             sym: &mut SymbolTable,
-            expected: Option<Primitive>,
         ) -> Result<Primitive, String> {
+            use BinaryOperator::*;
+
             let lty = self.traverse(l, current_func, sym)?;
             let rty = self.traverse(r, current_func, sym)?;
 
-            match expected {
-                None => {
-                    if lty == rty {
-                        Ok(lty)
+            match op {
+                Add | Mul => {
+                    if lty == I32 && rty == I32 {
+                        Ok(I32)
                     } else {
-                        Err(format!(
-                            "L{}: {} expected {} but found {}",
-                            ln, op, lty, rty
-                        ))
+                        Err(format!("L{}: {} expected i32 but found {} and {}", ln, op, lty, rty))
+                    }
+                },
+                BAnd | BOr => {
+                    if lty == Bool && rty == Bool {
+                        Ok(Bool)
+                    } else {
+                        Err(format!("L{}: {} expected bool but found {} and {}", ln, op, lty, rty))
                     }
                 }
-                Some(expected) => {
-                    if lty == expected && rty == expected {
-                        Ok(lty)
+                Eq | NEq | Ls | LsEq | Gr | GrEq => {
+                    if lty == rty {
+                        Ok(Bool)
                     } else {
-                        Err(format!("L{}: {} expected operands of {}", ln, op, expected))
+                        Err(format!("L{}: {} expected {} but found {}", ln, op, lty, rty))
                     }
                 }
             }
@@ -127,7 +132,6 @@ pub mod checker {
             sym: &mut SymbolTable,
         ) -> Result<Primitive, String> {
             use Ast::*;
-            let root_str = ast.root_str();
             match ast {
                 Integer(meta, _) => {
                     meta.ty = I32;
@@ -157,27 +161,11 @@ pub mod checker {
                         Ok(meta.ty)
                     }
                 },
-                Mul(meta, l, r) | Add(meta, l, r) => {
+                BinaryOp(meta, op, l, r) => {
                     let ty =
-                        self.binary_op(root_str, meta.ln, l, r, current_func, sym, Some(I32))?;
+                        self.binary_op(*op, meta.ln, l, r, current_func, sym)?;
                     meta.ty = ty;
                     Ok(ty)
-                }
-                BAnd(meta, l, r) | BOr(meta, l, r) => {
-                    let ty =
-                        self.binary_op(root_str, meta.ln, l, r, current_func, sym, Some(Bool))?;
-                    meta.ty = ty;
-                    Ok(ty)
-                }
-                Eq(meta, l, r)
-                | NEq(meta, l, r)
-                | Gr(meta, l, r)
-                | GrEq(meta, l, r)
-                | Ls(meta, l, r)
-                | LsEq(meta, l, r) => {
-                    self.binary_op(root_str, meta.ln, l, r, current_func, sym, None)?;
-                    meta.ty = Bool;
-                    Ok(meta.ty)
                 }
                 If(meta, cond, true_arm, false_arm) => {
                     let cond_ty = self.traverse(cond, current_func, sym)?;
@@ -311,7 +299,7 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                FunctionCall(meta, fname, params) => {
+                RoutineCall(meta, call, fname, params)=> {
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];
@@ -323,7 +311,11 @@ pub mod checker {
                         Some(Symbol {
                             ty: Type::Function(pty, rty),
                             ..
-                        }) => (pty, rty),
+                        }) if *call == crate::syntax::ast::RoutineCall::Function => (pty, rty),
+                        Some(Symbol {
+                            ty: Type::Coroutine(pty, rty),
+                            ..
+                        }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (pty, rty),
                         Some(_) => {
                             return Err(format!(
                                 "L{}: {} found but was not a function",
@@ -337,63 +329,19 @@ pub mod checker {
 
                     if pty.len() != expected_tys.len() {
                         Err(format!(
-                            "L{}: Incorrect number of parameters passed to function: {}",
+                            "L{}: Incorrect number of parameters passed to routine: {}",
                             meta.ln, fname
                         ))
                     } else {
                         let z = pty.iter().zip(expected_tys.iter());
                         let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                         if all_params_match {
-                            //let fty = ftable.funcs[fname].ty;
                             meta.ty = *ret_ty;
                             Ok(*ret_ty)
                         } else {
                             Err(format!(
                                 "L{}: One or more parameters had mismatching types for function {}",
                                 meta.ln, fname
-                            ))
-                        }
-                    }
-                }
-                CoroutineInit(meta, coname, params) => {
-                    // test that the expressions passed to the function match the functions
-                    // parameter types
-                    let mut pty = vec![];
-                    for param in params.iter_mut() {
-                        let ty = self.traverse(param, current_func, sym)?;
-                        pty.push(ty);
-                    }
-                    let (expected_tys, ret_ty) = match sym.get(coname).or(self.stack.get(coname)) {
-                        Some(Symbol {
-                            ty: Type::Coroutine(pty, rty),
-                            ..
-                        }) => (pty, rty),
-                        Some(_) => {
-                            return Err(format!(
-                                "L{}: {} found but was not a function",
-                                meta.ln, coname
-                            ))
-                        }
-                        None => {
-                            return Err(format!("L{}: function {} not declared", meta.ln, coname))
-                        }
-                    };
-
-                    if pty.len() != expected_tys.len() {
-                        Err(format!(
-                            "L{}: Incorrect number of parameters passed to coroutine: {}",
-                            meta.ln, coname
-                        ))
-                    } else {
-                        let z = pty.iter().zip(expected_tys.iter());
-                        let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
-                        if all_params_match {
-                            meta.ty = *ret_ty;
-                            Ok(*ret_ty)
-                        } else {
-                            Err(format!(
-                                "L{}: Mismatching parameter types in init for coroutine {}",
-                                meta.ln, coname
                             ))
                         }
                     }
@@ -443,12 +391,10 @@ pub mod checker {
                     meta.ty = ty;
                     Ok(ty)
                 }
-                FunctionDef(meta, name, params, p, body)
-                | CoroutineDef(meta, name, params, p, body) => {
+                RoutineDef(meta, _, name, params, p, body) => {
                     for (pname, pty) in params.iter() {
                         meta.sym.add(pname, Type::Primitive(*pty))?;
                     }
-                    //meta.sym.add(name, Type::Function(params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(), *p))?;
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
                     for stmt in body.iter_mut() {
@@ -600,8 +546,9 @@ pub mod checker {
             scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
             // both operands are i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -616,8 +563,9 @@ pub mod checker {
 
             // operands are not i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -627,12 +575,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected i32 but found bool and i32".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -642,12 +591,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected i32 but found i32 and bool".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Add(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Add,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -657,7 +607,7 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: + expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: + expected i32 but found bool and bool".into()));
             }
         }
 
@@ -667,8 +617,9 @@ pub mod checker {
             scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
             // both operands are i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Integer(1, 5)),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -683,8 +634,9 @@ pub mod checker {
 
             // operands are not i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Integer(1, 10)),
                 );
@@ -694,12 +646,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected i32 but found bool and i32".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Integer(1, 10)),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -709,12 +662,13 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected i32 but found i32 and bool".into()));
             }
             // operands are not i32
             {
-                let node = Ast::Mul(
+                let node = Ast::BinaryOp(
                     1,
+                    BinaryOperator::Mul,
                     Box::new(Ast::Identifier(1, "b".into())),
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
@@ -724,7 +678,7 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: * expected operands of i32".into()));
+                assert_eq!(ty, Err("L1: * expected i32 but found bool and bool".into()));
             }
         }
 
@@ -733,12 +687,13 @@ pub mod checker {
             let scope = Scope::new();
 
             let tests: Vec<(PNode, Result<Primitive, String>)> = vec![(
-                Ast::BAnd(
+                Ast::BinaryOp(
                     1,
+                    BinaryOperator::BAnd,
                     Box::new(Ast::Boolean(1, true)),
                     Box::new(Ast::Integer(1, 5)),
                 ),
-                Err("L1: && expected operands of bool".into()),
+                Err("L1: && expected bool but found bool and i32".into()),
             )];
 
             for (test, expected) in tests.iter() {
@@ -756,24 +711,27 @@ pub mod checker {
             let scope = Scope::new();
             let tests: Vec<(PNode, Result<Primitive, String>)> = vec![
                 (
-                    Ast::Eq(
+                    Ast::BinaryOp(
                         1,
+                        BinaryOperator::Eq,
                         Box::new(Ast::Integer(1, 3)),
                         Box::new(Ast::Integer(1, 5)),
                     ),
                     Ok(Bool),
                 ),
                 (
-                    Ast::Eq(
+                    Ast::BinaryOp(
                         1,
+                        BinaryOperator::Eq,
                         Box::new(Ast::Boolean(1, true)),
                         Box::new(Ast::Boolean(1, false)),
                     ),
                     Ok(Bool),
                 ),
                 (
-                    Ast::Eq(
+                    Ast::BinaryOp(
                         1,
+                        BinaryOperator::Eq,
                         Box::new(Ast::Integer(1, 3)),
                         Box::new(Ast::Boolean(1, true)),
                     ),
@@ -890,7 +848,7 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], I32, vec![]);
 
-            let node = Ast::FunctionCall(1, "my_func".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func".into(), vec![]);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
@@ -900,7 +858,7 @@ pub mod checker {
 
             scope.add("my_func2", vec![("x", I32)], I32, vec![]);
             // test correct parameters passed in call
-            let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1, 5)]);
+            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func2".into(), vec![Ast::Integer(1, 5)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -910,7 +868,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
-            let node = Ast::FunctionCall(1, "my_func2".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func2".into(), vec![]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -919,7 +877,7 @@ pub mod checker {
             );
             assert_eq!(
                 ty,
-                Err("L1: Incorrect number of parameters passed to function: my_func2".into())
+                Err("L1: Incorrect number of parameters passed to routine: my_func2".into())
             );
         }
 
@@ -929,7 +887,7 @@ pub mod checker {
             scope.add("my_co", vec![], I32, vec![]);
             scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
-            let node = Ast::CoroutineInit(1, "my_co".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co".into(), vec![]);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
@@ -938,7 +896,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test correct parameters passed in call
-            let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1, 5)]);
+            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co2".into(), vec![Ast::Integer(1, 5)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -948,7 +906,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
-            let node = Ast::CoroutineInit(1, "my_co2".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co2".into(), vec![]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -957,7 +915,7 @@ pub mod checker {
             );
             assert_eq!(
                 ty,
-                Err("L1: Incorrect number of parameters passed to coroutine: my_co2".into())
+                Err("L1: Incorrect number of parameters passed to routine: my_co2".into())
             );
         }
 
@@ -1014,8 +972,9 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], I32, vec![]);
 
-            let node = Ast::FunctionDef(
+            let node = Ast::RoutineDef(
                 1,
+                RoutineDef::Function,
                 "my_func".into(),
                 vec![],
                 I32,
@@ -1030,7 +989,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::FunctionDef(1, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
+                Ast::RoutineDef(1, RoutineDef::Function, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1045,8 +1004,9 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_co", vec![], I32, vec![]);
 
-            let node = Ast::CoroutineDef(
+            let node = Ast::RoutineDef(
                 1,
+                RoutineDef::Coroutine,
                 "my_co".into(),
                 vec![],
                 I32,
@@ -1061,7 +1021,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::CoroutineDef(1, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
+                Ast::RoutineDef(1, RoutineDef::Coroutine, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),

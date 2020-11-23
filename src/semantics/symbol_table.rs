@@ -64,7 +64,7 @@ impl SymbolTable {
 
     fn traverse(ast: &mut SemanticNode, sym: &mut SemanticMetadata) -> Result<(), String> {
         match &ast {
-            Ast::FunctionDef(_, name, params, ty, _) => {
+            Ast::RoutineDef(_, RoutineDef::Function, name, params, ty, _) => {
                 sym.sym.add(
                     name,
                     Type::Function(
@@ -73,7 +73,7 @@ impl SymbolTable {
                     ),
                 )?;
             }
-            Ast::CoroutineDef(_, name, params, ty, _) => {
+            Ast::RoutineDef(_, RoutineDef::Coroutine, name, params, ty, _) => {
                 sym.sym.add(
                     name,
                     Type::Coroutine(

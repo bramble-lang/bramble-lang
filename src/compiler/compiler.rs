@@ -1,6 +1,9 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::ast::BinaryOperator;
+use crate::ast::RoutineDef;
+use crate::ast::RoutineCall;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::LayoutData;
 use crate::compiler::ast::scope::Type::Routine;
@@ -185,11 +188,37 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn handle_binary_operands(&mut self, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+    fn handle_binary_operands(&mut self, op: BinaryOperator, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+        use BinaryOperator::*;
+
         let mut left_code = vec![];
         self.traverse(left, current_func, &mut left_code)?;
         let mut right_code = vec![];
         self.traverse(right, current_func, &mut right_code)?;
+
+        let mut op_asm = vec![];
+        match op {
+                BinaryOperator::Add => {assembly!{(op_asm) {add %eax, %ebx;}}},
+                BinaryOperator::Mul => {assembly!{(op_asm) {imul %eax, %ebx;}}},
+                BinaryOperator::BAnd => {assembly!{(op_asm) {and %eax, %ebx;}}},
+                BinaryOperator::BOr => {assembly!{(op_asm) {or %eax, %ebx;}}},
+                cond => {
+                    let set = match cond {
+                        Eq => Inst::Sete(Reg8::Al),
+                        NEq => Inst::Setne(Reg8::Al),
+                        Ls => Inst::Setl(Reg8::Al),
+                        LsEq => Inst::Setle(Reg8::Al),
+                        Gr => Inst::Setg(Reg8::Al),
+                        GrEq => Inst::Setge(Reg8::Al),
+                        _ => panic!("Invalid conditional operator: {}", cond)
+                    };
+                    assembly!{(op_asm){
+                        cmp %eax, %ebx;
+                        {{[set]}}
+                        and %al, 1;
+                    }}
+                }
+        };
 
         let mut code = vec![];
         assembly!{(code){
@@ -199,20 +228,10 @@ impl<'a> Compiler<'a> {
             push %eax;
             pop %ebx;
             pop %eax;
+            {{op_asm}}
         }}
 
         Ok(code)
-    }
-    
-    fn comparison_op(&mut self, op: Inst, left: &'a CompilerNode, right: &'a CompilerNode, current_func: &String, code: &mut Vec<Inst>) -> Result<(), String> {
-        assembly!{(code){
-            {{self.handle_binary_operands(left, right, current_func)?}}
-            cmp %eax, %ebx;
-            {{[op]}}
-            and %al, 1;
-        }}
-
-        Ok(())
     }
 
     fn push_scope(&mut self, ast: &'a CompilerNode) {
@@ -247,46 +266,9 @@ impl<'a> Compiler<'a> {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
             }
-            Ast::Mul(_, l, r) => {
+            Ast::BinaryOp(_, op, l, r) => {
                 assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    imul %eax, %ebx;
-                }}
-            }
-            Ast::Add(_, l, r) => {
-                assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    add %eax, %ebx;
-                }}
-            }
-            Ast::Eq(_, l, r) => {
-                self.comparison_op(Inst::Sete(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::NEq(_, l, r) => {
-                self.comparison_op(Inst::Setne(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::Ls(_, l, r) => {
-                self.comparison_op(Inst::Setl(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::LsEq(_, l, r) => {
-                self.comparison_op(Inst::Setle(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::Gr(_, l, r) => {
-                self.comparison_op(Inst::Setg(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::GrEq(_, l, r) => {
-                self.comparison_op(Inst::Setge(Reg8::Al), l.as_ref(), r.as_ref(), current_func, code)?;
-            }
-            Ast::BAnd(_, l, r) => {
-                assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    and %eax, %ebx;
-                }}
-            }
-            Ast::BOr(_, l, r) => {
-                assembly!{(code) {
-                    {{self.handle_binary_operands(l.as_ref(), r.as_ref(), current_func)?}}
-                    or %eax, %ebx;
+                    {{self.handle_binary_operands(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
             Ast::Printiln(_, ref exp) => {
@@ -370,7 +352,7 @@ impl<'a> Compiler<'a> {
                     ^ret_lbl:
                 }};
             }
-            Ast::CoroutineDef(_, ref fn_name, _, _, stmts) => {
+            Ast::RoutineDef(_, RoutineDef::Coroutine, ref fn_name, _, _, stmts) => {
                 assembly!{(code) {
                 @{fn_name}:
                 }};
@@ -383,7 +365,7 @@ impl<'a> Compiler<'a> {
                     jmp @runtime_yield_return;
                 }};
             }
-            Ast::CoroutineInit(_, ref co, params) => {
+            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
                 self.validate_routine_call(co, params)?;
 
 
@@ -403,7 +385,7 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::FunctionDef(scope, ref fn_name, _, _, stmts) => {
+            Ast::RoutineDef(scope, RoutineDef::Function, ref fn_name, _, _, stmts) => {
                 let total_offset = match scope.ty() {
                     Routine{allocation,..} => {
                         allocation
@@ -434,7 +416,7 @@ impl<'a> Compiler<'a> {
                 }};
 
             }
-            Ast::FunctionCall(_, ref fn_name, params) => {
+            Ast::RoutineCall(_, RoutineCall::Function, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 self.validate_routine_call(fn_name, params)?;
