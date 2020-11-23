@@ -299,7 +299,7 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                FunctionCall(meta, fname, params) | RoutineCall(meta, crate::syntax::ast::RoutineCall::Function, fname, params)=> {
+                RoutineCall(meta, crate::syntax::ast::RoutineCall::Function, fname, params)=> {
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];
@@ -342,7 +342,7 @@ pub mod checker {
                         }
                     }
                 }
-                CoroutineInit(meta, coname, params) | RoutineCall(meta, crate::syntax::ast::RoutineCall::CoroutineInit, coname, params) => {
+                RoutineCall(meta, crate::syntax::ast::RoutineCall::CoroutineInit, coname, params) => {
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];
@@ -887,7 +887,7 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], I32, vec![]);
 
-            let node = Ast::FunctionCall(1, "my_func".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func".into(), vec![]);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
@@ -897,7 +897,7 @@ pub mod checker {
 
             scope.add("my_func2", vec![("x", I32)], I32, vec![]);
             // test correct parameters passed in call
-            let node = Ast::FunctionCall(1, "my_func2".into(), vec![Ast::Integer(1, 5)]);
+            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func2".into(), vec![Ast::Integer(1, 5)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -907,7 +907,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
-            let node = Ast::FunctionCall(1, "my_func2".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func2".into(), vec![]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -926,7 +926,7 @@ pub mod checker {
             scope.add("my_co", vec![], I32, vec![]);
             scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
-            let node = Ast::CoroutineInit(1, "my_co".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co".into(), vec![]);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
@@ -935,7 +935,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test correct parameters passed in call
-            let node = Ast::CoroutineInit(1, "my_co2".into(), vec![Ast::Integer(1, 5)]);
+            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co2".into(), vec![Ast::Integer(1, 5)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -945,7 +945,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
-            let node = Ast::CoroutineInit(1, "my_co2".into(), vec![]);
+            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co2".into(), vec![]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),

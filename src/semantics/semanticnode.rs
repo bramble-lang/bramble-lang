@@ -87,30 +87,6 @@ impl SemanticNode {
                 }
                 Ok(Box::new(RoutineCall(sm_from(*l), *call, name.clone(), nparams)))
             }
-            FunctionCall(l, fname, params) => {
-                // test that the expressions passed to the function match the functions
-                // parameter types
-                let mut nparams = vec![];
-                for param in params.iter() {
-                    let np = SemanticNode::from_parser_ast(param)?;
-                    nparams.push(*np);
-                }
-                Ok(Box::new(FunctionCall(sm_from(*l), fname.clone(), nparams)))
-            }
-            CoroutineInit(l, coname, params) => {
-                // test that the expressions passed to the function match the functions
-                // parameter types
-                let mut nparams = vec![];
-                for param in params.iter() {
-                    let np = SemanticNode::from_parser_ast(param)?;
-                    nparams.push(*np);
-                }
-                Ok(Box::new(CoroutineInit(
-                    sm_from(*l),
-                    coname.clone(),
-                    nparams,
-                )))
-            }
             Printi(l, exp) => Ok(Box::new(Printi(
                 sm_from(*l),
                 SemanticNode::from_parser_ast(exp)?,

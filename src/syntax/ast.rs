@@ -86,8 +86,6 @@ pub enum Ast<I> {
     RoutineDef(I, RoutineDef, String, Vec<(String, Primitive)>, Primitive, Vec<Ast<I>>),
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
     
-    FunctionCall(I, String, Vec<Ast<I>>),
-    CoroutineInit(I, String, Vec<Ast<I>>),
     Module(I, Vec<Ast<I>>, Vec<Ast<I>>),
 }
 
@@ -118,8 +116,6 @@ impl<I> Ast<I> {
             RoutineDef(_, def, ..) => format!("{}", def),
             RoutineCall(_, call, ..) => format!("{}", call),
 
-            FunctionCall(_, _, _) => "function call".into(),
-            CoroutineInit(_, _, _) => "coroutine init".into(),
             Module(_, _, _) => "module".into(),
         }
     }
@@ -134,7 +130,6 @@ impl<I> Ast<I> {
             | Bind(m,..) | Return(m,..) | Yield(m,..) | YieldReturn(m,..)
             | RoutineDef(m,..)
             | RoutineCall(m,..)
-            | FunctionCall(m,..) | CoroutineInit(m,..)
             | Module(m,..)
             => m
         }

@@ -327,7 +327,7 @@ fn co_init(iter: &mut TokenIter) -> PResult {
             Some((l, id)) => {
                 let params = fn_call_params(iter)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Ast::CoroutineInit(l, id.clone(), params)))
+                Ok(Some(Ast::RoutineCall(l, RoutineCall::CoroutineInit, id.clone(), params)))
             }
             None => Err(format!("L{}: expected identifier after init", l)),
         },
@@ -524,7 +524,7 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
         Some((l, id)) => match fn_call_params(iter)? {
             Some(params) => {
                 // this is a function call
-                Some(Ast::FunctionCall(l, id, params))
+                Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
             }
             _ => Some(Ast::Identifier(l, id)),
         },

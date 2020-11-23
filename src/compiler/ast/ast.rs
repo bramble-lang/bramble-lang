@@ -129,28 +129,6 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            FunctionCall(m, name, params) => {
-                let (meta, layout) = Scope::block_from(m, layout);
-                let mut nlayout = layout;
-                let mut nparams = vec![];
-                for p in params.iter() {
-                    let (np, playout) = CompilerNode::from(p, nlayout);
-                    nlayout = playout;
-                    nparams.push(np);
-                }
-                (FunctionCall(meta, name.clone(), nparams), nlayout)
-            }
-            CoroutineInit(m, name, params) => {
-                let (meta, layout) = Scope::block_from(m, layout);
-                let mut nlayout = layout;
-                let mut nparams = vec![];
-                for p in params.iter() {
-                    let (np, playout) = CompilerNode::from(p, nlayout);
-                    nlayout = playout;
-                    nparams.push(np);
-                }
-                (CoroutineInit(meta, name.clone(), nparams), nlayout)
-            }
             Module(m, funcs, cors) => {
                 let (meta, layout) = Scope::block_from(m, layout);
                 let mut nlayout = layout;

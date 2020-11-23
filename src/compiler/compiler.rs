@@ -420,7 +420,7 @@ impl<'a> Compiler<'a> {
                     jmp @runtime_yield_return;
                 }};
             }
-            Ast::CoroutineInit(_, ref co, params) | Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
+            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
                 self.validate_routine_call(co, params)?;
 
 
@@ -471,7 +471,7 @@ impl<'a> Compiler<'a> {
                 }};
 
             }
-            Ast::FunctionCall(_, ref fn_name, params) | Ast::RoutineCall(_, RoutineCall::Function, ref fn_name, params) => {
+            Ast::RoutineCall(_, RoutineCall::Function, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 self.validate_routine_call(fn_name, params)?;
