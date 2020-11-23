@@ -299,7 +299,7 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                RoutineCall(meta, crate::syntax::ast::RoutineCall::Function, fname, params)=> {
+                RoutineCall(meta, call, fname, params)=> {
                     // test that the expressions passed to the function match the functions
                     // parameter types
                     let mut pty = vec![];
@@ -311,7 +311,11 @@ pub mod checker {
                         Some(Symbol {
                             ty: Type::Function(pty, rty),
                             ..
-                        }) => (pty, rty),
+                        }) if *call == crate::syntax::ast::RoutineCall::Function => (pty, rty),
+                        Some(Symbol {
+                            ty: Type::Coroutine(pty, rty),
+                            ..
+                        }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (pty, rty),
                         Some(_) => {
                             return Err(format!(
                                 "L{}: {} found but was not a function",
@@ -325,7 +329,7 @@ pub mod checker {
 
                     if pty.len() != expected_tys.len() {
                         Err(format!(
-                            "L{}: Incorrect number of parameters passed to function: {}",
+                            "L{}: Incorrect number of parameters passed to routine: {}",
                             meta.ln, fname
                         ))
                     } else {
@@ -338,49 +342,6 @@ pub mod checker {
                             Err(format!(
                                 "L{}: One or more parameters had mismatching types for function {}",
                                 meta.ln, fname
-                            ))
-                        }
-                    }
-                }
-                RoutineCall(meta, crate::syntax::ast::RoutineCall::CoroutineInit, coname, params) => {
-                    // test that the expressions passed to the function match the functions
-                    // parameter types
-                    let mut pty = vec![];
-                    for param in params.iter_mut() {
-                        let ty = self.traverse(param, current_func, sym)?;
-                        pty.push(ty);
-                    }
-                    let (expected_tys, ret_ty) = match sym.get(coname).or(self.stack.get(coname)) {
-                        Some(Symbol {
-                            ty: Type::Coroutine(pty, rty),
-                            ..
-                        }) => (pty, rty),
-                        Some(_) => {
-                            return Err(format!(
-                                "L{}: {} found but was not a function",
-                                meta.ln, coname
-                            ))
-                        }
-                        None => {
-                            return Err(format!("L{}: function {} not declared", meta.ln, coname))
-                        }
-                    };
-
-                    if pty.len() != expected_tys.len() {
-                        Err(format!(
-                            "L{}: Incorrect number of parameters passed to coroutine: {}",
-                            meta.ln, coname
-                        ))
-                    } else {
-                        let z = pty.iter().zip(expected_tys.iter());
-                        let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
-                        if all_params_match {
-                            meta.ty = *ret_ty;
-                            Ok(*ret_ty)
-                        } else {
-                            Err(format!(
-                                "L{}: Mismatching parameter types in init for coroutine {}",
-                                meta.ln, coname
                             ))
                         }
                     }
@@ -916,7 +877,7 @@ pub mod checker {
             );
             assert_eq!(
                 ty,
-                Err("L1: Incorrect number of parameters passed to function: my_func2".into())
+                Err("L1: Incorrect number of parameters passed to routine: my_func2".into())
             );
         }
 
@@ -954,7 +915,7 @@ pub mod checker {
             );
             assert_eq!(
                 ty,
-                Err("L1: Incorrect number of parameters passed to coroutine: my_co2".into())
+                Err("L1: Incorrect number of parameters passed to routine: my_co2".into())
             );
         }
 
