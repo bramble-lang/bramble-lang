@@ -2,6 +2,8 @@
 pub enum BinaryOperator{
     Add,
     Mul,
+    BAnd,
+    BOr,
 }
 
 impl std::fmt::Display for BinaryOperator {
@@ -10,6 +12,8 @@ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::f
     match self {
         Add => f.write_str("+"),
         Mul => f.write_str("*"),
+        BAnd => f.write_str("&&"),
+        BOr => f.write_str("||"),
     }
  }
 }

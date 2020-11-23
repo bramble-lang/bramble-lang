@@ -45,8 +45,10 @@ impl PNode {
             Lex::LsEq => Ok(Ast::LsEq(i, left, right)),
             Lex::Gr => Ok(Ast::Gr(i, left, right)),
             Lex::GrEq => Ok(Ast::GrEq(i, left, right)),
-            Lex::BAnd => Ok(Ast::BAnd(i, left, right)),
-            Lex::BOr => Ok(Ast::BOr(i, left, right)),
+            //Lex::BAnd => Ok(Ast::BAnd(i, left, right)),
+            Lex::BAnd => Ok(Ast::BinaryOp(i, BinaryOperator::BAnd, left, right)),
+            //Lex::BOr => Ok(Ast::BOr(i, left, right)),
+            Lex::BOr => Ok(Ast::BinaryOp(i, BinaryOperator::BOr, left, right)),
             //Lex::Add => Ok(Ast::Add(i, left, right)),
             Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
             //Lex::Mul => Ok(Ast::Mul(i, left, right)),
@@ -739,7 +741,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::BOr(l, left, right)) = expression(&mut iter).unwrap() {
+        if let Some(Ast::BinaryOp(l, BinaryOperator::BOr, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(*left, Ast::Boolean(1, true));
             assert_eq!(*right, Ast::Boolean(1, false));
