@@ -5,9 +5,31 @@ use crate::{
 };
 
 #[derive(Debug, PartialEq)]
+pub struct LayoutData {
+    pub(super) offset: i32,
+    pub(super) next_label: i32,
+}
+
+impl LayoutData {
+    pub fn new(offset:i32) -> LayoutData {
+        LayoutData{
+            offset,
+            next_label: 0,
+        }
+    }
+
+    pub fn get_label(&mut self) -> i32 {
+        let label = self.next_label;
+        self.next_label += 1;
+        label
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Scope {
     pub(super) ty: Type,
     pub(super) symbols: SymbolTable,
+    pub(super) label: i32,
 }
 
 impl Scope {
@@ -15,6 +37,7 @@ impl Scope {
         Scope {
             ty,
             symbols: SymbolTable::new(),
+            label: 0,
         }
     }
 
@@ -33,13 +56,18 @@ impl Scope {
         self.symbols.table.get(name)
     }
 
-    pub fn block_from(m: &SemanticMetadata, current_offset: i32) -> (Scope, i32) {
+    pub fn label(&self) -> i32 {
+        self.label
+    }
+
+    pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
+        let mut layout = current_layout;
         let mut scope = Scope::new(Type::Block);
-        let mut current_offset = current_offset;
+        scope.label = layout.get_label();
         for s in m.sym.table().iter() {
-            current_offset = scope.insert(&s.name, s.ty.size(), current_offset);
+            layout.offset = scope.insert(&s.name, s.ty.size(), layout.offset);
         }
-        (scope, current_offset)
+        (scope, layout)
     }
 
     pub fn routine_from(m: &SemanticMetadata, current_offset: i32) -> (Scope, i32) {

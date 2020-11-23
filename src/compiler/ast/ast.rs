@@ -1,4 +1,4 @@
-use crate::compiler::ast::scope::{Scope, Type};
+use crate::compiler::ast::scope::{LayoutData, Scope, Type};
 
 use crate::{
     semantics::semanticnode::SemanticNode,
@@ -8,222 +8,221 @@ use crate::{
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
-    pub fn from(ast: &SemanticNode, offset: i32) -> (CompilerNode, i32) {
+    pub fn from(ast: &SemanticNode, layout: LayoutData) -> (CompilerNode, LayoutData) {
         use Ast::*;
         match ast {
             ExpressionBlock(m, body) => {
-                let (meta, offset) = Scope::block_from(m, offset);
+                let (meta, mut nlayout) = Scope::block_from(m, layout);
                 let mut nbody = vec![];
-                let mut noffset = offset;
                 for e in body.iter() {
-                    let (e, offset) = CompilerNode::from(e, noffset);
-                    noffset = offset;
+                    let (e, layout) = CompilerNode::from(e, nlayout);
+                    nlayout = layout;
                     nbody.push(e);
                 }
-                (ExpressionBlock(meta, nbody), noffset)
+                (ExpressionBlock(meta, nbody), nlayout)
             }
             FunctionDef(m, name, params, ret_ty, body) => {
                 let (mut meta, offset2) = Scope::routine_from(m, 0);
                 let mut nbody = vec![];
-                let mut noffset = offset2;
+                let mut nlayout = LayoutData::new(offset2);
                 for e in body.iter() {
-                    let (e, offset) = CompilerNode::from(e, noffset);
-                    noffset = offset;
+                    let (e, layout) = CompilerNode::from(e, nlayout);
+                    nlayout = layout;
                     nbody.push(e);
                 }
-                meta.ty = Type::Routine{next_label: 0, allocation: noffset};
+                meta.ty = Type::Routine{next_label: 0, allocation: nlayout.offset};
                 (
                     FunctionDef(meta, name.clone(), params.clone(), *ret_ty, nbody),
-                    offset,
+                    layout,
                 )
             }
             CoroutineDef(m, name, params, ret_ty, body) => {
                 let coroutine_metadata_size = 20;
                 let (mut meta, offset2) = Scope::routine_from(m, coroutine_metadata_size);
                 let mut nbody = vec![];
-                let mut noffset = offset2;
+                let mut nlayout = LayoutData::new(offset2);
                 for e in body.iter() {
-                    let (e, offset) = CompilerNode::from(e, noffset);
-                    noffset = offset;
+                    let (e, layout) = CompilerNode::from(e, nlayout);
+                    nlayout = layout;
                     nbody.push(e);
                 }
-                meta.ty = Type::Routine{next_label: 0, allocation: noffset};
+                meta.ty = Type::Routine{next_label: 0, allocation: nlayout.offset};
                 (
                     CoroutineDef(meta, name.clone(), params.clone(), *ret_ty, nbody),
-                    offset,
+                    layout,
                 )
             }
             Ast::Integer(m, i) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::Integer(meta, *i), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::Integer(meta, *i), layout)
             }
             Ast::Boolean(m, b) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::Boolean(meta, *b), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::Boolean(meta, *b), layout)
             }
             Ast::Identifier(m, id) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::Identifier(meta, id.clone()), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::Identifier(meta, id.clone()), layout)
             }
             Ast::IdentifierDeclare(m, id, p) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::IdentifierDeclare(meta, id.clone(), *p), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::IdentifierDeclare(meta, id.clone(), *p), layout)
             }
             Mul(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::Mul(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::Mul(meta, Box::new(l), Box::new(r)), layout)
             }
             Add(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::Add(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::Add(meta, Box::new(l), Box::new(r)), layout)
             }
             BAnd(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::BAnd(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::BAnd(meta, Box::new(l), Box::new(r)), layout)
             }
             BOr(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::BOr(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::BOr(meta, Box::new(l), Box::new(r)), layout)
             }
             Eq(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ast::Eq(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ast::Eq(meta, Box::new(l), Box::new(r)), layout)
             }
             NEq(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (NEq(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (NEq(meta, Box::new(l), Box::new(r)), layout)
             }
             Ls(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Ls(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Ls(meta, Box::new(l), Box::new(r)), layout)
             }
             LsEq(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (LsEq(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (LsEq(meta, Box::new(l), Box::new(r)), layout)
             }
             Gr(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Gr(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Gr(meta, Box::new(l), Box::new(r)), layout)
             }
             GrEq(m, ref l, ref r) => {
-                let (l, offset) = CompilerNode::from(l, offset);
-                let (r, offset) = CompilerNode::from(r, offset);
-                let (meta, offset) = Scope::block_from(m, offset);
-                (GrEq(meta, Box::new(l), Box::new(r)), offset)
+                let (l, layout) = CompilerNode::from(l, layout);
+                let (r, layout) = CompilerNode::from(r, layout);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (GrEq(meta, Box::new(l), Box::new(r)), layout)
             }
             Printi(m, ref e) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (Printi(meta, Box::new(e)), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Printi(meta, Box::new(e)), layout)
             }
             Printiln(m, ref e) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (Printiln(meta, Box::new(e)), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Printiln(meta, Box::new(e)), layout)
             }
             Printbln(m, ref e) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (Printbln(meta, Box::new(e)), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Printbln(meta, Box::new(e)), layout)
             }
             If(m, ref cond, ref tb, ref fb) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (cond, offset) = CompilerNode::from(cond, offset);
-                let (tb, offset) = CompilerNode::from(tb, offset);
-                let (fb, offset) = CompilerNode::from(fb, offset);
-                (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (cond, layout) = CompilerNode::from(cond, layout);
+                let (tb, layout) = CompilerNode::from(tb, layout);
+                let (fb, layout) = CompilerNode::from(fb, layout);
+                (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
             Bind(m, id, p, e) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (Bind(meta, id.clone(), *p, Box::new(e)), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Bind(meta, id.clone(), *p, Box::new(e)), layout)
             }
             Yield(m, e) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (Yield(meta, Box::new(e)), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Yield(meta, Box::new(e)), layout)
             }
             Return(m, None) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                (Return(meta, None), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                (Return(meta, None), layout)
             }
             Return(m, Some(e)) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (Return(meta, Some(Box::new(e))), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Return(meta, Some(Box::new(e))), layout)
             }
             YieldReturn(m, None) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                (YieldReturn(meta, None), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                (YieldReturn(meta, None), layout)
             }
             YieldReturn(m, Some(e)) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (YieldReturn(meta, Some(Box::new(e))), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (YieldReturn(meta, Some(Box::new(e))), layout)
             }
             Statement(m, e) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let (e, offset) = CompilerNode::from(e, offset);
-                (Statement(meta, Box::new(e)), offset)
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Statement(meta, Box::new(e)), layout)
             }
             FunctionCall(m, name, params) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let mut noffset = offset;
+                let (meta, layout) = Scope::block_from(m, layout);
+                let mut nlayout = layout;
                 let mut nparams = vec![];
                 for p in params.iter() {
-                    let (np, poffset) = CompilerNode::from(p, noffset);
-                    noffset = poffset;
+                    let (np, playout) = CompilerNode::from(p, nlayout);
+                    nlayout = playout;
                     nparams.push(np);
                 }
-                (FunctionCall(meta, name.clone(), nparams), noffset)
+                (FunctionCall(meta, name.clone(), nparams), nlayout)
             }
             CoroutineInit(m, name, params) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let mut noffset = offset;
+                let (meta, layout) = Scope::block_from(m, layout);
+                let mut nlayout = layout;
                 let mut nparams = vec![];
                 for p in params.iter() {
-                    let (np, poffset) = CompilerNode::from(p, noffset);
-                    noffset = poffset;
+                    let (np, playout) = CompilerNode::from(p, nlayout);
+                    nlayout = playout;
                     nparams.push(np);
                 }
-                (CoroutineInit(meta, name.clone(), nparams), noffset)
+                (CoroutineInit(meta, name.clone(), nparams), nlayout)
             }
             Module(m, funcs, cors) => {
-                let (meta, offset) = Scope::block_from(m, offset);
-                let mut offset = offset;
+                let (meta, layout) = Scope::block_from(m, layout);
+                let mut nlayout = layout;
                 let mut nfuncs = vec![];
                 for f in funcs.iter() {
-                    let (nf, no) = CompilerNode::from(f, offset);
-                    offset = no;
+                    let (nf, no) = CompilerNode::from(f, nlayout);
+                    nlayout = no;
                     nfuncs.push(nf);
                 }
 
                 let mut ncors = vec![];
                 for co in cors.iter() {
-                    let (nco, no) = CompilerNode::from(co, offset);
-                    offset = no;
+                    let (nco, no) = CompilerNode::from(co, nlayout);
+                    nlayout = no;
                     ncors.push(nco);
                 }
 
-                (Module(meta, nfuncs, ncors), offset)
+                (Module(meta, nfuncs, ncors), nlayout)
             }
         }
     }
@@ -231,7 +230,8 @@ impl CompilerNode {
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::{
+    use crate::compiler::ast::scope::SymbolTable;
+use crate::{
         semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode,
     };
     use crate::semantics::symbol_table;
@@ -249,8 +249,8 @@ mod ast_tests {
             },
             0,
         );
-        let cn = CompilerNode::from(&sn, 8);
-        assert_eq!(cn.1, 8);
+        let cn = CompilerNode::from(&sn, LayoutData::new(8));
+        assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
@@ -287,18 +287,24 @@ mod ast_tests {
             Box::new(sn1),
             Box::new(sn2),
         );
-        let cn = CompilerNode::from(&snmul, 8);
-        assert_eq!(cn.1, 8);
+        let cn = CompilerNode::from(&snmul, LayoutData::new(8));
+        assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::Mul(m, l, r) => {
-                assert_eq!(m, Scope::new(Type::Block));
+                assert_eq!(m, Scope{ty: Type::Block, symbols: SymbolTable::new(), label: 2});
 
                 match *l {
-                    CompilerNode::Integer(_, v) => assert_eq!(v, 1),
+                    CompilerNode::Integer(m, v) => {
+                        assert_eq!(m.label, 0);
+                        assert_eq!(v, 1);
+                    }
                     _ => assert!(false),
                 }
                 match *r {
-                    CompilerNode::Integer(_, v) => assert_eq!(v, 2),
+                    CompilerNode::Integer(m, v) => {
+                        assert_eq!(m.label, 1);
+                        assert_eq!(v, 2);
+                    }
                     _ => assert!(false),
                 }
             }
@@ -329,8 +335,8 @@ mod ast_tests {
             },
             vec![],
         );
-        let cn = CompilerNode::from(&sn, 0);
-        assert_eq!(cn.1, 8);
+        let cn = CompilerNode::from(&sn, LayoutData::new(0));
+        assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, _) => {
                 assert_eq!(m.symbols.table.len(), 2);
@@ -388,8 +394,8 @@ mod ast_tests {
             },
             vec![sn],
         );
-        let cn = CompilerNode::from(&sn, 0);
-        assert_eq!(cn.1, 16);
+        let cn = CompilerNode::from(&sn, LayoutData::new(0));
+        assert_eq!(cn.1.offset, 16);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, b) => {
                 assert_eq!(m.symbols.table.len(), 2);
@@ -432,8 +438,8 @@ mod ast_tests {
             crate::syntax::ast::Primitive::I32,
             vec![],
         );
-        let cn = CompilerNode::from(&sn, 0);
-        assert_eq!(cn.1, 0);
+        let cn = CompilerNode::from(&sn, LayoutData::new(0));
+        assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::FunctionDef(m, name, ..) => {
                 assert_eq!(name, "func");
@@ -495,8 +501,8 @@ mod ast_tests {
             vec![sn],
         );
 
-        let cn = CompilerNode::from(&sn, 0);
-        assert_eq!(cn.1, 0);
+        let cn = CompilerNode::from(&sn, LayoutData::new(0));
+        assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::FunctionDef(m, .., body) => {
                 assert_eq!(m.symbols.table.len(), 2);
@@ -540,8 +546,8 @@ mod ast_tests {
             Primitive::I32,
             vec![],
         );
-        let cn = CompilerNode::from(&sn, 0);
-        assert_eq!(cn.1, 0);
+        let cn = CompilerNode::from(&sn, LayoutData::new(0));
+        assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::CoroutineDef(m, name, _, _, _) => {
                 assert_eq!(name, "coroutine");
