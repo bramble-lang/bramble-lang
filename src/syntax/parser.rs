@@ -685,21 +685,59 @@ pub mod tests {
     use super::*;
 
     #[test]
-    fn parse_arithmetic_expression() {
+    fn parse_arithmetic_expressions() {
         let mut lexer = Lexer::new();
-        let text = "2 + 2";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
-            .into_iter()
-            .collect::<Result<_, _>>()
-            .unwrap();
-        let mut iter = tokens.iter().peekable();
-        if let Some(Ast::BinaryOp(l, BinaryOperator::Add, left, right)) = expression(&mut iter).unwrap() {
-            assert_eq!(l, 1);
-            assert_eq!(*left, Ast::Integer(1, 2));
-            assert_eq!(*right, Ast::Integer(1, 2));
-        } else {
-            panic!("No nodes returned by parser")
+
+        for (text, expected) in vec![
+            ("2+2", BinaryOperator::Add),
+            ("2*2", BinaryOperator::Mul),
+            ("2-2", BinaryOperator::Sub),
+            ("2==2", BinaryOperator::Eq),
+            ("2!=2", BinaryOperator::NEq),
+            ("2<2", BinaryOperator::Ls),
+            ("2<=2", BinaryOperator::LsEq),
+            ("2>2", BinaryOperator::Gr),
+            ("2>=2", BinaryOperator::GrEq),
+            ].iter() {
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            if let Some(Ast::BinaryOp(l, op, left, right)) = expression(&mut iter).unwrap() {
+                assert_eq!(op, *expected);
+                assert_eq!(l, 1);
+                assert_eq!(*left, Ast::Integer(1, 2));
+                assert_eq!(*right, Ast::Integer(1, 2));
+            } else {
+                panic!("No nodes returned by parser")
+            }
+        }
+    }
+
+    #[test]
+    fn parse_boolean_expresions() {
+        let mut lexer = Lexer::new();
+
+        for (text, expected) in vec![
+            ("true && false", BinaryOperator::BAnd),
+            ("true || false", BinaryOperator::BOr),
+            ].iter() {
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            if let Some(Ast::BinaryOp(l, op, left, right)) = expression(&mut iter).unwrap() {
+                assert_eq!(op, *expected);
+                assert_eq!(l, 1);
+                assert_eq!(*left, Ast::Boolean(1, true));
+                assert_eq!(*right, Ast::Boolean(1, false));
+            } else {
+                panic!("No nodes returned by parser")
+            }
         }
     }
 
