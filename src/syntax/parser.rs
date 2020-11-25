@@ -48,6 +48,7 @@ impl PNode {
             Lex::BAnd => Ok(Ast::BinaryOp(i, BinaryOperator::BAnd, left, right)),
             Lex::BOr => Ok(Ast::BinaryOp(i, BinaryOperator::BOr, left, right)),
             Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
+            Lex::Minus => Ok(Ast::BinaryOp(i, BinaryOperator::Sub, left, right)),
             Lex::Mul => Ok(Ast::BinaryOp(i, BinaryOperator::Mul, left, right)),
             _ => Err(format!("L{}: {} is not a binary operator", line, op)),
         }

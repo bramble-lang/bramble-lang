@@ -199,6 +199,7 @@ impl<'a> Compiler<'a> {
         let mut op_asm = vec![];
         match op {
                 BinaryOperator::Add => {assembly!{(op_asm) {add %eax, %ebx;}}},
+                BinaryOperator::Sub => {assembly!{(op_asm) {sub %eax, %ebx;}}},
                 BinaryOperator::Mul => {assembly!{(op_asm) {imul %eax, %ebx;}}},
                 BinaryOperator::BAnd => {assembly!{(op_asm) {and %eax, %ebx;}}},
                 BinaryOperator::BOr => {assembly!{(op_asm) {or %eax, %ebx;}}},
