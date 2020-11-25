@@ -4,9 +4,11 @@ fn my_main() {
     let sub:i32 := add - 2;
     let negative:i32 := 0 - sub;
     let multiply:i32 := 5 * negative;
+    let divide:i32 := multiply / 5;
     printiln add;
     printiln sub;
     printiln negative;
     printiln multiply;
+    printiln divide;
     return;
 }

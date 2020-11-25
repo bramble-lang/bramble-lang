@@ -50,6 +50,7 @@ impl PNode {
             Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
             Lex::Minus => Ok(Ast::BinaryOp(i, BinaryOperator::Sub, left, right)),
             Lex::Mul => Ok(Ast::BinaryOp(i, BinaryOperator::Mul, left, right)),
+            Lex::Div => Ok(Ast::BinaryOp(i, BinaryOperator::Div, left, right)),
             _ => Err(format!("L{}: {} is not a binary operator", line, op)),
         }
     }
@@ -420,10 +421,10 @@ fn sum(iter: &mut TokenIter) -> PResult {
 
 fn term(iter: &mut TokenIter) -> PResult {
     Ok(match factor(iter)? {
-        Some(n) => match consume_if(iter, Lex::Mul) {
-            Some(l) => {
-                let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after *", l))?;
-                Some(PNode::binary_op(l, &Lex::Mul, Box::new(n), Box::new(n2))?)
+        Some(n) => match consume_if_one_of(iter, vec![Lex::Mul, Lex::Div]) {
+            Some((l, op)) => {
+                let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after {}", l, op))?;
+                Some(PNode::binary_op(l, &op, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -690,8 +691,9 @@ pub mod tests {
 
         for (text, expected) in vec![
             ("2+2", BinaryOperator::Add),
-            ("2*2", BinaryOperator::Mul),
             ("2-2", BinaryOperator::Sub),
+            ("2*2", BinaryOperator::Mul),
+            ("2/2", BinaryOperator::Div),
             ("2==2", BinaryOperator::Eq),
             ("2!=2", BinaryOperator::NEq),
             ("2<2", BinaryOperator::Ls),

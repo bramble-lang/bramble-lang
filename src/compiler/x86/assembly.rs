@@ -170,6 +170,7 @@ pub enum Inst {
     Jz(Operand),
     Call(Operand),
     Ret,
+    Cdq,
 
     Push(Operand),
     Pop(Operand),
@@ -179,6 +180,7 @@ pub enum Inst {
     Add(Operand, Operand),
     Sub(Operand, Operand),
     IMul(Operand, Operand),
+    IDiv(Reg32),
     
     Cmp(Operand, Operand),
     
@@ -231,10 +233,12 @@ impl Display for Inst {
                 Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
                 _ => format!("{}", b),
             })),
+            Cdq => f.write_fmt(format_args!("cdq")),
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
             Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
             Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
             IMul(a, b) => f.write_fmt(format_args!("imul {}, {}", a, b)),
+            IDiv(a) => f.write_fmt(format_args!("idiv {}", a)),
             Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
             And(a, b) => f.write_fmt(format_args!("and {}, {}", a, b)),
             Or(a, b) => f.write_fmt(format_args!("or {}, {}", a, b)),
@@ -259,6 +263,9 @@ impl Display for Inst {
 macro_rules! unit_op {
     (ret) => {
         Inst::Ret
+    };
+    (cdq) => {
+        Inst::Cdq
     };
     (newline) => {
         Inst::NewLine
@@ -319,6 +326,13 @@ macro_rules! binary_op {
 macro_rules! reg8 {
     (al) => {
         Reg8::Al
+    };
+}
+
+#[macro_export]
+macro_rules! reg32 {
+    (ebx) => {
+        Reg32::Ebx
     };
 }
 
@@ -473,6 +487,11 @@ macro_rules! assembly {
     };
     (($buf:expr) {data $lbl:tt: dd $val:expr; $($tail:tt)*}) => {
         $buf.push(Inst::Data(stringify!($lbl).into(), $val));
+        assembly!(($buf) {$($tail)*})
+    };
+
+    (($buf:expr) {idiv % $a:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::IDiv(reg32!($a)));
         assembly!(($buf) {$($tail)*})
     };
 

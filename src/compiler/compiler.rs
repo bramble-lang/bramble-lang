@@ -18,6 +18,7 @@ use crate::unary_op;
 use crate::binary_op;
 use crate::operand;
 use crate::register;
+use crate::reg32;
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,
@@ -201,6 +202,10 @@ impl<'a> Compiler<'a> {
                 BinaryOperator::Add => {assembly!{(op_asm) {add %eax, %ebx;}}},
                 BinaryOperator::Sub => {assembly!{(op_asm) {sub %eax, %ebx;}}},
                 BinaryOperator::Mul => {assembly!{(op_asm) {imul %eax, %ebx;}}},
+                BinaryOperator::Div => {assembly!{(op_asm) {
+                    cdq;
+                    idiv %ebx;
+                }}},
                 BinaryOperator::BAnd => {assembly!{(op_asm) {and %eax, %ebx;}}},
                 BinaryOperator::BOr => {assembly!{(op_asm) {or %eax, %ebx;}}},
                 cond => {

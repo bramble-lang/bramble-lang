@@ -43,7 +43,7 @@ pub mod checker {
             let rty = self.traverse(r, current_func, sym)?;
 
             match op {
-                Add | Sub | Mul => {
+                Add | Sub | Mul | Div => {
                     if lty == I32 && rty == I32 {
                         Ok(I32)
                     } else {
