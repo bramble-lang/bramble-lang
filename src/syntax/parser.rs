@@ -406,10 +406,10 @@ fn comparison(iter: &mut TokenIter) -> PResult {
 
 fn sum(iter: &mut TokenIter) -> PResult {
     Ok(match term(iter)? {
-        Some(n) => match consume_if(iter, Lex::Add) {
-            Some(l) => {
-                let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after +", l))?;
-                Some(PNode::binary_op(l, &Lex::Add, Box::new(n), Box::new(n2))?)
+        Some(n) => match consume_if_one_of(iter, vec![Lex::Add, Lex::Minus]) {
+            Some((l, op)) => {
+                let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after {}", l, op))?;
+                Some(PNode::binary_op(l, &op, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },

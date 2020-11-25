@@ -1,6 +1,7 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator{
     Add,
+    Sub,
     Mul,
     BAnd,
     BOr,
@@ -17,6 +18,7 @@ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::f
     use BinaryOperator::*;
     match self {
         Add => f.write_str("+"),
+        Sub => f.write_str("-"),
         Mul => f.write_str("*"),
         BAnd => f.write_str("&&"),
         BOr => f.write_str("||"),
