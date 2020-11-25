@@ -24,6 +24,7 @@ pub enum Lex {
     Identifier(String),
     Mul,
     Add,
+    Minus,
     BAnd,
     BOr,
     GrEq,
@@ -71,6 +72,7 @@ impl std::fmt::Display for Lex {
             NEq => f.write_str("!="),
             Mul => f.write_str("*"),
             Add => f.write_str("+"),
+            Minus => f.write_str("-"),
             BAnd => f.write_str("&&"),
             BOr => f.write_str("||"),
             Assign => f.write_str(":="),
@@ -312,7 +314,10 @@ impl Lexer {
                 iter.next();
                 match iter.peek() {
                     Some('>') => Some(Token::new(self.line, LArrow)),
-                    _ => return Err(format!("L{}: Unexpected '-' character", self.line)),
+                    _ => {
+                        consume = false;
+                        Some(Token::new(self.line, Minus))
+                    },
                 }
             }
             Some('&') => {
@@ -433,6 +438,7 @@ mod tests {
         for (text, expected_token) in [
             ("*", Token::new(1, Mul)),
             ("+", Token::new(1, Add)),
+            ("-", Token::new(1, Minus)),
             ("&&", Token::new(1, BAnd)),
             ("||", Token::new(1, BOr)),
             (">", Token::new(1, Gr)),
