@@ -28,6 +28,7 @@ cargo build
 if [ $? -eq 0 ]
 then
     run_test "operations/arithmetic"
+    run_test "operations/boolean"
     run_test "simple"
     run_test "simple_coroutine"
     run_test "boolean"
