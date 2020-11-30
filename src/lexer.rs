@@ -23,7 +23,9 @@ pub enum Lex {
     Bool(bool),
     Identifier(String),
     Mul,
+    Div,
     Add,
+    Minus,
     BAnd,
     BOr,
     GrEq,
@@ -70,7 +72,9 @@ impl std::fmt::Display for Lex {
             Eq => f.write_str("="),
             NEq => f.write_str("!="),
             Mul => f.write_str("*"),
+            Div => f.write_str("/"),
             Add => f.write_str("+"),
+            Minus => f.write_str("-"),
             BAnd => f.write_str("&&"),
             BOr => f.write_str("||"),
             Assign => f.write_str(":="),
@@ -261,6 +265,7 @@ impl Lexer {
             Some('{') => Some(Token::new(self.line, LBrace)),
             Some('}') => Some(Token::new(self.line, RBrace)),
             Some('*') => Some(Token::new(self.line, Mul)),
+            Some('/') => Some(Token::new(self.line, Div)),
             Some('+') => Some(Token::new(self.line, Add)),
             Some(';') => Some(Token::new(self.line, Semicolon)),
             Some(',') => Some(Token::new(self.line, Comma)),
@@ -312,7 +317,10 @@ impl Lexer {
                 iter.next();
                 match iter.peek() {
                     Some('>') => Some(Token::new(self.line, LArrow)),
-                    _ => return Err(format!("L{}: Unexpected '-' character", self.line)),
+                    _ => {
+                        consume = false;
+                        Some(Token::new(self.line, Minus))
+                    },
                 }
             }
             Some('&') => {
@@ -432,7 +440,9 @@ mod tests {
     fn test_operator() {
         for (text, expected_token) in [
             ("*", Token::new(1, Mul)),
+            ("/", Token::new(1, Div)),
             ("+", Token::new(1, Add)),
+            ("-", Token::new(1, Minus)),
             ("&&", Token::new(1, BAnd)),
             ("||", Token::new(1, BOr)),
             (">", Token::new(1, Gr)),

@@ -27,6 +27,7 @@ function run_test() {
 cargo build
 if [ $? -eq 0 ]
 then
+    run_test "operations/arithmetic"
     run_test "simple"
     run_test "simple_coroutine"
     run_test "boolean"
