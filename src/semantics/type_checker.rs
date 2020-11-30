@@ -28,6 +28,29 @@ pub mod checker {
             }
         }
 
+        fn unary_op(
+            &mut self,
+            op: UnaryOperator,
+            ln: u32,
+            operand: &mut SemanticNode,
+            current_func: &Option<String>,
+            sym: &mut SymbolTable,
+        ) -> Result<Primitive, String> {
+            use UnaryOperator::*;
+
+            let operand_ty = self.traverse(operand, current_func, sym)?;
+
+            match op {
+                Minus => {
+                    if operand_ty == I32 {
+                        Ok(I32)
+                    } else {
+                        Err(format!("L{}: {} expected i32 but found {}", ln, op, operand_ty))
+                    }
+                },
+            }
+        }
+
         fn binary_op(
             &mut self,
             op: BinaryOperator,
@@ -164,6 +187,12 @@ pub mod checker {
                 BinaryOp(meta, op, l, r) => {
                     let ty =
                         self.binary_op(*op, meta.ln, l, r, current_func, sym)?;
+                    meta.ty = ty;
+                    Ok(ty)
+                }
+                UnaryOp(meta, op, operand) => {
+                    let ty =
+                        self.unary_op(*op, meta.ln, operand, current_func, sym)?;
                     meta.ty = ty;
                     Ok(ty)
                 }

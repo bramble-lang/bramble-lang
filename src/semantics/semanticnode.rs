@@ -27,6 +27,11 @@ impl SemanticNode {
                 SemanticNode::from_parser_ast(l)?,
                 SemanticNode::from_parser_ast(r)?,
             ))),
+            UnaryOp(ln, op, ref operand) => Ok(Box::new(UnaryOp(
+                sm_from(*ln),
+                *op,
+                SemanticNode::from_parser_ast(operand)?,
+            ))),
             If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
                 sm_from(*ln),
                 SemanticNode::from_parser_ast(cond)?,

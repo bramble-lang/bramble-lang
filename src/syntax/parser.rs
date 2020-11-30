@@ -31,6 +31,17 @@ impl PNode {
         }
     }
 
+    pub fn unary_op(
+        line: u32,
+        op: &Lex,
+        operand: Box<Self>
+    ) -> Result<Self, String> {
+        match op {
+            Lex::Minus => Ok(Ast::UnaryOp(line, UnaryOperator::Minus, operand)),
+            _ => Err(format!("L{}: {} is not a unary operator", line, op))
+        }
+    }
+
     pub fn binary_op(
         line: u32,
         op: &Lex,
@@ -444,6 +455,11 @@ fn factor(iter: &mut TokenIter) -> PResult {
             consume_must_be(iter, Lex::RParen)?;
             exp
         }
+        Some(Token {l, s: Lex::Minus}) => {
+            iter.next();
+            let factor = factor(iter)?.ok_or(format!("L{}: expected factor after -", l))?;
+            Some(PNode::unary_op(*l, &Lex::Minus, Box::new(factor))?)
+        }
         _ => match constant(iter)? {
             Some(n) => Some(n),
             None => match function_call_or_variable(iter)? {
@@ -684,6 +700,29 @@ fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, 
 pub mod tests {
     use super::lexer::Lexer;
     use super::*;
+
+    #[test]
+    fn parse_unary_operators() {
+        let mut lexer = Lexer::new();
+
+        for (text, expected) in vec![
+            ("-a", UnaryOperator::Minus),
+            ].iter() {
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            if let Some(Ast::UnaryOp(l, op, operand)) = expression(&mut iter).unwrap() {
+                assert_eq!(op, *expected);
+                assert_eq!(l, 1);
+                assert_eq!(*operand, Ast::Identifier(1, "a".into()));
+            } else {
+                panic!("No nodes returned by parser")
+            }
+        }
+    }
 
     #[test]
     fn parse_arithmetic_expressions() {
