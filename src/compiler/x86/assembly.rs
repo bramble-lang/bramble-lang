@@ -233,7 +233,7 @@ impl Display for Inst {
                 Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
                 _ => format!("{}", b),
             })),
-            Cdq => f.write_fmt(format_args!("cdq")),
+            Cdq => f.write_str("cdq"),
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
             Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
             Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
