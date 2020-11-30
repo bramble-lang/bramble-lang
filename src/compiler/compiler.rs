@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::ast::BinaryOperator;
+use crate::ast::{BinaryOperator, UnaryOperator};
 use crate::ast::RoutineDef;
 use crate::ast::RoutineCall;
 use crate::compiler::ast::ast::CompilerNode;
@@ -271,6 +271,16 @@ impl<'a> Compiler<'a> {
             Ast::Identifier(_, id) => {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
+            }
+            Ast::UnaryOp(_, op, operand) => {
+                self.traverse(operand, current_func, code)?;
+                match op {
+                    UnaryOperator::Minus => {
+                        assembly!{(code){
+                            neg %eax;
+                        }}
+                    }
+                }
             }
             Ast::BinaryOp(_, op, l, r) => {
                 assembly!{(code) {

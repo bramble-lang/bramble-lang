@@ -181,6 +181,7 @@ pub enum Inst {
     Sub(Operand, Operand),
     IMul(Operand, Operand),
     IDiv(Reg32),
+    Neg(Reg32),
     
     Cmp(Operand, Operand),
     
@@ -239,6 +240,7 @@ impl Display for Inst {
             Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
             IMul(a, b) => f.write_fmt(format_args!("imul {}, {}", a, b)),
             IDiv(a) => f.write_fmt(format_args!("idiv {}", a)),
+            Neg(a) => f.write_fmt(format_args!("neg {}", a)),
             Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
             And(a, b) => f.write_fmt(format_args!("and {}, {}", a, b)),
             Or(a, b) => f.write_fmt(format_args!("or {}, {}", a, b)),
@@ -331,6 +333,9 @@ macro_rules! reg8 {
 
 #[macro_export]
 macro_rules! reg32 {
+    (eax) => {
+        Reg32::Eax
+    };
     (ebx) => {
         Reg32::Ebx
     };
@@ -490,6 +495,10 @@ macro_rules! assembly {
         assembly!(($buf) {$($tail)*})
     };
 
+    (($buf:expr) {neg % $a:tt; $($tail:tt)*}) => {
+        $buf.push(Inst::Neg(reg32!($a)));
+        assembly!(($buf) {$($tail)*})
+    };
     (($buf:expr) {idiv % $a:tt; $($tail:tt)*}) => {
         $buf.push(Inst::IDiv(reg32!($a)));
         assembly!(($buf) {$($tail)*})

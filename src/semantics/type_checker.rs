@@ -570,6 +570,42 @@ pub mod checker {
         }
 
         #[test]
+        pub fn test_negate() {
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
+            // operand is i32
+            {
+                let node = Ast::UnaryOp(
+                    1,
+                    UnaryOperator::Minus,
+                    Box::new(Ast::Integer(1, 5)),
+                );
+
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &None,
+                    &scope,
+                );
+                assert_eq!(ty, Ok(Primitive::I32));
+            }
+            // operand is not i32
+            {
+                let node = Ast::UnaryOp(
+                    1,
+                    UnaryOperator::Minus,
+                    Box::new(Ast::Boolean(1, true)),
+                );
+
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &None,
+                    &scope,
+                );
+                assert_eq!(ty, Err("L1: - expected i32 but found bool".into()));
+            }
+        }
+
+        #[test]
         pub fn test_add() {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);

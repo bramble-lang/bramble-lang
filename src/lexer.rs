@@ -223,6 +223,7 @@ impl Lexer {
         iter: &mut Peekable<std::str::Chars>,
     ) -> Result<Option<Token>, String> {
         let mut num = String::new();
+
         while iter.peek().map_or_else(|| false, |c| c.is_numeric()) {
             match iter.next() {
                 Some(d) => num.push(d),
