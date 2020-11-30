@@ -28,6 +28,36 @@ pub mod checker {
             }
         }
 
+        fn unary_op(
+            &mut self,
+            op: UnaryOperator,
+            ln: u32,
+            operand: &mut SemanticNode,
+            current_func: &Option<String>,
+            sym: &mut SymbolTable,
+        ) -> Result<Primitive, String> {
+            use UnaryOperator::*;
+
+            let operand_ty = self.traverse(operand, current_func, sym)?;
+
+            match op {
+                Minus => {
+                    if operand_ty == I32 {
+                        Ok(I32)
+                    } else {
+                        Err(format!("L{}: {} expected i32 but found {}", ln, op, operand_ty))
+                    }
+                },
+                Not => {
+                    if operand_ty == Bool {
+                        Ok(Bool)
+                    } else {
+                        Err(format!("L{}: {} expected bool but found {}", ln, op, operand_ty))
+                    }
+                },
+            }
+        }
+
         fn binary_op(
             &mut self,
             op: BinaryOperator,
@@ -164,6 +194,12 @@ pub mod checker {
                 BinaryOp(meta, op, l, r) => {
                     let ty =
                         self.binary_op(*op, meta.ln, l, r, current_func, sym)?;
+                    meta.ty = ty;
+                    Ok(ty)
+                }
+                UnaryOp(meta, op, operand) => {
+                    let ty =
+                        self.unary_op(*op, meta.ln, operand, current_func, sym)?;
                     meta.ty = ty;
                     Ok(ty)
                 }
@@ -538,6 +574,42 @@ pub mod checker {
                 &scope,
             );
             assert_eq!(ty, Ok(Primitive::Bool));
+        }
+
+        #[test]
+        pub fn test_unary_ops() {
+            let mut scope = Scope::new();
+            scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
+            // operand is i32
+            {
+                let node = Ast::UnaryOp(
+                    1,
+                    UnaryOperator::Minus,
+                    Box::new(Ast::Integer(1, 5)),
+                );
+
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &None,
+                    &scope,
+                );
+                assert_eq!(ty, Ok(Primitive::I32));
+            }
+            // operand is not i32
+            {
+                let node = Ast::UnaryOp(
+                    1,
+                    UnaryOperator::Minus,
+                    Box::new(Ast::Boolean(1, true)),
+                );
+
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &None,
+                    &scope,
+                );
+                assert_eq!(ty, Err("L1: - expected i32 but found bool".into()));
+            }
         }
 
         #[test]

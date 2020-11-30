@@ -1,5 +1,5 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum BinaryOperator{
+pub enum BinaryOperator {
     Add,
     Sub,
     Mul,
@@ -15,55 +15,71 @@ pub enum BinaryOperator{
 }
 
 impl std::fmt::Display for BinaryOperator {
-fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> { 
-    use BinaryOperator::*;
-    match self {
-        Add => f.write_str("+"),
-        Sub => f.write_str("-"),
-        Mul => f.write_str("*"),
-        Div => f.write_str("/"),
-        BAnd => f.write_str("&&"),
-        BOr => f.write_str("||"),
-        Eq => f.write_str("=="),
-        NEq => f.write_str("!="),
-        Ls => f.write_str("<"),
-        LsEq => f.write_str("<="),
-        Gr => f.write_str(">"),
-        GrEq => f.write_str(">="),
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use BinaryOperator::*;
+        match self {
+            Add => f.write_str("+"),
+            Sub => f.write_str("-"),
+            Mul => f.write_str("*"),
+            Div => f.write_str("/"),
+            BAnd => f.write_str("&&"),
+            BOr => f.write_str("||"),
+            Eq => f.write_str("=="),
+            NEq => f.write_str("!="),
+            Ls => f.write_str("<"),
+            LsEq => f.write_str("<="),
+            Gr => f.write_str(">"),
+            GrEq => f.write_str(">="),
+        }
     }
- }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum RoutineDef{
+pub enum UnaryOperator {
+    Minus,
+    Not,
+}
+
+impl std::fmt::Display for UnaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use UnaryOperator::*;
+        match self {
+            Minus => f.write_str("-"),
+            Not => f.write_str("!"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RoutineDef {
     Function,
     Coroutine,
 }
 
 impl std::fmt::Display for RoutineDef {
-fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> { 
-    use RoutineDef::*;
-    match self {
-        Coroutine => f.write_str("coroutine def"),
-        Function => f.write_str("function def"),
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use RoutineDef::*;
+        match self {
+            Coroutine => f.write_str("coroutine def"),
+            Function => f.write_str("function def"),
+        }
     }
- }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum RoutineCall{
+pub enum RoutineCall {
     Function,
     CoroutineInit,
 }
 
 impl std::fmt::Display for RoutineCall {
-fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> { 
-    use RoutineCall::*;
-    match self {
-        CoroutineInit => f.write_str("coroutine init"),
-        Function => f.write_str("function call"),
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use RoutineCall::*;
+        match self {
+            CoroutineInit => f.write_str("coroutine init"),
+            Function => f.write_str("function call"),
+        }
     }
- }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -74,6 +90,7 @@ pub enum Ast<I> {
     IdentifierDeclare(I, String, Primitive),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
+    UnaryOp(I, UnaryOperator, Box<Ast<I>>),
     Printi(I, Box<Ast<I>>),
     Printiln(I, Box<Ast<I>>),
     Printbln(I, Box<Ast<I>>),
@@ -87,9 +104,15 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    RoutineDef(I, RoutineDef, String, Vec<(String, Primitive)>, Primitive, Vec<Ast<I>>),
+    RoutineDef(
+        I,
+        RoutineDef,
+        String,
+        Vec<(String, Primitive)>,
+        Primitive,
+        Vec<Ast<I>>,
+    ),
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
-    
     Module(I, Vec<Ast<I>>, Vec<Ast<I>>),
 }
 
@@ -103,6 +126,7 @@ impl<I> Ast<I> {
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
 
             BinaryOp(_, op, _, _) => format!("{}", op),
+            UnaryOp(_, op, _) => format!("{}", op),
 
             Printi(_, _) => "printi".into(),
             Printiln(_, _) => "printiln".into(),
@@ -117,7 +141,7 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            RoutineDef(_, def, name,..) => format!("{} for {}", def, name),
+            RoutineDef(_, def, name, ..) => format!("{} for {}", def, name),
             RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
 
             Module(_, _, _) => "module".into(),
@@ -127,37 +151,42 @@ impl<I> Ast<I> {
     pub fn get_metadata(&self) -> &I {
         use Ast::*;
         match self {
-            Integer(m,..) | Boolean(m,..) | Identifier(m,..) | IdentifierDeclare(m,..)
+            Integer(m, ..)
+            | Boolean(m, ..)
+            | Identifier(m, ..)
+            | IdentifierDeclare(m, ..)
             | BinaryOp(m, ..)
-            | Printi(m,..) | Printiln(m,..) | Printbln(m,..)
-            | If(m,..) | ExpressionBlock(m,..) | Statement(m,..)
-            | Bind(m,..) | Return(m,..) | Yield(m,..) | YieldReturn(m,..)
-            | RoutineDef(m,..)
-            | RoutineCall(m,..)
-            | Module(m,..)
-            => m
+            | UnaryOp(m, ..)
+            | Printi(m, ..)
+            | Printiln(m, ..)
+            | Printbln(m, ..)
+            | If(m, ..)
+            | ExpressionBlock(m, ..)
+            | Statement(m, ..)
+            | Bind(m, ..)
+            | Return(m, ..)
+            | Yield(m, ..)
+            | YieldReturn(m, ..)
+            | RoutineDef(m, ..)
+            | RoutineCall(m, ..)
+            | Module(m, ..) => m,
         }
     }
 
     /// If a node is a function or a coroutine this will return its parameter vector.  If
     /// the node is not a function or coroutine, this will return None.
-    pub fn get_params(&self) -> Option<&Vec<(String,Primitive)>> {
+    pub fn get_params(&self) -> Option<&Vec<(String, Primitive)>> {
         match self {
-            Ast::RoutineDef(_, _, _, params, ..) => {
-                Some(params)
-            }
-            _ => None
+            Ast::RoutineDef(_, _, _, params, ..) => Some(params),
+            _ => None,
         }
     }
 
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef(_, _, name, _, ..)
-            | Ast::Identifier(_, name) => {
-                Some(name)
-            }
-            _ => None
+            Ast::RoutineDef(_, _, name, _, ..) | Ast::Identifier(_, name) => Some(name),
+            _ => None,
         }
     }
 }
