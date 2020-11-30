@@ -38,6 +38,7 @@ impl PNode {
     ) -> Result<Self, String> {
         match op {
             Lex::Minus => Ok(Ast::UnaryOp(line, UnaryOperator::Minus, operand)),
+            Lex::Not => Ok(Ast::UnaryOp(line, UnaryOperator::Not, operand)),
             _ => Err(format!("L{}: {} is not a unary operator", line, op))
         }
     }
@@ -460,6 +461,11 @@ fn factor(iter: &mut TokenIter) -> PResult {
             let factor = factor(iter)?.ok_or(format!("L{}: expected factor after -", l))?;
             Some(PNode::unary_op(*l, &Lex::Minus, Box::new(factor))?)
         }
+        Some(Token {l, s: Lex::Not}) => {
+            iter.next();
+            let factor = factor(iter)?.ok_or(format!("L{}: expected factor after !", l))?;
+            Some(PNode::unary_op(*l, &Lex::Not, Box::new(factor))?)
+        }
         _ => match constant(iter)? {
             Some(n) => Some(n),
             None => match function_call_or_variable(iter)? {
@@ -707,6 +713,7 @@ pub mod tests {
 
         for (text, expected) in vec![
             ("-a", UnaryOperator::Minus),
+            ("!a", UnaryOperator::Not),
             ].iter() {
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)

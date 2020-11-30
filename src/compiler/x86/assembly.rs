@@ -175,6 +175,7 @@ pub enum Inst {
     Push(Operand),
     Pop(Operand),
     Mov(Operand, Operand),
+    Movzx(Operand, Operand),
     Lea(Operand, Operand),
 
     Add(Operand, Operand),
@@ -187,6 +188,7 @@ pub enum Inst {
     
     And(Operand, Operand),
     Or(Operand, Operand),
+    Xor(Operand, Operand),
 
     Sete(Reg8),
     Setne(Reg8),
@@ -234,6 +236,11 @@ impl Display for Inst {
                 Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
                 _ => format!("{}", b),
             })),
+            Movzx(a, b) => f.write_fmt(format_args!("movzx {}, {}", a, match b {
+                Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
+                _ => format!("{}", b),
+            })),
+
             Cdq => f.write_str("cdq"),
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
             Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
@@ -244,6 +251,7 @@ impl Display for Inst {
             Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
             And(a, b) => f.write_fmt(format_args!("and {}, {}", a, b)),
             Or(a, b) => f.write_fmt(format_args!("or {}, {}", a, b)),
+            Xor(a, b) => f.write_fmt(format_args!("xor {}, {}", a, b)),
 
             Sete(a) => f.write_fmt(format_args!("sete {}", a)),
             Setne(a) => f.write_fmt(format_args!("setne {}", a)),
@@ -301,6 +309,9 @@ macro_rules! binary_op {
     (mov) => {
         Inst::Mov
     };
+    (movzx) => {
+        Inst::Movzx
+    };
     (lea) => {
         Inst::Lea
     };
@@ -321,6 +332,9 @@ macro_rules! binary_op {
     };
     (or) => {
         Inst::Or
+    };
+    (xor) => {
+        Inst::Xor
     };
 }
 

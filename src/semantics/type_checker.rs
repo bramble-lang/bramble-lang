@@ -48,6 +48,13 @@ pub mod checker {
                         Err(format!("L{}: {} expected i32 but found {}", ln, op, operand_ty))
                     }
                 },
+                Not => {
+                    if operand_ty == Bool {
+                        Ok(Bool)
+                    } else {
+                        Err(format!("L{}: {} expected bool but found {}", ln, op, operand_ty))
+                    }
+                },
             }
         }
 
@@ -570,7 +577,7 @@ pub mod checker {
         }
 
         #[test]
-        pub fn test_negate() {
+        pub fn test_unary_ops() {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
             // operand is i32

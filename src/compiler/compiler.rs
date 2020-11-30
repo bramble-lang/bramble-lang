@@ -280,6 +280,12 @@ impl<'a> Compiler<'a> {
                             neg %eax;
                         }}
                     }
+                    UnaryOperator::Not => {
+                        assembly!{(code){
+                            xor %eax, 1;
+                            movzx %eax, %al;
+                        }}
+                    }
                 }
             }
             Ast::BinaryOp(_, op, l, r) => {
