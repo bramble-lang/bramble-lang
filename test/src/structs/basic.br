@@ -6,9 +6,9 @@ fn my_main() {
 
 struct MyStruct {
     x: i32,
-    y: bool
+    y: bool,
 }
 
-fn test(ms: MyStruct) {
-    return;
+fn test(ms: MyStruct) -> MyStruct {
+    return ms;
 }

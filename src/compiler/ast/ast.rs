@@ -4,7 +4,6 @@ use crate::{
     semantics::semanticnode::SemanticNode,
     syntax::ast::Ast,
     syntax,
-    syntax::ast,
 };
 
 pub type CompilerNode = Ast<Scope>;
