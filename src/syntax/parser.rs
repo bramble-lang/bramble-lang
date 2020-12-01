@@ -32,7 +32,6 @@ impl PNode {
     }
 
     pub fn new_assign(line: u32, id: &str, exp: Box<Self>) -> Result<Self, String> {
-        let i = line;
         Ok(Ast::Assign(line, id.into(), exp))
     }
 
