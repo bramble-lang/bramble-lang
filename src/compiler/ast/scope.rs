@@ -27,6 +27,7 @@ impl LayoutData {
 pub struct Scope {
     pub(super) ty: Level,
     pub(super) symbols: SymbolTable,
+    pub(super) structs: StructTable,
     pub(super) label: i32,
 }
 
@@ -35,7 +36,17 @@ impl Scope {
         Scope {
             ty,
             symbols: SymbolTable::new(),
+            structs: StructTable::new(),
             label: 0,
+        }
+    }
+
+    pub fn new2(ty: Level, label: i32) -> Scope {
+        Scope {
+            ty,
+            symbols: SymbolTable::new(),
+            structs: StructTable::new(),
+            label,
         }
     }
 
@@ -52,6 +63,14 @@ impl Scope {
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
         self.symbols.table.get(name)
+    }
+
+    pub fn add_struct(&mut self, name: &str, fields: Vec<(String, ast::Type)>) -> Result<(), String> {
+        self.structs.add(name, fields)
+    }
+
+    pub fn get_struct(&self, name: &str) -> Option<&StructDefinition> {
+        self.structs.get(name)
     }
 
     pub fn label(&self) -> i32 {
@@ -130,6 +149,33 @@ impl ast::Type {
             ast::Type::Bool => 4,
             _ => 0,
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StructTable {
+    pub structs: HashMap<String, StructDefinition>,
+}
+
+impl StructTable {
+    pub fn new() -> StructTable {
+        StructTable {
+            structs: HashMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, name: &str, fields: Vec<(String, ast::Type)>) -> Result<(), String> {
+        if self.structs.contains_key(name) {
+            Err(format!("Struct {} is already in the StructTable", name))
+        } else {
+            let struct_def = StructDefinition::new(name, fields);
+            self.structs.insert(name.into(), struct_def);
+            Ok(())
+        }
+    }
+
+    pub fn get(&self, name: &str) -> Option<&StructDefinition> {
+        self.structs.get(name)
     }
 }
 

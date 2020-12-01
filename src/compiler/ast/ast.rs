@@ -1,4 +1,4 @@
-use crate::compiler::ast::scope::{LayoutData, Scope, Level};
+use crate::compiler::ast::scope::{LayoutData, Level, Scope};
 
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
@@ -158,7 +158,7 @@ impl CompilerNode {
                 coroutines,
                 structs,
             } => {
-                let (meta, layout) = Scope::block_from(meta, layout);
+                let (mut meta, layout) = Scope::block_from(meta, layout);
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];
                 for f in functions.iter() {
@@ -174,11 +174,11 @@ impl CompilerNode {
                     ncors.push(nco);
                 }
 
-                let mut nstructs = vec![];
                 for st in structs.iter() {
-                    let (nst, no) = CompilerNode::from(st, nlayout);
-                    nlayout = no;
-                    nstructs.push(nst);
+                    match st {
+                        Ast::StructDef(_, name, fields) => meta.structs.add(name, fields.clone()).unwrap(),
+                        _ => panic!("Expected only strucst in Module.structs, got {:?}", st),
+                    }
                 }
 
                 (
@@ -186,12 +186,13 @@ impl CompilerNode {
                         meta,
                         functions: nfuncs,
                         coroutines: ncors,
-                        structs: nstructs,
+                        structs: vec![],
                     },
                     nlayout,
                 )
             }
             StructDef(..) => panic!("StructDef Unimplemented"),
+            StructInit(..) => panic!("StructInit Unimplemented"),
         }
     }
 }
@@ -199,11 +200,10 @@ impl CompilerNode {
 #[cfg(test)]
 mod ast_tests {
     use crate::compiler::ast::scope;
-    use crate::compiler::ast::scope::SymbolTable;
     use crate::semantics::symbol_table;
-    use crate::syntax::ast::Type;
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
+    use crate::syntax::ast::Type;
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
 
     use super::*;
@@ -261,14 +261,7 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(
-                    m,
-                    Scope {
-                        ty: scope::Level::Block,
-                        symbols: SymbolTable::new(),
-                        label: 2
-                    }
-                );
+                assert_eq!(m, Scope::new2(Level::Block, 2),);
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
@@ -292,12 +285,8 @@ mod ast_tests {
     #[test]
     pub fn test_expression_block() {
         let mut semantic_table = symbol_table::SymbolTable::new();
-        semantic_table
-            .add("x", Type::I32, false)
-            .unwrap();
-        semantic_table
-            .add("y", Type::I32, false)
-            .unwrap();
+        semantic_table.add("x", Type::I32, false).unwrap();
+        semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
                 ln: 0,
@@ -323,12 +312,8 @@ mod ast_tests {
     #[test]
     pub fn test_nested_expression_block() {
         let mut semantic_table = symbol_table::SymbolTable::new();
-        semantic_table
-            .add("x", Type::I32, false)
-            .unwrap();
-        semantic_table
-            .add("y", Type::I32, false)
-            .unwrap();
+        semantic_table.add("x", Type::I32, false).unwrap();
+        semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
                 ln: 0,
@@ -339,12 +324,8 @@ mod ast_tests {
         );
 
         let mut semantic_table = symbol_table::SymbolTable::new();
-        semantic_table
-            .add("x", Type::I32, false)
-            .unwrap();
-        semantic_table
-            .add("y", Type::I32, false)
-            .unwrap();
+        semantic_table.add("x", Type::I32, false).unwrap();
+        semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
                 ln: 0,
@@ -380,12 +361,8 @@ mod ast_tests {
     #[test]
     pub fn test_function() {
         let mut semantic_table = symbol_table::SymbolTable::new();
-        semantic_table
-            .add("x", Type::I32, false)
-            .unwrap();
-        semantic_table
-            .add("y", Type::I32, false)
-            .unwrap();
+        semantic_table.add("x", Type::I32, false).unwrap();
+        semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
@@ -427,12 +404,8 @@ mod ast_tests {
     #[test]
     pub fn test_nested_function() {
         let mut semantic_table = symbol_table::SymbolTable::new();
-        semantic_table
-            .add("x", Type::I32, false)
-            .unwrap();
-        semantic_table
-            .add("y", Type::I32, false)
-            .unwrap();
+        semantic_table.add("x", Type::I32, false).unwrap();
+        semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
@@ -447,12 +420,8 @@ mod ast_tests {
         );
 
         let mut semantic_table = symbol_table::SymbolTable::new();
-        semantic_table
-            .add("x", Type::I32, false)
-            .unwrap();
-        semantic_table
-            .add("y", Type::I32, false)
-            .unwrap();
+        semantic_table.add("x", Type::I32, false).unwrap();
+        semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
@@ -494,12 +463,8 @@ mod ast_tests {
     #[test]
     pub fn test_coroutine() {
         let mut semantic_table = symbol_table::SymbolTable::new();
-        semantic_table
-            .add("x", Type::I32, false)
-            .unwrap();
-        semantic_table
-            .add("y", Type::I32, false)
-            .unwrap();
+        semantic_table.add("x", Type::I32, false).unwrap();
+        semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
