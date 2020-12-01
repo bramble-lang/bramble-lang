@@ -1,10 +1,6 @@
 use crate::compiler::ast::scope::{LayoutData, Scope, Type};
 
-use crate::{
-    semantics::semanticnode::SemanticNode,
-    syntax::ast::Ast,
-    syntax,
-};
+use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
 pub type CompilerNode = Ast<Scope>;
 
@@ -23,9 +19,9 @@ impl CompilerNode {
                 (ExpressionBlock(meta, nbody), nlayout)
             }
             RoutineDef(m, def, name, params, ret_ty, body) => {
-                let initial_frame_size = match def { 
-                    syntax::ast::RoutineDef::Function => 0, 
-                    syntax::ast::RoutineDef::Coroutine => 20
+                let initial_frame_size = match def {
+                    syntax::ast::RoutineDef::Function => 0,
+                    syntax::ast::RoutineDef::Coroutine => 20,
                 };
                 let (mut meta, offset2) = Scope::routine_from(m, initial_frame_size);
                 let mut nbody = vec![];
@@ -35,9 +31,19 @@ impl CompilerNode {
                     nlayout = layout;
                     nbody.push(e);
                 }
-                meta.ty = Type::Routine{next_label: 0, allocation: nlayout.offset};
+                meta.ty = Type::Routine {
+                    next_label: 0,
+                    allocation: nlayout.offset,
+                };
                 (
-                    RoutineDef(meta, *def, name.clone(), params.clone(), ret_ty.clone(), nbody),
+                    RoutineDef(
+                        meta,
+                        *def,
+                        name.clone(),
+                        params.clone(),
+                        ret_ty.clone(),
+                        nbody,
+                    ),
                     layout,
                 )
             }
@@ -102,7 +108,10 @@ impl CompilerNode {
             Bind(m, id, mutable, p, e) => {
                 let (meta, layout) = Scope::block_from(m, layout);
                 let (e, layout) = CompilerNode::from(e, layout);
-                (Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)), layout)
+                (
+                    Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)),
+                    layout,
+                )
             }
             Yield(m, e) => {
                 let (meta, layout) = Scope::block_from(m, layout);
@@ -143,7 +152,12 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            Module{meta, functions, coroutines, structs} => {
+            Module {
+                meta,
+                functions,
+                coroutines,
+                structs,
+            } => {
                 let (meta, layout) = Scope::block_from(meta, layout);
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];
@@ -167,25 +181,30 @@ impl CompilerNode {
                     nstructs.push(nst);
                 }
 
-                (Module{meta, functions: nfuncs, coroutines: ncors, structs: nstructs}, nlayout)
+                (
+                    Module {
+                        meta,
+                        functions: nfuncs,
+                        coroutines: ncors,
+                        structs: nstructs,
+                    },
+                    nlayout,
+                )
             }
-            StructDef(..) => panic!("StructDef Unimplemented")
+            StructDef(..) => panic!("StructDef Unimplemented"),
         }
     }
 }
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::semantics::symbol_table::Type::Type;
-use crate::compiler::ast::scope::SymbolTable;
-use crate::compiler::ast::scope;
-use crate::{
-        semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode,
-    };
+    use crate::compiler::ast::scope;
+    use crate::compiler::ast::scope::SymbolTable;
     use crate::semantics::symbol_table;
-    use crate::syntax::ast;
+    use crate::syntax::ast::Type;
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
+    use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
 
     use super::*;
 
@@ -194,7 +213,7 @@ use crate::{
         let sn = SemanticNode::Integer(
             SemanticMetadata {
                 ln: 0,
-                ty: ast::Type::I32,
+                ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
             },
             0,
@@ -242,7 +261,14 @@ use crate::{
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope{ty: scope::Type::Block, symbols: SymbolTable::new(), label: 2});
+                assert_eq!(
+                    m,
+                    Scope {
+                        ty: scope::Type::Block,
+                        symbols: SymbolTable::new(),
+                        label: 2
+                    }
+                );
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
@@ -267,18 +293,10 @@ use crate::{
     pub fn test_expression_block() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add(
-                "x",
-                Type(crate::syntax::ast::Type::I32),
-                false,
-            )
+            .add("x", Type::I32, false)
             .unwrap();
         semantic_table
-            .add(
-                "y",
-                Type(crate::syntax::ast::Type::I32),
-                false,
-            )
+            .add("y", Type::I32, false)
             .unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
@@ -306,18 +324,10 @@ use crate::{
     pub fn test_nested_expression_block() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add(
-                "x",
-                Type(crate::syntax::ast::Type::I32),
-                false,
-            )
+            .add("x", Type::I32, false)
             .unwrap();
         semantic_table
-            .add(
-                "y",
-                Type(crate::syntax::ast::Type::I32),
-                false,
-            )
+            .add("y", Type::I32, false)
             .unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
@@ -330,18 +340,10 @@ use crate::{
 
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add(
-                "x",
-                Type(crate::syntax::ast::Type::I32),
-                false,
-            )
+            .add("x", Type::I32, false)
             .unwrap();
         semantic_table
-            .add(
-                "y",
-                Type(crate::syntax::ast::Type::I32),
-                false,
-            )
+            .add("y", Type::I32, false)
             .unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
@@ -379,21 +381,21 @@ use crate::{
     pub fn test_function() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", Type(ast::Type::I32), false)
+            .add("x", Type::I32, false)
             .unwrap();
         semantic_table
-            .add("y", Type(ast::Type::I32), false)
+            .add("y", Type::I32, false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
-                ty: ast::Type::I32,
+                ty: Type::I32,
                 sym: semantic_table,
             },
             RoutineDef::Function,
             "func".into(),
             vec![],
-            crate::syntax::ast::Type::I32,
+            Type::I32,
             vec![],
         );
         let cn = CompilerNode::from(&sn, LayoutData::new(0));
@@ -408,11 +410,14 @@ use crate::{
                 assert_eq!(m.symbols.table["y"].offset, 8);
 
                 match m.ty {
-                    scope::Type::Routine{next_label, allocation} => {
+                    scope::Type::Routine {
+                        next_label,
+                        allocation,
+                    } => {
                         assert_eq!(next_label, 0);
                         assert_eq!(allocation, 8);
                     }
-                    _ => assert!(false)
+                    _ => assert!(false),
                 }
             }
             _ => assert!(false),
@@ -423,10 +428,10 @@ use crate::{
     pub fn test_nested_function() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", Type(ast::Type::I32), false)
+            .add("x", Type::I32, false)
             .unwrap();
         semantic_table
-            .add("y", Type(ast::Type::I32), false)
+            .add("y", Type::I32, false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
@@ -443,10 +448,10 @@ use crate::{
 
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", Type(ast::Type::I32), false)
+            .add("x", Type::I32, false)
             .unwrap();
         semantic_table
-            .add("y", Type(ast::Type::I32), false)
+            .add("y", Type::I32, false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
@@ -490,21 +495,21 @@ use crate::{
     pub fn test_coroutine() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", Type(ast::Type::I32), false)
+            .add("x", Type::I32, false)
             .unwrap();
         semantic_table
-            .add("y", Type(ast::Type::I32), false)
+            .add("y", Type::I32, false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
                 ln: 0,
-                ty: ast::Type::I32,
+                ty: Type::I32,
                 sym: semantic_table,
             },
             RoutineDef::Coroutine,
             "coroutine".into(),
             vec![],
-            ast::Type::I32,
+            Type::I32,
             vec![],
         );
         let cn = CompilerNode::from(&sn, LayoutData::new(0));
@@ -519,9 +524,7 @@ use crate::{
                 assert_eq!(m.symbols.table["y"].offset, 28);
 
                 match m.ty {
-                    scope::Type::Routine{allocation,..} => {
-                        assert_eq!(allocation, 28)
-                    }
+                    scope::Type::Routine { allocation, .. } => assert_eq!(allocation, 28),
                     _ => assert!(false),
                 }
             }

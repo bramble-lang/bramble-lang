@@ -206,6 +206,8 @@ pub enum Type {
     Bool,
     Unit,
     Custom(String),
+    Function(Vec<Type>, Box<Type>),
+    Coroutine(Vec<Type>, Box<Type>),
     Unknown,
 }
 
@@ -217,6 +219,14 @@ impl std::fmt::Display for Type {
             Bool => f.write_str("bool"),
             Unit => f.write_str("unit"),
             Custom(name) => f.write_str(name),
+            Type::Coroutine(params, ret_ty) => {
+                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
+            }
+            Type::Function(params, ret_ty) => {
+                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
+            }
             Unknown => f.write_str("unknown"),
         }
     }

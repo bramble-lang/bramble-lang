@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{
-    semantics, semantics::semanticnode::SemanticMetadata, 
-};
+use crate::{semantics::semanticnode::SemanticMetadata, syntax::ast};
 
 #[derive(Debug, PartialEq)]
 pub struct LayoutData {
@@ -125,11 +123,11 @@ impl Symbol {
     }
 }
 
-impl semantics::symbol_table::Type {
+impl ast::Type {
     pub fn size(&self) -> i32 {
         match self {
-            semantics::symbol_table::Type::Type(crate::syntax::ast::Type::I32) => 4,
-            semantics::symbol_table::Type::Type(crate::syntax::ast::Type::Bool) => 4,
+            ast::Type::I32 => 4,
+            ast::Type::Bool => 4,
             _ => 0,
         }
     }

@@ -5,6 +5,7 @@ pub mod checker {
     use crate::semantics::semanticnode::SemanticNode;
     use crate::semantics::symbol_table::*;
     use crate::syntax::ast::Type::*;
+    use crate::syntax::ast::Type;
 
     pub fn type_check(ast: &PNode) -> Result<Box<SemanticNode>, String> {
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
@@ -147,10 +148,7 @@ pub mod checker {
 
         fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
             match self.lookup(sym, id) {
-                Some(Symbol {
-                    ty: Type::Type(p),
-                    ..
-                }) => Ok(p),
+                Some(Symbol { ty: p,..}) if *p == I32 || *p == Bool => Ok(p),
                 Some(_) => return Err(format!("{} is not a variable", id)),
                 None => return Err(format!("label {} not found in symbol table", id)),
             }
@@ -188,7 +186,7 @@ pub mod checker {
                     Some(_) => {
                         match self.lookup(sym, id) {
                             Some(Symbol {
-                                ty: Type::Type(p),
+                                ty: p,
                                 ..
                             }) => meta.ty = p.clone(),
                             _ => return Err(format!("L{}: Variable {} not declared", meta.ln, id)),
@@ -235,7 +233,7 @@ pub mod checker {
                         match self.lookup(sym, id) {
                             Some(ref symbol) => {
                                 if symbol.mutable {
-                                    if symbol.ty == Type::Type(rhs.clone()) {
+                                    if symbol.ty == rhs {
                                         Ok(rhs.clone())
                                     } else {
                                         Err(format!("L{}: {} is of type {} but is assigned {}", meta.ln, id, symbol.ty, rhs))
@@ -256,7 +254,7 @@ pub mod checker {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {
-                            sym.add(name, Type::Type(p.clone()), *mutable)
+                            sym.add(name, p.clone(), *mutable)
                                 .map_err(|e| format!("L{}: {}", meta.ln, e))?;
                             meta.ty = p.clone();
                             Ok(rhs)
@@ -396,7 +394,7 @@ pub mod checker {
                         let z = pty.iter().zip(expected_tys.iter());
                         let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                         if all_params_match {
-                            meta.ty = ret_ty.clone();
+                            meta.ty = *ret_ty.clone();
                             Ok(meta.ty.clone())
                         } else {
                             Err(format!(
@@ -453,7 +451,7 @@ pub mod checker {
                 }
                 RoutineDef(meta, _, name, params, p, body) => {
                     for (pname, pty) in params.iter() {
-                        meta.sym.add(pname, Type::Type(pty.clone()), false)?;
+                        meta.sym.add(pname, pty.clone(), false)?;
                     }
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
@@ -554,7 +552,7 @@ pub mod checker {
                         .vars
                         .iter()
                     {
-                        sym.add(&vname, Type::Type(vty.clone()), *mutable)?;
+                        sym.add(&vname, vty.clone(), *mutable)?;
                     }
                 }
                 None => {}
@@ -569,9 +567,9 @@ pub mod checker {
                     .collect::<Vec<ast::Type>>();
 
                 if f.starts_with("my_co") {
-                    sym.add(f, Type::Coroutine(params, fi.ret.clone()), false)?;
+                    sym.add(f, Type::Coroutine(params, Box::new(fi.ret.clone())), false)?;
                 } else {
-                    sym.add(f, Type::Function(params, fi.ret.clone()), false)?;
+                    sym.add(f, Type::Function(params, Box::new(fi.ret.clone())), false)?;
                 }
             }
 

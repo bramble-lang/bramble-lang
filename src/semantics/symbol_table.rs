@@ -1,29 +1,7 @@
 use crate::ast;
+use crate::ast::Type;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Type {
-    Type(ast::Type),
-    Function(Vec<ast::Type>, ast::Type),
-    Coroutine(Vec<ast::Type>, ast::Type),
-}
-
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        match self {
-            Type::Coroutine(params, ret_ty) => {
-                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
-                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
-            }
-            Type::Function(params, ret_ty) => {
-                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
-                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
-            }
-            Type::Type(ty) => f.write_fmt(format_args!("{}", ty)),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
@@ -89,7 +67,7 @@ impl SymbolTable {
                     name,
                     Type::Function(
                         params.iter().map(|(_, ty)| ty.clone()).collect::<Vec<ast::Type>>(),
-                        ty.clone(),
+                        Box::new(ty.clone()),
                     ),
                     false,
                 )?;
@@ -99,7 +77,7 @@ impl SymbolTable {
                     name,
                     Type::Coroutine(
                         params.iter().map(|(_, ty)| ty.clone()).collect::<Vec<ast::Type>>(),
-                        ty.clone(),
+                        Box::new(ty.clone()),
                     ),
                     false,
                 )?;
