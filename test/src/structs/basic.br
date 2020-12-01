@@ -4,10 +4,6 @@ fn my_main() {
     return;
 }
 
-fn test(ms: MyStruct) {
-    return;
-}
-
 struct MyStruct {
     x: i32,
     y: bool

@@ -111,6 +111,7 @@ pub fn parse(tokens: Vec<Token>) -> PResult {
 fn module(iter: &mut TokenIter) -> PResult {
     let mut functions = vec![];
     let mut coroutines = vec![];
+    let mut structs = vec![];
 
     match iter.peek() {
         Some(Token { l, s: _ }) => {
@@ -119,13 +120,16 @@ fn module(iter: &mut TokenIter) -> PResult {
                     Some(f) => functions.push(f),
                     None => match coroutine_def(iter)? {
                         Some(co) => coroutines.push(co),
-                        None => break,
+                        None => match struct_def(iter)? {
+                            Some(st) => structs.push(st),
+                            None => break,
+                        }
                     },
                 }
             }
 
             Ok(if functions.len() > 0 {
-                Some(Ast::Module{meta: *l, functions, coroutines})
+                Some(Ast::Module{meta: *l, functions, coroutines, structs})
             } else {
                 None
             })

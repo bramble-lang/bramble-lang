@@ -201,7 +201,7 @@ mod tests {
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("func", 0, 0);
-        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![fun_node], coroutines: vec![]};
+        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![fun_node], coroutines: vec![], structs: vec![]};
         stack.push(&module_node);
 
         let fun2_scope = Scope::new(Type::Routine {
@@ -242,7 +242,7 @@ mod tests {
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("cor", 0, 0);
-        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![], coroutines: vec![cor_node]};
+        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![], coroutines: vec![cor_node], structs: vec![]};
         stack.push(&module_node);
 
         let fun2_scope = Scope::new(Type::Routine {

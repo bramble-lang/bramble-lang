@@ -110,7 +110,7 @@ impl SemanticNode {
                 sm_from(*l),
                 SemanticNode::from_parser_ast(exp)?,
             ))),
-            Module{meta:ln, functions, coroutines} => {
+            Module{meta:ln, functions, coroutines, structs} => {
                 let mut nfuncs = vec![];
                 for func in functions.iter() {
                     nfuncs.push(*SemanticNode::from_parser_ast(func)?);
@@ -119,9 +119,13 @@ impl SemanticNode {
                 for cor in coroutines.iter() {
                     ncors.push(*SemanticNode::from_parser_ast(cor)?);
                 }
-                Ok(Box::new(Module{meta: sm_from(*ln), functions: nfuncs, coroutines: ncors}))
+                let mut nstructs = vec![];
+                for st in structs.iter() {
+                    nstructs.push(*SemanticNode::from_parser_ast(st)?);
+                }
+                Ok(Box::new(Module{meta: sm_from(*ln), functions: nfuncs, coroutines: ncors, structs: nstructs}))
             }
-            Struct(..) => panic!("Unimplemented")
+            Struct(l, name, fields) => Ok(Box::new(Struct(sm_from(*l), name.clone(), fields.clone()))),
         }
     }
 }

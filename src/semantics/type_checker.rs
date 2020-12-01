@@ -458,7 +458,7 @@ pub mod checker {
                     self.stack.pop();
                     Ok(*p)
                 }
-                Module{meta, functions, coroutines} => {
+                Module{meta, functions, coroutines, structs} => {
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
                     for func in functions.iter_mut() {
@@ -467,12 +467,15 @@ pub mod checker {
                     for cor in coroutines.iter_mut() {
                         self.traverse(cor, &None, &mut meta.sym)?;
                     }
+                    for st in structs.iter_mut() {
+                        self.traverse(st, &None, &mut meta.sym)?;
+                    }
                     self.stack.pop();
                     meta.ty = Unit;
                     Ok(Unit)
                 }
                 Struct(..) => {
-                    panic!("Unimplemented")
+                    Ok(Unit)
                 }
             }
         }

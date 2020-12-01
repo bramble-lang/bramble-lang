@@ -71,7 +71,7 @@ impl SymbolTable {
 
     pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
         match ast {
-            Ast::Module{meta, functions, coroutines} => {
+            Ast::Module{meta, functions, coroutines, ..} => {
                 for f in functions.iter_mut() {
                     SymbolTable::traverse(f, meta)?;
                 }
