@@ -43,6 +43,7 @@ then
     run_test "binding/undeclared"
     run_test "binding/before_declaration"
     run_test "binding/redeclare"
+    run_test "binding/mutation"
     run_test "fn/recurse"
     run_test "scope/out_of_scope"
     run_test "parser/missing_type"

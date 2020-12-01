@@ -1,0 +1,10 @@
+
+fn my_main() {
+    let mut x:i32 := 1;
+    printiln x;
+    mut x := 13;
+    printiln x;
+    mut x := -13;
+    printiln x;
+    return;
+}
