@@ -1,9 +1,10 @@
 pub mod checker {
-    use crate::ast::*;
+    use crate::ast;
+    use crate::ast::{UnaryOperator, BinaryOperator};
     use crate::parser::PNode;
     use crate::semantics::semanticnode::SemanticNode;
     use crate::semantics::symbol_table::*;
-    use Primitive::*;
+    use crate::syntax::ast::Type::*;
 
     pub fn type_check(ast: &PNode) -> Result<Box<SemanticNode>, String> {
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
@@ -35,7 +36,7 @@ pub mod checker {
             operand: &mut SemanticNode,
             current_func: &Option<String>,
             sym: &mut SymbolTable,
-        ) -> Result<Primitive, String> {
+        ) -> Result<ast::Type, String> {
             use UnaryOperator::*;
 
             let operand_ty = self.traverse(operand, current_func, sym)?;
@@ -66,7 +67,7 @@ pub mod checker {
             r: &mut SemanticNode,
             current_func: &Option<String>,
             sym: &mut SymbolTable,
-        ) -> Result<Primitive, String> {
+        ) -> Result<ast::Type, String> {
             use BinaryOperator::*;
 
             let lty = self.traverse(l, current_func, sym)?;
@@ -102,7 +103,7 @@ pub mod checker {
             ast: &mut SemanticNode,
             current_func: &Option<String>,
             sym: &mut SymbolTable,
-        ) -> Result<Primitive, String> {
+        ) -> Result<ast::Type, String> {
             self.analyize_node(ast, current_func, sym)
         }
 
@@ -114,7 +115,7 @@ pub mod checker {
             &'a self,
             sym: &'a SymbolTable,
             id: &str,
-        ) -> Result<(&Vec<Primitive>, &Primitive), String> {
+        ) -> Result<(&Vec<ast::Type>, &ast::Type), String> {
             match self.lookup(sym, id) {
                 Some(Symbol {
                     ty: Type::Coroutine(params, p),
@@ -133,7 +134,7 @@ pub mod checker {
             &'a self,
             sym: &'a SymbolTable,
             id: &str,
-        ) -> Result<(&Vec<Primitive>, &Primitive), String> {
+        ) -> Result<(&Vec<ast::Type>, &ast::Type), String> {
             match self.lookup(sym, id) {
                 Some(Symbol {
                     ty: Type::Coroutine(params, p),
@@ -144,10 +145,10 @@ pub mod checker {
             }
         }
 
-        fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Primitive, String> {
+        fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
             match self.lookup(sym, id) {
                 Some(Symbol {
-                    ty: Type::Primitive(p),
+                    ty: Type::Type(p),
                     ..
                 }) => Ok(p),
                 Some(_) => return Err(format!("{} is not a variable", id)),
@@ -160,8 +161,8 @@ pub mod checker {
             ast: &mut SemanticNode,
             current_func: &Option<String>,
             sym: &mut SymbolTable,
-        ) -> Result<Primitive, String> {
-            use Ast::*;
+        ) -> Result<ast::Type, String> {
+            use ast::Ast::*;
             match ast {
                 Integer(meta, _) => {
                     meta.ty = I32;
@@ -171,9 +172,13 @@ pub mod checker {
                     meta.ty = Bool;
                     Ok(Bool)
                 }
+                CustomType(meta, name) => {
+                    meta.ty = Custom(name.clone());
+                    Ok(meta.ty.clone())
+                }
                 IdentifierDeclare(meta, _, p) => {
-                    meta.ty = *p;
-                    Ok(*p)
+                    meta.ty = p.clone();
+                    Ok(p.clone())
                 }
                 Identifier(meta, id) => match current_func {
                     None => Err(format!(
@@ -183,25 +188,25 @@ pub mod checker {
                     Some(_) => {
                         match self.lookup(sym, id) {
                             Some(Symbol {
-                                ty: Type::Primitive(p),
+                                ty: Type::Type(p),
                                 ..
-                            }) => meta.ty = *p,
+                            }) => meta.ty = p.clone(),
                             _ => return Err(format!("L{}: Variable {} not declared", meta.ln, id)),
                         };
-                        Ok(meta.ty)
+                        Ok(meta.ty.clone())
                     }
                 },
                 BinaryOp(meta, op, l, r) => {
                     let ty =
                         self.binary_op(*op, meta.ln, l, r, current_func, sym)?;
                     meta.ty = ty;
-                    Ok(ty)
+                    Ok(meta.ty.clone())
                 }
                 UnaryOp(meta, op, operand) => {
                     let ty =
                         self.unary_op(*op, meta.ln, operand, current_func, sym)?;
                     meta.ty = ty;
-                    Ok(ty)
+                    Ok(meta.ty.clone())
                 }
                 If(meta, cond, true_arm, false_arm) => {
                     let cond_ty = self.traverse(cond, current_func, sym)?;
@@ -210,7 +215,7 @@ pub mod checker {
                         let false_arm = self.traverse(false_arm, current_func, sym)?;
                         if true_arm == false_arm {
                             meta.ty = true_arm;
-                            Ok(true_arm)
+                            Ok(meta.ty.clone())
                         } else {
                             Err(format!(
                                 "L{}: If expression has mismatching arms: expected {} got {}",
@@ -230,8 +235,8 @@ pub mod checker {
                         match self.lookup(sym, id) {
                             Some(ref symbol) => {
                                 if symbol.mutable {
-                                    if symbol.ty == Type::Primitive(rhs) {
-                                        Ok(rhs)
+                                    if symbol.ty == Type::Type(rhs.clone()) {
+                                        Ok(rhs.clone())
                                     } else {
                                         Err(format!("L{}: {} is of type {} but is assigned {}", meta.ln, id, symbol.ty, rhs))
                                     }
@@ -251,9 +256,9 @@ pub mod checker {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {
-                            sym.add(name, Type::Primitive(*p), *mutable)
+                            sym.add(name, Type::Type(p.clone()), *mutable)
                                 .map_err(|e| format!("L{}: {}", meta.ln, e))?;
-                            meta.ty = *p;
+                            meta.ty = p.clone();
                             Ok(rhs)
                         } else {
                             Err(format!("L{}: Bind expected {} but got {}", meta.ln, p, rhs))
@@ -292,8 +297,8 @@ pub mod checker {
                             .lookup_func_or_cor(sym, cf)
                             .map_err(|e| format!("L{}: {}", meta.ln, e))?;
                         if *fty == val {
-                            meta.ty = *fty;
-                            Ok(meta.ty)
+                            meta.ty = fty.clone();
+                            Ok(meta.ty.clone())
                         } else {
                             Err(format!(
                                 "L{}: Return expected {} but got {}",
@@ -305,12 +310,12 @@ pub mod checker {
                 Yield(meta, exp) => match current_func {
                     None => Err(format!("L{}: Yield appears outside of function", meta.ln)),
                     Some(_) => match exp.as_ref() {
-                        Ast::Identifier(id_meta, coname) => {
+                        Identifier(id_meta, coname) => {
                             let ty = self
                                 .lookup_var(sym, coname)
                                 .map_err(|e| format!("L{}: {}", id_meta.ln, e))?;
-                            meta.ty = *ty;
-                            Ok(meta.ty)
+                            meta.ty = ty.clone();
+                            Ok(meta.ty.clone())
                         }
                         _ => Err(format!(
                             "L{}: Expected name of coroutine after yield",
@@ -339,8 +344,8 @@ pub mod checker {
                         let val = self.traverse(exp, current_func, sym)?;
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
                         if *ret_ty == val {
-                            meta.ty = *ret_ty;
-                            Ok(meta.ty)
+                            meta.ty = ret_ty.clone();
+                            Ok(meta.ty.clone())
                         } else {
                             Err(format!(
                                 "L{}: Yield return expected {} but got {}",
@@ -391,8 +396,8 @@ pub mod checker {
                         let z = pty.iter().zip(expected_tys.iter());
                         let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                         if all_params_match {
-                            meta.ty = *ret_ty;
-                            Ok(*ret_ty)
+                            meta.ty = ret_ty.clone();
+                            Ok(meta.ty.clone())
                         } else {
                             Err(format!(
                                 "L{}: One or more parameters had mismatching types for function {}",
@@ -444,11 +449,11 @@ pub mod checker {
                     }
                     self.stack.pop();
                     meta.ty = ty;
-                    Ok(ty)
+                    Ok(meta.ty.clone())
                 }
                 RoutineDef(meta, _, name, params, p, body) => {
                     for (pname, pty) in params.iter() {
-                        meta.sym.add(pname, Type::Primitive(*pty), false)?;
+                        meta.sym.add(pname, Type::Type(pty.clone()), false)?;
                     }
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
@@ -456,7 +461,7 @@ pub mod checker {
                         self.traverse(stmt, &Some(name.clone()), &mut meta.sym)?;
                     }
                     self.stack.pop();
-                    Ok(*p)
+                    Ok(p.clone())
                 }
                 Module{meta, functions, coroutines, structs} => {
                     let tmp_sym = sym.clone();
@@ -484,23 +489,24 @@ pub mod checker {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::ast::{Ast, Primitive};
+        use crate::ast;
+        use crate::ast::Ast;
         use std::collections::HashMap;
 
         /*
          * map: function name -> (params, ret, vars)
          */
         struct FunInfo {
-            params: Vec<(&'static str, Primitive)>,
-            ret: Primitive,
-            vars: Vec<(&'static str, bool, Primitive)>,
+            params: Vec<(&'static str, ast::Type)>,
+            ret: ast::Type,
+            vars: Vec<(&'static str, bool, ast::Type)>,
         }
 
         impl FunInfo {
             pub fn new(
-                params: Vec<(&'static str, Primitive)>,
-                ret: Primitive,
-                vars: Vec<(&'static str, bool, Primitive)>,
+                params: Vec<(&'static str, ast::Type)>,
+                ret: ast::Type,
+                vars: Vec<(&'static str, bool, ast::Type)>,
             ) -> FunInfo {
                 FunInfo {
                     params: params,
@@ -524,9 +530,9 @@ pub mod checker {
             pub fn add(
                 &mut self,
                 name: &'static str,
-                params: Vec<(&'static str, Primitive)>,
-                ret: Primitive,
-                vars: Vec<(&'static str, bool, Primitive)>,
+                params: Vec<(&'static str, ast::Type)>,
+                ret: ast::Type,
+                vars: Vec<(&'static str, bool, ast::Type)>,
             ) {
                 self.func
                     .insert(name.into(), FunInfo::new(params, ret, vars));
@@ -537,7 +543,7 @@ pub mod checker {
             ast: &mut SemanticNode,
             current_func: &Option<String>,
             scope: &Scope,
-        ) -> Result<Primitive, String> {
+        ) -> Result<ast::Type, String> {
             let mut sym = SymbolTable::new();
             match current_func {
                 Some(cf) => {
@@ -548,7 +554,7 @@ pub mod checker {
                         .vars
                         .iter()
                     {
-                        sym.add(&vname, Type::Primitive(*vty), *mutable)?;
+                        sym.add(&vname, Type::Type(vty.clone()), *mutable)?;
                     }
                 }
                 None => {}
@@ -559,13 +565,13 @@ pub mod checker {
                 let params = fi
                     .params
                     .iter()
-                    .map(|(_, pty)| *pty)
-                    .collect::<Vec<Primitive>>();
+                    .map(|(_, pty)| pty.clone())
+                    .collect::<Vec<ast::Type>>();
 
                 if f.starts_with("my_co") {
-                    sym.add(f, Type::Coroutine(params, fi.ret), false)?;
+                    sym.add(f, Type::Coroutine(params, fi.ret.clone()), false)?;
                 } else {
-                    sym.add(f, Type::Function(params, fi.ret), false)?;
+                    sym.add(f, Type::Function(params, fi.ret.clone()), false)?;
                 }
             }
 
@@ -583,7 +589,7 @@ pub mod checker {
                 &None,
                 &scope,
             );
-            assert_eq!(ty, Ok(Primitive::I32));
+            assert_eq!(ty, Ok(ast::Type::I32));
         }
 
         #[test]
@@ -598,7 +604,7 @@ pub mod checker {
                 &Some("my_main".into()),
                 &scope,
             );
-            assert_eq!(ty, Ok(Primitive::Bool));
+            assert_eq!(ty, Ok(ast::Type::Bool));
         }
 
         #[test]
@@ -618,7 +624,7 @@ pub mod checker {
                     &None,
                     &scope,
                 );
-                assert_eq!(ty, Ok(Primitive::I32));
+                assert_eq!(ty, Ok(ast::Type::I32));
             }
             // operand is not i32
             {
@@ -655,7 +661,7 @@ pub mod checker {
                     &None,
                     &scope,
                 );
-                assert_eq!(ty, Ok(Primitive::I32));
+                assert_eq!(ty, Ok(ast::Type::I32));
             }
 
             // operands are not i32
@@ -726,7 +732,7 @@ pub mod checker {
                     &None,
                     &scope,
                 );
-                assert_eq!(ty, Ok(Primitive::I32));
+                assert_eq!(ty, Ok(ast::Type::I32));
             }
 
             // operands are not i32
@@ -783,7 +789,7 @@ pub mod checker {
         pub fn test_boolean_ops() {
             let scope = Scope::new();
 
-            let tests: Vec<(PNode, Result<Primitive, String>)> = vec![(
+            let tests: Vec<(PNode, Result<ast::Type, String>)> = vec![(
                 Ast::BinaryOp(
                     1,
                     BinaryOperator::BAnd,
@@ -806,7 +812,7 @@ pub mod checker {
         #[test]
         pub fn test_comparison_ops() {
             let scope = Scope::new();
-            let tests: Vec<(PNode, Result<Primitive, String>)> = vec![
+            let tests: Vec<(PNode, Result<ast::Type, String>)> = vec![
                 (
                     Ast::BinaryOp(
                         1,
@@ -814,7 +820,7 @@ pub mod checker {
                         Box::new(Ast::Integer(1, 3)),
                         Box::new(Ast::Integer(1, 5)),
                     ),
-                    Ok(Bool),
+                    Ok(ast::Type::Bool),
                 ),
                 (
                     Ast::BinaryOp(
@@ -823,7 +829,7 @@ pub mod checker {
                         Box::new(Ast::Boolean(1, true)),
                         Box::new(Ast::Boolean(1, false)),
                     ),
-                    Ok(Bool),
+                    Ok(ast::Type::Bool),
                 ),
                 (
                     Ast::BinaryOp(
@@ -853,13 +859,13 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![]);
 
-                let node = Ast::Bind(1, "x".into(), false, Primitive::I32, Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Bind(1, "x".into(), false, ast::Type::I32, Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Ok(Primitive::I32));
+                assert_eq!(ty, Ok(ast::Type::I32));
             }
 
             // RHS type does not match LHS type
@@ -867,7 +873,7 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![]);
 
-                let node = Ast::Bind(1, "x".into(), false, Primitive::Bool, Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Bind(1, "x".into(), false, ast::Type::Bool, Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
@@ -885,7 +891,7 @@ pub mod checker {
                     1,
                     "x".into(),
                     false,
-                    Primitive::I32,
+                    ast::Type::I32,
                     Box::new(Ast::Identifier(1, "x".into())),
                 );
 
@@ -917,7 +923,7 @@ pub mod checker {
             // RHS type matches the LHS type
             {
                 let mut scope = Scope::new();
-                scope.add("my_func", vec![], Unit, vec![("x".into(), true, Primitive::I32)]);
+                scope.add("my_func", vec![], Unit, vec![("x".into(), true, ast::Type::I32)]);
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
@@ -925,12 +931,12 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Ok(Primitive::I32));
+                assert_eq!(ty, Ok(ast::Type::I32));
             }
             // Variable is immutable
             {
                 let mut scope = Scope::new();
-                scope.add("my_func", vec![], Unit, vec![("x".into(), false, Primitive::I32)]);
+                scope.add("my_func", vec![], Unit, vec![("x".into(), false, ast::Type::I32)]);
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
@@ -943,7 +949,7 @@ pub mod checker {
             // RHS type mismatch
             {
                 let mut scope = Scope::new();
-                scope.add("my_func", vec![], Unit, vec![("x".into(), true, Primitive::Bool)]);
+                scope.add("my_func", vec![], Unit, vec![("x".into(), true, ast::Type::Bool)]);
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
@@ -956,7 +962,7 @@ pub mod checker {
             // Variable does not exist
             {
                 let mut scope = Scope::new();
-                scope.add("my_func", vec![], Unit, vec![("y".into(), false, Primitive::I32)]);
+                scope.add("my_func", vec![], Unit, vec![("y".into(), false, ast::Type::I32)]);
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
@@ -1003,7 +1009,7 @@ pub mod checker {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], I32, vec![]);
 
-            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func".into(), vec![]);
+            let node = Ast::RoutineCall(1, ast::RoutineCall::Function, "my_func".into(), vec![]);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
@@ -1013,7 +1019,7 @@ pub mod checker {
 
             scope.add("my_func2", vec![("x", I32)], I32, vec![]);
             // test correct parameters passed in call
-            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func2".into(), vec![Ast::Integer(1, 5)]);
+            let node = Ast::RoutineCall(1, ast::RoutineCall::Function, "my_func2".into(), vec![Ast::Integer(1, 5)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1023,7 +1029,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
-            let node = Ast::RoutineCall(1, RoutineCall::Function, "my_func2".into(), vec![]);
+            let node = Ast::RoutineCall(1, ast::RoutineCall::Function, "my_func2".into(), vec![]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1042,7 +1048,7 @@ pub mod checker {
             scope.add("my_co", vec![], I32, vec![]);
             scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
-            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co".into(), vec![]);
+            let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, "my_co".into(), vec![]);
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
@@ -1051,7 +1057,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test correct parameters passed in call
-            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co2".into(), vec![Ast::Integer(1, 5)]);
+            let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, "my_co2".into(), vec![Ast::Integer(1, 5)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1061,7 +1067,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             // test incorrect parameters passed in call
-            let node = Ast::RoutineCall(1, RoutineCall::CoroutineInit, "my_co2".into(), vec![]);
+            let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, "my_co2".into(), vec![]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1129,7 +1135,7 @@ pub mod checker {
 
             let node = Ast::RoutineDef(
                 1,
-                RoutineDef::Function,
+                ast::RoutineDef::Function,
                 "my_func".into(),
                 vec![],
                 I32,
@@ -1144,7 +1150,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::RoutineDef(1, RoutineDef::Function, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
+                Ast::RoutineDef(1, ast::RoutineDef::Function, "my_func".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),
@@ -1161,7 +1167,7 @@ pub mod checker {
 
             let node = Ast::RoutineDef(
                 1,
-                RoutineDef::Coroutine,
+                ast::RoutineDef::Coroutine,
                 "my_co".into(),
                 vec![],
                 I32,
@@ -1176,7 +1182,7 @@ pub mod checker {
             assert_eq!(ty, Ok(I32));
 
             let node =
-                Ast::RoutineDef(1, RoutineDef::Coroutine, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
+                Ast::RoutineDef(1, ast::RoutineDef::Coroutine, "my_co".into(), vec![], I32, vec![Ast::Return(1, None)]);
 
             let ty = start(
                 &mut SemanticNode::from_parser_ast(&node).unwrap(),

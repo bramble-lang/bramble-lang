@@ -8,3 +8,7 @@ struct MyStruct {
     x: i32,
     y: bool
 }
+
+fn test(ms: MyStruct) {
+    return;
+}

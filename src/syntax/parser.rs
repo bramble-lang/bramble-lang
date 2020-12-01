@@ -22,7 +22,7 @@ impl PNode {
     pub fn new_bind(line: u32, id: Box<Self>, mutable: bool, exp: Box<Self>) -> Result<Self, String> {
         let i = line; //ParserInfo{l: line};
         match id.as_ref() {
-            Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), mutable, *prim, exp)),
+            Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), mutable, prim.clone(), exp)),
             _ => Err(format!(
                 "L{}: Expected type specification after {}",
                 line,
@@ -166,7 +166,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                         "L{}: Expected primitive type after -> in function definition",
                         l
                     ))?,
-                    _ => Primitive::Unit,
+                    _ => Type::Unit,
                 };
 
                 consume_must_be(iter, Lex::LBrace)?;
@@ -205,7 +205,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                         "L{}: Expected primitive type after -> in function definition",
                         l
                     )),
-                    _ => Primitive::Unit,
+                    _ => Type::Unit,
                 };
 
                 consume_must_be(iter, Lex::LBrace)?;
@@ -232,7 +232,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
     Ok(syntax)
 }
 
-fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, String> {
+fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Type)>, String> {
     consume_must_be(iter, Lex::LParen)?;
 
     let params = id_declaration_list(iter)?;
@@ -242,7 +242,7 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
     Ok(params)
 }
 
-fn id_declaration_list(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, String> {
+fn id_declaration_list(iter: &mut TokenIter) -> Result<Vec<(String, Type)>, String> {
     let mut decls = vec![];
 
     while let Some(decl) = identifier_or_declare(iter)? {
@@ -606,7 +606,7 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
+fn primitive(iter: &mut TokenIter) -> Option<Type> {
     match iter.peek() {
         Some(Token {
             l: _,
@@ -614,8 +614,8 @@ fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
         }) => {
             iter.next();
             match primitive {
-                lexer::Primitive::I32 => Some(Primitive::I32),
-                lexer::Primitive::Bool => Some(Primitive::Bool),
+                lexer::Primitive::I32 => Some(Type::I32),
+                lexer::Primitive::Bool => Some(Type::Bool),
             }
         }
         _ => None,
@@ -898,7 +898,7 @@ pub mod tests {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, false, p, exp) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*p, Type::I32);
                     assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
@@ -922,7 +922,7 @@ pub mod tests {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, true, p, exp) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*p, Type::I32);
                     assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
@@ -969,8 +969,8 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Primitive::I32)]);
-            assert_eq!(ty, Primitive::Bool);
+            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
                 Ast::Return(_, Some(exp)) => {
@@ -1043,7 +1043,7 @@ pub mod tests {
                 Ast::Statement(_, stm) => match stm.as_ref() {
                     Ast::Bind(_, id, false, p, exp) => {
                         assert_eq!(id, "x");
-                        assert_eq!(*p, Primitive::I32);
+                        assert_eq!(*p, Type::I32);
                         assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                     }
                     _ => panic!("Not a binding statement"),
@@ -1066,8 +1066,8 @@ pub mod tests {
     fn parse_struct_def() {
         for (text, expected) in vec![
             ("struct MyStruct {}", Some(Ast::Struct(1, "MyStruct".into(), vec![]))),
-            ("struct MyStruct {x: i32}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Primitive::I32)]))),
-            ("struct MyStruct {x: i32, y: bool}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Primitive::I32), ("y".into(), Primitive::Bool)]))),
+            ("struct MyStruct {x: i32}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Type::I32)]))),
+            ("struct MyStruct {x: i32, y: bool}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Type::I32), ("y".into(), Type::Bool)]))),
         ] {
             let mut lexer = Lexer::new();
             let tokens: Vec<Token> = lexer

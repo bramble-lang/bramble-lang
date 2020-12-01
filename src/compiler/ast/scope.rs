@@ -128,8 +128,8 @@ impl Symbol {
 impl semantics::symbol_table::Type {
     pub fn size(&self) -> i32 {
         match self {
-            semantics::symbol_table::Type::Primitive(crate::syntax::ast::Primitive::I32) => 4,
-            semantics::symbol_table::Type::Primitive(crate::syntax::ast::Primitive::Bool) => 4,
+            semantics::symbol_table::Type::Type(crate::syntax::ast::Type::I32) => 4,
+            semantics::symbol_table::Type::Type(crate::syntax::ast::Type::Bool) => 4,
             _ => 0,
         }
     }

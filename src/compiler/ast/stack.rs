@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_find_symbol_does_not_pass_function() {
-        use crate::syntax::ast::Primitive;
+        use crate::syntax::ast;
 
         let mut stack = ScopeStack::new();
 
@@ -172,7 +172,7 @@ mod tests {
         });
         fun_scope.insert("y", 4, 4);
         fun_scope.insert("z", 4, 8);
-        let outer_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![], Primitive::I32, vec![]);
+        let outer_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![], ast::Type::I32, vec![]);
         stack.push(&outer_node);
 
         let mut inner_scope = Scope::new(Type::Block);
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_get_routine_parameters() {
-        use crate::syntax::ast::Primitive;
+        use crate::syntax::ast;
 
         let mut stack = ScopeStack::new();
 
@@ -197,7 +197,7 @@ mod tests {
         });
         fun_scope.insert("y", 4, 0);
         fun_scope.insert("z", 4, 4);
-        let fun_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
+        let fun_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![("y".into(), ast::Type::I32)], ast::Type::I32, vec![]);
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("func", 0, 0);
@@ -208,7 +208,7 @@ mod tests {
             next_label: 0,
             allocation: 0,
         });
-        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Function, "func2".into(), vec![], Primitive::I32, vec![]);
+        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Function, "func2".into(), vec![], ast::Type::I32, vec![]);
         stack.push(&fun2_node);
         
         assert_eq!(stack.find("func").is_none(), true);
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn test_get_coroutine_parameters() {
-        use crate::syntax::ast::Primitive;
+        use crate::syntax::ast;
 
         let mut stack = ScopeStack::new();
 
@@ -238,7 +238,7 @@ mod tests {
         });
         cor_scope.insert("y", 4, 20);
         cor_scope.insert("z", 4, 24);
-        let cor_node = CompilerNode::RoutineDef(cor_scope, RoutineDef::Coroutine, "cor".into(), vec![("y".into(), Primitive::I32)], Primitive::I32, vec![]);
+        let cor_node = CompilerNode::RoutineDef(cor_scope, RoutineDef::Coroutine, "cor".into(), vec![("y".into(), ast::Type::I32)], ast::Type::I32, vec![]);
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("cor", 0, 0);
@@ -249,7 +249,7 @@ mod tests {
             next_label: 0,
             allocation: 0,
         });
-        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Coroutine, "func2".into(), vec![], Primitive::I32, vec![]);
+        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Coroutine, "func2".into(), vec![], ast::Type::I32, vec![]);
         stack.push(&fun2_node);
 
         let node = stack.find_coroutine("cor").unwrap();

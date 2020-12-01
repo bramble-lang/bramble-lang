@@ -1,3 +1,4 @@
+use crate::ast;
 use crate::ast::*;
 use crate::parser::PNode;
 use crate::semantics::symbol_table::*;
@@ -5,7 +6,7 @@ use crate::semantics::symbol_table::*;
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
     pub ln: u32,
-    pub ty: Primitive,
+    pub ty: ast::Type,
     pub sym: SymbolTable,
 }
 
@@ -17,8 +18,9 @@ impl SemanticNode {
         match ast {
             Integer(ln, val) => Ok(Box::new(Integer(sm_from(*ln), *val))),
             Boolean(ln, val) => Ok(Box::new(Boolean(sm_from(*ln), *val))),
+            CustomType(ln, val) => Ok(Box::new(CustomType(sm_from(*ln), val.clone()))),
             IdentifierDeclare(ln, name, p) => {
-                Ok(Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), *p)))
+                Ok(Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), p.clone())))
             }
             Identifier(l, id) => Ok(Box::new(Identifier(sm_from(*l), id.clone()))),
             BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
@@ -47,7 +49,7 @@ impl SemanticNode {
                 sm_from(*ln),
                 name.clone(),
                 *mutable,
-                *p,
+                p.clone(),
                 SemanticNode::from_parser_ast(exp)?,
             ))),
             Return(l, None) => Ok(Box::new(Return(sm_from(*l), None))),
@@ -84,7 +86,7 @@ impl SemanticNode {
                     *def,
                     fname.clone(),
                     params.clone(),
-                    *p,
+                    p.clone(),
                     nbody,
                 )))
             }
@@ -130,7 +132,7 @@ impl SemanticNode {
     }
 }
 
-fn sm(ln: u32, ty: Primitive) -> SemanticMetadata {
+fn sm(ln: u32, ty: ast::Type) -> SemanticMetadata {
     SemanticMetadata {
         ln,
         ty,
@@ -139,7 +141,7 @@ fn sm(ln: u32, ty: Primitive) -> SemanticMetadata {
 }
 
 fn sm_from(l: u32) -> SemanticMetadata {
-    sm(l, Primitive::Unknown)
+    sm(l, ast::Type::Unknown)
 }
 
 #[cfg(test)]
@@ -151,15 +153,15 @@ mod tests {
         for (node, expected) in [
             (
                 Ast::Integer(1, 3),
-                Ast::Integer(sm(1, Primitive::Unknown), 3),
+                Ast::Integer(sm(1, ast::Type::Unknown), 3),
             ),
             (
                 Ast::Boolean(1, true),
-                Ast::Boolean(sm(1, Primitive::Unknown), true),
+                Ast::Boolean(sm(1, ast::Type::Unknown), true),
             ),
             (
                 Ast::Identifier(1, "x".into()),
-                Ast::Identifier(sm(1, Primitive::Unknown), "x".into()),
+                Ast::Identifier(sm(1, ast::Type::Unknown), "x".into()),
             ),
         ]
         .iter()
@@ -175,8 +177,8 @@ mod tests {
             (
                 (Ast::Integer(1, 3), Ast::Integer(1, 3)),
                 (
-                    Ast::Integer(sm(1, Primitive::Unknown), 3),
-                    Ast::Integer(sm(1, Primitive::Unknown), 3),
+                    Ast::Integer(sm(1, ast::Type::Unknown), 3),
+                    Ast::Integer(sm(1, ast::Type::Unknown), 3),
                 ),
             ),
             (
@@ -185,15 +187,15 @@ mod tests {
                     Ast::Identifier(1, "y".into()),
                 ),
                 (
-                    Ast::Identifier(sm(1, Primitive::Unknown), "x".into()),
-                    Ast::Identifier(sm(1, Primitive::Unknown), "y".into()),
+                    Ast::Identifier(sm(1, ast::Type::Unknown), "x".into()),
+                    Ast::Identifier(sm(1, ast::Type::Unknown), "y".into()),
                 ),
             ),
             (
                 (Ast::Boolean(1, true), Ast::Boolean(1, false)),
                 (
-                    Ast::Boolean(sm(1, Primitive::Unknown), true),
-                    Ast::Boolean(sm(1, Primitive::Unknown), false),
+                    Ast::Boolean(sm(1, ast::Type::Unknown), true),
+                    Ast::Boolean(sm(1, ast::Type::Unknown), false),
                 ),
             ),
         ]
@@ -203,7 +205,7 @@ mod tests {
                 (
                     Ast::BinaryOp(1, BinaryOperator::Mul, Box::new(l.clone()), Box::new(r.clone())),
                     Ast::BinaryOp(
-                        sm(1, Primitive::Unknown),
+                        sm(1, ast::Type::Unknown),
                         BinaryOperator::Mul,
                         Box::new(el.clone()),
                         Box::new(er.clone()),

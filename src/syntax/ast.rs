@@ -86,8 +86,9 @@ impl std::fmt::Display for RoutineCall {
 pub enum Ast<I> {
     Integer(I, i32),
     Boolean(I, bool),
+    CustomType(I, String),
     Identifier(I, String),
-    IdentifierDeclare(I, String, Primitive),
+    IdentifierDeclare(I, String, Type),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
@@ -99,7 +100,7 @@ pub enum Ast<I> {
     ExpressionBlock(I, Vec<Ast<I>>),
 
     Statement(I, Box<Ast<I>>),
-    Bind(I, String, bool, Primitive, Box<Ast<I>>),
+    Bind(I, String, bool, Type, Box<Ast<I>>),
     Mutate(I, String, Box<Ast<I>>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
@@ -109,13 +110,13 @@ pub enum Ast<I> {
         I,
         RoutineDef,
         String,
-        Vec<(String, Primitive)>,
-        Primitive,
+        Vec<(String, Type)>,
+        Type,
         Vec<Ast<I>>,
     ),
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
     Module{meta: I, functions: Vec<Ast<I>>, coroutines: Vec<Ast<I>>, structs: Vec<Ast<I>>},
-    Struct(I, String, Vec<(String,Primitive)>),
+    Struct(I, String, Vec<(String,Type)>),
 }
 
 impl<I> Ast<I> {
@@ -124,6 +125,7 @@ impl<I> Ast<I> {
         match self {
             Integer(_, v) => format!("{}", v),
             Boolean(_, v) => format!("{}", v),
+            CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
 
@@ -157,6 +159,7 @@ impl<I> Ast<I> {
         match self {
             Integer(m, ..)
             | Boolean(m, ..)
+            | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
             | BinaryOp(m, ..)
@@ -181,7 +184,7 @@ impl<I> Ast<I> {
 
     /// If a node is a function or a coroutine this will return its parameter vector.  If
     /// the node is not a function or coroutine, this will return None.
-    pub fn get_params(&self) -> Option<&Vec<(String, Primitive)>> {
+    pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
         match self {
             Ast::RoutineDef(_, _, _, params, ..) => Some(params),
             _ => None,
@@ -197,21 +200,23 @@ impl<I> Ast<I> {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Primitive {
+#[derive(Clone, Debug, PartialEq)]
+pub enum Type {
     I32,
     Bool,
     Unit,
+    Custom(String),
     Unknown,
 }
 
-impl std::fmt::Display for Primitive {
+impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        use Primitive::*;
+        use Type::*;
         match self {
             I32 => f.write_str("i32"),
             Bool => f.write_str("bool"),
             Unit => f.write_str("unit"),
+            Custom(name) => f.write_str(name),
             Unknown => f.write_str("unknown"),
         }
     }

@@ -1,31 +1,26 @@
-use crate::ast::*;
+use crate::ast;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
-    Primitive(Primitive),
-    Function(Vec<Primitive>, Primitive),
-    Coroutine(Vec<Primitive>, Primitive),
-    Custom(String),
+    Type(ast::Type),
+    Function(Vec<ast::Type>, ast::Type),
+    Coroutine(Vec<ast::Type>, ast::Type),
 }
 
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        use Type::*;
         match self {
-            Coroutine(params, ret_ty) => {
+            Type::Coroutine(params, ret_ty) => {
                 let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
                 f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
             }
-            Function(params, ret_ty) => {
+            Type::Function(params, ret_ty) => {
                 let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
                 f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
             }
-            Custom(name) => {
-                f.write_fmt(format_args!("{}", name))
-            }
-            Primitive(ty) => f.write_fmt(format_args!("{}", ty)),
+            Type::Type(ty) => f.write_fmt(format_args!("{}", ty)),
         }
     }
 }
@@ -70,6 +65,7 @@ impl SymbolTable {
     }
 
     pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
+        use ast::Ast;
         match ast {
             Ast::Module{meta, functions, coroutines, ..} => {
                 for f in functions.iter_mut() {
@@ -86,23 +82,24 @@ impl SymbolTable {
     }
 
     fn traverse(ast: &mut SemanticNode, sym: &mut SemanticMetadata) -> Result<(), String> {
+        use ast::Ast;
         match &ast {
-            Ast::RoutineDef(_, RoutineDef::Function, name, params, ty, _) => {
+            Ast::RoutineDef(_, ast::RoutineDef::Function, name, params, ty, _) => {
                 sym.sym.add(
                     name,
                     Type::Function(
-                        params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
-                        *ty,
+                        params.iter().map(|(_, ty)| ty.clone()).collect::<Vec<ast::Type>>(),
+                        ty.clone(),
                     ),
                     false,
                 )?;
             }
-            Ast::RoutineDef(_, RoutineDef::Coroutine, name, params, ty, _) => {
+            Ast::RoutineDef(_, ast::RoutineDef::Coroutine, name, params, ty, _) => {
                 sym.sym.add(
                     name,
                     Type::Coroutine(
-                        params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
-                        *ty,
+                        params.iter().map(|(_, ty)| ty.clone()).collect::<Vec<ast::Type>>(),
+                        ty.clone(),
                     ),
                     false,
                 )?;
