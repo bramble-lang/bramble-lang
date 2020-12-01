@@ -1,4 +1,4 @@
-use crate::compiler::ast::scope::{LayoutData, Scope, Type};
+use crate::compiler::ast::scope::{LayoutData, Scope, Level};
 
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
@@ -31,7 +31,7 @@ impl CompilerNode {
                     nlayout = layout;
                     nbody.push(e);
                 }
-                meta.ty = Type::Routine {
+                meta.ty = Level::Routine {
                     next_label: 0,
                     allocation: nlayout.offset,
                 };
@@ -223,7 +223,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
-                assert_eq!(m, Scope::new(scope::Type::Block));
+                assert_eq!(m, Scope::new(scope::Level::Block));
             }
             _ => assert_eq!(true, false),
         }
@@ -264,7 +264,7 @@ mod ast_tests {
                 assert_eq!(
                     m,
                     Scope {
-                        ty: scope::Type::Block,
+                        ty: scope::Level::Block,
                         symbols: SymbolTable::new(),
                         label: 2
                     }
@@ -410,7 +410,7 @@ mod ast_tests {
                 assert_eq!(m.symbols.table["y"].offset, 8);
 
                 match m.ty {
-                    scope::Type::Routine {
+                    scope::Level::Routine {
                         next_label,
                         allocation,
                     } => {
@@ -524,7 +524,7 @@ mod ast_tests {
                 assert_eq!(m.symbols.table["y"].offset, 28);
 
                 match m.ty {
-                    scope::Type::Routine { allocation, .. } => assert_eq!(allocation, 28),
+                    scope::Level::Routine { allocation, .. } => assert_eq!(allocation, 28),
                     _ => assert!(false),
                 }
             }

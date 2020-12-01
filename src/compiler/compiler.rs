@@ -6,7 +6,7 @@ use crate::ast::RoutineDef;
 use crate::ast::RoutineCall;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::LayoutData;
-use crate::compiler::ast::scope::Type::Routine;
+use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::stack::ScopeStack;
 use crate::ast::Ast;
 use crate::semantics::semanticnode::SemanticNode;

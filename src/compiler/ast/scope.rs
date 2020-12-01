@@ -25,13 +25,13 @@ impl LayoutData {
 
 #[derive(Debug, PartialEq)]
 pub struct Scope {
-    pub(super) ty: Type,
+    pub(super) ty: Level,
     pub(super) symbols: SymbolTable,
     pub(super) label: i32,
 }
 
 impl Scope {
-    pub fn new(ty: Type) -> Scope {
+    pub fn new(ty: Level) -> Scope {
         Scope {
             ty,
             symbols: SymbolTable::new(),
@@ -39,7 +39,7 @@ impl Scope {
         }
     }
 
-    pub fn ty(&self) -> &Type {
+    pub fn ty(&self) -> &Level {
         &self.ty
     }
 
@@ -60,7 +60,7 @@ impl Scope {
 
     pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(Type::Block);
+        let mut scope = Scope::new(Level::Block);
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
             layout.offset = scope.insert(&s.name, s.ty.size(), layout.offset);
@@ -69,7 +69,7 @@ impl Scope {
     }
 
     pub fn routine_from(m: &SemanticMetadata, current_offset: i32) -> (Scope, i32) {
-        let mut scope = Scope::new(Type::Routine {
+        let mut scope = Scope::new(Level::Routine {
             next_label: 0,
             allocation: 0,
         });
@@ -78,7 +78,7 @@ impl Scope {
             current_offset = scope.insert(&s.name, s.ty.size(), current_offset);
         }
         match scope.ty {
-            Type::Routine {
+            Level::Routine {
                 ref mut allocation, ..
             } => *allocation = current_offset,
             _ => (),
@@ -88,7 +88,7 @@ impl Scope {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Type {
+pub enum Level {
     Block,
     Routine { next_label: i32, allocation: i32 },
 }
@@ -129,6 +129,37 @@ impl ast::Type {
             ast::Type::I32 => 4,
             ast::Type::Bool => 4,
             _ => 0,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StructDefinition {
+    pub name: String,
+    pub size: Option<i32>,
+    pub fields: Vec<(String, ast::Type, Option<i32>)>,
+}
+
+impl StructDefinition {
+    pub fn new(name: &str, fields: Vec<(String, ast::Type)>) -> StructDefinition {
+        let mut nfields = vec![];
+        let mut total_sz = 0;
+        let mut size_known = true;
+        for (fname, fty) in fields.iter() {
+            let sz = fty.size();
+            if sz > 0 {
+                total_sz += sz;
+                nfields.push((fname.clone(), fty.clone(), Some(sz)));
+            } else {
+                size_known = false;
+                nfields.push((fname.clone(), fty.clone(), None));
+            }
+        }
+
+        StructDefinition {
+            name: name.into(),
+            fields: nfields,
+            size: if size_known {Some(total_sz)} else {None},
         }
     }
 }
