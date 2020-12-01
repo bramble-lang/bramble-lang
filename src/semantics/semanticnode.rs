@@ -127,7 +127,7 @@ impl SemanticNode {
                 }
                 Ok(Box::new(Module{meta: sm_from(*ln), functions: nfuncs, coroutines: ncors, structs: nstructs}))
             }
-            Struct(l, name, fields) => Ok(Box::new(Struct(sm_from(*l), name.clone(), fields.clone()))),
+            StructDef(l, name, fields) => Ok(Box::new(StructDef(sm_from(*l), name.clone(), fields.clone()))),
         }
     }
 }

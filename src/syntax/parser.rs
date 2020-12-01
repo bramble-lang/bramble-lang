@@ -146,7 +146,7 @@ fn struct_def(iter: &mut TokenIter) -> PResult {
                     consume_must_be(iter, Lex::LBrace)?;
                     let fields = id_declaration_list(iter)?;
                     consume_must_be(iter, Lex::RBrace)?;
-                    Ok(Some(Ast::Struct(l, id.clone(), fields)))
+                    Ok(Some(Ast::StructDef(l, id.clone(), fields)))
                 },
                 None => Err(format!("L{}: expected identifer after struct", l))
             }
@@ -1072,9 +1072,9 @@ pub mod tests {
     #[test]
     fn parse_struct_def() {
         for (text, expected) in vec![
-            ("struct MyStruct {}", Some(Ast::Struct(1, "MyStruct".into(), vec![]))),
-            ("struct MyStruct {x: i32}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Type::I32)]))),
-            ("struct MyStruct {x: i32, y: bool}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Type::I32), ("y".into(), Type::Bool)]))),
+            ("struct MyStruct {}", Some(Ast::StructDef(1, "MyStruct".into(), vec![]))),
+            ("struct MyStruct {x: i32}", Some(Ast::StructDef(1, "MyStruct".into(), vec![("x".into(), Type::I32)]))),
+            ("struct MyStruct {x: i32, y: bool}", Some(Ast::StructDef(1, "MyStruct".into(), vec![("x".into(), Type::I32), ("y".into(), Type::Bool)]))),
         ] {
             let mut lexer = Lexer::new();
             let tokens: Vec<Token> = lexer

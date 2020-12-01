@@ -116,7 +116,7 @@ pub enum Ast<I> {
     ),
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
     Module{meta: I, functions: Vec<Ast<I>>, coroutines: Vec<Ast<I>>, structs: Vec<Ast<I>>},
-    Struct(I, String, Vec<(String,Type)>),
+    StructDef(I, String, Vec<(String,Type)>),
 }
 
 impl<I> Ast<I> {
@@ -150,7 +150,7 @@ impl<I> Ast<I> {
             RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
 
             Module{..} => "module".into(),
-            Struct(..) => "struct".into(),
+            StructDef(..) => "struct".into(),
         }
     }
 
@@ -178,7 +178,7 @@ impl<I> Ast<I> {
             | RoutineDef(m, ..)
             | RoutineCall(m, ..)
             | Module{meta:m, ..}
-            | Struct(m, ..) => m,
+            | StructDef(m, ..) => m,
         }
     }
 

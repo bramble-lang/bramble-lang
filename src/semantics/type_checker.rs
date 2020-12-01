@@ -479,7 +479,7 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                Struct(..) => {
+                StructDef(..) => {
                     Ok(Unit)
                 }
             }

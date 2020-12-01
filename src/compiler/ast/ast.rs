@@ -162,7 +162,7 @@ impl CompilerNode {
 
                 (Module{meta, functions: nfuncs, coroutines: ncors, structs: vec![]}, nlayout)
             }
-            Struct(..) => panic!("Unimplemented")
+            StructDef(..) => panic!("Unimplemented")
         }
     }
 }
