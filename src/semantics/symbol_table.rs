@@ -9,6 +9,23 @@ pub enum Type {
     Coroutine(Vec<Primitive>, Primitive),
 }
 
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use Type::*;
+        match self {
+            Coroutine(params, ret_ty) => {
+                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
+            }
+            Function(params, ret_ty) => {
+                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
+            }
+            Primitive(ty) => f.write_fmt(format_args!("{}", ty)),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
     pub name: String,

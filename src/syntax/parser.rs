@@ -31,6 +31,11 @@ impl PNode {
         }
     }
 
+    pub fn new_assign(line: u32, id: &str, exp: Box<Self>) -> Result<Self, String> {
+        let i = line;
+        Ok(Ast::Assign(line, id.into(), exp))
+    }
+
     pub fn unary_op(
         line: u32,
         op: &Lex,
@@ -82,6 +87,7 @@ impl PNode {
     EXPRESSION_BLOCK := {STATEMENT* [EXPRESSION]}
     EXPRESSION :=  TERM [+ EXPRESSION] | EXPESSION_BLOCK
     INIT_CO := init IDENTIFIER
+    ASSIGN := IDENTIFIER = EXPRESSION;
     BIND := let [mut] ID_DEC := (EXPRESSION|INIT_CO)
     PRINTLN := println EXPRESSION ;
     RETURN := return [EXPRESSION] SEMICOLON
@@ -330,6 +336,18 @@ fn let_bind(iter: &mut TokenIter) -> PResult {
                     .ok_or(format!("L{}: expected expression on LHS of bind", l))?,
             };
             Ok(Some(PNode::new_bind(l, Box::new(id_decl), is_mutable, Box::new(exp))?))
+        }
+        None => Ok(None),
+    }
+}
+
+fn assign(iter: &mut TokenIter) -> PResult {
+    match consume_if_id(iter) {
+        Some((l, id)) => {
+            consume_must_be(iter, Lex::Assign)?;
+            let exp = expression(iter)?
+                    .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
+            Ok(Some(PNode::new_assign(l, &id, Box::new(exp))?))
         }
         None => Ok(None),
     }

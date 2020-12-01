@@ -224,6 +224,29 @@ pub mod checker {
                         ))
                     }
                 }
+                Assign(meta, id, exp) => match current_func {
+                    Some(_) => {
+                        let rhs = self.traverse(exp, current_func, sym)?;
+                        match self.lookup(sym, id) {
+                            Some(ref symbol) => {
+                                if symbol.mutable {
+                                    if symbol.ty == Type::Primitive(rhs) {
+                                        Ok(rhs)
+                                    } else {
+                                        Err(format!("L{}: {} is of type {} but is assigned {}", meta.ln, id, symbol.ty, rhs))
+                                    }
+                                } else {
+                                    Err(format!("L{}: Variable {} is not mutable", meta.ln, id))
+                                }
+                            }
+                            _ => return Err(format!("L{}: Variable {} is not declared", meta.ln, id)),
+                        }
+                    }
+                    None => Err(format!(
+                        "L{}: Attempting to mutate a variable {} outside of function",
+                        meta.ln, id
+                    )),
+                }
                 Bind(meta, name, mutable, p, exp) => match current_func {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
@@ -464,14 +487,14 @@ pub mod checker {
         struct FunInfo {
             params: Vec<(&'static str, Primitive)>,
             ret: Primitive,
-            vars: Vec<(&'static str, Primitive)>,
+            vars: Vec<(&'static str, bool, Primitive)>,
         }
 
         impl FunInfo {
             pub fn new(
                 params: Vec<(&'static str, Primitive)>,
                 ret: Primitive,
-                vars: Vec<(&'static str, Primitive)>,
+                vars: Vec<(&'static str, bool, Primitive)>,
             ) -> FunInfo {
                 FunInfo {
                     params: params,
@@ -497,7 +520,7 @@ pub mod checker {
                 name: &'static str,
                 params: Vec<(&'static str, Primitive)>,
                 ret: Primitive,
-                vars: Vec<(&'static str, Primitive)>,
+                vars: Vec<(&'static str, bool, Primitive)>,
             ) {
                 self.func
                     .insert(name.into(), FunInfo::new(params, ret, vars));
@@ -512,14 +535,14 @@ pub mod checker {
             let mut sym = SymbolTable::new();
             match current_func {
                 Some(cf) => {
-                    for (vname, vty) in scope
+                    for (vname, mutable, vty) in scope
                         .func
                         .get(cf)
                         .ok_or(format!("could not find: {}", cf))?
                         .vars
                         .iter()
                     {
-                        sym.add(&vname, Type::Primitive(*vty), false)?;
+                        sym.add(&vname, Type::Primitive(*vty), *mutable)?;
                     }
                 }
                 None => {}
@@ -560,7 +583,7 @@ pub mod checker {
         #[test]
         pub fn test_identifier() {
             let mut scope = Scope::new();
-            scope.add("my_main", vec![], Unit, vec![("x", Bool)]);
+            scope.add("my_main", vec![], Unit, vec![("x", false, Bool)]);
 
             let node = Ast::Identifier(1, "x".into());
 
@@ -575,7 +598,7 @@ pub mod checker {
         #[test]
         pub fn test_unary_ops() {
             let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
+            scope.add("my_func", vec![], Unit, vec![("x", false, I32), ("b", false, Bool)]);
             // operand is i32
             {
                 let node = Ast::UnaryOp(
@@ -611,7 +634,7 @@ pub mod checker {
         #[test]
         pub fn test_add() {
             let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
+            scope.add("my_func", vec![], Unit, vec![("x", false, I32), ("b", false, Bool)]);
             // both operands are i32
             {
                 let node = Ast::BinaryOp(
@@ -682,7 +705,7 @@ pub mod checker {
         #[test]
         pub fn test_mul() {
             let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![("x", I32), ("b", Bool)]);
+            scope.add("my_func", vec![], Unit, vec![("x", false, I32), ("b", false, Bool)]);
             // both operands are i32
             {
                 let node = Ast::BinaryOp(
@@ -884,6 +907,63 @@ pub mod checker {
         }
 
         #[test]
+        pub fn test_mutate() {
+            // RHS type matches the LHS type
+            {
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![("x".into(), true, Primitive::I32)]);
+
+                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &scope,
+                );
+                assert_eq!(ty, Ok(Primitive::I32));
+            }
+            // Variable is immutable
+            {
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![("x".into(), false, Primitive::I32)]);
+
+                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &scope,
+                );
+                assert_eq!(ty, Err("L1: Variable x is not mutable".into()));
+            }
+            // RHS type mismatch
+            {
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![("x".into(), true, Primitive::Bool)]);
+
+                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &scope,
+                );
+                assert_eq!(ty, Err("L1: x is of type bool but is assigned i32".into()));
+            }
+            // Variable does not exist
+            {
+                let mut scope = Scope::new();
+                scope.add("my_func", vec![], Unit, vec![("y".into(), false, Primitive::I32)]);
+
+                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let ty = start(
+                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &Some("my_func".into()),
+                    &scope,
+                );
+                assert_eq!(ty, Err("L1: Variable x is not declared".into()));
+            }
+        }
+
+
+        #[test]
         pub fn test_return_unit() {
             let mut scope = Scope::new();
             scope.add("my_func", vec![], Unit, vec![]);
@@ -1024,7 +1104,7 @@ pub mod checker {
         #[test]
         fn test_yield() {
             let mut scope = Scope::new();
-            scope.add("my_main", vec![], Unit, vec![("c", I32)]);
+            scope.add("my_main", vec![], Unit, vec![("c", false, I32)]);
             scope.add("my_co2", vec![], I32, vec![]);
 
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
@@ -1103,7 +1183,7 @@ pub mod checker {
         #[test]
         fn test_if_expression() {
             let mut scope = Scope::new();
-            scope.add("my_main", vec![], I32, vec![("c", I32)]);
+            scope.add("my_main", vec![], I32, vec![("c", false, I32)]);
 
             for (c, t, f, ex) in vec![
                 (
