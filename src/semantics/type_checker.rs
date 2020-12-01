@@ -224,11 +224,11 @@ pub mod checker {
                         ))
                     }
                 }
-                Bind(meta, name, _mutable, p, exp) => match current_func {
+                Bind(meta, name, mutable, p, exp) => match current_func {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {
-                            sym.add(name, Type::Primitive(*p))
+                            sym.add(name, Type::Primitive(*p), *mutable)
                                 .map_err(|e| format!("L{}: {}", meta.ln, e))?;
                             meta.ty = *p;
                             Ok(rhs)
@@ -425,7 +425,7 @@ pub mod checker {
                 }
                 RoutineDef(meta, _, name, params, p, body) => {
                     for (pname, pty) in params.iter() {
-                        meta.sym.add(pname, Type::Primitive(*pty))?;
+                        meta.sym.add(pname, Type::Primitive(*pty), false)?;
                     }
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
@@ -519,7 +519,7 @@ pub mod checker {
                         .vars
                         .iter()
                     {
-                        sym.add(&vname, Type::Primitive(*vty))?;
+                        sym.add(&vname, Type::Primitive(*vty), false)?;
                     }
                 }
                 None => {}
@@ -534,9 +534,9 @@ pub mod checker {
                     .collect::<Vec<Primitive>>();
 
                 if f.starts_with("my_co") {
-                    sym.add(f, Type::Coroutine(params, fi.ret))?;
+                    sym.add(f, Type::Coroutine(params, fi.ret), false)?;
                 } else {
-                    sym.add(f, Type::Function(params, fi.ret))?;
+                    sym.add(f, Type::Function(params, fi.ret), false)?;
                 }
             }
 
