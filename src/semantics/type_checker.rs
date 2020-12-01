@@ -471,6 +471,9 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
+                Struct(..) => {
+                    panic!("Unimplemented")
+                }
             }
         }
     }

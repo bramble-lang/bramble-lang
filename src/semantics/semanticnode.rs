@@ -121,6 +121,7 @@ impl SemanticNode {
                 }
                 Ok(Box::new(Module(sm_from(*ln), nfuncs, ncors)))
             }
+            Struct(..) => panic!("Unimplemented")
         }
     }
 }

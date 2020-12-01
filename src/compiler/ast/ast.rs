@@ -158,6 +158,7 @@ impl CompilerNode {
 
                 (Module(meta, nfuncs, ncors), nlayout)
             }
+            Struct(..) => panic!("Unimplemented")
         }
     }
 }

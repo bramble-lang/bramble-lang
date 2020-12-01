@@ -96,7 +96,8 @@ impl PNode {
     COBLOCK := [STATEMENT | YIELD_RETURN]*
     FUNCTION := fn IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN  [LARROW PRIMITIVE] LBRACE BLOCK RETURN RBRACE
     COROUTINE := co IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN [LARROW PRIMITIVE] LBRACE COBLOCK RETURN RBRACE
-    MODULES := [FUNCTION|COROUTINE]*
+    STRUCT := struct IDENTIFIER LBRACE [ID_DEC]* RBRACE
+    MODULES := [FUNCTION|COROUTINE|STRUCT]*
 
     tokenize - takes a string of text and converts it to a string of tokens
     parse - takes a string of tokens and converts it into an AST
@@ -130,6 +131,23 @@ fn module(iter: &mut TokenIter) -> PResult {
             })
         }
         None => Ok(None),
+    }
+}
+
+fn struct_def(iter: &mut TokenIter) -> PResult {
+    match consume_if(iter, Lex::Struct) {
+        Some(l) => {
+            match consume_if_id(iter) {
+                Some((l, id)) => {
+                    consume_must_be(iter, Lex::LBrace)?;
+                    let fields = id_declaration_list(iter)?;
+                    consume_must_be(iter, Lex::RBrace)?;
+                    Ok(Some(Ast::Struct(l, id.clone(), fields)))
+                },
+                None => Err(format!("L{}: expected identifer after struct", l))
+            }
+        }
+        None => Ok(None)
     }
 }
 
@@ -213,12 +231,20 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
 fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, String> {
     consume_must_be(iter, Lex::LParen)?;
 
-    let mut params = vec![];
+    let params = id_declaration_list(iter)?;
 
-    while let Some(param) = identifier_or_declare(iter)? {
-        match param {
+    consume_must_be(iter, Lex::RParen)?;
+
+    Ok(params)
+}
+
+fn id_declaration_list(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, String> {
+    let mut decls = vec![];
+
+    while let Some(decl) = identifier_or_declare(iter)? {
+        match decl {
             Ast::IdentifierDeclare(_, id, id_type) => {
-                params.push((id, id_type));
+                decls.push((id, id_type));
                 consume_if(iter, Lex::Comma);
             }
             _ => {
@@ -228,10 +254,7 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
             }
         }
     }
-
-    consume_must_be(iter, Lex::RParen)?;
-
-    Ok(params)
+    Ok(decls)
 }
 
 fn block(iter: &mut TokenIter) -> Result<Vec<PNode>, String> {
@@ -1032,6 +1055,25 @@ pub mod tests {
             }
         } else {
             panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_struct_def() {
+        for (text, expected) in vec![
+            ("struct MyStruct {}", Some(Ast::Struct(1, "MyStruct".into(), vec![]))),
+            ("struct MyStruct {x: i32}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Primitive::I32)]))),
+            ("struct MyStruct {x: i32, y: bool}", Some(Ast::Struct(1, "MyStruct".into(), vec![("x".into(), Primitive::I32), ("y".into(), Primitive::Bool)]))),
+        ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            let result = struct_def(&mut iter).unwrap();
+            assert_eq!(result, expected);
         }
     }
 }

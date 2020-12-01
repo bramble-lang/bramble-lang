@@ -115,6 +115,7 @@ pub enum Ast<I> {
     ),
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
     Module(I, Vec<Ast<I>>, Vec<Ast<I>>),
+    Struct(I, String, Vec<(String,Primitive)>),
 }
 
 impl<I> Ast<I> {
@@ -147,6 +148,7 @@ impl<I> Ast<I> {
             RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
 
             Module(_, _, _) => "module".into(),
+            Struct(..) => "struct".into(),
         }
     }
 
@@ -173,6 +175,7 @@ impl<I> Ast<I> {
             | RoutineDef(m, ..)
             | RoutineCall(m, ..)
             | Module(m, ..) => m,
+            | Struct(m, ..) => m,
         }
     }
 
