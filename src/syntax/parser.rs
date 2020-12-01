@@ -162,7 +162,7 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                 let params = fn_def_params(iter)?;
 
                 let fn_type = match consume_if(iter, Lex::LArrow) {
-                    Some(l) => primitive(iter).ok_or(&format!(
+                    Some(l) => consume_type(iter).ok_or(&format!(
                         "L{}: Expected primitive type after -> in function definition",
                         l
                     ))?,
@@ -201,7 +201,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                 let params = fn_def_params(iter)?;
 
                 let co_type = match consume_if(iter, Lex::LArrow) {
-                    Some(l) => primitive(iter).expect(&format!(
+                    Some(l) => consume_type(iter).expect(&format!(
                         "L{}: Expected primitive type after -> in function definition",
                         l
                     )),
@@ -606,7 +606,7 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn primitive(iter: &mut TokenIter) -> Option<Type> {
+fn consume_type(iter: &mut TokenIter) -> Option<Type> {
     match iter.peek() {
         Some(Token {
             l: _,
@@ -618,6 +618,13 @@ fn primitive(iter: &mut TokenIter) -> Option<Type> {
                 lexer::Primitive::Bool => Some(Type::Bool),
             }
         }
+        Some(Token {
+            l: _,
+            s: Lex::Identifier(name),
+        }) => {
+            iter.next();
+            Some(Type::Custom(name.clone()))
+        }
         _ => None,
     }
 }
@@ -625,7 +632,7 @@ fn primitive(iter: &mut TokenIter) -> Option<Type> {
 fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<PNode>, String> {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => match consume_if(iter, Lex::Colon) {
-            Some(l) => match primitive(iter) {
+            Some(l) => match consume_type(iter) {
                 Some(p) => Some(Ast::IdentifierDeclare(l, id.clone(), p)),
                 None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
             },
