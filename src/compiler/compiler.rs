@@ -336,7 +336,7 @@ impl<'a> Compiler<'a> {
             Ast::Statement(_, stm) => {
                 self.traverse(stm, current_func, code)?;
             }
-            Ast::Bind(_, id, _, ref exp) => {
+            Ast::Bind(_, id, .., ref exp) => {
                 let id_offset = self.scope.find(id).ok_or(format!("Could not find variable {}", id))?.offset;
                 self.traverse(exp, current_func, code)?;
                 assembly!{(code) {

@@ -224,14 +224,10 @@ pub mod checker {
                         ))
                     }
                 }
-                Bind(meta, name, p, exp) => match current_func {
+                Bind(meta, name, mutable, p, exp) => match current_func {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {
-                            /*ftable
-                            .add_var(cf, name, *p)
-                            .map_err(|e| format!("L{}: {}", meta.ln, e))?;*/
-
                             sym.add(name, Type::Primitive(*p))
                                 .map_err(|e| format!("L{}: {}", meta.ln, e))?;
                             meta.ty = *p;
@@ -828,7 +824,7 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![]);
 
-                let node = Ast::Bind(1, "x".into(), Primitive::I32, Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Bind(1, "x".into(), false, Primitive::I32, Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
@@ -842,7 +838,7 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![]);
 
-                let node = Ast::Bind(1, "x".into(), Primitive::Bool, Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Bind(1, "x".into(), false, Primitive::Bool, Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
@@ -859,6 +855,7 @@ pub mod checker {
                 let node = Ast::Bind(
                     1,
                     "x".into(),
+                    false,
                     Primitive::I32,
                     Box::new(Ast::Identifier(1, "x".into())),
                 );

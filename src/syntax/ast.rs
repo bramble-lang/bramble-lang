@@ -99,7 +99,7 @@ pub enum Ast<I> {
     ExpressionBlock(I, Vec<Ast<I>>),
 
     Statement(I, Box<Ast<I>>),
-    Bind(I, String, Primitive, Box<Ast<I>>),
+    Bind(I, String, bool, Primitive, Box<Ast<I>>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
@@ -136,7 +136,7 @@ impl<I> Ast<I> {
             ExpressionBlock(_, _) => "expression block".into(),
 
             Statement(_, _) => "statement".into(),
-            Bind(_, _, _, _) => "bind".into(),
+            Bind(..) => "bind".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),

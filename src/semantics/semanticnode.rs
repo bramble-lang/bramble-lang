@@ -38,9 +38,10 @@ impl SemanticNode {
                 SemanticNode::from_parser_ast(true_arm)?,
                 SemanticNode::from_parser_ast(false_arm)?,
             ))),
-            Bind(ln, name, p, ref exp) => Ok(Box::new(Bind(
+            Bind(ln, name, mutable, p, ref exp) => Ok(Box::new(Bind(
                 sm_from(*ln),
                 name.clone(),
+                *mutable,
                 *p,
                 SemanticNode::from_parser_ast(exp)?,
             ))),
