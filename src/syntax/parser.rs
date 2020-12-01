@@ -125,7 +125,7 @@ fn module(iter: &mut TokenIter) -> PResult {
             }
 
             Ok(if functions.len() > 0 {
-                Some(Ast::Module(*l, functions, coroutines))
+                Some(Ast::Module{meta: *l, functions, coroutines})
             } else {
                 None
             })

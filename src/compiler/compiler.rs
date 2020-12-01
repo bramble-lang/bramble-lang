@@ -343,7 +343,7 @@ impl<'a> Compiler<'a> {
                     mov [%ebp-{id_offset as u32}], %eax;
                 }};
             }
-            Ast::Module(_, functions, coroutines) => {
+            Ast::Module{functions, coroutines, ..} => {
                 for f in functions.iter() {
                     self.traverse(f, current_func, code)?;
                 }

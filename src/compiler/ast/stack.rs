@@ -61,8 +61,8 @@ impl<'a> ScopeStack<'a> {
         match self.find_global(name) {
             Some(ref node) => {
                 match node {
-                    CompilerNode::Module(_, funcs, _) =>
-                        funcs.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Function, n, _, _, _) => n == name, _ => false}),
+                    CompilerNode::Module{functions, ..} =>
+                        functions.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Function, n, _, _, _) => n == name, _ => false}),
                     _ => None,
                 }
             },
@@ -74,8 +74,8 @@ impl<'a> ScopeStack<'a> {
         match self.find_global(name) {
             Some(ref node) => {
                 match node {
-                    CompilerNode::Module(_, _, cors) =>
-                        cors.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Coroutine, n, _, _, _) => n == name, _ => false}),
+                    CompilerNode::Module{coroutines, ..}=>
+                        coroutines.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Coroutine, n, _, _, _) => n == name, _ => false}),
                     _ => None,
                 }
             },
@@ -201,7 +201,7 @@ mod tests {
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("func", 0, 0);
-        let module_node = CompilerNode::Module(module_scope, vec![fun_node], vec![]);
+        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![fun_node], coroutines: vec![]};
         stack.push(&module_node);
 
         let fun2_scope = Scope::new(Type::Routine {
@@ -242,7 +242,7 @@ mod tests {
 
         let mut module_scope = Scope::new(Type::Block);
         module_scope.insert("cor", 0, 0);
-        let module_node = CompilerNode::Module(module_scope, vec![], vec![cor_node]);
+        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![], coroutines: vec![cor_node]};
         stack.push(&module_node);
 
         let fun2_scope = Scope::new(Type::Routine {

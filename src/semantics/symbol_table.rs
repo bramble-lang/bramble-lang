@@ -7,6 +7,7 @@ pub enum Type {
     Primitive(Primitive),
     Function(Vec<Primitive>, Primitive),
     Coroutine(Vec<Primitive>, Primitive),
+    Custom(String),
 }
 
 impl std::fmt::Display for Type {
@@ -20,6 +21,9 @@ impl std::fmt::Display for Type {
             Function(params, ret_ty) => {
                 let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
                 f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
+            }
+            Custom(name) => {
+                f.write_fmt(format_args!("{}", name))
             }
             Primitive(ty) => f.write_fmt(format_args!("{}", ty)),
         }
@@ -67,12 +71,12 @@ impl SymbolTable {
 
     pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
         match ast {
-            Ast::Module(sym, functions, coroutines) => {
+            Ast::Module{meta, functions, coroutines} => {
                 for f in functions.iter_mut() {
-                    SymbolTable::traverse(f, sym)?;
+                    SymbolTable::traverse(f, meta)?;
                 }
                 for co in coroutines.iter_mut() {
-                    SymbolTable::traverse(co, sym)?;
+                    SymbolTable::traverse(co, meta)?;
                 }
             }
             _ => panic!("Type analysis: expected Module at root level of the AST"),

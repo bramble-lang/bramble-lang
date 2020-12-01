@@ -458,13 +458,13 @@ pub mod checker {
                     self.stack.pop();
                     Ok(*p)
                 }
-                Module(meta, funcs, cors) => {
+                Module{meta, functions, coroutines} => {
                     let tmp_sym = sym.clone();
                     self.stack.push(tmp_sym);
-                    for func in funcs.iter_mut() {
+                    for func in functions.iter_mut() {
                         self.traverse(func, &None, &mut meta.sym)?;
                     }
-                    for cor in cors.iter_mut() {
+                    for cor in coroutines.iter_mut() {
                         self.traverse(cor, &None, &mut meta.sym)?;
                     }
                     self.stack.pop();
