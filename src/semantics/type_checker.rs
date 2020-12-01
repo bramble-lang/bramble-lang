@@ -224,7 +224,7 @@ pub mod checker {
                         ))
                     }
                 }
-                Bind(meta, name, mutable, p, exp) => match current_func {
+                Bind(meta, name, _mutable, p, exp) => match current_func {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {

@@ -320,11 +320,10 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
 fn let_bind(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Let) {
         Some(l) => {
+            let is_mutable = consume_if(iter, Lex::Mut).is_some();
             let id_decl = identifier_or_declare(iter)?
                 .ok_or(format!("L{}: expected identifier after let", l))?;
             consume_must_be(iter, Lex::Assign)?;
-            let is_mutable = consume_if(iter, Lex::Mut).is_some();
-            //let exp = expression(iter)?.ok_or(format!("L{}: expected expression on LHS of bind", l))?;
             let exp = match co_init(iter)? {
                 Some(co_init) => co_init,
                 None => expression(iter)?
@@ -833,6 +832,55 @@ pub mod tests {
             panic!("No nodes returned by parser")
         }
     }
+
+    #[test]
+    fn parse_bind() {
+        let mut lexer = Lexer::new();
+        let text = "let x:i32 := 5;";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        let stm = statement(&mut iter).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, false, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+   }
+ 
+    #[test]
+    fn parse_mut_bind() {
+        let mut lexer = Lexer::new();
+        let text = "let mut x:i32 := 5;";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        let stm = statement(&mut iter).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, true, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
 
     #[test]
     fn parse_function_def() {
