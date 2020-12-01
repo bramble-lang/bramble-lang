@@ -1,0 +1,14 @@
+fn my_main() {
+    let x:i32 := 1;
+    printiln x;
+    return;
+}
+
+fn test(ms: MyStruct) {
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: bool
+}

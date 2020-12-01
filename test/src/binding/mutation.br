@@ -1,10 +1,16 @@
 
 fn my_main() {
     let mut x:i32 := 1;
+    let mut y:i32 := 5;
     printiln x;
+    printiln y;
     mut x := 13;
+    mut y := y * x;
     printiln x;
+    printiln y;
     mut x := -13;
+    mut y := -y;
     printiln x;
+    printiln y;
     return;
 }
