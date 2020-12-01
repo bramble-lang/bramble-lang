@@ -90,10 +90,15 @@ impl CompilerNode {
                 let (fb, layout) = CompilerNode::from(fb, layout);
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
-            Bind(m, id, p, e) => {
+            Mutate(m, id, e) => {
                 let (meta, layout) = Scope::block_from(m, layout);
                 let (e, layout) = CompilerNode::from(e, layout);
-                (Bind(meta, id.clone(), *p, Box::new(e)), layout)
+                (Mutate(meta, id.clone(), Box::new(e)), layout)
+            }
+            Bind(m, id, mutable, p, e) => {
+                let (meta, layout) = Scope::block_from(m, layout);
+                let (e, layout) = CompilerNode::from(e, layout);
+                (Bind(meta, id.clone(), *mutable, *p, Box::new(e)), layout)
             }
             Yield(m, e) => {
                 let (meta, layout) = Scope::block_from(m, layout);
@@ -251,12 +256,14 @@ use crate::{
             .add(
                 "x",
                 symbol_table::Type::Primitive(crate::syntax::ast::Primitive::I32),
+                false,
             )
             .unwrap();
         semantic_table
             .add(
                 "y",
                 symbol_table::Type::Primitive(crate::syntax::ast::Primitive::I32),
+                false,
             )
             .unwrap();
         let sn = SemanticNode::ExpressionBlock(
@@ -288,12 +295,14 @@ use crate::{
             .add(
                 "x",
                 symbol_table::Type::Primitive(crate::syntax::ast::Primitive::I32),
+                false,
             )
             .unwrap();
         semantic_table
             .add(
                 "y",
                 symbol_table::Type::Primitive(crate::syntax::ast::Primitive::I32),
+                false,
             )
             .unwrap();
         let sn = SemanticNode::ExpressionBlock(
@@ -310,12 +319,14 @@ use crate::{
             .add(
                 "x",
                 symbol_table::Type::Primitive(crate::syntax::ast::Primitive::I32),
+                false,
             )
             .unwrap();
         semantic_table
             .add(
                 "y",
                 symbol_table::Type::Primitive(crate::syntax::ast::Primitive::I32),
+                false,
             )
             .unwrap();
         let sn = SemanticNode::ExpressionBlock(
@@ -354,10 +365,10 @@ use crate::{
     pub fn test_function() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", symbol_table::Type::Primitive(Primitive::I32))
+            .add("x", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         semantic_table
-            .add("y", symbol_table::Type::Primitive(Primitive::I32))
+            .add("y", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
@@ -398,10 +409,10 @@ use crate::{
     pub fn test_nested_function() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", symbol_table::Type::Primitive(Primitive::I32))
+            .add("x", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         semantic_table
-            .add("y", symbol_table::Type::Primitive(Primitive::I32))
+            .add("y", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
@@ -418,10 +429,10 @@ use crate::{
 
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", symbol_table::Type::Primitive(Primitive::I32))
+            .add("x", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         semantic_table
-            .add("y", symbol_table::Type::Primitive(Primitive::I32))
+            .add("y", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
@@ -465,10 +476,10 @@ use crate::{
     pub fn test_coroutine() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table
-            .add("x", symbol_table::Type::Primitive(Primitive::I32))
+            .add("x", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         semantic_table
-            .add("y", symbol_table::Type::Primitive(Primitive::I32))
+            .add("y", symbol_table::Type::Primitive(Primitive::I32), false)
             .unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {

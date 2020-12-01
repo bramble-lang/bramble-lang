@@ -9,10 +9,28 @@ pub enum Type {
     Coroutine(Vec<Primitive>, Primitive),
 }
 
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use Type::*;
+        match self {
+            Coroutine(params, ret_ty) => {
+                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
+            }
+            Function(params, ret_ty) => {
+                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
+            }
+            Primitive(ty) => f.write_fmt(format_args!("{}", ty)),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
     pub name: String,
     pub ty: Type,
+    pub mutable: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -34,13 +52,14 @@ impl SymbolTable {
         self.sym.iter().find(|s| s.name == name)
     }
 
-    pub fn add(&mut self, name: &str, ty: Type) -> Result<(), String> {
+    pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<(), String> {
         if self.get(name).is_some() {
             Err(format!("{} already declared", name))
         } else {
             self.sym.push(Symbol {
                 name: name.into(),
                 ty,
+                mutable,
             });
             Ok(())
         }
@@ -71,6 +90,7 @@ impl SymbolTable {
                         params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
                         *ty,
                     ),
+                    false,
                 )?;
             }
             Ast::RoutineDef(_, RoutineDef::Coroutine, name, params, ty, _) => {
@@ -80,6 +100,7 @@ impl SymbolTable {
                         params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
                         *ty,
                     ),
+                    false,
                 )?;
             }
             _ => panic!(

@@ -39,6 +39,7 @@ pub enum Lex {
     Semicolon,
     Comma,
     Let,
+    Mut,
     Return,
     LParen,
     RParen,
@@ -83,6 +84,7 @@ impl std::fmt::Display for Lex {
             Semicolon => f.write_str(";"),
             Comma => f.write_str(","),
             Let => f.write_str("let"),
+            Mut => f.write_str("mut"),
             Return => f.write_str("return"),
             LParen => f.write_str("("),
             RParen => f.write_str(")"),
@@ -387,6 +389,7 @@ impl Lexer {
                 s: Identifier(ref id),
             } => match id.as_str() {
                 "let" => Token::new(self.line, Let),
+                "mut" => Token::new(self.line, Mut),
                 "return" => Token::new(self.line, Return),
                 "yield" => Token::new(self.line, Yield),
                 "yret" => Token::new(self.line, YieldReturn),
@@ -501,6 +504,7 @@ mod tests {
     fn test_keywords() {
         for (text, expected_token) in [
             ("let", Token::new(1, Let)),
+            ("mut", Token::new(1, Mut)),
             ("return", Token::new(1, Return)),
             ("yield", Token::new(1, Yield)),
             ("yret", Token::new(1, YieldReturn)),

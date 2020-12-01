@@ -19,16 +19,20 @@ impl PNode {
         Ast::Yield(i, Box::new(Ast::Identifier(i_id, id)))
     }
 
-    pub fn new_bind(line: u32, id: Box<Self>, exp: Box<Self>) -> Result<Self, String> {
+    pub fn new_bind(line: u32, id: Box<Self>, mutable: bool, exp: Box<Self>) -> Result<Self, String> {
         let i = line; //ParserInfo{l: line};
         match id.as_ref() {
-            Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), *prim, exp)),
+            Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), mutable, *prim, exp)),
             _ => Err(format!(
                 "L{}: Expected type specification after {}",
                 line,
                 id.root_str()
             )),
         }
+    }
+
+    pub fn new_mutate(line: u32, id: &str, exp: Box<Self>) -> Result<Self, String> {
+        Ok(Ast::Mutate(line, id.into(), exp))
     }
 
     pub fn unary_op(
@@ -82,7 +86,8 @@ impl PNode {
     EXPRESSION_BLOCK := {STATEMENT* [EXPRESSION]}
     EXPRESSION :=  TERM [+ EXPRESSION] | EXPESSION_BLOCK
     INIT_CO := init IDENTIFIER
-    BIND := ID_DEC := (EXPRESSION|INIT_CO)
+    ASSIGN := IDENTIFIER = EXPRESSION;
+    BIND := let [mut] ID_DEC := (EXPRESSION|INIT_CO)
     PRINTLN := println EXPRESSION ;
     RETURN := return [EXPRESSION] SEMICOLON
     YIELD_RETURN := yield return [EXPRESSION] SEMICOLON
@@ -285,9 +290,12 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
 fn statement(iter: &mut TokenIter) -> PResult {
     let stm = match let_bind(iter)? {
         Some(b) => Some(b),
-        None => match println_stmt(iter)? {
+        None => match mutate(iter)? {
             Some(p) => Some(p),
-            _ => None,
+            None => match println_stmt(iter)? {
+                Some(p) => Some(p),
+                _ => None,
+            },
         },
     };
 
@@ -320,18 +328,33 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
 fn let_bind(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Let) {
         Some(l) => {
+            let is_mutable = consume_if(iter, Lex::Mut).is_some();
             let id_decl = identifier_or_declare(iter)?
                 .ok_or(format!("L{}: expected identifier after let", l))?;
             consume_must_be(iter, Lex::Assign)?;
-            //let exp = expression(iter)?.ok_or(format!("L{}: expected expression on LHS of bind", l))?;
             let exp = match co_init(iter)? {
                 Some(co_init) => co_init,
                 None => expression(iter)?
                     .ok_or(format!("L{}: expected expression on LHS of bind", l))?,
             };
-            Ok(Some(PNode::new_bind(l, Box::new(id_decl), Box::new(exp))?))
+            Ok(Some(PNode::new_bind(l, Box::new(id_decl), is_mutable, Box::new(exp))?))
         }
         None => Ok(None),
+    }
+}
+
+fn mutate(iter: &mut TokenIter) -> PResult {
+    match consume_if(iter, Lex::Mut){
+        None => Ok(None),
+        Some(l) => match consume_if_id(iter) {
+            Some((l, id)) => {
+                consume_must_be(iter, Lex::Assign)?;
+                let exp = expression(iter)?
+                        .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
+                Ok(Some(PNode::new_mutate(l, &id, Box::new(exp))?))
+            }
+            None => Err(format!("L{}: expected identifier after mut", l)),
+        }
     }
 }
 
@@ -834,6 +857,78 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_bind() {
+        let mut lexer = Lexer::new();
+        let text = "let x:i32 := 5;";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        let stm = statement(&mut iter).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, false, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+   }
+ 
+    #[test]
+    fn parse_mut_bind() {
+        let mut lexer = Lexer::new();
+        let text = "let mut x:i32 := 5;";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        let stm = statement(&mut iter).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, true, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+ 
+    #[test]
+    fn parse_mutation() {
+        let mut lexer = Lexer::new();
+        let text = "mut x := 5;";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        let stm = statement(&mut iter).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Mutate(_, id, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+
+    #[test]
     fn parse_function_def() {
         let mut lexer = Lexer::new();
         let text = "fn test(x:i32) -> bool {return true;}";
@@ -919,7 +1014,7 @@ pub mod tests {
             assert_eq!(body.len(), 2);
             match &body[0] {
                 Ast::Statement(_, stm) => match stm.as_ref() {
-                    Ast::Bind(_, id, p, exp) => {
+                    Ast::Bind(_, id, false, p, exp) => {
                         assert_eq!(id, "x");
                         assert_eq!(*p, Primitive::I32);
                         assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
