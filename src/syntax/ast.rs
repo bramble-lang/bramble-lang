@@ -100,7 +100,7 @@ pub enum Ast<I> {
 
     Statement(I, Box<Ast<I>>),
     Bind(I, String, bool, Primitive, Box<Ast<I>>),
-    Assign(I, String, Box<Ast<I>>),
+    Mutate(I, String, Box<Ast<I>>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
@@ -138,7 +138,7 @@ impl<I> Ast<I> {
 
             Statement(_, _) => "statement".into(),
             Bind(..) => "bind".into(),
-            Assign(..) => "assign".into(),
+            Mutate(..) => "assign".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
@@ -166,7 +166,7 @@ impl<I> Ast<I> {
             | ExpressionBlock(m, ..)
             | Statement(m, ..)
             | Bind(m, ..)
-            | Assign(m, ..)
+            | Mutate(m, ..)
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)

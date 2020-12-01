@@ -224,7 +224,7 @@ pub mod checker {
                         ))
                     }
                 }
-                Assign(meta, id, exp) => match current_func {
+                Mutate(meta, id, exp) => match current_func {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         match self.lookup(sym, id) {
@@ -913,7 +913,7 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![("x".into(), true, Primitive::I32)]);
 
-                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
@@ -926,7 +926,7 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![("x".into(), false, Primitive::I32)]);
 
-                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
@@ -939,7 +939,7 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![("x".into(), true, Primitive::Bool)]);
 
-                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
@@ -952,7 +952,7 @@ pub mod checker {
                 let mut scope = Scope::new();
                 scope.add("my_func", vec![], Unit, vec![("y".into(), false, Primitive::I32)]);
 
-                let node = Ast::Assign(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
                 let ty = start(
                     &mut SemanticNode::from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),

@@ -90,10 +90,10 @@ impl CompilerNode {
                 let (fb, layout) = CompilerNode::from(fb, layout);
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
-            Assign(m, id, e) => {
+            Mutate(m, id, e) => {
                 let (meta, layout) = Scope::block_from(m, layout);
                 let (e, layout) = CompilerNode::from(e, layout);
-                (Assign(meta, id.clone(), Box::new(e)), layout)
+                (Mutate(meta, id.clone(), Box::new(e)), layout)
             }
             Bind(m, id, mutable, p, e) => {
                 let (meta, layout) = Scope::block_from(m, layout);

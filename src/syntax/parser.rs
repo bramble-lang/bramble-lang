@@ -31,8 +31,8 @@ impl PNode {
         }
     }
 
-    pub fn new_assign(line: u32, id: &str, exp: Box<Self>) -> Result<Self, String> {
-        Ok(Ast::Assign(line, id.into(), exp))
+    pub fn new_mutate(line: u32, id: &str, exp: Box<Self>) -> Result<Self, String> {
+        Ok(Ast::Mutate(line, id.into(), exp))
     }
 
     pub fn unary_op(
@@ -290,7 +290,7 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
 fn statement(iter: &mut TokenIter) -> PResult {
     let stm = match let_bind(iter)? {
         Some(b) => Some(b),
-        None => match assign(iter)? {
+        None => match mutate(iter)? {
             Some(p) => Some(p),
             None => match println_stmt(iter)? {
                 Some(p) => Some(p),
@@ -343,7 +343,7 @@ fn let_bind(iter: &mut TokenIter) -> PResult {
     }
 }
 
-fn assign(iter: &mut TokenIter) -> PResult {
+fn mutate(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Mut){
         None => Ok(None),
         Some(l) => match consume_if_id(iter) {
@@ -351,7 +351,7 @@ fn assign(iter: &mut TokenIter) -> PResult {
                 consume_must_be(iter, Lex::Assign)?;
                 let exp = expression(iter)?
                         .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
-                Ok(Some(PNode::new_assign(l, &id, Box::new(exp))?))
+                Ok(Some(PNode::new_mutate(l, &id, Box::new(exp))?))
             }
             None => Err(format!("L{}: expected identifier after mut", l)),
         }
@@ -917,7 +917,7 @@ pub mod tests {
         let stm = statement(&mut iter).unwrap().unwrap();
         match stm {
             Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Assign(_, id, exp) => {
+                Ast::Mutate(_, id, exp) => {
                     assert_eq!(id, "x");
                     assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                 }
