@@ -143,7 +143,7 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            Module{meta, functions, coroutines, ..} => {
+            Module{meta, functions, coroutines, structs} => {
                 let (meta, layout) = Scope::block_from(meta, layout);
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];
@@ -160,9 +160,16 @@ impl CompilerNode {
                     ncors.push(nco);
                 }
 
-                (Module{meta, functions: nfuncs, coroutines: ncors, structs: vec![]}, nlayout)
+                let mut nstructs = vec![];
+                for st in structs.iter() {
+                    let (nst, no) = CompilerNode::from(st, nlayout);
+                    nlayout = no;
+                    nstructs.push(nst);
+                }
+
+                (Module{meta, functions: nfuncs, coroutines: ncors, structs: nstructs}, nlayout)
             }
-            StructDef(..) => panic!("Unimplemented")
+            StructDef(..) => panic!("StructDef Unimplemented")
         }
     }
 }
