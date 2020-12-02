@@ -480,8 +480,9 @@ pub mod checker {
                 StructDef(..) => {
                     Ok(Unit)
                 }
-                StructInit(_, name,..) => {
-                    Ok(Custom(name.clone()))
+                StructInit(meta, name,..) => {
+                    meta.ty = Custom(name.clone());
+                    Ok(meta.ty.clone())
                 }
             }
         }

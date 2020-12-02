@@ -450,14 +450,17 @@ impl<'a> Compiler<'a> {
                     call @{fn_name};
                 }};
             }
-            Ast::StructInit(_, struct_name, fields) => {
-                for (fname, fvalue) in fields.iter() {
+            Ast::StructInit(m, struct_name, fields) => {
+                println!("Struct Meta: {:?}", m);
+                let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                println!("Struct {:?}", st);
+                /*for (fname, fvalue) in fields.iter() {
                     self.traverse(fvalue, current_func, code)?;
                     // use fname to look up the offset of the given field
                     assembly!{(code) {
                         push %eax;
                     }};
-                }
+                }*/
             }
             node => panic!("Expected an operator, found {:?}", node),
         };

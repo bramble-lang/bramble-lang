@@ -26,24 +26,17 @@ impl LayoutData {
 #[derive(Debug, PartialEq)]
 pub struct Scope {
     pub(super) level: Level,
+    pub(super) ty: ast::Type,
     pub(super) symbols: SymbolTable,
     pub(super) structs: StructTable,
     pub(super) label: i32,
 }
 
 impl Scope {
-    pub fn new(level: Level) -> Scope {
+    pub fn new(level: Level, label: i32, ty: ast::Type) -> Scope {
         Scope {
             level,
-            symbols: SymbolTable::new(),
-            structs: StructTable::new(),
-            label: 0,
-        }
-    }
-
-    pub fn new2(level: Level, label: i32) -> Scope {
-        Scope {
-            level,
+            ty,
             symbols: SymbolTable::new(),
             structs: StructTable::new(),
             label,
@@ -79,7 +72,7 @@ impl Scope {
 
     pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(Level::Block);
+        let mut scope = Scope::new(Level::Block, 0, m.ty.clone());
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
             layout.offset = scope.insert(&s.name, s.ty.size(), layout.offset);
@@ -91,7 +84,7 @@ impl Scope {
         let mut scope = Scope::new(Level::Routine {
             next_label: 0,
             allocation: 0,
-        });
+        }, 0, m.ty.clone());
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
             current_offset = scope.insert(&s.name, s.ty.size(), current_offset);

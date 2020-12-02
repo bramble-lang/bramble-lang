@@ -232,7 +232,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
-                assert_eq!(m, Scope::new(scope::Level::Block));
+                assert_eq!(m, Scope::new(scope::Level::Block, 0, m.ty.clone()));
             }
             _ => assert_eq!(true, false),
         }
@@ -270,7 +270,7 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope::new2(Level::Block, 2),);
+                assert_eq!(m, Scope::new(Level::Block, 2, m.ty.clone()),);
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
