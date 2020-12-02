@@ -439,6 +439,7 @@ impl<'a> Compiler<'a> {
                     sub %esp, {*total_offset};
                     ; "Move function parameters from registers into the stack frame"
                     {{self.move_params_into_stackframe(ast, &fn_param_registers)?}}
+                    ; "Done moving function parameters from registers into the stack frame"
                 }};
 
 
@@ -469,20 +470,29 @@ impl<'a> Compiler<'a> {
             Ast::StructInit(m, struct_name, fields) => {
                 println!("Struct Meta: {:?}", m);
                 let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                let struct_sz = st.size.unwrap();
+                let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
                 println!("Struct {:?}", st);
 
-                // TODO: Make sure that the order the expressions are pushed onto the stack is the same
-                // as the layout of the struct itself!
+                if fields.len() != field_info.len() {
+                    return Err(format!("{} expected {} fields but found {}", struct_name, st.fields().len(), fields.len()));
+                }
+
                 assembly!{(code){
-                    ; "instantiate struct"
+                    ; "Start instantiate struct"
                 }};
                 for (fname, fvalue) in fields.iter() {
+                    let relative_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
                     self.traverse(fvalue, current_func, code)?;
                     // use fname to look up the offset of the given field
                     assembly!{(code) {
-                        push %eax;
+                        mov [%esp-{relative_offset as u32}], %eax;
                     }};
                 }
+                assembly!{(code){
+                    ; "Done instantiate struct"
+                    sub %esp, {struct_sz};
+                }};
             }
             node => panic!("Expected an operator, found {:?}", node),
         };
