@@ -79,19 +79,19 @@ impl Scope {
         let mut scope = Scope::new(Level::Block, 0, m.ty.clone());
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
-            layout.offset = scope.insert(&s.name, s.ty.size(), layout.offset);
+            layout.offset = scope.insert(&s.name, s.ty.size(None), layout.offset);
         }
         (scope, layout)
     }
 
-    pub fn routine_from(m: &SemanticMetadata, current_offset: i32) -> (Scope, i32) {
+    pub fn routine_from(m: &SemanticMetadata, struct_table: Option<&StructTable>, current_offset: i32) -> (Scope, i32) {
         let mut scope = Scope::new(Level::Routine {
             next_label: 0,
             allocation: 0,
         }, 0, m.ty.clone());
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
-            current_offset = scope.insert(&s.name, s.ty.size(), current_offset);
+            current_offset = scope.insert(&s.name, s.ty.size(struct_table), current_offset);
         }
         match scope.level {
             Level::Routine {
@@ -140,10 +140,16 @@ impl Symbol {
 }
 
 impl ast::Type {
-    pub fn size(&self) -> i32 {
+    pub fn size(&self, struct_table: Option<&StructTable>) -> i32 {
         match self {
             ast::Type::I32 => 4,
             ast::Type::Bool => 4,
+            ast::Type::Custom(name) => {
+                match struct_table {
+                    Some(st) => st.get(name).expect("Could not find struct").size.expect("Struct has no size"),
+                    _ => panic!("Attempting to look up a struct when there is not struct table"),
+                }
+            },
             _ => 0,
         }
     }
@@ -189,7 +195,7 @@ impl StructDefinition {
         let mut total_sz = 0;
         let mut size_known = true;
         for (fname, fty) in fields.iter() {
-            let sz = fty.size();
+            let sz = fty.size(None);
             if sz > 0 {
                 total_sz += sz;
                 let offset = if size_known {Some(total_sz)} else {None};

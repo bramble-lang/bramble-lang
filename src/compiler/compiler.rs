@@ -45,7 +45,7 @@ impl<'a> Compiler<'a> {
 
         // Put user code here
         let global_func = "".into();
-        let (compiler_ast, _) = CompilerNode::from(ast, LayoutData::new(0));
+        let (compiler_ast, _) = CompilerNode::from(ast, LayoutData::new(0), None);
         let mut compiler = Compiler { code:vec![], scope: ScopeStack::new() };
         compiler.traverse(&compiler_ast, &global_func, &mut code).unwrap();
         code
@@ -343,12 +343,12 @@ impl<'a> Compiler<'a> {
                 match exp.get_metadata().ty() {
                     Type::Custom(name) => {
                         let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
-                        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))?;
+                        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
                         for (_, _, field_offset) in ty_def.fields().iter() {
                             let field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
                             assembly!{(code) {
                                 pop %eax;
-                                mov [%ebp-{id_offset as u32 + field_offset}], %eax;
+                                mov [%ebp-{id_offset as u32 - (struct_sz - field_offset)}], %eax;
                             }};
                         }
                     },
