@@ -70,6 +70,10 @@ impl Scope {
         self.label
     }
 
+    pub fn ty(&self) -> &ast::Type {
+        &self.ty
+    }
+
     pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
         let mut layout = current_layout;
         let mut scope = Scope::new(Level::Block, 0, m.ty.clone());
@@ -188,7 +192,8 @@ impl StructDefinition {
             let sz = fty.size();
             if sz > 0 {
                 total_sz += sz;
-                nfields.push((fname.clone(), fty.clone(), Some(sz)));
+                let offset = if size_known {Some(total_sz)} else {None};
+                nfields.push((fname.clone(), fty.clone(), offset));
             } else {
                 size_known = false;
                 nfields.push((fname.clone(), fty.clone(), None));
@@ -200,5 +205,17 @@ impl StructDefinition {
             fields: nfields,
             size: if size_known {Some(total_sz)} else {None},
         }
+    }
+
+    pub fn get_offset_of(&self, field: &str) -> Option<i32> {
+        if self.size.is_none() {
+            None
+        } else {
+            self.fields.iter().find(|(fname,_,_)| fname == field ).map_or(None, |f| f.2)
+        }
+    }
+
+    pub fn fields(&self) -> &Vec<(String, ast::Type, Option<i32>)> {
+        &self.fields
     }
 }

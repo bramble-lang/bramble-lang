@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::ast::{BinaryOperator, UnaryOperator};
+use crate::{syntax::ast::Type, ast::{BinaryOperator, UnaryOperator}};
 use crate::ast::RoutineDef;
 use crate::ast::RoutineCall;
 use crate::compiler::ast::ast::CompilerNode;
@@ -339,9 +339,25 @@ impl<'a> Compiler<'a> {
             Ast::Bind(_, id, .., ref exp) | Ast::Mutate(_, id, ref exp) => {
                 let id_offset = self.scope.find(id).ok_or(format!("Could not find variable {}", id))?.offset;
                 self.traverse(exp, current_func, code)?;
-                assembly!{(code) {
-                    mov [%ebp-{id_offset as u32}], %eax;
-                }};
+
+                match exp.get_metadata().ty() {
+                    Type::Custom(name) => {
+                        let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
+                        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))?;
+                        for (_, _, field_offset) in ty_def.fields().iter() {
+                            let field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
+                            assembly!{(code) {
+                                pop %eax;
+                                mov [%ebp-{id_offset as u32 + field_offset}], %eax;
+                            }};
+                        }
+                    },
+                    _ => {
+                        assembly!{(code) {
+                            mov [%ebp-{id_offset as u32}], %eax;
+                        }};
+                    },
+                }
             }
             Ast::Module{functions, coroutines, ..} => {
                 for f in functions.iter() {
@@ -454,13 +470,19 @@ impl<'a> Compiler<'a> {
                 println!("Struct Meta: {:?}", m);
                 let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
                 println!("Struct {:?}", st);
-                /*for (fname, fvalue) in fields.iter() {
+
+                // TODO: Make sure that the order the expressions are pushed onto the stack is the same
+                // as the layout of the struct itself!
+                assembly!{(code){
+                    ; "instantiate struct"
+                }};
+                for (fname, fvalue) in fields.iter() {
                     self.traverse(fvalue, current_func, code)?;
                     // use fname to look up the offset of the given field
                     assembly!{(code) {
                         push %eax;
                     }};
-                }*/
+                }
             }
             node => panic!("Expected an operator, found {:?}", node),
         };
