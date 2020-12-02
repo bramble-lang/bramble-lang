@@ -132,7 +132,7 @@ impl SemanticNode {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
                     let fvalue2 = SemanticNode::from_parser_ast(fvalue)?;
-                    nfields.push((fname.clone(), fvalue2));
+                    nfields.push((fname.clone(), *fvalue2));
                 }
                 Ok(Box::new(StructInit(sm_from(*l), name.clone(), nfields)))
             }

@@ -117,7 +117,7 @@ pub enum Ast<I> {
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
     Module{meta: I, functions: Vec<Ast<I>>, coroutines: Vec<Ast<I>>, structs: Vec<Ast<I>>},
     StructDef(I, String, Vec<(String,Type)>),
-    StructInit(I, String, Vec<(String,Box<Ast<I>>)>),
+    StructInit(I, String, Vec<(String,Ast<I>)>),
 }
 
 impl<I> Ast<I> {

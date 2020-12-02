@@ -31,7 +31,7 @@ impl CompilerNode {
                     nlayout = layout;
                     nbody.push(e);
                 }
-                meta.ty = Level::Routine {
+                meta.level = Level::Routine {
                     next_label: 0,
                     allocation: nlayout.offset,
                 };
@@ -192,7 +192,16 @@ impl CompilerNode {
                 )
             }
             StructDef(..) => panic!("StructDef Unimplemented"),
-            StructInit(..) => panic!("StructInit Unimplemented"),
+            StructInit(meta, struct_name, fields) => {
+                let (meta, mut nlayout) = Scope::block_from(meta, layout);
+                let mut nfields = vec![];
+                for (fname, fvalue) in fields.iter() {
+                    let (nfv, no) = CompilerNode::from(fvalue, nlayout);
+                    nlayout = no;
+                    nfields.push((fname.clone(), nfv));
+                }
+                (StructInit(meta, struct_name.clone(), nfields), nlayout)
+            },
         }
     }
 }
@@ -386,7 +395,7 @@ mod ast_tests {
                 assert_eq!(m.symbols.table["y"].size, 4);
                 assert_eq!(m.symbols.table["y"].offset, 8);
 
-                match m.ty {
+                match m.level {
                     scope::Level::Routine {
                         next_label,
                         allocation,
@@ -488,7 +497,7 @@ mod ast_tests {
                 assert_eq!(m.symbols.table["y"].size, 4);
                 assert_eq!(m.symbols.table["y"].offset, 28);
 
-                match m.ty {
+                match m.level {
                     scope::Level::Routine { allocation, .. } => assert_eq!(allocation, 28),
                     _ => assert!(false),
                 }

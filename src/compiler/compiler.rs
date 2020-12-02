@@ -408,7 +408,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineDef(scope, RoutineDef::Function, ref fn_name, _, _, stmts) => {
-                let total_offset = match scope.ty() {
+                let total_offset = match scope.level() {
                     Routine{allocation,..} => {
                         allocation
                     },
@@ -449,6 +449,15 @@ impl<'a> Compiler<'a> {
                     {{self.evaluate_routine_params(params, &fn_param_registers, current_func)?}}
                     call @{fn_name};
                 }};
+            }
+            Ast::StructInit(_, struct_name, fields) => {
+                for (fname, fvalue) in fields.iter() {
+                    self.traverse(fvalue, current_func, code)?;
+                    // use fname to look up the offset of the given field
+                    assembly!{(code) {
+                        push %eax;
+                    }};
+                }
             }
             node => panic!("Expected an operator, found {:?}", node),
         };

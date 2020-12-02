@@ -25,33 +25,33 @@ impl LayoutData {
 
 #[derive(Debug, PartialEq)]
 pub struct Scope {
-    pub(super) ty: Level,
+    pub(super) level: Level,
     pub(super) symbols: SymbolTable,
     pub(super) structs: StructTable,
     pub(super) label: i32,
 }
 
 impl Scope {
-    pub fn new(ty: Level) -> Scope {
+    pub fn new(level: Level) -> Scope {
         Scope {
-            ty,
+            level,
             symbols: SymbolTable::new(),
             structs: StructTable::new(),
             label: 0,
         }
     }
 
-    pub fn new2(ty: Level, label: i32) -> Scope {
+    pub fn new2(level: Level, label: i32) -> Scope {
         Scope {
-            ty,
+            level,
             symbols: SymbolTable::new(),
             structs: StructTable::new(),
             label,
         }
     }
 
-    pub fn ty(&self) -> &Level {
-        &self.ty
+    pub fn level(&self) -> &Level {
+        &self.level
     }
 
     pub fn insert(&mut self, name: &str, size: i32, offset: i32) -> i32 {
@@ -96,7 +96,7 @@ impl Scope {
         for s in m.sym.table().iter() {
             current_offset = scope.insert(&s.name, s.ty.size(), current_offset);
         }
-        match scope.ty {
+        match scope.level {
             Level::Routine {
                 ref mut allocation, ..
             } => *allocation = current_offset,

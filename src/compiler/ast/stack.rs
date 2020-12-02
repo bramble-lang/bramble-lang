@@ -32,7 +32,7 @@ impl<'a> ScopeStack<'a> {
             if t.is_some() {
                 return t;
             }
-            match scope.ty {
+            match scope.level {
                 Level::Block => (),
                 Level::Routine { .. } => return None,
             }

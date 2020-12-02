@@ -9,6 +9,9 @@ struct MyStruct {
     y: bool,
 }
 
+struct MyStruct2 {}
+
 fn test(ms: MyStruct) -> MyStruct {
+    let t: MyStruct := MyStruct{x: 5, y: true};
     return ms;
 }

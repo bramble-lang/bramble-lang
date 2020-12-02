@@ -533,10 +533,12 @@ fn factor(iter: &mut TokenIter) -> PResult {
 fn if_expression(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if(iter, Lex::If) {
         Some(l) => {
-            let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
+            consume_must_be(iter, Lex::LParen)?;
+            let cond = expression(iter)?.ok_or(format!("L{}: Expected conditional expression after if", l))?;
+            consume_must_be(iter, Lex::RParen)?;
 
             let true_arm =
-                expression_block(iter)?.ok_or("Expression in true arm of if expression")?;
+                expression_block(iter)?.ok_or(format!("L{}: Expression in true arm of if expression", l))?;
             consume_must_be(iter, Lex::Else)?;
 
             // check for `else if`
@@ -584,6 +586,27 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<PNode>>, String> {
     }
 }
 
+fn struct_init_params(iter: &mut TokenIter) -> Result<Option<Vec<(String,PNode)>>, String> {
+    match consume_if(iter, Lex::LBrace) {
+        Some(_) => {
+            let mut params = vec![];
+            while let Some((l, field_name)) = consume_if_id(iter) {
+                consume_must_be(iter, Lex::Colon)?;
+                let field_value = expression(iter)?.ok_or(format!("L{}: expected an expression to be assigned to field {}", l, field_name))?;
+                params.push((field_name, field_value));
+                match consume_if(iter, Lex::Comma) {
+                    Some(_) => {}
+                    None => break,
+                };
+            }
+
+            consume_must_be(iter, Lex::RBrace)?;
+            Ok(Some(params))
+        }
+        _ => Ok(None),
+    }
+}
+
 fn co_yield(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Yield) {
         Some(l) => match consume_if_id(iter) {
@@ -601,7 +624,10 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
                 // this is a function call
                 Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
             }
-            _ => Some(Ast::Identifier(l, id)),
+            _ => match struct_init_params(iter)? {
+                Some(fields) => Some(Ast::StructInit(l, id, fields)),
+                _ => Some(Ast::Identifier(l, id)),
+            }
         },
         None => None,
     })
