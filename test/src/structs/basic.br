@@ -16,6 +16,5 @@ struct MyStruct2 {
 
 fn test(ms: MyStruct) -> MyStruct {
     let t: MyStruct := MyStruct{z: 10, x: 5, y: true};
-    let t2: MyStruct2 := MyStruct2{ms: t};
     return ms;
 }

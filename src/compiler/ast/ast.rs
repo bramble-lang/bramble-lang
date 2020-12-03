@@ -171,6 +171,7 @@ impl CompilerNode {
                     }
                 }
                 meta.structs.resolve_size().unwrap();
+                println!("{:?}", meta.structs);
 
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];

@@ -225,23 +225,12 @@ impl StructTable {
                     continue;
                 }
 
-                // Loop through each struct in the table and attempt to resolve its size
-                let sz = st
-                    .fields
-                    .iter()
-                    .map(|(_, ty, _)| ty.size2(self))
-                    .collect::<Option<Vec<i32>>>();
-                // if resolved increment the counter
-                match sz {
+                match self.attempt_size_resolution(st) {
                     Some(sz) => {
-                        let sz: i32 = sz.iter().sum();
-                        if st.size.is_none() {
-                            //st.size = Some(sz);
-                            resolved_sizes.insert(st.name.clone(), sz);
-                            counter += 1;
-                        }
+                        resolved_sizes.insert(st.name.clone(), sz);
+                        counter += 1;
                     }
-                    None => (),
+                    None => ()
                 }
             }
 
@@ -267,6 +256,23 @@ impl StructTable {
         match self.structs.iter().find(|(_, st)| st.size.is_none()) {
             Some((n, _)) => Err(format!("Struct {} cannot be resolved", n)),
             None => Ok(()),
+        }
+    }
+
+    fn attempt_size_resolution(&self, st: &StructDefinition) -> Option<i32> {
+        // Loop through each struct in the table and attempt to resolve its size
+        let sz = st
+            .fields
+            .iter()
+            .map(|(_, ty, _)| ty.size2(self))
+            .collect::<Option<Vec<i32>>>();
+        // if resolved increment the counter
+        match sz {
+            Some(sz) => {
+                let sz: i32 = sz.iter().sum();
+                Some(sz)
+            }
+            None => None,
         }
     }
 }
