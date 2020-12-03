@@ -370,7 +370,7 @@ impl<'a> Compiler<'a> {
                 match exp.get_metadata().ty() {
                     Type::Custom(name) => {
                         assembly!{(code){
-                            {{self.copy_struct(name, id_offset)?}}
+                            {{self.copy_struct(name, id_offset as u32)?}}
                         }}
                     },
                     _ => {
@@ -489,8 +489,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::StructInit(m, struct_name, fields) => {
-                println!("Struct Meta: {:?}", m);
-                let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                /*let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
                 println!("Struct: {:?}", st);
                 let struct_sz = st.size.unwrap();
                 let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
@@ -507,8 +506,10 @@ impl<'a> Compiler<'a> {
                     assembly!{(code) {
                         mov [%esp-{relative_offset as u32}], %eax;
                     }};
-                }
+                }*/
+                let (asm, struct_sz) = self.init_struct(current_func, struct_name, fields)?;
                 assembly!{(code){
+                    {{asm}}
                     ; {format!("Done instantiating {}", struct_name)}
                     sub %esp, {struct_sz};
                 }};
@@ -521,16 +522,48 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn copy_struct(&self, name: &str, id_offset: i32) -> Result<Vec<Inst>, String> {
+    fn init_struct(&mut self, current_func: &String, struct_name: &str, fields: &'a Vec<(String,CompilerNode)>) -> Result<(Vec<Inst>, i32), String> {
+        let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+        println!("Struct: {:?}", st);
+        let struct_sz = st.size.unwrap();
+        let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
+
+        if fields.len() != field_info.len() {
+            return Err(format!("{} expected {} fields but found {}", struct_name, st.fields().len(), fields.len()));
+        }
+
+        let mut code = vec![];
+        code.push(Inst::Comment(format!("Instantiate struct of type {}", struct_name)));
+        for (fname, fvalue) in fields.iter() {
+            let relative_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
+            self.traverse(fvalue, current_func, &mut code)?;
+            // use fname to look up the offset of the given field
+            assembly!{(code) {
+                mov [%esp-{relative_offset as u32}], %eax;
+            }};
+        }
+        Ok((code, struct_sz))
+    }
+
+    fn copy_struct(&self, name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
         let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
-        for (_, _, field_offset) in ty_def.fields().iter().rev() {
+        for (_, field_ty, field_offset) in ty_def.fields().iter().rev() {
             let field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
-            assembly!{(code) {
-                pop %eax;
-                mov [%ebp-{id_offset as u32 - (struct_sz - field_offset)}], %eax;
-            }};
+            match field_ty {
+                Type::Custom(name) => {
+                    assembly!{(code){
+                        {{self.copy_struct(name, id_offset + (struct_sz - field_offset))?}}
+                    }}
+                }
+                _ => {
+                    assembly!{(code) {
+                        pop %eax;
+                        mov [%ebp-{id_offset as u32 - (struct_sz - field_offset)}], %eax;
+                    }};
+                }
+            }
         }
 
         Ok(code)

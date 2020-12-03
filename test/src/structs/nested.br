@@ -1,5 +1,6 @@
 fn my_main() {
     let t:MyStruct2 := MyStruct2{
+        a: 123,
         ms: MyStruct{x: 1, y: 2, z: 3},
     };
     return;
@@ -12,6 +13,7 @@ struct MyStruct {
 }
 
 struct MyStruct2 {
+    a: i32,
     ms: MyStruct,
 }
 
