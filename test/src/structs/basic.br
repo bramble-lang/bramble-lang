@@ -1,12 +1,18 @@
 fn my_main() {
-    let x:i32 := 1;
+    let x:i32 := 5;
     printiln x;
+    let t: MyStruct := MyStruct{x: 5, y: 1, z: 10};
+    printiln t.x;
+    printiln t.y;
+    printiln t.z;
+    let y: i32 := test();
+    printiln y;
     return;
 }
 
 struct MyStruct {
     x: i32,
-    y: bool,
+    y: i32,
     z: i32,
 }
 
@@ -14,7 +20,8 @@ struct MyStruct2 {
     ms: MyStruct,
 }
 
-fn test(ms: MyStruct) -> i32 {
-    let t: MyStruct := MyStruct{z: 10, x: 5, y: true};
+fn test() -> i32 {
+    let t: MyStruct := MyStruct{z: 10, x: 5, y: 2};
+    printiln t.x;
     return t.x;
 }

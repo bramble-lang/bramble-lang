@@ -267,9 +267,35 @@ impl<'a> Compiler<'a> {
             Ast::Boolean(_, b) => {
                 assembly!{(code) {mov %eax, {if *b {1} else {0}};}}
             }
-            Ast::Identifier(_, id) => {
+            Ast::Identifier(m, id) => {
                 let id_offset = self.scope.find(id).unwrap().offset;
-                assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
+                match m.ty() {
+                    Type::Custom(struct_name) => {
+                        let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                        let struct_sz = st.size.unwrap();
+                        let offset = id_offset - struct_sz;
+                        assembly!{(code) {lea %eax, [%ebp-{offset as u32}];}}
+                    }
+                    _ => {
+                        assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
+                    }
+                }
+            }
+            Ast::MemberAccess(_, src, member) => {
+                let src_ty = src.get_metadata().ty();
+                match src_ty {
+                    Type::Custom(struct_name) => {
+                        code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
+                        self.traverse(src, current_func, code)?;
+                        let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                        let field_info = st.fields().iter().find(|(n,..)| n == member).ok_or(format!("member {} not found on {}", member, struct_name))?;
+                        let field_relative_offset = field_info.2.ok_or(format!("No field offset found for {}.{}", struct_name, member))?;
+                        assembly!{(code) {
+                            mov %eax, [%eax-{field_relative_offset as u32}];
+                        }}
+                    }
+                    _ => return Err(format!("Attempting to access a member on a type which has no members: {}", src_ty)),
+                }
             }
             Ast::UnaryOp(_, op, operand) => {
                 self.traverse(operand, current_func, code)?;
@@ -345,7 +371,7 @@ impl<'a> Compiler<'a> {
                     Type::Custom(name) => {
                         let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
                         let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
-                        for (_, _, field_offset) in ty_def.fields().iter() {
+                        for (_, _, field_offset) in ty_def.fields().iter().rev() {
                             let field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
                             assembly!{(code) {
                                 pop %eax;
