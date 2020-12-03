@@ -461,6 +461,11 @@ macro_rules! assembly {
         assembly!(($buf) {$($tail)*})
     };
 
+    (($buf:expr) {;{$comment:expr} $($tail:tt)*}) => {
+        $buf.push(Inst::Comment($comment.into()));
+        assembly!(($buf) {$($tail)*})
+    };
+
     /********************/
     /*     LABELS       */
     /********************/

@@ -340,6 +340,8 @@ impl<'a> Compiler<'a> {
                 let id_offset = self.scope.find(id).ok_or(format!("Could not find variable {}", id))?.offset;
                 self.traverse(exp, current_func, code)?;
 
+                code.push(Inst::Comment(format!("Binding {}", id)));
+
                 match exp.get_metadata().ty() {
                     Type::Custom(name) => {
                         let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
@@ -478,9 +480,7 @@ impl<'a> Compiler<'a> {
                     return Err(format!("{} expected {} fields but found {}", struct_name, st.fields().len(), fields.len()));
                 }
 
-                assembly!{(code){
-                    ; "Start instantiate struct"
-                }};
+                code.push(Inst::Comment(format!("Instantiate struct of type {}", struct_name)));
                 for (fname, fvalue) in fields.iter() {
                     let relative_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
                     self.traverse(fvalue, current_func, code)?;
@@ -490,7 +490,7 @@ impl<'a> Compiler<'a> {
                     }};
                 }
                 assembly!{(code){
-                    ; "Done instantiate struct"
+                    ; {format!("Done instantiating {}", struct_name)}
                     sub %esp, {struct_sz};
                 }};
             }
