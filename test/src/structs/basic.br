@@ -10,7 +10,9 @@ struct MyStruct {
     z: i32,
 }
 
-struct MyStruct2 {}
+struct MyStruct2 {
+    ms: MyStruct,
+}
 
 fn test(ms: MyStruct) -> MyStruct {
     let t: MyStruct := MyStruct{z: 10, x: 5, y: true};

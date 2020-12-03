@@ -180,6 +180,57 @@ impl StructTable {
     pub fn get(&self, name: &str) -> Option<&StructDefinition> {
         self.structs.get(name)
     }
+
+    /// Test the current set of struct definitions to see if there
+    /// are any circular dependencies
+    pub fn has_circular_dependencies(&self) -> bool {
+        // 
+        false
+    }
+
+    /// Attempt to resolve the size of every struct in this table
+    /// On success, the StructTable will be updated such that every
+    /// struct in the table has a Some value for its size.
+    ///
+    /// If a struct cannot have its size resolved (because of a circular
+    /// dependency) then an error is returned. The StructTable will then
+    /// be left with one or more Structs that do not have a resolved size.
+    pub fn resolve_size(&mut self) -> Result<(), String> {
+        // Create a counter that will count every time a struct is resolved
+        let mut counter = 0;
+        loop {
+            for (_, st) in self.structs.iter_mut() {
+                // Loop through each struct in the table and attempt to resolve its size
+                let sz = st.fields.iter().map(|(_, _, sz)| *sz).collect::<Option<Vec<i32>>>();
+                // if resolved increment the counter
+                match sz {
+                    Some(sz) => {
+                        let sz:i32 = sz.iter().sum();
+                        if st.size.is_none() {
+                            st.size = Some(sz);
+                            counter += 1;
+                        }
+                    },
+                    None => (),
+                }
+            }
+
+            // If the counter > 0 then reset the counter and repeat the process
+            // If the counter is 0 then no more structs can be resolved
+            if counter > 0 {
+                counter = 0;
+            } else {
+                break;
+            }
+        }
+
+        // If any struct has None for its size then return an error
+        // Otherwise, return success
+        match self.structs.iter().find(|(_, st)| st.size.is_none()) {
+            Some((n, _)) => Err(format!("Struct {} cannot be resolved", n)),
+            None => Ok(())
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]

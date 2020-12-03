@@ -163,11 +163,14 @@ impl CompilerNode {
                 let (mut meta, layout) = Scope::block_from(meta, layout);
 
                 for st in structs.iter() {
+                    // at this point I could compute the size of each struct and test for
+                    // circular dependencies
                     match st {
                         Ast::StructDef(_, name, fields) => meta.structs.add(name, fields.clone()).unwrap(),
                         _ => panic!("Expected only structs in Module.structs, got {:?}", st),
                     }
                 }
+                meta.structs.resolve_size().unwrap();
 
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];
