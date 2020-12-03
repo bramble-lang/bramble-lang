@@ -14,7 +14,7 @@ struct MyStruct2 {
     ms: MyStruct,
 }
 
-fn test(ms: MyStruct) -> MyStruct {
+fn test(ms: MyStruct) -> i32 {
     let t: MyStruct := MyStruct{z: 10, x: 5, y: true};
-    return ms;
+    return t.x;
 }

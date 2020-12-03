@@ -73,6 +73,11 @@ impl CompilerNode {
                 let (meta, layout) = Scope::block_from(m, layout);
                 (Ast::IdentifierDeclare(meta, id.clone(), p.clone()), layout)
             }
+            MemberAccess(m, src, member) => {
+                let (src, layout) = CompilerNode::compute_offsets(src, layout, struct_table);
+                let (meta, layout) = Scope::block_from(m, layout);
+                (MemberAccess(meta, Box::new(src), member.clone()), layout)
+            }
             UnaryOp(m, op, ref operand) => {
                 let (operand, layout) = CompilerNode::compute_offsets(operand, layout, struct_table);
                 let (meta, layout) = Scope::block_from(m, layout);

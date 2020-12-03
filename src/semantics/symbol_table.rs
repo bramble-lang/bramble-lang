@@ -82,6 +82,13 @@ impl SymbolTable {
                     false,
                 )?;
             }
+            Ast::StructDef(_, name, members) => {
+                sym.sym.add(
+                    name,
+                    Type::StructDef(members.clone()),
+                    false,
+                )?;
+            }
             _ => panic!(
                 "Type analysis: expected function or coroutine in module, found {}",
                 ast.root_str()

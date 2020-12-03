@@ -22,7 +22,12 @@ impl SemanticNode {
             IdentifierDeclare(ln, name, p) => {
                 Ok(Box::new(IdentifierDeclare(sm_from(*ln), name.clone(), p.clone())))
             }
-            Identifier(l, id) => Ok(Box::new(Identifier(sm_from(*l), id.clone()))),
+            Identifier(ln, id) => Ok(Box::new(Identifier(sm_from(*ln), id.clone()))),
+            MemberAccess(ln, src, member) => Ok(Box::new(MemberAccess(
+                sm_from(*ln),
+                SemanticNode::from_parser_ast(src)?,
+                member.clone(),
+            ))),
             BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
                 sm_from(*ln),
                 *op,

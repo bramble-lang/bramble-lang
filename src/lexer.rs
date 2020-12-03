@@ -57,6 +57,7 @@ pub enum Lex {
     If,
     Else,
     Colon,
+    MemberAccess,
     LArrow,
     Primitive(Primitive),
 }
@@ -103,6 +104,7 @@ impl std::fmt::Display for Lex {
             If => f.write_str("if"),
             Else => f.write_str("else"),
             Colon => f.write_str(":"),
+            MemberAccess => f.write_str("."),
             LArrow => f.write_str("->"),
             Primitive(p) => f.write_str(&format!("{}", p)),
         }
@@ -276,6 +278,7 @@ impl Lexer {
             Some('+') => Some(Token::new(self.line, Add)),
             Some(';') => Some(Token::new(self.line, Semicolon)),
             Some(',') => Some(Token::new(self.line, Comma)),
+            Some('.') => Some(Token::new(self.line, MemberAccess)),
             Some(':') => {
                 iter.next();
                 match iter.peek() {
@@ -469,6 +472,7 @@ mod tests {
             ("(", Token::new(1, LParen)),
             (")", Token::new(1, RParen)),
             (":=", Token::new(1, Assign)),
+            (".", Token::new(1, MemberAccess)),
             ("->", Token::new(1, LArrow)),
             (":", Token::new(1, Colon)),
             (",", Token::new(1, Comma)),

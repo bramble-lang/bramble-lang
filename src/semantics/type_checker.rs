@@ -194,6 +194,23 @@ pub mod checker {
                         Ok(meta.ty.clone())
                     }
                 },
+                MemberAccess(meta, src, member) => {
+                    // Get the type of src and look up its struct definition
+                    // Check the struct definition for the type of `member`
+                    // if it exists, if it does not exist then return an error
+                    let src_ty = self.traverse(src, current_func, sym)?;
+                    match src_ty {
+                        Custom(struct_name) => {
+                            let members = match sym.get(&struct_name).or(self.stack.get(&struct_name)) {
+                                Some(Symbol{ty: Type::StructDef(members), ..}) => members,
+                                _ => return Err(format!("L{}: no definition found for struct {}", meta.ln, struct_name)),
+                            };
+                            let member_ty = members.iter().find(|(n,_)| n == member).ok_or(format!("L{}: {} does not have member {}", meta.ln, struct_name, member))?.1.clone();
+                            Ok(member_ty)
+                        },
+                        _ => Err(format!("L{}: Type {} does not have members", meta.ln, src_ty)),
+                    }
+                }
                 BinaryOp(meta, op, l, r) => {
                     let ty =
                         self.binary_op(*op, meta.ln, l, r, current_func, sym)?;
