@@ -617,13 +617,38 @@ fn co_yield(iter: &mut TokenIter) -> PResult {
     }
 }
 
-fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
+fn function_call_or_variable2(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => match fn_call_params(iter)? {
             Some(params) => {
                 // this is a function call
                 Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
             }
+            _ => match struct_init_params(iter)? {
+                Some(fields) => Some(Ast::StructInit(l, id, fields)),
+                _ => Some(Ast::Identifier(l, id)),
+            }
+        },
+        None => None,
+    })
+}
+
+fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
+    Ok(match consume_if_id(iter) {
+        Some((l, id)) => match iter.peek() {
+            Some(Token{s: Lex::LParen,..}) => {
+                let params = fn_call_params(iter)?.ok_or(format!("L{}: failed to parse parameters for call to {}", l, id))?;
+                Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
+            },
+            Some(Token{s: Lex::LBrace,..}) => {
+                let members = struct_init_params(iter)?.ok_or(format!("L{}: failed to parse member assignments for instance of {}", l, id))?;
+                Some(Ast::StructInit(l, id, members))
+            },
+            Some(Token{s: Lex::MemberAccess,..}) => {
+                iter.next();
+                let member = consume_if_id(iter).ok_or(format!("L{}: expect field name after member access '.'", l))?;
+                Some(Ast::MemberAccess(l, Box::new(Ast::Identifier(l, id)), member.1))
+            },
             _ => match struct_init_params(iter)? {
                 Some(fields) => Some(Ast::StructInit(l, id, fields)),
                 _ => Some(Ast::Identifier(l, id)),

@@ -11,6 +11,8 @@ pub mod checker {
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
         SymbolTable::generate(&mut sm_ast)?;
 
+        println!("{:?}", sm_ast);
+
         let mut root_table = SymbolTable::new();
         let mut semantic = SemanticAnalyzer::new();
         semantic
@@ -201,6 +203,10 @@ pub mod checker {
                     let src_ty = self.traverse(src, current_func, sym)?;
                     match src_ty {
                         Custom(struct_name) => {
+                            println!("\n\n\n>>>");
+                            println!("{:?}", sym);
+                            println!("\n>>>");
+                            println!("{:?}", self.stack);
                             let members = match sym.get(&struct_name).or(self.stack.get(&struct_name)) {
                                 Some(Symbol{ty: Type::StructDef(members), ..}) => members,
                                 _ => return Err(format!("L{}: no definition found for struct {}", meta.ln, struct_name)),

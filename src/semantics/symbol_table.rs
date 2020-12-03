@@ -45,12 +45,15 @@ impl SymbolTable {
     pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
         use ast::Ast;
         match ast {
-            Ast::Module{meta, functions, coroutines, ..} => {
+            Ast::Module{meta, functions, coroutines, structs, ..} => {
                 for f in functions.iter_mut() {
                     SymbolTable::traverse(f, meta)?;
                 }
                 for co in coroutines.iter_mut() {
                     SymbolTable::traverse(co, meta)?;
+                }
+                for st in structs.iter_mut() {
+                    SymbolTable::traverse(st, meta)?;
                 }
             }
             _ => panic!("Type analysis: expected Module at root level of the AST"),
