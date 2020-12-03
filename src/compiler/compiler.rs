@@ -5,7 +5,6 @@ use crate::{syntax::ast::Type, ast::{BinaryOperator, UnaryOperator}};
 use crate::ast::RoutineDef;
 use crate::ast::RoutineCall;
 use crate::compiler::ast::ast::CompilerNode;
-use crate::compiler::ast::scope::LayoutData;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::stack::ScopeStack;
 use crate::ast::Ast;
@@ -45,7 +44,7 @@ impl<'a> Compiler<'a> {
 
         // Put user code here
         let global_func = "".into();
-        let (compiler_ast, _) = CompilerNode::from(ast, LayoutData::new(0), None);
+        let (compiler_ast, _) = CompilerNode::from(ast);
         let mut compiler = Compiler { code:vec![], scope: ScopeStack::new() };
         compiler.traverse(&compiler_ast, &global_func, &mut code).unwrap();
         code
