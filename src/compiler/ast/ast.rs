@@ -8,6 +8,10 @@ pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
     pub fn from(ast: &SemanticNode, layout: LayoutData, struct_table: Option<&StructTable>) -> (CompilerNode, LayoutData) {
+        CompilerNode::compute_offsets(ast, layout, struct_table)
+    }
+
+    fn compute_offsets(ast: &SemanticNode, layout: LayoutData, struct_table: Option<&StructTable>) -> (CompilerNode, LayoutData) {
         use Ast::*;
         match ast {
             ExpressionBlock(m, body) => {
@@ -171,7 +175,6 @@ impl CompilerNode {
                     }
                 }
                 meta.structs.resolve_size().unwrap();
-                println!("{:?}", meta.structs);
 
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];

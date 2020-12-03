@@ -234,8 +234,8 @@ impl StructTable {
                 }
             }
 
-            // If the counter > 0 then reset the counter and repeat the process
-            // If the counter is 0 then no more structs can be resolved
+            // If one or more structs were resolved then reset te counter and repeate
+            // If no structs were resolved then equilibrium is reached and we stop the loop
             if counter > 0 {
                 counter = 0;
             } else {
