@@ -9,8 +9,8 @@ pub struct LayoutData {
 }
 
 impl LayoutData {
-    pub fn new(offset:i32) -> LayoutData {
-        LayoutData{
+    pub fn new(offset: i32) -> LayoutData {
+        LayoutData {
             offset,
             next_label: 0,
         }
@@ -58,7 +58,11 @@ impl Scope {
         self.symbols.table.get(name)
     }
 
-    pub fn add_struct(&mut self, name: &str, fields: Vec<(String, ast::Type)>) -> Result<(), String> {
+    pub fn add_struct(
+        &mut self,
+        name: &str,
+        fields: Vec<(String, ast::Type)>,
+    ) -> Result<(), String> {
         self.structs.add(name, fields)
     }
 
@@ -84,11 +88,19 @@ impl Scope {
         (scope, layout)
     }
 
-    pub fn routine_from(m: &SemanticMetadata, struct_table: Option<&StructTable>, current_offset: i32) -> (Scope, i32) {
-        let mut scope = Scope::new(Level::Routine {
-            next_label: 0,
-            allocation: 0,
-        }, 0, m.ty.clone());
+    pub fn routine_from(
+        m: &SemanticMetadata,
+        struct_table: Option<&StructTable>,
+        current_offset: i32,
+    ) -> (Scope, i32) {
+        let mut scope = Scope::new(
+            Level::Routine {
+                next_label: 0,
+                allocation: 0,
+            },
+            0,
+            m.ty.clone(),
+        );
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
             current_offset = scope.insert(&s.name, s.ty.size(struct_table), current_offset);
@@ -146,11 +158,25 @@ impl ast::Type {
             ast::Type::Bool => 4,
             ast::Type::Custom(name) => {
                 match struct_table {
-                    Some(st) => st.get(name).expect("Could not find struct").size.expect("Struct has no size"),
-                    _ => panic!("Attempting to look up a struct when there is not struct table"),
+                    Some(st) => st
+                        .get(name)
+                        .expect("Could not find struct")
+                        .size
+                        .unwrap_or(0),
+                    _ => 0,
+                    //_ => panic!("Attempting to look up a struct when there is not struct table"),
                 }
-            },
+            }
             _ => 0,
+        }
+    }
+
+    pub fn size2(&self) -> Option<i32> {
+        match self {
+            ast::Type::I32 => Some(4),
+            ast::Type::Bool => Some(4),
+            ast::Type::Custom(name) => None,
+            _ => None,
         }
     }
 }
@@ -184,7 +210,7 @@ impl StructTable {
     /// Test the current set of struct definitions to see if there
     /// are any circular dependencies
     pub fn has_circular_dependencies(&self) -> bool {
-        // 
+        //
         false
     }
 
@@ -198,19 +224,37 @@ impl StructTable {
     pub fn resolve_size(&mut self) -> Result<(), String> {
         // Create a counter that will count every time a struct is resolved
         let mut counter = 0;
+        let mut resolved_sizes: HashMap<String, i32> = HashMap::new();
         loop {
-            for (_, st) in self.structs.iter_mut() {
+            for (_, st) in self.structs.iter() {
+                // Check if we have already resolved this struct
+                if resolved_sizes.contains_key(&st.name) {
+                    continue;
+                }
+
                 // Loop through each struct in the table and attempt to resolve its size
-                let sz = st.fields.iter().map(|(_, _, sz)| *sz).collect::<Option<Vec<i32>>>();
+                let sz = st
+                    .fields
+                    .iter()
+                    .map(|(_, ty, _)| match ty {
+                        ast::Type::I32 => Some(4),
+                        ast::Type::Bool => Some(4),
+                        ast::Type::Custom(name) => {
+                            self.structs.get(name).map(|st| st.size).flatten()
+                        }
+                        _ => None,
+                    })
+                    .collect::<Option<Vec<i32>>>();
                 // if resolved increment the counter
                 match sz {
                     Some(sz) => {
-                        let sz:i32 = sz.iter().sum();
+                        let sz: i32 = sz.iter().sum();
                         if st.size.is_none() {
-                            st.size = Some(sz);
+                            //st.size = Some(sz);
+                            resolved_sizes.insert(st.name.clone(), sz);
                             counter += 1;
                         }
-                    },
+                    }
                     None => (),
                 }
             }
@@ -224,11 +268,19 @@ impl StructTable {
             }
         }
 
+        // Run through all the structs and update their sizes
+        for (_, st) in self.structs.iter_mut() {
+            match resolved_sizes.get(&st.name) {
+                Some(sz) => st.size = Some(*sz),
+                None => (),
+            }
+        }
+
         // If any struct has None for its size then return an error
         // Otherwise, return success
         match self.structs.iter().find(|(_, st)| st.size.is_none()) {
             Some((n, _)) => Err(format!("Struct {} cannot be resolved", n)),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 }
@@ -249,7 +301,7 @@ impl StructDefinition {
             let sz = fty.size(None);
             if sz > 0 {
                 total_sz += sz;
-                let offset = if size_known {Some(total_sz)} else {None};
+                let offset = if size_known { Some(total_sz) } else { None };
                 nfields.push((fname.clone(), fty.clone(), offset));
             } else {
                 size_known = false;
@@ -260,7 +312,7 @@ impl StructDefinition {
         StructDefinition {
             name: name.into(),
             fields: nfields,
-            size: if size_known {Some(total_sz)} else {None},
+            size: if size_known { Some(total_sz) } else { None },
         }
     }
 
@@ -268,7 +320,10 @@ impl StructDefinition {
         if self.size.is_none() {
             None
         } else {
-            self.fields.iter().find(|(fname,_,_)| fname == field ).map_or(None, |f| f.2)
+            self.fields
+                .iter()
+                .find(|(fname, _, _)| fname == field)
+                .map_or(None, |f| f.2)
         }
     }
 
