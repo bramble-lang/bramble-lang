@@ -171,11 +171,11 @@ impl ast::Type {
         }
     }
 
-    pub fn size2(&self) -> Option<i32> {
+    pub fn size2(&self, structs: &StructTable) -> Option<i32> {
         match self {
             ast::Type::I32 => Some(4),
             ast::Type::Bool => Some(4),
-            ast::Type::Custom(name) => None,
+            ast::Type::Custom(name) => structs.get(name)?.size,
             _ => None,
         }
     }
@@ -207,13 +207,6 @@ impl StructTable {
         self.structs.get(name)
     }
 
-    /// Test the current set of struct definitions to see if there
-    /// are any circular dependencies
-    pub fn has_circular_dependencies(&self) -> bool {
-        //
-        false
-    }
-
     /// Attempt to resolve the size of every struct in this table
     /// On success, the StructTable will be updated such that every
     /// struct in the table has a Some value for its size.
@@ -236,14 +229,7 @@ impl StructTable {
                 let sz = st
                     .fields
                     .iter()
-                    .map(|(_, ty, _)| match ty {
-                        ast::Type::I32 => Some(4),
-                        ast::Type::Bool => Some(4),
-                        ast::Type::Custom(name) => {
-                            self.structs.get(name).map(|st| st.size).flatten()
-                        }
-                        _ => None,
-                    })
+                    .map(|(_, ty, _)| ty.size2(self))
                     .collect::<Option<Vec<i32>>>();
                 // if resolved increment the counter
                 match sz {
