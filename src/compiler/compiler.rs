@@ -497,9 +497,9 @@ impl<'a> Compiler<'a> {
             Ast::StructInit(m, struct_name, fields) => {
                 println!("Struct Meta: {:?}", m);
                 let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                println!("Struct: {:?}", st);
                 let struct_sz = st.size.unwrap();
                 let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
-                println!("Struct {:?}", st);
 
                 if fields.len() != field_info.len() {
                     return Err(format!("{} expected {} fields but found {}", struct_name, st.fields().len(), fields.len()));

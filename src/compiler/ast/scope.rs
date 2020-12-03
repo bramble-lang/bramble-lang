@@ -217,7 +217,7 @@ impl StructTable {
     pub fn resolve_size(&mut self) -> Result<(), String> {
         // Create a counter that will count every time a struct is resolved
         let mut counter = 0;
-        let mut resolved_sizes: HashMap<String, i32> = HashMap::new();
+        let mut resolved_sizes: HashMap<String, Vec<i32>> = HashMap::new();
         loop {
             for (_, st) in self.structs.iter() {
                 // Check if we have already resolved this struct
@@ -246,7 +246,14 @@ impl StructTable {
         // Run through all the structs and update their sizes
         for (_, st) in self.structs.iter_mut() {
             match resolved_sizes.get(&st.name) {
-                Some(sz) => st.size = Some(*sz),
+                Some(sz) => {
+                    let mut total_offset = 0;
+                    st.fields.iter_mut().zip(sz.iter()).for_each(|(f,sz)|{
+                        total_offset += *sz;
+                        f.2 = Some(total_offset);
+                    });
+                    st.size = Some(sz.iter().sum());
+                },
                 None => (),
             }
         }
@@ -259,21 +266,13 @@ impl StructTable {
         }
     }
 
-    fn attempt_size_resolution(&self, st: &StructDefinition) -> Option<i32> {
+    fn attempt_size_resolution(&self, st: &StructDefinition) -> Option<Vec<i32>> {
         // Loop through each struct in the table and attempt to resolve its size
-        let sz = st
+        st
             .fields
             .iter()
             .map(|(_, ty, _)| ty.size2(self))
-            .collect::<Option<Vec<i32>>>();
-        // if resolved increment the counter
-        match sz {
-            Some(sz) => {
-                let sz: i32 = sz.iter().sum();
-                Some(sz)
-            }
-            None => None,
-        }
+            .collect::<Option<Vec<i32>>>()
     }
 }
 
