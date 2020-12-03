@@ -369,15 +369,9 @@ impl<'a> Compiler<'a> {
 
                 match exp.get_metadata().ty() {
                     Type::Custom(name) => {
-                        let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
-                        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
-                        for (_, _, field_offset) in ty_def.fields().iter().rev() {
-                            let field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
-                            assembly!{(code) {
-                                pop %eax;
-                                mov [%ebp-{id_offset as u32 - (struct_sz - field_offset)}], %eax;
-                            }};
-                        }
+                        assembly!{(code){
+                            {{self.copy_struct(name, id_offset)?}}
+                        }}
                     },
                     _ => {
                         assembly!{(code) {
@@ -525,6 +519,21 @@ impl<'a> Compiler<'a> {
         self.pop();
 
         Ok(())
+    }
+
+    fn copy_struct(&self, name: &str, id_offset: i32) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
+        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
+        for (_, _, field_offset) in ty_def.fields().iter().rev() {
+            let field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
+            assembly!{(code) {
+                pop %eax;
+                mov [%ebp-{id_offset as u32 - (struct_sz - field_offset)}], %eax;
+            }};
+        }
+
+        Ok(code)
     }
 
     fn move_params_into_stackframe(&self, routine: &CompilerNode, param_registers: &Vec<Reg>) -> Result<Vec<Inst>, String>{
