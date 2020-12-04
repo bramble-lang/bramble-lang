@@ -11,6 +11,10 @@ fn my_main() {
     printiln t.ms.z;
     printiln t.b;
 
+    let t3: MyStruct3 := MyStruct3{
+        ms2: t,
+    };
+
     return;
 }
 
@@ -24,4 +28,8 @@ struct MyStruct2 {
     a: i32,
     ms: MyStruct,
     b: i32,
+}
+
+struct MyStruct3 {
+    ms2: MyStruct2,
 }

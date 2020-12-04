@@ -171,11 +171,13 @@ impl ast::Type {
         }
     }
 
-    pub fn size2(&self, structs: &StructTable) -> Option<i32> {
+    pub fn size2(&self, resolved_sz: &HashMap<String, Vec<i32>>) -> Option<i32> {
         match self {
             ast::Type::I32 => Some(4),
             ast::Type::Bool => Some(4),
-            ast::Type::Custom(name) => structs.get(name)?.size,
+            ast::Type::Custom(name) => {
+                Some(resolved_sz.get(name)?.iter().sum())
+            }
             _ => None,
         }
     }
@@ -225,7 +227,7 @@ impl StructTable {
                     continue;
                 }
 
-                match self.attempt_size_resolution(st) {
+                match self.attempt_size_resolution(st, &resolved_sizes) {
                     Some(sz) => {
                         resolved_sizes.insert(st.name.clone(), sz);
                         counter += 1;
@@ -266,12 +268,12 @@ impl StructTable {
         }
     }
 
-    fn attempt_size_resolution(&self, st: &StructDefinition) -> Option<Vec<i32>> {
+    fn attempt_size_resolution(&self, st: &StructDefinition, resolved_sz: &HashMap<String, Vec<i32>>) -> Option<Vec<i32>> {
         // Loop through each struct in the table and attempt to resolve its size
         st
             .fields
             .iter()
-            .map(|(_, ty, _)| ty.size2(self))
+            .map(|(_, ty, _)| ty.size2(resolved_sz))
             .collect::<Option<Vec<i32>>>()
     }
 }
