@@ -1,7 +1,7 @@
 fn my_main() {
     let t:MyStruct2 := MyStruct2{
         a: 123,
-        b: 456,
+        b: 400 + 56,
         ms: MyStruct{x: 1, z: 3, y: 2},
     };
     return;

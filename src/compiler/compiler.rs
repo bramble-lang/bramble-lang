@@ -510,8 +510,6 @@ impl<'a> Compiler<'a> {
                 let (asm, _struct_sz) = self.init_struct(current_func, struct_name, fields, 0, true)?;
                 assembly!{(code){
                     {{asm}}
-                    ; {format!("Done instantiating {}", struct_name)}
-                    //sub %esp, {struct_sz};
                 }};
             }
             node => panic!("Expected an operator, found {:?}", node),
@@ -557,10 +555,8 @@ impl<'a> Compiler<'a> {
                     }};
                 }
             }
-            // TODO: check the type of fvalue, if its a Custom type then call init_struct on it
-            // then when calling init struct I can specify to just the already allocated space for that struct
-            // or this could take the offset from ESP (or EBP) to use: the outer most would get 0
         }
+        code.push(Inst::Comment(format!("Done instantiating struct of type {}", struct_name)));
         Ok((code, struct_sz))
     }
 
