@@ -488,25 +488,7 @@ impl<'a> Compiler<'a> {
                     call @{fn_name};
                 }};
             }
-            Ast::StructInit(m, struct_name, fields) => {
-                /*let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
-                println!("Struct: {:?}", st);
-                let struct_sz = st.size.unwrap();
-                let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
-
-                if fields.len() != field_info.len() {
-                    return Err(format!("{} expected {} fields but found {}", struct_name, st.fields().len(), fields.len()));
-                }
-
-                code.push(Inst::Comment(format!("Instantiate struct of type {}", struct_name)));
-                for (fname, fvalue) in fields.iter() {
-                    let relative_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
-                    self.traverse(fvalue, current_func, code)?;
-                    // use fname to look up the offset of the given field
-                    assembly!{(code) {
-                        mov [%esp-{relative_offset as u32}], %eax;
-                    }};
-                }*/
+            Ast::StructInit(_, struct_name, fields) => {
                 let (asm, _struct_sz) = self.init_struct(current_func, struct_name, fields, 0, true)?;
                 assembly!{(code){
                     {{asm}}
