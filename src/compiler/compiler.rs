@@ -476,7 +476,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::StructInit(_, struct_name, fields) => {
-                let (asm, _struct_sz) = self.init_struct(current_func, struct_name, fields, 0, true)?;
+                let asm = self.init_struct(current_func, struct_name, fields, 0, true)?;
                 assembly!{(code){
                     {{asm}}
                 }};
@@ -523,7 +523,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn init_struct(&mut self, current_func: &String, struct_name: &str, field_values: &'a Vec<(String,CompilerNode)>, offset: i32, allocate: bool) -> Result<(Vec<Inst>, i32), String> {
+    fn init_struct(&mut self, current_func: &String, struct_name: &str, field_values: &'a Vec<(String,CompilerNode)>, offset: i32, allocate: bool) -> Result<Vec<Inst>, String> {
         let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
         let struct_sz = st.size.unwrap();
         let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
@@ -544,7 +544,7 @@ impl<'a> Compiler<'a> {
             let relative_offset = struct_sz - field_offset + offset;
             match fvalue {
                 Ast::StructInit(_, substruct_name, substruct_values) => {
-                    let (asm, _) = self.init_struct(current_func, substruct_name, substruct_values, relative_offset, false)?;
+                    let asm = self.init_struct(current_func, substruct_name, substruct_values, relative_offset, false)?;
                     assembly!{(code){
                         {{asm}}
                     }};
@@ -558,7 +558,7 @@ impl<'a> Compiler<'a> {
             }
         }
         code.push(Inst::Comment(format!("Done instantiating struct of type {}", struct_name)));
-        Ok((code, struct_sz))
+        Ok(code)
     }
 
     fn copy_struct(&self, name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
