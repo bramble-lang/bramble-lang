@@ -16,6 +16,37 @@ fn my_main() {
     printiln t.ms.z;
     printiln t.b;
 
+    let t3: MyStruct3 := MyStruct3{
+        h: 321,
+        ms2: t,
+        k: true,
+    };
+
+    printiln t3.h;
+    printiln t3.ms2.a;
+    printiln t3.ms2.ms.x;
+    printiln t3.ms2.ms.y;
+    printiln t3.ms2.ms.z;
+    printiln t3.ms2.b;
+    printbln t3.k;
+
+    let t4: MyStruct4 := MyStruct4 {
+        a: t3,
+        b: t3,
+    };
+
+    printiln t4.a.ms2.a;
+    printiln t4.a.ms2.ms.x;
+    printiln t4.a.ms2.ms.y;
+    printiln t4.a.ms2.ms.z;
+    printiln t4.a.ms2.b;
+
+    printiln t4.b.ms2.a;
+    printiln t4.b.ms2.ms.x;
+    printiln t4.b.ms2.ms.y;
+    printiln t4.b.ms2.ms.z;
+    printiln t4.b.ms2.b;
+
     return;
 }
 
@@ -35,4 +66,9 @@ struct MyStruct3 {
     h: i32,
     ms2: MyStruct2,
     k: bool,
+}
+
+struct MyStruct4 {
+    a: MyStruct3,
+    b: MyStruct3,
 }
