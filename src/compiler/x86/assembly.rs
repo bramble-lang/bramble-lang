@@ -144,6 +144,7 @@ pub enum Operand {
     Direct(DirectOperand),
     Memory(DirectOperand),
     MemoryExpr(Reg, u32),
+    MemoryAdd(Reg, u32),
 }
 
 impl Display for Operand {
@@ -153,6 +154,7 @@ impl Display for Operand {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
             Memory(mem) => f.write_fmt(format_args!("[{}]", mem)),
             MemoryExpr(mem, d) => f.write_fmt(format_args!("[{}-{}]", mem, d)),
+            MemoryAdd(mem, d) => f.write_fmt(format_args!("[{}+{}]", mem, d)),
         }
     }
 }
@@ -391,6 +393,9 @@ macro_rules! operand {
     };
     ([%$reg:tt-{$e:expr}]) => {
         Operand::MemoryExpr(register!($reg), $e)
+    };
+    ([%$reg:tt+{$e:expr}]) => {
+        Operand::MemoryAdd(register!($reg), $e)
     };
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))

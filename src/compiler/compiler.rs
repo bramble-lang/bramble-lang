@@ -507,11 +507,11 @@ impl<'a> Compiler<'a> {
                         mov [%esp-{relative_offset as u32}], %eax;
                     }};
                 }*/
-                let (asm, struct_sz) = self.init_struct(current_func, struct_name, fields)?;
+                let (asm, _struct_sz) = self.init_struct(current_func, struct_name, fields, 0, true)?;
                 assembly!{(code){
                     {{asm}}
                     ; {format!("Done instantiating {}", struct_name)}
-                    sub %esp, {struct_sz};
+                    //sub %esp, {struct_sz};
                 }};
             }
             node => panic!("Expected an operator, found {:?}", node),
@@ -522,25 +522,44 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn init_struct(&mut self, current_func: &String, struct_name: &str, fields: &'a Vec<(String,CompilerNode)>) -> Result<(Vec<Inst>, i32), String> {
+    fn init_struct(&mut self, current_func: &String, struct_name: &str, field_values: &'a Vec<(String,CompilerNode)>, offset: i32, allocate: bool) -> Result<(Vec<Inst>, i32), String> {
         let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
         println!("Struct: {:?}", st);
         let struct_sz = st.size.unwrap();
         let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
 
-        if fields.len() != field_info.len() {
-            return Err(format!("{} expected {} fields but found {}", struct_name, st.fields().len(), fields.len()));
+        if field_values.len() != field_info.len() {
+            return Err(format!("{} expected {} fields but found {}", struct_name, st.fields().len(), field_values.len()));
         }
 
         let mut code = vec![];
         code.push(Inst::Comment(format!("Instantiate struct of type {}", struct_name)));
-        for (fname, fvalue) in fields.iter() {
-            let relative_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
-            self.traverse(fvalue, current_func, &mut code)?;
-            // use fname to look up the offset of the given field
-            assembly!{(code) {
-                mov [%esp-{relative_offset as u32}], %eax;
+        if allocate {
+            assembly!{(code){
+                sub %esp, {struct_sz};
             }};
+        }
+        for (fname, fvalue) in field_values.iter() {
+            let field_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
+            let relative_offset = struct_sz - field_offset + offset;
+            match fvalue {
+                Ast::StructInit(_, substruct_name, substruct_values) => {
+                    println!("{}: struct_sz: {}, field_offset: {}, rel offset: {}", substruct_name, struct_sz, field_offset, relative_offset);
+                    let (asm, _) = self.init_struct(current_func, substruct_name, substruct_values, relative_offset, false)?;
+                    assembly!{(code){
+                        {{asm}}
+                    }};
+                },
+                _ => {
+                    self.traverse(fvalue, current_func, &mut code)?;
+                    assembly!{(code) {
+                        mov [%esp+{relative_offset as u32}], %eax;
+                    }};
+                }
+            }
+            // TODO: check the type of fvalue, if its a Custom type then call init_struct on it
+            // then when calling init struct I can specify to just the already allocated space for that struct
+            // or this could take the offset from ESP (or EBP) to use: the outer most would get 0
         }
         Ok((code, struct_sz))
     }
