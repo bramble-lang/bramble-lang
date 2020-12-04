@@ -282,20 +282,7 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::MemberAccess(_, src, member) => {
-                let src_ty = src.get_metadata().ty();
-                match src_ty {
-                    Type::Custom(struct_name) => {
-                        code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
-                        self.traverse(src, current_func, code)?;
-                        let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
-                        let field_info = st.fields().iter().find(|(n,..)| n == member).ok_or(format!("member {} not found on {}", member, struct_name))?;
-                        let field_relative_offset = field_info.2.ok_or(format!("No field offset found for {}.{}", struct_name, member))?;
-                        assembly!{(code) {
-                            mov %eax, [%eax-{field_relative_offset as u32}];
-                        }}
-                    }
-                    _ => return Err(format!("Attempting to access a member, {}, on a type which has no members: {}", member, src_ty)),
-                }
+                self.member_access(current_func, code, src, member)?;
             }
             Ast::UnaryOp(_, op, operand) => {
                 self.traverse(operand, current_func, code)?;
@@ -502,9 +489,42 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    fn member_access(&mut self, current_func: &String, code: &mut Vec<Inst>, src: &'a CompilerNode, member: &str) -> Result<(), String> {
+        let src_ty = src.get_metadata().ty();
+        match src_ty {
+            Type::Custom(struct_name) => {
+                code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
+
+                self.traverse(src, current_func, code)?;
+
+                let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                let field_info = st.fields().iter().find(|(n,..)| n == member).ok_or(format!("member {} not found on {}", member, struct_name))?;
+
+                match &field_info.1 {
+                    Type::Custom(substruct_name) => {
+                        let sst = self.scope.find_struct(&substruct_name).ok_or(format!("no definition for {} found", substruct_name))?;
+                        let field_relative_offset = field_info.2.ok_or(format!("No field offset found for {}.{}", struct_name, member))?;
+                        let substruct_sz = sst.size.expect(&format!("CRITICAL: structure {} has no resolved size", substruct_name));
+                        assembly!{(code) {
+                            lea %eax, [%eax-{(field_relative_offset - substruct_sz) as u32}];
+                        }}
+                    },
+                    _ => {
+                        let field_relative_offset = field_info.2.ok_or(format!("No field offset found for {}.{}", struct_name, member))?;
+                        assembly!{(code) {
+                            mov %eax, [%eax-{field_relative_offset as u32}];
+                        }}
+                    }
+                }
+            }
+            _ => return Err(format!("Attempting to access a member, {}, on a type which has no members: {}", member, src_ty)),
+        }
+
+        Ok(())
+    }
+
     fn init_struct(&mut self, current_func: &String, struct_name: &str, field_values: &'a Vec<(String,CompilerNode)>, offset: i32, allocate: bool) -> Result<(Vec<Inst>, i32), String> {
         let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
-        println!("Struct: {:?}", st);
         let struct_sz = st.size.unwrap();
         let field_info = st.fields().iter().map(|(n, _, o)| (n.clone(), o.unwrap())).collect::<Vec<(String,i32)>>();
 
@@ -524,7 +544,6 @@ impl<'a> Compiler<'a> {
             let relative_offset = struct_sz - field_offset + offset;
             match fvalue {
                 Ast::StructInit(_, substruct_name, substruct_values) => {
-                    println!("{}: struct_sz: {}, field_offset: {}, rel offset: {}", substruct_name, struct_sz, field_offset, relative_offset);
                     let (asm, _) = self.init_struct(current_func, substruct_name, substruct_values, relative_offset, false)?;
                     assembly!{(code){
                         {{asm}}

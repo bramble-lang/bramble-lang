@@ -1,12 +1,20 @@
 fn my_main() {
     let t:MyStruct2 := MyStruct2{
         a: 123,
-        b: 456,
         ms: MyStruct{x: 1, z: 3, y: 2},
+        b: 456,
     };
 
     printiln t.a;
     printiln t.ms.x;
+
+    let t2:MyStruct := MyStruct {
+        x: 10,
+        y: 11,
+        z: 12,
+    };
+    printiln t2.x;
+    
     return;
 }
 
