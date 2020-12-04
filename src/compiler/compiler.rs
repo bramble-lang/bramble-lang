@@ -566,17 +566,18 @@ impl<'a> Compiler<'a> {
         let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
         let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
         for (_, field_ty, field_offset) in ty_def.fields().iter().rev() {
-            let field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
+            let rel_field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
+            let field_offset = id_offset - (struct_sz - rel_field_offset);
             match field_ty {
                 Type::Custom(name) => {
                     assembly!{(code){
-                        {{self.copy_struct(name, id_offset + (struct_sz - field_offset))?}}
+                        {{self.copy_struct(name, field_offset)?}}
                     }}
                 }
                 _ => {
                     assembly!{(code) {
                         pop %eax;
-                        mov [%ebp-{id_offset as u32 - (struct_sz - field_offset)}], %eax;
+                        mov [%ebp-{field_offset}], %eax;
                     }};
                 }
             }

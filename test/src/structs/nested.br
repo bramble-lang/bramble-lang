@@ -7,6 +7,9 @@ fn my_main() {
 
     printiln t.a;
     printiln t.ms.x;
+    printiln t.ms.y;
+    printiln t.ms.z;
+    printiln t.b;
 
     let t2:MyStruct := MyStruct {
         x: 10,
@@ -14,7 +17,7 @@ fn my_main() {
         z: 12,
     };
     printiln t2.x;
-    
+
     return;
 }
 
