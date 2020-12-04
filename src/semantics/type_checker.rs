@@ -206,7 +206,8 @@ pub mod checker {
                                 _ => return Err(format!("L{}: no definition found for struct {}", meta.ln, struct_name)),
                             };
                             let member_ty = members.iter().find(|(n,_)| n == member).ok_or(format!("L{}: {} does not have member {}", meta.ln, struct_name, member))?.1.clone();
-                            Ok(member_ty)
+                            meta.ty = member_ty;
+                            Ok(meta.ty.clone())
                         },
                         _ => Err(format!("L{}: Type {} does not have members", meta.ln, src_ty)),
                     }

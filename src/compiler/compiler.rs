@@ -294,7 +294,7 @@ impl<'a> Compiler<'a> {
                             mov %eax, [%eax-{field_relative_offset as u32}];
                         }}
                     }
-                    _ => return Err(format!("Attempting to access a member on a type which has no members: {}", src_ty)),
+                    _ => return Err(format!("Attempting to access a member, {}, on a type which has no members: {}", member, src_ty)),
                 }
             }
             Ast::UnaryOp(_, op, operand) => {

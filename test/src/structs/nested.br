@@ -1,9 +1,12 @@
 fn my_main() {
     let t:MyStruct2 := MyStruct2{
         a: 123,
-        b: 400 + 56,
+        b: 456,
         ms: MyStruct{x: 1, z: 3, y: 2},
     };
+
+    printiln t.a;
+    printiln t.ms.x;
     return;
 }
 
@@ -17,10 +20,4 @@ struct MyStruct2 {
     a: i32,
     ms: MyStruct,
     b: i32,
-}
-
-fn test() -> i32 {
-    let t: MyStruct := MyStruct{x: 5, y: 2, z: 15};
-    printiln t.x;
-    return t.x;
 }
