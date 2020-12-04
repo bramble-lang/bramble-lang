@@ -15,6 +15,12 @@ fn my_main() {
         ms2: t,
     };
 
+    printiln t3.ms2.a;
+    printiln t3.ms2.ms.x;
+    printiln t3.ms2.ms.y;
+    printiln t3.ms2.ms.z;
+    printiln t3.ms2.b;
+
     return;
 }
 

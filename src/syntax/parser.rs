@@ -555,10 +555,13 @@ fn factor(iter: &mut TokenIter) -> PResult {
                         l,
                         s: Lex::MemberAccess,
                     }) => {
-                        iter.next();
-                        let member = consume_if_id(iter)
-                            .ok_or(format!("L{}: expect field name after member access '.'", l))?;
-                        Some(Ast::MemberAccess(*l, Box::new(n), member.1))
+                        let mut ma = n;
+                        while let Some(l) = consume_if(iter, Lex::MemberAccess) {
+                            let member = consume_if_id(iter)
+                                .ok_or(format!("L{}: expect field name after member access '.'", l))?;
+                            ma = Ast::MemberAccess(l, Box::new(ma), member.1);
+                        }
+                        Some(ma)
                     }
                     _ => Some(n),
                 },
