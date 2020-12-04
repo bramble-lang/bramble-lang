@@ -270,7 +270,7 @@ impl<'a> Compiler<'a> {
             Ast::Identifier(m, id) => {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
-                    Type::Custom(struct_name) => {
+                    Type::Custom(_) => {
                         assembly!{(code) {lea %eax, [%ebp-{id_offset as u32}];}}
                     }
                     _ => {
@@ -584,6 +584,31 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
+    fn copy_struct_into(&self, struct_name: &str, dst_offset: u32) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        let ty_def = self.scope.find_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name))?;
+        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", struct_name))? as u32;
+        for (_, field_ty, field_offset) in ty_def.fields().iter().rev() {
+            let rel_field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", struct_name)) as u32;
+            let field_offset = dst_offset - (struct_sz - rel_field_offset);
+            match field_ty {
+                Type::Custom(name) => {
+                    assembly!{(code){
+                        {{self.copy_struct_into(name, field_offset)?}}
+                    }}
+                }
+                _ => {
+                    assembly!{(code) {
+                        mov %ebx, [%eax+{(struct_sz - rel_field_offset)}];
+                        mov [%ebp-{field_offset}], %ebx;
+                    }};
+                }
+            }
+        }
+
+        Ok(code)
+    }
+
     fn move_params_into_stackframe(&self, routine: &CompilerNode, param_registers: &Vec<Reg>) -> Result<Vec<Inst>, String>{
         let routine_name = routine.get_name().ok_or("Critical: treating a node without a name as a routine node")?;
         let params = routine.get_params().ok_or(format!("Critical: node for {} does not have a params field", routine_name))?;
@@ -595,9 +620,19 @@ impl<'a> Compiler<'a> {
         let routine_sym_table = routine.get_metadata();
         for idx in 0..params.len() {
             let param_offset = routine_sym_table.get(&params[idx].0).ok_or(format!("Critical: could not find parameter {} in symbol table for {}", params[idx].0, routine_name))?.offset;
-            assembly!{(code){
-                mov [%ebp-{param_offset as u32}], %{param_registers[idx]};
-            }};
+            match &params[idx].1 {
+                Type::Custom(struct_name) => {
+                    let asm = self.copy_struct_into(struct_name, param_offset as u32)?;
+                    assembly!{(code){
+                        {{asm}}
+                    }}
+                }
+                _ => {
+                    assembly!{(code){
+                        mov [%ebp-{param_offset as u32}], %{param_registers[idx]};
+                    }};
+                }
+            }
         }
         Ok(code)
     }

@@ -13,5 +13,5 @@ struct MyStruct {
 
 fn test(t: MyStruct) -> i32 {
     printiln t.x;
-    return t.y;
+    return t.y + t.z;
 }
