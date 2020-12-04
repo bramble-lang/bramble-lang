@@ -552,8 +552,8 @@ fn factor(iter: &mut TokenIter) -> PResult {
             None => match function_call_or_variable(iter)? {
                 Some(n) => match iter.peek() {
                     Some(Token {
-                        l,
                         s: Lex::MemberAccess,
+                        ..
                     }) => {
                         let mut ma = n;
                         while let Some(l) = consume_if(iter, Lex::MemberAccess) {
