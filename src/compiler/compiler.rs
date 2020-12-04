@@ -561,12 +561,12 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn pop_struct_into(&self, name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
+    fn pop_struct_into(&self, struct_name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
-        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
+        let ty_def = self.scope.find_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name))?;
+        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", struct_name))? as u32;
         for (_, field_ty, field_offset) in ty_def.fields().iter().rev() {
-            let rel_field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", name)) as u32;
+            let rel_field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", struct_name)) as u32;
             let field_offset = id_offset - (struct_sz - rel_field_offset);
             match field_ty {
                 Type::Custom(name) => {
