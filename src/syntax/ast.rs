@@ -227,6 +227,20 @@ pub enum Type {
     Unknown,
 }
 
+impl Type {
+    pub fn get_members(&self) -> Option<&Vec<(String,Type)>> {
+        match self {
+            Type::StructDef(members) => Some(members),
+            _ => None,
+        }
+    }
+
+    pub fn get_member(&self, member: &str) -> Option<&Type> {
+       self.get_members()
+            .map(|ms| ms.iter().find(|(n, _)| n == member).map(|m| &m.1)).flatten()
+    }
+}
+
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Type::*;
