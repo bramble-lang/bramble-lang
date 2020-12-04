@@ -514,8 +514,18 @@ pub mod checker {
                     Ok(Unit)
                 }
                 StructDef(..) => Ok(Unit),
-                StructInit(meta, name, ..) => {
-                    meta.ty = Custom(name.clone());
+                StructInit(meta, struct_name, params) => {
+                    // Validate the types in the initialization parameters
+                    // match their respective members in the struct
+                    let struct_def = self.lookup(sym, &struct_name)?.ty.clone();
+                    for (pn,pv) in params.iter_mut() {
+                        let pty = self.traverse(pv, current_func, sym)?;
+                        let member_ty = struct_def.get_member(pn).ok_or(format!("L{}: member {} not found on {}", meta.ln, pn, struct_name))?;
+                        if pty != *member_ty {
+                            return Err(format!("L{}: {}.{} expects {} but got {}", meta.ln, struct_name, pn, member_ty, pty));
+                        }
+                    }
+                    meta.ty = Custom(struct_name.clone());
                     Ok(meta.ty.clone())
                 }
             }
