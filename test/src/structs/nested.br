@@ -11,13 +11,6 @@ fn my_main() {
     printiln t.ms.z;
     printiln t.b;
 
-    let t2:MyStruct := MyStruct {
-        x: 10,
-        y: 11,
-        z: 12,
-    };
-    printiln t2.x;
-
     return;
 }
 

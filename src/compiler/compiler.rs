@@ -271,10 +271,7 @@ impl<'a> Compiler<'a> {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
                     Type::Custom(struct_name) => {
-                        let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
-                        let struct_sz = st.size.unwrap();
-                        let offset = id_offset - struct_sz;
-                        assembly!{(code) {lea %eax, [%ebp-{offset as u32}];}}
+                        assembly!{(code) {lea %eax, [%ebp-{id_offset as u32}];}}
                     }
                     _ => {
                         assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
@@ -506,13 +503,14 @@ impl<'a> Compiler<'a> {
                         let field_relative_offset = field_info.2.ok_or(format!("No field offset found for {}.{}", struct_name, member))?;
                         let substruct_sz = sst.size.expect(&format!("CRITICAL: structure {} has no resolved size", substruct_name));
                         assembly!{(code) {
-                            lea %eax, [%eax-{(field_relative_offset - substruct_sz) as u32}];
+                            lea %eax, [%eax+{(field_relative_offset - substruct_sz) as u32}];
                         }}
                     },
                     _ => {
-                        let field_relative_offset = field_info.2.ok_or(format!("No field offset found for {}.{}", struct_name, member))?;
+                        let field_relative_offset = field_info.2.ok_or(format!("No field offset found for {}.{}", struct_name, member))? as u32;
+                        let struct_sz = st.size.unwrap() as u32;
                         assembly!{(code) {
-                            mov %eax, [%eax-{field_relative_offset as u32}];
+                            mov %eax, [%eax+{struct_sz - field_relative_offset}];
                         }}
                     }
                 }
