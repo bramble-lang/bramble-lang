@@ -391,8 +391,23 @@ macro_rules! operand {
     ([%$reg:tt-$d:literal]) => {
         Operand::MemoryExpr(register!($reg), $d)
     };
+    ([%{$reg:expr}-{$e:expr}]) => {
+        if $e < 0 {
+            Operand::MemoryAdd($reg, (-$e) as u32)
+        } else {
+            Operand::MemoryExpr($reg, $e as u32)
+        }
+    };
     ([%$reg:tt-{$e:expr}]) => {
-        Operand::MemoryExpr(register!($reg), $e)
+        //Operand::MemoryExpr(register!($reg), $e)
+        if $e < 0 {
+            Operand::MemoryAdd(register!($reg), -($e as i32) as u32)
+        } else {
+            Operand::MemoryExpr(register!($reg), $e as u32)
+        }
+    };
+    ([%{$reg:expr}+{$e:expr}]) => {
+        Operand::MemoryAdd($reg, $e)
     };
     ([%$reg:tt+{$e:expr}]) => {
         Operand::MemoryAdd(register!($reg), $e)

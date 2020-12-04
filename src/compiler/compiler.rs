@@ -271,10 +271,10 @@ impl<'a> Compiler<'a> {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
                     Type::Custom(_) => {
-                        assembly!{(code) {lea %eax, [%ebp-{id_offset as u32}];}}
+                        assembly!{(code) {lea %eax, [%ebp-{id_offset}];}}
                     }
                     _ => {
-                        assembly!{(code) {mov %eax, [%ebp-{id_offset as u32}];}}
+                        assembly!{(code) {mov %eax, [%ebp-{id_offset}];}}
                     }
                 }
             }
@@ -359,7 +359,7 @@ impl<'a> Compiler<'a> {
                     },
                     _ => {
                         assembly!{(code) {
-                            mov [%ebp-{id_offset as u32}], %eax;
+                            mov [%ebp-{id_offset}], %eax;
                         }};
                     },
                 }
@@ -372,8 +372,20 @@ impl<'a> Compiler<'a> {
                     self.traverse(co, current_func, code)?;
                 }
             }
-            Ast::Return(_, ref exp) => match exp {
-                Some(e) => self.traverse(e, current_func, code)?,
+            Ast::Return(meta, ref exp) => match exp {
+                Some(e) => {
+                    self.traverse(e, current_func, code)?;
+                    match meta.ty() {
+                        Type::Custom(struct_name) => {
+                            // Copy the structure into the stack frame of the calling function
+                            let asm = self.copy_struct_into(struct_name, Reg32::Ebp, -8, 0)?;
+                            assembly!{(code){
+                                {{asm}}
+                            }};
+                        },
+                        _ => (),
+                    }
+                }
                 None => (),
             },
             Ast::Yield(meta, ref id) => {
@@ -463,7 +475,17 @@ impl<'a> Compiler<'a> {
             Ast::RoutineCall(_, RoutineCall::Function, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                self.validate_routine_call(fn_name, params)?;
+                let return_type = self.validate_routine_call(fn_name, params)?;
+                match return_type {
+                    Type::Custom(struct_name) => {
+                        let st = self.scope.find_struct(struct_name).ok_or(format!("no definition for {} found", struct_name))?;
+                        let st_sz = st.size.ok_or(format!("struct {} has no resolved size", struct_name))?;
+                        assembly!{(code){
+                            sub %esp, {st_sz};
+                        }}
+                    },
+                    _ => (),
+                }
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
@@ -575,7 +597,7 @@ impl<'a> Compiler<'a> {
                 _ => {
                     assembly!{(code) {
                         pop %eax;
-                        mov [%ebp-{field_offset}], %eax;
+                        mov [%ebp-{field_offset as i32}], %eax;
                     }};
                 }
             }
@@ -584,23 +606,23 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn copy_struct_into(&self, struct_name: &str, dst_offset: u32) -> Result<Vec<Inst>, String> {
+    fn copy_struct_into(&self, struct_name: &str, reg: Reg32, dst_offset: i32, src_offset: i32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self.scope.find_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name))?;
-        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", struct_name))? as u32;
+        let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", struct_name))?;
         for (_, field_ty, field_offset) in ty_def.fields().iter().rev() {
-            let rel_field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", struct_name)) as u32;
-            let field_offset = dst_offset - (struct_sz - rel_field_offset);
+            let rel_field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", struct_name));
+            let dst_field_offset = dst_offset - (struct_sz - rel_field_offset);
             match field_ty {
                 Type::Custom(name) => {
                     assembly!{(code){
-                        {{self.copy_struct_into(name, field_offset)?}}
+                        {{self.copy_struct_into(name, reg, dst_field_offset, rel_field_offset)?}}
                     }}
                 }
                 _ => {
                     assembly!{(code) {
-                        mov %ebx, [%eax+{(struct_sz - rel_field_offset)}];
-                        mov [%ebp-{field_offset}], %ebx;
+                        mov %ebx, [%eax-{src_offset - (struct_sz - rel_field_offset)}];
+                        mov [%{Reg::R32(reg)}-{dst_field_offset}], %ebx;
                     }};
                 }
             }
@@ -622,14 +644,14 @@ impl<'a> Compiler<'a> {
             let param_offset = routine_sym_table.get(&params[idx].0).ok_or(format!("Critical: could not find parameter {} in symbol table for {}", params[idx].0, routine_name))?.offset;
             match &params[idx].1 {
                 Type::Custom(struct_name) => {
-                    let asm = self.copy_struct_into(struct_name, param_offset as u32)?;
+                    let asm = self.copy_struct_into(struct_name, Reg32::Ebp, param_offset, 0)?;
                     assembly!{(code){
                         {{asm}}
                     }}
                 }
                 _ => {
                     assembly!{(code){
-                        mov [%ebp-{param_offset as u32}], %{param_registers[idx]};
+                        mov [%ebp-{param_offset}], %{param_registers[idx]};
                     }};
                 }
             }
@@ -658,7 +680,7 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn validate_routine_call(&self, routine_name: &str, params: &Vec<CompilerNode>) -> Result<(),String>{
+    fn validate_routine_call(&self, routine_name: &str, params: &Vec<CompilerNode>) -> Result<&Type,String>{
         let routine = self.scope.find_func(routine_name).or_else(|| self.scope.find_coroutine(routine_name)).expect("Could not find routine in any symbol table in the scope stack");
         let expected_params = routine.get_params().ok_or(format!("Critical: node for {} does not have a params field", routine_name))?;
 
@@ -670,7 +692,8 @@ impl<'a> Compiler<'a> {
                 expected_num_params, got_num_params, routine_name
             ))
         } else {
-            Ok(())
+            let return_type = routine.get_return_type().ok_or(format!("Critical: node for {} does not have a return type", routine_name))?;
+            Ok(return_type)
         }
     }
 }

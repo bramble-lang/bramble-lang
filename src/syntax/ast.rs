@@ -197,6 +197,15 @@ impl<I> Ast<I> {
         }
     }
 
+    /// if a node is a routine type then return the return type of the routine
+    /// otherwise return None.
+    pub fn get_return_type(&self) -> Option<&Type> {
+        match self {
+            Ast::RoutineDef(_, _, _, _, ret, _) => Some(ret),
+            _ => None,
+        }
+    }
+
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
