@@ -357,7 +357,7 @@ impl<'a> Compiler<'a> {
                 match exp.get_metadata().ty() {
                     Type::Custom(name) => {
                         assembly!{(code){
-                            {{self.copy_struct(name, id_offset as u32)?}}
+                            {{self.pop_struct_into(name, id_offset as u32)?}}
                         }}
                     },
                     _ => {
@@ -561,7 +561,7 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn copy_struct(&self, name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
+    fn pop_struct_into(&self, name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self.scope.find_struct(name).ok_or(format!("Could not find definition for {}", name))?;
         let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", name))? as u32;
@@ -571,7 +571,7 @@ impl<'a> Compiler<'a> {
             match field_ty {
                 Type::Custom(name) => {
                     assembly!{(code){
-                        {{self.copy_struct(name, field_offset)?}}
+                        {{self.pop_struct_into(name, field_offset)?}}
                     }}
                 }
                 _ => {
