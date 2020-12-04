@@ -1,0 +1,38 @@
+fn my_main() {
+    let ms: MyStruct := MyStruct {
+        x: 1,
+        y: 2,
+        z: 3,
+    };
+    let t:MyStruct2 := MyStruct2{
+        a: 123,
+        ms: ms,
+        b: 456,
+    };
+
+    printiln t.a;
+    printiln t.ms.x;
+    printiln t.ms.y;
+    printiln t.ms.z;
+    printiln t.b;
+
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+struct MyStruct2 {
+    a: i32,
+    ms: MyStruct,
+    b: i32,
+}
+
+struct MyStruct3 {
+    h: i32,
+    ms2: MyStruct2,
+    k: bool,
+}

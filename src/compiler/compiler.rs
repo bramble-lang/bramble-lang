@@ -571,9 +571,19 @@ impl<'a> Compiler<'a> {
                 },
                 _ => {
                     self.traverse(fvalue, current_func, &mut code)?;
-                    assembly!{(code) {
-                        mov [%esp+{relative_offset as u32}], %eax;
-                    }};
+                    match fvalue.get_metadata().ty() {
+                        Type::Custom(struct_name) => {
+                            let asm = self.copy_struct_into(struct_name, Reg32::Esp, 0, 0)?;
+                            assembly!{(code){
+                                {{asm}}
+                            }};
+                        }
+                        _ => {
+                            assembly!{(code) {
+                                mov [%esp+{relative_offset as u32}], %eax;
+                            }};
+                        }
+                    }
                 }
             }
         }
@@ -610,7 +620,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         let ty_def = self.scope.find_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name))?;
         let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", struct_name))?;
-        for (_, field_ty, field_offset) in ty_def.fields().iter().rev() {
+        for (field_name, field_ty, field_offset) in ty_def.fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!("CRITICAL: struct {} has field with no relative offset", struct_name));
             let dst_field_offset = dst_offset - (struct_sz - rel_field_offset);
             match field_ty {
@@ -621,6 +631,7 @@ impl<'a> Compiler<'a> {
                 }
                 _ => {
                     assembly!{(code) {
+                        ; {format!("copy {}.{}", struct_name, field_name)}
                         mov %ebx, [%eax-{src_offset - (struct_sz - rel_field_offset)}];
                         mov [%{Reg::R32(reg)}-{dst_field_offset}], %ebx;
                     }};
