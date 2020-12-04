@@ -513,7 +513,18 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                StructDef(..) => Ok(Unit),
+                StructDef(meta, struct_name, members) => {
+                    // Check the type of each member
+                    for (mname, mtype) in members.iter() {
+                        match mtype {
+                            Custom(ty_name) => {
+                                self.lookup(sym, ty_name).map_err(|e| format!("L{}: member {}.{} invalid: {}", meta.ln, struct_name, mname, e))?;
+                            },
+                            _ => (),
+                        }
+                    }
+                    Ok(Unit)
+                },
                 StructInit(meta, struct_name, params) => {
                     // Validate the types in the initialization parameters
                     // match their respective members in the struct
