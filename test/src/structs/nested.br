@@ -52,5 +52,5 @@ struct MyStruct3 {
 
 struct MyStruct4 {
     a: MyStruct3,
-    b: Mystruct3,
+    b: MyStruct3,
 }
