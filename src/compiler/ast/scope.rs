@@ -78,6 +78,17 @@ impl Scope {
         &self.ty
     }
 
+    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
+        match ty {
+            ast::Type::I32 => Some(4),
+            ast::Type::Bool => Some(4),
+            ast::Type::Custom(name) => {
+                self.structs.get(name).map(|st| st.size).flatten()
+            }
+            _ => None,
+        }
+    }
+
     pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
         let mut layout = current_layout;
         let mut scope = Scope::new(Level::Block, 0, m.ty.clone());

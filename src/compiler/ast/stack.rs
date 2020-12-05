@@ -1,3 +1,4 @@
+use crate::ast::Type;
 use crate::ast::RoutineDef;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::{Symbol, Level};
@@ -88,6 +89,17 @@ impl<'a> ScopeStack<'a> {
     pub fn find_struct(&self, name: &str) -> Option<&StructDefinition> {
         for node in self.stack.iter().rev() {
             match node.get_metadata().get_struct(name) {
+                Some(def) => return Some(def),
+                None => (),
+            }
+        }
+
+        None
+    }
+
+    pub fn size_of(&self, ty: &Type) -> Option<i32> {
+        for node in self.stack.iter().rev() {
+            match node.get_metadata().size_of(ty) {
                 Some(def) => return Some(def),
                 None => (),
             }
