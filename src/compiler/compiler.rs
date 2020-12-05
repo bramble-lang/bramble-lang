@@ -442,7 +442,7 @@ impl<'a> Compiler<'a> {
                             let is_coroutine = self.scope.find_coroutine(current_func).is_some();
                             if !is_coroutine {
                                 assembly! {(code){
-                                    lea %esi, [%ebp-8];
+                                    lea %esi, [%ebp+8];
                                     {{asm}}
                                 }};
                             } else {

@@ -407,6 +407,9 @@ macro_rules! operand {
     ([%$reg:tt-$d:literal]) => {
         Operand::MemoryExpr(register!($reg), $d)
     };
+    ([%$reg:tt+$d:literal]) => {
+        Operand::MemoryAdd(register!($reg), $d)
+    };
     ([%{$reg:expr}-{$e:expr}]) => {
         if $e < 0 {
             Operand::MemoryAdd($reg, (-$e) as u32)
