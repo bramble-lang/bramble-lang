@@ -11,6 +11,11 @@ fn my_main() {
     printiln z.ms.z;
     printiln z.b;
 
+    let a: MyStruct := test3();
+    printiln a.x;
+    printiln a.y;
+    printiln a.z;
+
     return;
 }
 
@@ -40,4 +45,14 @@ fn test2() -> MyStruct2 {
     };
 
     return t;
+}
+
+fn test3() -> MyStruct {
+    let t:MyStruct2 := MyStruct2{
+        a: 123,
+        ms: MyStruct{x: 1, z: 3, y: 2},
+        b: 456,
+    };
+
+    return t.ms;
 }

@@ -53,4 +53,7 @@ then
     run_test "structs/passing"
     run_test "structs/return_nested"
     run_test "structs/returning"
+    run_test "structs/errors/field"
+    run_test "structs/errors/missing_member"
+    run_test "structs/errors/type_mismatch"
 fi

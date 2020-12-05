@@ -529,11 +529,16 @@ pub mod checker {
                     // Validate the types in the initialization parameters
                     // match their respective members in the struct
                     let struct_def = self.lookup(sym, &struct_name)?.ty.clone();
+                    let expected_num_params = struct_def.get_members().ok_or("Invalid structure")?.len();
+                    if params.len() !=  expected_num_params {
+                        return Err(format!("L{}: expected {} parameters but found {}", meta.ln, expected_num_params, params.len()))
+                    }
+
                     for (pn,pv) in params.iter_mut() {
                         let pty = self.traverse(pv, current_func, sym)?;
-                        let member_ty = struct_def.get_member(pn).ok_or(format!("L{}: member {} not found on {}", meta.ln, pn, struct_name))?;
+                        let member_ty = struct_def.get_member(pn).ok_or(format!("L{}: member {} not found on {}", pv.get_metadata().ln, pn, struct_name))?;
                         if pty != *member_ty {
-                            return Err(format!("L{}: {}.{} expects {} but got {}", meta.ln, struct_name, pn, member_ty, pty));
+                            return Err(format!("L{}: {}.{} expects {} but got {}", pv.get_metadata().ln, struct_name, pn, member_ty, pty));
                         }
                     }
                     meta.ty = Custom(struct_name.clone());
