@@ -11,7 +11,7 @@ fn my_main( p: bool) {
     printiln (yield ms.x);
     printiln (yield ms.x);
     
-    let c2: co i32 := init numbers();
+    let c2: co i32 := make_co();
     let x:i32 := takes_co(c2);
     printiln x;
     let x2:i32 := takes_co(c2);
@@ -22,6 +22,11 @@ fn my_main( p: bool) {
 
 fn takes_co(c: co i32) -> i32{
     return (yield c);
+}
+
+fn make_co() -> co i32 {
+    let c: co i32 := init numbers();
+    return c;
 }
 
 co numbers() -> i32 {
