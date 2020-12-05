@@ -573,7 +573,6 @@ impl<'a> Compiler<'a> {
                     self.traverse(fvalue, current_func, &mut code)?;
                     match fvalue.get_metadata().ty() {
                         Type::Custom(struct_name) => {
-                            println!("relative offset: {}", relative_offset);
                             let asm = self.copy_struct_into(struct_name, Reg32::Esp, -relative_offset, 0)?;
                             assembly!{(code){
                                 {{asm}}
@@ -618,7 +617,6 @@ impl<'a> Compiler<'a> {
     }
 
     fn copy_struct_into(&self, struct_name: &str, reg: Reg32, dst_offset: i32, src_offset: i32) -> Result<Vec<Inst>, String> {
-        println!("copy: {}, dst offset: {}, src offset: {}", struct_name, dst_offset, src_offset);
         let mut code = vec![];
         let ty_def = self.scope.find_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name))?;
         let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", struct_name))?;

@@ -47,4 +47,10 @@ then
     run_test "fn/recurse"
     run_test "scope/out_of_scope"
     run_test "parser/missing_type"
+    run_test "structs/basic"
+    run_test "structs/copying"
+    run_test "structs/nested"
+    run_test "structs/passing"
+    run_test "structs/return_nested"
+    run_test "structs/returning"
 fi

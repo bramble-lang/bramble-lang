@@ -1,6 +1,4 @@
 fn my_main() {
-    let x:i32 := 5;
-    printiln x;
     let t: MyStruct := MyStruct{x: 5, y: 1, z: true};
     printiln t.x;
     printiln t.y;
