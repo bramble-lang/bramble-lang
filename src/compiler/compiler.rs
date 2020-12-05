@@ -378,7 +378,7 @@ impl<'a> Compiler<'a> {
                     match meta.ty() {
                         Type::Custom(struct_name) => {
                             // Copy the structure into the stack frame of the calling function
-                            let asm = self.copy_struct_into(struct_name, Reg32::Ebp, -8, 0)?;
+                            let asm = self.copy_struct_into(struct_name, Reg32::Ebp, -8, Reg::R32(Reg32::Eax), 0)?;
                             assembly!{(code){
                                 {{asm}}
                             }};
@@ -422,7 +422,6 @@ impl<'a> Compiler<'a> {
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
                 self.validate_routine_call(co, params)?;
-
 
                 assembly!{(code) {
                     {{self.evaluate_routine_params(params, &co_param_registers, current_func)?}}
@@ -573,7 +572,7 @@ impl<'a> Compiler<'a> {
                     self.traverse(fvalue, current_func, &mut code)?;
                     match fvalue.get_metadata().ty() {
                         Type::Custom(struct_name) => {
-                            let asm = self.copy_struct_into(struct_name, Reg32::Esp, -relative_offset, 0)?;
+                            let asm = self.copy_struct_into(struct_name, Reg32::Esp, -relative_offset, Reg::R32(Reg32::Eax), 0)?;
                             assembly!{(code){
                                 {{asm}}
                             }};
@@ -616,7 +615,7 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn copy_struct_into(&self, struct_name: &str, reg: Reg32, dst_offset: i32, src_offset: i32) -> Result<Vec<Inst>, String> {
+    fn copy_struct_into(&self, struct_name: &str, dst_reg: Reg32, dst_offset: i32, src_reg: Reg, src_offset: i32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self.scope.find_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name))?;
         let struct_sz = ty_def.size.ok_or(format!("struct {} has an unknown size", struct_name))?;
@@ -626,14 +625,14 @@ impl<'a> Compiler<'a> {
             match field_ty {
                 Type::Custom(name) => {
                     assembly!{(code){
-                        {{self.copy_struct_into(name, reg, dst_field_offset, src_offset-(struct_sz - rel_field_offset))?}}
+                        {{self.copy_struct_into(name, dst_reg, dst_field_offset, src_reg, src_offset-(struct_sz - rel_field_offset))?}}
                     }}
                 }
                 _ => {
                     assembly!{(code) {
                         ; {format!("copy {}.{}", struct_name, field_name)}
-                        mov %ebx, [%eax-{src_offset - (struct_sz - rel_field_offset)}];
-                        mov [%{Reg::R32(reg)}-{dst_field_offset}], %ebx;
+                        mov %edi, [%{src_reg}-{src_offset - (struct_sz - rel_field_offset)}];
+                        mov [%{Reg::R32(dst_reg)}-{dst_field_offset}], %edi;
                     }};
                 }
             }
@@ -655,7 +654,7 @@ impl<'a> Compiler<'a> {
             let param_offset = routine_sym_table.get(&params[idx].0).ok_or(format!("Critical: could not find parameter {} in symbol table for {}", params[idx].0, routine_name))?.offset;
             match &params[idx].1 {
                 Type::Custom(struct_name) => {
-                    let asm = self.copy_struct_into(struct_name, Reg32::Ebp, param_offset, 0)?;
+                    let asm = self.copy_struct_into(struct_name, Reg32::Ebp, param_offset, param_registers[idx], 0)?;
                     assembly!{(code){
                         {{asm}}
                     }}
