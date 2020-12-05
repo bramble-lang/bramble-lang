@@ -86,6 +86,16 @@ impl<'a> ScopeStack<'a> {
         }
     }
 
+    pub fn get_routine_allocation(&self, name: &str) -> Option<i32> {
+        match self.find_func(name) {
+            Some(func) => func,
+            None => match self.find_coroutine(name) {
+                Some(co) => co,
+                None => return None,
+            }
+        }.get_metadata().level().allocation()
+    }
+
     pub fn find_struct(&self, name: &str) -> Option<&StructDefinition> {
         for node in self.stack.iter().rev() {
             match node.get_metadata().get_struct(name) {

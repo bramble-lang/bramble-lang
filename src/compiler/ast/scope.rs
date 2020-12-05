@@ -132,6 +132,15 @@ pub enum Level {
     Routine { next_label: i32, allocation: i32 },
 }
 
+impl Level {
+    pub fn allocation(&self) -> Option<i32> {
+        match self {
+            Level::Block => None,
+            Level::Routine{allocation, ..} => Some(*allocation),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct SymbolTable {
     pub(super) table: HashMap<String, Symbol>,

@@ -115,7 +115,7 @@ impl<'a> Compiler<'a> {
         /*
          * Input:
          * EAX - address of the coroutine's instructions
-         * EBX - EnX - initialization parameters for the coroutine
+         * EDI - number of bytes to allocate into the stack frame (including coroutine meta data)
          *
          * Output:
          * EAX - address of the new coroutine instance
@@ -154,7 +154,8 @@ impl<'a> Compiler<'a> {
                     mov [%esp-8], 0;
                     mov [%esp-12], 0;
                     mov [%esp-16], 0;
-                    lea %eax, [%esp-20];
+                    mov %eax, %esp;
+                    sub %eax, %edi;
                     mov [%esp-20], %eax;
                     mov %eax, %esp;
                     sub %esp, [@{stack_increment_variable}];
@@ -479,28 +480,19 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
-                let total_offset: i32 = params
-                    .iter()
-                    .map(|p| self.scope.size_of(p.get_metadata().ty()))
-                    .collect::<Option<Vec<i32>>>()
-                    .ok_or("could not resolve size of coroutine")?
-                    .iter()
-                    .sum();
+                let total_offset = self.scope.get_routine_allocation(co).ok_or(format!("Coroutine {} has not allocation size", co))?;
 
                 self.validate_routine_call(co, params)?;
 
                 assembly! {(code) {
                     {{self.evaluate_routine_params(params, &co_param_registers, current_func)?}}
+                    ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
                     lea %eax, [@{co}];
+                    mov %edi, {total_offset};
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
                     push %ebp;
                     mov %ebp, %eax;
-
-                    ; "Move coroutine's ESP to allocate space for the parameters"
-                    mov %edi, [%ebp - 20];
-                    sub %edi, {total_offset};
-                    mov [%ebp-20], %edi;
 
                     ; "move parameters into the stack frame of the coroutine"
                     {{{
