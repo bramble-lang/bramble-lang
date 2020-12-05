@@ -4,7 +4,7 @@ fn my_main( p: bool) {
     
     let c: co MyStruct := init my_co(ms, ms2);
     
-    let w : MyStruct := yield c;
+    let w : MyStruct := yield (c);
     printiln w.x;
     printiln w.y;
     printbln w.z;

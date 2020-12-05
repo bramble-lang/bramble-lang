@@ -3,7 +3,7 @@ fn my_main() {
 
     printbln (yield c);
     printbln (yield c);
-    printbln (yield c == yield c);
+    printbln ((yield c) == (yield c));
 
     return;
 }

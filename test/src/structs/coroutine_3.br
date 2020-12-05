@@ -1,0 +1,37 @@
+fn my_main( p: bool) {
+    let c: co i32 := init numbers();
+    
+    let ms:MyStruct := MyStruct {
+        x: c,
+        y: 1,
+        z: false,
+    };
+
+    printiln (yield ms.x);
+    printiln (yield ms.x);
+    printiln (yield ms.x);
+    
+    let c2: co i32 := init numbers();
+    let x:i32 := takes_co(c2);
+    printiln x;
+    let x2:i32 := takes_co(c2);
+    printiln x2;
+
+    return;
+}
+
+fn takes_co(c: co i32) -> i32{
+    return (yield c);
+}
+
+co numbers() -> i32 {
+    yret 1;
+    yret 2;
+    return 3;
+}
+
+struct MyStruct {
+    x: co i32,
+    y: i32,
+    z: bool,
+}

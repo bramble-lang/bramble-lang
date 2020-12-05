@@ -124,7 +124,9 @@ pub mod checker {
         }
 
         fn lookup<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
-            sym.get(id).or(self.stack.get(id)).ok_or(format!("{} not defined", id))
+            sym.get(id)
+                .or(self.stack.get(id))
+                .ok_or(format!("{} not defined", id))
         }
 
         fn lookup_func_or_cor<'a>(
@@ -160,8 +162,8 @@ pub mod checker {
         }
 
         fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
-            let p = &self.lookup(sym, id)?.ty; 
-            match  p {
+            let p = &self.lookup(sym, id)?.ty;
+            match p {
                 Custom(..) | CoroutineVal(_) | I32 | Bool => Ok(p),
                 _ => return Err(format!("{} is not a variable", id)),
             }
@@ -210,7 +212,8 @@ pub mod checker {
                     let src_ty = self.traverse(src, current_func, sym)?;
                     match src_ty {
                         Custom(struct_name) => {
-                            let member_ty = self.lookup(sym, &struct_name)?
+                            let member_ty = self
+                                .lookup(sym, &struct_name)?
                                 .ty
                                 .get_member(&member)
                                 .ok_or(format!(
@@ -339,22 +342,19 @@ pub mod checker {
                 },
                 Yield(meta, exp) => match current_func {
                     None => Err(format!("L{}: Yield appears outside of function", meta.ln)),
-                    Some(_) => match exp.as_ref() {
-                        Identifier(id_meta, coname) => {
-                            let ty = self
-                                .lookup_var(sym, coname)
-                                .map_err(|e| format!("L{}: {}", id_meta.ln, e))?;
-                            meta.ty = match ty {
-                                CoroutineVal(ret_ty) => *ret_ty.clone(),
-                                _ => return Err(format!("L{}: yield expects co<_> but got {}", id_meta.ln, ty)),
-                            };
-                            Ok(meta.ty.clone())
-                        }
-                        _ => Err(format!(
-                            "L{}: Expected name of coroutine after yield",
-                            meta.ln
-                        )),
-                    },
+                    Some(_) => {
+                        let yield_target = self.traverse(exp, current_func, sym)?;
+                        meta.ty = match yield_target {
+                            CoroutineVal(ret_ty) => *ret_ty.clone(),
+                            _ => {
+                                return Err(format!(
+                                    "L{}: yield expects co<_> but got {}",
+                                    meta.ln, yield_target
+                                ))
+                            }
+                        };
+                        Ok(meta.ty.clone())
+                    }
                 },
                 YieldReturn(meta, None) => match current_func {
                     None => Err(format!("L{}: YRet appears outside of function", meta.ln)),
@@ -400,15 +400,22 @@ pub mod checker {
                         let ty = self.traverse(param, current_func, sym)?;
                         pty.push(ty);
                     }
-                    let (expected_param_tys, ret_ty) = match sym.get(fname).or(self.stack.get(fname)) {
+                    let (expected_param_tys, ret_ty) = match sym
+                        .get(fname)
+                        .or(self.stack.get(fname))
+                    {
                         Some(Symbol {
                             ty: Type::Function(pty, rty),
                             ..
-                        }) if *call == crate::syntax::ast::RoutineCall::Function => (pty, *rty.clone()),
+                        }) if *call == crate::syntax::ast::RoutineCall::Function => {
+                            (pty, *rty.clone())
+                        }
                         Some(Symbol {
                             ty: Type::Coroutine(pty, rty),
                             ..
-                        }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (pty, Type::CoroutineVal(rty.clone())),
+                        }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
+                            (pty, Type::CoroutineVal(rty.clone()))
+                        }
                         Some(_) => {
                             return Err(format!(
                                 "L{}: {} found but was not a function",
@@ -522,27 +529,50 @@ pub mod checker {
                     for (mname, mtype) in members.iter() {
                         match mtype {
                             Custom(ty_name) => {
-                                self.lookup(sym, ty_name).map_err(|e| format!("L{}: member {}.{} invalid: {}", meta.ln, struct_name, mname, e))?;
-                            },
+                                self.lookup(sym, ty_name).map_err(|e| {
+                                    format!(
+                                        "L{}: member {}.{} invalid: {}",
+                                        meta.ln, struct_name, mname, e
+                                    )
+                                })?;
+                            }
                             _ => (),
                         }
                     }
                     Ok(Unit)
-                },
+                }
                 StructInit(meta, struct_name, params) => {
                     // Validate the types in the initialization parameters
                     // match their respective members in the struct
                     let struct_def = self.lookup(sym, &struct_name)?.ty.clone();
-                    let expected_num_params = struct_def.get_members().ok_or("Invalid structure")?.len();
-                    if params.len() !=  expected_num_params {
-                        return Err(format!("L{}: expected {} parameters but found {}", meta.ln, expected_num_params, params.len()))
+                    let expected_num_params =
+                        struct_def.get_members().ok_or("Invalid structure")?.len();
+                    if params.len() != expected_num_params {
+                        return Err(format!(
+                            "L{}: expected {} parameters but found {}",
+                            meta.ln,
+                            expected_num_params,
+                            params.len()
+                        ));
                     }
 
-                    for (pn,pv) in params.iter_mut() {
+                    for (pn, pv) in params.iter_mut() {
                         let pty = self.traverse(pv, current_func, sym)?;
-                        let member_ty = struct_def.get_member(pn).ok_or(format!("L{}: member {} not found on {}", pv.get_metadata().ln, pn, struct_name))?;
+                        let member_ty = struct_def.get_member(pn).ok_or(format!(
+                            "L{}: member {} not found on {}",
+                            pv.get_metadata().ln,
+                            pn,
+                            struct_name
+                        ))?;
                         if pty != *member_ty {
-                            return Err(format!("L{}: {}.{} expects {} but got {}", pv.get_metadata().ln, struct_name, pn, member_ty, pty));
+                            return Err(format!(
+                                "L{}: {}.{} expects {} but got {}",
+                                pv.get_metadata().ln,
+                                struct_name,
+                                pn,
+                                member_ty,
+                                pty
+                            ));
                         }
                     }
                     meta.ty = Custom(struct_name.clone());

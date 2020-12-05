@@ -13,10 +13,9 @@ type ParserInfo = u32;
 pub type PNode = Ast<ParserInfo>;
 
 impl PNode {
-    pub fn new_yield(line: u32, id_line: u32, id: String) -> Self {
+    pub fn new_yield(line: u32, coroutine_value: Box<Self>) -> Self {
         let i = line; //ParserInfo{l: line};
-        let i_id = id_line; //ParserInfo{l: id_line};
-        Ast::Yield(i, Box::new(Ast::Identifier(i_id, id)))
+        Ast::Yield(i, coroutine_value)
     }
 
     pub fn new_bind(
@@ -657,8 +656,8 @@ fn struct_init_params(iter: &mut TokenIter) -> Result<Option<Vec<(String, PNode)
 
 fn co_yield(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Yield) {
-        Some(l) => match consume_if_id(iter) {
-            Some((ll, id)) => Ok(Some(PNode::new_yield(l, ll, id))),
+        Some(l) => match expression(iter)? {
+            Some(coroutine_value) => Ok(Some(PNode::new_yield(l, Box::new(coroutine_value)))),
             _ => Err(format!("L{}: expected an identifier after yield", l)),
         },
         _ => Ok(None),
