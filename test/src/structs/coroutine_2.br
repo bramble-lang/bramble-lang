@@ -18,7 +18,9 @@ fn my_main( p: bool) {
 }
 
 co my_co (x: MyStruct, y: MyStruct) -> MyStruct {
+    printiln x.x;
     yret x;
+    printbln y.z;
     return y;
 }
 
