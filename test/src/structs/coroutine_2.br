@@ -1,10 +1,14 @@
 fn my_main( p: bool) {
     let ms:MyStruct := MyStruct {x: 5, y: 13, z: true};
     let ms2:MyStruct := MyStruct {x: 123, y: 456, z: false};
-    let c: MyStruct := init my_co(ms, ms);
-    let w : MyStruct := yield c;
+
     let x : i32 := 1;
     printiln x;
+
+    let c: co MyStruct := init my_co(ms, ms);
+    printiln x;
+    
+    let w : MyStruct := yield c;
     printiln w.x;
     let z : MyStruct := yield c;
     printiln z.y;
@@ -12,9 +16,8 @@ fn my_main( p: bool) {
 }
 
 co my_co (x: MyStruct, y: MyStruct) -> MyStruct {
-    printiln x.x;
+    printiln 0;
     yret x;
-    printiln y.x;
     return y;
 }
 

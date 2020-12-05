@@ -705,6 +705,7 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
 }
 
 fn consume_type(iter: &mut TokenIter) -> Option<Type> {
+    let is_coroutine = consume_if(iter, Lex::CoroutineDef).is_some();
     match iter.peek() {
         Some(Token {
             l: _,
@@ -724,7 +725,7 @@ fn consume_type(iter: &mut TokenIter) -> Option<Type> {
             Some(Type::Custom(name.clone()))
         }
         _ => None,
-    }
+    }.map(|ty| if is_coroutine {Type::CoroutineVal(Box::new(ty))} else {ty})
 }
 
 fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<PNode>, String> {

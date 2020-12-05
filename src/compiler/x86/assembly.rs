@@ -80,6 +80,7 @@ pub enum Reg32 {
     Esp,
     Ebp,
     Edi,
+    Esi,
 }
 
 impl Display for Reg32 {
@@ -93,6 +94,7 @@ impl Display for Reg32 {
             Esp => f.write_str("esp"),
             Ebp => f.write_str("ebp"),
             Edi => f.write_str("edi"),
+            Esi => f.write_str("esi"),
         }
     }
 }
@@ -360,6 +362,9 @@ macro_rules! reg32 {
     (edi) => {
         Reg32::Edi
     };
+    (esi) => {
+        Reg32::Esi
+    };
 }
 
 #[macro_export]
@@ -384,6 +389,9 @@ macro_rules! register {
     };
     (edi) => {
         Reg::R32(Reg32::Edi)
+    };
+    (esi) => {
+        Reg::R32(Reg32::Esi)
     };
     (al) => {
         Reg::R8(Reg8::Al)

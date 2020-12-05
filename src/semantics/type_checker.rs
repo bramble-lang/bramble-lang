@@ -160,8 +160,9 @@ pub mod checker {
         }
 
         fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
-            match self.lookup(sym, id)? {
-                Symbol { ty: p, .. } if *p == I32 || *p == Bool => Ok(p),
+            let p = &self.lookup(sym, id)?.ty; 
+            match  p {
+                Custom(..) | CoroutineVal(_) | I32 | Bool => Ok(p),
                 _ => return Err(format!("{} is not a variable", id)),
             }
         }
@@ -343,7 +344,10 @@ pub mod checker {
                             let ty = self
                                 .lookup_var(sym, coname)
                                 .map_err(|e| format!("L{}: {}", id_meta.ln, e))?;
-                            meta.ty = ty.clone();
+                            meta.ty = match ty {
+                                CoroutineVal(ret_ty) => *ret_ty.clone(),
+                                _ => return Err(format!("L{}: yield expects co<_> but got {}", id_meta.ln, ty)),
+                            };
                             Ok(meta.ty.clone())
                         }
                         _ => Err(format!(
@@ -396,15 +400,15 @@ pub mod checker {
                         let ty = self.traverse(param, current_func, sym)?;
                         pty.push(ty);
                     }
-                    let (expected_tys, ret_ty) = match sym.get(fname).or(self.stack.get(fname)) {
+                    let (expected_param_tys, ret_ty) = match sym.get(fname).or(self.stack.get(fname)) {
                         Some(Symbol {
                             ty: Type::Function(pty, rty),
                             ..
-                        }) if *call == crate::syntax::ast::RoutineCall::Function => (pty, rty),
+                        }) if *call == crate::syntax::ast::RoutineCall::Function => (pty, *rty.clone()),
                         Some(Symbol {
                             ty: Type::Coroutine(pty, rty),
                             ..
-                        }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (pty, rty),
+                        }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (pty, Type::CoroutineVal(rty.clone())),
                         Some(_) => {
                             return Err(format!(
                                 "L{}: {} found but was not a function",
@@ -416,16 +420,16 @@ pub mod checker {
                         }
                     };
 
-                    if pty.len() != expected_tys.len() {
+                    if pty.len() != expected_param_tys.len() {
                         Err(format!(
                             "L{}: Incorrect number of parameters passed to routine: {}",
                             meta.ln, fname
                         ))
                     } else {
-                        let z = pty.iter().zip(expected_tys.iter());
+                        let z = pty.iter().zip(expected_param_tys.iter());
                         let all_params_match = z.map(|(up, fp)| up == fp).fold(true, |x, y| x && y);
                         if all_params_match {
-                            meta.ty = *ret_ty.clone();
+                            meta.ty = ret_ty;
                             Ok(meta.ty.clone())
                         } else {
                             Err(format!(

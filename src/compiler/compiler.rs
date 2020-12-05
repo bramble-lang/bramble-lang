@@ -449,6 +449,21 @@ impl<'a> Compiler<'a> {
             },
             Ast::Yield(meta, ref id) => {
                 self.traverse(id, current_func, code)?;
+                /*match meta.ty() {
+                    Type::Custom(struct_name) => {
+                        let st = self
+                            .scope
+                            .find_struct(struct_name)
+                            .ok_or(format!("no definition for {} found", struct_name))?;
+                        let st_sz = st
+                            .size
+                            .ok_or(format!("struct {} has no resolved size", struct_name))?;
+                        assembly! {(code){
+                            sub %esp, {st_sz};
+                        }}
+                    }
+                    _ => (),
+                }*/
                 assembly2! {(code, meta) {
                     mov %ebx, ^ret_lbl;
                     jmp @runtime_yield_into_coroutine;
@@ -458,6 +473,23 @@ impl<'a> Compiler<'a> {
             Ast::YieldReturn(meta, ref exp) => {
                 if let Some(exp) = exp {
                     self.traverse(exp, current_func, code)?;
+                    match meta.ty() {
+                        Type::Custom(struct_name) => {
+                            // Copy the structure into the stack frame of the calling function
+                            let asm = self.copy_struct_into(
+                                struct_name,
+                                Reg32::Esi,
+                                -8,
+                                Reg::R32(Reg32::Eax),
+                                0,
+                            )?;
+                            assembly! {(code){
+                                mov %esi, [%ebp-8];
+                                {{asm}}
+                            }};
+                        }
+                        _ => (),
+                    }
                 }
 
                 assembly2! {(code, meta) {
