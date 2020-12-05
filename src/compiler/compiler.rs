@@ -433,14 +433,24 @@ impl<'a> Compiler<'a> {
                             // Copy the structure into the stack frame of the calling function
                             let asm = self.copy_struct_into(
                                 struct_name,
-                                Reg32::Ebp,
-                                -8,
+                                Reg32::Esi,
+                                0,
                                 Reg::R32(Reg32::Eax),
                                 0,
                             )?;
-                            assembly! {(code){
-                                {{asm}}
-                            }};
+
+                            let is_coroutine = self.scope.find_coroutine(current_func).is_some();
+                            if !is_coroutine {
+                                assembly! {(code){
+                                    lea %esi, [%ebp-8];
+                                    {{asm}}
+                                }};
+                            } else {
+                                assembly! {(code){
+                                    mov %esi, [%ebp-8];
+                                    {{asm}}
+                                }};
+                            }
                         }
                         _ => (),
                     }
@@ -449,7 +459,7 @@ impl<'a> Compiler<'a> {
             },
             Ast::Yield(meta, ref id) => {
                 self.traverse(id, current_func, code)?;
-                /*match meta.ty() {
+                match meta.ty() {
                     Type::Custom(struct_name) => {
                         let st = self
                             .scope
@@ -463,7 +473,7 @@ impl<'a> Compiler<'a> {
                         }}
                     }
                     _ => (),
-                }*/
+                }
                 assembly2! {(code, meta) {
                     mov %ebx, ^ret_lbl;
                     jmp @runtime_yield_into_coroutine;
@@ -479,7 +489,7 @@ impl<'a> Compiler<'a> {
                             let asm = self.copy_struct_into(
                                 struct_name,
                                 Reg32::Esi,
-                                -8,
+                                0,
                                 Reg::R32(Reg32::Eax),
                                 0,
                             )?;
