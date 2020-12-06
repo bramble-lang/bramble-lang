@@ -46,20 +46,14 @@ pub mod checker {
                     if operand_ty == I32 {
                         Ok(I32)
                     } else {
-                        Err(format!(
-                            "{} expected i32 but found {}",
-                            op, operand_ty
-                        ))
+                        Err(format!("{} expected i32 but found {}", op, operand_ty))
                     }
                 }
                 Not => {
                     if operand_ty == Bool {
                         Ok(Bool)
                     } else {
-                        Err(format!(
-                            "{} expected bool but found {}",
-                            op, operand_ty
-                        ))
+                        Err(format!("{} expected bool but found {}", op, operand_ty))
                     }
                 }
             }
@@ -83,10 +77,7 @@ pub mod checker {
                     if lty == I32 && rty == I32 {
                         Ok(I32)
                     } else {
-                        Err(format!(
-                            "{} expected i32 but found {} and {}",
-                            op, lty, rty
-                        ))
+                        Err(format!("{} expected i32 but found {} and {}", op, lty, rty))
                     }
                 }
                 BAnd | BOr => {
@@ -103,10 +94,7 @@ pub mod checker {
                     if lty == rty {
                         Ok(Bool)
                     } else {
-                        Err(format!(
-                            "{} expected {} but found {}",
-                            op, lty, rty
-                        ))
+                        Err(format!("{} expected {} but found {}", op, lty, rty))
                     }
                 }
             }
@@ -198,10 +186,7 @@ pub mod checker {
                     Ok(p.clone())
                 }
                 Identifier(meta, id) => match current_func {
-                    None => Err(format!(
-                        "Variable {} appears outside of function",
-                        id
-                    )),
+                    None => Err(format!("Variable {} appears outside of function", id)),
                     Some(_) => {
                         match self.lookup(sym, id)? {
                             Symbol { ty: p, .. } => meta.ty = p.clone(),
@@ -227,10 +212,7 @@ pub mod checker {
                             meta.ty = member_ty.clone();
                             Ok(meta.ty.clone())
                         }
-                        _ => Err(format!(
-                            "Type {} does not have members",
-                            src_ty
-                        )),
+                        _ => Err(format!("Type {} does not have members", src_ty)),
                     }
                 }
                 BinaryOp(meta, op, l, r) => {
@@ -308,35 +290,25 @@ pub mod checker {
                 Return(meta, None) => match current_func {
                     None => Err(format!("Return called outside of a function")),
                     Some(cf) => {
-                        let (_, fty) = self
-                            .lookup_func_or_cor(sym, cf)?;
+                        let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
                         if *fty == Unit {
                             meta.ty = Unit;
                             Ok(Unit)
                         } else {
-                            Err(format!(
-                                "Return expected {} type and got unit",
-                                fty
-                            ))
+                            Err(format!("Return expected {} type and got unit", fty))
                         }
                     }
                 },
                 Return(meta, Some(exp)) => match current_func {
-                    None => Err(format!(
-                        "Return appears outside of a function"
-                    )),
+                    None => Err(format!("Return appears outside of a function")),
                     Some(cf) => {
                         let val = self.traverse(exp, current_func, sym)?;
-                        let (_, fty) = self
-                            .lookup_func_or_cor(sym, cf)?;
+                        let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
                         if *fty == val {
                             meta.ty = fty.clone();
                             Ok(meta.ty.clone())
                         } else {
-                            Err(format!(
-                                "Return expected {} but got {}",
-                                fty, val
-                            ))
+                            Err(format!("Return expected {} but got {}", fty, val))
                         }
                     }
                 },
@@ -347,10 +319,7 @@ pub mod checker {
                         meta.ty = match yield_target {
                             CoroutineVal(ret_ty) => *ret_ty.clone(),
                             _ => {
-                                return Err(format!(
-                                    "yield expects co<_> but got {}",
-                                    yield_target
-                                ))
+                                return Err(format!("yield expects co<_> but got {}", yield_target))
                             }
                         };
                         Ok(meta.ty.clone())
@@ -364,10 +333,7 @@ pub mod checker {
                             meta.ty = Unit;
                             Ok(Unit)
                         } else {
-                            Err(format!(
-                                "Yield return expected {} but got unit",
-                                ret_ty
-                            ))
+                            Err(format!("Yield return expected {} but got unit", ret_ty))
                         }
                     }
                 },
@@ -380,10 +346,7 @@ pub mod checker {
                             meta.ty = ret_ty.clone();
                             Ok(meta.ty.clone())
                         } else {
-                            Err(format!(
-                                "Yield return expected {} but got {}",
-                                ret_ty, val
-                            ))
+                            Err(format!("Yield return expected {} but got {}", ret_ty, val))
                         }
                     }
                 },
@@ -416,15 +379,8 @@ pub mod checker {
                         }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
                             (pty, Type::CoroutineVal(rty.clone()))
                         }
-                        Some(_) => {
-                            return Err(format!(
-                                "{} found but was not a function",
-                                fname
-                            ))
-                        }
-                        None => {
-                            return Err(format!("function {} not declared", fname))
-                        }
+                        Some(_) => return Err(format!("{} found but was not a function", fname)),
+                        None => return Err(format!("function {} not declared", fname)),
                     };
 
                     if pty.len() != expected_param_tys.len() {
@@ -461,10 +417,7 @@ pub mod checker {
                         meta.ty = Unit;
                         Ok(Unit)
                     } else {
-                        Err(format!(
-                            "Expected i32 for printiln got {}",
-                            ty
-                        ))
+                        Err(format!("Expected i32 for printiln got {}", ty))
                     }
                 }
                 Printbln(meta, exp) => {
@@ -473,10 +426,7 @@ pub mod checker {
                         meta.ty = Unit;
                         Ok(Unit)
                     } else {
-                        Err(format!(
-                            "Expected i32 for printbln got {}",
-                            ty
-                        ))
+                        Err(format!("Expected i32 for printbln got {}", ty))
                     }
                 }
 
@@ -530,10 +480,7 @@ pub mod checker {
                         match mtype {
                             Custom(ty_name) => {
                                 self.lookup(sym, ty_name).map_err(|e| {
-                                    format!(
-                                        "member {}.{} invalid: {}",
-                                        struct_name, mname, e
-                                    )
+                                    format!("member {}.{} invalid: {}", struct_name, mname, e)
                                 })?;
                             }
                             _ => (),
@@ -557,18 +504,13 @@ pub mod checker {
 
                     for (pn, pv) in params.iter_mut() {
                         let pty = self.traverse(pv, current_func, sym)?;
-                        let member_ty = struct_def.get_member(pn).ok_or(format!(
-                            "member {} not found on {}",
-                            pn,
-                            struct_name
-                        ))?;
+                        let member_ty = struct_def
+                            .get_member(pn)
+                            .ok_or(format!("member {} not found on {}", pn, struct_name))?;
                         if pty != *member_ty {
                             return Err(format!(
                                 "{}.{} expects {} but got {}",
-                                struct_name,
-                                pn,
-                                member_ty,
-                                pty
+                                struct_name, pn, member_ty, pty
                             ));
                         }
                     }
@@ -584,6 +526,8 @@ pub mod checker {
         use super::*;
         use crate::ast;
         use crate::ast::Ast;
+        use crate::lexer::Lexer;
+        use crate::Token;
         use std::collections::HashMap;
 
         /*
@@ -1258,7 +1202,12 @@ pub mod checker {
         #[test]
         fn test_yield() {
             let mut scope = Scope::new();
-            scope.add("my_main", vec![], Unit, vec![("c", false, CoroutineVal(Box::new(I32)))]);
+            scope.add(
+                "my_main",
+                vec![],
+                Unit,
+                vec![("c", false, CoroutineVal(Box::new(I32)))],
+            );
             scope.add("my_co2", vec![], I32, vec![]);
 
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
@@ -1391,6 +1340,68 @@ pub mod checker {
                     &scope,
                 );
                 assert_eq!(result, ex);
+            }
+        }
+
+        #[test]
+        pub fn test_struct_init() {
+            use crate::syntax::parser;
+            for (text, expected) in vec![
+                ("struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:1};}",
+                Ok(())),
+                ("struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:false};}", 
+                Err("Semantic: L1: MyStruct.x expects i32 but got bool")),
+                ("struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{};}", 
+                Err("Semantic: L1: expected 1 parameters but found 0")),
+                ("struct MyStruct{x:i32} fn test() -> i32 {return MyStruct{x:5};}", 
+                Err("Semantic: L1: Return expected i32 but got MyStruct")),
+            ] {
+                let mut lexer = Lexer::new();
+                let tokens: Vec<Token> = lexer
+                    .tokenize(&text)
+                    .into_iter()
+                    .collect::<Result<_, _>>()
+                    .unwrap();
+                let ast = parser::parse(tokens).unwrap().unwrap();
+                let result = type_check(&ast);
+                match expected {
+                    Ok(_) => assert!(result.is_ok()),
+                    Err(msg) => assert_eq!(result.err().unwrap(), msg),
+                }
+            }
+        }
+
+        #[test]
+        pub fn test_member_access() {
+            use crate::syntax::parser;
+            for (text, expected) in vec![
+                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.x;}",
+                Ok(())),
+                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
+                Err("Semantic: L1: MyStruct does not have member y")),
+                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> bool{return ms.x;}",
+                Err("Semantic: L1: Return expected bool but got i32")),
+                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.x;}",
+                Ok(())),
+                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
+                Ok(())),
+                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.y;}",
+                Err("Semantic: L1: MyStruct does not have member y")),
+                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
+                Err("Semantic: L1: Return expected bool but got i32")),
+            ] {
+                let mut lexer = Lexer::new();
+                let tokens: Vec<Token> = lexer
+                    .tokenize(&text)
+                    .into_iter()
+                    .collect::<Result<_, _>>()
+                    .unwrap();
+                let ast = parser::parse(tokens).unwrap().unwrap();
+                let result = type_check(&ast);
+                match expected {
+                    Ok(_) => assert!(result.is_ok()),
+                    Err(msg) => assert_eq!(result.err().unwrap(), msg),
+                }
             }
         }
     }
