@@ -1355,6 +1355,8 @@ pub mod checker {
                 Err("Semantic: L1: expected 1 parameters but found 0")),
                 ("struct MyStruct{x:i32} fn test() -> i32 {return MyStruct{x:5};}", 
                 Err("Semantic: L1: Return expected i32 but got MyStruct")),
+                ("struct MyStruct{x:co i32} fn test(c: co i32) -> MyStruct {return MyStruct{x: c};}",
+                Ok(())),
             ] {
                 let mut lexer = Lexer::new();
                 let tokens: Vec<Token> = lexer
@@ -1389,8 +1391,6 @@ pub mod checker {
                 Err("Semantic: L1: MyStruct does not have member y")),
                 ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
-                ("struct MyStruct{x:co i32} fn test(c: co i32) -> MyStruct {return MyStruct{x: c};}",
-                Ok(())),
             ] {
                 let mut lexer = Lexer::new();
                 let tokens: Vec<Token> = lexer
