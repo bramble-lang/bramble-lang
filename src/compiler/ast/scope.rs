@@ -204,6 +204,7 @@ impl ast::Type {
             ast::Type::Custom(name) => {
                 Some(resolved_sz.get(name)?.iter().sum())
             }
+            ast::Type::CoroutineVal(_) => Some(4),
             _ => None,
         }
     }

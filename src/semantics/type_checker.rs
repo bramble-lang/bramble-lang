@@ -33,7 +33,6 @@ pub mod checker {
         fn unary_op(
             &mut self,
             op: UnaryOperator,
-            ln: u32,
             operand: &mut SemanticNode,
             current_func: &Option<String>,
             sym: &mut SymbolTable,
@@ -48,8 +47,8 @@ pub mod checker {
                         Ok(I32)
                     } else {
                         Err(format!(
-                            "L{}: {} expected i32 but found {}",
-                            ln, op, operand_ty
+                            "{} expected i32 but found {}",
+                            op, operand_ty
                         ))
                     }
                 }
@@ -58,8 +57,8 @@ pub mod checker {
                         Ok(Bool)
                     } else {
                         Err(format!(
-                            "L{}: {} expected bool but found {}",
-                            ln, op, operand_ty
+                            "{} expected bool but found {}",
+                            op, operand_ty
                         ))
                     }
                 }
@@ -69,7 +68,6 @@ pub mod checker {
         fn binary_op(
             &mut self,
             op: BinaryOperator,
-            ln: u32,
             l: &mut SemanticNode,
             r: &mut SemanticNode,
             current_func: &Option<String>,
@@ -86,8 +84,8 @@ pub mod checker {
                         Ok(I32)
                     } else {
                         Err(format!(
-                            "L{}: {} expected i32 but found {} and {}",
-                            ln, op, lty, rty
+                            "{} expected i32 but found {} and {}",
+                            op, lty, rty
                         ))
                     }
                 }
@@ -96,8 +94,8 @@ pub mod checker {
                         Ok(Bool)
                     } else {
                         Err(format!(
-                            "L{}: {} expected bool but found {} and {}",
-                            ln, op, lty, rty
+                            "{} expected bool but found {} and {}",
+                            op, lty, rty
                         ))
                     }
                 }
@@ -106,8 +104,8 @@ pub mod checker {
                         Ok(Bool)
                     } else {
                         Err(format!(
-                            "L{}: {} expected {} but found {}",
-                            ln, op, lty, rty
+                            "{} expected {} but found {}",
+                            op, lty, rty
                         ))
                     }
                 }
@@ -120,13 +118,19 @@ pub mod checker {
             current_func: &Option<String>,
             sym: &mut SymbolTable,
         ) -> Result<ast::Type, String> {
-            self.analyize_node(ast, current_func, sym)
+            self.analyize_node(ast, current_func, sym).map_err(|e| {
+                if !e.starts_with("L") {
+                    format!("L{}: {}", ast.get_metadata().ln, e)
+                } else {
+                    e
+                }
+            })
         }
 
         fn lookup<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
             sym.get(id)
                 .or(self.stack.get(id))
-                .ok_or(format!("{} not defined", id))
+                .ok_or(format!("{} is not defined", id))
         }
 
         fn lookup_func_or_cor<'a>(
@@ -195,8 +199,8 @@ pub mod checker {
                 }
                 Identifier(meta, id) => match current_func {
                     None => Err(format!(
-                        "L{}: Variable {} appears outside of function",
-                        meta.ln, id
+                        "Variable {} appears outside of function",
+                        id
                     )),
                     Some(_) => {
                         match self.lookup(sym, id)? {
@@ -217,25 +221,25 @@ pub mod checker {
                                 .ty
                                 .get_member(&member)
                                 .ok_or(format!(
-                                    "L{}: {} does not have member {}",
-                                    meta.ln, struct_name, member
+                                    "{} does not have member {}",
+                                    struct_name, member
                                 ))?;
                             meta.ty = member_ty.clone();
                             Ok(meta.ty.clone())
                         }
                         _ => Err(format!(
-                            "L{}: Type {} does not have members",
-                            meta.ln, src_ty
+                            "Type {} does not have members",
+                            src_ty
                         )),
                     }
                 }
                 BinaryOp(meta, op, l, r) => {
-                    let ty = self.binary_op(*op, meta.ln, l, r, current_func, sym)?;
+                    let ty = self.binary_op(*op, l, r, current_func, sym)?;
                     meta.ty = ty;
                     Ok(meta.ty.clone())
                 }
                 UnaryOp(meta, op, operand) => {
-                    let ty = self.unary_op(*op, meta.ln, operand, current_func, sym)?;
+                    let ty = self.unary_op(*op, operand, current_func, sym)?;
                     meta.ty = ty;
                     Ok(meta.ty.clone())
                 }
@@ -249,18 +253,18 @@ pub mod checker {
                             Ok(meta.ty.clone())
                         } else {
                             Err(format!(
-                                "L{}: If expression has mismatching arms: expected {} got {}",
-                                meta.ln, true_arm, false_arm
+                                "If expression has mismatching arms: expected {} got {}",
+                                true_arm, false_arm
                             ))
                         }
                     } else {
                         Err(format!(
-                            "L{}: Expected boolean expression in if conditional, got: {}",
-                            meta.ln, cond_ty
+                            "Expected boolean expression in if conditional, got: {}",
+                            cond_ty
                         ))
                     }
                 }
-                Mutate(meta, id, exp) => match current_func {
+                Mutate(_, id, exp) => match current_func {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         match self.lookup(sym, id)? {
@@ -270,86 +274,82 @@ pub mod checker {
                                         Ok(rhs.clone())
                                     } else {
                                         Err(format!(
-                                            "L{}: {} is of type {} but is assigned {}",
-                                            meta.ln, id, symbol.ty, rhs
+                                            "{} is of type {} but is assigned {}",
+                                            id, symbol.ty, rhs
                                         ))
                                     }
                                 } else {
-                                    Err(format!("L{}: Variable {} is not mutable", meta.ln, id))
+                                    Err(format!("Variable {} is not mutable", id))
                                 }
                             }
                         }
                     }
                     None => Err(format!(
-                        "L{}: Attempting to mutate a variable {} outside of function",
-                        meta.ln, id
+                        "Attempting to mutate a variable {} outside of function",
+                        id
                     )),
                 },
                 Bind(meta, name, mutable, p, exp) => match current_func {
                     Some(_) => {
                         let rhs = self.traverse(exp, current_func, sym)?;
                         if *p == rhs {
-                            sym.add(name, p.clone(), *mutable)
-                                .map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                            sym.add(name, p.clone(), *mutable)?;
                             meta.ty = p.clone();
                             Ok(rhs)
                         } else {
-                            Err(format!("L{}: Bind expected {} but got {}", meta.ln, p, rhs))
+                            Err(format!("Bind expected {} but got {}", p, rhs))
                         }
                     }
                     None => Err(format!(
-                        "L{}: Attempting to bind variable {} outside of function",
-                        meta.ln, name
+                        "Attempting to bind variable {} outside of function",
+                        name
                     )),
                 },
                 Return(meta, None) => match current_func {
-                    None => Err(format!("L{}: Return called outside of a function", meta.ln)),
+                    None => Err(format!("Return called outside of a function")),
                     Some(cf) => {
                         let (_, fty) = self
-                            .lookup_func_or_cor(sym, cf)
-                            .map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                            .lookup_func_or_cor(sym, cf)?;
                         if *fty == Unit {
                             meta.ty = Unit;
                             Ok(Unit)
                         } else {
                             Err(format!(
-                                "L{}: Return expected {} type and got unit",
-                                meta.ln, fty
+                                "Return expected {} type and got unit",
+                                fty
                             ))
                         }
                     }
                 },
                 Return(meta, Some(exp)) => match current_func {
                     None => Err(format!(
-                        "L{}: Return appears outside of a function",
-                        meta.ln
+                        "Return appears outside of a function"
                     )),
                     Some(cf) => {
                         let val = self.traverse(exp, current_func, sym)?;
                         let (_, fty) = self
-                            .lookup_func_or_cor(sym, cf)
-                            .map_err(|e| format!("L{}: {}", meta.ln, e))?;
+                            .lookup_func_or_cor(sym, cf)?;
                         if *fty == val {
                             meta.ty = fty.clone();
                             Ok(meta.ty.clone())
                         } else {
                             Err(format!(
-                                "L{}: Return expected {} but got {}",
-                                meta.ln, fty, val
+                                "Return expected {} but got {}",
+                                fty, val
                             ))
                         }
                     }
                 },
                 Yield(meta, exp) => match current_func {
-                    None => Err(format!("L{}: Yield appears outside of function", meta.ln)),
+                    None => Err(format!("Yield appears outside of function")),
                     Some(_) => {
                         let yield_target = self.traverse(exp, current_func, sym)?;
                         meta.ty = match yield_target {
                             CoroutineVal(ret_ty) => *ret_ty.clone(),
                             _ => {
                                 return Err(format!(
-                                    "L{}: yield expects co<_> but got {}",
-                                    meta.ln, yield_target
+                                    "yield expects co<_> but got {}",
+                                    yield_target
                                 ))
                             }
                         };
@@ -357,7 +357,7 @@ pub mod checker {
                     }
                 },
                 YieldReturn(meta, None) => match current_func {
-                    None => Err(format!("L{}: YRet appears outside of function", meta.ln)),
+                    None => Err(format!("YRet appears outside of function")),
                     Some(cf) => {
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
                         if *ret_ty == Unit {
@@ -365,14 +365,14 @@ pub mod checker {
                             Ok(Unit)
                         } else {
                             Err(format!(
-                                "L{}: Yield return expected {} but got unit",
-                                meta.ln, ret_ty
+                                "Yield return expected {} but got unit",
+                                ret_ty
                             ))
                         }
                     }
                 },
                 YieldReturn(meta, Some(exp)) => match current_func {
-                    None => Err(format!("L{}: YRet appears outside of function", meta.ln)),
+                    None => Err(format!("YRet appears outside of function")),
                     Some(cf) => {
                         let val = self.traverse(exp, current_func, sym)?;
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
@@ -381,8 +381,8 @@ pub mod checker {
                             Ok(meta.ty.clone())
                         } else {
                             Err(format!(
-                                "L{}: Yield return expected {} but got {}",
-                                meta.ln, ret_ty, val
+                                "Yield return expected {} but got {}",
+                                ret_ty, val
                             ))
                         }
                     }
@@ -418,19 +418,19 @@ pub mod checker {
                         }
                         Some(_) => {
                             return Err(format!(
-                                "L{}: {} found but was not a function",
-                                meta.ln, fname
+                                "{} found but was not a function",
+                                fname
                             ))
                         }
                         None => {
-                            return Err(format!("L{}: function {} not declared", meta.ln, fname))
+                            return Err(format!("function {} not declared", fname))
                         }
                     };
 
                     if pty.len() != expected_param_tys.len() {
                         Err(format!(
-                            "L{}: Incorrect number of parameters passed to routine: {}",
-                            meta.ln, fname
+                            "Incorrect number of parameters passed to routine: {}",
+                            fname
                         ))
                     } else {
                         let z = pty.iter().zip(expected_param_tys.iter());
@@ -440,8 +440,8 @@ pub mod checker {
                             Ok(meta.ty.clone())
                         } else {
                             Err(format!(
-                                "L{}: One or more parameters had mismatching types for function {}",
-                                meta.ln, fname
+                                "One or more parameters had mismatching types for function {}",
+                                fname
                             ))
                         }
                     }
@@ -452,7 +452,7 @@ pub mod checker {
                         meta.ty = Unit;
                         Ok(Unit)
                     } else {
-                        Err(format!("L{}: Expected i32 for printi got {}", meta.ln, ty))
+                        Err(format!("Expected i32 for printi got {}", ty))
                     }
                 }
                 Printiln(meta, exp) => {
@@ -462,8 +462,8 @@ pub mod checker {
                         Ok(Unit)
                     } else {
                         Err(format!(
-                            "L{}: Expected i32 for printiln got {}",
-                            meta.ln, ty
+                            "Expected i32 for printiln got {}",
+                            ty
                         ))
                     }
                 }
@@ -474,8 +474,8 @@ pub mod checker {
                         Ok(Unit)
                     } else {
                         Err(format!(
-                            "L{}: Expected i32 for printbln got {}",
-                            meta.ln, ty
+                            "Expected i32 for printbln got {}",
+                            ty
                         ))
                     }
                 }
@@ -524,15 +524,15 @@ pub mod checker {
                     meta.ty = Unit;
                     Ok(Unit)
                 }
-                StructDef(meta, struct_name, members) => {
+                StructDef(_, struct_name, members) => {
                     // Check the type of each member
                     for (mname, mtype) in members.iter() {
                         match mtype {
                             Custom(ty_name) => {
                                 self.lookup(sym, ty_name).map_err(|e| {
                                     format!(
-                                        "L{}: member {}.{} invalid: {}",
-                                        meta.ln, struct_name, mname, e
+                                        "member {}.{} invalid: {}",
+                                        struct_name, mname, e
                                     )
                                 })?;
                             }
@@ -549,8 +549,7 @@ pub mod checker {
                         struct_def.get_members().ok_or("Invalid structure")?.len();
                     if params.len() != expected_num_params {
                         return Err(format!(
-                            "L{}: expected {} parameters but found {}",
-                            meta.ln,
+                            "expected {} parameters but found {}",
                             expected_num_params,
                             params.len()
                         ));
@@ -559,15 +558,13 @@ pub mod checker {
                     for (pn, pv) in params.iter_mut() {
                         let pty = self.traverse(pv, current_func, sym)?;
                         let member_ty = struct_def.get_member(pn).ok_or(format!(
-                            "L{}: member {} not found on {}",
-                            pv.get_metadata().ln,
+                            "member {} not found on {}",
                             pn,
                             struct_name
                         ))?;
                         if pty != *member_ty {
                             return Err(format!(
-                                "L{}: {}.{} expects {} but got {}",
-                                pv.get_metadata().ln,
+                                "{}.{} expects {} but got {}",
                                 struct_name,
                                 pn,
                                 member_ty,
@@ -1015,7 +1012,7 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: Variable x not declared".into()));
+                assert_eq!(ty, Err("L1: x is not defined".into()));
             }
 
             // use an unbound variable
@@ -1029,7 +1026,7 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: Variable x not declared".into()));
+                assert_eq!(ty, Err("L1: x is not defined".into()));
             }
         }
 
@@ -1105,7 +1102,7 @@ pub mod checker {
                     &Some("my_func".into()),
                     &scope,
                 );
-                assert_eq!(ty, Err("L1: Variable x is not declared".into()));
+                assert_eq!(ty, Err("L1: x is not defined".into()));
             }
         }
 
@@ -1193,7 +1190,7 @@ pub mod checker {
                 &Some("my_co".into()),
                 &scope,
             );
-            assert_eq!(ty, Ok(I32));
+            assert_eq!(ty, Ok(CoroutineVal(Box::new(I32))));
 
             // test correct parameters passed in call
             let node = Ast::RoutineCall(
@@ -1208,7 +1205,7 @@ pub mod checker {
                 &Some("my_co2".into()),
                 &scope,
             );
-            assert_eq!(ty, Ok(I32));
+            assert_eq!(ty, Ok(CoroutineVal(Box::new(I32))));
 
             // test incorrect parameters passed in call
             let node =
@@ -1261,7 +1258,7 @@ pub mod checker {
         #[test]
         fn test_yield() {
             let mut scope = Scope::new();
-            scope.add("my_main", vec![], Unit, vec![("c", false, I32)]);
+            scope.add("my_main", vec![], Unit, vec![("c", false, CoroutineVal(Box::new(I32)))]);
             scope.add("my_co2", vec![], I32, vec![]);
 
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
