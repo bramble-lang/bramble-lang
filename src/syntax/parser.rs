@@ -1005,6 +1005,27 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_member_access() {
+        let mut lexer = Lexer::new();
+        let text = "thing.first.second";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(Ast::MemberAccess(l, left, right)) =
+            expression(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(*left, Ast::MemberAccess(1, Box::new(Ast::Identifier(1, "thing".into())), "first".into()));
+            assert_eq!(right, "second");
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
     fn parse_bind() {
         let mut lexer = Lexer::new();
         let text = "let x:i32 := 5;";
@@ -1027,6 +1048,7 @@ pub mod tests {
             _ => panic!("No body: {:?}", stm),
         }
     }
+
     #[test]
     fn parse_mut_bind() {
         let mut lexer = Lexer::new();
@@ -1099,6 +1121,67 @@ pub mod tests {
             }
         } else {
             panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_coroutine_def() {
+        let mut lexer = Lexer::new();
+        let text = "co test(x:i32) -> bool {return true;}";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body)) =
+            coroutine_def(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(name, "test");
+            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(ty, Type::Bool);
+            assert_eq!(body.len(), 1);
+            match &body[0] {
+                Ast::Return(_, Some(exp)) => {
+                    assert_eq!(*exp.as_ref(), Ast::Boolean(1, true));
+                }
+                _ => panic!("No body"),
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_coroutine_init() {
+        let mut lexer = Lexer::new();
+        let text = "let x:co i32 := init c(1, 2);";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        let stm = statement(&mut iter).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, false, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Type::CoroutineVal(Box::new(Type::I32)));
+                    assert_eq!(
+                        *exp,
+                        Box::new(Ast::RoutineCall(
+                            1,
+                            RoutineCall::CoroutineInit,
+                            "c".into(),
+                            vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                        ))
+                    );
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1220,17 +1303,10 @@ pub mod tests {
     #[test]
     fn parse_struct_init() {
         for (text, expected) in vec![
-            (
-                "MyStruct{}",
-                Ast::StructInit(1, "MyStruct".into(), vec![]),
-            ),
+            ("MyStruct{}", Ast::StructInit(1, "MyStruct".into(), vec![])),
             (
                 "MyStruct{x: 5}",
-                Ast::StructInit(
-                    1,
-                    "MyStruct".into(),
-                    vec![("x".into(), Ast::Integer(1, 5))],
-                ),
+                Ast::StructInit(1, "MyStruct".into(), vec![("x".into(), Ast::Integer(1, 5))]),
             ),
             (
                 "MyStruct{x: 5, y: false}",
@@ -1250,7 +1326,14 @@ pub mod tests {
                     "MyStruct".into(),
                     vec![
                         ("x".into(), Ast::Integer(1, 5)),
-                        ("y".into(), Ast::StructInit(1, "MyStruct2".into(), vec![("z".into(), Ast::Integer(1, 3))])),
+                        (
+                            "y".into(),
+                            Ast::StructInit(
+                                1,
+                                "MyStruct2".into(),
+                                vec![("z".into(), Ast::Integer(1, 3))],
+                            ),
+                        ),
                     ],
                 ),
             ),
