@@ -556,8 +556,10 @@ fn factor(iter: &mut TokenIter) -> PResult {
                     }) => {
                         let mut ma = n;
                         while let Some(l) = consume_if(iter, Lex::MemberAccess) {
-                            let member = consume_if_id(iter)
-                                .ok_or(format!("L{}: expect field name after member access '.'", l))?;
+                            let member = consume_if_id(iter).ok_or(format!(
+                                "L{}: expect field name after member access '.'",
+                                l
+                            ))?;
                             ma = Ast::MemberAccess(l, Box::new(ma), member.1);
                         }
                         Some(ma)
@@ -724,7 +726,14 @@ fn consume_type(iter: &mut TokenIter) -> Option<Type> {
             Some(Type::Custom(name.clone()))
         }
         _ => None,
-    }.map(|ty| if is_coroutine {Type::CoroutineVal(Box::new(ty))} else {ty})
+    }
+    .map(|ty| {
+        if is_coroutine {
+            Type::CoroutineVal(Box::new(ty))
+        } else {
+            ty
+        }
+    })
 }
 
 fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<PNode>, String> {
@@ -1204,6 +1213,56 @@ pub mod tests {
                 .unwrap();
             let mut iter = tokens.iter().peekable();
             let result = struct_def(&mut iter).unwrap();
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn parse_struct_init() {
+        for (text, expected) in vec![
+            (
+                "MyStruct{}",
+                Ast::StructInit(1, "MyStruct".into(), vec![]),
+            ),
+            (
+                "MyStruct{x: 5}",
+                Ast::StructInit(
+                    1,
+                    "MyStruct".into(),
+                    vec![("x".into(), Ast::Integer(1, 5))],
+                ),
+            ),
+            (
+                "MyStruct{x: 5, y: false}",
+                Ast::StructInit(
+                    1,
+                    "MyStruct".into(),
+                    vec![
+                        ("x".into(), Ast::Integer(1, 5)),
+                        ("y".into(), Ast::Boolean(1, false)),
+                    ],
+                ),
+            ),
+            (
+                "MyStruct{x: 5, y: MyStruct2{z:3}}",
+                Ast::StructInit(
+                    1,
+                    "MyStruct".into(),
+                    vec![
+                        ("x".into(), Ast::Integer(1, 5)),
+                        ("y".into(), Ast::StructInit(1, "MyStruct2".into(), vec![("z".into(), Ast::Integer(1, 3))])),
+                    ],
+                ),
+            ),
+        ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            let result = expression(&mut iter).unwrap().unwrap();
             assert_eq!(result, expected);
         }
     }

@@ -116,9 +116,14 @@ pub enum Ast<I> {
         Vec<Ast<I>>,
     ),
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
-    Module{meta: I, functions: Vec<Ast<I>>, coroutines: Vec<Ast<I>>, structs: Vec<Ast<I>>},
-    StructDef(I, String, Vec<(String,Type)>),
-    StructInit(I, String, Vec<(String,Ast<I>)>),
+    Module {
+        meta: I,
+        functions: Vec<Ast<I>>,
+        coroutines: Vec<Ast<I>>,
+        structs: Vec<Ast<I>>,
+    },
+    StructDef(I, String, Vec<(String, Type)>),
+    StructInit(I, String, Vec<(String, Ast<I>)>),
 }
 
 impl<I> Ast<I> {
@@ -152,9 +157,9 @@ impl<I> Ast<I> {
             RoutineDef(_, def, name, ..) => format!("{} for {}", def, name),
             RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
 
-            Module{..} => "module".into(),
-            StructDef(_, name,..) => format!("definition of struct {}", name),
-            StructInit(_, name,..) => format!("intialization for struct {}", name),
+            Module { .. } => "module".into(),
+            StructDef(_, name, ..) => format!("definition of struct {}", name),
+            StructInit(_, name, ..) => format!("intialization for struct {}", name),
         }
     }
 
@@ -182,9 +187,9 @@ impl<I> Ast<I> {
             | YieldReturn(m, ..)
             | RoutineDef(m, ..)
             | RoutineCall(m, ..)
-            | Module{meta:m, ..}
+            | Module { meta: m, .. }
             | StructDef(m, ..) => m,
-            | StructInit(m, ..) => m,
+            StructInit(m, ..) => m,
         }
     }
 
@@ -221,7 +226,7 @@ pub enum Type {
     Bool,
     Unit,
     Custom(String),
-    StructDef(Vec<(String,Type)>),
+    StructDef(Vec<(String, Type)>),
     Function(Vec<Type>, Box<Type>),
     Coroutine(Vec<Type>, Box<Type>),
     CoroutineVal(Box<Type>),
@@ -229,7 +234,7 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn get_members(&self) -> Option<&Vec<(String,Type)>> {
+    pub fn get_members(&self) -> Option<&Vec<(String, Type)>> {
         match self {
             Type::StructDef(members) => Some(members),
             _ => None,
@@ -237,8 +242,9 @@ impl Type {
     }
 
     pub fn get_member(&self, member: &str) -> Option<&Type> {
-       self.get_members()
-            .map(|ms| ms.iter().find(|(n, _)| n == member).map(|m| &m.1)).flatten()
+        self.get_members()
+            .map(|ms| ms.iter().find(|(n, _)| n == member).map(|m| &m.1))
+            .flatten()
     }
 }
 
@@ -251,18 +257,28 @@ impl std::fmt::Display for Type {
             Unit => f.write_str("unit"),
             Custom(name) => f.write_str(name),
             StructDef(members) => {
-                let members = members.iter().map(|m| format!("{}: {}", m.0, m.1)).collect::<Vec<String>>().join(",");
+                let members = members
+                    .iter()
+                    .map(|m| format!("{}: {}", m.0, m.1))
+                    .collect::<Vec<String>>()
+                    .join(",");
                 f.write_str(&members)
             }
             Type::Coroutine(params, ret_ty) => {
-                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                let params = params
+                    .iter()
+                    .map(|p| format!("{}", p))
+                    .collect::<Vec<String>>()
+                    .join(",");
                 f.write_fmt(format_args!("co ({}) -> {}", params, ret_ty))
             }
-            Type::CoroutineVal(ret_ty) => {
-                f.write_fmt(format_args!("co<{}>", ret_ty))
-            }
+            Type::CoroutineVal(ret_ty) => f.write_fmt(format_args!("co<{}>", ret_ty)),
             Type::Function(params, ret_ty) => {
-                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
+                let params = params
+                    .iter()
+                    .map(|p| format!("{}", p))
+                    .collect::<Vec<String>>()
+                    .join(",");
                 f.write_fmt(format_args!("fn ({}) -> {}", params, ret_ty))
             }
             Unknown => f.write_str("unknown"),
