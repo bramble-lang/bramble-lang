@@ -629,25 +629,21 @@ impl<'a> Compiler<'a> {
                     .find(|(n, ..)| n == member)
                     .ok_or(format!("member {} not found on {}", member, struct_name))?;
                 let struct_sz = st.size.unwrap() as u32;
+                let field_relative_offset = field_info.2.ok_or(format!(
+                    "No field offset found for {}.{}",
+                    struct_name, member
+                ))? as u32;
+                let field_offset = struct_sz - field_relative_offset;
 
                 match &field_info.1 {
                     Type::Custom(_substruct_name) => {
-                        let field_relative_offset = field_info.2.ok_or(format!(
-                            "No field offset found for {}.{}",
-                            struct_name, member
-                        ))?;
-
                         assembly! {(code) {
-                            lea %eax, [%eax+{(struct_sz - field_relative_offset as u32)}];
+                            lea %eax, [%eax+{field_offset}];
                         }}
                     }
                     _ => {
-                        let field_relative_offset = field_info.2.ok_or(format!(
-                            "No field offset found for {}.{}",
-                            struct_name, member
-                        ))? as u32;
                         assembly! {(code) {
-                            mov %eax, [%eax+{struct_sz - field_relative_offset}];
+                            mov %eax, [%eax+{field_offset}];
                         }}
                     }
                 }
