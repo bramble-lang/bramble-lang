@@ -734,47 +734,56 @@ impl<'a> Compiler<'a> {
         for (fname, fvalue) in field_values.iter() {
             let field_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
             let relative_offset = struct_sz - field_offset + offset;
-            match fvalue {
-                Ast::StructInit(_, substruct_name, substruct_values) => {
-                    let asm = self.init_struct(
-                        current_func,
-                        substruct_name,
-                        substruct_values,
-                        relative_offset,
-                        false,
-                    )?;
-                    assembly! {(code){
-                        {{asm}}
-                    }};
-                }
-                _ => {
-                    self.traverse(fvalue, current_func, &mut code)?;
-                    match fvalue.get_metadata().ty() {
-                        Type::Custom(struct_name) => {
-                            let asm = self.copy_struct_into(
-                                struct_name,
-                                Reg32::Esp,
-                                -relative_offset,
-                                Reg::R32(Reg32::Eax),
-                                0,
-                            )?;
-                            assembly! {(code){
-                                {{asm}}
-                            }};
-                        }
-                        _ => {
-                            assembly! {(code) {
-                                mov [%esp+{relative_offset as u32}], %eax;
-                            }};
-                        }
-                    }
-                }
-            }
+            assembly! {(code) {
+                {{self.bind_member(fvalue, current_func, Reg32::Esp, relative_offset)?}}
+            }}
         }
         code.push(Inst::Comment(format!(
             "Done instantiating struct of type {}",
             struct_name
         )));
+        Ok(code)
+    }
+
+    fn bind_member(&mut self, fvalue: &'a CompilerNode, current_func: &String, dst: Reg32, dst_offset: i32) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        
+        match fvalue {
+            Ast::StructInit(_, substruct_name, substruct_values) => {
+                let asm = self.init_struct(
+                    current_func,
+                    substruct_name,
+                    substruct_values,
+                    dst_offset,
+                    false,
+                )?;
+                assembly! {(code){
+                    {{asm}}
+                }};
+            }
+            _ => {
+                self.traverse(fvalue, current_func, &mut code)?;
+                match fvalue.get_metadata().ty() {
+                    Type::Custom(struct_name) => {
+                        let asm = self.copy_struct_into(
+                            struct_name,
+                            dst,
+                            -dst_offset,
+                            Reg::R32(Reg32::Eax),
+                            0,
+                        )?;
+                        assembly! {(code){
+                            {{asm}}
+                        }};
+                    }
+                    _ => {
+                        assembly! {(code) {
+                            mov [%{Reg::R32(dst)}+{dst_offset as u32}], %eax;
+                        }};
+                    }
+                }
+            }
+        }
         Ok(code)
     }
 
