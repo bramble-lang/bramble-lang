@@ -631,7 +631,7 @@ impl<'a> Compiler<'a> {
                 let field_offset = st.get_offset_of(member).ok_or(format!(
                     "No field offset found for {}.{}",
                     struct_name, member
-                ))? as u32;
+                ))?;
 
                 match &field_info.1 {
                     Type::Custom(_substruct_name) => {

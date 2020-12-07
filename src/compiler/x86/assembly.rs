@@ -147,8 +147,7 @@ impl Display for DirectOperand {
 pub enum Operand {
     Direct(DirectOperand),
     Memory(DirectOperand),
-    MemoryExpr(Reg, u32),
-    MemoryAdd(Reg, u32),
+    MemoryAddr(Reg, i32),
 }
 
 impl Display for Operand {
@@ -157,8 +156,15 @@ impl Display for Operand {
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
             Memory(mem) => f.write_fmt(format_args!("[{}]", mem)),
-            MemoryExpr(mem, d) => f.write_fmt(format_args!("[{}-{}]", mem, d)),
-            MemoryAdd(mem, d) => f.write_fmt(format_args!("[{}+{}]", mem, d)),
+            MemoryAddr(mem, d) => {
+                if *d < 0 {
+                    f.write_fmt(format_args!("[{}-{}]", mem, -d))
+                } else if *d > 0 {
+                    f.write_fmt(format_args!("[{}+{}]", mem, d))
+                } else {
+                    f.write_fmt(format_args!("[{}]", mem))
+                }
+            }
         }
     }
 }
@@ -244,7 +250,7 @@ impl Display for Inst {
                 match b {
                     Operand::Direct(DirectOperand::Integer(_))
                     | Operand::Memory(_)
-                    | Operand::MemoryExpr(_, _) => format!("DWORD {}", b),
+                    | Operand::MemoryAddr(_, _) => format!("DWORD {}", b),
                     _ => format!("{}", b),
                 }
             )),
@@ -254,7 +260,7 @@ impl Display for Inst {
                 match b {
                     Operand::Direct(DirectOperand::Integer(_))
                     | Operand::Memory(_)
-                    | Operand::MemoryExpr(_, _) => format!("DWORD {}", b),
+                    | Operand::MemoryAddr(_, _) => format!("DWORD {}", b),
                     _ => format!("{}", b),
                 }
             )),
@@ -417,31 +423,22 @@ macro_rules! operand {
         Operand::Memory(DirectOperand::Register(register!($e)))
     };
     ([%$reg:tt-$d:literal]) => {
-        Operand::MemoryExpr(register!($reg), $d)
+        Operand::MemoryAddr(register!($reg), -$d)
     };
     ([%$reg:tt+$d:literal]) => {
-        Operand::MemoryAdd(register!($reg), $d)
+        Operand::MemoryAddr(register!($reg), $d)
     };
     ([%{$reg:expr}-{$e:expr}]) => {
-        if $e < 0 {
-            Operand::MemoryAdd($reg, (-$e) as u32)
-        } else {
-            Operand::MemoryExpr($reg, $e as u32)
-        }
+        Operand::MemoryAddr($reg, -$e)
     };
     ([%$reg:tt-{$e:expr}]) => {
-        //Operand::MemoryExpr(register!($reg), $e)
-        if $e < 0 {
-            Operand::MemoryAdd(register!($reg), -($e as i32) as u32)
-        } else {
-            Operand::MemoryExpr(register!($reg), $e as u32)
-        }
+        Operand::MemoryAddr(register!($reg), -$e)
     };
     ([%{$reg:expr}+{$e:expr}]) => {
-        Operand::MemoryAdd($reg, $e)
+        Operand::MemoryAddr($reg, $e)
     };
     ([%$reg:tt+{$e:expr}]) => {
-        Operand::MemoryAdd(register!($reg), $e)
+        Operand::MemoryAddr(register!($reg), $e)
     };
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))
