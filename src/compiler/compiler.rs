@@ -413,37 +413,10 @@ impl<'a> Compiler<'a> {
                     self.traverse(co, current_func, code)?;
                 }
             }
-            Ast::Return(meta, ref exp) => match exp {
-                Some(e) => {
-                    self.traverse(e, current_func, code)?;
-                    match meta.ty() {
-                        Type::Custom(struct_name) => {
-                            // Copy the structure into the stack frame of the calling function
-                            let asm = self.copy_struct_into(
-                                struct_name,
-                                Reg32::Esi,
-                                0,
-                                Reg::R32(Reg32::Eax),
-                                0,
-                            )?;
-
-                            let is_coroutine = self.scope.find_coroutine(current_func).is_some();
-                            if !is_coroutine {
-                                assembly! {(code){
-                                    lea %esi, [%ebp+8];
-                                    {{asm}}
-                                }};
-                            } else {
-                                assembly! {(code){
-                                    mov %esi, [%ebp-8];
-                                    {{asm}}
-                                }};
-                            }
-                        }
-                        _ => (),
-                    }
-                }
-                None => (),
+            Ast::Return(_, ref exp) => {
+                assembly!{(code) {
+                    {{self.return_exp(exp, current_func)?}}
+                }}
             },
             Ast::Yield(meta, ref id) => {
                 self.traverse(id, current_func, code)?;
@@ -786,6 +759,44 @@ impl<'a> Compiler<'a> {
                 }};
             }
         }
+        Ok(code)
+    }
+
+    fn return_exp(&mut self, exp: &'a Option<Box<CompilerNode>>, current_func: &String) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        match exp {
+            Some(e) => {
+                self.traverse(e, current_func, &mut code)?;
+                match e.get_metadata().ty() {
+                    Type::Custom(struct_name) => {
+                        // Copy the structure into the stack frame of the calling function
+                        let asm = self.copy_struct_into(
+                            struct_name,
+                            Reg32::Esi,
+                            0,
+                            Reg::R32(Reg32::Eax),
+                            0,
+                        )?;
+
+                        let is_coroutine = self.scope.find_coroutine(current_func).is_some();
+                        if is_coroutine {
+                            assembly! {(code){
+                                mov %esi, [%ebp-8];
+                                {{asm}}
+                            }};
+                        } else {
+                            assembly! {(code){
+                                lea %esi, [%ebp+8];
+                                {{asm}}
+                            }};
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            None => (),
+        }
+
         Ok(code)
     }
 
