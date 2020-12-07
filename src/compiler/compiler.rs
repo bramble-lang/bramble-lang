@@ -400,46 +400,6 @@ impl<'a> Compiler<'a> {
                 assembly!{(code) {
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
                 }}
-                //self.traverse(exp, current_func, code)?;
-
-                /*code.push(Inst::Comment(format!("Binding {}", id)));
-
-                assembly!{(code) {
-                    {{self.bind_member(exp, current_func, Reg32::Ebp, -id_offset)?}}
-                }}*/
-
-                /*
-                match exp.get_metadata().ty() {
-                    Type::Custom(name) => {
-                        match exp.as_ref() {
-                            Ast::Identifier(..) => {
-                                // If an identifier is being copied to another identifier, then just copy
-                                // the data over rather than pop off of the stack
-                                let asm = self.copy_struct_into(
-                                    name,
-                                    Reg32::Ebp,
-                                    id_offset,
-                                    Reg::R32(Reg32::Eax),
-                                    0,
-                                )?;
-                                assembly! {(code){
-                                    {{asm}}
-                                }}
-                            }
-                            _ => {
-                                assembly! {(code){
-                                    {{self.pop_struct_into(name, id_offset as u32)?}}
-                                }}
-                            }
-                        }
-                    }
-                    _ => {
-                        assembly! {(code) {
-                            mov [%ebp-{id_offset}], %eax;
-                        }};
-                    }
-                }
-                */
             }
             Ast::Module {
                 functions,
