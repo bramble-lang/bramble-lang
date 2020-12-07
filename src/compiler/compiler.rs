@@ -481,7 +481,7 @@ impl<'a> Compiler<'a> {
                     Type::Custom(struct_name) => {
                         let st = self
                             .scope
-                            .find_struct(struct_name)
+                            .get_struct(struct_name)
                             .ok_or(format!("no definition for {} found", struct_name))?;
                         let st_sz = st
                             .size
@@ -602,7 +602,7 @@ impl<'a> Compiler<'a> {
                     Type::Custom(struct_name) => {
                         let st = self
                             .scope
-                            .find_struct(struct_name)
+                            .get_struct(struct_name)
                             .ok_or(format!("no definition for {} found", struct_name))?;
                         let st_sz = st
                             .size
@@ -651,10 +651,10 @@ impl<'a> Compiler<'a> {
 
                 let st = self
                     .scope
-                    .find_struct(struct_name)
+                    .get_struct(struct_name)
                     .ok_or(format!("no definition for {} found", struct_name))?;
                 let field_info = st
-                    .fields()
+                    .get_fields()
                     .iter()
                     .find(|(n, ..)| n == member)
                     .ok_or(format!("member {} not found on {}", member, struct_name))?;
@@ -703,11 +703,11 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let st = self
             .scope
-            .find_struct(struct_name)
+            .get_struct(struct_name)
             .ok_or(format!("no definition for {} found", struct_name))?;
         let struct_sz = st.size.unwrap();
         let field_info = st
-            .fields()
+            .get_fields()
             .iter()
             .map(|(n, _, o)| (n.clone(), o.unwrap()))
             .collect::<Vec<(String, i32)>>();
@@ -716,7 +716,7 @@ impl<'a> Compiler<'a> {
             return Err(format!(
                 "{} expected {} fields but found {}",
                 struct_name,
-                st.fields().len(),
+                st.get_fields().len(),
                 field_values.len()
             ));
         }
@@ -782,13 +782,13 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         let ty_def = self
             .scope
-            .find_struct(struct_name)
+            .get_struct(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
         let struct_sz = ty_def
             .size
             .ok_or(format!("struct {} has an unknown size", struct_name))?
             as u32;
-        for (_, field_ty, field_offset) in ty_def.fields().iter().rev() {
+        for (_, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!(
                 "CRITICAL: struct {} has field with no relative offset",
                 struct_name
@@ -823,12 +823,12 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         let ty_def = self
             .scope
-            .find_struct(struct_name)
+            .get_struct(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
         let struct_sz = ty_def
             .size
             .ok_or(format!("struct {} has an unknown size", struct_name))?;
-        for (field_name, field_ty, field_offset) in ty_def.fields().iter().rev() {
+        for (field_name, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!(
                 "CRITICAL: struct {} has field with no relative offset",
                 struct_name

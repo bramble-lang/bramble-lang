@@ -99,7 +99,7 @@ impl<'a> ScopeStack<'a> {
         .allocation()
     }
 
-    pub fn find_struct(&self, name: &str) -> Option<&StructDefinition> {
+    pub fn get_struct(&self, name: &str) -> Option<&StructDefinition> {
         for node in self.stack.iter().rev() {
             match node.get_metadata().get_struct(name) {
                 Some(def) => return Some(def),

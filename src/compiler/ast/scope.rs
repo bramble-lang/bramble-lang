@@ -344,7 +344,7 @@ impl StructDefinition {
         }
     }
 
-    pub fn fields(&self) -> &Vec<(String, ast::Type, Option<i32>)> {
+    pub fn get_fields(&self) -> &Vec<(String, ast::Type, Option<i32>)> {
         &self.fields
     }
 }
