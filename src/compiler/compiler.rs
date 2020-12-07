@@ -637,23 +637,17 @@ impl<'a> Compiler<'a> {
                     .iter()
                     .find(|(n, ..)| n == member)
                     .ok_or(format!("member {} not found on {}", member, struct_name))?;
+                let struct_sz = st.size.unwrap() as u32;
 
                 match &field_info.1 {
-                    Type::Custom(substruct_name) => {
-                        let sst = self
-                            .scope
-                            .find_struct(&substruct_name)
-                            .ok_or(format!("no definition for {} found", substruct_name))?;
+                    Type::Custom(_substruct_name) => {
                         let field_relative_offset = field_info.2.ok_or(format!(
                             "No field offset found for {}.{}",
                             struct_name, member
                         ))?;
-                        let substruct_sz = sst.size.expect(&format!(
-                            "CRITICAL: structure {} has no resolved size",
-                            substruct_name
-                        ));
+                        
                         assembly! {(code) {
-                            lea %eax, [%eax+{(field_relative_offset - substruct_sz) as u32}];
+                            lea %eax, [%eax+{(struct_sz - field_relative_offset as u32)}];
                         }}
                     }
                     _ => {
@@ -661,7 +655,6 @@ impl<'a> Compiler<'a> {
                             "No field offset found for {}.{}",
                             struct_name, member
                         ))? as u32;
-                        let struct_sz = st.size.unwrap() as u32;
                         assembly! {(code) {
                             mov %eax, [%eax+{struct_sz - field_relative_offset}];
                         }}
