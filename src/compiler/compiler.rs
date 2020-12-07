@@ -503,13 +503,10 @@ impl<'a> Compiler<'a> {
                 let return_type = self.validate_routine_call(fn_name, params)?;
                 match return_type {
                     Type::Custom(struct_name) => {
-                        let st = self
+                        let st_sz = self
                             .scope
-                            .get_struct(struct_name)
-                            .ok_or(format!("no definition for {} found", struct_name))?;
-                        let st_sz = st
-                            .size
-                            .ok_or(format!("struct {} has no resolved size", struct_name))?;
+                            .size_of(return_type)
+                            .ok_or(format!("no size for {} found", struct_name))?;
                         assembly! {(code){
                             sub %esp, {st_sz};
                         }}
