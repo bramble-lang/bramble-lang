@@ -396,10 +396,19 @@ impl<'a> Compiler<'a> {
                     .find(id)
                     .ok_or(format!("Could not find variable {}", id))?
                     .offset;
-                self.traverse(exp, current_func, code)?;
-
                 code.push(Inst::Comment(format!("Binding {}", id)));
+                assembly!{(code) {
+                    {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
+                }}
+                //self.traverse(exp, current_func, code)?;
 
+                /*code.push(Inst::Comment(format!("Binding {}", id)));
+
+                assembly!{(code) {
+                    {{self.bind_member(exp, current_func, Reg32::Ebp, -id_offset)?}}
+                }}*/
+
+                /*
                 match exp.get_metadata().ty() {
                     Type::Custom(name) => {
                         match exp.as_ref() {
@@ -430,6 +439,7 @@ impl<'a> Compiler<'a> {
                         }};
                     }
                 }
+                */
             }
             Ast::Module {
                 functions,
@@ -782,6 +792,44 @@ impl<'a> Compiler<'a> {
                         }};
                     }
                 }
+            }
+        }
+        Ok(code)
+    }
+
+
+    fn bind(&mut self, value: &'a CompilerNode, current_func: &String, dst: Reg32, dst_offset: i32) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        self.traverse(value, current_func, &mut code)?;
+
+        match value.get_metadata().ty() {
+            Type::Custom(name) => {
+                match value {
+                    Ast::Identifier(..) => {
+                        // If an identifier is being copied to another identifier, then just copy
+                        // the data over rather than pop off of the stack
+                        let asm = self.copy_struct_into(
+                            name,
+                            dst,
+                            dst_offset,
+                            Reg::R32(Reg32::Eax),
+                            0,
+                        )?;
+                        assembly! {(code){
+                            {{asm}}
+                        }}
+                    }
+                    _ => {
+                        assembly! {(code){
+                            {{self.pop_struct_into(name, dst_offset as u32)?}}
+                        }}
+                    }
+                }
+            }
+            _ => {
+                assembly! {(code) {
+                    mov [%ebp-{dst_offset}], %eax;
+                }};
             }
         }
         Ok(code)
