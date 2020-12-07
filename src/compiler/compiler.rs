@@ -1,6 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::compiler::ast::scope::Scope;
 use crate::assembly;
 use crate::assembly2;
 use crate::ast::Ast;
@@ -442,32 +443,9 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::YieldReturn(meta, ref exp) => {
-                if let Some(exp) = exp {
-                    self.traverse(exp, current_func, code)?;
-                    match meta.ty() {
-                        Type::Custom(struct_name) => {
-                            // Copy the structure into the stack frame of the calling function
-                            let asm = self.copy_struct_into(
-                                struct_name,
-                                Reg32::Esi,
-                                0,
-                                Reg::R32(Reg32::Eax),
-                                0,
-                            )?;
-                            assembly! {(code){
-                                mov %esi, [%ebp-8];
-                                {{asm}}
-                            }};
-                        }
-                        _ => (),
-                    }
-                }
-
-                assembly2! {(code, meta) {
-                    mov %ebx, ^ret_lbl;
-                    jmp @runtime_yield_return;
-                    ^ret_lbl:
-                }};
+                assembly!{(code) {
+                    {{self.yield_return(meta, exp, current_func)?}}
+                }}
             }
             Ast::RoutineDef(_, RoutineDef::Coroutine, ref fn_name, _, _, stmts) => {
                 assembly! {(code) {
@@ -759,6 +737,37 @@ impl<'a> Compiler<'a> {
                 }};
             }
         }
+        Ok(code)
+    }
+    
+    fn yield_return(&mut self, meta: &'a Scope, exp: &'a Option<Box<CompilerNode>>, current_func: &String) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        if let Some(exp) = exp {
+            self.traverse(exp, current_func, &mut code)?;
+            match exp.get_metadata().ty() {
+                Type::Custom(struct_name) => {
+                    // Copy the structure into the stack frame of the calling function
+                    let asm = self.copy_struct_into(
+                        struct_name,
+                        Reg32::Esi,
+                        0,
+                        Reg::R32(Reg32::Eax),
+                        0,
+                    )?;
+                    assembly! {(code){
+                        mov %esi, [%ebp-8];
+                        {{asm}}
+                    }};
+                }
+                _ => (),
+            }
+        }
+
+        assembly2! {(code, meta) {
+            mov %ebx, ^ret_lbl;
+            jmp @runtime_yield_return;
+            ^ret_lbl:
+        }};
         Ok(code)
     }
 
