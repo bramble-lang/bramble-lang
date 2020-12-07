@@ -548,7 +548,7 @@ fn factor(iter: &mut TokenIter) -> PResult {
         }
         _ => match constant(iter)? {
             Some(n) => Some(n),
-            None => match function_call_or_variable(iter)? {
+            None => match function_call_or_variable_or_member_access(iter)? {
                 Some(n) => match iter.peek() {
                     Some(Token {
                         s: Lex::MemberAccess,
@@ -666,7 +666,7 @@ fn co_yield(iter: &mut TokenIter) -> PResult {
     }
 }
 
-fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
+fn function_call_or_variable_or_member_access(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => match iter.peek() {
             Some(Token { s: Lex::LParen, .. }) => {
