@@ -628,12 +628,10 @@ impl<'a> Compiler<'a> {
                     .iter()
                     .find(|(n, ..)| n == member)
                     .ok_or(format!("member {} not found on {}", member, struct_name))?;
-                let struct_sz = st.size.unwrap() as u32;
-                let field_relative_offset = field_info.2.ok_or(format!(
+                let field_offset = st.get_offset_of(member).ok_or(format!(
                     "No field offset found for {}.{}",
                     struct_name, member
                 ))? as u32;
-                let field_offset = struct_sz - field_relative_offset;
 
                 match &field_info.1 {
                     Type::Custom(_substruct_name) => {
@@ -797,16 +795,12 @@ impl<'a> Compiler<'a> {
             .scope
             .get_struct(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
-        let struct_sz = ty_def
-            .size
-            .ok_or(format!("struct {} has an unknown size", struct_name))?
-            as u32;
-        for (field_name, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
-            let rel_field_offset = field_offset.expect(&format!(
+        for (field_name, field_ty, _) in ty_def.get_fields().iter().rev() {
+            let rel_field_offset = ty_def.get_offset_of(field_name).expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",
                 struct_name, field_name,
             )) as u32;
-            let field_offset = id_offset - (struct_sz - rel_field_offset);
+            let field_offset = id_offset - rel_field_offset;
             match field_ty {
                 Type::Custom(name) => {
                     assembly! {(code){

@@ -334,13 +334,15 @@ impl StructDefinition {
     }
 
     pub fn get_offset_of(&self, field: &str) -> Option<i32> {
-        if self.size.is_none() {
-            None
-        } else {
-            self.fields
-                .iter()
-                .find(|(fname, _, _)| fname == field)
-                .map_or(None, |f| f.2)
+        match self.size {
+            None => None,
+            Some(sz) => {
+                self.fields
+                    .iter()
+                    .find(|(fname, _, _)| fname == field)
+                    .map_or(None, |f| f.2)
+                    .map_or(None, |x| Some(sz - x))
+            }
         }
     }
 
