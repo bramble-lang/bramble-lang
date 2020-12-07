@@ -778,7 +778,7 @@ impl<'a> Compiler<'a> {
                     }
                     _ => {
                         assembly! {(code) {
-                            mov [%{Reg::R32(dst)}+{dst_offset as u32}], %eax;
+                            mov [%{Reg::R32(dst)}-{-dst_offset}], %eax;
                         }};
                     }
                 }
