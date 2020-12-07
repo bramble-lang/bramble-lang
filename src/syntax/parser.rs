@@ -512,7 +512,7 @@ fn sum(iter: &mut TokenIter) -> PResult {
 }
 
 fn term(iter: &mut TokenIter) -> PResult {
-    Ok(match factor(iter)? {
+    Ok(match negate(iter)? {
         Some(n) => match consume_if_one_of(iter, vec![Lex::Mul, Lex::Div]) {
             Some((l, op)) => {
                 let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after {}", l, op))?;
@@ -522,6 +522,35 @@ fn term(iter: &mut TokenIter) -> PResult {
         },
         None => None,
     })
+}
+
+fn negate(iter: &mut TokenIter) -> PResult {
+    match consume_if_one_of(iter, vec![Lex::Minus, Lex::Not]) {
+        Some((l, op)) => {
+            let factor = member_access(iter)?.ok_or(&format!("L{}: expected term after {}", l, op))?;
+            Ok(Some(PNode::unary_op(l, &op, Box::new(factor))?))
+        },
+        None => {
+            member_access(iter)
+        }
+    }
+}
+
+fn member_access(iter: &mut TokenIter) -> PResult {
+    match factor(iter)? {
+        Some(f) => {
+            let mut ma = f;
+            while let Some(l) = consume_if(iter, Lex::MemberAccess) {
+                let member = consume_if_id(iter).ok_or(format!(
+                    "L{}: expect field name after member access '.'",
+                    l
+                ))?;
+                ma = Ast::MemberAccess(l, Box::new(ma), member.1);
+            }
+            Ok(Some(ma))
+        },
+        None => Ok(None)
+    }
 }
 
 fn factor(iter: &mut TokenIter) -> PResult {
@@ -536,36 +565,10 @@ fn factor(iter: &mut TokenIter) -> PResult {
             consume_must_be(iter, Lex::RParen)?;
             exp
         }
-        Some(Token { l, s: Lex::Minus }) => {
-            iter.next();
-            let factor = factor(iter)?.ok_or(format!("L{}: expected factor after -", l))?;
-            Some(PNode::unary_op(*l, &Lex::Minus, Box::new(factor))?)
-        }
-        Some(Token { l, s: Lex::Not }) => {
-            iter.next();
-            let factor = factor(iter)?.ok_or(format!("L{}: expected factor after !", l))?;
-            Some(PNode::unary_op(*l, &Lex::Not, Box::new(factor))?)
-        }
         _ => match constant(iter)? {
             Some(n) => Some(n),
-            None => match function_call_or_variable_or_member_access(iter)? {
-                Some(n) => match iter.peek() {
-                    Some(Token {
-                        s: Lex::MemberAccess,
-                        ..
-                    }) => {
-                        let mut ma = n;
-                        while let Some(l) = consume_if(iter, Lex::MemberAccess) {
-                            let member = consume_if_id(iter).ok_or(format!(
-                                "L{}: expect field name after member access '.'",
-                                l
-                            ))?;
-                            ma = Ast::MemberAccess(l, Box::new(ma), member.1);
-                        }
-                        Some(ma)
-                    }
-                    _ => Some(n),
-                },
+            None => match function_call_or_variable(iter)? {
+                Some(n) => Some(n),
                 None => match co_yield(iter)? {
                     Some(n) => Some(n),
                     None => None,
@@ -666,7 +669,7 @@ fn co_yield(iter: &mut TokenIter) -> PResult {
     }
 }
 
-fn function_call_or_variable_or_member_access(iter: &mut TokenIter) -> PResult {
+fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => match iter.peek() {
             Some(Token { s: Lex::LParen, .. }) => {
@@ -682,19 +685,6 @@ fn function_call_or_variable_or_member_access(iter: &mut TokenIter) -> PResult {
                     l, id
                 ))?;
                 Some(Ast::StructInit(l, id, members))
-            }
-            Some(Token {
-                s: Lex::MemberAccess,
-                ..
-            }) => {
-                iter.next();
-                let member = consume_if_id(iter)
-                    .ok_or(format!("L{}: expect field name after member access '.'", l))?;
-                Some(Ast::MemberAccess(
-                    l,
-                    Box::new(Ast::Identifier(l, id)),
-                    member.1,
-                ))
             }
             _ => match struct_init_params(iter)? {
                 Some(fields) => Some(Ast::StructInit(l, id, fields)),
@@ -1006,27 +996,69 @@ pub mod tests {
 
     #[test]
     fn parse_member_access() {
-        let mut lexer = Lexer::new();
-        let text = "thing.first.second";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
-            .into_iter()
-            .collect::<Result<_, _>>()
-            .unwrap();
-        let mut iter = tokens.iter().peekable();
-        if let Some(Ast::MemberAccess(l, left, right)) = expression(&mut iter).unwrap() {
-            assert_eq!(l, 1);
-            assert_eq!(
-                *left,
-                Ast::MemberAccess(
-                    1,
-                    Box::new(Ast::Identifier(1, "thing".into())),
-                    "first".into()
-                )
-            );
-            assert_eq!(right, "second");
-        } else {
-            panic!("No nodes returned by parser")
+        for text in vec![
+            "thing.first",
+            "(thing).first",
+            "(thing.first)",
+            ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            match member_access(&mut iter) {
+                Ok(Some(Ast::MemberAccess(l, left, right))) => {
+                    assert_eq!(l, 1);
+                    assert_eq!(
+                        *left,
+                        Ast::Identifier(1, "thing".into()),
+                        "Input: {}", text,
+                    );
+                    assert_eq!(right, "first");
+                },
+                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
+                Ok(None) => panic!("No node returned for {}", text),
+                Err(msg) => panic!("{} caused {}", text, msg),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_multiple_member_access() {
+        for text in vec![
+            "thing.first.second",
+            "(thing).first.second",
+            "(thing.first).second",
+            "((thing.first).second)",
+            "(thing.first.second)",
+            ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            match expression(&mut iter) {
+                Ok(Some(Ast::MemberAccess(l, left, right))) => {
+                    assert_eq!(l, 1);
+                    assert_eq!(
+                        *left,
+                        Ast::MemberAccess(
+                            1,
+                            Box::new(Ast::Identifier(1, "thing".into())),
+                            "first".into()
+                        ),
+                        "Input: {}", text,
+                    );
+                    assert_eq!(right, "second");
+                },
+                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
+                Ok(None) => panic!("No node returned for {}", text),
+                Err(msg) => panic!("{} caused {}", text, msg),
+            }
         }
     }
 
