@@ -1014,11 +1014,16 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::MemberAccess(l, left, right)) =
-            expression(&mut iter).unwrap()
-        {
+        if let Some(Ast::MemberAccess(l, left, right)) = expression(&mut iter).unwrap() {
             assert_eq!(l, 1);
-            assert_eq!(*left, Ast::MemberAccess(1, Box::new(Ast::Identifier(1, "thing".into())), "first".into()));
+            assert_eq!(
+                *left,
+                Ast::MemberAccess(
+                    1,
+                    Box::new(Ast::Identifier(1, "thing".into())),
+                    "first".into()
+                )
+            );
             assert_eq!(right, "second");
         } else {
             panic!("No nodes returned by parser")

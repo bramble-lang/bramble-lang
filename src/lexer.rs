@@ -333,7 +333,7 @@ impl Lexer {
                     _ => {
                         consume = false;
                         Some(Token::new(self.line, Minus))
-                    },
+                    }
                 }
             }
             Some('&') => {

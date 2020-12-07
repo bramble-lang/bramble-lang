@@ -406,11 +406,17 @@ impl<'a> Compiler<'a> {
                             Ast::Identifier(..) => {
                                 // If an identifier is being copied to another identifier, then just copy
                                 // the data over rather than pop off of the stack
-                                let asm = self.copy_struct_into(name, Reg32::Ebp, id_offset, Reg::R32(Reg32::Eax), 0)?;
+                                let asm = self.copy_struct_into(
+                                    name,
+                                    Reg32::Ebp,
+                                    id_offset,
+                                    Reg::R32(Reg32::Eax),
+                                    0,
+                                )?;
                                 assembly! {(code){
                                     {{asm}}
                                 }}
-                            },
+                            }
                             _ => {
                                 assembly! {(code){
                                     {{self.pop_struct_into(name, id_offset as u32)?}}
@@ -534,7 +540,10 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
-                let total_offset = self.scope.get_routine_allocation(co).ok_or(format!("Coroutine {} has not allocation size", co))?;
+                let total_offset = self
+                    .scope
+                    .get_routine_allocation(co)
+                    .ok_or(format!("Coroutine {} has not allocation size", co))?;
 
                 self.validate_routine_call(co, params)?;
 
@@ -657,7 +666,7 @@ impl<'a> Compiler<'a> {
                             "No field offset found for {}.{}",
                             struct_name, member
                         ))?;
-                        
+
                         assembly! {(code) {
                             lea %eax, [%eax+{(struct_sz - field_relative_offset as u32)}];
                         }}

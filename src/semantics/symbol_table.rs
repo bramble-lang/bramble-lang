@@ -45,7 +45,13 @@ impl SymbolTable {
     pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
         use ast::Ast;
         match ast {
-            Ast::Module{meta, functions, coroutines, structs, ..} => {
+            Ast::Module {
+                meta,
+                functions,
+                coroutines,
+                structs,
+                ..
+            } => {
                 for f in functions.iter_mut() {
                     SymbolTable::traverse(f, meta)?;
                 }
@@ -69,7 +75,10 @@ impl SymbolTable {
                 sym.sym.add(
                     name,
                     Type::Function(
-                        params.iter().map(|(_, ty)| ty.clone()).collect::<Vec<ast::Type>>(),
+                        params
+                            .iter()
+                            .map(|(_, ty)| ty.clone())
+                            .collect::<Vec<ast::Type>>(),
                         Box::new(ty.clone()),
                     ),
                     false,
@@ -79,18 +88,17 @@ impl SymbolTable {
                 sym.sym.add(
                     name,
                     Type::Coroutine(
-                        params.iter().map(|(_, ty)| ty.clone()).collect::<Vec<ast::Type>>(),
+                        params
+                            .iter()
+                            .map(|(_, ty)| ty.clone())
+                            .collect::<Vec<ast::Type>>(),
                         Box::new(ty.clone()),
                     ),
                     false,
                 )?;
             }
             Ast::StructDef(_, name, members) => {
-                sym.sym.add(
-                    name,
-                    Type::StructDef(members.clone()),
-                    false,
-                )?;
+                sym.sym.add(name, Type::StructDef(members.clone()), false)?;
             }
             _ => panic!(
                 "Type analysis: expected function or coroutine in module, found {}",

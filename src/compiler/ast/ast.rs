@@ -11,7 +11,11 @@ impl CompilerNode {
         CompilerNode::compute_offsets(ast, LayoutData::new(0), None)
     }
 
-    fn compute_offsets(ast: &SemanticNode, layout: LayoutData, struct_table: Option<&StructTable>) -> (CompilerNode, LayoutData) {
+    fn compute_offsets(
+        ast: &SemanticNode,
+        layout: LayoutData,
+        struct_table: Option<&StructTable>,
+    ) -> (CompilerNode, LayoutData) {
         use Ast::*;
         match ast {
             ExpressionBlock(m, body) => {
@@ -79,7 +83,8 @@ impl CompilerNode {
                 (MemberAccess(meta, Box::new(src), member.clone()), layout)
             }
             UnaryOp(m, op, ref operand) => {
-                let (operand, layout) = CompilerNode::compute_offsets(operand, layout, struct_table);
+                let (operand, layout) =
+                    CompilerNode::compute_offsets(operand, layout, struct_table);
                 let (meta, layout) = Scope::block_from(m, layout);
                 (Ast::UnaryOp(meta, *op, Box::new(operand)), layout)
             }
@@ -175,7 +180,9 @@ impl CompilerNode {
                     // at this point I could compute the size of each struct and test for
                     // circular dependencies
                     match st {
-                        Ast::StructDef(_, name, fields) => meta.structs.add(name, fields.clone()).unwrap(),
+                        Ast::StructDef(_, name, fields) => {
+                            meta.structs.add(name, fields.clone()).unwrap()
+                        }
                         _ => panic!("Expected only structs in Module.structs, got {:?}", st),
                     }
                 }
@@ -216,7 +223,7 @@ impl CompilerNode {
                     nfields.push((fname.clone(), nfv));
                 }
                 (StructInit(meta, struct_name.clone(), nfields), nlayout)
-            },
+            }
         }
     }
 }

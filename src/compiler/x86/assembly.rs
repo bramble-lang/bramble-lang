@@ -189,9 +189,9 @@ pub enum Inst {
     IMul(Operand, Operand),
     IDiv(Reg32),
     Neg(Reg32),
-    
+
     Cmp(Operand, Operand),
-    
+
     And(Operand, Operand),
     Or(Operand, Operand),
     Xor(Operand, Operand),
@@ -238,14 +238,26 @@ impl Display for Inst {
             Push(a) => f.write_fmt(format_args!("push {}", a)),
             Pop(a) => f.write_fmt(format_args!("pop {}", a)),
 
-            Mov(a, b) => f.write_fmt(format_args!("mov {}, {}", a, match b {
-                Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
-                _ => format!("{}", b),
-            })),
-            Movzx(a, b) => f.write_fmt(format_args!("movzx {}, {}", a, match b {
-                Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
-                _ => format!("{}", b),
-            })),
+            Mov(a, b) => f.write_fmt(format_args!(
+                "mov {}, {}",
+                a,
+                match b {
+                    Operand::Direct(DirectOperand::Integer(_))
+                    | Operand::Memory(_)
+                    | Operand::MemoryExpr(_, _) => format!("DWORD {}", b),
+                    _ => format!("{}", b),
+                }
+            )),
+            Movzx(a, b) => f.write_fmt(format_args!(
+                "movzx {}, {}",
+                a,
+                match b {
+                    Operand::Direct(DirectOperand::Integer(_))
+                    | Operand::Memory(_)
+                    | Operand::MemoryExpr(_, _) => format!("DWORD {}", b),
+                    _ => format!("{}", b),
+                }
+            )),
 
             Cdq => f.write_str("cdq"),
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
@@ -285,7 +297,7 @@ macro_rules! unit_op {
     };
     (newline) => {
         Inst::NewLine
-    }
+    };
 }
 
 #[macro_export]
@@ -450,7 +462,7 @@ macro_rules! operand {
     ({$e:expr}) => {
         Operand::Direct(DirectOperand::Integer($e))
     };
-    
+
     // register
     (%{$reg:expr}) => {
         Operand::Direct(DirectOperand::Register($reg))
@@ -490,7 +502,7 @@ macro_rules! assembly {
         }
         assembly!(($buf) {$($tail)*})
     };
-    
+
 
     /********************/
     /*     COMMENTS       */
@@ -532,7 +544,7 @@ macro_rules! assembly {
         $buf.push(unit_op!($inst));
         assembly!(($buf) {$($tail)*})
     };
-    
+
     /********************/
     /* Special Ops      */
     /********************/
@@ -680,7 +692,7 @@ macro_rules! assembly2 {
         }
         assembly2!(($buf, $info) {$($tail)*})
     };
-    
+
 
     /********************/
     /*     COMMENTS       */
@@ -721,7 +733,7 @@ macro_rules! assembly2 {
         $buf.push(unit_op!($inst));
         assembly2!(($buf, $info) {$($tail)*})
     };
-    
+
     /********************/
     /* Special Ops      */
     /********************/

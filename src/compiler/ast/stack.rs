@@ -1,7 +1,7 @@
-use crate::ast::Type;
 use crate::ast::RoutineDef;
+use crate::ast::Type;
 use crate::compiler::ast::ast::CompilerNode;
-use crate::compiler::ast::scope::{Symbol, Level};
+use crate::compiler::ast::scope::{Level, Symbol};
 
 use super::scope::StructDefinition;
 
@@ -62,12 +62,12 @@ impl<'a> ScopeStack<'a> {
 
     pub fn find_func(&self, name: &str) -> Option<&CompilerNode> {
         match self.find_global(name) {
-            Some(ref node) => {
-                match node {
-                    CompilerNode::Module{functions, ..} =>
-                        functions.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Function, n, _, _, _) => n == name, _ => false}),
-                    _ => None,
-                }
+            Some(ref node) => match node {
+                CompilerNode::Module { functions, .. } => functions.iter().find(|v| match v {
+                    CompilerNode::RoutineDef(_, RoutineDef::Function, n, _, _, _) => n == name,
+                    _ => false,
+                }),
+                _ => None,
             },
             None => None,
         }
@@ -75,12 +75,12 @@ impl<'a> ScopeStack<'a> {
 
     pub fn find_coroutine(&self, name: &str) -> Option<&CompilerNode> {
         match self.find_global(name) {
-            Some(ref node) => {
-                match node {
-                    CompilerNode::Module{coroutines, ..}=>
-                        coroutines.iter().find(|v| match v {CompilerNode::RoutineDef(_, RoutineDef::Coroutine, n, _, _, _) => n == name, _ => false}),
-                    _ => None,
-                }
+            Some(ref node) => match node {
+                CompilerNode::Module { coroutines, .. } => coroutines.iter().find(|v| match v {
+                    CompilerNode::RoutineDef(_, RoutineDef::Coroutine, n, _, _, _) => n == name,
+                    _ => false,
+                }),
+                _ => None,
             },
             None => None,
         }
@@ -92,8 +92,11 @@ impl<'a> ScopeStack<'a> {
             None => match self.find_coroutine(name) {
                 Some(co) => co,
                 None => return None,
-            }
-        }.get_metadata().level().allocation()
+            },
+        }
+        .get_metadata()
+        .level()
+        .allocation()
     }
 
     pub fn find_struct(&self, name: &str) -> Option<&StructDefinition> {
@@ -121,8 +124,8 @@ impl<'a> ScopeStack<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::compiler::ast::scope::Scope;
     use super::*;
+    use crate::compiler::ast::scope::Scope;
     use crate::syntax::ast::Type;
 
     #[test]
@@ -193,7 +196,6 @@ mod tests {
 
     #[test]
     fn test_find_symbol_does_not_pass_function() {
-
         let mut stack = ScopeStack::new();
 
         let mut outer_scope = Scope::new(Level::Block, 0, Type::Unit);
@@ -201,13 +203,24 @@ mod tests {
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
 
-        let mut fun_scope = Scope::new(Level::Routine {
-            next_label: 0,
-            allocation: 8,
-        }, 0, Type::Unit);
+        let mut fun_scope = Scope::new(
+            Level::Routine {
+                next_label: 0,
+                allocation: 8,
+            },
+            0,
+            Type::Unit,
+        );
         fun_scope.insert("y", 4, 4);
         fun_scope.insert("z", 4, 8);
-        let outer_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![], Type::I32, vec![]);
+        let outer_node = CompilerNode::RoutineDef(
+            fun_scope,
+            RoutineDef::Function,
+            "func".into(),
+            vec![],
+            Type::I32,
+            vec![],
+        );
         stack.push(&outer_node);
 
         let mut inner_scope = Scope::new(Level::Block, 0, Type::Unit);
@@ -224,26 +237,53 @@ mod tests {
     fn test_get_routine_parameters() {
         let mut stack = ScopeStack::new();
 
-        let mut fun_scope = Scope::new(Level::Routine {
-            next_label: 0,
-            allocation: 8,
-        }, 0, Type::Unit);
+        let mut fun_scope = Scope::new(
+            Level::Routine {
+                next_label: 0,
+                allocation: 8,
+            },
+            0,
+            Type::Unit,
+        );
         fun_scope.insert("y", 4, 0);
         fun_scope.insert("z", 4, 4);
-        let fun_node = CompilerNode::RoutineDef(fun_scope, RoutineDef::Function, "func".into(), vec![("y".into(), Type::I32)], Type::I32, vec![]);
+        let fun_node = CompilerNode::RoutineDef(
+            fun_scope,
+            RoutineDef::Function,
+            "func".into(),
+            vec![("y".into(), Type::I32)],
+            Type::I32,
+            vec![],
+        );
 
         let mut module_scope = Scope::new(Level::Block, 0, Type::Unit);
         module_scope.insert("func", 0, 0);
-        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![fun_node], coroutines: vec![], structs: vec![]};
+        let module_node = CompilerNode::Module {
+            meta: module_scope,
+            functions: vec![fun_node],
+            coroutines: vec![],
+            structs: vec![],
+        };
         stack.push(&module_node);
 
-        let fun2_scope = Scope::new(Level::Routine {
-            next_label: 0,
-            allocation: 0,
-        }, 0, Type::Unit);
-        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Function, "func2".into(), vec![], Type::I32, vec![]);
+        let fun2_scope = Scope::new(
+            Level::Routine {
+                next_label: 0,
+                allocation: 0,
+            },
+            0,
+            Type::Unit,
+        );
+        let fun2_node = CompilerNode::RoutineDef(
+            fun2_scope,
+            RoutineDef::Function,
+            "func2".into(),
+            vec![],
+            Type::I32,
+            vec![],
+        );
         stack.push(&fun2_node);
-        
+
         assert_eq!(stack.find("func").is_none(), true);
 
         let node = stack.find_func("func").unwrap();
@@ -254,7 +294,7 @@ mod tests {
                 let y_param = meta.get("y").unwrap();
                 assert_eq!(y_param.offset, 4);
                 assert_eq!(y_param.size, 4);
-            },
+            }
             _ => assert!(false),
         }
     }
@@ -263,24 +303,51 @@ mod tests {
     fn test_get_coroutine_parameters() {
         let mut stack = ScopeStack::new();
 
-        let mut cor_scope = Scope::new(Level::Routine {
-            next_label: 0,
-            allocation: 8,
-        }, 0, Type::Unit);
+        let mut cor_scope = Scope::new(
+            Level::Routine {
+                next_label: 0,
+                allocation: 8,
+            },
+            0,
+            Type::Unit,
+        );
         cor_scope.insert("y", 4, 20);
         cor_scope.insert("z", 4, 24);
-        let cor_node = CompilerNode::RoutineDef(cor_scope, RoutineDef::Coroutine, "cor".into(), vec![("y".into(), Type::I32)], Type::I32, vec![]);
+        let cor_node = CompilerNode::RoutineDef(
+            cor_scope,
+            RoutineDef::Coroutine,
+            "cor".into(),
+            vec![("y".into(), Type::I32)],
+            Type::I32,
+            vec![],
+        );
 
         let mut module_scope = Scope::new(Level::Block, 0, Type::Unit);
         module_scope.insert("cor", 0, 0);
-        let module_node = CompilerNode::Module{meta: module_scope, functions: vec![], coroutines: vec![cor_node], structs: vec![]};
+        let module_node = CompilerNode::Module {
+            meta: module_scope,
+            functions: vec![],
+            coroutines: vec![cor_node],
+            structs: vec![],
+        };
         stack.push(&module_node);
 
-        let fun2_scope = Scope::new(Level::Routine {
-            next_label: 0,
-            allocation: 0,
-        }, 0, Type::Unit);
-        let fun2_node = CompilerNode::RoutineDef(fun2_scope, RoutineDef::Coroutine, "func2".into(), vec![], Type::I32, vec![]);
+        let fun2_scope = Scope::new(
+            Level::Routine {
+                next_label: 0,
+                allocation: 0,
+            },
+            0,
+            Type::Unit,
+        );
+        let fun2_node = CompilerNode::RoutineDef(
+            fun2_scope,
+            RoutineDef::Coroutine,
+            "func2".into(),
+            vec![],
+            Type::I32,
+            vec![],
+        );
         stack.push(&fun2_node);
 
         let node = stack.find_coroutine("cor").unwrap();
@@ -291,7 +358,7 @@ mod tests {
                 let y_param = meta.get("y").unwrap();
                 assert_eq!(y_param.offset, 24);
                 assert_eq!(y_param.size, 4);
-            },
+            }
             _ => assert!(false),
         }
     }
