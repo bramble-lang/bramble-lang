@@ -75,7 +75,7 @@ impl Scope {
             ast::Type::I32 => Some(4),
             ast::Type::Bool => Some(4),
             ast::Type::Custom(name) => self.structs.get(name).map(|st| st.size).flatten(),
-            ast::Type::CoroutineVal(..) => Some(4),
+            ast::Type::Coroutine(..) => Some(4),
             _ => None,
         }
     }
@@ -167,7 +167,7 @@ impl ast::Type {
         match self {
             ast::Type::I32 => 4,
             ast::Type::Bool => 4,
-            ast::Type::CoroutineVal(_) => 4,
+            ast::Type::Coroutine(_) => 4,
             ast::Type::Custom(name) => {
                 match struct_table {
                     Some(st) => st
@@ -179,8 +179,8 @@ impl ast::Type {
                     //_ => panic!("Attempting to look up a struct when there is not struct table"),
                 }
             }
-            ast::Type::Function(..) => 0,
-            ast::Type::Coroutine(..) => 0,
+            ast::Type::FunctionDef(..) => 0,
+            ast::Type::CoroutineDef(..) => 0,
             ast::Type::StructDef(..) => 0,
             ast::Type::Unit => 0,
             ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
@@ -192,7 +192,7 @@ impl ast::Type {
             ast::Type::I32 => Some(4),
             ast::Type::Bool => Some(4),
             ast::Type::Custom(name) => Some(resolved_sz.get(name)?.iter().sum()),
-            ast::Type::CoroutineVal(_) => Some(4),
+            ast::Type::Coroutine(_) => Some(4),
             _ => None,
         }
     }

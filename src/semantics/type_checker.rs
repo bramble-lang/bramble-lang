@@ -128,11 +128,11 @@ pub mod checker {
         ) -> Result<(&Vec<ast::Type>, &ast::Type), String> {
             match self.lookup(sym, id)? {
                 Symbol {
-                    ty: Type::Coroutine(params, p),
+                    ty: Type::CoroutineDef(params, p),
                     ..
                 }
                 | Symbol {
-                    ty: Type::Function(params, p),
+                    ty: Type::FunctionDef(params, p),
                     ..
                 } => Ok((params, p)),
                 _ => return Err(format!("{} is not a coroutine or function", id)),
@@ -146,7 +146,7 @@ pub mod checker {
         ) -> Result<(&Vec<ast::Type>, &ast::Type), String> {
             match self.lookup(sym, id)? {
                 Symbol {
-                    ty: Type::Coroutine(params, p),
+                    ty: Type::CoroutineDef(params, p),
                     ..
                 } => Ok((params, p)),
                 _ => return Err(format!("{} is not a coroutine", id)),
@@ -156,7 +156,7 @@ pub mod checker {
         fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
             let p = &self.lookup(sym, id)?.ty;
             match p {
-                Custom(..) | CoroutineVal(_) | I32 | Bool => Ok(p),
+                Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
                 _ => return Err(format!("{} is not a variable", id)),
             }
         }
@@ -317,7 +317,7 @@ pub mod checker {
                     Some(_) => {
                         let yield_target = self.traverse(exp, current_func, sym)?;
                         meta.ty = match yield_target {
-                            CoroutineVal(ret_ty) => *ret_ty.clone(),
+                            Coroutine(ret_ty) => *ret_ty.clone(),
                             _ => {
                                 return Err(format!("yield expects co<_> but got {}", yield_target))
                             }
@@ -368,16 +368,16 @@ pub mod checker {
                         .or(self.stack.get(fname))
                     {
                         Some(Symbol {
-                            ty: Type::Function(pty, rty),
+                            ty: Type::FunctionDef(pty, rty),
                             ..
                         }) if *call == crate::syntax::ast::RoutineCall::Function => {
                             (pty, *rty.clone())
                         }
                         Some(Symbol {
-                            ty: Type::Coroutine(pty, rty),
+                            ty: Type::CoroutineDef(pty, rty),
                             ..
                         }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
-                            (pty, Type::CoroutineVal(rty.clone()))
+                            (pty, Type::Coroutine(rty.clone()))
                         }
                         Some(_) => return Err(format!("{} found but was not a function", fname)),
                         None => return Err(format!("function {} not declared", fname)),
@@ -606,9 +606,9 @@ pub mod checker {
                     .collect::<Vec<ast::Type>>();
 
                 if f.starts_with("my_co") {
-                    sym.add(f, Type::Coroutine(params, Box::new(fi.ret.clone())), false)?;
+                    sym.add(f, Type::CoroutineDef(params, Box::new(fi.ret.clone())), false)?;
                 } else {
-                    sym.add(f, Type::Function(params, Box::new(fi.ret.clone())), false)?;
+                    sym.add(f, Type::FunctionDef(params, Box::new(fi.ret.clone())), false)?;
                 }
             }
 
@@ -1134,7 +1134,7 @@ pub mod checker {
                 &Some("my_co".into()),
                 &scope,
             );
-            assert_eq!(ty, Ok(CoroutineVal(Box::new(I32))));
+            assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
             // test correct parameters passed in call
             let node = Ast::RoutineCall(
@@ -1149,7 +1149,7 @@ pub mod checker {
                 &Some("my_co2".into()),
                 &scope,
             );
-            assert_eq!(ty, Ok(CoroutineVal(Box::new(I32))));
+            assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
             // test incorrect parameters passed in call
             let node =
@@ -1206,7 +1206,7 @@ pub mod checker {
                 "my_main",
                 vec![],
                 Unit,
-                vec![("c", false, CoroutineVal(Box::new(I32)))],
+                vec![("c", false, Coroutine(Box::new(I32)))],
             );
             scope.add("my_co2", vec![], I32, vec![]);
 

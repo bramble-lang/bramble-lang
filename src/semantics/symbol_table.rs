@@ -74,7 +74,7 @@ impl SymbolTable {
             Ast::RoutineDef(_, ast::RoutineDef::Function, name, params, ty, _) => {
                 sym.sym.add(
                     name,
-                    Type::Function(
+                    Type::FunctionDef(
                         params
                             .iter()
                             .map(|(_, ty)| ty.clone())
@@ -87,7 +87,7 @@ impl SymbolTable {
             Ast::RoutineDef(_, ast::RoutineDef::Coroutine, name, params, ty, _) => {
                 sym.sym.add(
                     name,
-                    Type::Coroutine(
+                    Type::CoroutineDef(
                         params
                             .iter()
                             .map(|(_, ty)| ty.clone())

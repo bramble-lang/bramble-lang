@@ -729,7 +729,7 @@ fn consume_type(iter: &mut TokenIter) -> Option<Type> {
     }
     .map(|ty| {
         if is_coroutine {
-            Type::CoroutineVal(Box::new(ty))
+            Type::Coroutine(Box::new(ty))
         } else {
             ty
         }
@@ -1173,7 +1173,7 @@ pub mod tests {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, false, p, exp) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Type::CoroutineVal(Box::new(Type::I32)));
+                    assert_eq!(*p, Type::Coroutine(Box::new(Type::I32)));
                     assert_eq!(
                         *exp,
                         Box::new(Ast::RoutineCall(

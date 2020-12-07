@@ -227,9 +227,9 @@ pub enum Type {
     Unit,
     Custom(String),
     StructDef(Vec<(String, Type)>),
-    Function(Vec<Type>, Box<Type>),
-    Coroutine(Vec<Type>, Box<Type>),
-    CoroutineVal(Box<Type>),
+    FunctionDef(Vec<Type>, Box<Type>),
+    CoroutineDef(Vec<Type>, Box<Type>),
+    Coroutine(Box<Type>),
     Unknown,
 }
 
@@ -264,7 +264,7 @@ impl std::fmt::Display for Type {
                     .join(",");
                 f.write_str(&members)
             }
-            Type::Coroutine(params, ret_ty) => {
+            Type::CoroutineDef(params, ret_ty) => {
                 let params = params
                     .iter()
                     .map(|p| format!("{}", p))
@@ -272,8 +272,8 @@ impl std::fmt::Display for Type {
                     .join(",");
                 f.write_fmt(format_args!("co ({}) -> {}", params, ret_ty))
             }
-            Type::CoroutineVal(ret_ty) => f.write_fmt(format_args!("co<{}>", ret_ty)),
-            Type::Function(params, ret_ty) => {
+            Type::Coroutine(ret_ty) => f.write_fmt(format_args!("co<{}>", ret_ty)),
+            Type::FunctionDef(params, ret_ty) => {
                 let params = params
                     .iter()
                     .map(|p| format!("{}", p))
