@@ -788,10 +788,10 @@ impl<'a> Compiler<'a> {
             .size
             .ok_or(format!("struct {} has an unknown size", struct_name))?
             as u32;
-        for (_, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
+        for (field_name, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!(
-                "CRITICAL: struct {} has field with no relative offset",
-                struct_name
+                "CRITICAL: struct {} has member, {}, with no relative offset",
+                struct_name, field_name,
             )) as u32;
             let field_offset = id_offset - (struct_sz - rel_field_offset);
             match field_ty {
@@ -830,8 +830,8 @@ impl<'a> Compiler<'a> {
             .ok_or(format!("struct {} has an unknown size", struct_name))?;
         for (field_name, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!(
-                "CRITICAL: struct {} has field with no relative offset",
-                struct_name
+                "CRITICAL: struct {} has member, {}, with no relative offset",
+                struct_name, field_name
             ));
             let dst_field_offset = dst_offset - (struct_sz - rel_field_offset);
             match field_ty {
@@ -914,7 +914,8 @@ impl<'a> Compiler<'a> {
         // calling the function
         if params.len() > param_registers.len() {
             return Err(format!(
-                "Compiler: too many parameters being passed to function"
+                "Compiler: too many parameters being passed to function.  {} has {} parameters but compiler cannot support more than {}",
+                current_func, params.len(), param_registers.len(),
             ));
         }
         let mut code = vec![];
