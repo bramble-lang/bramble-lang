@@ -4,6 +4,13 @@ fn my_main() {
         y: 2,
         z: 3,
     };
+
+    let ms2: MyStruct := ms;
+    printiln ms2.x;
+    printiln ms2.y;
+    printiln ms2.z;
+
+
     let t:MyStruct2 := MyStruct2{
         a: 123,
         ms: ms,
