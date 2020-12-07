@@ -420,27 +420,9 @@ impl<'a> Compiler<'a> {
                 }}
             },
             Ast::Yield(meta, ref id) => {
-                self.traverse(id, current_func, code)?;
-                match meta.ty() {
-                    Type::Custom(struct_name) => {
-                        let st = self
-                            .scope
-                            .get_struct(struct_name)
-                            .ok_or(format!("no definition for {} found", struct_name))?;
-                        let st_sz = st
-                            .size
-                            .ok_or(format!("struct {} has no resolved size", struct_name))?;
-                        assembly! {(code){
-                            sub %esp, {st_sz};
-                        }}
-                    }
-                    _ => (),
-                }
-                assembly2! {(code, meta) {
-                    mov %ebx, ^ret_lbl;
-                    jmp @runtime_yield_into_coroutine;
-                    ^ret_lbl:
-                }};
+                assembly!{(code) {
+                    {{self.yield_exp(meta, id, current_func)?}}
+                }}
             }
             Ast::YieldReturn(meta, ref exp) => {
                 assembly!{(code) {
@@ -737,6 +719,32 @@ impl<'a> Compiler<'a> {
                 }};
             }
         }
+        Ok(code)
+    }
+
+    fn yield_exp(&mut self, meta: &'a Scope, exp: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        self.traverse(exp, current_func, &mut code)?;
+        match meta.ty() {
+            Type::Custom(struct_name) => {
+                let st = self
+                    .scope
+                    .get_struct(struct_name)
+                    .ok_or(format!("no definition for {} found", struct_name))?;
+                let st_sz = st
+                    .size
+                    .ok_or(format!("struct {} has no resolved size", struct_name))?;
+                assembly! {(code){
+                    sub %esp, {st_sz};
+                }}
+            }
+            _ => (),
+        }
+        assembly2! {(code, meta) {
+            mov %ebx, ^ret_lbl;
+            jmp @runtime_yield_into_coroutine;
+            ^ret_lbl:
+        }};
         Ok(code)
     }
     
