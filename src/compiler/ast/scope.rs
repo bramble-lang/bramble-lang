@@ -58,14 +58,6 @@ impl Scope {
         self.symbols.table.get(name)
     }
 
-    pub fn add_struct(
-        &mut self,
-        name: &str,
-        fields: Vec<(String, ast::Type)>,
-    ) -> Result<(), String> {
-        self.structs.add(name, fields)
-    }
-
     pub fn get_struct(&self, name: &str) -> Option<&StructDefinition> {
         self.structs.get(name)
     }
@@ -218,7 +210,7 @@ impl StructTable {
         }
     }
 
-    pub fn add(&mut self, name: &str, fields: Vec<(String, ast::Type)>) -> Result<(), String> {
+    pub fn insert(&mut self, name: &str, fields: Vec<(String, ast::Type)>) -> Result<(), String> {
         if self.structs.contains_key(name) {
             Err(format!("Struct {} is already in the StructTable", name))
         } else {
@@ -239,8 +231,34 @@ impl StructTable {
     /// If a struct cannot have its size resolved (because of a circular
     /// dependency) then an error is returned. The StructTable will then
     /// be left with one or more Structs that do not have a resolved size.
-    pub fn resolve_size(&mut self) -> Result<(), String> {
+    pub fn resolve_sizes(&mut self) -> Result<(), String> {
         // Create a counter that will count every time a struct is resolved
+        let resolved_sizes = self.compute_struct_sizes();
+
+        // Run through all the structs and update their sizes
+        for (_, st) in self.structs.iter_mut() {
+            match resolved_sizes.get(&st.name) {
+                Some(sz) => {
+                    let mut total_offset = 0;
+                    st.fields.iter_mut().zip(sz.iter()).for_each(|(f, sz)| {
+                        total_offset += *sz;
+                        f.2 = Some(total_offset);
+                    });
+                    st.size = Some(sz.iter().sum());
+                }
+                None => (),
+            }
+        }
+
+        // If any struct has None for its size then return an error
+        // Otherwise, return success
+        match self.structs.iter().find(|(_, st)| st.size.is_none()) {
+            Some((n, _)) => Err(format!("Struct {} cannot be resolved", n)),
+            None => Ok(()),
+        }
+    }
+
+    fn compute_struct_sizes(&mut self) -> HashMap<String, Vec<i32>> {
         let mut counter = 0;
         let mut resolved_sizes: HashMap<String, Vec<i32>> = HashMap::new();
         loop {
@@ -268,27 +286,7 @@ impl StructTable {
             }
         }
 
-        // Run through all the structs and update their sizes
-        for (_, st) in self.structs.iter_mut() {
-            match resolved_sizes.get(&st.name) {
-                Some(sz) => {
-                    let mut total_offset = 0;
-                    st.fields.iter_mut().zip(sz.iter()).for_each(|(f, sz)| {
-                        total_offset += *sz;
-                        f.2 = Some(total_offset);
-                    });
-                    st.size = Some(sz.iter().sum());
-                }
-                None => (),
-            }
-        }
-
-        // If any struct has None for its size then return an error
-        // Otherwise, return success
-        match self.structs.iter().find(|(_, st)| st.size.is_none()) {
-            Some((n, _)) => Err(format!("Struct {} cannot be resolved", n)),
-            None => Ok(()),
-        }
+        resolved_sizes
     }
 
     fn attempt_size_resolution(

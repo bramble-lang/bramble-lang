@@ -181,12 +181,12 @@ impl CompilerNode {
                     // circular dependencies
                     match st {
                         Ast::StructDef(_, name, fields) => {
-                            meta.structs.add(name, fields.clone()).unwrap()
+                            meta.structs.insert(name, fields.clone()).unwrap()
                         }
                         _ => panic!("Expected only structs in Module.structs, got {:?}", st),
                     }
                 }
-                meta.structs.resolve_size().unwrap();
+                meta.structs.resolve_sizes().unwrap();
 
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];
