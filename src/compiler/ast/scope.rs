@@ -191,15 +191,6 @@ impl ast::Type {
         }
     }
 
-    pub fn size2(&self, resolved_sz: &HashMap<String, Vec<i32>>) -> Option<i32> {
-        match self {
-            ast::Type::I32 => Some(4),
-            ast::Type::Bool => Some(4),
-            ast::Type::Custom(name) => Some(resolved_sz.get(name)?.iter().sum()),
-            ast::Type::Coroutine(_) => Some(4),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -296,13 +287,23 @@ impl StructTable {
     fn attempt_size_resolution(
         &self,
         st: &StructDefinition,
-        resolved_sz: &HashMap<String, Vec<i32>>,
+        resolved_structs: &HashMap<String, Vec<i32>>,
     ) -> Option<Vec<i32>> {
         // Loop through each struct in the table and attempt to resolve its size
         st.fields
             .iter()
-            .map(|(_, ty, _)| ty.size2(resolved_sz))
+            .map(|(_, ty, _)| StructTable::size_of(ty,resolved_structs))
             .collect::<Option<Vec<i32>>>()
+    }
+
+    fn size_of(ty: &ast::Type, resolved_structs: &HashMap<String, Vec<i32>>) -> Option<i32> {
+        match ty {
+            ast::Type::I32 => Some(4),
+            ast::Type::Bool => Some(4),
+            ast::Type::Custom(name) => Some(resolved_structs.get(name)?.iter().sum()),
+            ast::Type::Coroutine(_) => Some(4),
+            _ => None,
+        }
     }
 }
 
