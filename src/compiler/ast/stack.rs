@@ -36,7 +36,7 @@ impl<'a> ScopeStack<'a> {
                 return t;
             }
             match scope.level {
-                Level::Block => (),
+                Level::Local => (),
                 Level::Routine { .. } => return None,
             }
         }
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_find_symbol_in_current_scope() {
-        let mut scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut scope = Scope::new(Level::Local, 0, Type::Unit);
         scope.insert("x", 4, 4);
         let node = CompilerNode::ExpressionBlock(scope, vec![]);
         let mut stack = ScopeStack::new();
@@ -145,11 +145,11 @@ mod tests {
     fn test_find_symbol_in_outer_scope() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut outer_scope = Scope::new(Level::Local, 0, Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
-        let inner_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let inner_scope = Scope::new(Level::Local, 0, Type::Unit);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
 
@@ -163,11 +163,11 @@ mod tests {
     fn test_find_symbol_defined_in_both_scopes() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut outer_scope = Scope::new(Level::Local, 0, Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
-        let mut inner_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut inner_scope = Scope::new(Level::Local, 0, Type::Unit);
         inner_scope.insert("x", 4, 16);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
@@ -182,11 +182,11 @@ mod tests {
     fn test_find_symbol_does_not_exist() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut outer_scope = Scope::new(Level::Local, 0, Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
-        let inner_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let inner_scope = Scope::new(Level::Local, 0, Type::Unit);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
 
@@ -197,7 +197,7 @@ mod tests {
     fn test_find_symbol_does_not_pass_function() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut outer_scope = Scope::new(Level::Local, 0, Type::Unit);
         outer_scope.insert("nope", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
@@ -222,7 +222,7 @@ mod tests {
         );
         stack.push(&outer_node);
 
-        let mut inner_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut inner_scope = Scope::new(Level::Local, 0, Type::Unit);
         inner_scope.insert("x", 4, 4);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
@@ -255,7 +255,7 @@ mod tests {
             vec![],
         );
 
-        let mut module_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut module_scope = Scope::new(Level::Local, 0, Type::Unit);
         module_scope.insert("func", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,
@@ -321,7 +321,7 @@ mod tests {
             vec![],
         );
 
-        let mut module_scope = Scope::new(Level::Block, 0, Type::Unit);
+        let mut module_scope = Scope::new(Level::Local, 0, Type::Unit);
         module_scope.insert("cor", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,

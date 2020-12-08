@@ -84,9 +84,9 @@ impl Scope {
         }
     }
 
-    pub fn block_from(m: &SemanticMetadata, struct_table: &StructTable, current_layout: LayoutData) -> (Scope, LayoutData) {
+    pub fn local_from(m: &SemanticMetadata, struct_table: &StructTable, current_layout: LayoutData) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(Level::Block, 0, m.ty.clone());
+        let mut scope = Scope::new(Level::Local, 0, m.ty.clone());
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
             layout.offset = scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
@@ -123,14 +123,14 @@ impl Scope {
 
 #[derive(Debug, PartialEq)]
 pub enum Level {
-    Block,
+    Local,
     Routine { next_label: i32, allocation: i32 },
 }
 
 impl Level {
     pub fn allocation(&self) -> Option<i32> {
         match self {
-            Level::Block => None,
+            Level::Local => None,
             Level::Routine { allocation, .. } => Some(*allocation),
         }
     }
