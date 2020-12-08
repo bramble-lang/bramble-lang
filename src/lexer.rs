@@ -164,27 +164,27 @@ impl Lexer {
             if cs.peek().is_none() {
                 break;
             }
-            tokens.push(self.next_token(&mut cs));
+            match self.next_token(&mut cs) {
+                Ok(Some(t)) => tokens.push(Ok(t)),
+                Ok(None) => (),
+                Err(msg) => tokens.push(Err(msg)),
+            }
         }
 
         tokens
     }
 
-    fn next_token(&mut self, cs: &mut Peekable<std::str::Chars>) -> Result<Token, String> {
+    fn next_token(&mut self, cs: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
         match self.consume_integer(cs)? {
-            Some(i) => Ok(i),
+            Some(i) => Ok(Some(i)),
             None => match self.consume_identifier(cs)? {
                 Some(id) => {
                     let tok = self.if_primitive_map(self.if_keyword_map(self.if_boolean_map(id)));
-                    Ok(tok)
+                    Ok(Some(tok))
                 }
                 None => match self.consume_operator(cs)? {
-                    Some(op) => Ok(op),
-                    None => Err(format!(
-                        "L{}: Unexpected character: {:?}",
-                        self.line,
-                        cs.next()
-                    )),
+                    Some(op) => Ok(Some(op)),
+                    None => Ok(None),
                 },
             },
         }
@@ -274,7 +274,25 @@ impl Lexer {
             Some('{') => Some(Token::new(self.line, LBrace)),
             Some('}') => Some(Token::new(self.line, RBrace)),
             Some('*') => Some(Token::new(self.line, Mul)),
-            Some('/') => Some(Token::new(self.line, Div)),
+            Some('/') => {
+                iter.next();
+                match iter.peek() {
+                    Some('/') => {
+                        // this is a line comment
+                        self.consume_line_comment(iter);
+                        None
+                    },
+                    Some('*') => {
+                        /* this is a block comment */
+                        self.consume_block_comment(iter);
+                        None
+                    }
+                    _ => {
+                        consume = false;
+                        Some(Token::new(self.line, Div))
+                    }
+                }
+            },
             Some('+') => Some(Token::new(self.line, Add)),
             Some(';') => Some(Token::new(self.line, Semicolon)),
             Some(',') => Some(Token::new(self.line, Comma)),
@@ -357,6 +375,33 @@ impl Lexer {
             iter.next();
         }
         Ok(token)
+    }
+
+    fn consume_line_comment(
+        &self,
+        iter: &mut Peekable<std::str::Chars>,
+    ) {
+        while let Some(c) = iter.next() {
+            if c == '\n' {
+                break;
+            }
+        }
+    }
+
+    fn consume_block_comment(
+        &self,
+        iter: &mut Peekable<std::str::Chars>,
+    ) {
+        while let Some(c) = iter.next() {
+            if c == '*' {
+                if let Some(c2) = iter.peek() {
+                    if *c2 == '/' {
+                        iter.next();
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     pub fn if_boolean_map(&self, token: Token) -> Token {
@@ -588,6 +633,44 @@ mod tests {
             assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
             assert_eq!(tokens[6].clone().unwrap(), Token::new(*t7, Bool(true)));
             assert_eq!(tokens[7].clone().unwrap(), Token::new(*t8, RParen));
+        }
+    }
+
+    #[test]
+    fn test_comments() {
+        for (text, t1, t2, t3, t4, t5, t6) in [
+            ("return ( x + 5 || //true )", 1, 1, 1, 1, 1, 1, ),
+            (" return ( x + 5|| /*true )*/ ", 1, 1, 1, 1, 1, 1, ),
+            ("return(x+5||///*true)", 1, 1, 1, 1, 1, 1, ),
+            (
+                "return
+            (x+
+                5
+                ||
+                /*true
+            )*/",
+                1,
+                2,
+                2,
+                2,
+                3,
+                4,
+            ),
+        ]
+        .iter()
+        {
+            let mut lexer = Lexer::new();
+            let tokens = lexer.tokenize(text);
+            assert_eq!(tokens.len(), 6, "{:?}", tokens);
+            assert_eq!(tokens[0].clone().unwrap(), Token::new(*t1, Return));
+            assert_eq!(tokens[1].clone().unwrap(), Token::new(*t2, LParen));
+            assert_eq!(
+                tokens[2].clone().unwrap(),
+                Token::new(*t3, Identifier("x".into()))
+            );
+            assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer(5)));
+            assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
         }
     }
 }
