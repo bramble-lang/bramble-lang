@@ -452,6 +452,7 @@ impl<'a> Compiler<'a> {
 
                 assembly! {(code) {
                     {{self.evaluate_routine_params(params, &co_param_registers, current_func)?}}
+                    {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
                     lea %eax, [@{co}];
                     mov %edi, {total_offset};
@@ -519,6 +520,7 @@ impl<'a> Compiler<'a> {
                 // calling the function
                 assembly! {(code) {
                     {{self.evaluate_routine_params(params, &fn_param_registers, current_func)?}}
+                    {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
                     call @{fn_name};
                 }};
             }
@@ -959,6 +961,15 @@ impl<'a> Compiler<'a> {
                 push %eax;
             }};
         }
+        Ok(code)
+    }
+
+    fn move_routine_params_into_registers(
+        &mut self,
+        params: &'a Vec<CompilerNode>,
+        param_registers: &Vec<Reg>,
+    ) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
         for reg in param_registers.iter().take(params.len()).rev() {
             assembly! {(code){
                 pop %{*reg};
@@ -966,6 +977,7 @@ impl<'a> Compiler<'a> {
         }
         Ok(code)
     }
+
 
     fn validate_routine_call(
         &self,
