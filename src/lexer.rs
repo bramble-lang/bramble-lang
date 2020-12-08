@@ -22,6 +22,7 @@ pub enum Lex {
     Integer(i32),
     Bool(bool),
     Identifier(String),
+    StringLiteral(String),
     Mul,
     Div,
     Add,
@@ -69,6 +70,7 @@ impl std::fmt::Display for Lex {
             Integer(i) => f.write_str(&format!("literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
+            StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
             Ls => f.write_str("<"),
             LsEq => f.write_str("<="),
             Gr => f.write_str(">"),
@@ -166,7 +168,7 @@ impl Lexer {
             }
             match self.next_token(&mut cs) {
                 Ok(Some(t)) => tokens.push(Ok(t)),
-                Ok(None) => (),
+                Ok(None) => {cs.next();},
                 Err(msg) => tokens.push(Err(msg)),
             }
         }
@@ -175,7 +177,7 @@ impl Lexer {
     }
 
     fn next_token(&mut self, cs: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
-        match self.consume_integer(cs)? {
+        match self.consume_literal(cs)? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_identifier(cs)? {
                 Some(id) => {
@@ -187,6 +189,16 @@ impl Lexer {
                     None => Ok(None),
                 },
             },
+        }
+    }
+
+    fn consume_literal(&mut self, iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
+        match self.consume_integer(iter)? {
+            Some(i) => Ok(Some(i)),
+            None => match self.consume_string_literal(iter)? {
+                Some(s) => Ok(Some(s)),
+                None => Ok(None),
+            }
         }
     }
 
@@ -223,6 +235,30 @@ impl Lexer {
             Ok(None)
         } else {
             Ok(Some(Token::new(self.line, Lex::Identifier(id))))
+        }
+    }
+
+    fn consume_string_literal(
+        &self,
+        iter: &mut Peekable<std::str::Chars>,
+    ) -> Result<Option<Token>, String> {
+        println!("string literal");
+        if let Some(c) = iter.peek() {
+           if *c == '"' {
+               iter.next();
+               let mut s = String::new();
+               while let Some(c) = iter.next() {
+                   if c == '"' {
+                       break;
+                   }
+                   s.push(c);
+               }
+            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
+           } else {
+               Ok(None)
+           }
+        } else {
+            Ok(None)
         }
     }
 
@@ -471,6 +507,16 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer(5)));
+    }
+
+    #[test]
+    fn test_string_literal() {
+        let text = "\"text\"";
+        let mut lexer = Lexer::new();
+        let tokens = lexer.tokenize(text);
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, StringLiteral("text".into())));
     }
 
     #[test]
