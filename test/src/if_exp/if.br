@@ -1,9 +1,9 @@
 fn my_main() {
-    printiln if true {1} else {3};
-    let x:i32 := if 2 < 3 {4} else {5};
+    printiln if (true) {1} else {3};
+    let x:i32 := if (2 < 3) {4} else {5};
     printiln x;
     printiln (if (x < 1) {100} else {500});
-    printiln if x < 1 {0} else if x < 10 {5} else {7};
-    printiln if x < 1 {0} else if x < 2 {5} else {7};
+    printiln if (x < 1) {0} else if (x < 10) {5} else {7};
+    printiln if (x < 1) {0} else if (x < 2) {5} else {7};
     return;
 }

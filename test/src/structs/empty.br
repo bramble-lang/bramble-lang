@@ -1,0 +1,15 @@
+fn my_main() {
+    let t: MyStruct := MyStruct{};
+    let y: MyStruct := test(t);
+    printiln 2;
+    return;
+}
+
+struct MyStruct {
+}
+
+fn test(e: MyStruct) -> MyStruct {
+    let t: MyStruct := e;
+    printiln 1;
+    return t;
+}

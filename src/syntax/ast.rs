@@ -86,8 +86,10 @@ impl std::fmt::Display for RoutineCall {
 pub enum Ast<I> {
     Integer(I, i32),
     Boolean(I, bool),
+    CustomType(I, String),
     Identifier(I, String),
-    IdentifierDeclare(I, String, Primitive),
+    MemberAccess(I, Box<Ast<I>>, String),
+    IdentifierDeclare(I, String, Type),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
@@ -99,7 +101,7 @@ pub enum Ast<I> {
     ExpressionBlock(I, Vec<Ast<I>>),
 
     Statement(I, Box<Ast<I>>),
-    Bind(I, String, bool, Primitive, Box<Ast<I>>),
+    Bind(I, String, bool, Type, Box<Ast<I>>),
     Mutate(I, String, Box<Ast<I>>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
@@ -109,12 +111,19 @@ pub enum Ast<I> {
         I,
         RoutineDef,
         String,
-        Vec<(String, Primitive)>,
-        Primitive,
+        Vec<(String, Type)>,
+        Type,
         Vec<Ast<I>>,
     ),
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
-    Module(I, Vec<Ast<I>>, Vec<Ast<I>>),
+    Module {
+        meta: I,
+        functions: Vec<Ast<I>>,
+        coroutines: Vec<Ast<I>>,
+        structs: Vec<Ast<I>>,
+    },
+    StructDef(I, String, Vec<(String, Type)>),
+    StructInit(I, String, Vec<(String, Ast<I>)>),
 }
 
 impl<I> Ast<I> {
@@ -123,8 +132,10 @@ impl<I> Ast<I> {
         match self {
             Integer(_, v) => format!("{}", v),
             Boolean(_, v) => format!("{}", v),
+            CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
+            MemberAccess(_, s, m) => format!("{}.{}", s.root_str(), m),
 
             BinaryOp(_, op, _, _) => format!("{}", op),
             UnaryOp(_, op, _) => format!("{}", op),
@@ -146,7 +157,9 @@ impl<I> Ast<I> {
             RoutineDef(_, def, name, ..) => format!("{} for {}", def, name),
             RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
 
-            Module(_, _, _) => "module".into(),
+            Module { .. } => "module".into(),
+            StructDef(_, name, ..) => format!("definition of struct {}", name),
+            StructInit(_, name, ..) => format!("intialization for struct {}", name),
         }
     }
 
@@ -155,8 +168,10 @@ impl<I> Ast<I> {
         match self {
             Integer(m, ..)
             | Boolean(m, ..)
+            | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
+            | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
             | Printi(m, ..)
@@ -172,15 +187,26 @@ impl<I> Ast<I> {
             | YieldReturn(m, ..)
             | RoutineDef(m, ..)
             | RoutineCall(m, ..)
-            | Module(m, ..) => m,
+            | Module { meta: m, .. }
+            | StructDef(m, ..) => m,
+            StructInit(m, ..) => m,
         }
     }
 
     /// If a node is a function or a coroutine this will return its parameter vector.  If
     /// the node is not a function or coroutine, this will return None.
-    pub fn get_params(&self) -> Option<&Vec<(String, Primitive)>> {
+    pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
         match self {
             Ast::RoutineDef(_, _, _, params, ..) => Some(params),
+            _ => None,
+        }
+    }
+
+    /// if a node is a routine type then return the return type of the routine
+    /// otherwise return None.
+    pub fn get_return_type(&self) -> Option<&Type> {
+        match self {
+            Ast::RoutineDef(_, _, _, _, ret, _) => Some(ret),
             _ => None,
         }
     }
@@ -194,21 +220,67 @@ impl<I> Ast<I> {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Primitive {
+#[derive(Clone, Debug, PartialEq)]
+pub enum Type {
     I32,
     Bool,
     Unit,
+    Custom(String),
+    StructDef(Vec<(String, Type)>),
+    FunctionDef(Vec<Type>, Box<Type>),
+    CoroutineDef(Vec<Type>, Box<Type>),
+    Coroutine(Box<Type>),
     Unknown,
 }
 
-impl std::fmt::Display for Primitive {
+impl Type {
+    pub fn get_members(&self) -> Option<&Vec<(String, Type)>> {
+        match self {
+            Type::StructDef(members) => Some(members),
+            _ => None,
+        }
+    }
+
+    pub fn get_member(&self, member: &str) -> Option<&Type> {
+        self.get_members()
+            .map(|ms| ms.iter().find(|(n, _)| n == member).map(|m| &m.1))
+            .flatten()
+    }
+}
+
+impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        use Primitive::*;
+        use Type::*;
         match self {
             I32 => f.write_str("i32"),
             Bool => f.write_str("bool"),
             Unit => f.write_str("unit"),
+            Custom(name) => f.write_str(name),
+            StructDef(members) => {
+                let members = members
+                    .iter()
+                    .map(|m| format!("{}: {}", m.0, m.1))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                f.write_str(&members)
+            }
+            Type::CoroutineDef(params, ret_ty) => {
+                let params = params
+                    .iter()
+                    .map(|p| format!("{}", p))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                f.write_fmt(format_args!("co ({}) -> {}", params, ret_ty))
+            }
+            Type::Coroutine(ret_ty) => f.write_fmt(format_args!("co<{}>", ret_ty)),
+            Type::FunctionDef(params, ret_ty) => {
+                let params = params
+                    .iter()
+                    .map(|p| format!("{}", p))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                f.write_fmt(format_args!("fn ({}) -> {}", params, ret_ty))
+            }
             Unknown => f.write_str("unknown"),
         }
     }

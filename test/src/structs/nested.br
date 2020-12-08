@@ -1,0 +1,82 @@
+fn my_main() {
+    let t:MyStruct2 := MyStruct2{
+        a: 123,
+        ms1: MyStruct{x: 1, z: 3, y: 2},
+        ms2: MyStruct{x: 11, z: 33, y: 22},
+        b: 456,
+        c: 100,
+    };
+
+    printiln t.a;
+    printiln t.ms1.x;
+    printiln t.ms1.y;
+    printiln t.ms1.z;
+    printiln t.ms2.x;
+    printiln t.ms2.y;
+    printiln t.ms2.z;
+    printiln t.b;
+    printiln t.c;
+
+    let t3: MyStruct3 := MyStruct3{
+        h: 666,
+        k: true,
+        ms1: MyStruct2{
+            a: 123,
+            ms1: MyStruct{x: 1, y: 2, z: 3},
+            ms2: MyStruct{x: 11, y: 22, z: 33},
+            b: 456,
+            c: 200,
+        },
+        ms2: MyStruct2{
+            a: 246,
+            ms1: MyStruct{x: 100, y: 200, z: 300},
+            ms2: MyStruct{x: 111, y: 222, z: 333},
+            b: 912,
+            c: 300,
+        },
+    };
+
+    printiln t3.h;
+    printbln t3.k;
+    printiln t3.ms1.a;
+    printiln t3.ms1.ms1.x;
+    printiln t3.ms1.ms1.y;
+    printiln t3.ms1.ms1.z;
+    printiln t3.ms1.ms2.x;
+    printiln t3.ms1.ms2.y;
+    printiln t3.ms1.ms2.z;
+    printiln t3.ms1.b;
+    printiln t3.ms1.c;
+    printiln t3.ms2.a;
+    printiln t3.ms2.ms1.x;
+    printiln t3.ms2.ms1.y;
+    printiln t3.ms2.ms1.z;
+    printiln t3.ms2.ms2.x;
+    printiln t3.ms2.ms2.y;
+    printiln t3.ms2.ms2.z;
+    printiln t3.ms2.b;
+    printiln t3.ms2.c;
+
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+struct MyStruct2 {
+    a: i32,
+    ms1: MyStruct,
+    ms2: MyStruct,
+    b: i32,
+    c: i32,
+}
+
+struct MyStruct3 {
+    h: i32,
+    k: bool,
+    ms1: MyStruct2,
+    ms2: MyStruct2,
+}

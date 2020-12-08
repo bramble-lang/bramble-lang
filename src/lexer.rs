@@ -45,7 +45,6 @@ pub enum Lex {
     RParen,
     LBrace,
     RBrace,
-    FunctionDef,
     Printi,
     Printiln,
     Printbln,
@@ -53,9 +52,12 @@ pub enum Lex {
     Yield,
     YieldReturn,
     CoroutineDef,
+    FunctionDef,
+    Struct,
     If,
     Else,
     Colon,
+    MemberAccess,
     LArrow,
     Primitive(Primitive),
 }
@@ -90,7 +92,6 @@ impl std::fmt::Display for Lex {
             RParen => f.write_str(")"),
             LBrace => f.write_str("{"),
             RBrace => f.write_str("}"),
-            FunctionDef => f.write_str("fn"),
             Printi => f.write_str("printi"),
             Printiln => f.write_str("printiln"),
             Printbln => f.write_str("printbln"),
@@ -98,9 +99,12 @@ impl std::fmt::Display for Lex {
             Yield => f.write_str("yield"),
             YieldReturn => f.write_str("yret"),
             CoroutineDef => f.write_str("co"),
+            FunctionDef => f.write_str("fn"),
+            Struct => f.write_str("struct"),
             If => f.write_str("if"),
             Else => f.write_str("else"),
             Colon => f.write_str(":"),
+            MemberAccess => f.write_str("."),
             LArrow => f.write_str("->"),
             Primitive(p) => f.write_str(&format!("{}", p)),
         }
@@ -274,6 +278,7 @@ impl Lexer {
             Some('+') => Some(Token::new(self.line, Add)),
             Some(';') => Some(Token::new(self.line, Semicolon)),
             Some(',') => Some(Token::new(self.line, Comma)),
+            Some('.') => Some(Token::new(self.line, MemberAccess)),
             Some(':') => {
                 iter.next();
                 match iter.peek() {
@@ -328,7 +333,7 @@ impl Lexer {
                     _ => {
                         consume = false;
                         Some(Token::new(self.line, Minus))
-                    },
+                    }
                 }
             }
             Some('&') => {
@@ -395,6 +400,7 @@ impl Lexer {
                 "yret" => Token::new(self.line, YieldReturn),
                 "fn" => Token::new(self.line, FunctionDef),
                 "co" => Token::new(self.line, CoroutineDef),
+                "struct" => Token::new(self.line, Struct),
                 "init" => Token::new(self.line, Init),
                 "printi" => Token::new(self.line, Printi),
                 "printiln" => Token::new(self.line, Printiln),
@@ -466,6 +472,7 @@ mod tests {
             ("(", Token::new(1, LParen)),
             (")", Token::new(1, RParen)),
             (":=", Token::new(1, Assign)),
+            (".", Token::new(1, MemberAccess)),
             ("->", Token::new(1, LArrow)),
             (":", Token::new(1, Colon)),
             (",", Token::new(1, Comma)),
@@ -511,6 +518,7 @@ mod tests {
             ("init", Token::new(1, Init)),
             ("co", Token::new(1, CoroutineDef)),
             ("fn", Token::new(1, FunctionDef)),
+            ("struct", Token::new(1, Struct)),
             ("printi", Token::new(1, Printi)),
             ("printiln", Token::new(1, Printiln)),
             ("printbln", Token::new(1, Printbln)),

@@ -13,16 +13,22 @@ type ParserInfo = u32;
 pub type PNode = Ast<ParserInfo>;
 
 impl PNode {
-    pub fn new_yield(line: u32, id_line: u32, id: String) -> Self {
+    pub fn new_yield(line: u32, coroutine_value: Box<Self>) -> Self {
         let i = line; //ParserInfo{l: line};
-        let i_id = id_line; //ParserInfo{l: id_line};
-        Ast::Yield(i, Box::new(Ast::Identifier(i_id, id)))
+        Ast::Yield(i, coroutine_value)
     }
 
-    pub fn new_bind(line: u32, id: Box<Self>, mutable: bool, exp: Box<Self>) -> Result<Self, String> {
+    pub fn new_bind(
+        line: u32,
+        id: Box<Self>,
+        mutable: bool,
+        exp: Box<Self>,
+    ) -> Result<Self, String> {
         let i = line; //ParserInfo{l: line};
         match id.as_ref() {
-            Ast::IdentifierDeclare(_, id, prim) => Ok(Ast::Bind(i, id.clone(), mutable, *prim, exp)),
+            Ast::IdentifierDeclare(_, id, prim) => {
+                Ok(Ast::Bind(i, id.clone(), mutable, prim.clone(), exp))
+            }
             _ => Err(format!(
                 "L{}: Expected type specification after {}",
                 line,
@@ -35,15 +41,11 @@ impl PNode {
         Ok(Ast::Mutate(line, id.into(), exp))
     }
 
-    pub fn unary_op(
-        line: u32,
-        op: &Lex,
-        operand: Box<Self>
-    ) -> Result<Self, String> {
+    pub fn unary_op(line: u32, op: &Lex, operand: Box<Self>) -> Result<Self, String> {
         match op {
             Lex::Minus => Ok(Ast::UnaryOp(line, UnaryOperator::Minus, operand)),
             Lex::Not => Ok(Ast::UnaryOp(line, UnaryOperator::Not, operand)),
-            _ => Err(format!("L{}: {} is not a unary operator", line, op))
+            _ => Err(format!("L{}: {} is not a unary operator", line, op)),
         }
     }
 
@@ -96,7 +98,9 @@ impl PNode {
     COBLOCK := [STATEMENT | YIELD_RETURN]*
     FUNCTION := fn IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN  [LARROW PRIMITIVE] LBRACE BLOCK RETURN RBRACE
     COROUTINE := co IDENTIFIER LPAREN [ID_DEC [, ID_DEC]*] RPAREN [LARROW PRIMITIVE] LBRACE COBLOCK RETURN RBRACE
-    MODULES := [FUNCTION|COROUTINE]*
+    STRUCT_INIT := IDENTIFIER LBRACE [IDENTIFIER : PRIMITIVE]* RBRACE
+    STRUCT_DEF := struct IDENTIFIER LBRACE [ID_DEC]* RBRACE
+    MODULES := [FUNCTION|COROUTINE|STRUCT]*
 
     tokenize - takes a string of text and converts it to a string of tokens
     parse - takes a string of tokens and converts it into an AST
@@ -110,6 +114,7 @@ pub fn parse(tokens: Vec<Token>) -> PResult {
 fn module(iter: &mut TokenIter) -> PResult {
     let mut functions = vec![];
     let mut coroutines = vec![];
+    let mut structs = vec![];
 
     match iter.peek() {
         Some(Token { l, s: _ }) => {
@@ -118,17 +123,40 @@ fn module(iter: &mut TokenIter) -> PResult {
                     Some(f) => functions.push(f),
                     None => match coroutine_def(iter)? {
                         Some(co) => coroutines.push(co),
-                        None => break,
+                        None => match struct_def(iter)? {
+                            Some(st) => structs.push(st),
+                            None => break,
+                        },
                     },
                 }
             }
 
             Ok(if functions.len() > 0 {
-                Some(Ast::Module(*l, functions, coroutines))
+                Some(Ast::Module {
+                    meta: *l,
+                    functions,
+                    coroutines,
+                    structs,
+                })
             } else {
                 None
             })
         }
+        None => Ok(None),
+    }
+}
+
+fn struct_def(iter: &mut TokenIter) -> PResult {
+    match consume_if(iter, Lex::Struct) {
+        Some(l) => match consume_if_id(iter) {
+            Some((l, id)) => {
+                consume_must_be(iter, Lex::LBrace)?;
+                let fields = id_declaration_list(iter)?;
+                consume_must_be(iter, Lex::RBrace)?;
+                Ok(Some(Ast::StructDef(l, id.clone(), fields)))
+            }
+            None => Err(format!("L{}: expected identifer after struct", l)),
+        },
         None => Ok(None),
     }
 }
@@ -140,11 +168,11 @@ fn function_def(iter: &mut TokenIter) -> PResult {
                 let params = fn_def_params(iter)?;
 
                 let fn_type = match consume_if(iter, Lex::LArrow) {
-                    Some(l) => primitive(iter).ok_or(&format!(
+                    Some(l) => consume_type(iter).ok_or(&format!(
                         "L{}: Expected primitive type after -> in function definition",
                         l
                     ))?,
-                    _ => Primitive::Unit,
+                    _ => Type::Unit,
                 };
 
                 consume_must_be(iter, Lex::LBrace)?;
@@ -163,7 +191,14 @@ fn function_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(Ast::RoutineDef(l, RoutineDef::Function, id.clone(), params, fn_type, stmts))
+                Some(Ast::RoutineDef(
+                    l,
+                    RoutineDef::Function,
+                    id.clone(),
+                    params,
+                    fn_type,
+                    stmts,
+                ))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -179,11 +214,11 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                 let params = fn_def_params(iter)?;
 
                 let co_type = match consume_if(iter, Lex::LArrow) {
-                    Some(l) => primitive(iter).expect(&format!(
+                    Some(l) => consume_type(iter).expect(&format!(
                         "L{}: Expected primitive type after -> in function definition",
                         l
                     )),
-                    _ => Primitive::Unit,
+                    _ => Type::Unit,
                 };
 
                 consume_must_be(iter, Lex::LBrace)?;
@@ -201,7 +236,14 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
 
                 consume_must_be(iter, Lex::RBrace)?;
 
-                Some(Ast::RoutineDef(l, RoutineDef::Coroutine, id.clone(), params, co_type, stmts))
+                Some(Ast::RoutineDef(
+                    l,
+                    RoutineDef::Coroutine,
+                    id.clone(),
+                    params,
+                    co_type,
+                    stmts,
+                ))
             }
             _ => return Err(format!("Expected function name after fn")),
         },
@@ -210,15 +252,23 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
     Ok(syntax)
 }
 
-fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, String> {
+fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Type)>, String> {
     consume_must_be(iter, Lex::LParen)?;
 
-    let mut params = vec![];
+    let params = id_declaration_list(iter)?;
 
-    while let Some(param) = identifier_or_declare(iter)? {
-        match param {
+    consume_must_be(iter, Lex::RParen)?;
+
+    Ok(params)
+}
+
+fn id_declaration_list(iter: &mut TokenIter) -> Result<Vec<(String, Type)>, String> {
+    let mut decls = vec![];
+
+    while let Some(decl) = identifier_or_declare(iter)? {
+        match decl {
             Ast::IdentifierDeclare(_, id, id_type) => {
-                params.push((id, id_type));
+                decls.push((id, id_type));
                 consume_if(iter, Lex::Comma);
             }
             _ => {
@@ -228,10 +278,7 @@ fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Primitive)>, Strin
             }
         }
     }
-
-    consume_must_be(iter, Lex::RParen)?;
-
-    Ok(params)
+    Ok(decls)
 }
 
 fn block(iter: &mut TokenIter) -> Result<Vec<PNode>, String> {
@@ -337,24 +384,29 @@ fn let_bind(iter: &mut TokenIter) -> PResult {
                 None => expression(iter)?
                     .ok_or(format!("L{}: expected expression on LHS of bind", l))?,
             };
-            Ok(Some(PNode::new_bind(l, Box::new(id_decl), is_mutable, Box::new(exp))?))
+            Ok(Some(PNode::new_bind(
+                l,
+                Box::new(id_decl),
+                is_mutable,
+                Box::new(exp),
+            )?))
         }
         None => Ok(None),
     }
 }
 
 fn mutate(iter: &mut TokenIter) -> PResult {
-    match consume_if(iter, Lex::Mut){
+    match consume_if(iter, Lex::Mut) {
         None => Ok(None),
         Some(l) => match consume_if_id(iter) {
             Some((l, id)) => {
                 consume_must_be(iter, Lex::Assign)?;
                 let exp = expression(iter)?
-                        .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
+                    .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
                 Ok(Some(PNode::new_mutate(l, &id, Box::new(exp))?))
             }
             None => Err(format!("L{}: expected identifier after mut", l)),
-        }
+        },
     }
 }
 
@@ -364,7 +416,12 @@ fn co_init(iter: &mut TokenIter) -> PResult {
             Some((l, id)) => {
                 let params = fn_call_params(iter)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Ast::RoutineCall(l, RoutineCall::CoroutineInit, id.clone(), params)))
+                Ok(Some(Ast::RoutineCall(
+                    l,
+                    RoutineCall::CoroutineInit,
+                    id.clone(),
+                    params,
+                )))
             }
             None => Err(format!("L{}: expected identifier after init", l)),
         },
@@ -455,7 +512,7 @@ fn sum(iter: &mut TokenIter) -> PResult {
 }
 
 fn term(iter: &mut TokenIter) -> PResult {
-    Ok(match factor(iter)? {
+    Ok(match negate(iter)? {
         Some(n) => match consume_if_one_of(iter, vec![Lex::Mul, Lex::Div]) {
             Some((l, op)) => {
                 let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after {}", l, op))?;
@@ -465,6 +522,35 @@ fn term(iter: &mut TokenIter) -> PResult {
         },
         None => None,
     })
+}
+
+fn negate(iter: &mut TokenIter) -> PResult {
+    match consume_if_one_of(iter, vec![Lex::Minus, Lex::Not]) {
+        Some((l, op)) => {
+            let factor = member_access(iter)?.ok_or(&format!("L{}: expected term after {}", l, op))?;
+            Ok(Some(PNode::unary_op(l, &op, Box::new(factor))?))
+        },
+        None => {
+            member_access(iter)
+        }
+    }
+}
+
+fn member_access(iter: &mut TokenIter) -> PResult {
+    match factor(iter)? {
+        Some(f) => {
+            let mut ma = f;
+            while let Some(l) = consume_if(iter, Lex::MemberAccess) {
+                let member = consume_if_id(iter).ok_or(format!(
+                    "L{}: expect field name after member access '.'",
+                    l
+                ))?;
+                ma = Ast::MemberAccess(l, Box::new(ma), member.1);
+            }
+            Ok(Some(ma))
+        },
+        None => Ok(None)
+    }
 }
 
 fn factor(iter: &mut TokenIter) -> PResult {
@@ -478,16 +564,6 @@ fn factor(iter: &mut TokenIter) -> PResult {
             let exp = expression(iter)?;
             consume_must_be(iter, Lex::RParen)?;
             exp
-        }
-        Some(Token {l, s: Lex::Minus}) => {
-            iter.next();
-            let factor = factor(iter)?.ok_or(format!("L{}: expected factor after -", l))?;
-            Some(PNode::unary_op(*l, &Lex::Minus, Box::new(factor))?)
-        }
-        Some(Token {l, s: Lex::Not}) => {
-            iter.next();
-            let factor = factor(iter)?.ok_or(format!("L{}: expected factor after !", l))?;
-            Some(PNode::unary_op(*l, &Lex::Not, Box::new(factor))?)
         }
         _ => match constant(iter)? {
             Some(n) => Some(n),
@@ -505,10 +581,13 @@ fn factor(iter: &mut TokenIter) -> PResult {
 fn if_expression(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if(iter, Lex::If) {
         Some(l) => {
-            let cond = expression(iter)?.ok_or("Expected conditional expression after if")?;
+            consume_must_be(iter, Lex::LParen)?;
+            let cond = expression(iter)?
+                .ok_or(format!("L{}: Expected conditional expression after if", l))?;
+            consume_must_be(iter, Lex::RParen)?;
 
-            let true_arm =
-                expression_block(iter)?.ok_or("Expression in true arm of if expression")?;
+            let true_arm = expression_block(iter)?
+                .ok_or(format!("L{}: Expression in true arm of if expression", l))?;
             consume_must_be(iter, Lex::Else)?;
 
             // check for `else if`
@@ -556,10 +635,34 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<PNode>>, String> {
     }
 }
 
+fn struct_init_params(iter: &mut TokenIter) -> Result<Option<Vec<(String, PNode)>>, String> {
+    match consume_if(iter, Lex::LBrace) {
+        Some(_) => {
+            let mut params = vec![];
+            while let Some((l, field_name)) = consume_if_id(iter) {
+                consume_must_be(iter, Lex::Colon)?;
+                let field_value = expression(iter)?.ok_or(format!(
+                    "L{}: expected an expression to be assigned to field {}",
+                    l, field_name
+                ))?;
+                params.push((field_name, field_value));
+                match consume_if(iter, Lex::Comma) {
+                    Some(_) => {}
+                    None => break,
+                };
+            }
+
+            consume_must_be(iter, Lex::RBrace)?;
+            Ok(Some(params))
+        }
+        _ => Ok(None),
+    }
+}
+
 fn co_yield(iter: &mut TokenIter) -> PResult {
     match consume_if(iter, Lex::Yield) {
-        Some(l) => match consume_if_id(iter) {
-            Some((ll, id)) => Ok(Some(PNode::new_yield(l, ll, id))),
+        Some(l) => match expression(iter)? {
+            Some(coroutine_value) => Ok(Some(PNode::new_yield(l, Box::new(coroutine_value)))),
             _ => Err(format!("L{}: expected an identifier after yield", l)),
         },
         _ => Ok(None),
@@ -568,18 +671,32 @@ fn co_yield(iter: &mut TokenIter) -> PResult {
 
 fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
     Ok(match consume_if_id(iter) {
-        Some((l, id)) => match fn_call_params(iter)? {
-            Some(params) => {
-                // this is a function call
+        Some((l, id)) => match iter.peek() {
+            Some(Token { s: Lex::LParen, .. }) => {
+                let params = fn_call_params(iter)?.ok_or(format!(
+                    "L{}: failed to parse parameters for call to {}",
+                    l, id
+                ))?;
                 Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
             }
-            _ => Some(Ast::Identifier(l, id)),
+            Some(Token { s: Lex::LBrace, .. }) => {
+                let members = struct_init_params(iter)?.ok_or(format!(
+                    "L{}: failed to parse member assignments for instance of {}",
+                    l, id
+                ))?;
+                Some(Ast::StructInit(l, id, members))
+            }
+            _ => match struct_init_params(iter)? {
+                Some(fields) => Some(Ast::StructInit(l, id, fields)),
+                _ => Some(Ast::Identifier(l, id)),
+            },
         },
         None => None,
     })
 }
 
-fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
+fn consume_type(iter: &mut TokenIter) -> Option<Type> {
+    let is_coroutine = consume_if(iter, Lex::CoroutineDef).is_some();
     match iter.peek() {
         Some(Token {
             l: _,
@@ -587,18 +704,32 @@ fn primitive(iter: &mut TokenIter) -> Option<Primitive> {
         }) => {
             iter.next();
             match primitive {
-                lexer::Primitive::I32 => Some(Primitive::I32),
-                lexer::Primitive::Bool => Some(Primitive::Bool),
+                lexer::Primitive::I32 => Some(Type::I32),
+                lexer::Primitive::Bool => Some(Type::Bool),
             }
+        }
+        Some(Token {
+            l: _,
+            s: Lex::Identifier(name),
+        }) => {
+            iter.next();
+            Some(Type::Custom(name.clone()))
         }
         _ => None,
     }
+    .map(|ty| {
+        if is_coroutine {
+            Type::Coroutine(Box::new(ty))
+        } else {
+            ty
+        }
+    })
 }
 
 fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<PNode>, String> {
     Ok(match consume_if_id(iter) {
         Some((l, id)) => match consume_if(iter, Lex::Colon) {
-            Some(l) => match primitive(iter) {
+            Some(l) => match consume_type(iter) {
                 Some(p) => Some(Ast::IdentifierDeclare(l, id.clone(), p)),
                 None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
             },
@@ -734,10 +865,9 @@ pub mod tests {
     fn parse_unary_operators() {
         let mut lexer = Lexer::new();
 
-        for (text, expected) in vec![
-            ("-a", UnaryOperator::Minus),
-            ("!a", UnaryOperator::Not),
-            ].iter() {
+        for (text, expected) in
+            vec![("-a", UnaryOperator::Minus), ("!a", UnaryOperator::Not)].iter()
+        {
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
                 .into_iter()
@@ -769,7 +899,9 @@ pub mod tests {
             ("2<=2", BinaryOperator::LsEq),
             ("2>2", BinaryOperator::Gr),
             ("2>=2", BinaryOperator::GrEq),
-            ].iter() {
+        ]
+        .iter()
+        {
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
                 .into_iter()
@@ -794,7 +926,9 @@ pub mod tests {
         for (text, expected) in vec![
             ("true && false", BinaryOperator::BAnd),
             ("true || false", BinaryOperator::BOr),
-            ].iter() {
+        ]
+        .iter()
+        {
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
                 .into_iter()
@@ -822,7 +956,9 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::BinaryOp(l, BinaryOperator::Mul, left, right)) = expression(&mut iter).unwrap() {
+        if let Some(Ast::BinaryOp(l, BinaryOperator::Mul, left, right)) =
+            expression(&mut iter).unwrap()
+        {
             assert_eq!(l, 1);
             match left.as_ref() {
                 Ast::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
@@ -847,12 +983,82 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::BinaryOp(l, BinaryOperator::BOr, left, right)) = expression(&mut iter).unwrap() {
+        if let Some(Ast::BinaryOp(l, BinaryOperator::BOr, left, right)) =
+            expression(&mut iter).unwrap()
+        {
             assert_eq!(l, 1);
             assert_eq!(*left, Ast::Boolean(1, true));
             assert_eq!(*right, Ast::Boolean(1, false));
         } else {
             panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_member_access() {
+        for text in vec![
+            "thing.first",
+            "(thing).first",
+            "(thing.first)",
+            ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            match member_access(&mut iter) {
+                Ok(Some(Ast::MemberAccess(l, left, right))) => {
+                    assert_eq!(l, 1);
+                    assert_eq!(
+                        *left,
+                        Ast::Identifier(1, "thing".into()),
+                        "Input: {}", text,
+                    );
+                    assert_eq!(right, "first");
+                },
+                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
+                Ok(None) => panic!("No node returned for {}", text),
+                Err(msg) => panic!("{} caused {}", text, msg),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_multiple_member_access() {
+        for text in vec![
+            "thing.first.second",
+            "(thing).first.second",
+            "(thing.first).second",
+            "((thing.first).second)",
+            "(thing.first.second)",
+            ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            match expression(&mut iter) {
+                Ok(Some(Ast::MemberAccess(l, left, right))) => {
+                    assert_eq!(l, 1);
+                    assert_eq!(
+                        *left,
+                        Ast::MemberAccess(
+                            1,
+                            Box::new(Ast::Identifier(1, "thing".into())),
+                            "first".into()
+                        ),
+                        "Input: {}", text,
+                    );
+                    assert_eq!(right, "second");
+                },
+                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
+                Ok(None) => panic!("No node returned for {}", text),
+                Err(msg) => panic!("{} caused {}", text, msg),
+            }
         }
     }
 
@@ -871,15 +1077,15 @@ pub mod tests {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, false, p, exp) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*p, Type::I32);
                     assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
             },
             _ => panic!("No body: {:?}", stm),
         }
-   }
- 
+    }
+
     #[test]
     fn parse_mut_bind() {
         let mut lexer = Lexer::new();
@@ -895,7 +1101,7 @@ pub mod tests {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, true, p, exp) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Primitive::I32);
+                    assert_eq!(*p, Type::I32);
                     assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
@@ -903,7 +1109,6 @@ pub mod tests {
             _ => panic!("No body: {:?}", stm),
         }
     }
- 
     #[test]
     fn parse_mutation() {
         let mut lexer = Lexer::new();
@@ -927,7 +1132,6 @@ pub mod tests {
         }
     }
 
-
     #[test]
     fn parse_function_def() {
         let mut lexer = Lexer::new();
@@ -938,12 +1142,13 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = tokens.iter().peekable();
-        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) = function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) =
+            function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Primitive::I32)]);
-            assert_eq!(ty, Primitive::Bool);
+            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
                 Ast::Return(_, Some(exp)) => {
@@ -953,6 +1158,67 @@ pub mod tests {
             }
         } else {
             panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_coroutine_def() {
+        let mut lexer = Lexer::new();
+        let text = "co test(x:i32) -> bool {return true;}";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        if let Some(Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body)) =
+            coroutine_def(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(name, "test");
+            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(ty, Type::Bool);
+            assert_eq!(body.len(), 1);
+            match &body[0] {
+                Ast::Return(_, Some(exp)) => {
+                    assert_eq!(*exp.as_ref(), Ast::Boolean(1, true));
+                }
+                _ => panic!("No body"),
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_coroutine_init() {
+        let mut lexer = Lexer::new();
+        let text = "let x:co i32 := init c(1, 2);";
+        let tokens: Vec<Token> = lexer
+            .tokenize(&text)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = tokens.iter().peekable();
+        let stm = statement(&mut iter).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, false, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Type::Coroutine(Box::new(Type::I32)));
+                    assert_eq!(
+                        *exp,
+                        Box::new(Ast::RoutineCall(
+                            1,
+                            RoutineCall::CoroutineInit,
+                            "c".into(),
+                            vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                        ))
+                    );
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1016,7 +1282,7 @@ pub mod tests {
                 Ast::Statement(_, stm) => match stm.as_ref() {
                     Ast::Bind(_, id, false, p, exp) => {
                         assert_eq!(id, "x");
-                        assert_eq!(*p, Primitive::I32);
+                        assert_eq!(*p, Type::I32);
                         assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                     }
                     _ => panic!("Not a binding statement"),
@@ -1032,6 +1298,92 @@ pub mod tests {
             }
         } else {
             panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_struct_def() {
+        for (text, expected) in vec![
+            (
+                "struct MyStruct {}",
+                Some(Ast::StructDef(1, "MyStruct".into(), vec![])),
+            ),
+            (
+                "struct MyStruct {x: i32}",
+                Some(Ast::StructDef(
+                    1,
+                    "MyStruct".into(),
+                    vec![("x".into(), Type::I32)],
+                )),
+            ),
+            (
+                "struct MyStruct {x: i32, y: bool}",
+                Some(Ast::StructDef(
+                    1,
+                    "MyStruct".into(),
+                    vec![("x".into(), Type::I32), ("y".into(), Type::Bool)],
+                )),
+            ),
+        ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            let result = struct_def(&mut iter).unwrap();
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn parse_struct_init() {
+        for (text, expected) in vec![
+            ("MyStruct{}", Ast::StructInit(1, "MyStruct".into(), vec![])),
+            (
+                "MyStruct{x: 5}",
+                Ast::StructInit(1, "MyStruct".into(), vec![("x".into(), Ast::Integer(1, 5))]),
+            ),
+            (
+                "MyStruct{x: 5, y: false}",
+                Ast::StructInit(
+                    1,
+                    "MyStruct".into(),
+                    vec![
+                        ("x".into(), Ast::Integer(1, 5)),
+                        ("y".into(), Ast::Boolean(1, false)),
+                    ],
+                ),
+            ),
+            (
+                "MyStruct{x: 5, y: MyStruct2{z:3}}",
+                Ast::StructInit(
+                    1,
+                    "MyStruct".into(),
+                    vec![
+                        ("x".into(), Ast::Integer(1, 5)),
+                        (
+                            "y".into(),
+                            Ast::StructInit(
+                                1,
+                                "MyStruct2".into(),
+                                vec![("z".into(), Ast::Integer(1, 3))],
+                            ),
+                        ),
+                    ],
+                ),
+            ),
+        ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut iter = tokens.iter().peekable();
+            let result = expression(&mut iter).unwrap().unwrap();
+            assert_eq!(result, expected);
         }
     }
 }

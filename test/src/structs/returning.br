@@ -1,0 +1,58 @@
+fn my_main() {
+    let y: MyStruct := test();
+    printiln y.x;
+    printiln y.y;
+    printiln y.z;
+
+    let z: MyStruct2 := test2();
+    printiln z.a;
+    printiln z.ms.x;
+    printiln z.ms.y;
+    printiln z.ms.z;
+    printiln z.b;
+
+    let a: MyStruct := test3();
+    printiln a.x;
+    printiln a.y;
+    printiln a.z;
+
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+struct MyStruct2 {
+    a: i32,
+    ms: MyStruct,
+    b: i32,
+}
+
+fn test() -> MyStruct {
+    let t: MyStruct := MyStruct{z: 10, x: 5, y: 2};
+    printiln t.x;
+    return t;
+}
+
+fn test2() -> MyStruct2 {
+    let t:MyStruct2 := MyStruct2{
+        a: 123,
+        ms: MyStruct{x: 1, z: 3, y: 2},
+        b: 456,
+    };
+
+    return t;
+}
+
+fn test3() -> MyStruct {
+    let t:MyStruct2 := MyStruct2{
+        a: 123,
+        ms: MyStruct{x: 1, z: 3, y: 2},
+        b: 456,
+    };
+
+    return t.ms;
+}

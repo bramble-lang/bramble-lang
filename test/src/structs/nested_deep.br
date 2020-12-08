@@ -1,0 +1,101 @@
+fn my_main() {
+    let t: MyStruct3 := MyStruct3{
+        ms2: MyStruct2{
+            ms: MyStruct{x: 1, y: 2, z: -3},
+        },
+    };
+    
+    let t2: MyStruct3 := MyStruct3{
+        ms2: MyStruct2{
+            ms: MyStruct{x: 11, y: 22, z: 33},
+        },
+    };
+
+    let t4: MyStruct4 := MyStruct4 {
+        x: 123,
+        a: t,
+        b: t2,
+        y: 456,
+    };
+    
+    printiln t4.x;
+    printiln t4.a.ms2.ms.x;
+    printiln t4.a.ms2.ms.y;
+    printiln t4.a.ms2.ms.z;
+
+    printiln t4.b.ms2.ms.x;
+    printiln t4.b.ms2.ms.y;
+    printiln t4.b.ms2.ms.z;
+    printiln t4.y;
+
+    let deep: MS10 := MS10 {
+        a: MS9{
+            a: MS8 {
+                a: MS7{
+                    a: MS6 {
+                        a: MS5 {
+                            a: t4,
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    printiln deep.a.a.a.a.a.a.x;
+    printiln deep.a.a.a.a.a.a.a.ms2.ms.x;
+    printiln deep.a.a.a.a.a.a.a.ms2.ms.y;
+    printiln deep.a.a.a.a.a.a.a.ms2.ms.z;
+
+    printiln deep.a.a.a.a.a.a.b.ms2.ms.x;
+    printiln deep.a.a.a.a.a.a.b.ms2.ms.y;
+    printiln deep.a.a.a.a.a.a.b.ms2.ms.z;
+    printiln deep.a.a.a.a.a.a.y;
+
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+struct MyStruct2 {
+    ms: MyStruct,
+}
+
+struct MyStruct3 {
+    ms2: MyStruct2,
+}
+
+struct MyStruct4 {
+    x: i32,
+    a: MyStruct3,
+    b: MyStruct3,
+    y: i32,
+}
+
+struct MS5 {
+    a: MyStruct4,
+}
+
+struct MS6 {
+    a: MS5,
+}
+
+struct MS7 {
+    a: MS6,
+}
+
+struct MS8 {
+    a: MS7,
+}
+
+struct MS9 {
+    a: MS8,
+}
+
+struct MS10 {
+    a: MS9,
+}

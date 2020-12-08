@@ -79,6 +79,8 @@ pub enum Reg32 {
     Ebx,
     Esp,
     Ebp,
+    Edi,
+    Esi,
 }
 
 impl Display for Reg32 {
@@ -91,6 +93,8 @@ impl Display for Reg32 {
             Ebx => f.write_str("ebx"),
             Esp => f.write_str("esp"),
             Ebp => f.write_str("ebp"),
+            Edi => f.write_str("edi"),
+            Esi => f.write_str("esi"),
         }
     }
 }
@@ -143,7 +147,7 @@ impl Display for DirectOperand {
 pub enum Operand {
     Direct(DirectOperand),
     Memory(DirectOperand),
-    MemoryExpr(Reg, u32),
+    MemoryAddr(Reg, i32),
 }
 
 impl Display for Operand {
@@ -152,7 +156,15 @@ impl Display for Operand {
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
             Memory(mem) => f.write_fmt(format_args!("[{}]", mem)),
-            MemoryExpr(mem, d) => f.write_fmt(format_args!("[{}-{}]", mem, d)),
+            MemoryAddr(mem, d) => {
+                if *d < 0 {
+                    f.write_fmt(format_args!("[{}-{}]", mem, -d))
+                } else if *d > 0 {
+                    f.write_fmt(format_args!("[{}+{}]", mem, d))
+                } else {
+                    f.write_fmt(format_args!("[{}]", mem))
+                }
+            }
         }
     }
 }
@@ -183,9 +195,9 @@ pub enum Inst {
     IMul(Operand, Operand),
     IDiv(Reg32),
     Neg(Reg32),
-    
+
     Cmp(Operand, Operand),
-    
+
     And(Operand, Operand),
     Or(Operand, Operand),
     Xor(Operand, Operand),
@@ -232,14 +244,26 @@ impl Display for Inst {
             Push(a) => f.write_fmt(format_args!("push {}", a)),
             Pop(a) => f.write_fmt(format_args!("pop {}", a)),
 
-            Mov(a, b) => f.write_fmt(format_args!("mov {}, {}", a, match b {
-                Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
-                _ => format!("{}", b),
-            })),
-            Movzx(a, b) => f.write_fmt(format_args!("movzx {}, {}", a, match b {
-                Operand::Direct(DirectOperand::Integer(_)) | Operand::Memory(_) | Operand::MemoryExpr(_, _)=> format!("DWORD {}", b),
-                _ => format!("{}", b),
-            })),
+            Mov(a, b) => f.write_fmt(format_args!(
+                "mov {}, {}",
+                a,
+                match b {
+                    Operand::Direct(DirectOperand::Integer(_))
+                    | Operand::Memory(_)
+                    | Operand::MemoryAddr(_, _) => format!("DWORD {}", b),
+                    _ => format!("{}", b),
+                }
+            )),
+            Movzx(a, b) => f.write_fmt(format_args!(
+                "movzx {}, {}",
+                a,
+                match b {
+                    Operand::Direct(DirectOperand::Integer(_))
+                    | Operand::Memory(_)
+                    | Operand::MemoryAddr(_, _) => format!("DWORD {}", b),
+                    _ => format!("{}", b),
+                }
+            )),
 
             Cdq => f.write_str("cdq"),
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
@@ -279,7 +303,7 @@ macro_rules! unit_op {
     };
     (newline) => {
         Inst::NewLine
-    }
+    };
 }
 
 #[macro_export]
@@ -353,6 +377,12 @@ macro_rules! reg32 {
     (ebx) => {
         Reg32::Ebx
     };
+    (edi) => {
+        Reg32::Edi
+    };
+    (esi) => {
+        Reg32::Esi
+    };
 }
 
 #[macro_export]
@@ -375,6 +405,12 @@ macro_rules! register {
     (ebp) => {
         Reg::R32(Reg32::Ebp)
     };
+    (edi) => {
+        Reg::R32(Reg32::Edi)
+    };
+    (esi) => {
+        Reg::R32(Reg32::Esi)
+    };
     (al) => {
         Reg::R8(Reg8::Al)
     };
@@ -387,10 +423,22 @@ macro_rules! operand {
         Operand::Memory(DirectOperand::Register(register!($e)))
     };
     ([%$reg:tt-$d:literal]) => {
-        Operand::MemoryExpr(register!($reg), $d)
+        Operand::MemoryAddr(register!($reg), -$d)
+    };
+    ([%$reg:tt+$d:literal]) => {
+        Operand::MemoryAddr(register!($reg), $d)
+    };
+    ([%{$reg:expr}-{$e:expr}]) => {
+        Operand::MemoryAddr($reg, -$e)
     };
     ([%$reg:tt-{$e:expr}]) => {
-        Operand::MemoryExpr(register!($reg), $e)
+        Operand::MemoryAddr(register!($reg), -$e)
+    };
+    ([%{$reg:expr}+{$e:expr}]) => {
+        Operand::MemoryAddr($reg, $e)
+    };
+    ([%$reg:tt+{$e:expr}]) => {
+        Operand::MemoryAddr(register!($reg), $e)
     };
     ([%$e:tt]) => {
         Operand::Memory(DirectOperand::Register(register!($e)))
@@ -411,7 +459,7 @@ macro_rules! operand {
     ({$e:expr}) => {
         Operand::Direct(DirectOperand::Integer($e))
     };
-    
+
     // register
     (%{$reg:expr}) => {
         Operand::Direct(DirectOperand::Register($reg))
@@ -451,12 +499,17 @@ macro_rules! assembly {
         }
         assembly!(($buf) {$($tail)*})
     };
-    
+
 
     /********************/
     /*     COMMENTS       */
     /********************/
     (($buf:expr) {;$comment:literal $($tail:tt)*}) => {
+        $buf.push(Inst::Comment($comment.into()));
+        assembly!(($buf) {$($tail)*})
+    };
+
+    (($buf:expr) {;{$comment:expr} $($tail:tt)*}) => {
         $buf.push(Inst::Comment($comment.into()));
         assembly!(($buf) {$($tail)*})
     };
@@ -488,7 +541,7 @@ macro_rules! assembly {
         $buf.push(unit_op!($inst));
         assembly!(($buf) {$($tail)*})
     };
-    
+
     /********************/
     /* Special Ops      */
     /********************/
@@ -636,7 +689,7 @@ macro_rules! assembly2 {
         }
         assembly2!(($buf, $info) {$($tail)*})
     };
-    
+
 
     /********************/
     /*     COMMENTS       */
@@ -677,7 +730,7 @@ macro_rules! assembly2 {
         $buf.push(unit_op!($inst));
         assembly2!(($buf, $info) {$($tail)*})
     };
-    
+
     /********************/
     /* Special Ops      */
     /********************/

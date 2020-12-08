@@ -1,30 +1,7 @@
-use crate::ast::*;
+use crate::ast;
+use crate::ast::Type;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Type {
-    Primitive(Primitive),
-    Function(Vec<Primitive>, Primitive),
-    Coroutine(Vec<Primitive>, Primitive),
-}
-
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        use Type::*;
-        match self {
-            Coroutine(params, ret_ty) => {
-                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
-                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
-            }
-            Function(params, ret_ty) => {
-                let params = params.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(",");
-                f.write_fmt(format_args!("({}) -> {}", params, ret_ty))
-            }
-            Primitive(ty) => f.write_fmt(format_args!("{}", ty)),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
@@ -66,13 +43,23 @@ impl SymbolTable {
     }
 
     pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
+        use ast::Ast;
         match ast {
-            Ast::Module(sym, functions, coroutines) => {
+            Ast::Module {
+                meta,
+                functions,
+                coroutines,
+                structs,
+                ..
+            } => {
                 for f in functions.iter_mut() {
-                    SymbolTable::traverse(f, sym)?;
+                    SymbolTable::traverse(f, meta)?;
                 }
                 for co in coroutines.iter_mut() {
-                    SymbolTable::traverse(co, sym)?;
+                    SymbolTable::traverse(co, meta)?;
+                }
+                for st in structs.iter_mut() {
+                    SymbolTable::traverse(st, meta)?;
                 }
             }
             _ => panic!("Type analysis: expected Module at root level of the AST"),
@@ -82,26 +69,36 @@ impl SymbolTable {
     }
 
     fn traverse(ast: &mut SemanticNode, sym: &mut SemanticMetadata) -> Result<(), String> {
+        use ast::Ast;
         match &ast {
-            Ast::RoutineDef(_, RoutineDef::Function, name, params, ty, _) => {
+            Ast::RoutineDef(_, ast::RoutineDef::Function, name, params, ty, _) => {
                 sym.sym.add(
                     name,
-                    Type::Function(
-                        params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
-                        *ty,
+                    Type::FunctionDef(
+                        params
+                            .iter()
+                            .map(|(_, ty)| ty.clone())
+                            .collect::<Vec<ast::Type>>(),
+                        Box::new(ty.clone()),
                     ),
                     false,
                 )?;
             }
-            Ast::RoutineDef(_, RoutineDef::Coroutine, name, params, ty, _) => {
+            Ast::RoutineDef(_, ast::RoutineDef::Coroutine, name, params, ty, _) => {
                 sym.sym.add(
                     name,
-                    Type::Coroutine(
-                        params.iter().map(|(_, ty)| *ty).collect::<Vec<Primitive>>(),
-                        *ty,
+                    Type::CoroutineDef(
+                        params
+                            .iter()
+                            .map(|(_, ty)| ty.clone())
+                            .collect::<Vec<ast::Type>>(),
+                        Box::new(ty.clone()),
                     ),
                     false,
                 )?;
+            }
+            Ast::StructDef(_, name, members) => {
+                sym.sym.add(name, Type::StructDef(members.clone()), false)?;
             }
             _ => panic!(
                 "Type analysis: expected function or coroutine in module, found {}",

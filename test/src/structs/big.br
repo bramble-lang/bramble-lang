@@ -1,0 +1,162 @@
+fn my_main() {
+    let t: MyStruct := MyStruct{
+        x00: 1,
+        x01: 1,
+        x02: 1,
+        x03: 1,
+        x04: 1,
+        x05: 1,
+        x06: 1,
+        x07: 1,
+        x08: 1,
+        x09: 1,
+        x10: 2,
+        x11: 2,
+        x12: 2,
+        x13: 2,
+        x14: 2,
+        x15: 2,
+        x16: 2,
+        x17: 2,
+        x18: 2,
+        x19: 2,
+        x20: 3,
+        x21: 3,
+        x22: 3,
+        x23: 3,
+        x24: 3,
+        x25: 3,
+        x26: 3,
+        x27: 3,
+        x28: 3,
+        x29: 3,
+        x30: 4,
+        x31: 4,
+        x32: 4,
+        x33: 4,
+        x34: 4,
+        x35: 4,
+        x36: 4,
+        x37: 4,
+        x38: 4,
+        x39: 4,
+    };
+    printiln t.x00;
+    printiln t.x30;
+    printiln print(t);
+    let y: MyStruct := copy(t);
+    printiln y.x00;
+    printiln y.x30;
+
+    let z: MyStruct := new();
+    printiln z.x00;
+    printiln z.x30;
+
+    return;
+}
+
+struct MyStruct {
+    x00: i32,
+    x01: i32,
+    x02: i32,
+    x03: i32,
+    x04: i32,
+    x05: i32,
+    x06: i32,
+    x07: i32,
+    x08: i32,
+    x09: i32,
+    x10: i32,
+    x11: i32,
+    x12: i32,
+    x13: i32,
+    x14: i32,
+    x15: i32,
+    x16: i32,
+    x17: i32,
+    x18: i32,
+    x19: i32,
+    x20: i32,
+    x21: i32,
+    x22: i32,
+    x23: i32,
+    x24: i32,
+    x25: i32,
+    x26: i32,
+    x27: i32,
+    x28: i32,
+    x29: i32,
+    x30: i32,
+    x31: i32,
+    x32: i32,
+    x33: i32,
+    x34: i32,
+    x35: i32,
+    x36: i32,
+    x37: i32,
+    x38: i32,
+    x39: i32,
+}
+
+fn copy(e: MyStruct) -> MyStruct {
+    printiln e.x10;
+    printiln e.x20;
+    let t: MyStruct := e;
+    printiln t.x00;
+    printiln t.x30;
+    return t;
+}
+
+fn print(e: MyStruct) -> i32 {
+    printiln e.x00;
+    printiln e.x30;
+
+    return e.x11;
+}
+
+fn new() -> MyStruct {
+    let t: MyStruct := MyStruct{
+        x00: 10,
+        x01: 10,
+        x02: 10,
+        x03: 10,
+        x04: 10,
+        x05: 10,
+        x06: 10,
+        x07: 10,
+        x08: 10,
+        x09: 10,
+        x10: 20,
+        x11: 20,
+        x12: 20,
+        x13: 20,
+        x14: 20,
+        x15: 20,
+        x16: 20,
+        x17: 20,
+        x18: 20,
+        x19: 20,
+        x20: 30,
+        x21: 30,
+        x22: 30,
+        x23: 30,
+        x24: 30,
+        x25: 30,
+        x26: 30,
+        x27: 30,
+        x28: 30,
+        x29: 30,
+        x30: 40,
+        x31: 40,
+        x32: 40,
+        x33: 40,
+        x34: 40,
+        x35: 40,
+        x36: 40,
+        x37: 40,
+        x38: 40,
+        x39: 40,
+    };
+
+    return t;
+}

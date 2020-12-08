@@ -3,10 +3,16 @@
 function run() {
     test=$1
     rm -f ./target/*
-    cargo run -- -i ${test} -o ./target/output.asm > ./target/compiler.log
+    echo "Compiling"
+    cargo run -- -i ${test} -o ./target/output.asm
+    echo ""
+    echo "Assembling"
+
     nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
     gcc -w ./target/output.obj macro.c -g -o ./target/output -m32 2>&1 > gcc.log
 
+    echo ""
+    echo "Running"
     ./target/output
 }
 

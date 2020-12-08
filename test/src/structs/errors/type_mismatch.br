@@ -1,0 +1,18 @@
+fn my_main() {
+    let t: MyStruct := MyStruct{
+        x: 5, 
+        y: 1, 
+        z: 10,
+    };
+    printiln t.x;
+    printiln t.y;
+    printbln t.z;
+    
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: i32,
+    z: bool,
+}
