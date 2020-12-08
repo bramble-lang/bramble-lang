@@ -633,10 +633,11 @@ impl<'a> Compiler<'a> {
                 {{self.bind_member(fvalue, current_func, Reg32::Esp, relative_offset)?}}
             }}
         }
-        code.push(Inst::Comment(format!(
-            "Done instantiating struct of type {}",
-            struct_name
-        )));
+
+        assembly!{(code) {
+            ; {format!("Done instantiating struct of type {}", struct_name)}
+            lea %eax, [%esp + {offset}];
+        }};
         Ok(code)
     }
 

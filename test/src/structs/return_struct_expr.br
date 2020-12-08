@@ -1,0 +1,22 @@
+fn my_main() {
+    let y: MyStruct := test4(10);
+    printiln y.x;
+    printiln y.y;
+    printiln y.z;
+    
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+fn test4(x: i32) -> MyStruct {
+    return MyStruct{
+        x: x,
+        y: x * x,
+        z: x + x,
+    };
+}

@@ -2,7 +2,16 @@ fn my_main() {
     let t: MyStruct := MyStruct{x: 5, y: 1, z: 10};
     let mut y: i32 := test(t);
     printiln y;
+
+    mut y := test4(10, t);
+
     mut y := test2(10, t);
+    printiln y;
+
+    mut y := test3(MyStruct{x: 111, y: 222, z: 333});
+    printiln y;
+
+    mut y := test4(10, MyStruct{x: 1111, y: 2222, z: 3333});
     printiln y;
     
     return;
@@ -22,4 +31,21 @@ fn test(t: MyStruct) -> i32 {
 fn test2(x: i32, t: MyStruct) -> i32 {
     printiln x * t.x;
     return t.y + t.z;
+}
+
+fn test3(t: MyStruct) -> i32 {
+    printiln t.x;
+    printiln t.y;
+    printiln t.z;
+
+    return t.x + t.y + t.z;
+}
+
+fn test4(x: i32, t: MyStruct) -> i32 {
+    printiln x;
+    printiln t.x;
+    printiln t.y;
+    printiln t.z;
+
+    return x * (t.x + t.y + t.z);
 }
