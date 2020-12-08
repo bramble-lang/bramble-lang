@@ -47,6 +47,7 @@ then
     run_test "fn/recurse"
     run_test "scope/out_of_scope"
     run_test "parser/missing_type"
+
     run_test "structs/basic"
     run_test "structs/copying"
     run_test "structs/copying_simple"
@@ -57,6 +58,9 @@ then
     run_test "structs/passing"
     run_test "structs/return_nested"
     run_test "structs/returning"
+    run_test "structs/coroutine_1"
+    run_test "structs/coroutine_2"
+    run_test "structs/coroutine_3"
     run_test "structs/errors/field"
     run_test "structs/errors/missing_member"
     run_test "structs/errors/type_mismatch"
