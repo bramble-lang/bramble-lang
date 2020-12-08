@@ -1,0 +1,25 @@
+fn my_main() {
+    let t: MyStruct := if (true) {
+        let x:i32 := 5;
+        let y:i32 := 1;
+        let z: i32 := -1;
+        let ms0:MyStruct := MyStruct{x: 11, y: 22, z: 33};
+        let ms1:MyStruct := MyStruct{x: 111, y: 222, z: 333};
+        let ms2:MyStruct := MyStruct{x: x, y: y, z: z};
+        ms2
+    } else {
+        MyStruct{x: 0, y: 0, z: 0}
+    };
+
+    printiln t.x;
+    printiln t.y;
+    printiln t.z;
+    
+    return;
+}
+
+struct MyStruct {
+    x: i32,
+    y: i32,
+    z: i32,
+}

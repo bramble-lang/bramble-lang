@@ -84,19 +84,19 @@ impl Scope {
         }
     }
 
-    pub fn block_from(m: &SemanticMetadata, current_layout: LayoutData) -> (Scope, LayoutData) {
+    pub fn block_from(m: &SemanticMetadata, struct_table: &StructTable, current_layout: LayoutData) -> (Scope, LayoutData) {
         let mut layout = current_layout;
         let mut scope = Scope::new(Level::Block, 0, m.ty.clone());
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
-            layout.offset = scope.insert(&s.name, s.ty.size(None), layout.offset);
+            layout.offset = scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
         }
         (scope, layout)
     }
 
     pub fn routine_from(
         m: &SemanticMetadata,
-        struct_table: Option<&StructTable>,
+        struct_table: &StructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
         let mut scope = Scope::new(
@@ -109,7 +109,7 @@ impl Scope {
         );
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
-            current_offset = scope.insert(&s.name, s.ty.size(struct_table), current_offset);
+            current_offset = scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), current_offset);
         }
         match scope.level {
             Level::Routine {
@@ -190,7 +190,6 @@ impl ast::Type {
             ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
         }
     }
-
 }
 
 #[derive(Debug, PartialEq)]
@@ -217,6 +216,23 @@ impl StructTable {
 
     pub fn get(&self, name: &str) -> Option<&StructDefinition> {
         self.structs.get(name)
+    }
+
+    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
+        match ty {
+            ast::Type::I32 => Some(4),
+            ast::Type::Bool => Some(4),
+            ast::Type::Coroutine(_) => Some(4),
+            ast::Type::Custom(name) => self
+                .get(name)
+                .expect("Could not find struct")
+                .size,
+            ast::Type::FunctionDef(..) => Some(0),
+            ast::Type::CoroutineDef(..) => Some(0),
+            ast::Type::StructDef(..) => Some(0),
+            ast::Type::Unit => Some(0),
+            ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
+        }
     }
 
     /// Attempt to resolve the size of every struct in this table
@@ -289,7 +305,10 @@ impl StructTable {
         st: &StructDefinition,
         resolved_structs: &HashMap<String, Vec<i32>>,
     ) -> Option<Vec<i32>> {
-        fn get_resolved_size(ty: &ast::Type, resolved_structs: &HashMap<String, Vec<i32>>) -> Option<i32> {
+        fn get_resolved_size(
+            ty: &ast::Type,
+            resolved_structs: &HashMap<String, Vec<i32>>,
+        ) -> Option<i32> {
             match ty {
                 ast::Type::I32 => Some(4),
                 ast::Type::Bool => Some(4),
@@ -302,10 +321,9 @@ impl StructTable {
         // Loop through each struct in the table and attempt to resolve its size
         st.fields
             .iter()
-            .map(|(_, ty, _)| get_resolved_size(ty,resolved_structs))
+            .map(|(_, ty, _)| get_resolved_size(ty, resolved_structs))
             .collect::<Option<Vec<i32>>>()
     }
-
 }
 
 #[derive(Debug, PartialEq)]
@@ -332,13 +350,12 @@ impl StructDefinition {
     pub fn get_offset_of(&self, field: &str) -> Option<i32> {
         match self.size {
             None => None,
-            Some(sz) => {
-                self.fields
-                    .iter()
-                    .find(|(fname, _, _)| fname == field)
-                    .map_or(None, |f| f.2)
-                    .map_or(None, |x| Some(sz - x))
-            }
+            Some(sz) => self
+                .fields
+                .iter()
+                .find(|(fname, _, _)| fname == field)
+                .map_or(None, |f| f.2)
+                .map_or(None, |x| Some(sz - x)),
         }
     }
 

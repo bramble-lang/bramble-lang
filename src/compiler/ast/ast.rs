@@ -8,18 +8,19 @@ pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
     pub fn from(ast: &SemanticNode) -> (CompilerNode, LayoutData) {
-        CompilerNode::compute_offsets(ast, LayoutData::new(0), None)
+        let empty_struct_table = StructTable::new();
+        CompilerNode::compute_offsets(ast, LayoutData::new(0), &empty_struct_table)
     }
 
     fn compute_offsets(
         ast: &SemanticNode,
         layout: LayoutData,
-        struct_table: Option<&StructTable>,
+        struct_table: &StructTable,
     ) -> (CompilerNode, LayoutData) {
         use Ast::*;
         match ast {
             ExpressionBlock(m, body) => {
-                let (meta, mut nlayout) = Scope::block_from(m, layout);
+                let (meta, mut nlayout) = Scope::block_from(m, struct_table, layout);
                 let mut nbody = vec![];
                 for e in body.iter() {
                     let (e, layout) = CompilerNode::compute_offsets(e, nlayout, struct_table);
@@ -58,71 +59,71 @@ impl CompilerNode {
                 )
             }
             Ast::Integer(m, i) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Ast::Integer(meta, *i), layout)
             }
             Ast::Boolean(m, b) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Ast::Boolean(meta, *b), layout)
             }
             Ast::CustomType(m, name) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Ast::CustomType(meta, name.clone()), layout)
             }
             Ast::Identifier(m, id) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Ast::Identifier(meta, id.clone()), layout)
             }
             Ast::IdentifierDeclare(m, id, p) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Ast::IdentifierDeclare(meta, id.clone(), p.clone()), layout)
             }
             MemberAccess(m, src, member) => {
                 let (src, layout) = CompilerNode::compute_offsets(src, layout, struct_table);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (MemberAccess(meta, Box::new(src), member.clone()), layout)
             }
             UnaryOp(m, op, ref operand) => {
                 let (operand, layout) =
                     CompilerNode::compute_offsets(operand, layout, struct_table);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Ast::UnaryOp(meta, *op, Box::new(operand)), layout)
             }
             BinaryOp(m, op, ref l, ref r) => {
                 let (l, layout) = CompilerNode::compute_offsets(l, layout, struct_table);
                 let (r, layout) = CompilerNode::compute_offsets(r, layout, struct_table);
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Ast::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
             }
             Printi(m, ref e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Printi(meta, Box::new(e)), layout)
             }
             Printiln(m, ref e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Printiln(meta, Box::new(e)), layout)
             }
             Printbln(m, ref e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Printbln(meta, Box::new(e)), layout)
             }
             If(m, ref cond, ref tb, ref fb) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (cond, layout) = CompilerNode::compute_offsets(cond, layout, struct_table);
                 let (tb, layout) = CompilerNode::compute_offsets(tb, layout, struct_table);
                 let (fb, layout) = CompilerNode::compute_offsets(fb, layout, struct_table);
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
             Mutate(m, id, e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Mutate(meta, id.clone(), Box::new(e)), layout)
             }
             Bind(m, id, mutable, p, e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (
                     Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)),
@@ -130,35 +131,35 @@ impl CompilerNode {
                 )
             }
             Yield(m, e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Yield(meta, Box::new(e)), layout)
             }
             Return(m, None) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (Return(meta, None), layout)
             }
             Return(m, Some(e)) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Return(meta, Some(Box::new(e))), layout)
             }
             YieldReturn(m, None) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 (YieldReturn(meta, None), layout)
             }
             YieldReturn(m, Some(e)) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (YieldReturn(meta, Some(Box::new(e))), layout)
             }
             Statement(m, e) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Statement(meta, Box::new(e)), layout)
             }
             RoutineCall(m, call, name, params) => {
-                let (meta, layout) = Scope::block_from(m, layout);
+                let (meta, layout) = Scope::block_from(m, struct_table, layout);
                 let mut nlayout = layout;
                 let mut nparams = vec![];
                 for p in params.iter() {
@@ -174,7 +175,7 @@ impl CompilerNode {
                 coroutines,
                 structs,
             } => {
-                let (mut meta, layout) = Scope::block_from(meta, layout);
+                let (mut meta, layout) = Scope::block_from(meta, struct_table, layout);
 
                 for st in structs.iter() {
                     // at this point I could compute the size of each struct and test for
@@ -191,14 +192,14 @@ impl CompilerNode {
                 let mut nlayout = layout;
                 let mut nfuncs = vec![];
                 for f in functions.iter() {
-                    let (nf, no) = CompilerNode::compute_offsets(f, nlayout, Some(&meta.structs));
+                    let (nf, no) = CompilerNode::compute_offsets(f, nlayout, &meta.structs);
                     nlayout = no;
                     nfuncs.push(nf);
                 }
 
                 let mut ncors = vec![];
                 for co in coroutines.iter() {
-                    let (nco, no) = CompilerNode::compute_offsets(co, nlayout, Some(&meta.structs));
+                    let (nco, no) = CompilerNode::compute_offsets(co, nlayout, &meta.structs);
                     nlayout = no;
                     ncors.push(nco);
                 }
@@ -215,7 +216,7 @@ impl CompilerNode {
             }
             StructDef(..) => panic!("StructDef Unimplemented"),
             StructInit(meta, struct_name, fields) => {
-                let (meta, mut nlayout) = Scope::block_from(meta, layout);
+                let (meta, mut nlayout) = Scope::block_from(meta, struct_table, layout);
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
                     let (nfv, no) = CompilerNode::compute_offsets(fvalue, nlayout, struct_table);
@@ -249,7 +250,8 @@ mod ast_tests {
             },
             0,
         );
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), None);
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::Integer(m, v) => {
@@ -288,7 +290,8 @@ mod ast_tests {
             Box::new(sn1),
             Box::new(sn2),
         );
-        let cn = CompilerNode::compute_offsets(&snmul, LayoutData::new(8), None);
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&snmul, LayoutData::new(8), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
@@ -326,7 +329,8 @@ mod ast_tests {
             },
             vec![],
         );
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), None);
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, _) => {
@@ -365,7 +369,8 @@ mod ast_tests {
             },
             vec![sn],
         );
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), None);
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 16);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, b) => {
@@ -406,7 +411,8 @@ mod ast_tests {
             Type::I32,
             vec![],
         );
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), None);
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::RoutineDef(m, RoutineDef::Function, name, ..) => {
@@ -466,7 +472,8 @@ mod ast_tests {
             vec![sn],
         );
 
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), None);
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::RoutineDef(m, RoutineDef::Function, .., body) => {
@@ -508,7 +515,8 @@ mod ast_tests {
             Type::I32,
             vec![],
         );
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), None);
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::RoutineDef(m, RoutineDef::Coroutine, name, _, _, _) => {
