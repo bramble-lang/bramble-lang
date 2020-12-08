@@ -95,8 +95,7 @@ impl<'a> ScopeStack<'a> {
             },
         }
         .get_metadata()
-        .level()
-        .allocation()
+        .local_allocation()
     }
 
     pub fn get_struct(&self, name: &str) -> Option<&StructDefinition> {

@@ -47,6 +47,10 @@ impl Scope {
         &self.level
     }
 
+    pub fn local_allocation(&self) -> Option<i32> {
+        self.level().allocation()
+    }
+
     pub fn insert(&mut self, name: &str, size: i32, offset: i32) -> i32 {
         self.symbols
             .table
