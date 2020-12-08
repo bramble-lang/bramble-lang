@@ -325,7 +325,7 @@ impl StructDefinition {
         StructDefinition {
             name: name.into(),
             fields: nfields,
-            size: None, //if size_known { Some(total_sz) } else { None },
+            size: None,
         }
     }
 
