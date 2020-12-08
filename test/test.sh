@@ -49,6 +49,7 @@ then
     run_test "parser/missing_type"
 
     run_test "structs/basic"
+    run_test "structs/expr_block"
     run_test "structs/expr_block_result"
     run_test "structs/copying"
     run_test "structs/copying_simple"

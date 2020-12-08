@@ -5,7 +5,7 @@ fn my_main() {
         let z: i32 := -1;
         let ms0:MyStruct := MyStruct{x: 11, y: 22, z: 33};
         let ms1:MyStruct := MyStruct{x: 111, y: 222, z: 333};
-        let ms2:MyStruct := MyStruct{x: x, y: y, z: z};
+        let ms2:MyStruct := MyStruct{x: x * ms0.x * ms1.x, y: y + ms0.y + ms1.y, z: z};
         ms2
     } else {
         MyStruct{x: 0, y: 0, z: 0}
