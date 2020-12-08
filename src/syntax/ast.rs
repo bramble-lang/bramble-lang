@@ -224,6 +224,7 @@ impl<I> Ast<I> {
 pub enum Type {
     I32,
     Bool,
+    StringLiteral,
     Unit,
     Custom(String),
     StructDef(Vec<(String, Type)>),
@@ -254,6 +255,7 @@ impl std::fmt::Display for Type {
         match self {
             I32 => f.write_str("i32"),
             Bool => f.write_str("bool"),
+            StringLiteral => f.write_str("string"),
             Unit => f.write_str("unit"),
             Custom(name) => f.write_str(name),
             StructDef(members) => {

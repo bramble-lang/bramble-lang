@@ -166,32 +166,6 @@ impl Symbol {
     }
 }
 
-impl ast::Type {
-    pub fn size(&self, struct_table: Option<&StructTable>) -> i32 {
-        match self {
-            ast::Type::I32 => 4,
-            ast::Type::Bool => 4,
-            ast::Type::Coroutine(_) => 4,
-            ast::Type::Custom(name) => {
-                match struct_table {
-                    Some(st) => st
-                        .get(name)
-                        .expect("Could not find struct")
-                        .size
-                        .unwrap_or(0),
-                    _ => 0,
-                    //_ => panic!("Attempting to look up a struct when there is not struct table"),
-                }
-            }
-            ast::Type::FunctionDef(..) => 0,
-            ast::Type::CoroutineDef(..) => 0,
-            ast::Type::StructDef(..) => 0,
-            ast::Type::Unit => 0,
-            ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub struct StructTable {
     pub structs: HashMap<String, StructDefinition>,
@@ -222,6 +196,7 @@ impl StructTable {
         match ty {
             ast::Type::I32 => Some(4),
             ast::Type::Bool => Some(4),
+            ast::Type::StringLiteral => Some(4),
             ast::Type::Coroutine(_) => Some(4),
             ast::Type::Custom(name) => self
                 .get(name)
