@@ -318,24 +318,14 @@ pub struct StructDefinition {
 impl StructDefinition {
     pub fn new(name: &str, fields: Vec<(String, ast::Type)>) -> StructDefinition {
         let mut nfields = vec![];
-        let mut total_sz = 0;
-        let mut size_known = true;
         for (fname, fty) in fields.iter() {
-            let sz = fty.size(None);
-            if sz > 0 {
-                total_sz += sz;
-                let offset = if size_known { Some(total_sz) } else { None };
-                nfields.push((fname.clone(), fty.clone(), offset));
-            } else {
-                size_known = false;
-                nfields.push((fname.clone(), fty.clone(), None));
-            }
+            nfields.push((fname.clone(), fty.clone(), None));
         }
 
         StructDefinition {
             name: name.into(),
             fields: nfields,
-            size: if size_known { Some(total_sz) } else { None },
+            size: None, //if size_known { Some(total_sz) } else { None },
         }
     }
 
