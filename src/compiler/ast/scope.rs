@@ -289,22 +289,23 @@ impl StructTable {
         st: &StructDefinition,
         resolved_structs: &HashMap<String, Vec<i32>>,
     ) -> Option<Vec<i32>> {
+        fn get_resolved_size(ty: &ast::Type, resolved_structs: &HashMap<String, Vec<i32>>) -> Option<i32> {
+            match ty {
+                ast::Type::I32 => Some(4),
+                ast::Type::Bool => Some(4),
+                ast::Type::Custom(name) => Some(resolved_structs.get(name)?.iter().sum()),
+                ast::Type::Coroutine(_) => Some(4),
+                _ => None,
+            }
+        }
+
         // Loop through each struct in the table and attempt to resolve its size
         st.fields
             .iter()
-            .map(|(_, ty, _)| StructTable::size_of(ty,resolved_structs))
+            .map(|(_, ty, _)| get_resolved_size(ty,resolved_structs))
             .collect::<Option<Vec<i32>>>()
     }
 
-    fn size_of(ty: &ast::Type, resolved_structs: &HashMap<String, Vec<i32>>) -> Option<i32> {
-        match ty {
-            ast::Type::I32 => Some(4),
-            ast::Type::Bool => Some(4),
-            ast::Type::Custom(name) => Some(resolved_structs.get(name)?.iter().sum()),
-            ast::Type::Coroutine(_) => Some(4),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Debug, PartialEq)]
