@@ -497,21 +497,22 @@ impl<'a> Compiler<'a> {
                     ret;
                 }};
             }
-            Ast::RoutineCall(_, RoutineCall::Function, ref fn_name, params) => {
+            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                let return_type = self.validate_routine_call(fn_name, params)?;
-                match return_type {
-                    Type::Custom(struct_name) => {
-                        let st_sz = self
-                            .scope
-                            .size_of(return_type)
-                            .ok_or(format!("no size for {} found", struct_name))?;
-                        assembly! {(code){
-                            sub %esp, {st_sz};
-                        }}
-                    }
-                    _ => (),
+                self.validate_routine_call(fn_name, params)?;
+                self.scope.find_func(fn_name);
+               
+                let return_type = meta.ty();
+                if let Type::Custom(_) = return_type {
+                    let st_sz = self
+                        .scope
+                        .size_of(return_type)
+                        .ok_or(format!("no size for {} found", return_type))?;
+
+                    assembly! {(code){
+                        sub %esp, {st_sz};
+                    }}
                 }
 
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
@@ -969,7 +970,7 @@ impl<'a> Compiler<'a> {
         &self,
         routine_name: &str,
         params: &Vec<CompilerNode>,
-    ) -> Result<&Type, String> {
+    ) -> Result<(), String> {
         let routine = self
             .scope
             .find_func(routine_name)
@@ -988,11 +989,7 @@ impl<'a> Compiler<'a> {
                 expected_num_params, got_num_params, routine_name
             ))
         } else {
-            let return_type = routine.get_return_type().ok_or(format!(
-                "Critical: node for {} does not have a return type",
-                routine_name
-            ))?;
-            Ok(return_type)
+            Ok(())
         }
     }
 }
