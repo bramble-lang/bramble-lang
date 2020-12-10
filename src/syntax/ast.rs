@@ -86,6 +86,7 @@ impl std::fmt::Display for RoutineCall {
 pub enum Ast<I> {
     Integer(I, i32),
     Boolean(I, bool),
+    StringLiteral(I, String),
     CustomType(I, String),
     Identifier(I, String),
     MemberAccess(I, Box<Ast<I>>, String),
@@ -132,6 +133,7 @@ impl<I> Ast<I> {
         match self {
             Integer(_, v) => format!("{}", v),
             Boolean(_, v) => format!("{}", v),
+            StringLiteral(_, v) => format!("\"{}\"", v),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
@@ -168,6 +170,7 @@ impl<I> Ast<I> {
         match self {
             Integer(m, ..)
             | Boolean(m, ..)
+            | StringLiteral(m,..)
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)

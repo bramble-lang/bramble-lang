@@ -18,6 +18,7 @@ impl SemanticNode {
         match ast {
             Integer(ln, val) => Ok(Box::new(Integer(sm_from(*ln), *val))),
             Boolean(ln, val) => Ok(Box::new(Boolean(sm_from(*ln), *val))),
+            StringLiteral(ln, val) => Ok(Box::new(StringLiteral(sm_from(*ln), val.clone()))),
             CustomType(ln, val) => Ok(Box::new(CustomType(sm_from(*ln), val.clone()))),
             IdentifierDeclare(ln, name, p) => Ok(Box::new(IdentifierDeclare(
                 sm_from(*ln),

@@ -177,6 +177,10 @@ pub mod checker {
                     meta.ty = Bool;
                     Ok(Bool)
                 }
+                StringLiteral(meta, _) => {
+                    meta.ty = ast::Type::StringLiteral;
+                    Ok(ast::Type::StringLiteral)
+                }
                 CustomType(meta, name) => {
                     meta.ty = Custom(name.clone());
                     Ok(meta.ty.clone())
