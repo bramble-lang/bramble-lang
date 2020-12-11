@@ -86,6 +86,7 @@ impl std::fmt::Display for RoutineCall {
 pub enum Ast<I> {
     Integer(I, i32),
     Boolean(I, bool),
+    StringLiteral(I, String),
     CustomType(I, String),
     Identifier(I, String),
     MemberAccess(I, Box<Ast<I>>, String),
@@ -94,6 +95,7 @@ pub enum Ast<I> {
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
     Printi(I, Box<Ast<I>>),
+    Prints(I, Box<Ast<I>>),
     Printiln(I, Box<Ast<I>>),
     Printbln(I, Box<Ast<I>>),
 
@@ -132,6 +134,7 @@ impl<I> Ast<I> {
         match self {
             Integer(_, v) => format!("{}", v),
             Boolean(_, v) => format!("{}", v),
+            StringLiteral(_, v) => format!("\"{}\"", v),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
@@ -141,6 +144,7 @@ impl<I> Ast<I> {
             UnaryOp(_, op, _) => format!("{}", op),
 
             Printi(_, _) => "printi".into(),
+            Prints(_, _) => "prints".into(),
             Printiln(_, _) => "printiln".into(),
             Printbln(_, _) => "printbln".into(),
 
@@ -168,6 +172,7 @@ impl<I> Ast<I> {
         match self {
             Integer(m, ..)
             | Boolean(m, ..)
+            | StringLiteral(m,..)
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
@@ -176,6 +181,7 @@ impl<I> Ast<I> {
             | UnaryOp(m, ..)
             | Printi(m, ..)
             | Printiln(m, ..)
+            | Prints(m, ..)
             | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
@@ -224,6 +230,7 @@ impl<I> Ast<I> {
 pub enum Type {
     I32,
     Bool,
+    StringLiteral,
     Unit,
     Custom(String),
     StructDef(Vec<(String, Type)>),
@@ -254,6 +261,7 @@ impl std::fmt::Display for Type {
         match self {
             I32 => f.write_str("i32"),
             Bool => f.write_str("bool"),
+            StringLiteral => f.write_str("string"),
             Unit => f.write_str("unit"),
             Custom(name) => f.write_str(name),
             StructDef(members) => {

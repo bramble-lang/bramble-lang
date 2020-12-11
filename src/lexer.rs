@@ -6,6 +6,7 @@ use std::iter::Peekable;
 pub enum Primitive {
     I32,
     Bool,
+    StringLiteral
 }
 
 impl std::fmt::Display for Primitive {
@@ -13,6 +14,7 @@ impl std::fmt::Display for Primitive {
         match self {
             Primitive::I32 => f.write_str("i32"),
             Primitive::Bool => f.write_str("bool"),
+            Primitive::StringLiteral => f.write_str("string"),
         }
     }
 }
@@ -22,6 +24,7 @@ pub enum Lex {
     Integer(i32),
     Bool(bool),
     Identifier(String),
+    StringLiteral(String),
     Mul,
     Div,
     Add,
@@ -47,6 +50,7 @@ pub enum Lex {
     RBrace,
     Printi,
     Printiln,
+    Prints,
     Printbln,
     Init,
     Yield,
@@ -69,6 +73,7 @@ impl std::fmt::Display for Lex {
             Integer(i) => f.write_str(&format!("literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
+            StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
             Ls => f.write_str("<"),
             LsEq => f.write_str("<="),
             Gr => f.write_str(">"),
@@ -94,6 +99,7 @@ impl std::fmt::Display for Lex {
             RBrace => f.write_str("}"),
             Printi => f.write_str("printi"),
             Printiln => f.write_str("printiln"),
+            Prints => f.write_str("prints"),
             Printbln => f.write_str("printbln"),
             Init => f.write_str("init"),
             Yield => f.write_str("yield"),
@@ -166,7 +172,7 @@ impl Lexer {
             }
             match self.next_token(&mut cs) {
                 Ok(Some(t)) => tokens.push(Ok(t)),
-                Ok(None) => (),
+                Ok(None) => {cs.next();},
                 Err(msg) => tokens.push(Err(msg)),
             }
         }
@@ -175,7 +181,7 @@ impl Lexer {
     }
 
     fn next_token(&mut self, cs: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
-        match self.consume_integer(cs)? {
+        match self.consume_literal(cs)? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_identifier(cs)? {
                 Some(id) => {
@@ -187,6 +193,16 @@ impl Lexer {
                     None => Ok(None),
                 },
             },
+        }
+    }
+
+    fn consume_literal(&mut self, iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
+        match self.consume_integer(iter)? {
+            Some(i) => Ok(Some(i)),
+            None => match self.consume_string_literal(iter)? {
+                Some(s) => Ok(Some(s)),
+                None => Ok(None),
+            }
         }
     }
 
@@ -223,6 +239,29 @@ impl Lexer {
             Ok(None)
         } else {
             Ok(Some(Token::new(self.line, Lex::Identifier(id))))
+        }
+    }
+
+    fn consume_string_literal(
+        &self,
+        iter: &mut Peekable<std::str::Chars>,
+    ) -> Result<Option<Token>, String> {
+        if let Some(c) = iter.peek() {
+           if *c == '"' {
+               iter.next();
+               let mut s = String::new();
+               while let Some(c) = iter.next() {
+                   if c == '"' {
+                       break;
+                   }
+                   s.push(c);
+               }
+            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
+           } else {
+               Ok(None)
+           }
+        } else {
+            Ok(None)
         }
     }
 
@@ -426,6 +465,7 @@ impl Lexer {
             } => match id.as_str() {
                 "i32" => Token::new(self.line, Primitive(Primitive::I32)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
+                "string" => Token::new(self.line, Primitive(Primitive::StringLiteral)),
                 _ => Token::new(self.line, Identifier(id.clone())),
             },
             _ => token,
@@ -449,6 +489,7 @@ impl Lexer {
                 "init" => Token::new(self.line, Init),
                 "printi" => Token::new(self.line, Printi),
                 "printiln" => Token::new(self.line, Printiln),
+                "prints" => Token::new(self.line, Prints),
                 "printbln" => Token::new(self.line, Printbln),
                 "if" => Token::new(self.line, If),
                 "else" => Token::new(self.line, Else),
@@ -471,6 +512,16 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer(5)));
+    }
+
+    #[test]
+    fn test_string_literal() {
+        let text = "\"text\"";
+        let mut lexer = Lexer::new();
+        let tokens = lexer.tokenize(text);
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, StringLiteral("text".into())));
     }
 
     #[test]
@@ -566,6 +617,7 @@ mod tests {
             ("struct", Token::new(1, Struct)),
             ("printi", Token::new(1, Printi)),
             ("printiln", Token::new(1, Printiln)),
+            ("prints", Token::new(1, Prints)),
             ("printbln", Token::new(1, Printbln)),
             ("if", Token::new(1, If)),
             ("else", Token::new(1, Else)),
@@ -584,6 +636,7 @@ mod tests {
         for (text, expected_token) in [
             ("i32", Token::new(1, Primitive(Primitive::I32))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),
+            ("string", Token::new(1, Primitive(Primitive::StringLiteral))),
         ]
         .iter()
         {

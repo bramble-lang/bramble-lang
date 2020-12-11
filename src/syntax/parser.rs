@@ -357,13 +357,14 @@ fn statement(iter: &mut TokenIter) -> PResult {
 fn println_stmt(iter: &mut TokenIter) -> PResult {
     let tk = iter.peek();
     Ok(match tk {
-        Some(Token { l, s }) if *s == Lex::Printiln || *s == Lex::Printbln => {
+        Some(Token { l, s }) if *s == Lex::Printiln || *s == Lex::Printbln || *s == Lex::Prints => {
             iter.next();
             let exp =
                 expression(iter)?.ok_or(format!("L{}: Expected expression after println", l))?;
 
             match s {
                 Lex::Printiln => Some(Ast::Printiln(*l, Box::new(exp))),
+                Lex::Prints => Some(Ast::Prints(*l, Box::new(exp))),
                 Lex::Printbln => Some(Ast::Printbln(*l, Box::new(exp))),
                 _ => panic!("CRITICAL: already tested for a print token but found {}", s),
             }
@@ -706,6 +707,7 @@ fn consume_type(iter: &mut TokenIter) -> Option<Type> {
             match primitive {
                 lexer::Primitive::I32 => Some(Type::I32),
                 lexer::Primitive::Bool => Some(Type::Bool),
+                lexer::Primitive::StringLiteral => Some(Type::StringLiteral),
             }
         }
         Some(Token {
@@ -744,7 +746,7 @@ fn constant(iter: &mut TokenIter) -> PResult {
         Some(i) => Some(i),
         None => match boolean(iter)? {
             Some(t) => Some(t),
-            None => None,
+            None => string_literal(iter)?,
         },
     })
 }
@@ -770,6 +772,16 @@ fn boolean(iter: &mut TokenIter) -> PResult {
         Some(Token { l, s: Lex::Bool(b) }) => {
             iter.next();
             Ok(Some(Ast::Boolean(*l, *b)))
+        }
+        _ => Ok(None),
+    }
+}
+
+fn string_literal(iter: &mut TokenIter) -> PResult {
+    match iter.peek() {
+        Some(Token{ l, s: Lex::StringLiteral(s)}) => {
+            iter.next();
+            Ok(Some(Ast::StringLiteral(*l, s.clone())))
         }
         _ => Ok(None),
     }
@@ -1384,6 +1396,36 @@ pub mod tests {
             let mut iter = tokens.iter().peekable();
             let result = expression(&mut iter).unwrap().unwrap();
             assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn parse_string_literals() {
+        for (text, expected) in vec![
+            ("fn test() -> String {return \"test\";}",
+            "test"),
+            ("fn test() -> String {return \"test 2\";}",
+            "test 2"),
+            ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parse(tokens).unwrap().unwrap();
+            match ast {
+                Ast::Module{functions, ..} => {
+                    match &functions[0] {
+                        Ast::RoutineDef(.., body) => match &body[0] {
+                            Ast::Return(.., Some(rv)) => assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into()))),
+                            _ => assert!(false, "Not a return statement"),
+                        }
+                        _ => assert!(false, "Not a return statement"),
+                    }
+                }
+                _ => assert!(false, "Not a routine, got {:?}", ast),
+            }
         }
     }
 }

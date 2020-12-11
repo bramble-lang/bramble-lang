@@ -1,0 +1,13 @@
+fn my_main() {
+    let c:co string  := init my_co("abra\n", "cadabra\n");
+    prints (yield c);
+    prints (yield c);
+    prints (yield c);
+    return;
+}
+
+co my_co(a: string, b: string) -> string {
+    yret a;
+    yret b;
+    return "presto\n";
+}
