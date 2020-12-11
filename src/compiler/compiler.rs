@@ -69,14 +69,11 @@ impl<'a> Compiler<'a> {
 
     /// Creates the runtime code that will manage the entire execution of this program.
     fn create_base(code2: &mut Vec<Inst>, string_pool: &StringPool) {
-                assembly! {
+        assembly! {
             (code2) {
                 include "io.inc";
 
-                section ".data";
-                data next_stack_addr: dd 0;
-                data stack_size: dd 8*1024;
-                {{Compiler::write_string_pool(&string_pool)}}
+                {{Compiler::write_data_section(&string_pool)}}
 
                 section ".text";
                 global CMAIN;
@@ -94,6 +91,29 @@ impl<'a> Compiler<'a> {
                     ret;
             }
         };
+    }
+
+    fn write_data_section(string_pool: &StringPool) -> Vec<Inst> {
+        let mut code = vec![];
+        assembly! {
+            (code) {
+                section ".data";
+                data next_stack_addr: dd 0;
+                data stack_size: dd 8*1024;
+                {{Compiler::write_string_pool(&string_pool)}}
+            }
+        };
+
+        code
+    }
+
+    fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
+        let mut code = vec![];
+        for (s, id) in string_pool.pool.iter() {
+            let lbl = format!("str_{}", id);
+            code.push(Inst::DataString(lbl, s.clone()));
+        }
+        code
     }
 
     fn print_bool(code2: &mut Vec<Inst>) {
@@ -114,15 +134,6 @@ impl<'a> Compiler<'a> {
                     ret;
             }
         }
-    }
-
-    fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
-        let mut code = vec![];
-        for (s, id) in string_pool.pool.iter() {
-            let lbl = format!("str_{}", id);
-            code.push(Inst::DataString(lbl, s.clone()));
-        }
-        code
     }
 
     /// Writes the function which will handle initializing a new coroutine
