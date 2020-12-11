@@ -2,5 +2,8 @@ fn my_main() {
     let s: string := "hello\n";
     let s2: string := "\tworld\n";
 
+    prints s;
+    prints s2;
+
     return;
 }

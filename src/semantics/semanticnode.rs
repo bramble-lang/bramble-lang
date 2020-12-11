@@ -121,6 +121,10 @@ impl SemanticNode {
                 sm_from(*l),
                 SemanticNode::from_parser_ast(exp)?,
             ))),
+            Prints(l, exp) => Ok(Box::new(Prints(
+                sm_from(*l),
+                SemanticNode::from_parser_ast(exp)?,
+            ))),
             Printbln(l, exp) => Ok(Box::new(Printbln(
                 sm_from(*l),
                 SemanticNode::from_parser_ast(exp)?,

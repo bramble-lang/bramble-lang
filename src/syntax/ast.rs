@@ -95,6 +95,7 @@ pub enum Ast<I> {
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
     Printi(I, Box<Ast<I>>),
+    Prints(I, Box<Ast<I>>),
     Printiln(I, Box<Ast<I>>),
     Printbln(I, Box<Ast<I>>),
 
@@ -143,6 +144,7 @@ impl<I> Ast<I> {
             UnaryOp(_, op, _) => format!("{}", op),
 
             Printi(_, _) => "printi".into(),
+            Prints(_, _) => "prints".into(),
             Printiln(_, _) => "printiln".into(),
             Printbln(_, _) => "printbln".into(),
 
@@ -179,6 +181,7 @@ impl<I> Ast<I> {
             | UnaryOp(m, ..)
             | Printi(m, ..)
             | Printiln(m, ..)
+            | Prints(m, ..)
             | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)

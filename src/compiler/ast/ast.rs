@@ -109,6 +109,11 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Printiln(meta, Box::new(e)), layout)
             }
+            Prints(m, ref e) => {
+                let (meta, layout) = Scope::local_from(m, struct_table, layout);
+                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
+                (Prints(meta, Box::new(e)), layout)
+            }
             Printbln(m, ref e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);

@@ -357,13 +357,14 @@ fn statement(iter: &mut TokenIter) -> PResult {
 fn println_stmt(iter: &mut TokenIter) -> PResult {
     let tk = iter.peek();
     Ok(match tk {
-        Some(Token { l, s }) if *s == Lex::Printiln || *s == Lex::Printbln => {
+        Some(Token { l, s }) if *s == Lex::Printiln || *s == Lex::Printbln || *s == Lex::Prints => {
             iter.next();
             let exp =
                 expression(iter)?.ok_or(format!("L{}: Expected expression after println", l))?;
 
             match s {
                 Lex::Printiln => Some(Ast::Printiln(*l, Box::new(exp))),
+                Lex::Prints => Some(Ast::Prints(*l, Box::new(exp))),
                 Lex::Printbln => Some(Ast::Printbln(*l, Box::new(exp))),
                 _ => panic!("CRITICAL: already tested for a print token but found {}", s),
             }

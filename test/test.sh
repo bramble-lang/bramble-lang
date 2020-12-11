@@ -48,6 +48,10 @@ then
     run_test "scope/out_of_scope"
     run_test "parser/missing_type"
 
+    run_test "string_literals/basic"
+    run_test "string_literals/with_functions"
+    run_test "string_literals/with_coroutines"
+
     run_test "structs/basic"
     run_test "structs/expr_block"
     run_test "structs/expr_block_result"

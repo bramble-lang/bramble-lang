@@ -74,6 +74,9 @@ impl StringPool {
             Printiln(_, ref e) => {
                 self.extract_from(e);
             }
+            Prints(_, ref e) => {
+                self.extract_from(e);
+            }
             Printbln(_, ref e) => {
                 self.extract_from(e);
             }

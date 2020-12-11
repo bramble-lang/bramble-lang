@@ -104,10 +104,10 @@ impl<'a> Compiler<'a> {
                     mov %ebp, %esp;
                     cmp %eax, 0;
                     jz ^false;
-                    print_str "true";
+                    print_string "true";
                     jmp ^done;
                     ^false:
-                    print_str "false";
+                    print_string "false";
                     ^done:
                     mov %esp, %ebp;
                     pop %ebp;
@@ -379,6 +379,13 @@ impl<'a> Compiler<'a> {
                 assembly! {(code) {
                     print_dec %eax;
                     newline;
+                }}
+            }
+            Ast::Prints(_, ref exp) => {
+                self.traverse(exp, current_func, code)?;
+
+                assembly! {(code) {
+                    print_str [%eax];
                 }}
             }
             Ast::Printbln(_, ref exp) => {

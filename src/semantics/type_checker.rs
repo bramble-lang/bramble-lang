@@ -429,6 +429,15 @@ pub mod checker {
                         Err(format!("Expected i32 for printiln got {}", ty))
                     }
                 }
+                Prints(meta, exp) => {
+                    let ty = self.traverse(exp, current_func, sym)?;
+                    if ty == ast::Type::StringLiteral {
+                        meta.ty = Unit;
+                        Ok(Unit)
+                    } else {
+                        Err(format!("Expected string for printiln got {}", ty))
+                    }
+                }
                 Printbln(meta, exp) => {
                     let ty = self.traverse(exp, current_func, sym)?;
                     if ty == Bool {

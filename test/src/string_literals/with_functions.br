@@ -1,0 +1,16 @@
+fn my_main() {
+    let s: string := create_a_string();
+    return say_hello(s);
+}
+
+fn create_a_string() -> string {
+    return "world";
+}
+
+fn say_hello(to: string) {
+    prints "hello, ";
+    prints to;
+    prints "\n";
+
+    return;
+}

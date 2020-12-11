@@ -210,7 +210,8 @@ pub enum Inst {
     Setg(Reg8),
     Setge(Reg8),
 
-    PrintStr(String),
+    PrintStr(Operand),
+    PrintString(String),
     PrintDec(Operand),
     NewLine,
 }
@@ -288,7 +289,8 @@ impl Display for Inst {
 
             Label(lbl) => f.write_fmt(format_args!("{}:", lbl)),
 
-            PrintStr(str) => f.write_fmt(format_args!("PRINT_STRING \"{}\"", str)),
+            PrintStr(val) => f.write_fmt(format_args!("PRINT_STRING {}", val)),
+            PrintString(s) => f.write_fmt(format_args!("PRINT_STRING \"{}\"", s)),
             PrintDec(val) => f.write_fmt(format_args!("PRINT_DEC 4, {}", val)),
             NewLine => f.write_fmt(format_args!("NEWLINE")),
         }
@@ -327,6 +329,9 @@ macro_rules! unary_op {
     };
     (print_dec) => {
         Inst::PrintDec
+    };
+    (print_str) => {
+        Inst::PrintStr
     };
 }
 
@@ -597,8 +602,8 @@ macro_rules! assembly {
         $buf.push(Inst::Setge(reg8!($a)));
         assembly!(($buf) {$($tail)*})
     };
-    (($buf:expr) {print_str $a:literal; $($tail:tt)*}) => {
-        $buf.push(Inst::PrintStr($a.into()));
+    (($buf:expr) {print_string $a:literal; $($tail:tt)*}) => {
+        $buf.push(Inst::PrintString($a.into()));
         assembly!(($buf) {$($tail)*})
     };
 
