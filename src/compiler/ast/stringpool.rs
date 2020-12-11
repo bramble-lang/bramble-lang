@@ -128,13 +128,10 @@ impl StringPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast;
-    use crate::ast::Ast;
     use crate::checker::type_check;
     use crate::lexer::Lexer;
     use crate::syntax::parser;
     use crate::Token;
-    use std::collections::HashMap;
 
     #[test]
     fn insert_string() {
