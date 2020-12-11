@@ -4,12 +4,12 @@ use crate::compiler::ast::ast::CompilerNode;
 
 #[derive(Debug, PartialEq)]
 pub struct StringPool {
-    pool: HashMap<String,usize>,
+    pool: HashMap<String, usize>,
 }
 
 impl StringPool {
     pub fn new() -> StringPool {
-        StringPool{
+        StringPool {
             pool: HashMap::new(),
         }
     }
@@ -18,7 +18,7 @@ impl StringPool {
     /// string and generate a unique ID for it.
     pub fn insert(&mut self, s: &str) {
         if self.pool.contains_key(s.into()) {
-            return
+            return;
         }
         let id = self.pool.len();
         self.pool.insert(s.into(), id);
@@ -30,7 +30,7 @@ impl StringPool {
         self.pool.get(s)
     }
 
-    /// Traverse through all the nodes in an AST and find any occurances of 
+    /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
     pub fn extract_from(&mut self, ast: &CompilerNode) {
         use crate::ast::Ast::*;
@@ -46,19 +46,14 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
-            Integer(..) => {
-            }
-            Boolean(..) => {
-            }
+            Integer(..) => {}
+            Boolean(..) => {}
             StringLiteral(_, s) => {
                 self.insert(s);
             }
-            CustomType(..) => {
-            }
-            Identifier(..) => {
-            }
-            IdentifierDeclare(..) => {
-            }
+            CustomType(..) => {}
+            Identifier(..) => {}
+            IdentifierDeclare(..) => {}
             MemberAccess(_, src, _) => {
                 self.extract_from(src);
             }
@@ -92,13 +87,11 @@ impl StringPool {
             Yield(_, e) => {
                 self.extract_from(e);
             }
-            Return(_, None) => {
-            }
+            Return(_, None) => {}
             Return(_, Some(e)) => {
                 self.extract_from(e);
             }
-            YieldReturn(_, None) => {
-            }
+            YieldReturn(_, None) => {}
             YieldReturn(_, Some(e)) => {
                 self.extract_from(e);
             }
@@ -122,7 +115,7 @@ impl StringPool {
                     self.extract_from(c);
                 }
             }
-            StructDef(..) => {},
+            StructDef(..) => {}
             StructInit(_, _, fields) => {
                 for (_, f) in fields.iter() {
                     self.extract_from(f);
@@ -135,6 +128,13 @@ impl StringPool {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ast;
+    use crate::ast::Ast;
+    use crate::checker::type_check;
+    use crate::lexer::Lexer;
+    use crate::syntax::parser;
+    use crate::Token;
+    use std::collections::HashMap;
 
     #[test]
     fn insert_string() {
@@ -154,5 +154,45 @@ mod test {
         let second_id = *sp.get("test").unwrap();
 
         assert_eq!(first_id, second_id);
+    }
+
+    #[test]
+    fn extract_from_ast() {
+        for (text, expected) in vec![
+            ("fn test() -> string {return \"test\";}",
+            vec!["test"]),
+            ("fn test() -> string {return \"test2\";}",
+            vec!["test2"]),
+            ("fn test() -> string {let s: string := \"hello\"; return \"test2\";}",
+            vec!["hello", "test2"]),
+            ] {
+            let mut lexer = Lexer::new();
+            let tokens: Vec<Token> = lexer
+                .tokenize(&text)
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast).unwrap();
+            let (compiler_ast, _) = CompilerNode::from(result.as_ref());
+            let mut sp = StringPool::new();
+            sp.extract_from(&compiler_ast);
+
+            assert!(cmp(&sp, &expected));
+        }
+    }
+
+    fn cmp(sp: &StringPool, expected: &Vec<&str>) -> bool {
+        if sp.pool.len() != expected.len() {
+            return false
+        }
+
+        for e in expected.iter() {
+            if sp.get(e).is_none() {
+                return false
+            }
+        }
+
+        true
     }
 }

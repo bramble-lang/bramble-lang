@@ -6,6 +6,7 @@ use std::iter::Peekable;
 pub enum Primitive {
     I32,
     Bool,
+    StringLiteral
 }
 
 impl std::fmt::Display for Primitive {
@@ -13,6 +14,7 @@ impl std::fmt::Display for Primitive {
         match self {
             Primitive::I32 => f.write_str("i32"),
             Primitive::Bool => f.write_str("bool"),
+            Primitive::StringLiteral => f.write_str("string"),
         }
     }
 }
@@ -242,7 +244,6 @@ impl Lexer {
         &self,
         iter: &mut Peekable<std::str::Chars>,
     ) -> Result<Option<Token>, String> {
-        println!("string literal");
         if let Some(c) = iter.peek() {
            if *c == '"' {
                iter.next();
@@ -462,6 +463,7 @@ impl Lexer {
             } => match id.as_str() {
                 "i32" => Token::new(self.line, Primitive(Primitive::I32)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
+                "string" => Token::new(self.line, Primitive(Primitive::StringLiteral)),
                 _ => Token::new(self.line, Identifier(id.clone())),
             },
             _ => token,
@@ -630,6 +632,7 @@ mod tests {
         for (text, expected_token) in [
             ("i32", Token::new(1, Primitive(Primitive::I32))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),
+            ("string", Token::new(1, Primitive(Primitive::StringLiteral))),
         ]
         .iter()
         {
