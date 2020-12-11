@@ -176,6 +176,7 @@ pub enum Inst {
     Section(String),
     Global(String),
     Data(String, i32),
+    DataString(String, String),
     Label(String),
 
     Jmp(Operand),
@@ -235,6 +236,7 @@ impl Display for Inst {
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
             Global(global) => f.write_fmt(format_args!("global {}", global)),
             Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),
+            DataString(lbl, value) => f.write_fmt(format_args!("{}: db `{}`,0", lbl, value)),
 
             Jmp(a) => f.write_fmt(format_args!("jmp {}", a)),
             Jz(a) => f.write_fmt(format_args!("jz {}", a)),

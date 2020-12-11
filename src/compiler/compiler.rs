@@ -1,6 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::compiler::ast::stringpool::StringPool;
 use crate::compiler::ast::scope::Scope;
 use crate::assembly;
 use crate::assembly2;
@@ -26,6 +27,7 @@ use crate::{
 pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
+    string_pool: StringPool,
 }
 
 impl<'a> Compiler<'a> {
@@ -39,20 +41,26 @@ impl<'a> Compiler<'a> {
     pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
         let mut code = vec![];
 
-        Compiler::create_base(&mut code);
+        // Put user code here
+        let (compiler_ast, _) = CompilerNode::from(ast);
 
+        let mut string_pool =  StringPool::new();
+        string_pool.extract_from(&compiler_ast);
+
+        Compiler::create_base(&mut code, &string_pool);
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
         Compiler::runtime_yield_into_coroutine(&mut code);
         Compiler::runtime_yield_return(&mut code);
         Compiler::print_bool(&mut code);
 
-        // Put user code here
-        let global_func = "".into();
-        let (compiler_ast, _) = CompilerNode::from(ast);
+
         let mut compiler = Compiler {
             code: vec![],
             scope: ScopeStack::new(),
+            string_pool,
         };
+
+        let global_func = "".into();
         compiler
             .traverse(&compiler_ast, &global_func, &mut code)
             .unwrap();
@@ -60,14 +68,15 @@ impl<'a> Compiler<'a> {
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
-    fn create_base(code2: &mut Vec<Inst>) {
-        assembly! {
+    fn create_base(code2: &mut Vec<Inst>, string_pool: &StringPool) {
+                assembly! {
             (code2) {
                 include "io.inc";
 
                 section ".data";
                 data next_stack_addr: dd 0;
                 data stack_size: dd 8*1024;
+                {{Compiler::write_string_pool(&string_pool)}}
 
                 section ".text";
                 global CMAIN;
@@ -105,6 +114,15 @@ impl<'a> Compiler<'a> {
                     ret;
             }
         }
+    }
+
+    fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
+        let mut code = vec![];
+        for (s, id) in string_pool.pool.iter() {
+            let lbl = format!("str_{}", id);
+            code.push(Inst::DataString(lbl, s.clone()));
+        }
+        code
     }
 
     /// Writes the function which will handle initializing a new coroutine
@@ -312,6 +330,13 @@ impl<'a> Compiler<'a> {
             }
             Ast::Boolean(_, b) => {
                 assembly! {(code) {mov %eax, {if *b {1} else {0}};}}
+            }
+            Ast::StringLiteral(_, s) => {
+                let str_id = self.string_pool.get(s).ok_or(format!("Could not find string {} in string pool", s))?;
+                assembly!{(code) {
+                        lea %eax, @{format!("str_{}", str_id)};
+                    }
+                }
             }
             Ast::Identifier(m, id) => {
                 let id_offset = self.scope.find(id).unwrap().offset;

@@ -4,7 +4,7 @@ use crate::compiler::ast::ast::CompilerNode;
 
 #[derive(Debug, PartialEq)]
 pub struct StringPool {
-    pool: HashMap<String, usize>,
+    pub pool: HashMap<String, usize>,
 }
 
 impl StringPool {
@@ -12,6 +12,10 @@ impl StringPool {
         StringPool {
             pool: HashMap::new(),
         }
+    }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, usize> {
+        self.pool.iter()
     }
 
     /// If the given string is not in the string pool, this will insert the

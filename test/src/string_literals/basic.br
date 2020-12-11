@@ -1,0 +1,6 @@
+fn my_main() {
+    let s: string := "hello\n";
+    let s2: string := "\tworld\n";
+
+    return;
+}
