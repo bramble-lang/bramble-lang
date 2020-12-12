@@ -71,8 +71,7 @@ impl<'a> Compiler<'a> {
     fn create_base(code2: &mut Vec<Inst>, string_pool: &StringPool) {
         assembly! {
             (code2) {
-                include "io.inc";
-
+                {{Compiler::write_includes()}}
                 {{Compiler::write_data_section(&string_pool)}}
 
                 section ".text";
@@ -91,6 +90,13 @@ impl<'a> Compiler<'a> {
                     ret;
             }
         };
+    }
+
+    fn write_includes() -> Vec<Inst> {
+        let mut code = vec![];
+        code.push(Inst::Include("io.inc".into()));
+        code.push(Inst::Extern("printf".into()));
+        code
     }
 
     fn write_data_section(string_pool: &StringPool) -> Vec<Inst> {
@@ -396,7 +402,10 @@ impl<'a> Compiler<'a> {
                 self.traverse(exp, current_func, code)?;
 
                 assembly! {(code) {
-                    print_str [%eax];
+                    //print_str [%eax];
+                    push %eax;
+                    call @printf;
+                    add %esp, 4;
                 }}
             }
             Ast::Printbln(_, ref exp) => {

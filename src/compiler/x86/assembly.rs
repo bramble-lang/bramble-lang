@@ -173,6 +173,7 @@ impl Display for Operand {
 pub enum Inst {
     Comment(String),
     Include(String),
+    Extern(String),
     Section(String),
     Global(String),
     Data(String, i32),
@@ -234,6 +235,7 @@ impl Display for Inst {
         match self {
             Comment(comment) => f.write_fmt(format_args!("; {}", comment)),
             Include(inc) => f.write_fmt(format_args!("%include \"{}\"", inc)),
+            Extern(ext) => f.write_fmt(format_args!("extern {}", ext)),
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
             Global(global) => f.write_fmt(format_args!("global {}", global)),
             Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),
