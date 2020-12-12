@@ -9,7 +9,7 @@ function run_test() {
     if [ $? -eq 0 ]
     then
         nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > ./target/assembler.log
-        gcc -w ./target/output.obj macro.c -g -o ./target/output -m32 2>&1 > ./target/gcc.log
+        gcc -w ./target/output.obj -g -o ./target/output -m32 2>&1 > ./target/gcc.log
 
         ./target/output >> ./target/stdout
     fi

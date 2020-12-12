@@ -9,7 +9,7 @@ function run() {
     echo "Assembling"
 
     nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-    gcc -w ./target/output.obj macro.c -g -o ./target/output -m32 2>&1 > gcc.log
+    gcc -w ./target/output.obj -g -o ./target/output -m32 2>&1 > gcc.log
 
     echo ""
     echo "Running"
