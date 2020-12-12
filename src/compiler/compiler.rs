@@ -75,8 +75,8 @@ impl<'a> Compiler<'a> {
                 {{Compiler::write_data_section(&string_pool)}}
 
                 section ".text";
-                global CMAIN;
-                @CMAIN:
+                global main;
+                @main:
                     push %ebp;
                     mov %ebp, %esp;
                     mov %eax, %esp;
@@ -94,7 +94,6 @@ impl<'a> Compiler<'a> {
 
     fn write_includes() -> Vec<Inst> {
         let mut code = vec![];
-        code.push(Inst::Include("io.inc".into()));
         code.push(Inst::Extern("printf".into()));
         code
     }
