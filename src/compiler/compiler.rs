@@ -115,6 +115,9 @@ impl<'a> Compiler<'a> {
 
     fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
         let mut code = vec![];
+        code.push(Inst::DataString("_decimal".into(), "%d\\n".into()));
+        code.push(Inst::DataString("_true".into(), "true\\n".into()));
+        code.push(Inst::DataString("_false".into(), "false\\n".into()));
         for (s, id) in string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
             code.push(Inst::DataString(lbl, s.clone()));
@@ -130,11 +133,13 @@ impl<'a> Compiler<'a> {
                     mov %ebp, %esp;
                     cmp %eax, 0;
                     jz ^false;
-                    print_string "true";
+                    push @_true;
                     jmp ^done;
                     ^false:
-                    print_string "false";
+                    push @_false;
                     ^done:
+                    call @printf;
+                    add %esp, 4;
                     mov %esp, %ebp;
                     pop %ebp;
                     ret;
@@ -394,15 +399,16 @@ impl<'a> Compiler<'a> {
                 self.traverse(exp, current_func, code)?;
 
                 assembly! {(code) {
-                    print_dec %eax;
-                    newline;
+                    push %eax;
+                    push @_decimal;
+                    call @printf;
+                    add %esp, 8;
                 }}
             }
             Ast::Prints(_, ref exp) => {
                 self.traverse(exp, current_func, code)?;
 
                 assembly! {(code) {
-                    //print_str [%eax];
                     push %eax;
                     call @printf;
                     add %esp, 4;
@@ -413,7 +419,6 @@ impl<'a> Compiler<'a> {
 
                 assembly! {(code) {
                     call @print_bool;
-                    newline;
                 }}
             }
             Ast::If(meta, ref cond, ref true_arm, ref false_arm) => {
