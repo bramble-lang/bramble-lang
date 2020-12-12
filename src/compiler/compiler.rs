@@ -137,13 +137,34 @@ impl<'a> Compiler<'a> {
                     ^false:
                     push @_false;
                     ^done:
-                    call @printf;
-                    add %esp, 4;
+                    {{Compiler::make_c_extern_call("printf", 1)}}
                     mov %esp, %ebp;
                     pop %ebp;
                     ret;
             }
         }
+    }
+
+    fn make_c_extern_call(c_func: &str, nparams: i32) -> Vec<Inst> {
+        let mut code = vec![];
+        for pl in 0..nparams {
+            let pr = nparams - pl - 1;
+            if pr <= pl  {
+                break;
+            }
+            assembly!{(code){
+                mov %esi, [%esp+{4*pl as i32}];
+                mov %edi, [%esp+{4*pr as i32}];
+                mov [%esp+{4*pl as i32}], %edi;
+                mov [%esp+{4*pr as i32}], %esi;
+            }}
+        }
+
+        assembly!{(code){
+            call @{c_func};
+            add %esp, {4*nparams as i32};
+        }}
+        code
     }
 
     /// Writes the function which will handle initializing a new coroutine
@@ -398,10 +419,9 @@ impl<'a> Compiler<'a> {
                 self.traverse(exp, current_func, code)?;
 
                 assembly! {(code) {
-                    push %eax;
                     push @_decimal;
-                    call @printf;
-                    add %esp, 8;
+                    push %eax;
+                    {{Compiler::make_c_extern_call("printf", 2)}}
                 }}
             }
             Ast::Prints(_, ref exp) => {
@@ -409,8 +429,7 @@ impl<'a> Compiler<'a> {
 
                 assembly! {(code) {
                     push %eax;
-                    call @printf;
-                    add %esp, 4;
+                    {{Compiler::make_c_extern_call("printf", 1)}}
                 }}
             }
             Ast::Printbln(_, ref exp) => {
@@ -507,7 +526,7 @@ impl<'a> Compiler<'a> {
                 self.validate_routine_call(co, params)?;
 
                 assembly! {(code) {
-                    {{self.evaluate_routine_params(params, &co_param_registers, current_func)?}}
+                    {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
                     lea %eax, [@{co}];
@@ -575,7 +594,7 @@ impl<'a> Compiler<'a> {
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
                 assembly! {(code) {
-                    {{self.evaluate_routine_params(params, &fn_param_registers, current_func)?}}
+                    {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
                     call @{fn_name};
                 }};
@@ -999,17 +1018,8 @@ impl<'a> Compiler<'a> {
     fn evaluate_routine_params(
         &mut self,
         params: &'a Vec<CompilerNode>,
-        param_registers: &Vec<Reg>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
-        // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
-        // calling the function
-        if params.len() > param_registers.len() {
-            return Err(format!(
-                "Compiler: too many parameters being passed to function.  {} has {} parameters but compiler cannot support more than {}",
-                current_func, params.len(), param_registers.len(),
-            ));
-        }
         let mut code = vec![];
         for param in params.iter() {
             self.traverse(param, current_func, &mut code)?;
@@ -1025,6 +1035,15 @@ impl<'a> Compiler<'a> {
         params: &'a Vec<CompilerNode>,
         param_registers: &Vec<Reg>,
     ) -> Result<Vec<Inst>, String> {
+        // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
+        // calling the function
+        if params.len() > param_registers.len() {
+            return Err(format!(
+                "Compiler: too many parameters being passed to function.  Has {} parameters but compiler cannot support more than {}",
+                params.len(), param_registers.len(),
+            ));
+        }
+
         let mut code = vec![];
         for reg in param_registers.iter().take(params.len()).rev() {
             assembly! {(code){
