@@ -156,6 +156,9 @@ impl<'a> Compiler<'a> {
         code
     }
 
+    /// The GCC32 uses a different order for parameters from the order that
+    /// Braid pushes parameters onto the stack as they are evaluated.  This
+    /// function reverses the order of the parameters.
     fn reverse_params_on_stack(nparams: i32) -> Vec<Inst> {
         let mut code = vec![];
         for pl in 0..nparams {
