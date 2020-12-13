@@ -1,15 +1,15 @@
 fn my_main() {
     let s: string := create_a_string();
-    return say_hello(s);
+    return say_something("hello, ", s);
 }
 
 fn create_a_string() -> string {
     return "world";
 }
 
-fn say_hello(to: string) {
-    prints "hello, ";
-    prints to;
+fn say_something(a: string, b: string) {
+    prints a;
+    prints b;
     prints "\n";
 
     return;
