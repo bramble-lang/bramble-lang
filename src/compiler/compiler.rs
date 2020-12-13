@@ -39,7 +39,6 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
-        let mut code = vec![];
 
         // Put user code here
         let (compiler_ast, _) = CompilerNode::from(ast);
@@ -47,6 +46,7 @@ impl<'a> Compiler<'a> {
         let mut string_pool = StringPool::new();
         string_pool.extract_from(&compiler_ast);
 
+        let mut code = vec![];
         Compiler::create_base(&mut code, &string_pool);
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
         Compiler::runtime_yield_into_coroutine(&mut code);
@@ -67,9 +67,9 @@ impl<'a> Compiler<'a> {
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
-    fn create_base(code2: &mut Vec<Inst>, string_pool: &StringPool) {
+    fn create_base(code: &mut Vec<Inst>, string_pool: &StringPool) {
         assembly! {
-            (code2) {
+            (code) {
                 {{Compiler::write_includes()}}
                 {{Compiler::write_data_section(&string_pool)}}
 
@@ -125,9 +125,9 @@ impl<'a> Compiler<'a> {
         code
     }
 
-    fn print_bool(code2: &mut Vec<Inst>) {
+    fn print_bool(code: &mut Vec<Inst>) {
         assembly! {
-            (code2) {
+            (code) {
                 @print_bool:
                     push %ebp;
                     mov %ebp, %esp;
@@ -148,6 +148,16 @@ impl<'a> Compiler<'a> {
 
     fn make_c_extern_call(c_func: &str, nparams: i32) -> Vec<Inst> {
         let mut code = vec![];
+        assembly! {(code){
+            {{Compiler::reverse_params_on_stack(nparams)}}
+            call @{c_func};
+            add %esp, {4*nparams as i32};
+        }}
+        code
+    }
+
+    fn reverse_params_on_stack(nparams: i32) -> Vec<Inst> {
+        let mut code = vec![];
         for pl in 0..nparams {
             let pr = nparams - pl - 1;
             if pr <= pl {
@@ -161,10 +171,6 @@ impl<'a> Compiler<'a> {
             }}
         }
 
-        assembly! {(code){
-            call @{c_func};
-            add %esp, {4*nparams as i32};
-        }}
         code
     }
 
@@ -172,7 +178,7 @@ impl<'a> Compiler<'a> {
     fn coroutine_init(
         next_stack_variable: &str,
         stack_increment_variable: &str,
-        code2: &mut Vec<Inst>,
+        code: &mut Vec<Inst>,
     ) {
         /*
          * Input:
@@ -202,7 +208,7 @@ impl<'a> Compiler<'a> {
          */
 
         assembly! {
-            (code2) {
+            (code) {
                 @runtime_init_coroutine:
                     push %ebp;
                     mov %ebp, %esp;
@@ -248,7 +254,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn runtime_yield_return(code2: &mut Vec<Inst>) {
+    fn runtime_yield_return(code: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - value being returned (if any)
@@ -256,7 +262,7 @@ impl<'a> Compiler<'a> {
          */
         // When in a coroutine, return to the calling coroutine
         assembly! {
-            (code2) {
+            (code) {
                 @runtime_yield_return:
                     mov [%ebp-20], %esp;
                     mov [%ebp-4], %ebx;
