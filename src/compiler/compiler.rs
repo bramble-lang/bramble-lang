@@ -94,6 +94,8 @@ impl<'a> Compiler<'a> {
     fn write_includes() -> Vec<Inst> {
         let mut code = vec![];
         code.push(Inst::Extern("printf".into()));
+        code.push(Inst::Extern("stdout".into()));
+        code.push(Inst::Extern("fputs".into()));
         code
     }
 
@@ -431,7 +433,8 @@ impl<'a> Compiler<'a> {
 
                 assembly! {(code) {
                     push %eax;
-                    {{Compiler::make_c_extern_call("printf", 1)}}
+                    push [rel @stdout];
+                    {{Compiler::make_c_extern_call("fputs", 2)}}
                 }}
             }
             Ast::Printbln(_, ref exp) => {
