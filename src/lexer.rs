@@ -6,7 +6,7 @@ use std::iter::Peekable;
 pub enum Primitive {
     I32,
     Bool,
-    StringLiteral
+    StringLiteral,
 }
 
 impl std::fmt::Display for Primitive {
@@ -172,7 +172,9 @@ impl Lexer {
             }
             match self.next_token(&mut cs) {
                 Ok(Some(t)) => tokens.push(Ok(t)),
-                Ok(None) => {cs.next();},
+                Ok(None) => {
+                    cs.next();
+                }
                 Err(msg) => tokens.push(Err(msg)),
             }
         }
@@ -196,13 +198,16 @@ impl Lexer {
         }
     }
 
-    fn consume_literal(&mut self, iter: &mut Peekable<std::str::Chars>) -> Result<Option<Token>, String> {
+    fn consume_literal(
+        &mut self,
+        iter: &mut Peekable<std::str::Chars>,
+    ) -> Result<Option<Token>, String> {
         match self.consume_integer(iter)? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_string_literal(iter)? {
                 Some(s) => Ok(Some(s)),
                 None => Ok(None),
-            }
+            },
         }
     }
 
@@ -247,19 +252,19 @@ impl Lexer {
         iter: &mut Peekable<std::str::Chars>,
     ) -> Result<Option<Token>, String> {
         if let Some(c) = iter.peek() {
-           if *c == '"' {
-               iter.next();
-               let mut s = String::new();
-               while let Some(c) = iter.next() {
-                   if c == '"' {
-                       break;
-                   }
-                   s.push(c);
-               }
-            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
-           } else {
-               Ok(None)
-           }
+            if *c == '"' {
+                iter.next();
+                let mut s = String::new();
+                while let Some(c) = iter.next() {
+                    if c == '"' {
+                        break;
+                    }
+                    s.push(c);
+                }
+                Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
+            } else {
+                Ok(None)
+            }
         } else {
             Ok(None)
         }
@@ -320,7 +325,7 @@ impl Lexer {
                         // this is a line comment
                         self.consume_line_comment(iter);
                         None
-                    },
+                    }
                     Some('*') => {
                         /* this is a block comment */
                         self.consume_block_comment(iter);
@@ -331,7 +336,7 @@ impl Lexer {
                         Some(Token::new(self.line, Div))
                     }
                 }
-            },
+            }
             Some('+') => Some(Token::new(self.line, Add)),
             Some(';') => Some(Token::new(self.line, Semicolon)),
             Some(',') => Some(Token::new(self.line, Comma)),
@@ -416,10 +421,7 @@ impl Lexer {
         Ok(token)
     }
 
-    fn consume_line_comment(
-        &self,
-        iter: &mut Peekable<std::str::Chars>,
-    ) {
+    fn consume_line_comment(&self, iter: &mut Peekable<std::str::Chars>) {
         while let Some(c) = iter.next() {
             if c == '\n' {
                 break;
@@ -427,10 +429,7 @@ impl Lexer {
         }
     }
 
-    fn consume_block_comment(
-        &self,
-        iter: &mut Peekable<std::str::Chars>,
-    ) {
+    fn consume_block_comment(&self, iter: &mut Peekable<std::str::Chars>) {
         while let Some(c) = iter.next() {
             if c == '*' {
                 if let Some(c2) = iter.peek() {
@@ -692,9 +691,9 @@ mod tests {
     #[test]
     fn test_comments() {
         for (text, t1, t2, t3, t4, t5, t6) in [
-            ("return ( x + 5 || //true )", 1, 1, 1, 1, 1, 1, ),
-            (" return ( x + 5|| /*true )*/ ", 1, 1, 1, 1, 1, 1, ),
-            ("return(x+5||///*true)", 1, 1, 1, 1, 1, 1, ),
+            ("return ( x + 5 || //true )", 1, 1, 1, 1, 1, 1),
+            (" return ( x + 5|| /*true )*/ ", 1, 1, 1, 1, 1, 1),
+            ("return(x+5||///*true)", 1, 1, 1, 1, 1, 1),
             (
                 "return
             (x+

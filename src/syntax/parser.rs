@@ -528,12 +528,11 @@ fn term(iter: &mut TokenIter) -> PResult {
 fn negate(iter: &mut TokenIter) -> PResult {
     match consume_if_one_of(iter, vec![Lex::Minus, Lex::Not]) {
         Some((l, op)) => {
-            let factor = member_access(iter)?.ok_or(&format!("L{}: expected term after {}", l, op))?;
+            let factor =
+                member_access(iter)?.ok_or(&format!("L{}: expected term after {}", l, op))?;
             Ok(Some(PNode::unary_op(l, &op, Box::new(factor))?))
-        },
-        None => {
-            member_access(iter)
         }
+        None => member_access(iter),
     }
 }
 
@@ -542,15 +541,13 @@ fn member_access(iter: &mut TokenIter) -> PResult {
         Some(f) => {
             let mut ma = f;
             while let Some(l) = consume_if(iter, Lex::MemberAccess) {
-                let member = consume_if_id(iter).ok_or(format!(
-                    "L{}: expect field name after member access '.'",
-                    l
-                ))?;
+                let member = consume_if_id(iter)
+                    .ok_or(format!("L{}: expect field name after member access '.'", l))?;
                 ma = Ast::MemberAccess(l, Box::new(ma), member.1);
             }
             Ok(Some(ma))
-        },
-        None => Ok(None)
+        }
+        None => Ok(None),
     }
 }
 
@@ -779,7 +776,10 @@ fn boolean(iter: &mut TokenIter) -> PResult {
 
 fn string_literal(iter: &mut TokenIter) -> PResult {
     match iter.peek() {
-        Some(Token{ l, s: Lex::StringLiteral(s)}) => {
+        Some(Token {
+            l,
+            s: Lex::StringLiteral(s),
+        }) => {
             iter.next();
             Ok(Some(Ast::StringLiteral(*l, s.clone())))
         }
@@ -1008,11 +1008,7 @@ pub mod tests {
 
     #[test]
     fn parse_member_access() {
-        for text in vec![
-            "thing.first",
-            "(thing).first",
-            "(thing.first)",
-            ] {
+        for text in vec!["thing.first", "(thing).first", "(thing.first)"] {
             let mut lexer = Lexer::new();
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
@@ -1023,13 +1019,9 @@ pub mod tests {
             match member_access(&mut iter) {
                 Ok(Some(Ast::MemberAccess(l, left, right))) => {
                     assert_eq!(l, 1);
-                    assert_eq!(
-                        *left,
-                        Ast::Identifier(1, "thing".into()),
-                        "Input: {}", text,
-                    );
+                    assert_eq!(*left, Ast::Identifier(1, "thing".into()), "Input: {}", text,);
                     assert_eq!(right, "first");
-                },
+                }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
                 Ok(None) => panic!("No node returned for {}", text),
                 Err(msg) => panic!("{} caused {}", text, msg),
@@ -1045,7 +1037,7 @@ pub mod tests {
             "(thing.first).second",
             "((thing.first).second)",
             "(thing.first.second)",
-            ] {
+        ] {
             let mut lexer = Lexer::new();
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
@@ -1063,10 +1055,11 @@ pub mod tests {
                             Box::new(Ast::Identifier(1, "thing".into())),
                             "first".into()
                         ),
-                        "Input: {}", text,
+                        "Input: {}",
+                        text,
                     );
                     assert_eq!(right, "second");
-                },
+                }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
                 Ok(None) => panic!("No node returned for {}", text),
                 Err(msg) => panic!("{} caused {}", text, msg),
@@ -1402,11 +1395,9 @@ pub mod tests {
     #[test]
     fn parse_string_literals() {
         for (text, expected) in vec![
-            ("fn test() -> String {return \"test\";}",
-            "test"),
-            ("fn test() -> String {return \"test 2\";}",
-            "test 2"),
-            ] {
+            ("fn test() -> String {return \"test\";}", "test"),
+            ("fn test() -> String {return \"test 2\";}", "test 2"),
+        ] {
             let mut lexer = Lexer::new();
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
@@ -1415,15 +1406,15 @@ pub mod tests {
                 .unwrap();
             let ast = parse(tokens).unwrap().unwrap();
             match ast {
-                Ast::Module{functions, ..} => {
-                    match &functions[0] {
-                        Ast::RoutineDef(.., body) => match &body[0] {
-                            Ast::Return(.., Some(rv)) => assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into()))),
-                            _ => assert!(false, "Not a return statement"),
+                Ast::Module { functions, .. } => match &functions[0] {
+                    Ast::RoutineDef(.., body) => match &body[0] {
+                        Ast::Return(.., Some(rv)) => {
+                            assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))
                         }
                         _ => assert!(false, "Not a return statement"),
-                    }
-                }
+                    },
+                    _ => assert!(false, "Not a return statement"),
+                },
                 _ => assert!(false, "Not a routine, got {:?}", ast),
             }
         }

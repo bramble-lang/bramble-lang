@@ -172,7 +172,7 @@ impl<I> Ast<I> {
         match self {
             Integer(m, ..)
             | Boolean(m, ..)
-            | StringLiteral(m,..)
+            | StringLiteral(m, ..)
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)

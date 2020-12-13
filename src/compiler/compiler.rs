@@ -1,8 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::compiler::ast::stringpool::StringPool;
-use crate::compiler::ast::scope::Scope;
 use crate::assembly;
 use crate::assembly2;
 use crate::ast::Ast;
@@ -11,7 +9,9 @@ use crate::ast::RoutineDef;
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
+use crate::compiler::ast::scope::Scope;
 use crate::compiler::ast::stack::ScopeStack;
+use crate::compiler::ast::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::reg32;
@@ -44,7 +44,7 @@ impl<'a> Compiler<'a> {
         // Put user code here
         let (compiler_ast, _) = CompilerNode::from(ast);
 
-        let mut string_pool =  StringPool::new();
+        let mut string_pool = StringPool::new();
         string_pool.extract_from(&compiler_ast);
 
         Compiler::create_base(&mut code, &string_pool);
@@ -52,7 +52,6 @@ impl<'a> Compiler<'a> {
         Compiler::runtime_yield_into_coroutine(&mut code);
         Compiler::runtime_yield_return(&mut code);
         Compiler::print_bool(&mut code);
-
 
         let mut compiler = Compiler {
             code: vec![],
@@ -149,10 +148,10 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         for pl in 0..nparams {
             let pr = nparams - pl - 1;
-            if pr <= pl  {
+            if pr <= pl {
                 break;
             }
-            assembly!{(code){
+            assembly! {(code){
                 mov %esi, [%esp+{4*pl as i32}];
                 mov %edi, [%esp+{4*pr as i32}];
                 mov [%esp+{4*pl as i32}], %edi;
@@ -160,7 +159,7 @@ impl<'a> Compiler<'a> {
             }}
         }
 
-        assembly!{(code){
+        assembly! {(code){
             call @{c_func};
             add %esp, {4*nparams as i32};
         }}
@@ -374,8 +373,11 @@ impl<'a> Compiler<'a> {
                 assembly! {(code) {mov %eax, {if *b {1} else {0}};}}
             }
             Ast::StringLiteral(_, s) => {
-                let str_id = self.string_pool.get(s).ok_or(format!("Could not find string {} in string pool", s))?;
-                assembly!{(code) {
+                let str_id = self
+                    .string_pool
+                    .get(s)
+                    .ok_or(format!("Could not find string {} in string pool", s))?;
+                assembly! {(code) {
                         lea %eax, @{format!("str_{}", str_id)};
                     }
                 }
@@ -472,8 +474,8 @@ impl<'a> Compiler<'a> {
                     .find(id)
                     .ok_or(format!("Could not find variable {}", id))?
                     .offset;
-                code.push(Inst::Comment(format!("Binding {}", id)));
-                assembly!{(code) {
+                assembly! {(code) {
+                    ; {format!("Binding {}", id)}
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
                 }}
             }
@@ -490,17 +492,17 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Return(_, ref exp) => {
-                assembly!{(code) {
+                assembly! {(code) {
                     {{self.return_exp(exp, current_func)?}}
                 }}
-            },
+            }
             Ast::Yield(meta, ref id) => {
-                assembly!{(code) {
+                assembly! {(code) {
                     {{self.yield_exp(meta, id, current_func)?}}
                 }}
             }
             Ast::YieldReturn(meta, ref exp) => {
-                assembly!{(code) {
+                assembly! {(code) {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
@@ -578,7 +580,7 @@ impl<'a> Compiler<'a> {
                 // passed
                 self.validate_routine_call(fn_name, params)?;
                 self.scope.find_func(fn_name);
-               
+
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
@@ -711,16 +713,22 @@ impl<'a> Compiler<'a> {
             }}
         }
 
-        assembly!{(code) {
+        assembly! {(code) {
             ; {format!("Done instantiating struct of type {}", struct_name)}
             lea %eax, [%esp + {offset}];
         }};
         Ok(code)
     }
 
-    fn bind_member(&mut self, fvalue: &'a CompilerNode, current_func: &String, dst: Reg32, dst_offset: i32) -> Result<Vec<Inst>, String> {
+    fn bind_member(
+        &mut self,
+        fvalue: &'a CompilerNode,
+        current_func: &String,
+        dst: Reg32,
+        dst_offset: i32,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        
+
         match fvalue {
             Ast::StructInit(_, substruct_name, substruct_values) => {
                 let asm = self.init_struct(
@@ -760,8 +768,13 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-
-    fn bind(&mut self, value: &'a CompilerNode, current_func: &String, dst: Reg32, dst_offset: i32) -> Result<Vec<Inst>, String> {
+    fn bind(
+        &mut self,
+        value: &'a CompilerNode,
+        current_func: &String,
+        dst: Reg32,
+        dst_offset: i32,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         self.traverse(value, current_func, &mut code)?;
 
@@ -771,13 +784,8 @@ impl<'a> Compiler<'a> {
                     Ast::Identifier(..) => {
                         // If an identifier is being copied to another identifier, then just copy
                         // the data over rather than pop off of the stack
-                        let asm = self.copy_struct_into(
-                            name,
-                            dst,
-                            dst_offset,
-                            Reg::R32(Reg32::Eax),
-                            0,
-                        )?;
+                        let asm =
+                            self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?;
                         assembly! {(code){
                             {{asm}}
                         }}
@@ -798,7 +806,12 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn yield_exp(&mut self, meta: &'a Scope, exp: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+    fn yield_exp(
+        &mut self,
+        meta: &'a Scope,
+        exp: &'a CompilerNode,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         self.traverse(exp, current_func, &mut code)?;
         match meta.ty() {
@@ -823,21 +836,21 @@ impl<'a> Compiler<'a> {
         }};
         Ok(code)
     }
-    
-    fn yield_return(&mut self, meta: &'a Scope, exp: &'a Option<Box<CompilerNode>>, current_func: &String) -> Result<Vec<Inst>, String> {
+
+    fn yield_return(
+        &mut self,
+        meta: &'a Scope,
+        exp: &'a Option<Box<CompilerNode>>,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         if let Some(exp) = exp {
             self.traverse(exp, current_func, &mut code)?;
             match exp.get_metadata().ty() {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
-                    let asm = self.copy_struct_into(
-                        struct_name,
-                        Reg32::Esi,
-                        0,
-                        Reg::R32(Reg32::Eax),
-                        0,
-                    )?;
+                    let asm =
+                        self.copy_struct_into(struct_name, Reg32::Esi, 0, Reg::R32(Reg32::Eax), 0)?;
                     assembly! {(code){
                         mov %esi, [%ebp-8];
                         {{asm}}
@@ -855,7 +868,11 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn return_exp(&mut self, exp: &'a Option<Box<CompilerNode>>, current_func: &String) -> Result<Vec<Inst>, String> {
+    fn return_exp(
+        &mut self,
+        exp: &'a Option<Box<CompilerNode>>,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         match exp {
             Some(e) => {
@@ -1052,7 +1069,6 @@ impl<'a> Compiler<'a> {
         }
         Ok(code)
     }
-
 
     fn validate_routine_call(
         &self,
