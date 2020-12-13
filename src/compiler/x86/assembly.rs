@@ -147,6 +147,7 @@ impl Display for DirectOperand {
 pub enum Operand {
     Direct(DirectOperand),
     Memory(DirectOperand),
+    IPRelativeMemory(DirectOperand),
     MemoryAddr(Reg, i32),
 }
 
@@ -156,6 +157,7 @@ impl Display for Operand {
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
             Memory(mem) => f.write_fmt(format_args!("[{}]", mem)),
+            IPRelativeMemory(mem) => f.write_fmt(format_args!("DWORD [rel {}]", mem)),
             MemoryAddr(mem, d) => {
                 if *d < 0 {
                     f.write_fmt(format_args!("[{}-{}]", mem, -d))
@@ -173,6 +175,7 @@ impl Display for Operand {
 pub enum Inst {
     Comment(String),
     Include(String),
+    Extern(String),
     Section(String),
     Global(String),
     Data(String, i32),
@@ -234,6 +237,7 @@ impl Display for Inst {
         match self {
             Comment(comment) => f.write_fmt(format_args!("; {}", comment)),
             Include(inc) => f.write_fmt(format_args!("%include \"{}\"", inc)),
+            Extern(ext) => f.write_fmt(format_args!("extern {}", ext)),
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
             Global(global) => f.write_fmt(format_args!("global {}", global)),
             Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),
@@ -452,6 +456,9 @@ macro_rules! operand {
     };
     ([@ {$e:expr}]) => {
         Operand::Memory(DirectOperand::Label($e.into()))
+    };
+    ([rel @ $e:tt]) => {
+        Operand::IPRelativeMemory(DirectOperand::Label(stringify!($e).into()))
     };
     ([@ $e:tt]) => {
         Operand::Memory(DirectOperand::Label(stringify!($e).into()))

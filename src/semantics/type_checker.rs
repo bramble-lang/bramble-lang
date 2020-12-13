@@ -624,9 +624,17 @@ pub mod checker {
                     .collect::<Vec<ast::Type>>();
 
                 if f.starts_with("my_co") {
-                    sym.add(f, Type::CoroutineDef(params, Box::new(fi.ret.clone())), false)?;
+                    sym.add(
+                        f,
+                        Type::CoroutineDef(params, Box::new(fi.ret.clone())),
+                        false,
+                    )?;
                 } else {
-                    sym.add(f, Type::FunctionDef(params, Box::new(fi.ret.clone())), false)?;
+                    sym.add(
+                        f,
+                        Type::FunctionDef(params, Box::new(fi.ret.clone())),
+                        false,
+                    )?;
                 }
             }
 

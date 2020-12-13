@@ -163,13 +163,13 @@ mod test {
     #[test]
     fn extract_from_ast() {
         for (text, expected) in vec![
-            ("fn test() -> string {return \"test\";}",
-            vec!["test"]),
-            ("fn test() -> string {return \"test2\";}",
-            vec!["test2"]),
-            ("fn test() -> string {let s: string := \"hello\"; return \"test2\";}",
-            vec!["hello", "test2"]),
-            ] {
+            ("fn test() -> string {return \"test\";}", vec!["test"]),
+            ("fn test() -> string {return \"test2\";}", vec!["test2"]),
+            (
+                "fn test() -> string {let s: string := \"hello\"; return \"test2\";}",
+                vec!["hello", "test2"],
+            ),
+        ] {
             let mut lexer = Lexer::new();
             let tokens: Vec<Token> = lexer
                 .tokenize(&text)
@@ -188,12 +188,12 @@ mod test {
 
     fn cmp(sp: &StringPool, expected: &Vec<&str>) -> bool {
         if sp.pool.len() != expected.len() {
-            return false
+            return false;
         }
 
         for e in expected.iter() {
             if sp.get(e).is_none() {
-                return false
+                return false;
             }
         }
 

@@ -1,5 +1,6 @@
 fn my_main() {
-    let c:co string  := init my_co("abra\n", "cadabra\n");
+    let s: string := "cadabra\n";
+    let c:co string  := init my_co("abra\n", s);
     prints (yield c);
     prints (yield c);
     prints (yield c);

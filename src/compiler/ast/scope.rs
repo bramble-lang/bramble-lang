@@ -84,12 +84,17 @@ impl Scope {
         }
     }
 
-    pub fn local_from(m: &SemanticMetadata, struct_table: &StructTable, current_layout: LayoutData) -> (Scope, LayoutData) {
+    pub fn local_from(
+        m: &SemanticMetadata,
+        struct_table: &StructTable,
+        current_layout: LayoutData,
+    ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
         let mut scope = Scope::new(Level::Local, 0, m.ty.clone());
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
-            layout.offset = scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
+            layout.offset =
+                scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
         }
         (scope, layout)
     }
@@ -109,7 +114,11 @@ impl Scope {
         );
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
-            current_offset = scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), current_offset);
+            current_offset = scope.insert(
+                &s.name,
+                struct_table.size_of(&s.ty).unwrap(),
+                current_offset,
+            );
         }
         match scope.level {
             Level::Routine {
@@ -198,10 +207,7 @@ impl StructTable {
             ast::Type::Bool => Some(4),
             ast::Type::StringLiteral => Some(4),
             ast::Type::Coroutine(_) => Some(4),
-            ast::Type::Custom(name) => self
-                .get(name)
-                .expect("Could not find struct")
-                .size,
+            ast::Type::Custom(name) => self.get(name).expect("Could not find struct").size,
             ast::Type::FunctionDef(..) => Some(0),
             ast::Type::CoroutineDef(..) => Some(0),
             ast::Type::StructDef(..) => Some(0),

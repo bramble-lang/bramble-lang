@@ -1,8 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::compiler::ast::stringpool::StringPool;
-use crate::compiler::ast::scope::Scope;
 use crate::assembly;
 use crate::assembly2;
 use crate::ast::Ast;
@@ -11,7 +9,9 @@ use crate::ast::RoutineDef;
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
+use crate::compiler::ast::scope::Scope;
 use crate::compiler::ast::stack::ScopeStack;
+use crate::compiler::ast::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::reg32;
@@ -39,20 +39,18 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
-        let mut code = vec![];
-
         // Put user code here
         let (compiler_ast, _) = CompilerNode::from(ast);
 
-        let mut string_pool =  StringPool::new();
+        let mut string_pool = StringPool::new();
         string_pool.extract_from(&compiler_ast);
 
+        let mut code = vec![];
         Compiler::create_base(&mut code, &string_pool);
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
         Compiler::runtime_yield_into_coroutine(&mut code);
         Compiler::runtime_yield_return(&mut code);
         Compiler::print_bool(&mut code);
-
 
         let mut compiler = Compiler {
             code: vec![],
@@ -68,16 +66,15 @@ impl<'a> Compiler<'a> {
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
-    fn create_base(code2: &mut Vec<Inst>, string_pool: &StringPool) {
+    fn create_base(code: &mut Vec<Inst>, string_pool: &StringPool) {
         assembly! {
-            (code2) {
-                include "io.inc";
-
+            (code) {
+                {{Compiler::write_includes()}}
                 {{Compiler::write_data_section(&string_pool)}}
 
                 section ".text";
-                global CMAIN;
-                @CMAIN:
+                global main;
+                @main:
                     push %ebp;
                     mov %ebp, %esp;
                     mov %eax, %esp;
@@ -91,6 +88,14 @@ impl<'a> Compiler<'a> {
                     ret;
             }
         };
+    }
+
+    fn write_includes() -> Vec<Inst> {
+        let mut code = vec![];
+        code.push(Inst::Extern("printf".into()));
+        code.push(Inst::Extern("stdout".into()));
+        code.push(Inst::Extern("fputs".into()));
+        code
     }
 
     fn write_data_section(string_pool: &StringPool) -> Vec<Inst> {
@@ -109,6 +114,9 @@ impl<'a> Compiler<'a> {
 
     fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
         let mut code = vec![];
+        code.push(Inst::DataString("_i32_fmt".into(), "%d\\n".into()));
+        code.push(Inst::DataString("_true".into(), "true\\n".into()));
+        code.push(Inst::DataString("_false".into(), "false\\n".into()));
         for (s, id) in string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
             code.push(Inst::DataString(lbl, s.clone()));
@@ -116,19 +124,20 @@ impl<'a> Compiler<'a> {
         code
     }
 
-    fn print_bool(code2: &mut Vec<Inst>) {
+    fn print_bool(code: &mut Vec<Inst>) {
         assembly! {
-            (code2) {
+            (code) {
                 @print_bool:
                     push %ebp;
                     mov %ebp, %esp;
                     cmp %eax, 0;
                     jz ^false;
-                    print_string "true";
+                    push @_true;
                     jmp ^done;
                     ^false:
-                    print_string "false";
+                    push @_false;
                     ^done:
+                    {{Compiler::make_c_extern_call("printf", 1)}}
                     mov %esp, %ebp;
                     pop %ebp;
                     ret;
@@ -136,11 +145,42 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    fn make_c_extern_call(c_func: &str, nparams: i32) -> Vec<Inst> {
+        let mut code = vec![];
+        assembly! {(code){
+            {{Compiler::reverse_params_on_stack(nparams)}}
+            call @{c_func};
+            add %esp, {4*nparams as i32};
+        }}
+        code
+    }
+
+    /// The GCC32 uses a different order for parameters from the order that
+    /// Braid pushes parameters onto the stack as they are evaluated.  This
+    /// function reverses the order of the parameters.
+    fn reverse_params_on_stack(nparams: i32) -> Vec<Inst> {
+        let mut code = vec![];
+        for pl in 0..nparams {
+            let pr = nparams - pl - 1;
+            if pr <= pl {
+                break;
+            }
+            assembly! {(code){
+                mov %esi, [%esp+{4*pl as i32}];
+                mov %edi, [%esp+{4*pr as i32}];
+                mov [%esp+{4*pl as i32}], %edi;
+                mov [%esp+{4*pr as i32}], %esi;
+            }}
+        }
+
+        code
+    }
+
     /// Writes the function which will handle initializing a new coroutine
     fn coroutine_init(
         next_stack_variable: &str,
         stack_increment_variable: &str,
-        code2: &mut Vec<Inst>,
+        code: &mut Vec<Inst>,
     ) {
         /*
          * Input:
@@ -170,7 +210,7 @@ impl<'a> Compiler<'a> {
          */
 
         assembly! {
-            (code2) {
+            (code) {
                 @runtime_init_coroutine:
                     push %ebp;
                     mov %ebp, %esp;
@@ -216,7 +256,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn runtime_yield_return(code2: &mut Vec<Inst>) {
+    fn runtime_yield_return(code: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - value being returned (if any)
@@ -224,7 +264,7 @@ impl<'a> Compiler<'a> {
          */
         // When in a coroutine, return to the calling coroutine
         assembly! {
-            (code2) {
+            (code) {
                 @runtime_yield_return:
                     mov [%ebp-20], %esp;
                     mov [%ebp-4], %ebx;
@@ -343,8 +383,11 @@ impl<'a> Compiler<'a> {
                 assembly! {(code) {mov %eax, {if *b {1} else {0}};}}
             }
             Ast::StringLiteral(_, s) => {
-                let str_id = self.string_pool.get(s).ok_or(format!("Could not find string {} in string pool", s))?;
-                assembly!{(code) {
+                let str_id = self
+                    .string_pool
+                    .get(s)
+                    .ok_or(format!("Could not find string {} in string pool", s))?;
+                assembly! {(code) {
                         lea %eax, @{format!("str_{}", str_id)};
                     }
                 }
@@ -388,15 +431,18 @@ impl<'a> Compiler<'a> {
                 self.traverse(exp, current_func, code)?;
 
                 assembly! {(code) {
-                    print_dec %eax;
-                    newline;
+                    push @_i32_fmt;
+                    push %eax;
+                    {{Compiler::make_c_extern_call("printf", 2)}}
                 }}
             }
             Ast::Prints(_, ref exp) => {
                 self.traverse(exp, current_func, code)?;
 
                 assembly! {(code) {
-                    print_str [%eax];
+                    push %eax;
+                    push [rel @stdout];
+                    {{Compiler::make_c_extern_call("fputs", 2)}}
                 }}
             }
             Ast::Printbln(_, ref exp) => {
@@ -404,7 +450,6 @@ impl<'a> Compiler<'a> {
 
                 assembly! {(code) {
                     call @print_bool;
-                    newline;
                 }}
             }
             Ast::If(meta, ref cond, ref true_arm, ref false_arm) => {
@@ -440,8 +485,8 @@ impl<'a> Compiler<'a> {
                     .find(id)
                     .ok_or(format!("Could not find variable {}", id))?
                     .offset;
-                code.push(Inst::Comment(format!("Binding {}", id)));
-                assembly!{(code) {
+                assembly! {(code) {
+                    ; {format!("Binding {}", id)}
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
                 }}
             }
@@ -458,17 +503,17 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Return(_, ref exp) => {
-                assembly!{(code) {
+                assembly! {(code) {
                     {{self.return_exp(exp, current_func)?}}
                 }}
-            },
+            }
             Ast::Yield(meta, ref id) => {
-                assembly!{(code) {
+                assembly! {(code) {
                     {{self.yield_exp(meta, id, current_func)?}}
                 }}
             }
             Ast::YieldReturn(meta, ref exp) => {
-                assembly!{(code) {
+                assembly! {(code) {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
@@ -494,7 +539,7 @@ impl<'a> Compiler<'a> {
                 self.validate_routine_call(co, params)?;
 
                 assembly! {(code) {
-                    {{self.evaluate_routine_params(params, &co_param_registers, current_func)?}}
+                    {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
                     lea %eax, [@{co}];
@@ -546,7 +591,7 @@ impl<'a> Compiler<'a> {
                 // passed
                 self.validate_routine_call(fn_name, params)?;
                 self.scope.find_func(fn_name);
-               
+
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
@@ -562,7 +607,7 @@ impl<'a> Compiler<'a> {
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
                 assembly! {(code) {
-                    {{self.evaluate_routine_params(params, &fn_param_registers, current_func)?}}
+                    {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
                     call @{fn_name};
                 }};
@@ -679,16 +724,22 @@ impl<'a> Compiler<'a> {
             }}
         }
 
-        assembly!{(code) {
+        assembly! {(code) {
             ; {format!("Done instantiating struct of type {}", struct_name)}
             lea %eax, [%esp + {offset}];
         }};
         Ok(code)
     }
 
-    fn bind_member(&mut self, fvalue: &'a CompilerNode, current_func: &String, dst: Reg32, dst_offset: i32) -> Result<Vec<Inst>, String> {
+    fn bind_member(
+        &mut self,
+        fvalue: &'a CompilerNode,
+        current_func: &String,
+        dst: Reg32,
+        dst_offset: i32,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        
+
         match fvalue {
             Ast::StructInit(_, substruct_name, substruct_values) => {
                 let asm = self.init_struct(
@@ -728,8 +779,13 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-
-    fn bind(&mut self, value: &'a CompilerNode, current_func: &String, dst: Reg32, dst_offset: i32) -> Result<Vec<Inst>, String> {
+    fn bind(
+        &mut self,
+        value: &'a CompilerNode,
+        current_func: &String,
+        dst: Reg32,
+        dst_offset: i32,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         self.traverse(value, current_func, &mut code)?;
 
@@ -739,13 +795,8 @@ impl<'a> Compiler<'a> {
                     Ast::Identifier(..) => {
                         // If an identifier is being copied to another identifier, then just copy
                         // the data over rather than pop off of the stack
-                        let asm = self.copy_struct_into(
-                            name,
-                            dst,
-                            dst_offset,
-                            Reg::R32(Reg32::Eax),
-                            0,
-                        )?;
+                        let asm =
+                            self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?;
                         assembly! {(code){
                             {{asm}}
                         }}
@@ -766,7 +817,12 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn yield_exp(&mut self, meta: &'a Scope, exp: &'a CompilerNode, current_func: &String) -> Result<Vec<Inst>, String> {
+    fn yield_exp(
+        &mut self,
+        meta: &'a Scope,
+        exp: &'a CompilerNode,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         self.traverse(exp, current_func, &mut code)?;
         match meta.ty() {
@@ -791,21 +847,21 @@ impl<'a> Compiler<'a> {
         }};
         Ok(code)
     }
-    
-    fn yield_return(&mut self, meta: &'a Scope, exp: &'a Option<Box<CompilerNode>>, current_func: &String) -> Result<Vec<Inst>, String> {
+
+    fn yield_return(
+        &mut self,
+        meta: &'a Scope,
+        exp: &'a Option<Box<CompilerNode>>,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         if let Some(exp) = exp {
             self.traverse(exp, current_func, &mut code)?;
             match exp.get_metadata().ty() {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
-                    let asm = self.copy_struct_into(
-                        struct_name,
-                        Reg32::Esi,
-                        0,
-                        Reg::R32(Reg32::Eax),
-                        0,
-                    )?;
+                    let asm =
+                        self.copy_struct_into(struct_name, Reg32::Esi, 0, Reg::R32(Reg32::Eax), 0)?;
                     assembly! {(code){
                         mov %esi, [%ebp-8];
                         {{asm}}
@@ -823,7 +879,11 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn return_exp(&mut self, exp: &'a Option<Box<CompilerNode>>, current_func: &String) -> Result<Vec<Inst>, String> {
+    fn return_exp(
+        &mut self,
+        exp: &'a Option<Box<CompilerNode>>,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         match exp {
             Some(e) => {
@@ -986,17 +1046,8 @@ impl<'a> Compiler<'a> {
     fn evaluate_routine_params(
         &mut self,
         params: &'a Vec<CompilerNode>,
-        param_registers: &Vec<Reg>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
-        // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
-        // calling the function
-        if params.len() > param_registers.len() {
-            return Err(format!(
-                "Compiler: too many parameters being passed to function.  {} has {} parameters but compiler cannot support more than {}",
-                current_func, params.len(), param_registers.len(),
-            ));
-        }
         let mut code = vec![];
         for param in params.iter() {
             self.traverse(param, current_func, &mut code)?;
@@ -1012,6 +1063,15 @@ impl<'a> Compiler<'a> {
         params: &'a Vec<CompilerNode>,
         param_registers: &Vec<Reg>,
     ) -> Result<Vec<Inst>, String> {
+        // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
+        // calling the function
+        if params.len() > param_registers.len() {
+            return Err(format!(
+                "Compiler: too many parameters being passed to function.  Has {} parameters but compiler cannot support more than {}",
+                params.len(), param_registers.len(),
+            ));
+        }
+
         let mut code = vec![];
         for reg in param_registers.iter().take(params.len()).rev() {
             assembly! {(code){
@@ -1020,7 +1080,6 @@ impl<'a> Compiler<'a> {
         }
         Ok(code)
     }
-
 
     fn validate_routine_call(
         &self,
