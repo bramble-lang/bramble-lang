@@ -3,22 +3,22 @@
 // instructions
 use crate::assembly;
 use crate::assembly2;
-use crate::binary_op;
-use crate::operand;
-use crate::reg32;
-use crate::register;
-use crate::unary_op;
-use crate::unit_op;
 use crate::ast::Ast;
 use crate::ast::RoutineCall;
 use crate::ast::RoutineDef;
+use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
 use crate::compiler::ast::stack::ScopeStack;
 use crate::compiler::ast::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
+use crate::operand;
+use crate::reg32;
+use crate::register;
 use crate::semantics::semanticnode::SemanticNode;
+use crate::unary_op;
+use crate::unit_op;
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ast::Type,
@@ -39,7 +39,6 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
-
         // Put user code here
         let (compiler_ast, _) = CompilerNode::from(ast);
 
