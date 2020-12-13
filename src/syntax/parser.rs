@@ -24,7 +24,7 @@ impl PNode {
         mutable: bool,
         exp: Box<Self>,
     ) -> Result<Self, String> {
-        let i = line; //ParserInfo{l: line};
+        let i = line;
         match id.as_ref() {
             Ast::IdentifierDeclare(_, id, prim) => {
                 Ok(Ast::Bind(i, id.clone(), mutable, prim.clone(), exp))
