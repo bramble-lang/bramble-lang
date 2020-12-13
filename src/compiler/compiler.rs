@@ -114,7 +114,7 @@ impl<'a> Compiler<'a> {
 
     fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
         let mut code = vec![];
-        code.push(Inst::DataString("_decimal".into(), "%d\\n".into()));
+        code.push(Inst::DataString("_i32_fmt".into(), "%d\\n".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
         for (s, id) in string_pool.pool.iter() {
@@ -431,7 +431,7 @@ impl<'a> Compiler<'a> {
                 self.traverse(exp, current_func, code)?;
 
                 assembly! {(code) {
-                    push @_decimal;
+                    push @_i32_fmt;
                     push %eax;
                     {{Compiler::make_c_extern_call("printf", 2)}}
                 }}
