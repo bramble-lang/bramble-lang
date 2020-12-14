@@ -8,7 +8,6 @@ mod syntax;
 
 use clap::{App, Arg};
 use compiler::compiler::*;
-use lexer::Token;
 use semantics::type_checker::*;
 use syntax::ast;
 use syntax::parser;
@@ -39,7 +38,7 @@ fn main() {
         .expect("Expected an input source file to compile");
     let text = std::fs::read_to_string(input).expect("Failed to read input file");
 
-    let mut lexer = lexer::Lexer::new();
+    let mut lexer = crate::lexer::lexer::Lexer::new();
     let tokens = lexer.tokenize(&text);
     let tokens = tokens
         .into_iter()

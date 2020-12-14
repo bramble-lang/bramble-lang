@@ -544,8 +544,8 @@ pub mod checker {
         use super::*;
         use crate::ast;
         use crate::ast::Ast;
-        use crate::lexer::Lexer;
-        use crate::Token;
+        use crate::lexer::lexer::Lexer;
+        use crate::lexer::lexer::Token;
         use std::collections::HashMap;
 
         /*

@@ -136,9 +136,9 @@ impl StringPool {
 mod test {
     use super::*;
     use crate::checker::type_check;
-    use crate::lexer::Lexer;
+    use crate::lexer::lexer::Lexer;
+    use crate::lexer::lexer::Token;
     use crate::syntax::parser;
-    use crate::Token;
 
     #[test]
     fn insert_string() {

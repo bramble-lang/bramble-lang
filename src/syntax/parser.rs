@@ -1,10 +1,10 @@
+use crate::lexer::lexer::{self, Lex, Token};
+
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
 use super::ast::*;
-use crate::lexer::{self, Lex};
-use crate::Token;
 
 type PResult = Result<Option<PNode>, String>;
 type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
@@ -870,8 +870,8 @@ fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, 
 
 #[cfg(test)]
 pub mod tests {
-    use super::lexer::Lexer;
     use super::*;
+    use crate::lexer::lexer::Lexer;
 
     #[test]
     fn parse_unary_operators() {
