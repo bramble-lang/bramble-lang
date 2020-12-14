@@ -31,6 +31,82 @@ pub struct Lexer2 {
     line: u32,
 }
 
+struct LexerBranch<'a> {
+    lexer: &'a mut Lexer2,
+    index: usize,
+    line: u32,
+}
+
+impl<'a> LexerBranch<'a> {
+    pub fn from(l: &mut Lexer2) -> LexerBranch {
+        LexerBranch {
+            index: l.index,
+            line: l.line,
+            lexer: l,
+        }
+    }
+
+    pub fn merge(&mut self) -> String {
+        let start = self.lexer.index;
+        let stop = self.index;
+        let mut s = String::new();
+
+        for i in start..stop {
+            s.push(self.lexer.chars[i]);
+        }
+
+        self.lexer.index = self.index;
+        self.lexer.line = self.line;
+
+        s
+    }
+
+    pub fn next(&mut self) -> Option<char> {
+        if self.index < self.lexer.chars.len() {
+            let c = self.lexer.chars[self.index];
+            self.index += 1;
+            Some(c)
+        } else {
+            None
+        }
+    }
+
+    pub fn next_if(&mut self, t: char) -> bool {
+        match self.peek() {
+            None => false,
+            Some(c) => if c == t {
+                self.next().is_some()
+            } else {
+                false
+            }
+        }
+    }
+
+
+    pub fn peek(&self) -> Option<char> {
+        if self.index < self.lexer.chars.len() {
+            Some(self.lexer.chars[self.index])
+        } else {
+            None
+        }
+    }
+
+    pub fn peek_at(&self, i: usize) -> Option<char> {
+        if self.index + i < self.lexer.chars.len() {
+            Some(self.lexer.chars[self.index + i])
+        } else {
+            None
+        }
+    }
+
+    pub fn peek_if(&self, t: char) -> bool {
+        match self.peek() {
+            None => false,
+            Some(c) => t == c,
+        }
+    }
+}
+
 impl Lexer2 {
     pub fn new() -> Lexer2 {
         Lexer2 { 
@@ -129,25 +205,19 @@ impl Lexer2 {
     fn consume_string_literal(
         &mut self,
     ) -> Result<Option<Token>, String> {
-        let mut index = self.index;
+        let mut branch = LexerBranch::from(self);
 
-        if index < self.chars.len() {
-            if self.chars[index] == '"' {
-                index += 1;
-                let mut s = String::new();
-                while index < self.chars.len() {
-                    if self.chars[index] == '"' {
-                        index += 1;
-                        break;
-                    }
-                    s.push(self.chars[index]);
-                    index += 1;
+        if branch.next_if('"') {
+            while let Some(c) = branch.next() {
+                if c == '"' {
+                    break;
                 }
-                self.index = index;
-                Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
-            } else {
-                Ok(None)
             }
+            let mut s = branch.merge();
+            s.remove(0);
+            s.pop();
+
+            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
         } else {
             Ok(None)
         }
@@ -156,23 +226,19 @@ impl Lexer2 {
     pub fn consume_integer(
         &mut self,
     ) -> Result<Option<Token>, String> {
-        let mut num = String::new();
-        let mut index = self.index;
+        let mut branch = LexerBranch::from(self);
 
-        if !self.chars[index].is_numeric() {
+        if !branch.peek().map_or(false, |c| c.is_numeric()) {
             return Ok(None)
         }
 
-        while index < self.chars.len() && !self.chars[index].is_whitespace() {
-            if self.chars[index].is_numeric() {
-                num.push(self.chars[index]);
-            } else {
+        while let Some(c) = branch.next() {
+            if !c.is_numeric() {
                 return Err(format!("L{}: Invalid integer, should not contain characters", self.line));
             }
-            index += 1;
         }
 
-        self.index = index;
+        let num = branch.merge();
         Ok(Some(Token::new(
             self.line,
             Integer(num.parse::<i32>().unwrap()),
