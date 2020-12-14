@@ -1,4 +1,4 @@
-use crate::lexer::lexer::{self, Lex, Token};
+use crate::lexer::tokens::{Lex, Primitive, Token};
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
@@ -702,9 +702,9 @@ fn consume_type(iter: &mut TokenIter) -> Option<Type> {
         }) => {
             iter.next();
             match primitive {
-                lexer::Primitive::I32 => Some(Type::I32),
-                lexer::Primitive::Bool => Some(Type::Bool),
-                lexer::Primitive::StringLiteral => Some(Type::StringLiteral),
+                Primitive::I32 => Some(Type::I32),
+                Primitive::Bool => Some(Type::Bool),
+                Primitive::StringLiteral => Some(Type::StringLiteral),
             }
         }
         Some(Token {

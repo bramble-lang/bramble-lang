@@ -11,6 +11,7 @@ use compiler::compiler::*;
 use semantics::type_checker::*;
 use syntax::ast;
 use syntax::parser;
+use lexer::tokens::Token;
 
 fn main() {
     let matches = App::new("Braid Compiler")
@@ -40,7 +41,7 @@ fn main() {
 
     let mut lexer = crate::lexer::lexer::Lexer::new();
     let tokens = lexer.tokenize(&text);
-    let tokens = tokens
+    let tokens: Vec<Token> = tokens
         .into_iter()
         .filter(|t| match t {
             Ok(_) => true,
