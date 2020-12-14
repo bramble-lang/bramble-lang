@@ -123,6 +123,7 @@ impl Lexer2 {
         let mut tokens = vec![];
 
         while self.index < self.chars.len() {
+            let prev_index = self.index;
             self.consume_whitespace();
             if self.index >= self.chars.len() {
                 break;
@@ -133,6 +134,12 @@ impl Lexer2 {
                     //cs.next();
                 }
                 Err(msg) => tokens.push(Err(msg)),
+            }
+
+            // Can no longer consume the input text
+            if prev_index == self.index {
+                tokens.push(Err("The lexer is locked and cannot proceed".into()));
+                break;
             }
         }
 
