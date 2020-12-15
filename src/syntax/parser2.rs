@@ -62,7 +62,7 @@ impl<'a> TokenStream<'a> {
             None
         } else {
             self.index += 1;
-            Some(&self.tokens[self.index-1])
+            Some(&self.tokens[self.index - 1])
         }
     }
 
@@ -97,7 +97,11 @@ impl<'a> TokenStream<'a> {
         for i in 0..test.len() {
             match self.peek_at(i) {
                 None => return false,
-                Some(token) => if !token.ty_eq(&test[i]) { return false; }
+                Some(token) => {
+                    if !token.ty_eq(&test[i]) {
+                        return false;
+                    }
+                }
             }
         }
 
