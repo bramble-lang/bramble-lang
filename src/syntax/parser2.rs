@@ -74,6 +74,17 @@ impl<'a> TokenStream<'a> {
         }
     }
 
+    pub fn next_ifn(&mut self, test: Vec<Lex>) -> Option<&[Token]> {
+        let end = self.index + test.len();
+        if self.test_ifn(test) {
+            let v = &self.tokens[self.index..end];
+            self.index = end;
+            Some(v)
+        } else {
+            None
+        }
+    }
+
     pub fn peek(&self) -> Option<&Token> {
         if self.index < self.tokens.len() {
             Some(&self.tokens[self.index])
@@ -1403,5 +1414,132 @@ pub mod tests {
                 _ => assert!(false, "Not a routine, got {:?}", ast),
             }
         }
+    }
+}
+
+
+#[cfg(test)]
+mod test_tokenstream {
+    use crate::lexer::{lexer::Lexer, tokens::{Lex, Token}};
+    use super::TokenStream;
+
+    #[test]
+    fn test_peek() {
+        let text = "(2 + 4) * 3";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        let ts = TokenStream::new(&tokens);
+        let p = ts.peek().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
+    }
+
+    #[test]
+    fn test_peek_empty() {
+        let tokens = vec![];
+        let ts = TokenStream::new(&tokens);
+        let p = ts.peek();
+        assert_eq!(p, None);
+    }
+
+    #[test]
+    fn test_peek_at() {
+        let text = "(2 + 4) * 3";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        let ts = TokenStream::new(&tokens);
+        let p = ts.peek_at(0).unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
+        
+        let p = ts.peek_at(1).unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
+        
+        let p = ts.peek_at(8);
+        assert_eq!(p, None);
+    }
+
+    #[test]
+    fn test_next() {
+        let text = "(2 + 4) * 3";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        let mut ts = TokenStream::new(&tokens);
+        let p = ts.next().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
+        
+        let p = ts.next().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
+        
+        let p = ts.next().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Add});
+        
+        let p = ts.next().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Integer(4)});
+        
+        let p = ts.next().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::RParen});
+        
+        let p = ts.next().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Mul});
+        
+        let p = ts.next().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Integer(3)});
+        
+        let p = ts.next();
+        assert_eq!(p, None);
+    }
+
+    #[test]
+    fn test_next_if() {
+        let text = "(2 + 4) * 3";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        let mut ts = TokenStream::new(&tokens);
+        let p = ts.next_if(&Lex::LParen).unwrap();   // should I really use a borrow for this?  If not then gotta do clones and BS i think.
+        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
+        
+        let p = ts.peek().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
+
+        let p = ts.next_if(&Lex::LParen);   // should I really use a borrow for this?  If not then gotta do clones and BS i think.
+        assert_eq!(p, None);
+        
+        let p = ts.peek().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
+    }
+
+    #[test]
+    fn test_next_ifn() {
+        let text = "(2 + 4) * 3";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        let mut ts = TokenStream::new(&tokens);
+        let p = ts.next_ifn(vec![
+            Lex::LParen,
+            Lex::Integer(0),
+        ]).unwrap();
+        assert_eq!(*p, vec![Token{l: 1, s: Lex::LParen}, Token{ l: 1, s: Lex::Integer(2)}]);
+        
+        let p = ts.peek().unwrap();
+        assert_eq!(*p, Token{l: 1, s: Lex::Add});
     }
 }
