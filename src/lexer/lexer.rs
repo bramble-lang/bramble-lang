@@ -68,10 +68,12 @@ impl<'a> LexerBranch<'a> {
     pub fn next_if(&mut self, t: char) -> bool {
         match self.peek() {
             None => false,
-            Some(c) => if c == t {
-                self.next().is_some()
-            } else {
-                false
+            Some(c) => {
+                if c == t {
+                    self.next().is_some()
+                } else {
+                    false
+                }
             }
         }
     }
@@ -109,7 +111,7 @@ impl<'a> LexerBranch<'a> {
     }
 
     pub fn peek_ifn(&self, t: &str) -> bool {
-        let tc:Vec<char> = t.chars().collect();
+        let tc: Vec<char> = t.chars().collect();
         self.lexer.chars[self.index..].starts_with(&tc)
     }
 }
@@ -120,18 +122,15 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new() -> Lexer {
-        Lexer { 
-            chars: vec![],
+    pub fn new(text: &str) -> Lexer {
+        Lexer {
+            chars: text.chars().collect(),
             index: 0,
             line: 1,
-         }
+        }
     }
 
-    pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token, String>> {
-        self.chars = text.chars().collect();
-        self.index = 0;
-
+    pub fn tokenize(&mut self) -> Vec<Result<Token, String>> {
         let mut tokens = vec![];
 
         while self.index < self.chars.len() {
@@ -167,7 +166,7 @@ impl Lexer {
                     let tok = self.if_primitive_map(self.if_keyword_map(self.if_boolean_map(id)));
                     Ok(Some(tok))
                 }
-                None =>match self.consume_operator()? {
+                None => match self.consume_operator()? {
                     Some(op) => Ok(Some(op)),
                     None => Ok(None),
                 },
@@ -175,9 +174,7 @@ impl Lexer {
         }
     }
 
-    fn consume_literal(
-        &mut self,
-    ) -> Result<Option<Token>, String> {
+    fn consume_literal(&mut self) -> Result<Option<Token>, String> {
         match self.consume_integer()? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_string_literal()? {
@@ -196,9 +193,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_identifier(
-        &mut self,
-    ) -> Result<Option<Token>, String> {
+    pub fn consume_identifier(&mut self) -> Result<Option<Token>, String> {
         let mut branch = LexerBranch::from(self);
         if branch
             .peek()
@@ -223,9 +218,7 @@ impl Lexer {
         }
     }
 
-    fn consume_string_literal(
-        &mut self,
-    ) -> Result<Option<Token>, String> {
+    fn consume_string_literal(&mut self) -> Result<Option<Token>, String> {
         let mut branch = LexerBranch::from(self);
 
         if branch.next_if('"') {
@@ -244,19 +237,20 @@ impl Lexer {
         }
     }
 
-    pub fn consume_integer(
-        &mut self,
-    ) -> Result<Option<Token>, String> {
+    pub fn consume_integer(&mut self) -> Result<Option<Token>, String> {
         let mut branch = LexerBranch::from(self);
 
         if !branch.peek().map_or(false, |c| c.is_numeric()) {
-            return Ok(None)
+            return Ok(None);
         }
 
         while let Some(c) = branch.peek() {
             if !c.is_numeric() {
                 if c.is_alphabetic() || c == '_' {
-                    return Err(format!("L{}: Invalid integer, should not contain characters", self.line));
+                    return Err(format!(
+                        "L{}: Invalid integer, should not contain characters",
+                        self.line
+                    ));
                 } else {
                     break;
                 }
@@ -271,9 +265,7 @@ impl Lexer {
         )))
     }
 
-    pub fn consume_operator(
-        &mut self,
-    ) -> Result<Option<Token>, String> {
+    pub fn consume_operator(&mut self) -> Result<Option<Token>, String> {
         let line = self.line;
         let mut branch = LexerBranch::from(self);
         let mut consume = true;
@@ -455,8 +447,8 @@ mod tests {
     #[test]
     fn test_integer() {
         let text = "5";
-        let mut lexer = Lexer::new();
-        let tokens = lexer.tokenize(text);
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer(5)));
@@ -465,8 +457,8 @@ mod tests {
     #[test]
     fn test_string_literal() {
         let text = "\"text\"";
-        let mut lexer = Lexer::new();
-        let tokens = lexer.tokenize(text);
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1, "{:?}", tokens);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, StringLiteral("text".into())));
@@ -475,8 +467,8 @@ mod tests {
     #[test]
     fn test_identifier() {
         for text in ["x", "y", "x_5"].iter() {
-            let mut lexer = Lexer::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             let token = tokens[0].clone().expect("Expected valid token");
             assert_eq!(token, Token::new(1, Identifier((*text).into())));
@@ -486,8 +478,8 @@ mod tests {
     #[test]
     fn test_invalid_number() {
         for text in ["5x"].iter() {
-            let mut lexer = Lexer::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 2);
             tokens[0]
                 .clone()
@@ -524,8 +516,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone(), Ok(expected_token.clone()), "{}", text);
         }
@@ -534,8 +526,8 @@ mod tests {
     #[test]
     fn test_multiple_tokens() {
         let text = "x:i32;->yield";
-        let mut lexer = Lexer::new();
-        let tokens = lexer.tokenize(text);
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 6);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Identifier("x".into())));
@@ -572,8 +564,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
@@ -588,8 +580,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
@@ -620,8 +612,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 8, "{} => {:?}", text, tokens);
             assert_eq!(tokens[0].clone().unwrap(), Token::new(*t1, Return));
             assert_eq!(tokens[1].clone().unwrap(), Token::new(*t2, LParen));
@@ -660,8 +652,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 6, "{} => {:?}", text, tokens);
             assert_eq!(tokens[0].clone().unwrap(), Token::new(*t1, Return));
             assert_eq!(tokens[1].clone().unwrap(), Token::new(*t2, LParen));

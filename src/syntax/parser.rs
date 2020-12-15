@@ -875,13 +875,11 @@ pub mod tests {
 
     #[test]
     fn parse_unary_operators() {
-        let mut lexer = Lexer::new();
-
         for (text, expected) in
             vec![("-a", UnaryOperator::Minus), ("!a", UnaryOperator::Not)].iter()
         {
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -898,8 +896,6 @@ pub mod tests {
 
     #[test]
     fn parse_arithmetic_expressions() {
-        let mut lexer = Lexer::new();
-
         for (text, expected) in vec![
             ("2+2", BinaryOperator::Add),
             ("2-2", BinaryOperator::Sub),
@@ -914,8 +910,8 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -933,16 +929,14 @@ pub mod tests {
 
     #[test]
     fn parse_boolean_expresions() {
-        let mut lexer = Lexer::new();
-
         for (text, expected) in vec![
             ("true && false", BinaryOperator::BAnd),
             ("true || false", BinaryOperator::BOr),
         ]
         .iter()
         {
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -960,10 +954,9 @@ pub mod tests {
 
     #[test]
     fn parse_nested_arithmetic_expression() {
-        let mut lexer = Lexer::new();
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -987,10 +980,9 @@ pub mod tests {
 
     #[test]
     fn parse_boolean_expression() {
-        let mut lexer = Lexer::new();
         let text = "true || false";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1009,9 +1001,8 @@ pub mod tests {
     #[test]
     fn parse_member_access() {
         for text in vec!["thing.first", "(thing).first", "(thing.first)"] {
-            let mut lexer = Lexer::new();
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -1038,9 +1029,8 @@ pub mod tests {
             "((thing.first).second)",
             "(thing.first.second)",
         ] {
-            let mut lexer = Lexer::new();
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -1069,10 +1059,9 @@ pub mod tests {
 
     #[test]
     fn parse_bind() {
-        let mut lexer = Lexer::new();
         let text = "let x:i32 := 5;";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1093,10 +1082,9 @@ pub mod tests {
 
     #[test]
     fn parse_mut_bind() {
-        let mut lexer = Lexer::new();
         let text = "let mut x:i32 := 5;";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1116,10 +1104,9 @@ pub mod tests {
     }
     #[test]
     fn parse_mutation() {
-        let mut lexer = Lexer::new();
         let text = "mut x := 5;";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1139,10 +1126,9 @@ pub mod tests {
 
     #[test]
     fn parse_function_def() {
-        let mut lexer = Lexer::new();
         let text = "fn test(x:i32) -> bool {return true;}";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1168,10 +1154,9 @@ pub mod tests {
 
     #[test]
     fn parse_coroutine_def() {
-        let mut lexer = Lexer::new();
         let text = "co test(x:i32) -> bool {return true;}";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1197,10 +1182,9 @@ pub mod tests {
 
     #[test]
     fn parse_coroutine_init() {
-        let mut lexer = Lexer::new();
         let text = "let x:co i32 := init c(1, 2);";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1229,10 +1213,9 @@ pub mod tests {
 
     #[test]
     fn parse_expression_block_oneline() {
-        let mut lexer = Lexer::new();
         let text = "{5}";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1248,7 +1231,6 @@ pub mod tests {
 
     #[test]
     fn parse_expression_block_bad() {
-        let mut lexer = Lexer::new();
         for (text, msg) in [
             ("{5 10 51}", "L1: Expected }, but found literal 10"),
             ("{5; 10 51}", "L1: Expected }, but found ;"),
@@ -1260,8 +1242,8 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -1272,10 +1254,9 @@ pub mod tests {
 
     #[test]
     fn parse_expression_block_multiline() {
-        let mut lexer = Lexer::new();
         let text = "{let x:i32 := 5; x * x}";
-        let tokens: Vec<Token> = lexer
-            .tokenize(&text)
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
@@ -1330,9 +1311,8 @@ pub mod tests {
                 )),
             ),
         ] {
-            let mut lexer = Lexer::new();
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -1380,9 +1360,8 @@ pub mod tests {
                 ),
             ),
         ] {
-            let mut lexer = Lexer::new();
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
@@ -1398,9 +1377,8 @@ pub mod tests {
             ("fn test() -> String {return \"test\";}", "test"),
             ("fn test() -> String {return \"test 2\";}", "test 2"),
         ] {
-            let mut lexer = Lexer::new();
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();

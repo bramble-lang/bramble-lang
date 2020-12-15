@@ -170,9 +170,8 @@ mod test {
                 vec!["hello", "test2"],
             ),
         ] {
-            let mut lexer = Lexer::new();
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
