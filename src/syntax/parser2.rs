@@ -66,8 +66,12 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_if(&mut self, test: Lex) -> Option<&Token> {
-        None
+    pub fn next_if(&mut self, test: &Lex) -> Option<&Token> {
+        if self.test_if(test) {
+            self.next()
+        } else {
+            None
+        }
     }
 
     pub fn peek(&self) -> Option<&Token> {
