@@ -268,94 +268,39 @@ impl Lexer {
     pub fn consume_operator(&mut self) -> Result<Option<Token>, String> {
         let line = self.line;
         let mut branch = LexerBranch::from(self);
-        let mut consume = true;
-        let token = match branch.peek() {
-            Some('(') => Some(Token::new(line, LParen)),
-            Some(')') => Some(Token::new(line, RParen)),
-            Some('{') => Some(Token::new(line, LBrace)),
-            Some('}') => Some(Token::new(line, RBrace)),
-            Some('*') => Some(Token::new(line, Mul)),
-            Some('/') => Some(Token::new(line, Div)),
-            Some('+') => Some(Token::new(line, Add)),
-            Some(';') => Some(Token::new(line, Semicolon)),
-            Some(',') => Some(Token::new(line, Comma)),
-            Some('.') => Some(Token::new(line, MemberAccess)),
-            Some(':') => {
-                branch.next();
-                match branch.peek() {
-                    Some('=') => Some(Token::new(line, Assign)),
-                    _ => {
-                        consume = false;
-                        Some(Token::new(line, Colon))
-                    }
-                }
-            }
-            Some('!') => {
-                branch.next();
-                match branch.peek() {
-                    Some('=') => Some(Token::new(line, NEq)),
-                    _ => {
-                        consume = false;
-                        Some(Token::new(line, Not))
-                    }
-                }
-            }
-            Some('=') => {
-                branch.next();
-                match branch.peek() {
-                    Some('=') => Some(Token::new(line, Eq)),
-                    _ => return Err(format!("L{}: Unexpected '=' character", self.line)),
-                }
-            }
-            Some('>') => {
-                branch.next();
-                match branch.peek() {
-                    Some('=') => Some(Token::new(line, GrEq)),
-                    _ => {
-                        consume = false;
-                        Some(Token::new(line, Gr))
-                    }
-                }
-            }
-            Some('<') => {
-                branch.next();
-                match branch.peek() {
-                    Some('=') => Some(Token::new(line, LsEq)),
-                    _ => {
-                        consume = false;
-                        Some(Token::new(line, Ls))
-                    }
-                }
-            }
-            Some('-') => {
-                branch.next();
-                match branch.peek() {
-                    Some('>') => Some(Token::new(line, LArrow)),
-                    _ => {
-                        consume = false;
-                        Some(Token::new(line, Minus))
-                    }
-                }
-            }
-            Some('&') => {
-                branch.next();
-                match branch.peek() {
-                    Some('&') => Some(Token::new(line, BAnd)),
-                    _ => return Err(format!("L{}: Unexpected '-' character", line)),
-                }
-            }
-            Some('|') => {
-                branch.next();
-                match branch.peek() {
-                    Some('|') => Some(Token::new(line, BOr)),
-                    _ => return Err(format!("L{}: Unexpected '-' character", line)),
-                }
-            }
-            _ => None,
-        };
+        let mut operators = vec![
+            ("->", LArrow),
+            ("&&", BAnd),
+            ("||", BOr),
+            (":=", Assign),
+            ("!=", NEq),
+            ("==", Eq),
+            (">=", GrEq),
+            ("<=", LsEq),
+            ("(", LParen),
+            (")", RParen),
+            ("{", LBrace),
+            ("}", RBrace),
+            ("*", Mul),
+            ("/", Div),
+            ("+", Add),
+            (";", Semicolon),
+            (":", Colon),
+            (",", Comma),
+            (".", MemberAccess),
+            (">", Gr),
+            ("<", Ls),
+            ("-", Minus),
+            ("!", Not),
+        ];
+        operators.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
 
-        if token.is_some() && consume {
-            branch.next();
+        let mut token = None;
+        for (op, t) in operators.iter() {
+            if branch.next_ifn(op) {
+                token = Some(Token::new(line, t.clone()));
+                break;
+            }
         }
         branch.merge();
         Ok(token)
