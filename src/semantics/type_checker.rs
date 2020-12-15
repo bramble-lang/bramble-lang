@@ -544,8 +544,8 @@ pub mod checker {
         use super::*;
         use crate::ast;
         use crate::ast::Ast;
-        use crate::lexer::Lexer;
-        use crate::Token;
+        use crate::lexer::lexer::Lexer;
+        use crate::lexer::tokens::Token;
         use std::collections::HashMap;
 
         /*
@@ -1384,9 +1384,8 @@ pub mod checker {
                 ("struct MyStruct{x:co i32} fn test(c: co i32) -> MyStruct {return MyStruct{x: c};}",
                 Ok(())),
             ] {
-                let mut lexer = Lexer::new();
-                let tokens: Vec<Token> = lexer
-                    .tokenize(&text)
+                let tokens: Vec<Token> = Lexer::new(&text)
+                    .tokenize()
                     .into_iter()
                     .collect::<Result<_, _>>()
                     .unwrap();
@@ -1418,9 +1417,8 @@ pub mod checker {
                 ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
             ] {
-                let mut lexer = Lexer::new();
-                let tokens: Vec<Token> = lexer
-                    .tokenize(&text)
+                let tokens: Vec<Token> = Lexer::new(&text)
+                    .tokenize()
                     .into_iter()
                     .collect::<Result<_, _>>()
                     .unwrap();

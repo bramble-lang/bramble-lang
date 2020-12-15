@@ -136,9 +136,9 @@ impl StringPool {
 mod test {
     use super::*;
     use crate::checker::type_check;
-    use crate::lexer::Lexer;
+    use crate::lexer::lexer::Lexer;
+    use crate::lexer::tokens::Token;
     use crate::syntax::parser;
-    use crate::Token;
 
     #[test]
     fn insert_string() {
@@ -170,9 +170,8 @@ mod test {
                 vec!["hello", "test2"],
             ),
         ] {
-            let mut lexer = Lexer::new();
-            let tokens: Vec<Token> = lexer
-                .tokenize(&text)
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
