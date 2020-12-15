@@ -5,74 +5,9 @@ use crate::lexer::tokens::{Lex, Primitive, Token};
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
 use super::ast::*;
-
-pub type PResult = Result<Option<PNode>, String>;
-pub type TokenIter<'a> = std::iter::Peekable<core::slice::Iter<'a, Token>>;
-
-pub type ParserInfo = u32;
-pub type PNode = Ast<ParserInfo>;
-
-impl PNode {
-    pub fn new_yield(line: u32, coroutine_value: Box<Self>) -> Self {
-        let i = line; //ParserInfo{l: line};
-        Ast::Yield(i, coroutine_value)
-    }
-
-    pub fn new_bind(
-        line: u32,
-        id: Box<Self>,
-        mutable: bool,
-        exp: Box<Self>,
-    ) -> Result<Self, String> {
-        let i = line;
-        match id.as_ref() {
-            Ast::IdentifierDeclare(_, id, prim) => {
-                Ok(Ast::Bind(i, id.clone(), mutable, prim.clone(), exp))
-            }
-            _ => Err(format!(
-                "L{}: Expected type specification after {}",
-                line,
-                id.root_str()
-            )),
-        }
-    }
-
-    pub fn new_mutate(line: u32, id: &str, exp: Box<Self>) -> Result<Self, String> {
-        Ok(Ast::Mutate(line, id.into(), exp))
-    }
-
-    pub fn unary_op(line: u32, op: &Lex, operand: Box<Self>) -> Result<Self, String> {
-        match op {
-            Lex::Minus => Ok(Ast::UnaryOp(line, UnaryOperator::Minus, operand)),
-            Lex::Not => Ok(Ast::UnaryOp(line, UnaryOperator::Not, operand)),
-            _ => Err(format!("L{}: {} is not a unary operator", line, op)),
-        }
-    }
-
-    pub fn binary_op(
-        line: u32,
-        op: &Lex,
-        left: Box<Self>,
-        right: Box<Self>,
-    ) -> Result<Self, String> {
-        let i = line; //ParserInfo{l: line};
-        match op {
-            Lex::Eq => Ok(Ast::BinaryOp(i, BinaryOperator::Eq, left, right)),
-            Lex::NEq => Ok(Ast::BinaryOp(i, BinaryOperator::NEq, left, right)),
-            Lex::Ls => Ok(Ast::BinaryOp(i, BinaryOperator::Ls, left, right)),
-            Lex::LsEq => Ok(Ast::BinaryOp(i, BinaryOperator::LsEq, left, right)),
-            Lex::Gr => Ok(Ast::BinaryOp(i, BinaryOperator::Gr, left, right)),
-            Lex::GrEq => Ok(Ast::BinaryOp(i, BinaryOperator::GrEq, left, right)),
-            Lex::BAnd => Ok(Ast::BinaryOp(i, BinaryOperator::BAnd, left, right)),
-            Lex::BOr => Ok(Ast::BinaryOp(i, BinaryOperator::BOr, left, right)),
-            Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
-            Lex::Minus => Ok(Ast::BinaryOp(i, BinaryOperator::Sub, left, right)),
-            Lex::Mul => Ok(Ast::BinaryOp(i, BinaryOperator::Mul, left, right)),
-            Lex::Div => Ok(Ast::BinaryOp(i, BinaryOperator::Div, left, right)),
-            _ => Err(format!("L{}: {} is not a binary operator", line, op)),
-        }
-    }
-}
+use super::parser::PNode;
+use super::parser::PResult;
+use super::parser::TokenIter;
 
 /*
     Grammar
@@ -106,6 +41,70 @@ impl PNode {
     parse - takes a string of tokens and converts it into an AST
     compile - takes an AST and converts it to assembly
 */
+
+struct TokenStream<'a> {
+    tokens: &'a Vec<Token>,
+    index: usize,
+    errors: Vec<String>,
+}
+
+impl<'a> TokenStream<'a> {
+    pub fn new(tokens: &'a Vec<Token>) -> TokenStream {
+        TokenStream {
+            tokens,
+            index: 0,
+            errors: vec![],
+        }
+    }
+
+    pub fn next(&mut self) -> Option<&Token> {
+        if self.index >= self.tokens.len() {
+            None
+        } else {
+            self.index += 1;
+            Some(&self.tokens[self.index-1])
+        }
+    }
+
+    pub fn next_if(&mut self, test: Lex) -> Option<&Token> {
+        None
+    }
+
+    pub fn peek(&self) -> Option<&Token> {
+        if self.index < self.tokens.len() {
+            Some(&self.tokens[self.index])
+        } else {
+            None
+        }
+    }
+
+    pub fn peek_at(&self, i: usize) -> Option<&Token> {
+        if self.index + i < self.tokens.len() {
+            Some(&self.tokens[self.index + i])
+        } else {
+            None
+        }
+    }
+
+    pub fn test_if(&self, test: &Lex) -> bool {
+        match self.peek() {
+            None => false,
+            Some(t) => t.ty_eq(test),
+        }
+    }
+
+    pub fn test_ifn(&self, test: Vec<Lex>) -> bool {
+        for i in 0..test.len() {
+            match self.peek_at(i) {
+                None => return false,
+                Some(token) => if !token.ty_eq(&test[i]) { return false; }
+            }
+        }
+
+        true
+    }
+}
+
 pub fn parse(tokens: Vec<Token>) -> PResult {
     let mut iter = tokens.iter().peekable();
     module(&mut iter).map_err(|e| format!("Parser: {}", e))

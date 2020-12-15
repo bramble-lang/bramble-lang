@@ -123,4 +123,30 @@ impl Token {
     pub fn new(l: u32, s: Lex) -> Token {
         Token { l, s }
     }
+
+    pub fn ty_eq(&self, a: &Lex) -> bool {
+        match self.s {
+            Lex::Integer(_) => match a {
+                Lex::Integer(_) => true,
+                _ => false,
+            },
+            Lex::Bool(_) => match a {
+                Lex::Bool(_) => true,
+                _ => false,
+            },
+            Lex::Identifier(_) => match a {
+                Lex::Identifier(_) => true,
+                _ => false,
+            },
+            Lex::StringLiteral(_) => match a {
+                Lex::StringLiteral(_) => true,
+                _ => false,
+            },
+            Lex::Primitive(_) => match a {
+                Lex::Primitive(_) => true,
+                _ => false,
+            },
+            _ => *a == self.s,
+        }
+    }
 }
