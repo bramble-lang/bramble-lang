@@ -3,28 +3,6 @@
 use super::tokens::{Lex, Primitive, Token};
 use Lex::*;
 
-/*
-    Better Lexer:
-    provide a tokenizer that is more flexible about whitespace (does not tokenize purely on whitespace)
-
-    Starting assumptions:
-    1. Only integers (for now)
-    2. identifiers are made of only letters
-    3. Operators are single characters
-
-    These will change in the future, I just want a quick starting base to improve the Lexer a bit
-
-    high level flow:
-    1. consume any whitespace
-    2. when a non-whitespace character is found
-    3. Is it a number, a letter, or something else
-    4. Number => read until a whitespace or operator character is found
-    5. Letter => read until a whitespace or an operator character is found
-    6. Operator character => read one character and return that as a token
-
-    Repeat the above steps until the end of the string is reached
-*/
-
 struct LexerBranch<'a> {
     lexer: &'a mut Lexer,
     index: usize,
