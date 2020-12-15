@@ -120,16 +120,15 @@ impl<'a> LexerBranch<'a> {
 }
 
 impl Lexer2 {
-    pub fn new() -> Lexer2 {
+    pub fn new(text: &str) -> Lexer2 {
         Lexer2 { 
-            chars: vec![],
+            chars: text.chars().collect(),
             index: 0,
             line: 1,
          }
     }
 
-    pub fn tokenize(&mut self, text: &str) -> Vec<Result<Token, String>> {
-        self.chars = text.chars().collect();
+    pub fn tokenize(&mut self) -> Vec<Result<Token, String>> {
         self.index = 0;
 
         let mut tokens = vec![];
@@ -455,8 +454,8 @@ mod tests {
     #[test]
     fn test_integer() {
         let text = "5";
-        let mut lexer = Lexer2::new();
-        let tokens = lexer.tokenize(text);
+        let mut lexer = Lexer2::new(text);
+        let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer(5)));
@@ -465,8 +464,8 @@ mod tests {
     #[test]
     fn test_string_literal() {
         let text = "\"text\"";
-        let mut lexer = Lexer2::new();
-        let tokens = lexer.tokenize(text);
+        let mut lexer = Lexer2::new(text);
+        let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1, "{:?}", tokens);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, StringLiteral("text".into())));
@@ -475,8 +474,8 @@ mod tests {
     #[test]
     fn test_identifier() {
         for text in ["x", "y", "x_5"].iter() {
-            let mut lexer = Lexer2::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer2::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             let token = tokens[0].clone().expect("Expected valid token");
             assert_eq!(token, Token::new(1, Identifier((*text).into())));
@@ -486,8 +485,8 @@ mod tests {
     #[test]
     fn test_invalid_number() {
         for text in ["5x"].iter() {
-            let mut lexer = Lexer2::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer2::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 2);
             tokens[0]
                 .clone()
@@ -524,8 +523,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer2::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer2::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone(), Ok(expected_token.clone()), "{}", text);
         }
@@ -534,8 +533,8 @@ mod tests {
     #[test]
     fn test_multiple_tokens() {
         let text = "x:i32;->yield";
-        let mut lexer = Lexer2::new();
-        let tokens = lexer.tokenize(text);
+        let mut lexer = Lexer2::new(text);
+        let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 6);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Identifier("x".into())));
@@ -572,8 +571,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer2::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer2::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
@@ -588,8 +587,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer2::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer2::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].clone().unwrap(), *expected_token);
         }
@@ -620,8 +619,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer2::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer2::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 8, "{} => {:?}", text, tokens);
             assert_eq!(tokens[0].clone().unwrap(), Token::new(*t1, Return));
             assert_eq!(tokens[1].clone().unwrap(), Token::new(*t2, LParen));
@@ -660,8 +659,8 @@ mod tests {
         ]
         .iter()
         {
-            let mut lexer = Lexer2::new();
-            let tokens = lexer.tokenize(text);
+            let mut lexer = Lexer2::new(text);
+            let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 6, "{} => {:?}", text, tokens);
             assert_eq!(tokens[0].clone().unwrap(), Token::new(*t1, Return));
             assert_eq!(tokens[1].clone().unwrap(), Token::new(*t2, LParen));
