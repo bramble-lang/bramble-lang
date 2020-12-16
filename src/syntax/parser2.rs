@@ -253,25 +253,28 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     )))
 }
 
-fn coroutine_def(iter: &mut TokenIter) -> PResult {
-    Ok(None)
-    /*let syntax = match consume_if(iter, Lex::CoroutineDef) {
-        Some(_) => match consume_if_id(iter) {
-            Some((l, id)) => {
-                let params = vec![]; //fn_def_params(iter)?;
+fn coroutine_def(stream: &mut TokenStream) -> PResult {
+    let syntax = match stream.next_if(&Lex::CoroutineDef) {
+        Some(_) => match stream.next_if_id() {
+            Some(id) => {
+                let l = 1;
+                let params = fn_def_params(stream)?;
 
-                let co_type = match consume_if(iter, Lex::LArrow) {
-                    Some(l) => consume_type(iter).expect(&format!(
-                        "L{}: Expected primitive type after -> in function definition",
-                        l
-                    )),
+                let co_type = match stream.next_if(&Lex::LArrow) {
+                    Some(t) => {
+                        let l = t.l;
+                        consume_type(stream).expect(&format!(
+                            "L{}: Expected primitive type after -> in function definition",
+                            l
+                        ))
+                    }
                     _ => Type::Unit,
                 };
 
-                consume_must_be(iter, Lex::LBrace)?;
-                let mut stmts = co_block(iter)?;
+                stream.next_must_be(&Lex::LBrace)?;
+                let mut stmts = co_block(stream)?;
 
-                match return_stmt(iter)? {
+                match return_stmt(stream)? {
                     Some(ret) => stmts.push(ret),
                     None => {
                         return Err(format!(
@@ -281,7 +284,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
                     }
                 }
 
-                consume_must_be(iter, Lex::RBrace)?;
+                stream.next_must_be(&Lex::RBrace)?;
 
                 Some(Ast::RoutineDef(
                     l,
@@ -296,7 +299,7 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
         },
         _ => None,
     };
-    Ok(syntax)*/
+    Ok(syntax)
 }
 
 fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
@@ -351,17 +354,17 @@ fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     Ok(stmts)
 }
 
-fn co_block(iter: &mut TokenIter) -> Result<Vec<PNode>, String> {
+fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     let mut stmts = vec![];
-    /*while iter.peek().is_some() {
-        match statement(iter)? {
+    while stream.peek().is_some() {
+        match statement(stream)? {
             Some(s) => stmts.push(s),
-            None => match yield_return_stmt(iter)? {
+            None => match yield_return_stmt(stream)? {
                 Some(s) => stmts.push(s),
                 None => break,
             },
         }
-    }*/
+    }
     Ok(stmts)
 }
 
@@ -380,19 +383,19 @@ fn return_stmt(stream: &mut TokenStream) -> PResult {
     })
 }
 
-fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
-    /*Ok(match consume_if(iter, Lex::YieldReturn) {
-        Some(l) => {
-            let exp = expression(iter)?;
-            consume_must_be(iter, Lex::Semicolon)?;
+fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
+    Ok(match stream.next_if(&Lex::YieldReturn) {
+        Some(token) => {
+            let l = token.l;
+            let exp = expression(stream)?;
+            stream.next_must_be(&Lex::Semicolon)?;
             match exp {
                 Some(exp) => Some(Ast::YieldReturn(l, Some(Box::new(exp)))),
                 None => Some(Ast::YieldReturn(l, None)),
             }
         }
         _ => None,
-    })*/
-    Ok(None)
+    })
 }
 
 fn statement(stream: &mut TokenStream) -> PResult {
@@ -1319,9 +1322,9 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
+        let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body)) =
-            coroutine_def(&mut iter).unwrap()
+            coroutine_def(&mut stream).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
