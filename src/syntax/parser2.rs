@@ -549,57 +549,66 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
 
 fn comparison(stream: &mut TokenStream) -> PResult {
     Ok(match sum(stream)? {
-        Some(n) => None, /*match consume_if_one_of(
-            iter,
+        Some(n) => match stream.next_if_one_of(
             vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
         ) {
-            Some((l, op)) => {
-                let n2 = comparison(iter)?.ok_or(&format!("L{}: An expression after {}", l, op))?;
-                Some(PNode::binary_op(l, &op, Box::new(n), Box::new(n2))?)
+            Some(token) => {
+                let line = token.l;
+                let op = token.s.clone();
+                let n2 = comparison(stream)?.ok_or(&format!("L{}: An expression after {}", line, op))?;
+                Some(PNode::binary_op(line, &op, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
-        },*/
+        },
         None => None,
     })
 }
 
 fn sum(stream: &mut TokenStream) -> PResult {
     Ok(match term(stream)? {
-        Some(n) => None, /*match consume_if_one_of(iter, vec![Lex::Add, Lex::Minus]) {
-            Some((l, op)) => {
-                let n2 = sum(iter)?.ok_or(&format!("L{}: An expression after {}", l, op))?;
-                Some(PNode::binary_op(l, &op, Box::new(n), Box::new(n2))?)
+        Some(n) => match stream.next_if_one_of(vec![Lex::Add, Lex::Minus]) {
+            Some(token) => {
+                let line = token.l;
+                let op = token.s.clone();
+                let n2 = sum(stream)?.ok_or(&format!("L{}: An expression after {}", line, op))?;
+                Some(PNode::binary_op(line, &op, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
-        },*/
+        },
         None => None,
     })
 }
 
 fn term(stream: &mut TokenStream) -> PResult {
-    /*Ok(match negate(stream)? {
-        Some(n) => None, /*match consume_if_one_of(iter, vec![Lex::Mul, Lex::Div]) {
-            Some((l, op)) => {
-                let n2 = term(iter)?.ok_or(&format!("L{}: a valid term after {}", l, op))?;
-                Some(PNode::binary_op(l, &op, Box::new(n), Box::new(n2))?)
+    Ok(match negate(stream)? {
+        Some(n) => match stream.next_if_one_of(vec![Lex::Mul, Lex::Div]) {
+            Some(token) => {
+                let line = token.l;
+                let op = token.s.clone();
+                let n2 = term(stream)?.ok_or(&format!("L{}: a valid term after {}", line, op))?;
+                Some(PNode::binary_op(line, &op, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
-        },*/
+        },
         None => None,
-    })*/
-    negate(stream)
+    })
 }
 
 fn negate(stream: &mut TokenStream) -> PResult {
-    /*match consume_if_one_of(stream, vec![Lex::Minus, Lex::Not]) {
-        Some((l, op)) => {
+    println!("{:?}", stream.peek());
+    match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
+        Some(token) => {
+            let l = token.l;
+            let op = token.s.clone();
+            println!("negate: {:?}", stream.peek());
             let factor =
                 member_access(stream)?.ok_or(&format!("L{}: expected term after {}", l, op))?;
-            Ok(Some(PNode::unary_op(l, &op, Box::new(factor))?))
+            let r = Ok(Some(PNode::unary_op(l, &op, Box::new(factor))?));
+            println!("negate: {:?}", r);
+            r
         }
         None => member_access(stream),
-    }*/
-    member_access(stream)
+    }
 }
 
 fn member_access(stream: &mut TokenStream) -> PResult {
@@ -612,6 +621,7 @@ fn member_access(stream: &mut TokenStream) -> PResult {
                     .ok_or(format!("L{}: expect field name after member access '.'", line))?.into();
                 ma = Ast::MemberAccess(line, Box::new(ma), member);
             }
+            println!("factor = {:?}", ma);
             Ok(Some(ma))
         }
         None => Ok(None),
@@ -759,7 +769,10 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
             }*/
             _ => match struct_init_params(stream)? {
                 Some(fields) => Some(Ast::StructInit(l, id, fields)),
-                _ => Some(Ast::Identifier(l, id)),
+                _ => {
+                    println!("fncallorvar: {:?}", id);
+                    Some(Ast::Identifier(l, id))
+                }
             },
         },
         None => None,
@@ -974,12 +987,13 @@ pub mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            if let Some(Ast::UnaryOp(l, op, operand)) = expression(&mut stream).unwrap() {
+            let exp = expression(&mut stream).unwrap();
+            if let Some(Ast::UnaryOp(l, op, operand)) = exp {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
                 assert_eq!(*operand, Ast::Identifier(1, "a".into()));
             } else {
-                panic!("No nodes returned by parser")
+                panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
             }
         }
     }
@@ -1012,7 +1026,7 @@ pub mod tests {
                 assert_eq!(*left, Ast::Integer(1, 2));
                 assert_eq!(*right, Ast::Integer(1, 2));
             } else {
-                panic!("No nodes returned by parser")
+                panic!("No nodes returned by parser for {}", text)
             }
         }
     }
