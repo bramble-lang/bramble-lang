@@ -74,6 +74,23 @@ impl<'a> TokenStream<'a> {
         }
     }
 
+    pub fn next_if_id(&mut self) -> Option<&str> {
+        match self.next_if(&Lex::Identifier("".into())) {
+            Some(Token{s: Lex::Identifier(id), ..}) => Some(id),
+            Some(_) => None,
+            None => None
+        }
+    }
+
+    pub fn next_must_be(&mut self, test: &Lex) -> Result<&Token, String> {
+        match self.next_if(test) {
+            Some(t) => Ok(t),
+            None => {
+                Err(format!("Expected {}", test))
+            }
+        }
+    }
+
     pub fn next_ifn(&mut self, test: Vec<Lex>) -> Option<&[Token]> {
         let end = self.index + test.len();
         if self.test_ifn(test) {
@@ -125,47 +142,41 @@ impl<'a> TokenStream<'a> {
 }
 
 pub fn parse(tokens: Vec<Token>) -> PResult {
-    let mut iter = tokens.iter().peekable();
-    module(&mut iter).map_err(|e| format!("Parser: {}", e))
+    let mut stream = TokenStream::new(&tokens);
+    module(&mut stream).map_err(|e| format!("Parser: {}", e))
 }
 
-fn module(iter: &mut TokenIter) -> PResult {
+fn module(stream: &mut TokenStream) -> PResult {
     let mut functions = vec![];
     let mut coroutines = vec![];
     let mut structs = vec![];
 
-    match iter.peek() {
-        Some(Token { l, s: _ }) => {
-            while iter.peek().is_some() {
-                match function_def(iter)? {
-                    Some(f) => functions.push(f),
-                    None => match coroutine_def(iter)? {
-                        Some(co) => coroutines.push(co),
-                        None => match struct_def(iter)? {
-                            Some(st) => structs.push(st),
-                            None => break,
-                        },
-                    },
-                }
-            }
-
-            Ok(if functions.len() > 0 {
-                Some(Ast::Module {
-                    meta: *l,
-                    functions,
-                    coroutines,
-                    structs,
-                })
-            } else {
-                None
-            })
-        }
-        None => Ok(None),
+    let module_line = stream.peek().map_or(1, |t| t.l);
+    while let Some(f) = function_def(stream)? {
+            functions.push(f);
+            /*match coroutine_def(iter)? {
+                Some(co) => coroutines.push(co),
+                None => match struct_def(iter)? {
+                    Some(st) => structs.push(st),
+                    None => break,
+                },
+            },*/
     }
+
+    Ok(if functions.len() > 0 {
+        Some(Ast::Module {
+            meta: module_line,
+            functions,
+            coroutines,
+            structs,
+        })
+    } else {
+        None
+    })
 }
 
 fn struct_def(iter: &mut TokenIter) -> PResult {
-    match consume_if(iter, Lex::Struct) {
+    /*match consume_if(iter, Lex::Struct) {
         Some(l) => match consume_if_id(iter) {
             Some((l, id)) => {
                 consume_must_be(iter, Lex::LBrace)?;
@@ -176,60 +187,54 @@ fn struct_def(iter: &mut TokenIter) -> PResult {
             None => Err(format!("L{}: expected identifer after struct", l)),
         },
         None => Ok(None),
-    }
+    }*/
+    Ok(None)
 }
 
-fn function_def(iter: &mut TokenIter) -> PResult {
-    let syntax = match consume_if(iter, Lex::FunctionDef) {
-        Some(_) => match consume_if_id(iter) {
-            Some((l, id)) => {
-                let params = fn_def_params(iter)?;
-
-                let fn_type = match consume_if(iter, Lex::LArrow) {
-                    Some(l) => consume_type(iter).ok_or(&format!(
-                        "L{}: Expected primitive type after -> in function definition",
-                        l
-                    ))?,
-                    _ => Type::Unit,
-                };
-
-                consume_must_be(iter, Lex::LBrace)?;
-                let mut stmts = block(iter)?;
-
-                match return_stmt(iter)? {
-                    Some(ret) => stmts.push(ret),
-                    None => {
-                        return Err(format!(
-                            "L{}: Function must end with a return statement, got {:?}",
-                            l,
-                            iter.peek(),
-                        ))
-                    }
-                }
-
-                consume_must_be(iter, Lex::RBrace)?;
-
-                Some(Ast::RoutineDef(
-                    l,
-                    RoutineDef::Function,
-                    id.clone(),
-                    params,
-                    fn_type,
-                    stmts,
-                ))
-            }
-            _ => return Err(format!("Expected function name after fn")),
-        },
-        _ => None,
+fn function_def(stream: &mut TokenStream) -> PResult {
+    if stream.next_if(&Lex::FunctionDef).is_none() {
+        return Ok(None);
+    }
+    let fn_name = stream.next_if_id().ok_or("Expected identifier after fn")?.into();
+    let params = fn_def_params(stream)?;
+    let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
+        consume_type(stream).ok_or("Expected type after ->")?
+    } else {
+        Type::Unit
     };
-    Ok(syntax)
+
+    stream.next_must_be(&Lex::LBrace)?;
+    let mut stmts = block(stream)?;
+
+    match return_stmt(stream)? {
+        Some(ret) => stmts.push(ret),
+        None => {
+            return Err(format!(
+                "L{}: Function must end with a return statement, got {:?}",
+                0,
+                stream.peek(),
+            ))
+        }
+    }
+
+    stream.next_must_be(&Lex::RBrace)?;
+
+    Ok(Some(Ast::RoutineDef(
+        1,
+        RoutineDef::Function,
+        fn_name,
+        params,
+        fn_type,
+        stmts,
+    )))
 }
 
 fn coroutine_def(iter: &mut TokenIter) -> PResult {
-    let syntax = match consume_if(iter, Lex::CoroutineDef) {
+    Ok(None)
+    /*let syntax = match consume_if(iter, Lex::CoroutineDef) {
         Some(_) => match consume_if_id(iter) {
             Some((l, id)) => {
-                let params = fn_def_params(iter)?;
+                let params = vec![]; //fn_def_params(iter)?;
 
                 let co_type = match consume_if(iter, Lex::LArrow) {
                     Some(l) => consume_type(iter).expect(&format!(
@@ -267,23 +272,34 @@ fn coroutine_def(iter: &mut TokenIter) -> PResult {
         },
         _ => None,
     };
-    Ok(syntax)
+    Ok(syntax)*/
 }
 
-fn fn_def_params(iter: &mut TokenIter) -> Result<Vec<(String, Type)>, String> {
-    consume_must_be(iter, Lex::LParen)?;
+fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
+    stream.next_must_be(&Lex::LParen)?;
+    let params = id_declaration_list(stream)?;
+    stream.next_must_be(&Lex::RParen)?;
+    /*consume_must_be(iter, Lex::LParen)?;
 
-    let params = id_declaration_list(iter)?;
 
-    consume_must_be(iter, Lex::RParen)?;
+    consume_must_be(iter, Lex::RParen)?;*/
 
     Ok(params)
 }
 
-fn id_declaration_list(iter: &mut TokenIter) -> Result<Vec<(String, Type)>, String> {
+fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
     let mut decls = vec![];
 
-    while let Some(decl) = identifier_or_declare(iter)? {
+    while let Some(tokens) = stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
+        let id = match &tokens[0].s { Lex::Identifier(id) => id.clone(), _ => panic!()};
+        let ty = consume_type(stream).ok_or("Expected type after :")?;
+        decls.push((id, ty));
+        if !stream.test_if(&Lex::Comma) {
+            break;
+        }
+    }
+
+    /*while let Some(decl) = identifier_or_declare(iter)? {
         match decl {
             Ast::IdentifierDeclare(_, id, id_type) => {
                 decls.push((id, id_type));
@@ -295,14 +311,14 @@ fn id_declaration_list(iter: &mut TokenIter) -> Result<Vec<(String, Type)>, Stri
                 ))
             }
         }
-    }
+    }*/
     Ok(decls)
 }
 
-fn block(iter: &mut TokenIter) -> Result<Vec<PNode>, String> {
+fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     let mut stmts = vec![];
-    while iter.peek().is_some() {
-        match statement(iter)? {
+    while stream.peek().is_some() {
+        match statement(stream)? {
             Some(s) => stmts.push(s),
             None => break,
         }
@@ -312,7 +328,7 @@ fn block(iter: &mut TokenIter) -> Result<Vec<PNode>, String> {
 
 fn co_block(iter: &mut TokenIter) -> Result<Vec<PNode>, String> {
     let mut stmts = vec![];
-    while iter.peek().is_some() {
+    /*while iter.peek().is_some() {
         match statement(iter)? {
             Some(s) => stmts.push(s),
             None => match yield_return_stmt(iter)? {
@@ -320,18 +336,20 @@ fn co_block(iter: &mut TokenIter) -> Result<Vec<PNode>, String> {
                 None => break,
             },
         }
-    }
+    }*/
     Ok(stmts)
 }
 
-fn return_stmt(iter: &mut TokenIter) -> PResult {
-    Ok(match consume_if(iter, Lex::Return) {
-        Some(l) => {
-            let exp = expression(iter)?;
-            consume_must_be(iter, Lex::Semicolon)?;
+fn return_stmt(stream: &mut TokenStream) -> PResult {
+    Ok(match stream.next_if(&Lex::Return) {
+        Some(token) => {
+            let line = token.l;
+            let exp = None; /*expression(iter)?;
+            consume_must_be(iter, Lex::Semicolon)?;*/
+            stream.next_must_be(&Lex::Semicolon);
             match exp {
-                Some(exp) => Some(Ast::Return(l, Some(Box::new(exp)))),
-                None => Some(Ast::Return(l, None)),
+                Some(exp) => Some(Ast::Return(line, Some(Box::new(exp)))),
+                None => Some(Ast::Return(line, None)),
             }
         }
         _ => None,
@@ -352,20 +370,20 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn statement(iter: &mut TokenIter) -> PResult {
-    let stm = match let_bind(iter)? {
+fn statement(stream: &mut TokenStream) -> PResult {
+    let stm = match let_bind(stream)? {
         Some(b) => Some(b),
-        None => match mutate(iter)? {
+        None => None /*match mutate(iter)? {
             Some(p) => Some(p),
             None => match println_stmt(iter)? {
                 Some(p) => Some(p),
                 _ => None,
             },
-        },
+        },*/
     };
 
     match stm {
-        Some(stm) => match consume_must_be(iter, Lex::Semicolon)? {
+        Some(stm) => match stream.next_must_be(&Lex::Semicolon)? {
             Token { l, s: _ } => Ok(Some(Ast::Statement(*l, Box::new(stm)))),
         },
         None => Ok(None),
@@ -391,20 +409,23 @@ fn println_stmt(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn let_bind(iter: &mut TokenIter) -> PResult {
-    match consume_if(iter, Lex::Let) {
-        Some(l) => {
-            let is_mutable = consume_if(iter, Lex::Mut).is_some();
-            let id_decl = identifier_or_declare(iter)?
-                .ok_or(format!("L{}: expected identifier after let", l))?;
-            consume_must_be(iter, Lex::Assign)?;
-            let exp = match co_init(iter)? {
+fn let_bind(stream: &mut TokenStream) -> PResult {
+    match stream.next_if(&Lex::Let) {
+        Some(token) => {
+            let line = token.l;
+            let is_mutable = stream.next_if(&Lex::Mut).is_some();
+            let id_decl = id_declaration(stream)?
+                .ok_or(format!("L{}: expected identifier after let", 1))?;
+            stream.next_must_be(&Lex::Assign)?;
+            let exp = number(stream)?
+                    .ok_or(format!("L{}: expected expression on LHS of bind", 1))?;
+            /*match co_init(iter)? {
                 Some(co_init) => co_init,
                 None => expression(iter)?
                     .ok_or(format!("L{}: expected expression on LHS of bind", l))?,
-            };
+            };*/
             Ok(Some(PNode::new_bind(
-                l,
+                line,
                 Box::new(id_decl),
                 is_mutable,
                 Box::new(exp),
@@ -453,7 +474,7 @@ fn expression(iter: &mut TokenIter) -> PResult {
 }
 
 fn expression_block(iter: &mut TokenIter) -> PResult {
-    match consume_if(iter, Lex::LBrace) {
+    /*match consume_if(iter, Lex::LBrace) {
         Some(l) => {
             let mut stmts = block(iter)?;
             match iter.peek() {
@@ -472,7 +493,8 @@ fn expression_block(iter: &mut TokenIter) -> PResult {
             Ok(Some(Ast::ExpressionBlock(l, stmts)))
         }
         None => Ok(None),
-    }
+    }*/
+    Ok(None)
 }
 
 fn logical_or(iter: &mut TokenIter) -> PResult {
@@ -711,26 +733,28 @@ fn function_call_or_variable(iter: &mut TokenIter) -> PResult {
     })
 }
 
-fn consume_type(iter: &mut TokenIter) -> Option<Type> {
-    let is_coroutine = consume_if(iter, Lex::CoroutineDef).is_some();
-    match iter.peek() {
+fn consume_type(stream: &mut TokenStream) -> Option<Type> {
+    let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
+    match stream.peek() {
         Some(Token {
             l: _,
             s: Lex::Primitive(primitive),
         }) => {
-            iter.next();
-            match primitive {
+            let ty = match *primitive {
                 Primitive::I32 => Some(Type::I32),
                 Primitive::Bool => Some(Type::Bool),
                 Primitive::StringLiteral => Some(Type::StringLiteral),
-            }
+            };
+            stream.next();
+            ty
         }
         Some(Token {
             l: _,
             s: Lex::Identifier(name),
         }) => {
-            iter.next();
-            Some(Type::Custom(name.clone()))
+            let ty = Some(Type::Custom(name.clone()));
+            stream.next();
+            ty
         }
         _ => None,
     }
@@ -743,8 +767,22 @@ fn consume_type(iter: &mut TokenIter) -> Option<Type> {
     })
 }
 
+fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
+    // <IDENTIFER> COLON <TYPE>
+    match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
+        Some(t) => {
+            let line0 = t[0].l;
+            let line1 = t[1].l;
+            let id = match &t[0].s {Lex::Identifier(id) => id.clone(), _ => panic!("Must be identifier")};
+            let ty = consume_type(stream).ok_or(format!("L{}: expected type after : in type declaration", line1))?;
+            Ok(Some(Ast::IdentifierDeclare(line0, id, ty)))
+        }
+        None => Ok(None),
+    }
+}
+
 fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<PNode>, String> {
-    Ok(match consume_if_id(iter) {
+    /*Ok(match consume_if_id(iter) {
         Some((l, id)) => match consume_if(iter, Lex::Colon) {
             Some(l) => match consume_type(iter) {
                 Some(p) => Some(Ast::IdentifierDeclare(l, id.clone(), p)),
@@ -753,28 +791,32 @@ fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<PNode>, String> 
             _ => Some(Ast::Identifier(l, id.clone())),
         },
         _ => None,
-    })
+    })*/
+    Ok(None)
 }
 
 fn constant(iter: &mut TokenIter) -> PResult {
-    Ok(match number(iter)? {
+    /*Ok(match number(iter)? {
         Some(i) => Some(i),
         None => match boolean(iter)? {
             Some(t) => Some(t),
             None => string_literal(iter)?,
         },
-    })
+    })*/
+    Ok(None)
 }
 
-fn number(iter: &mut TokenIter) -> PResult {
-    Ok(match iter.peek() {
+fn number(stream: &mut TokenStream) -> PResult {
+    Ok(match stream.peek() {
         Some(token) => match token {
             Token {
                 l,
                 s: Lex::Integer(i),
             } => {
-                iter.next();
-                Some(Ast::Integer(*l, *i))
+                let line = *l;
+                let value = *i;
+                stream.next();
+                Some(Ast::Integer(line, value))
             }
             _ => None,
         },
@@ -1083,8 +1125,8 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
-        let stm = statement(&mut iter).unwrap().unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, false, p, exp) => {
@@ -1106,8 +1148,8 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
-        let stm = statement(&mut iter).unwrap().unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, true, p, exp) => {
@@ -1128,8 +1170,8 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
-        let stm = statement(&mut iter).unwrap().unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Mutate(_, id, exp) => {
@@ -1143,6 +1185,33 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_unit_function_def() {
+        let text = "fn test(x:i32) {return;}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) =
+            function_def(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(name, "test");
+            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(ty, Type::Unit);
+            assert_eq!(body.len(), 1);
+            match &body[0] {
+                Ast::Return(_, None) => {
+                }
+                _ => panic!("Wrong body, expected unit return"),
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
     fn parse_function_def() {
         let text = "fn test(x:i32) -> bool {return true;}";
         let tokens: Vec<Token> = Lexer::new(&text)
@@ -1150,7 +1219,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
+        let mut iter = TokenStream::new(&tokens);
         if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) =
             function_def(&mut iter).unwrap()
         {
@@ -1206,8 +1275,8 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
-        let stm = statement(&mut iter).unwrap().unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(_, stm) => match stm.as_ref() {
                 Ast::Bind(_, id, false, p, exp) => {
