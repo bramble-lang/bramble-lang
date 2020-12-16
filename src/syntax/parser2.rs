@@ -79,18 +79,19 @@ impl<'a> TokenStream<'a> {
     // TODO: return the line # and the ID name
     pub fn next_if_id(&mut self) -> Option<String> {
         match self.next_if(&Lex::Identifier("".into())) {
-            Some(Token{s: Lex::Identifier(id), ..}) => Some(id.into()),
+            Some(Token {
+                s: Lex::Identifier(id),
+                ..
+            }) => Some(id.into()),
             Some(_) => None,
-            None => None
+            None => None,
         }
     }
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<&Token, String> {
         match self.next_if(test) {
             Some(t) => Ok(t),
-            None => {
-                Err(format!("Expected {}", test))
-            }
+            None => Err(format!("Expected {}", test)),
         }
     }
 
@@ -154,8 +155,7 @@ impl<'a> TokenStream<'a> {
     pub fn test_if_one_of(&self, set: Vec<Lex>) -> bool {
         match self.peek() {
             None => false,
-            Some(t) => 
-                set.iter().find(|l| t.ty_eq(l)).is_some()
+            Some(t) => set.iter().find(|l| t.ty_eq(l)).is_some(),
         }
     }
 }
@@ -172,14 +172,14 @@ fn module(stream: &mut TokenStream) -> PResult {
 
     let module_line = stream.peek().map_or(1, |t| t.l);
     while let Some(f) = function_def(stream)? {
-            functions.push(f);
-            /*match coroutine_def(iter)? {
-                Some(co) => coroutines.push(co),
-                None => match struct_def(iter)? {
-                    Some(st) => structs.push(st),
-                    None => break,
-                },
-            },*/
+        functions.push(f);
+        /*match coroutine_def(iter)? {
+            Some(co) => coroutines.push(co),
+            None => match struct_def(iter)? {
+                Some(st) => structs.push(st),
+                None => break,
+            },
+        },*/
     }
 
     Ok(if functions.len() > 0 {
@@ -194,27 +194,32 @@ fn module(stream: &mut TokenStream) -> PResult {
     })
 }
 
-fn struct_def(iter: &mut TokenIter) -> PResult {
-    /*match consume_if(iter, Lex::Struct) {
-        Some(l) => match consume_if_id(iter) {
-            Some((l, id)) => {
-                consume_must_be(iter, Lex::LBrace)?;
-                let fields = id_declaration_list(iter)?;
-                consume_must_be(iter, Lex::RBrace)?;
-                Ok(Some(Ast::StructDef(l, id.clone(), fields)))
+fn struct_def(stream: &mut TokenStream) -> PResult {
+    match stream.next_if(&Lex::Struct) {
+        Some(token) => {
+            let line = token.l;
+            match stream.next_if_id() {
+                Some(id) => {
+                    stream.next_must_be(&Lex::LBrace)?;
+                    let fields = id_declaration_list(stream)?;
+                    stream.next_must_be(&Lex::RBrace)?;
+                    Ok(Some(Ast::StructDef(line, id.clone(), fields)))
+                }
+                None => Err(format!("L{}: expected identifer after struct", line)),
             }
-            None => Err(format!("L{}: expected identifer after struct", l)),
-        },
+        }
         None => Ok(None),
-    }*/
-    Ok(None)
+    }
 }
 
 fn function_def(stream: &mut TokenStream) -> PResult {
     if stream.next_if(&Lex::FunctionDef).is_none() {
         return Ok(None);
     }
-    let fn_name = stream.next_if_id().ok_or("Expected identifier after fn")?.into();
+    let fn_name = stream
+        .next_if_id()
+        .ok_or("Expected identifier after fn")?
+        .into();
     let params = fn_def_params(stream)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
         consume_type(stream).ok_or("Expected type after ->")?
@@ -310,12 +315,13 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
     let mut decls = vec![];
 
     while let Some(tokens) = stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
-        let id = match &tokens[0].s { Lex::Identifier(id) => id.clone(), _ => panic!()};
+        let id = match &tokens[0].s {
+            Lex::Identifier(id) => id.clone(),
+            _ => panic!(),
+        };
         let ty = consume_type(stream).ok_or("Expected type after :")?;
         decls.push((id, ty));
-        if !stream.test_if(&Lex::Comma) {
-            break;
-        }
+        stream.next_if(&Lex::Comma);
     }
 
     /*while let Some(decl) = identifier_or_declare(iter)? {
@@ -364,7 +370,7 @@ fn return_stmt(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let line = token.l;
             let exp = None; /*expression(iter)?;
-            consume_must_be(iter, Lex::Semicolon)?;*/
+                            consume_must_be(iter, Lex::Semicolon)?;*/
             stream.next_must_be(&Lex::Semicolon)?;
             match exp {
                 Some(exp) => Some(Ast::Return(line, Some(Box::new(exp)))),
@@ -396,9 +402,9 @@ fn statement(stream: &mut TokenStream) -> PResult {
         None => match mutate(stream)? {
             Some(p) => Some(p),
             None => None, /*match println_stmt(iter)? {
-                Some(p) => Some(p),
-                _ => None,
-            },*/
+                              Some(p) => Some(p),
+                              _ => None,
+                          },*/
         },
     };
 
@@ -435,11 +441,11 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let line = token.l;
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
-            let id_decl = id_declaration(stream)?
-                .ok_or(format!("L{}: expected identifier after let", 1))?;
+            let id_decl =
+                id_declaration(stream)?.ok_or(format!("L{}: expected identifier after let", 1))?;
             stream.next_must_be(&Lex::Assign)?;
-            let exp = number(stream)?
-                    .ok_or(format!("L{}: expected expression on LHS of bind", 1))?;
+            let exp =
+                number(stream)?.ok_or(format!("L{}: expected expression on LHS of bind", 1))?;
             /*match co_init(iter)? {
                 Some(co_init) => co_init,
                 None => expression(iter)?
@@ -524,8 +530,14 @@ fn logical_or(stream: &mut TokenStream) -> PResult {
         Some(n) => match stream.next_if(&Lex::BOr) {
             Some(token) => {
                 let line = token.l;
-                let n2 = logical_or(stream)?.ok_or(&format!("L{}: An expression after ||", line))?;
-                Some(PNode::binary_op(line, &Lex::BOr, Box::new(n), Box::new(n2))?)
+                let n2 =
+                    logical_or(stream)?.ok_or(&format!("L{}: An expression after ||", line))?;
+                Some(PNode::binary_op(
+                    line,
+                    &Lex::BOr,
+                    Box::new(n),
+                    Box::new(n2),
+                )?)
             }
             _ => Some(n),
         },
@@ -538,8 +550,14 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
         Some(n) => match stream.next_if(&Lex::BAnd) {
             Some(token) => {
                 let line = token.l;
-                let n2 = logical_and(stream)?.ok_or(&format!("L{}: An expression after &&", line))?;
-                Some(PNode::binary_op(line, &Lex::BAnd, Box::new(n), Box::new(n2))?)
+                let n2 =
+                    logical_and(stream)?.ok_or(&format!("L{}: An expression after &&", line))?;
+                Some(PNode::binary_op(
+                    line,
+                    &Lex::BAnd,
+                    Box::new(n),
+                    Box::new(n2),
+                )?)
             }
             _ => Some(n),
         },
@@ -549,13 +567,19 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
 
 fn comparison(stream: &mut TokenStream) -> PResult {
     Ok(match sum(stream)? {
-        Some(n) => match stream.next_if_one_of(
-            vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
-        ) {
+        Some(n) => match stream.next_if_one_of(vec![
+            Lex::Eq,
+            Lex::NEq,
+            Lex::Ls,
+            Lex::LsEq,
+            Lex::Gr,
+            Lex::GrEq,
+        ]) {
             Some(token) => {
                 let line = token.l;
                 let op = token.s.clone();
-                let n2 = comparison(stream)?.ok_or(&format!("L{}: An expression after {}", line, op))?;
+                let n2 =
+                    comparison(stream)?.ok_or(&format!("L{}: An expression after {}", line, op))?;
                 Some(PNode::binary_op(line, &op, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
@@ -617,8 +641,13 @@ fn member_access(stream: &mut TokenStream) -> PResult {
             let mut ma = f;
             while let Some(token) = stream.next_if(&Lex::MemberAccess) {
                 let line = token.l;
-                let member = stream.next_if_id()
-                    .ok_or(format!("L{}: expect field name after member access '.'", line))?.into();
+                let member = stream
+                    .next_if_id()
+                    .ok_or(format!(
+                        "L{}: expect field name after member access '.'",
+                        line
+                    ))?
+                    .into();
                 ma = Ast::MemberAccess(line, Box::new(ma), member);
             }
             println!("factor = {:?}", ma);
@@ -637,7 +666,6 @@ fn factor(stream: &mut TokenStream) -> PResult {
         }) => {
             stream.next();
             let exp = expression(stream)?;
-            //consume_must_be(iter, Lex::RParen)?;
             stream.next_must_be(&Lex::RParen)?;
             exp
         }
@@ -646,9 +674,9 @@ fn factor(stream: &mut TokenStream) -> PResult {
             None => match function_call_or_variable(stream)? {
                 Some(n) => Some(n),
                 None => None, /*match co_yield(iter)? {
-                    Some(n) => Some(n),
-                    None => None,
-                },*/
+                                  Some(n) => Some(n),
+                                  None => None,
+                              },*/
             },
         },
     })
@@ -720,7 +748,7 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
             let mut params = vec![];
             while let Some(field_name) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
-                let field_value = constant(stream)?.ok_or(format!(
+                let field_value = expression(stream)?.ok_or(format!(
                     "L{}: expected an expression to be assigned to field {}",
                     l, field_name
                 ))?;
@@ -819,8 +847,14 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
         Some(t) => {
             let line0 = t[0].l;
             let line1 = t[1].l;
-            let id = match &t[0].s {Lex::Identifier(id) => id.clone(), _ => panic!("Must be identifier")};
-            let ty = consume_type(stream).ok_or(format!("L{}: expected type after : in type declaration", line1))?;
+            let id = match &t[0].s {
+                Lex::Identifier(id) => id.clone(),
+                _ => panic!("Must be identifier"),
+            };
+            let ty = consume_type(stream).ok_or(format!(
+                "L{}: expected type after : in type declaration",
+                line1
+            ))?;
             Ok(Some(Ast::IdentifierDeclare(line0, id, ty)))
         }
         None => Ok(None),
@@ -871,9 +905,7 @@ fn number(stream: &mut TokenStream) -> PResult {
 
 fn boolean(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::Bool(true)) {
-        Some(Token { l, s: Lex::Bool(b) }) => {
-            Ok(Some(Ast::Boolean(*l, *b)))
-        }
+        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Ast::Boolean(*l, *b))),
         _ => Ok(None),
     }
 }
@@ -883,9 +915,7 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
         Some(Token {
             l,
             s: Lex::StringLiteral(s),
-        }) => {
-            Ok(Some(Ast::StringLiteral(*l, s.clone())))
-        }
+        }) => Ok(Some(Ast::StringLiteral(*l, s.clone()))),
         _ => Ok(None),
     }
 }
@@ -1246,8 +1276,7 @@ pub mod tests {
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Ast::Return(_, None) => {
-                }
+                Ast::Return(_, None) => {}
                 _ => panic!("Wrong body, expected unit return"),
             }
         } else {
@@ -1447,9 +1476,9 @@ pub mod tests {
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let mut iter = tokens.iter().peekable();
-            let result = struct_def(&mut iter).unwrap();
-            assert_eq!(result, expected);
+            let mut stream = TokenStream::new(&tokens);
+            let result = struct_def(&mut stream);
+            assert_eq!(result, Ok(expected), "{:?}", text);
         }
     }
 
@@ -1497,8 +1526,8 @@ pub mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            let result = expression(&mut stream).unwrap().unwrap();
-            assert_eq!(result, expected);
+            let result = expression(&mut stream);
+            assert_eq!(result, Ok(Some(expected)), "{:?}", text);
         }
     }
 
@@ -1530,11 +1559,13 @@ pub mod tests {
     }
 }
 
-
 #[cfg(test)]
 mod test_tokenstream {
-    use crate::lexer::{lexer::Lexer, tokens::{Lex, Token}};
     use super::TokenStream;
+    use crate::lexer::{
+        lexer::Lexer,
+        tokens::{Lex, Token},
+    };
 
     #[test]
     fn test_peek() {
@@ -1547,7 +1578,13 @@ mod test_tokenstream {
 
         let ts = TokenStream::new(&tokens);
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::LParen
+            }
+        );
     }
 
     #[test]
@@ -1569,11 +1606,23 @@ mod test_tokenstream {
 
         let ts = TokenStream::new(&tokens);
         let p = ts.peek_at(0).unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
-        
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::LParen
+            }
+        );
+
         let p = ts.peek_at(1).unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
-        
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(2)
+            }
+        );
+
         let p = ts.peek_at(8);
         assert_eq!(p, None);
     }
@@ -1589,26 +1638,56 @@ mod test_tokenstream {
 
         let mut ts = TokenStream::new(&tokens);
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
-        
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::LParen
+            }
+        );
+
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
-        
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(2)
+            }
+        );
+
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Add});
-        
+        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(4)});
-        
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(4)
+            }
+        );
+
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::RParen});
-        
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::RParen
+            }
+        );
+
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Mul});
-        
+        assert_eq!(*p, Token { l: 1, s: Lex::Mul });
+
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(3)});
-        
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(3)
+            }
+        );
+
         let p = ts.next();
         assert_eq!(p, None);
     }
@@ -1623,17 +1702,35 @@ mod test_tokenstream {
             .unwrap();
 
         let mut ts = TokenStream::new(&tokens);
-        let p = ts.next_if(&Lex::LParen).unwrap();   // should I really use a borrow for this?  If not then gotta do clones and BS i think.
-        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
-        
-        let p = ts.peek().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
+        let p = ts.next_if(&Lex::LParen).unwrap(); // should I really use a borrow for this?  If not then gotta do clones and BS i think.
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::LParen
+            }
+        );
 
-        let p = ts.next_if(&Lex::LParen);   // should I really use a borrow for this?  If not then gotta do clones and BS i think.
-        assert_eq!(p, None);
-        
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(2)
+            }
+        );
+
+        let p = ts.next_if(&Lex::LParen); // should I really use a borrow for this?  If not then gotta do clones and BS i think.
+        assert_eq!(p, None);
+
+        let p = ts.peek().unwrap();
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(2)
+            }
+        );
     }
 
     #[test]
@@ -1646,14 +1743,23 @@ mod test_tokenstream {
             .unwrap();
 
         let mut ts = TokenStream::new(&tokens);
-        let p = ts.next_ifn(vec![
-            Lex::LParen,
-            Lex::Integer(0),
-        ]).unwrap();
-        assert_eq!(*p, vec![Token{l: 1, s: Lex::LParen}, Token{ l: 1, s: Lex::Integer(2)}]);
-        
+        let p = ts.next_ifn(vec![Lex::LParen, Lex::Integer(0)]).unwrap();
+        assert_eq!(
+            *p,
+            vec![
+                Token {
+                    l: 1,
+                    s: Lex::LParen
+                },
+                Token {
+                    l: 1,
+                    s: Lex::Integer(2)
+                }
+            ]
+        );
+
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Add});
+        assert_eq!(*p, Token { l: 1, s: Lex::Add });
     }
 
     #[test]
@@ -1666,16 +1772,10 @@ mod test_tokenstream {
             .unwrap();
 
         let mut ts = TokenStream::new(&tokens);
-        let p = ts.test_if_one_of(vec![
-            Lex::LParen,
-            Lex::Integer(0),
-        ]);
+        let p = ts.test_if_one_of(vec![Lex::LParen, Lex::Integer(0)]);
         assert_eq!(p, true);
-        
-        let p = ts.test_if_one_of(vec![
-            Lex::RParen,
-            Lex::Integer(0),
-        ]);
+
+        let p = ts.test_if_one_of(vec![Lex::RParen, Lex::Integer(0)]);
         assert_eq!(p, false);
     }
 
@@ -1689,28 +1789,43 @@ mod test_tokenstream {
             .unwrap();
 
         let mut ts = TokenStream::new(&tokens);
-        let p = ts.next_if_one_of(vec![
-            Lex::LParen,
-            Lex::Integer(0),
-        ]).unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::LParen});
+        let p = ts
+            .next_if_one_of(vec![Lex::LParen, Lex::Integer(0)])
+            .unwrap();
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::LParen
+            }
+        );
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
-        
-        let p = ts.next_if_one_of(vec![
-            Lex::LParen,
-            Lex::Integer(0),
-        ]).unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Integer(2)});
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(2)
+            }
+        );
+
+        let p = ts
+            .next_if_one_of(vec![Lex::LParen, Lex::Integer(0)])
+            .unwrap();
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                s: Lex::Integer(2)
+            }
+        );
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Add});
-        
-        let p = ts.next_if_one_of(vec![
-            Lex::LParen,
-            Lex::Integer(0),
-        ]).is_none();
+        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+
+        let p = ts
+            .next_if_one_of(vec![Lex::LParen, Lex::Integer(0)])
+            .is_none();
         assert_eq!(p, true);
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token{l: 1, s: Lex::Add});
+        assert_eq!(*p, Token { l: 1, s: Lex::Add });
     }
 }
