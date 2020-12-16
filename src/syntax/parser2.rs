@@ -444,15 +444,13 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
             let line = token.l;
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl =
-                id_declaration(stream)?.ok_or(format!("L{}: expected identifier after let", 1))?;
+                id_declaration(stream)?.ok_or(format!("L{}: expected identifier after let", line))?;
             stream.next_must_be(&Lex::Assign)?;
-            let exp =
-                number(stream)?.ok_or(format!("L{}: expected expression on LHS of bind", 1))?;
-            /*match co_init(iter)? {
+            let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
-                None => expression(iter)?
-                    .ok_or(format!("L{}: expected expression on LHS of bind", l))?,
-            };*/
+                None => expression(stream)?
+                    .ok_or(format!("L{}: expected expression on LHS of bind", line))?,
+            };
             Ok(Some(PNode::new_bind(
                 line,
                 Box::new(id_decl),
@@ -465,7 +463,7 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
 }
 
 fn mutate(stream: &mut TokenStream) -> PResult {
-    let l = 0;
+    let l = 1;
     match stream.next_if(&Lex::Mut) {
         None => Ok(None),
         Some(token) => match stream.next_if_id() {
@@ -480,11 +478,13 @@ fn mutate(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn co_init(iter: &mut TokenIter) -> PResult {
-    match consume_if(iter, Lex::Init) {
-        Some(l) => match consume_if_id(iter) {
-            Some((l, id)) => {
-                let params = fn_call_params(iter)?
+fn co_init(stream: &mut TokenStream) -> PResult {
+    let l = 1;
+    match stream.next_if(&Lex::Init) {
+        Some(token) => match stream.next_if_id() {
+            Some(id) => {
+                let l = 1;
+                let params = fn_call_params(stream)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
                 Ok(Some(Ast::RoutineCall(
                     l,
@@ -719,15 +719,15 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<PNode>>, String> {
-    /*match consume_if(iter, Lex::LParen) {
+fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
+    match stream.next_if(&Lex::LParen) {
         Some(_) => {
             let mut params = vec![];
-            while let Some(param) = expression(iter)? {
+            while let Some(param) = expression(stream)? {
                 match param {
                     exp => {
                         params.push(exp);
-                        match consume_if(iter, Lex::Comma) {
+                        match stream.next_if(&Lex::Comma) {
                             Some(_) => {}
                             None => break,
                         };
@@ -735,12 +735,11 @@ fn fn_call_params(iter: &mut TokenIter) -> Result<Option<Vec<PNode>>, String> {
                 }
             }
 
-            consume_must_be(iter, Lex::RParen)?;
+            stream.next_must_be(&Lex::RParen)?;
             Ok(Some(params))
         }
         _ => Ok(None),
-    }*/
-    Ok(None)
+    }
 }
 
 fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>, String> {
