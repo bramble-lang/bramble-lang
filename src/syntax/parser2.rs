@@ -369,8 +369,7 @@ fn return_stmt(stream: &mut TokenStream) -> PResult {
     Ok(match stream.next_if(&Lex::Return) {
         Some(token) => {
             let line = token.l;
-            let exp = None; /*expression(iter)?;
-                            consume_must_be(iter, Lex::Semicolon)?;*/
+            let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             match exp {
                 Some(exp) => Some(Ast::Return(line, Some(Box::new(exp)))),
