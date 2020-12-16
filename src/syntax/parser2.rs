@@ -393,13 +393,13 @@ fn yield_return_stmt(iter: &mut TokenIter) -> PResult {
 fn statement(stream: &mut TokenStream) -> PResult {
     let stm = match let_bind(stream)? {
         Some(b) => Some(b),
-        None => None /*match mutate(iter)? {
+        None => match mutate(stream)? {
             Some(p) => Some(p),
-            None => match println_stmt(iter)? {
+            None => None, /*match println_stmt(iter)? {
                 Some(p) => Some(p),
                 _ => None,
-            },
-        },*/
+            },*/
+        },
     };
 
     match stm {
