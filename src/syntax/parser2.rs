@@ -89,9 +89,12 @@ impl<'a> TokenStream<'a> {
     }
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<&Token, String> {
+        let (line, found) = match self.peek() { Some(t) => (t.l, t.s.to_string()), None => (0, "EOF".into())};
         match self.next_if(test) {
             Some(t) => Ok(t),
-            None => Err(format!("Expected {}", test)),
+            None => {
+                Err(format!("L{}: Expected {}, but found {}", line, test, found))
+            }
         }
     }
 
@@ -327,19 +330,6 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
         stream.next_if(&Lex::Comma);
     }
 
-    /*while let Some(decl) = identifier_or_declare(iter)? {
-        match decl {
-            Ast::IdentifierDeclare(_, id, id_type) => {
-                decls.push((id, id_type));
-                consume_if(iter, Lex::Comma);
-            }
-            _ => {
-                return Err(format!(
-                    "invalid parameter declaration in function definition"
-                ))
-            }
-        }
-    }*/
     Ok(decls)
 }
 
@@ -503,28 +493,29 @@ fn expression(stream: &mut TokenStream) -> PResult {
     logical_or(stream)
 }
 
-fn expression_block(iter: &mut TokenIter) -> PResult {
-    /*match consume_if(iter, Lex::LBrace) {
-        Some(l) => {
-            let mut stmts = block(iter)?;
-            match iter.peek() {
+fn expression_block(stream: &mut TokenStream) -> PResult {
+    match stream.next_if(&Lex::LBrace) {
+        Some(token) => {
+            let line = token.l;
+            let mut stmts = block(stream)?;
+            match stream.peek() {
                 Some(Token {
-                    l: _,
+                    l,
                     s: Lex::RBrace,
                 }) => (),
-                Some(_) => {
-                    let exp = expression(iter)?
-                        .ok_or(format!("L{}: Expected expression at end of block", l))?;
+                Some(token) => {
+                    let line = token.l;
+                    let exp = expression(stream)?
+                        .ok_or(format!("L{}: Expected expression at end of block", line))?;
                     stmts.push(exp);
                 }
-                None => return Err(format!("L{}: expected {}, but found EOF", l, Lex::RBrace)),
+                None => return Err(format!("L{}: expected {}, but found EOF", line, Lex::RBrace)),
             };
-            consume_must_be(iter, Lex::RBrace)?;
-            Ok(Some(Ast::ExpressionBlock(l, stmts)))
+            stream.next_must_be(&Lex::RBrace)?;
+            Ok(Some(Ast::ExpressionBlock(line, stmts)))
         }
         None => Ok(None),
-    }*/
-    Ok(None)
+    }
 }
 
 fn logical_or(stream: &mut TokenStream) -> PResult {
@@ -1380,8 +1371,8 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
-        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut iter).unwrap() {
+        let mut stream = TokenStream::new(&tokens);
+        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut stream).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 1);
             assert_eq!(body[0], Ast::Integer(1, 5));
@@ -1408,8 +1399,8 @@ pub mod tests {
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let mut iter = tokens.iter().peekable();
-            assert_eq!(expression_block(&mut iter), Err((*msg).into()));
+            let mut stream = TokenStream::new(&tokens);
+            assert_eq!(expression_block(&mut stream), Err((*msg).into()), "{:?}", text);
         }
     }
 
@@ -1421,8 +1412,8 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = tokens.iter().peekable();
-        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut iter).unwrap() {
+        let mut stream = TokenStream::new(&tokens);
+        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut stream).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 2);
             match &body[0] {
