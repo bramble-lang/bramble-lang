@@ -754,21 +754,10 @@ fn constant(stream: &mut TokenStream) -> PResult {
 }
 
 fn number(stream: &mut TokenStream) -> PResult {
-    Ok(match stream.peek() {
-        Some(token) => match token {
-            Token {
-                l,
-                s: Lex::Integer(i),
-            } => {
-                let line = *l;
-                let value = *i;
-                stream.next();
-                Some(Ast::Integer(line, value))
-            }
-            _ => None,
-        },
-        None => None,
-    })
+    match stream.next_if(&Lex::Integer(0)) {
+        Some(Token{l, s: Lex::Integer(i)}) => Ok(Some(Ast::Integer(*l, *i))),
+        _ => Ok(None),
+    }
 }
 
 fn boolean(stream: &mut TokenStream) -> PResult {
