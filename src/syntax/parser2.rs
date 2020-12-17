@@ -410,10 +410,10 @@ fn statement(stream: &mut TokenStream) -> PResult {
         Some(b) => Some(b),
         None => match mutate(stream)? {
             Some(p) => Some(p),
-            None => None, /*match println_stmt(iter)? {
+            None => match println_stmt(stream)? {
                               Some(p) => Some(p),
                               _ => None,
-                          },*/
+                          },
         },
     };
 
@@ -425,24 +425,23 @@ fn statement(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn println_stmt(iter: &mut TokenIter) -> PResult {
-    /*let tk = iter.peek();
-    Ok(match tk {
-        Some(Token { l, s }) if *s == Lex::Printiln || *s == Lex::Printbln || *s == Lex::Prints => {
-            iter.next();
+fn println_stmt(stream: &mut TokenStream) -> PResult {
+    let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
+        Some(token) => {
+            let l = token.l;
+            let s = token.s.clone();
             let exp =
-                expression(iter)?.ok_or(format!("L{}: Expected expression after println", l))?;
-
+                expression(stream)?.ok_or(format!("L{}: Expected expression after println", l))?;
             match s {
-                Lex::Printiln => Some(Ast::Printiln(*l, Box::new(exp))),
-                Lex::Prints => Some(Ast::Prints(*l, Box::new(exp))),
-                Lex::Printbln => Some(Ast::Printbln(*l, Box::new(exp))),
+                Lex::Printiln => Some(Ast::Printiln(l, Box::new(exp))),
+                Lex::Prints => Some(Ast::Prints(l, Box::new(exp))),
+                Lex::Printbln => Some(Ast::Printbln(l, Box::new(exp))),
                 _ => panic!("CRITICAL: already tested for a print token but found {}", s),
             }
         }
-        _ => None,
-    })*/
-    Ok(None)
+        _ => None
+    };
+    Ok(syntax)
 }
 
 fn let_bind(stream: &mut TokenStream) -> PResult {
@@ -632,16 +631,13 @@ fn term(stream: &mut TokenStream) -> PResult {
 }
 
 fn negate(stream: &mut TokenStream) -> PResult {
-    println!("{:?}", stream.peek());
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(token) => {
             let l = token.l;
             let op = token.s.clone();
-            println!("negate: {:?}", stream.peek());
             let factor =
                 member_access(stream)?.ok_or(&format!("L{}: expected term after {}", l, op))?;
             let r = Ok(Some(PNode::unary_op(l, &op, Box::new(factor))?));
-            println!("negate: {:?}", r);
             r
         }
         None => member_access(stream),
@@ -663,7 +659,6 @@ fn member_access(stream: &mut TokenStream) -> PResult {
                     .into();
                 ma = Ast::MemberAccess(line, Box::new(ma), member);
             }
-            println!("factor = {:?}", ma);
             Ok(Some(ma))
         }
         None => Ok(None),
@@ -813,7 +808,6 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
             _ => match struct_init_params(stream)? {
                 Some(fields) => Some(Ast::StructInit(l, id, fields)),
                 _ => {
-                    println!("fncallorvar: {:?}", id);
                     Some(Ast::Identifier(l, id))
                 }
             },
@@ -1171,6 +1165,69 @@ pub mod tests {
                 Ast::Mutate(_, id, exp) => {
                     assert_eq!(id, "x");
                     assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_printiln() {
+        let text = "printiln 5;";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Printiln(_, exp) => {
+                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_printbln() {
+        let text = "printbln true;";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Printbln(_, exp) => {
+                    assert_eq!(*exp, Box::new(PNode::Boolean(1, true)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_prints() {
+        let text = "prints \"hello\";";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Prints(_, exp) => {
+                    assert_eq!(*exp, Box::new(PNode::StringLiteral(1, "hello".into())));
                 }
                 _ => panic!("Not a binding statement"),
             },
