@@ -316,10 +316,6 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String
     stream.next_must_be(&Lex::LParen)?;
     let params = id_declaration_list(stream)?;
     stream.next_must_be(&Lex::RParen)?;
-    /*consume_must_be(iter, Lex::LParen)?;
-
-
-    consume_must_be(iter, Lex::RParen)?;*/
 
     Ok(params)
 }
@@ -327,6 +323,7 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String
 fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
     let mut decls = vec![];
 
+    // TODO: Replace with call to id_declaration
     while let Some(tokens) = stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         let id = match &tokens[0].s {
             Lex::Identifier(id) => id.clone(),
@@ -866,20 +863,6 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
     }
 }
 
-fn identifier_or_declare(iter: &mut TokenIter) -> Result<Option<PNode>, String> {
-    /*Ok(match consume_if_id(iter) {
-        Some((l, id)) => match consume_if(iter, Lex::Colon) {
-            Some(l) => match consume_type(iter) {
-                Some(p) => Some(Ast::IdentifierDeclare(l, id.clone(), p)),
-                None => return Err(format!("L{}: Invalid primitive type: {:?}", l, iter.peek())),
-            },
-            _ => Some(Ast::Identifier(l, id.clone())),
-        },
-        _ => None,
-    })*/
-    Ok(None)
-}
-
 fn constant(stream: &mut TokenStream) -> PResult {
     Ok(match number(stream)? {
         Some(i) => Some(i),
@@ -922,87 +905,6 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
             s: Lex::StringLiteral(s),
         }) => Ok(Some(Ast::StringLiteral(*l, s.clone()))),
         _ => Ok(None),
-    }
-}
-
-fn consume_if(iter: &mut TokenIter, test: Lex) -> Option<u32> {
-    match iter.peek() {
-        Some(tok) if tok.s == test => {
-            let line = tok.l;
-            iter.next();
-            Some(line)
-        }
-        _ => None,
-    }
-}
-
-fn consume_if_one_of(iter: &mut TokenIter, tests: Vec<Lex>) -> Option<(u32, Lex)> {
-    match iter.peek() {
-        Some(Token { l, s }) => {
-            if tests.iter().find(|sym| *sym == s).is_some() {
-                iter.next();
-                Some((*l, s.clone()))
-            } else {
-                None
-            }
-        }
-        None => None,
-    }
-}
-
-fn must_be_one_of(iter: &mut TokenIter, tests: Vec<Lex>) -> Result<(u32, Lex), String> {
-    match iter.peek() {
-        Some(Token { l, s }) => {
-            if tests.iter().find(|sym| *sym == s).is_some() {
-                iter.next();
-                Ok((*l, s.clone()))
-            } else {
-                Err(format!(
-                    "L{}: expected one of {} but found {}",
-                    l,
-                    tests
-                        .iter()
-                        .map(|t| t.to_string())
-                        .collect::<Vec<String>>()
-                        .join(","),
-                    s
-                ))
-            }
-        }
-        None => Err(format!(
-            "Expected {} but found EOF",
-            tests
-                .iter()
-                .map(|t| t.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
-        )),
-    }
-}
-
-fn consume_if_id(iter: &mut TokenIter) -> Option<(u32, String)> {
-    match iter.peek() {
-        Some(Token {
-            l,
-            s: Lex::Identifier(id),
-        }) => {
-            iter.next();
-            Some((*l, id.clone()))
-        }
-        _ => None,
-    }
-}
-
-fn consume_must_be<'a>(iter: &'a mut TokenIter, test: Lex) -> Result<&'a Token, String> {
-    match iter.peek() {
-        Some(tok) if tok.s == test => {
-            let tok = iter
-                .next()
-                .expect("CRITICAL: failed to go to next token after successful match");
-            Ok(tok)
-        }
-        Some(Token { l, s }) => Err(format!("L{}: Expected {}, but found {}", l, test, s)),
-        None => Err(format!("Expected {}, but found EOF", test)),
     }
 }
 
