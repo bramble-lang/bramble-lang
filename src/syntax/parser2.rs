@@ -59,6 +59,10 @@ impl<'a> TokenStream<'a> {
         }
     }
 
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
     pub fn next(&mut self) -> Option<&Token> {
         if self.index >= self.tokens.len() {
             None
@@ -175,6 +179,7 @@ fn module(stream: &mut TokenStream) -> PResult {
     let mut structs = vec![];
 
     let module_line = stream.peek().map_or(1, |t| t.l);
+    let start_index = stream.index();
     while stream.peek().is_some() {
         if let Some(f) = function_def(stream)? {
             functions.push(f);
@@ -182,12 +187,20 @@ fn module(stream: &mut TokenStream) -> PResult {
         if let Some(c) = coroutine_def(stream)? {
             coroutines.push(c);
         }
+
+        if let Some(s) = struct_def(stream)? {
+            structs.push(s);
+        }
         /*match coroutine_def(stream)? {
         Some(co) => coroutines.push(co),
         None => (),match struct_def(iter)? {
             Some(st) => structs.push(st),
             None => break,
         },*/
+
+        if stream.index() == start_index {
+            return Err(format!("Parser cannot advance past {:?}", stream.peek()))
+        }
     }
 
     Ok(
