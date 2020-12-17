@@ -89,12 +89,13 @@ impl<'a> TokenStream<'a> {
     }
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<&Token, String> {
-        let (line, found) = match self.peek() { Some(t) => (t.l, t.s.to_string()), None => (0, "EOF".into())};
+        let (line, found) = match self.peek() {
+            Some(t) => (t.l, t.s.to_string()),
+            None => (0, "EOF".into()),
+        };
         match self.next_if(test) {
             Some(t) => Ok(t),
-            None => {
-                Err(format!("L{}: Expected {}, but found {}", line, test, found))
-            }
+            None => Err(format!("L{}: Expected {}, but found {}", line, test, found)),
         }
     }
 
@@ -174,27 +175,33 @@ fn module(stream: &mut TokenStream) -> PResult {
     let mut structs = vec![];
 
     let module_line = stream.peek().map_or(1, |t| t.l);
-    while let Some(f) = function_def(stream)? {
-        functions.push(f);
-        /*match coroutine_def(iter)? {
-            Some(co) => coroutines.push(co),
-            None => match struct_def(iter)? {
-                Some(st) => structs.push(st),
-                None => break,
-            },
+    while stream.peek().is_some() {
+        if let Some(f) = function_def(stream)? {
+            functions.push(f);
+        }
+        if let Some(c) = coroutine_def(stream)? {
+            coroutines.push(c);
+        }
+        /*match coroutine_def(stream)? {
+        Some(co) => coroutines.push(co),
+        None => (),match struct_def(iter)? {
+            Some(st) => structs.push(st),
+            None => break,
         },*/
     }
 
-    Ok(if functions.len() > 0 {
-        Some(Ast::Module {
-            meta: module_line,
-            functions,
-            coroutines,
-            structs,
-        })
-    } else {
-        None
-    })
+    Ok(
+        if functions.len() > 0 || coroutines.len() > 0 || structs.len() > 0 {
+            Some(Ast::Module {
+                meta: module_line,
+                functions,
+                coroutines,
+                structs,
+            })
+        } else {
+            None
+        },
+    )
 }
 
 fn struct_def(stream: &mut TokenStream) -> PResult {
@@ -433,8 +440,8 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let line = token.l;
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
-            let id_decl =
-                id_declaration(stream)?.ok_or(format!("L{}: expected identifier after let", line))?;
+            let id_decl = id_declaration(stream)?
+                .ok_or(format!("L{}: expected identifier after let", line))?;
             stream.next_must_be(&Lex::Assign)?;
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
@@ -499,17 +506,20 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
             let line = token.l;
             let mut stmts = block(stream)?;
             match stream.peek() {
-                Some(Token {
-                    l,
-                    s: Lex::RBrace,
-                }) => (),
+                Some(Token { l, s: Lex::RBrace }) => (),
                 Some(token) => {
                     let line = token.l;
                     let exp = expression(stream)?
                         .ok_or(format!("L{}: Expected expression at end of block", line))?;
                     stmts.push(exp);
                 }
-                None => return Err(format!("L{}: expected {}, but found EOF", line, Lex::RBrace)),
+                None => {
+                    return Err(format!(
+                        "L{}: expected {}, but found EOF",
+                        line,
+                        Lex::RBrace
+                    ))
+                }
             };
             stream.next_must_be(&Lex::RBrace)?;
             Ok(Some(Ast::ExpressionBlock(line, stmts)))
@@ -693,7 +703,7 @@ fn if_expression(stream: &mut TokenStream) -> PResult {
                 Some(Token { l, s: Lex::If }) => {
                     let l = *l;
                     if_expression(stream)?
-                    .ok_or(format!("L{}: Expected if expression after else if", l))?
+                        .ok_or(format!("L{}: Expected if expression after else if", l))?
                 }
                 _ => {
                     let false_arm = expression_block(stream)?
@@ -1321,7 +1331,13 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![Ast::Identifier(1, "x".into()), Ast::Identifier(1, "y".into())]);
+            assert_eq!(
+                params,
+                vec![
+                    Ast::Identifier(1, "x".into()),
+                    Ast::Identifier(1, "y".into())
+                ]
+            );
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1336,19 +1352,24 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body)) =
-            coroutine_def(&mut stream).unwrap()
+        if let Some(Ast::Module {
+            meta, coroutines, ..
+        }) = module(&mut stream).unwrap()
         {
-            assert_eq!(l, 1);
-            assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I32)]);
-            assert_eq!(ty, Type::Bool);
-            assert_eq!(body.len(), 1);
-            match &body[0] {
-                Ast::Return(_, Some(exp)) => {
-                    assert_eq!(*exp.as_ref(), Ast::Boolean(1, true));
+            assert_eq!(meta, 1);
+            if let Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body) =
+                &coroutines[0]
+            {
+                assert_eq!(name, "test");
+                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(ty, &Type::Bool);
+                assert_eq!(body.len(), 1);
+                match &body[0] {
+                    Ast::Return(_, Some(exp)) => {
+                        assert_eq!(*exp.as_ref(), Ast::Boolean(1, true));
+                    }
+                    _ => panic!("No body"),
                 }
-                _ => panic!("No body"),
             }
         } else {
             panic!("No nodes returned by parser")
@@ -1439,7 +1460,12 @@ pub mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            assert_eq!(expression_block(&mut stream), Err((*msg).into()), "{:?}", text);
+            assert_eq!(
+                expression_block(&mut stream),
+                Err((*msg).into()),
+                "{:?}",
+                text
+            );
         }
     }
 
@@ -1483,23 +1509,19 @@ pub mod tests {
         for (text, expected) in vec![
             (
                 "struct MyStruct {}",
-                Some(Ast::StructDef(1, "MyStruct".into(), vec![])),
+                Ast::StructDef(1, "MyStruct".into(), vec![]),
             ),
             (
                 "struct MyStruct {x: i32}",
-                Some(Ast::StructDef(
-                    1,
-                    "MyStruct".into(),
-                    vec![("x".into(), Type::I32)],
-                )),
+                Ast::StructDef(1, "MyStruct".into(), vec![("x".into(), Type::I32)]),
             ),
             (
                 "struct MyStruct {x: i32, y: bool}",
-                Some(Ast::StructDef(
+                Ast::StructDef(
                     1,
                     "MyStruct".into(),
                     vec![("x".into(), Type::I32), ("y".into(), Type::Bool)],
-                )),
+                ),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1508,8 +1530,9 @@ pub mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            let result = struct_def(&mut stream);
-            assert_eq!(result, Ok(expected), "{:?}", text);
+            if let Some(Ast::Module { structs, .. }) = module(&mut stream).unwrap() {
+                assert_eq!(structs[0], expected, "{:?}", text);
+            }
         }
     }
 
