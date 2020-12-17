@@ -67,12 +67,6 @@ fn module(stream: &mut TokenStream) -> PResult {
         if let Some(s) = struct_def(stream)? {
             structs.push(s);
         }
-        /*match coroutine_def(stream)? {
-        Some(co) => coroutines.push(co),
-        None => (),match struct_def(iter)? {
-            Some(st) => structs.push(st),
-            None => break,
-        },*/
 
         if stream.index() == start_index {
             return Err(format!("Parser cannot advance past {:?}", stream.peek()));
@@ -670,18 +664,13 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     Ok(match stream.next_if_id() {
         Some((id_line, id)) => {
-            match stream.peek() {
-                Some(Token { l, s: Lex::LParen, .. }) => {
-                    let l = *l;
-                    let params = fn_call_params(stream)?.ok_or(format!(
-                        "L{}: failed to parse parameters for call to {}",
-                        l, id
-                    ))?;
-                    Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
+            match fn_call_params(stream)? {
+                Some(params) => {
+                    Some(Ast::RoutineCall(id_line, RoutineCall::Function, id, params))
                 }
-                _ => match struct_init_params(stream)? {
+                None => match struct_init_params(stream)? {
                     Some(fields) => Some(Ast::StructInit(id_line, id, fields)),
-                    _ => Some(Ast::Identifier(id_line, id)),
+                    None => Some(Ast::Identifier(id_line, id)),
                 },
             }
         },
