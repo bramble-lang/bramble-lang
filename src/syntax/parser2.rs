@@ -675,24 +675,28 @@ fn factor(stream: &mut TokenStream) -> PResult {
     })
 }
 
-fn if_expression(iter: &mut TokenIter) -> PResult {
-    /*Ok(match consume_if(iter, Lex::If) {
-        Some(l) => {
-            consume_must_be(iter, Lex::LParen)?;
-            let cond = expression(iter)?
+fn if_expression(stream: &mut TokenStream) -> PResult {
+    Ok(match stream.next_if(&Lex::If) {
+        Some(token) => {
+            let l = token.l;
+            stream.next_must_be(&Lex::LParen)?;
+            let cond = expression(stream)?
                 .ok_or(format!("L{}: Expected conditional expression after if", l))?;
-            consume_must_be(iter, Lex::RParen)?;
+            stream.next_must_be(&Lex::RParen)?;
 
-            let true_arm = expression_block(iter)?
+            let true_arm = expression_block(stream)?
                 .ok_or(format!("L{}: Expression in true arm of if expression", l))?;
-            consume_must_be(iter, Lex::Else)?;
+            stream.next_must_be(&Lex::Else)?;
 
             // check for `else if`
-            let false_arm = match iter.peek() {
-                Some(Token { l, s: Lex::If }) => if_expression(iter)?
-                    .ok_or(format!("L{}: Expected if expression after else if", l))?,
+            let false_arm = match stream.peek() {
+                Some(Token { l, s: Lex::If }) => {
+                    let l = *l;
+                    if_expression(stream)?
+                    .ok_or(format!("L{}: Expected if expression after else if", l))?
+                }
                 _ => {
-                    let false_arm = expression_block(iter)?
+                    let false_arm = expression_block(stream)?
                         .ok_or(&format!("L{}: Expression in false arm of if expression", l))?;
                     false_arm
                 }
@@ -705,8 +709,7 @@ fn if_expression(iter: &mut TokenIter) -> PResult {
             ))
         }
         _ => None,
-    })*/
-    Ok(None)
+    })
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
@@ -837,17 +840,17 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
     // <IDENTIFER> COLON <TYPE>
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
-            let line0 = t[0].l;
-            let line1 = t[1].l;
+            let line_id = t[0].l;
+            let line_value = t[1].l;
             let id = match &t[0].s {
                 Lex::Identifier(id) => id.clone(),
                 _ => panic!("Must be identifier"),
             };
             let ty = consume_type(stream).ok_or(format!(
                 "L{}: expected type after : in type declaration",
-                line1
+                line_value
             ))?;
-            Ok(Some(Ast::IdentifierDeclare(line0, id, ty)))
+            Ok(Some(Ast::IdentifierDeclare(line_id, id, ty)))
         }
         None => Ok(None),
     }
@@ -1360,6 +1363,22 @@ pub mod tests {
                 _ => panic!("Not a binding statement"),
             },
             _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_if_expression() {
+        let text = "if (x) {5} else {7}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        if let Some(Ast::If(l, cond, if_arm, else_arm)) = if_expression(&mut stream).unwrap() {
+            assert_eq!(l, 1);
+        } else {
+            panic!("No nodes returned by parser")
         }
     }
 
