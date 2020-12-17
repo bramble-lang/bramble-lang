@@ -659,7 +659,7 @@ fn member_access(stream: &mut TokenStream) -> PResult {
 
 fn factor(stream: &mut TokenStream) -> PResult {
     Ok(match stream.peek() {
-        //Some(Token { l: _, s: Lex::If }) => if_expression(stream)?,
+        Some(Token { l: _, s: Lex::If }) => if_expression(stream)?,
         Some(Token {
             l: _,
             s: Lex::LParen,
@@ -1318,10 +1318,71 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::If(l, cond, if_arm, else_arm)) = if_expression(&mut stream).unwrap() {
+        let exp = expression(&mut stream).unwrap();
+        if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
+            assert_eq!(*cond, Ast::Identifier(1, "x".into()));
+            if let Ast::ExpressionBlock(l, body) = *if_arm {
+                assert_eq!(body[0], Ast::Integer(1, 5));
+            } else {
+                panic!("Expected Expression block");
+            }
+
+            if let Ast::ExpressionBlock(l, body) = *else_arm {
+                assert_eq!(body[0], Ast::Integer(1, 7));
+            } else {
+                panic!("Expected Expression block");
+            }
         } else {
-            panic!("No nodes returned by parser")
+            panic!("No nodes returned by parser, got: {:?}", exp)
+        }
+    }
+
+    #[test]
+    fn parse_if_else_if_expression() {
+        let text = "if (x) {5} else if (y && z) {7} else {8}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let exp = expression(&mut stream).unwrap();
+        if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
+            assert_eq!(l, 1);
+            assert_eq!(*cond, Ast::Identifier(1, "x".into()));
+            if let Ast::ExpressionBlock(l, body) = *if_arm {
+                assert_eq!(body[0], Ast::Integer(1, 5));
+            } else {
+                panic!("Expected Expression block");
+            }
+
+            if let Ast::If(l, cond, if_arm, else_arm) = *else_arm {
+                assert_eq!(
+                    *cond,
+                    Ast::BinaryOp(
+                        1,
+                        BinaryOperator::BAnd,
+                        Box::new(Ast::Identifier(1, "y".into())),
+                        Box::new(Ast::Identifier(1, "z".into()))
+                    )
+                );
+                if let Ast::ExpressionBlock(l, body) = *if_arm {
+                    assert_eq!(body[0], Ast::Integer(1, 7));
+                } else {
+                    panic!("Expected Expression block");
+                }
+
+                if let Ast::ExpressionBlock(l, body) = *else_arm {
+                    assert_eq!(body[0], Ast::Integer(1, 8));
+                } else {
+                    panic!("Expected Expression block");
+                }
+            } else {
+                panic!("Expected if statement in else arm");
+            }
+        } else {
+            panic!("No nodes returned by parser, got: {:?}", exp)
         }
     }
 
