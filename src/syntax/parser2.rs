@@ -98,7 +98,7 @@ fn struct_def(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let line = token.l;
             match stream.next_if_id() {
-                Some(id) => {
+                Some((line, id)) => {
                     stream.next_must_be(&Lex::LBrace)?;
                     let fields = id_declaration_list(stream)?;
                     stream.next_must_be(&Lex::RBrace)?;
@@ -115,13 +115,12 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     if stream.next_if(&Lex::FunctionDef).is_none() {
         return Ok(None);
     }
-    let fn_name = stream
+    let (fn_line, fn_name) = stream
         .next_if_id()
-        .ok_or("Expected identifier after fn")?
-        .into();
+        .ok_or("Expected identifier after fn")?;
     let params = fn_def_params(stream)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream).ok_or("Expected type after ->")?
+        consume_type(stream).ok_or(format!("L{}: Expected type after ->", fn_line))?
     } else {
         Type::Unit
     };
@@ -155,8 +154,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
 fn coroutine_def(stream: &mut TokenStream) -> PResult {
     let syntax = match stream.next_if(&Lex::CoroutineDef) {
         Some(_) => match stream.next_if_id() {
-            Some(id) => {
-                let l = 1;
+            Some((l,id)) => {
                 let params = fn_def_params(stream)?;
 
                 let co_type = match stream.next_if(&Lex::LArrow) {
@@ -188,7 +186,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
                 Some(Ast::RoutineDef(
                     l,
                     RoutineDef::Coroutine,
-                    id.clone(),
+                    id,
                     params,
                     co_type,
                     stmts,
@@ -326,7 +324,7 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
             let line = token.l;
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl = id_declaration(stream)?
-                .ok_or(format!("L{}: expected identifier after let", line))?;
+                .ok_or(format!("L{}: expected identifier declaration (`<id> : <type>`) after let", line))?;
             stream.next_must_be(&Lex::Assign)?;
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
@@ -345,17 +343,19 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
 }
 
 fn mutate(stream: &mut TokenStream) -> PResult {
-    let l = 1;
     match stream.next_if(&Lex::Mut) {
         None => Ok(None),
-        Some(token) => match stream.next_if_id() {
-            Some(id) => {
-                stream.next_must_be(&Lex::Assign)?;
-                let exp = expression(stream)?
-                    .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
-                Ok(Some(PNode::new_mutate(l, &id, Box::new(exp))?))
+        Some(token) => {
+            let l = token.l;
+            match stream.next_if_id() {
+                Some((l,id)) => {
+                    stream.next_must_be(&Lex::Assign)?;
+                    let exp = expression(stream)?
+                        .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
+                    Ok(Some(PNode::new_mutate(l, &id, Box::new(exp))?))
+                }
+                None => Err(format!("L{}: expected identifier after mut", l)),
             }
-            None => Err(format!("L{}: expected identifier after mut", l)),
         },
     }
 }
@@ -364,14 +364,13 @@ fn co_init(stream: &mut TokenStream) -> PResult {
     let l = 1;
     match stream.next_if(&Lex::Init) {
         Some(token) => match stream.next_if_id() {
-            Some(id) => {
-                let l = 1;
+            Some((l, id)) => {
                 let params = fn_call_params(stream)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
                 Ok(Some(Ast::RoutineCall(
                     l,
                     RoutineCall::CoroutineInit,
-                    id.clone(),
+                    id,
                     params,
                 )))
             }
@@ -526,13 +525,12 @@ fn member_access(stream: &mut TokenStream) -> PResult {
             let mut ma = f;
             while let Some(token) = stream.next_if(&Lex::MemberAccess) {
                 let line = token.l;
-                let member = stream
+                let (_, member) = stream
                     .next_if_id()
                     .ok_or(format!(
                         "L{}: expect field name after member access '.'",
                         line
-                    ))?
-                    .into();
+                    ))?;
                 ma = Ast::MemberAccess(line, Box::new(ma), member);
             }
             Ok(Some(ma))
@@ -632,7 +630,7 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
         Some(token) => {
             let line = token.l;
             let mut params = vec![];
-            while let Some(field_name) = stream.next_if_id() {
+            while let Some((line, field_name)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(format!(
                     "L{}: expected an expression to be assigned to field {}",
@@ -671,8 +669,7 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     Ok(match stream.next_if_id() {
-        Some(id) => {
-            let id_line = 3;
+        Some((id_line, id)) => {
             match stream.peek() {
                 Some(Token { l, s: Lex::LParen, .. }) => {
                     let l = *l;
