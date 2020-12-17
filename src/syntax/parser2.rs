@@ -776,14 +776,14 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     let l = 1;
     Ok(match stream.next_if_id() {
         Some(id) => match stream.peek() {
-            /*Some(Token { s: Lex::LParen, .. }) => {
+            Some(Token { s: Lex::LParen, .. }) => {
                 let params = fn_call_params(stream)?.ok_or(format!(
                     "L{}: failed to parse parameters for call to {}",
                     l, id
                 ))?;
                 Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
             }
-            Some(Token { s: Lex::LBrace, .. }) => {
+            /*Some(Token { s: Lex::LBrace, .. }) => {
                 let members = struct_init_params(stream)?.ok_or(format!(
                     "L{}: failed to parse member assignments for instance of {}",
                     l, id
@@ -1302,6 +1302,26 @@ pub mod tests {
                 }
                 _ => panic!("No body"),
             }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_routine_call() {
+        let text = "test(x, y)";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::RoutineCall(l, RoutineCall::Function, name, params)) =
+            expression(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(name, "test");
+            assert_eq!(params, vec![Ast::Identifier(1, "x".into()), Ast::Identifier(1, "y".into())]);
         } else {
             panic!("No nodes returned by parser")
         }
