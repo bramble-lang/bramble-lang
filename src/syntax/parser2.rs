@@ -628,15 +628,15 @@ fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String
 }
 
 fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>, String> {
-    let l = 1;
     match stream.next_if(&Lex::LBrace) {
-        Some(_) => {
+        Some(token) => {
+            let line = token.l;
             let mut params = vec![];
             while let Some(field_name) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(format!(
                     "L{}: expected an expression to be assigned to field {}",
-                    l, field_name
+                    line, field_name
                 ))?;
                 params.push((field_name, field_value));
                 match stream.next_if(&Lex::Comma) {
@@ -667,37 +667,26 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
         }
         None => Ok(None),
     }
-    /*match consume_if(iter, Lex::Yield) {
-        Some(l) => match expression(iter)? {
-            Some(coroutine_value) => Ok(Some(PNode::new_yield(l, Box::new(coroutine_value)))),
-            _ => Err(format!("L{}: expected an identifier after yield", l)),
-        },
-        _ => Ok(None),
-    }*/
 }
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
-    let l = 1;
     Ok(match stream.next_if_id() {
-        Some(id) => match stream.peek() {
-            Some(Token { s: Lex::LParen, .. }) => {
-                let params = fn_call_params(stream)?.ok_or(format!(
-                    "L{}: failed to parse parameters for call to {}",
-                    l, id
-                ))?;
-                Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
+        Some(id) => {
+            let id_line = 3;
+            match stream.peek() {
+                Some(Token { l, s: Lex::LParen, .. }) => {
+                    let l = *l;
+                    let params = fn_call_params(stream)?.ok_or(format!(
+                        "L{}: failed to parse parameters for call to {}",
+                        l, id
+                    ))?;
+                    Some(Ast::RoutineCall(l, RoutineCall::Function, id, params))
+                }
+                _ => match struct_init_params(stream)? {
+                    Some(fields) => Some(Ast::StructInit(id_line, id, fields)),
+                    _ => Some(Ast::Identifier(id_line, id)),
+                },
             }
-            /*Some(Token { s: Lex::LBrace, .. }) => {
-                let members = struct_init_params(stream)?.ok_or(format!(
-                    "L{}: failed to parse member assignments for instance of {}",
-                    l, id
-                ))?;
-                Some(Ast::StructInit(l, id, members))
-            }*/
-            _ => match struct_init_params(stream)? {
-                Some(fields) => Some(Ast::StructInit(l, id, fields)),
-                _ => Some(Ast::Identifier(l, id)),
-            },
         },
         None => None,
     })
