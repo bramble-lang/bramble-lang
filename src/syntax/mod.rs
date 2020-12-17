@@ -1,4 +1,4 @@
 pub mod ast;
-pub mod parser2;
+pub mod parser;
 pub mod pnode;
 mod tokenstream;

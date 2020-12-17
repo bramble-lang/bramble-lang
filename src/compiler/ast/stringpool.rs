@@ -138,7 +138,7 @@ mod test {
     use crate::checker::type_check;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
-    use crate::syntax::parser2;
+    use crate::syntax::parser;
 
     #[test]
     fn insert_string() {
@@ -175,7 +175,7 @@ mod test {
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let ast = parser2::parse(tokens).unwrap().unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast).unwrap();
             let (compiler_ast, _) = CompilerNode::from(result.as_ref());
             let mut sp = StringPool::new();
