@@ -1,6 +1,6 @@
-use crate::lexer::tokens::{Lex, Primitive, Token};
 use super::pnode::PNode;
 use super::pnode::PResult;
+use crate::lexer::tokens::{Lex, Primitive, Token};
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program

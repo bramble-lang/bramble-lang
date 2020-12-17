@@ -1,5 +1,5 @@
-use crate::lexer::tokens::{Lex};
 use super::ast::*;
+use crate::lexer::tokens::Lex;
 
 pub type ParserInfo = u32;
 pub type PResult = Result<Option<PNode>, String>;

@@ -199,7 +199,7 @@ fn module(stream: &mut TokenStream) -> PResult {
         },*/
 
         if stream.index() == start_index {
-            return Err(format!("Parser cannot advance past {:?}", stream.peek()))
+            return Err(format!("Parser cannot advance past {:?}", stream.peek()));
         }
     }
 
@@ -411,9 +411,9 @@ fn statement(stream: &mut TokenStream) -> PResult {
         None => match mutate(stream)? {
             Some(p) => Some(p),
             None => match println_stmt(stream)? {
-                              Some(p) => Some(p),
-                              _ => None,
-                          },
+                Some(p) => Some(p),
+                _ => None,
+            },
         },
     };
 
@@ -439,7 +439,7 @@ fn println_stmt(stream: &mut TokenStream) -> PResult {
                 _ => panic!("CRITICAL: already tested for a print token but found {}", s),
             }
         }
-        _ => None
+        _ => None,
     };
     Ok(syntax)
 }
@@ -681,10 +681,10 @@ fn factor(stream: &mut TokenStream) -> PResult {
             Some(n) => Some(n),
             None => match function_call_or_variable(stream)? {
                 Some(n) => Some(n),
-                None => None, /*match co_yield(iter)? {
-                                  Some(n) => Some(n),
-                                  None => None,
-                              },*/
+                None => match co_yield(stream)? {
+                    Some(n) => Some(n),
+                    None => None,
+                },
             },
         },
     })
@@ -778,6 +778,19 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
 
 // TODO no tests for htis
 fn co_yield(stream: &mut TokenStream) -> PResult {
+    match stream.next_if(&Lex::Yield) {
+        Some(token) => {
+            let line = token.l;
+            match expression(stream)? {
+                Some(coroutine) => Ok(Some(PNode::new_yield(
+                    *coroutine.get_metadata(),
+                    Box::new(coroutine),
+                ))),
+                None => Err(format!("L{}: expected an identifier after yield", line)),
+            }
+        }
+        None => Ok(None),
+    }
     /*match consume_if(iter, Lex::Yield) {
         Some(l) => match expression(iter)? {
             Some(coroutine_value) => Ok(Some(PNode::new_yield(l, Box::new(coroutine_value)))),
@@ -785,7 +798,6 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
         },
         _ => Ok(None),
     }*/
-    Ok(None)
 }
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
@@ -808,9 +820,7 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
             }*/
             _ => match struct_init_params(stream)? {
                 Some(fields) => Some(Ast::StructInit(l, id, fields)),
-                _ => {
-                    Some(Ast::Identifier(l, id))
-                }
+                _ => Some(Ast::Identifier(l, id)),
             },
         },
         None => None,
@@ -1377,6 +1387,37 @@ pub mod tests {
                 _ => panic!("Not a binding statement"),
             },
             _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_yield() {
+        let text = "fn test(x:i32) -> bool {return yield cor;}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) =
+            function_def(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(name, "test");
+            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(ty, Type::Bool);
+            assert_eq!(body.len(), 1);
+            match &body[0] {
+                Ast::Return(_, Some(exp)) => {
+                    assert_eq!(
+                        *exp.as_ref(),
+                        Ast::Yield(1, Box::new(Ast::Identifier(1, "cor".into())))
+                    );
+                }
+                _ => panic!("No body"),
+            }
+        } else {
+            panic!("No nodes returned by parser")
         }
     }
 
