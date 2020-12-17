@@ -1371,7 +1371,7 @@ pub mod checker {
 
         #[test]
         pub fn test_struct_init() {
-            use crate::syntax::parser;
+            use crate::syntax::parser2;
             for (text, expected) in vec![
                 ("struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:1};}",
                 Ok(())),
@@ -1389,7 +1389,7 @@ pub mod checker {
                     .into_iter()
                     .collect::<Result<_, _>>()
                     .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
+                let ast = parser2::parse(tokens).unwrap().unwrap();
                 let result = type_check(&ast);
                 match expected {
                     Ok(_) => assert!(result.is_ok()),
@@ -1400,7 +1400,7 @@ pub mod checker {
 
         #[test]
         pub fn test_member_access() {
-            use crate::syntax::parser;
+            use crate::syntax::parser2;
             for (text, expected) in vec![
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.x;}",
                 Ok(())),
@@ -1422,7 +1422,7 @@ pub mod checker {
                     .into_iter()
                     .collect::<Result<_, _>>()
                     .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
+                let ast = parser2::parse(tokens).unwrap().unwrap();
                 let result = type_check(&ast);
                 match expected {
                     Ok(_) => assert!(result.is_ok()),
