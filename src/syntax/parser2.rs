@@ -7,9 +7,9 @@ use crate::lexer::tokens::{Lex, Primitive, Token};
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
 use super::ast::*;
-use super::parser::PNode;
-use super::parser::PResult;
-use super::parser::TokenIter;
+use super::pnode::PNode;
+use super::pnode::PResult;
+//use super::parser::TokenIter;
 
 /*
     Grammar
@@ -776,7 +776,8 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
     }
 }
 
-fn co_yield(iter: &mut TokenIter) -> PResult {
+// TODO no tests for htis
+fn co_yield(stream: &mut TokenStream) -> PResult {
     /*match consume_if(iter, Lex::Yield) {
         Some(l) => match expression(iter)? {
             Some(coroutine_value) => Ok(Some(PNode::new_yield(l, Box::new(coroutine_value)))),

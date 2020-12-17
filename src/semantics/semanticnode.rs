@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::ast::*;
-use crate::parser::PNode;
+use crate::syntax::pnode::PNode;
 use crate::semantics::symbol_table::*;
 
 #[derive(Clone, Debug, PartialEq)]

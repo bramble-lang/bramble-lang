@@ -1,11 +1,11 @@
 pub mod checker {
     use crate::ast;
     use crate::ast::{BinaryOperator, UnaryOperator};
-    use crate::parser::PNode;
     use crate::semantics::semanticnode::SemanticNode;
     use crate::semantics::symbol_table::*;
     use crate::syntax::ast::Type;
     use crate::syntax::ast::Type::*;
+    use crate::syntax::pnode::PNode;
 
     pub fn type_check(ast: &PNode) -> Result<Box<SemanticNode>, String> {
         let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
