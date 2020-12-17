@@ -324,7 +324,7 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
             let line = token.l;
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl = id_declaration(stream)?
-                .ok_or(format!("L{}: expected identifier declaration (`<id> : <type>`) after let", line))?;
+                .ok_or(format!("L{}: Expected identifier declaration (`<id> : <type>`) after let", line))?;
             stream.next_must_be(&Lex::Assign)?;
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
