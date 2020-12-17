@@ -11,7 +11,6 @@ use compiler::compiler::*;
 use lexer::tokens::Token;
 use semantics::type_checker::*;
 use syntax::ast;
-use syntax::parser;
 use syntax::parser2;
 
 fn main() {
