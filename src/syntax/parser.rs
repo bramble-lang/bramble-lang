@@ -122,7 +122,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
         None => {
             return Err(format!(
                 "L{}: Function must end with a return statement, got {:?}",
-                0,
+                stmts.last().map_or(fn_line, |s| *s.get_metadata()),
                 stream.peek(),
             ))
         }
@@ -131,7 +131,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(Ast::RoutineDef(
-        1,
+        fn_line,
         RoutineDef::Function,
         fn_name,
         params,
