@@ -11,6 +11,14 @@ use super::pnode::PNode;
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
 
+macro_rules! trace {
+    ($fn_name:expr, $ts:expr) => {
+        if false {
+            println!("{} <- {:?}", $fn_name, $ts.peek())
+        }
+    };
+}
+
 /*
     Grammar
     PRIMITIVE := i32 | bool
@@ -261,10 +269,10 @@ fn statement(stream: &mut TokenStream) -> PResult {
     match stm {
         Some(stm) => match stream.next_if(&Lex::Semicolon) {
             Some(Token { l, s: _ }) => Ok(Some(Ast::Statement(l, Box::new(stm)))),
-            x => {
+            _ => {
                 if must_have_semicolon {
                     let line = *stm.get_metadata();
-                    Err(format!("L{}: Expected ;, but found {}", line, match x { Some(x) => format!("{}", x.s), None => "EOF".into()}))
+                    Err(format!("L{}: Expected ;, but found {}", line, match stream.peek() { Some(x) => format!("{}", x.s), None => "EOF".into()}))
                 } else {
                     stream.set_index(start_index);
                     Ok(None)
@@ -361,6 +369,7 @@ fn co_init(stream: &mut TokenStream) -> PResult {
 }
 
 fn expression(stream: &mut TokenStream) -> PResult {
+    trace!("expression", stream);
     logical_or(stream)
 }
 
@@ -382,6 +391,7 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
 }
 
 fn logical_or(stream: &mut TokenStream) -> PResult {
+    trace!("logical_or", stream);
     Ok(match logical_and(stream)? {
         Some(n) => match stream.next_if(&Lex::BOr) {
             Some(token) => {
@@ -401,6 +411,7 @@ fn logical_or(stream: &mut TokenStream) -> PResult {
 }
 
 fn logical_and(stream: &mut TokenStream) -> PResult {
+    trace!("logical_and", stream);
     Ok(match comparison(stream)? {
         Some(n) => match stream.next_if(&Lex::BAnd) {
             Some(token) => {
@@ -420,6 +431,7 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
 }
 
 fn comparison(stream: &mut TokenStream) -> PResult {
+    trace!("comparison", stream);
     Ok(match sum(stream)? {
         Some(n) => match stream.next_if_one_of(vec![
             Lex::Eq,
@@ -441,6 +453,7 @@ fn comparison(stream: &mut TokenStream) -> PResult {
 }
 
 fn sum(stream: &mut TokenStream) -> PResult {
+    trace!("sum", stream);
     Ok(match term(stream)? {
         Some(n) => match stream.next_if_one_of(vec![Lex::Add, Lex::Minus]) {
             Some(op) => {
@@ -454,6 +467,7 @@ fn sum(stream: &mut TokenStream) -> PResult {
 }
 
 fn term(stream: &mut TokenStream) -> PResult {
+    trace!("term", stream);
     Ok(match negate(stream)? {
         Some(n) => match stream.next_if_one_of(vec![Lex::Mul, Lex::Div]) {
             Some(op) => {
@@ -467,6 +481,7 @@ fn term(stream: &mut TokenStream) -> PResult {
 }
 
 fn negate(stream: &mut TokenStream) -> PResult {
+    trace!("negate", stream);
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
             let factor = member_access(stream)?
@@ -479,6 +494,7 @@ fn negate(stream: &mut TokenStream) -> PResult {
 }
 
 fn member_access(stream: &mut TokenStream) -> PResult {
+    trace!("member_access", stream);
     match factor(stream)? {
         Some(f) => {
             let mut ma = f;
@@ -497,6 +513,7 @@ fn member_access(stream: &mut TokenStream) -> PResult {
 }
 
 fn factor(stream: &mut TokenStream) -> PResult {
+    trace!("factor", stream);
     Ok(match stream.peek() {
         Some(Token { l: _, s: Lex::If }) => if_expression(stream)?,
         Some(Token {
@@ -731,6 +748,7 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
 }
 
 fn constant(stream: &mut TokenStream) -> PResult {
+    trace!("constant", stream);
     Ok(match number(stream)? {
         Some(i) => Some(i),
         None => match boolean(stream)? {
@@ -741,6 +759,7 @@ fn constant(stream: &mut TokenStream) -> PResult {
 }
 
 fn number(stream: &mut TokenStream) -> PResult {
+    trace!("number", stream);
     match stream.next_if(&Lex::Integer(0)) {
         Some(Token {
             l,
@@ -1365,7 +1384,7 @@ pub mod tests {
             ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found let"),
             (
                 "{let x: i32 := 10 5}",
-                "L1: Expected ;, but found EOF",
+                "L1: Expected ;, but found literal 5",
             ),
         ]
         .iter()
