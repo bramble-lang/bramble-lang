@@ -210,25 +210,16 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
 
 fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     let mut stmts = vec![];
-    while stream.peek().is_some() {
-        match statement(stream)? {
-            Some(s) => stmts.push(s),
-            None => break,
-        }
+    while let Some(s) = statement(stream)? {
+        stmts.push(s);
     }
     Ok(stmts)
 }
 
 fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     let mut stmts = vec![];
-    while stream.peek().is_some() {
-        match statement(stream)? {
-            Some(s) => stmts.push(s),
-            None => match yield_return_stmt(stream)? {
-                Some(s) => stmts.push(s),
-                None => break,
-            },
-        }
+    while let Some(s) = statement(stream).por(yield_return_stmt, stream)? {
+        stmts.push(s);
     }
     Ok(stmts)
 }
@@ -493,7 +484,7 @@ fn negate(stream: &mut TokenStream) -> PResult {
     trace!("negate", stream);
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
-            let factor = member_access(stream)?
+            let factor = negate(stream)?
                 .ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
             let r = Ok(Some(PNode::unary_op(op.l, &op.s, Box::new(factor))?));
             r
@@ -732,7 +723,7 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
             let line_id = t[0].l;
             let line_value = t[1].l;
             let id = t[0].s.get_str().expect(
-                "CRITICAL: first token must be an identifier but cannot be converted to a string",
+                "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
             let ty = consume_type(stream).ok_or(format!(
                 "L{}: expected type after : in type declaration",
@@ -746,13 +737,7 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
 
 fn constant(stream: &mut TokenStream) -> PResult {
     trace!("constant", stream);
-    Ok(match number(stream)? {
-        Some(i) => Some(i),
-        None => match boolean(stream)? {
-            Some(t) => Some(t),
-            None => string_literal(stream)?,
-        },
-    })
+    number(stream).por(boolean, stream).por(string_literal, stream)
 }
 
 fn number(stream: &mut TokenStream) -> PResult {
@@ -791,7 +776,10 @@ pub mod tests {
     #[test]
     fn parse_unary_operators() {
         for (text, expected) in
-            vec![("-a", UnaryOperator::Minus), ("!a", UnaryOperator::Not)].iter()
+            vec![
+                ("-a", UnaryOperator::Minus),
+                ("!a", UnaryOperator::Not),
+                ].iter()
         {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -804,6 +792,35 @@ pub mod tests {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
                 assert_eq!(*operand, Ast::Identifier(1, "a".into()));
+            } else {
+                panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
+            }
+        }
+    }
+
+    #[test]
+    fn parse_double_unary_operators() {
+        for (text, expected) in
+            vec![
+                ("--a", UnaryOperator::Minus),
+                ("!!a", UnaryOperator::Not),
+                ].iter()
+        {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            let exp = expression(&mut stream).unwrap();
+            if let Some(Ast::UnaryOp(l, op, operand)) = exp {
+                assert_eq!(op, *expected);
+                assert_eq!(l, 1);
+                if let Ast::UnaryOp(l, op, operand) = *operand {
+                    assert_eq!(op, *expected);
+                    assert_eq!(l, 1);
+                    assert_eq!(*operand, Ast::Identifier(1, "a".into()));
+                }
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
             }
