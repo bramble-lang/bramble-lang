@@ -184,7 +184,6 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
     )))
 }
 
-
 fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
@@ -259,62 +258,98 @@ fn expression(stream: &mut TokenStream) -> PResult {
 
 fn logical_or(stream: &mut TokenStream) -> PResult {
     trace!("logical_or", stream);
-    logical_and(stream).pif_then(vec![Lex::BOr], 
-        |t1, op, stream|{
-            let t2 = logical_or(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))?))
-        }, stream)
+    logical_and(stream).pif_then(
+        vec![Lex::BOr],
+        |t1, op, stream| {
+            let t2 =
+                logical_or(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
+            Ok(Some(PNode::binary_op(
+                op.l,
+                &op.s,
+                Box::new(t1),
+                Box::new(t2),
+            )?))
+        },
+        stream,
+    )
 }
 
 fn logical_and(stream: &mut TokenStream) -> PResult {
     trace!("logical_and", stream);
-    comparison(stream).pif_then(vec![Lex::BAnd], 
-        |t1, op, stream|{
-            let t2 = logical_and(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))?))
-        }, stream)
+    comparison(stream).pif_then(
+        vec![Lex::BAnd],
+        |t1, op, stream| {
+            let t2 =
+                logical_and(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
+            Ok(Some(PNode::binary_op(
+                op.l,
+                &op.s,
+                Box::new(t1),
+                Box::new(t2),
+            )?))
+        },
+        stream,
+    )
 }
 
 fn comparison(stream: &mut TokenStream) -> PResult {
     trace!("comparison", stream);
-    sum(stream).pif_then(vec![
-        Lex::Eq,
-        Lex::NEq,
-        Lex::Ls,
-        Lex::LsEq,
-        Lex::Gr,
-        Lex::GrEq,
-    ], 
-        |t1, op, stream|{
-            let t2 = comparison(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))?))
-        }, stream)
+    sum(stream).pif_then(
+        vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
+        |t1, op, stream| {
+            let t2 =
+                comparison(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
+            Ok(Some(PNode::binary_op(
+                op.l,
+                &op.s,
+                Box::new(t1),
+                Box::new(t2),
+            )?))
+        },
+        stream,
+    )
 }
 
 fn sum(stream: &mut TokenStream) -> PResult {
     trace!("sum", stream);
-    term(stream).pif_then(vec![Lex::Add, Lex::Minus], 
-        |t1, op, stream|{
+    term(stream).pif_then(
+        vec![Lex::Add, Lex::Minus],
+        |t1, op, stream| {
             let t2 = sum(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))?))
-        }, stream)
+            Ok(Some(PNode::binary_op(
+                op.l,
+                &op.s,
+                Box::new(t1),
+                Box::new(t2),
+            )?))
+        },
+        stream,
+    )
 }
 
 fn term(stream: &mut TokenStream) -> PResult {
     trace!("term", stream);
-    negate(stream).pif_then(vec![Lex::Mul, Lex::Div], 
-        |t1, op, stream|{
+    negate(stream).pif_then(
+        vec![Lex::Mul, Lex::Div],
+        |t1, op, stream| {
             let t2 = term(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))?))
-        }, stream)
+            Ok(Some(PNode::binary_op(
+                op.l,
+                &op.s,
+                Box::new(t1),
+                Box::new(t2),
+            )?))
+        },
+        stream,
+    )
 }
 
 fn negate(stream: &mut TokenStream) -> PResult {
     trace!("negate", stream);
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
-            let factor = negate(stream)?
-                .ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
+            let factor =
+                negate(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
             let r = Ok(Some(PNode::unary_op(op.l, &op.s, Box::new(factor))?));
             r
         }
@@ -599,7 +634,6 @@ fn co_init(stream: &mut TokenStream) -> PResult {
     }
 }
 
-
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     function_call(stream)
         .por(struct_expression, stream)
@@ -700,7 +734,9 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
 
 fn constant(stream: &mut TokenStream) -> PResult {
     trace!("constant", stream);
-    number(stream).por(boolean, stream).por(string_literal, stream)
+    number(stream)
+        .por(boolean, stream)
+        .por(string_literal, stream)
 }
 
 fn number(stream: &mut TokenStream) -> PResult {
@@ -739,10 +775,7 @@ pub mod tests {
     #[test]
     fn parse_unary_operators() {
         for (text, expected) in
-            vec![
-                ("-a", UnaryOperator::Minus),
-                ("!a", UnaryOperator::Not),
-                ].iter()
+            vec![("-a", UnaryOperator::Minus), ("!a", UnaryOperator::Not)].iter()
         {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -764,10 +797,7 @@ pub mod tests {
     #[test]
     fn parse_double_unary_operators() {
         for (text, expected) in
-            vec![
-                ("--a", UnaryOperator::Minus),
-                ("!!a", UnaryOperator::Not),
-                ].iter()
+            vec![("--a", UnaryOperator::Minus), ("!!a", UnaryOperator::Not)].iter()
         {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
