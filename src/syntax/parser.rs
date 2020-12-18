@@ -332,19 +332,13 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
 }
 
 fn mutate(stream: &mut TokenStream) -> PResult {
-    match stream.next_if(&Lex::Mut) {
+    match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
         None => Ok(None),
-        Some(token) => {
-            let l = token.l;
-            match stream.next_if_id() {
-                Some((l, id)) => {
-                    stream.next_must_be(&Lex::Assign)?;
-                    let exp = expression(stream)?
-                        .ok_or(format!("L{}: expected expression on LHS of assignment", l))?;
-                    Ok(Some(PNode::new_mutate(l, &id, Box::new(exp))?))
-                }
-                None => Err(format!("L{}: expected identifier after mut", l)),
-            }
+        Some(tokens) => {
+            let id = tokens[1].s.get_str().expect("CRITICAL: identifier token cannot be converted to string");
+            let exp = expression(stream)?
+                .ok_or(format!("L{}: expected expression on LHS of assignment", tokens[2].l))?;
+            Ok(Some(PNode::new_mutate(tokens[0].l, &id, Box::new(exp))?))
         }
     }
 }
