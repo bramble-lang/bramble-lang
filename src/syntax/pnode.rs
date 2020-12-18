@@ -12,10 +12,15 @@ impl Fluent for PResult {
             Err(e) => Err(e.clone()),
         }
     }
+
+    fn pand_then(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult {
+        todo!()
+    }
 }
 
 pub trait Fluent {
     fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult;
+    fn pand_then(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult;
 }
 
 pub type PNode = Ast<ParserInfo>;

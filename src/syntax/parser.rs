@@ -508,8 +508,7 @@ fn member_access(stream: &mut TokenStream) -> PResult {
 
 fn factor(stream: &mut TokenStream) -> PResult {
     trace!("factor", stream);
-    Ok(match stream.peek() {
-        Some(Token { l: _, s: Lex::If }) => if_expression(stream)?,
+    match stream.peek() {
         Some(Token {
             l: _,
             s: Lex::LParen,
@@ -517,19 +516,10 @@ fn factor(stream: &mut TokenStream) -> PResult {
             stream.next();
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::RParen)?;
-            exp
-        }
-        _ => match constant(stream)? {
-            Some(n) => Some(n),
-            None => match function_call_or_variable(stream)? {
-                Some(n) => Some(n),
-                None => match co_yield(stream)? {
-                    Some(n) => Some(n),
-                    None => None,
-                },
-            },
+            Ok(exp)
         },
-    })
+        _ => if_expression(stream).por(function_call_or_variable, stream).por(co_yield, stream).por(constant, stream)
+    }
 }
 
 fn if_expression(stream: &mut TokenStream) -> PResult {
@@ -639,14 +629,7 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
 }
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
-    let syntax = match function_call(stream)? {
-        Some(f) => Some(f),
-        None => match struct_expression(stream)? {
-            Some(se) => Some(se),
-            None => identifier(stream)?,
-        },
-    };
-    Ok(syntax)
+    function_call(stream).por(struct_expression, stream).por(identifier, stream)
 }
 
 fn function_call(stream: &mut TokenStream) -> PResult {
