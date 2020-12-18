@@ -7,10 +7,7 @@ pub struct TokenStream<'a> {
 
 impl<'a> TokenStream<'a> {
     pub fn new(tokens: &'a Vec<Token>) -> TokenStream {
-        TokenStream {
-            tokens,
-            index: 0,
-        }
+        TokenStream { tokens, index: 0 }
     }
 
     pub fn index(&self) -> usize {
