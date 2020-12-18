@@ -662,20 +662,43 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
 }
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
-    Ok(match stream.next_if_id() {
-        Some((id_line, id)) => {
-            match fn_call_params(stream)? {
-                Some(params) => {
-                    Some(Ast::RoutineCall(id_line, RoutineCall::Function, id, params))
-                }
-                None => match struct_init_params(stream)? {
-                    Some(fields) => Some(Ast::StructInit(id_line, id, fields)),
-                    None => Some(Ast::Identifier(id_line, id)),
-                },
-            }
+    let syntax = match function_call(stream)? {
+        Some(f) => Some(f),
+        None => match struct_expression(stream)? {
+            Some(se) => Some(se),
+            None => identifier(stream)?,
+        }
+    };
+    Ok(syntax)
+}
+
+fn function_call(stream: &mut TokenStream) -> PResult {
+    if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
+        let (line, fn_name) = stream.next_if_id().expect("CRITICAL: failed to get identifier");
+        let params = fn_call_params(stream)?.ok_or(format!("L{}: expected parameters in function call", line))?;
+        Ok(Some(Ast::RoutineCall(line, RoutineCall::Function, fn_name, params)))
+    } else {
+        Ok(None)
+    }
+}
+
+fn struct_expression(stream: &mut TokenStream) -> PResult {
+    if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LBrace]) {
+        let (line, struct_name) = stream.next_if_id().expect("CRITICAL: failed to get identifier");
+        let fields = struct_init_params(stream)?.ok_or(format!("L{}: Expected valid field assignments in struct expression", line))?;
+        Ok(Some(Ast::StructInit(line, struct_name, fields)))
+    } else {
+        Ok(None)
+    }
+}
+
+fn identifier(stream: &mut TokenStream) -> PResult {
+    match stream.next_if_id() {
+        Some((line, id)) => {
+            Ok(Some(Ast::Identifier(line, id)))
         },
-        None => None,
-    })
+        _ => Ok(None),
+    }
 }
 
 fn consume_type(stream: &mut TokenStream) -> Option<Type> {

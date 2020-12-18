@@ -62,6 +62,15 @@ pub enum Lex {
     Primitive(Primitive),
 }
 
+impl Lex {
+    pub fn get_str(&self) -> Option<String> {
+        match self {
+            Lex::StringLiteral(s) | Lex::Identifier(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+}
+
 impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
