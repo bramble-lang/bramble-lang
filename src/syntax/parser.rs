@@ -101,12 +101,14 @@ fn struct_def(stream: &mut TokenStream) -> PResult {
 }
 
 fn function_def(stream: &mut TokenStream) -> PResult {
-    if stream.next_if(&Lex::FunctionDef).is_none() {
-        return Ok(None);
-    }
+    let fn_line = match stream.next_if(&Lex::FunctionDef) {
+        Some(co) => co.l,
+        None => return Ok(None),
+    };
+    
     let (fn_line, fn_name) = stream
         .next_if_id()
-        .ok_or("Expected identifier after fn")?;
+        .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
     let params = fn_def_params(stream)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
         consume_type(stream).ok_or(format!("L{}: Expected type after ->", fn_line))?
@@ -116,7 +118,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
 
     stream.next_must_be(&Lex::LBrace)?;
     let mut stmts = block(stream)?;
-
+    
     match return_stmt(stream)? {
         Some(ret) => stmts.push(ret),
         None => {
@@ -127,7 +129,6 @@ fn function_def(stream: &mut TokenStream) -> PResult {
             ))
         }
     }
-
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(Ast::RoutineDef(
@@ -141,51 +142,45 @@ fn function_def(stream: &mut TokenStream) -> PResult {
 }
 
 fn coroutine_def(stream: &mut TokenStream) -> PResult {
-    let syntax = match stream.next_if(&Lex::CoroutineDef) {
-        Some(_) => match stream.next_if_id() {
-            Some((l,id)) => {
-                let params = fn_def_params(stream)?;
-
-                let co_type = match stream.next_if(&Lex::LArrow) {
-                    Some(t) => {
-                        let l = t.l;
-                        consume_type(stream).expect(&format!(
-                            "L{}: Expected primitive type after -> in function definition",
-                            l
-                        ))
-                    }
-                    _ => Type::Unit,
-                };
-
-                stream.next_must_be(&Lex::LBrace)?;
-                let mut stmts = co_block(stream)?;
-
-                match return_stmt(stream)? {
-                    Some(ret) => stmts.push(ret),
-                    None => {
-                        return Err(format!(
-                            "L{}: Coroutine must end with a return statement",
-                            l
-                        ))
-                    }
-                }
-
-                stream.next_must_be(&Lex::RBrace)?;
-
-                Some(Ast::RoutineDef(
-                    l,
-                    RoutineDef::Coroutine,
-                    id,
-                    params,
-                    co_type,
-                    stmts,
-                ))
-            }
-            _ => return Err(format!("Expected function name after fn")),
-        },
-        _ => None,
+    let co_line = match stream.next_if(&Lex::CoroutineDef) {
+        Some(co) => co.l,
+        None => return Ok(None),
     };
-    Ok(syntax)
+
+    let (co_line, co_name) = stream.next_if_id().ok_or(format!("L{}: Expected identifier after co", co_line))?;
+    let params = fn_def_params(stream)?;
+    let co_type = match stream.next_if(&Lex::LArrow) {
+        Some(t) => {
+            consume_type(stream).ok_or(format!(
+                "L{}: Expected type after ->",
+                t.l
+            ))?
+        }
+        _ => Type::Unit,
+    };
+
+    stream.next_must_be(&Lex::LBrace)?;
+    let mut stmts = co_block(stream)?;
+    
+    match return_stmt(stream)? {
+        Some(ret) => stmts.push(ret),
+        None => {
+            return Err(format!(
+                "L{}: Coroutine must end with a return statement",
+                stmts.last().map_or(co_line, |s| *s.get_metadata()),
+            ))
+        }
+    }
+    stream.next_must_be(&Lex::RBrace)?;
+
+    Ok(Some(Ast::RoutineDef(
+        co_line,
+        RoutineDef::Coroutine,
+        co_name,
+        params,
+        co_type,
+        stmts,
+    )))
 }
 
 fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
