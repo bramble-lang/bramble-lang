@@ -629,7 +629,6 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
     }
 }
 
-// TODO no tests for htis
 fn co_yield(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::Yield) {
         Some(token) => {
@@ -721,15 +720,11 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
 }
 
 fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
-    // <IDENTIFER> COLON <TYPE>
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
             let line_id = t[0].l;
             let line_value = t[1].l;
-            let id = match &t[0].s {
-                Lex::Identifier(id) => id.clone(),
-                _ => panic!("Must be identifier"),
-            };
+            let id = t[0].s.get_str().expect("CRITICAL: first token must be an identifier but cannot be converted to a string");
             let ty = consume_type(stream).ok_or(format!(
                 "L{}: expected type after : in type declaration",
                 line_value
