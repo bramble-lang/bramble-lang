@@ -17,16 +17,16 @@ impl<'a> TokenStream<'a> {
         self.index
     }
 
-    pub fn next(&mut self) -> Option<&Token> {
+    pub fn next(&mut self) -> Option<Token> {
         if self.index >= self.tokens.len() {
             None
         } else {
             self.index += 1;
-            Some(&self.tokens[self.index - 1])
+            Some(self.tokens[self.index - 1].clone())
         }
     }
 
-    pub fn next_if(&mut self, test: &Lex) -> Option<&Token> {
+    pub fn next_if(&mut self, test: &Lex) -> Option<Token> {
         if self.test_if(test) {
             self.next()
         } else {
@@ -41,13 +41,13 @@ impl<'a> TokenStream<'a> {
                 l,
                 s: Lex::Identifier(id),
                 ..
-            }) => Some((*l, id.into())),
+            }) => Some((l, id)),
             Some(_) => None,
             None => None,
         }
     }
 
-    pub fn next_must_be(&mut self, test: &Lex) -> Result<&Token, String> {
+    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, String> {
         let (line, found) = match self.peek() {
             Some(t) => (t.l, t.s.to_string()),
             None => (0, "EOF".into()),
@@ -69,7 +69,7 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_if_one_of(&mut self, set: Vec<Lex>) -> Option<&Token> {
+    pub fn next_if_one_of(&mut self, set: Vec<Lex>) -> Option<Token> {
         if self.test_if_one_of(set) {
             self.next()
         } else {
@@ -203,7 +203,7 @@ mod test_tokenstream {
         let mut ts = TokenStream::new(&tokens);
         let p = ts.next().unwrap();
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::LParen
@@ -212,7 +212,7 @@ mod test_tokenstream {
 
         let p = ts.next().unwrap();
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::Integer(2)
@@ -220,11 +220,11 @@ mod test_tokenstream {
         );
 
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+        assert_eq!(p, Token { l: 1, s: Lex::Add });
 
         let p = ts.next().unwrap();
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::Integer(4)
@@ -233,7 +233,7 @@ mod test_tokenstream {
 
         let p = ts.next().unwrap();
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::RParen
@@ -241,11 +241,11 @@ mod test_tokenstream {
         );
 
         let p = ts.next().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Mul });
+        assert_eq!(p, Token { l: 1, s: Lex::Mul });
 
         let p = ts.next().unwrap();
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::Integer(3)
@@ -268,7 +268,7 @@ mod test_tokenstream {
         let mut ts = TokenStream::new(&tokens);
         let p = ts.next_if(&Lex::LParen).unwrap(); // should I really use a borrow for this?  If not then gotta do clones and BS i think.
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::LParen
@@ -357,7 +357,7 @@ mod test_tokenstream {
             .next_if_one_of(vec![Lex::LParen, Lex::Integer(0)])
             .unwrap();
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::LParen
@@ -376,7 +376,7 @@ mod test_tokenstream {
             .next_if_one_of(vec![Lex::LParen, Lex::Integer(0)])
             .unwrap();
         assert_eq!(
-            *p,
+            p,
             Token {
                 l: 1,
                 s: Lex::Integer(2)

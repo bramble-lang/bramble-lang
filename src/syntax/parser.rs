@@ -86,7 +86,6 @@ fn module(stream: &mut TokenStream) -> PResult {
 fn struct_def(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::Struct) {
         Some(token) => {
-            let line = token.l;
             match stream.next_if_id() {
                 Some((line, id)) => {
                     stream.next_must_be(&Lex::LBrace)?;
@@ -94,7 +93,7 @@ fn struct_def(stream: &mut TokenStream) -> PResult {
                     stream.next_must_be(&Lex::RBrace)?;
                     Ok(Some(Ast::StructDef(line, id.clone(), fields)))
                 }
-                None => Err(format!("L{}: expected identifer after struct", line)),
+                None => Err(format!("L{}: expected identifer after struct", token.l)),
             }
         }
         None => Ok(None),
@@ -241,12 +240,11 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
 fn return_stmt(stream: &mut TokenStream) -> PResult {
     Ok(match stream.next_if(&Lex::Return) {
         Some(token) => {
-            let line = token.l;
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             match exp {
-                Some(exp) => Some(Ast::Return(line, Some(Box::new(exp)))),
-                None => Some(Ast::Return(line, None)),
+                Some(exp) => Some(Ast::Return(token.l, Some(Box::new(exp)))),
+                None => Some(Ast::Return(token.l, None)),
             }
         }
         _ => None,
@@ -256,12 +254,11 @@ fn return_stmt(stream: &mut TokenStream) -> PResult {
 fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
     Ok(match stream.next_if(&Lex::YieldReturn) {
         Some(token) => {
-            let l = token.l;
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             match exp {
-                Some(exp) => Some(Ast::YieldReturn(l, Some(Box::new(exp)))),
-                None => Some(Ast::YieldReturn(l, None)),
+                Some(exp) => Some(Ast::YieldReturn(token.l, Some(Box::new(exp)))),
+                None => Some(Ast::YieldReturn(token.l, None)),
             }
         }
         _ => None,
@@ -282,7 +279,7 @@ fn statement(stream: &mut TokenStream) -> PResult {
 
     match stm {
         Some(stm) => match stream.next_must_be(&Lex::Semicolon)? {
-            Token { l, s: _ } => Ok(Some(Ast::Statement(*l, Box::new(stm)))),
+            Token { l, s: _ } => Ok(Some(Ast::Statement(l, Box::new(stm)))),
         },
         None => Ok(None),
     }
@@ -290,16 +287,14 @@ fn statement(stream: &mut TokenStream) -> PResult {
 
 fn println_stmt(stream: &mut TokenStream) -> PResult {
     let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
-        Some(token) => {
-            let l = token.l;
-            let s = token.s.clone();
+        Some(print) => {
             let exp =
-                expression(stream)?.ok_or(format!("L{}: Expected expression after println", l))?;
-            match s {
-                Lex::Printiln => Some(Ast::Printiln(l, Box::new(exp))),
-                Lex::Prints => Some(Ast::Prints(l, Box::new(exp))),
-                Lex::Printbln => Some(Ast::Printbln(l, Box::new(exp))),
-                _ => panic!("CRITICAL: already tested for a print token but found {}", s),
+                expression(stream)?.ok_or(format!("L{}: Expected expression after println", print.l))?;
+            match print.s {
+                Lex::Printiln => Some(Ast::Printiln(print.l, Box::new(exp))),
+                Lex::Prints => Some(Ast::Prints(print.l, Box::new(exp))),
+                Lex::Printbln => Some(Ast::Printbln(print.l, Box::new(exp))),
+                _ => panic!("CRITICAL: already tested for a print token but found {}", print.s),
             }
         }
         _ => None,
@@ -310,18 +305,17 @@ fn println_stmt(stream: &mut TokenStream) -> PResult {
 fn let_bind(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::Let) {
         Some(token) => {
-            let line = token.l;
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl = id_declaration(stream)?
-                .ok_or(format!("L{}: Expected identifier declaration (`<id> : <type>`) after let", line))?;
+                .ok_or(format!("L{}: Expected identifier declaration (`<id> : <type>`) after let", token.l))?;
             stream.next_must_be(&Lex::Assign)?;
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
                 None => expression(stream)?
-                    .ok_or(format!("L{}: expected expression on LHS of bind", line))?,
+                    .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
             };
             Ok(Some(PNode::new_bind(
-                line,
+                token.l,
                 Box::new(id_decl),
                 is_mutable,
                 Box::new(exp),
@@ -350,7 +344,6 @@ fn mutate(stream: &mut TokenStream) -> PResult {
 }
 
 fn co_init(stream: &mut TokenStream) -> PResult {
-    let l = 1;
     match stream.next_if(&Lex::Init) {
         Some(token) => match stream.next_if_id() {
             Some((l, id)) => {
@@ -363,7 +356,7 @@ fn co_init(stream: &mut TokenStream) -> PResult {
                     params,
                 )))
             }
-            None => Err(format!("L{}: expected identifier after init", l)),
+            None => Err(format!("L{}: expected identifier after init", token.l)),
         },
         _ => Ok(None),
     }
@@ -376,7 +369,6 @@ fn expression(stream: &mut TokenStream) -> PResult {
 fn expression_block(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
-            let line = token.l;
             let mut stmts = block(stream)?;
 
             match expression(stream)? {
@@ -385,7 +377,7 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
             }
 
             stream.next_must_be(&Lex::RBrace)?;
-            Ok(Some(Ast::ExpressionBlock(line, stmts)))
+            Ok(Some(Ast::ExpressionBlock(token.l, stmts)))
         }
         None => Ok(None),
     }
@@ -395,11 +387,10 @@ fn logical_or(stream: &mut TokenStream) -> PResult {
     Ok(match logical_and(stream)? {
         Some(n) => match stream.next_if(&Lex::BOr) {
             Some(token) => {
-                let line = token.l;
                 let n2 =
-                    logical_or(stream)?.ok_or(&format!("L{}: An expression after ||", line))?;
+                    logical_or(stream)?.ok_or(&format!("L{}: An expression after ||", token.l))?;
                 Some(PNode::binary_op(
-                    line,
+                    token.l,
                     &Lex::BOr,
                     Box::new(n),
                     Box::new(n2),
@@ -415,11 +406,10 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
     Ok(match comparison(stream)? {
         Some(n) => match stream.next_if(&Lex::BAnd) {
             Some(token) => {
-                let line = token.l;
                 let n2 =
-                    logical_and(stream)?.ok_or(&format!("L{}: An expression after &&", line))?;
+                    logical_and(stream)?.ok_or(&format!("L{}: An expression after &&", token.l))?;
                 Some(PNode::binary_op(
-                    line,
+                    token.l,
                     &Lex::BAnd,
                     Box::new(n),
                     Box::new(n2),
@@ -441,12 +431,10 @@ fn comparison(stream: &mut TokenStream) -> PResult {
             Lex::Gr,
             Lex::GrEq,
         ]) {
-            Some(token) => {
-                let line = token.l;
-                let op = token.s.clone();
+            Some(op) => {
                 let n2 =
-                    comparison(stream)?.ok_or(&format!("L{}: An expression after {}", line, op))?;
-                Some(PNode::binary_op(line, &op, Box::new(n), Box::new(n2))?)
+                    comparison(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
+                Some(PNode::binary_op(op.l, &op.s, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -457,11 +445,9 @@ fn comparison(stream: &mut TokenStream) -> PResult {
 fn sum(stream: &mut TokenStream) -> PResult {
     Ok(match term(stream)? {
         Some(n) => match stream.next_if_one_of(vec![Lex::Add, Lex::Minus]) {
-            Some(token) => {
-                let line = token.l;
-                let op = token.s.clone();
-                let n2 = sum(stream)?.ok_or(&format!("L{}: An expression after {}", line, op))?;
-                Some(PNode::binary_op(line, &op, Box::new(n), Box::new(n2))?)
+            Some(op) => {
+                let n2 = sum(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
+                Some(PNode::binary_op(op.l, &op.s, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -472,11 +458,9 @@ fn sum(stream: &mut TokenStream) -> PResult {
 fn term(stream: &mut TokenStream) -> PResult {
     Ok(match negate(stream)? {
         Some(n) => match stream.next_if_one_of(vec![Lex::Mul, Lex::Div]) {
-            Some(token) => {
-                let line = token.l;
-                let op = token.s.clone();
-                let n2 = term(stream)?.ok_or(&format!("L{}: a valid term after {}", line, op))?;
-                Some(PNode::binary_op(line, &op, Box::new(n), Box::new(n2))?)
+            Some(op) => {
+                let n2 = term(stream)?.ok_or(&format!("L{}: a valid term after {}", op.l, op.s))?;
+                Some(PNode::binary_op(op.l, &op.s, Box::new(n), Box::new(n2))?)
             }
             _ => Some(n),
         },
@@ -486,12 +470,10 @@ fn term(stream: &mut TokenStream) -> PResult {
 
 fn negate(stream: &mut TokenStream) -> PResult {
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
-        Some(token) => {
-            let l = token.l;
-            let op = token.s.clone();
+        Some(op) => {
             let factor =
-                member_access(stream)?.ok_or(&format!("L{}: expected term after {}", l, op))?;
-            let r = Ok(Some(PNode::unary_op(l, &op, Box::new(factor))?));
+                member_access(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
+            let r = Ok(Some(PNode::unary_op(op.l, &op.s, Box::new(factor))?));
             r
         }
         None => member_access(stream),
@@ -546,14 +528,13 @@ fn factor(stream: &mut TokenStream) -> PResult {
 fn if_expression(stream: &mut TokenStream) -> PResult {
     Ok(match stream.next_if(&Lex::If) {
         Some(token) => {
-            let l = token.l;
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?
-                .ok_or(format!("L{}: Expected conditional expression after if", l))?;
+                .ok_or(format!("L{}: Expected conditional expression after if", token.l))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let true_arm = expression_block(stream)?
-                .ok_or(format!("L{}: Expression in true arm of if expression", l))?;
+                .ok_or(format!("L{}: Expression in true arm of if expression", token.l))?;
             stream.next_must_be(&Lex::Else)?;
 
             // check for `else if`
@@ -565,12 +546,12 @@ fn if_expression(stream: &mut TokenStream) -> PResult {
                 }
                 _ => {
                     let false_arm = expression_block(stream)?
-                        .ok_or(&format!("L{}: Expression in false arm of if expression", l))?;
+                        .ok_or(&format!("L{}: Expression in false arm of if expression", token.l))?;
                     false_arm
                 }
             };
             Some(Ast::If(
-                l,
+                token.l,
                 Box::new(cond),
                 Box::new(true_arm),
                 Box::new(false_arm),
@@ -607,7 +588,6 @@ fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String
 fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>, String> {
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
-            let line = token.l;
             let mut params = vec![];
             while let Some((line, field_name)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
@@ -747,14 +727,14 @@ fn constant(stream: &mut TokenStream) -> PResult {
 
 fn number(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::Integer(0)) {
-        Some(Token{l, s: Lex::Integer(i)}) => Ok(Some(Ast::Integer(*l, *i))),
+        Some(Token{l, s: Lex::Integer(i)}) => Ok(Some(Ast::Integer(l, i))),
         _ => Ok(None),
     }
 }
 
 fn boolean(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::Bool(true)) {
-        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Ast::Boolean(*l, *b))),
+        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Ast::Boolean(l, b))),
         _ => Ok(None),
     }
 }
@@ -764,7 +744,7 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
         Some(Token {
             l,
             s: Lex::StringLiteral(s),
-        }) => Ok(Some(Ast::StringLiteral(*l, s.clone()))),
+        }) => Ok(Some(Ast::StringLiteral(l, s))),
         _ => Ok(None),
     }
 }
