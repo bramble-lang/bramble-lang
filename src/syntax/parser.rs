@@ -258,65 +258,43 @@ fn expression(stream: &mut TokenStream) -> PResult {
 
 fn logical_or(stream: &mut TokenStream) -> PResult {
     trace!("logical_or", stream);
-    logical_and(stream).pif_then(
-        vec![Lex::BOr],
-        |t1, op, stream| {
-            let t2 =
-                logical_or(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
-        },
-        stream,
-    )
+    binary_op(stream, &vec![Lex::BOr], logical_and)
 }
 
 fn logical_and(stream: &mut TokenStream) -> PResult {
     trace!("logical_and", stream);
-    comparison(stream).pif_then(
-        vec![Lex::BAnd],
-        |t1, op, stream| {
-            let t2 =
-                logical_and(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
-        },
-        stream,
-    )
+    binary_op(stream, &vec![Lex::BAnd], comparison)
 }
 
 fn comparison(stream: &mut TokenStream) -> PResult {
     trace!("comparison", stream);
-    sum(stream).pif_then(
-        vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
-        |t1, op, stream| {
-            let t2 =
-                comparison(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
-        },
-        stream,
-    )
+    binary_op(stream, &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq], sum)
 }
 
 fn sum(stream: &mut TokenStream) -> PResult {
     trace!("sum", stream);
-    term(stream).pif_then(
-        vec![Lex::Add, Lex::Minus],
-        |t1, op, stream| {
-            let t2 = sum(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
-        },
-        stream,
-    )
+    binary_op(stream, &vec![Lex::Add, Lex::Minus], term)
 }
 
 fn term(stream: &mut TokenStream) -> PResult {
     trace!("term", stream);
-    negate(stream).pif_then(
-        vec![Lex::Mul, Lex::Div],
-        |t1, op, stream| {
-            let t2 = term(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
+    binary_op(stream, &vec![Lex::Mul, Lex::Div], negate)
+}
+
+fn binary_op(stream: &mut TokenStream, test: &Vec<Lex>, left_pattern: fn(&mut TokenStream) -> PResult) -> PResult {
+    trace!(format!("binary_op {:?}", test), stream);
+    match left_pattern(stream)? {
+        Some(left) => {
+            match stream.next_if_one_of(test.clone()) {
+                Some(op) => {
+                    let right = binary_op(stream, test, left_pattern)?.ok_or(format!("L{}: expected expression after {}", op.l, op.s))?;
+                    PNode::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
+                },
+                None => Ok(Some(left)),
+            }
         },
-        stream,
-    )
+        None => Ok(None),
+    }
 }
 
 fn negate(stream: &mut TokenStream) -> PResult {
