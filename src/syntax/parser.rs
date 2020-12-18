@@ -6,7 +6,7 @@ use crate::lexer::tokens::{Lex, Primitive, Token};
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::ast::*;
+use super::{ast::*, pnode::Fluent};
 use super::pnode::PNode;
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
@@ -254,22 +254,27 @@ fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
 }
 
 fn statement(stream: &mut TokenStream) -> PResult {
-    let stm = match let_bind(stream)? {
-        Some(b) => Some(b),
-        None => match mutate(stream)? {
-            Some(p) => Some(p),
-            None => match println_stmt(stream)? {
-                Some(p) => Some(p),
-                _ => None,
-            },
-        },
-    };
+    let start_index = stream.index();
+    let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
+    let stm = let_bind(stream).por(mutate, stream).por(println_stmt, stream).por(expression, stream)?;
 
     match stm {
-        Some(stm) => match stream.next_must_be(&Lex::Semicolon)? {
-            Token { l, s: _ } => Ok(Some(Ast::Statement(l, Box::new(stm)))),
+        Some(stm) => match stream.next_if(&Lex::Semicolon) {
+            Some(Token { l, s: _ }) => Ok(Some(Ast::Statement(l, Box::new(stm)))),
+            x => {
+                if must_have_semicolon {
+                    let line = *stm.get_metadata();
+                    Err(format!("L{}: Expected ;, but found {}", line, match x { Some(x) => format!("{}", x.s), None => "EOF".into()}))
+                } else {
+                    stream.set_index(start_index);
+                    Ok(None)
+                }
+            }
         },
-        None => Ok(None),
+        None => {
+            stream.set_index(start_index);
+            Ok(None)
+        }
     }
 }
 
@@ -1356,11 +1361,11 @@ pub mod tests {
     fn parse_expression_block_bad() {
         for (text, msg) in [
             ("{5 10 51}", "L1: Expected }, but found literal 10"),
-            ("{5; 10 51}", "L1: Expected }, but found ;"),
-            ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found ;"),
+            ("{5; 10 51}", "L1: Expected }, but found literal 51"),
+            ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found let"),
             (
                 "{let x: i32 := 10 5}",
-                "L1: Expected ;, but found literal 5",
+                "L1: Expected ;, but found EOF",
             ),
         ]
         .iter()
@@ -1382,7 +1387,7 @@ pub mod tests {
 
     #[test]
     fn parse_expression_block_multiline() {
-        let text = "{let x:i32 := 5; x * x}";
+        let text = "{let x:i32 := 5; f(x); x * x}";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1391,7 +1396,7 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut stream).unwrap() {
             assert_eq!(l, 1);
-            assert_eq!(body.len(), 2);
+            assert_eq!(body.len(), 3);
             match &body[0] {
                 Ast::Statement(_, stm) => match stm.as_ref() {
                     Ast::Bind(_, id, false, p, exp) => {
@@ -1404,11 +1409,18 @@ pub mod tests {
                 _ => panic!("No body: {:?}", &body[0]),
             }
             match &body[1] {
+                Ast::Statement(_, box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params)) => {
+                    assert_eq!(fn_name, "f");
+                    assert_eq!(params[0], Ast::Identifier(1, "x".into()));
+                }
+                _ => panic!("No body: {:?}", &body[1]),
+            }
+            match &body[2] {
                 Ast::BinaryOp(_, BinaryOperator::Mul, l, r) => {
                     assert_eq!(*l.as_ref(), Ast::Identifier(1, "x".into()));
                     assert_eq!(*r.as_ref(), Ast::Identifier(1, "x".into()));
                 }
-                _ => panic!("No body: {:?}", &body[0]),
+                _ => panic!("No body: {:?}", &body[2]),
             }
         } else {
             panic!("No nodes returned by parser")

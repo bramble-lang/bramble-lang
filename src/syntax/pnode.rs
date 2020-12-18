@@ -1,8 +1,22 @@
-use super::ast::*;
+use super::{ast::*, tokenstream::TokenStream};
 use crate::lexer::tokens::Lex;
 
 pub type ParserInfo = u32;
 pub type PResult = Result<Option<PNode>, String>;
+
+impl Fluent for PResult {
+    fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult {
+        match self {
+            Ok(Some(s)) => Ok(Some(s.clone())),
+            Ok(None) => f(ts),
+            Err(e) => Err(e.clone()),
+        }
+    }
+}
+
+pub trait Fluent {
+    fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult;
+}
 
 pub type PNode = Ast<ParserInfo>;
 
