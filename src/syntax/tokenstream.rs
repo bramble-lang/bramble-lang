@@ -3,7 +3,6 @@ use crate::lexer::tokens::{Lex, Token};
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,
     index: usize,
-    errors: Vec<String>,
 }
 
 impl<'a> TokenStream<'a> {
@@ -11,7 +10,6 @@ impl<'a> TokenStream<'a> {
         TokenStream {
             tokens,
             index: 0,
-            errors: vec![],
         }
     }
 
