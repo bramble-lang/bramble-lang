@@ -62,6 +62,15 @@ pub enum Lex {
     Primitive(Primitive),
 }
 
+impl Lex {
+    pub fn get_str(&self) -> Option<String> {
+        match self {
+            Lex::StringLiteral(s) | Lex::Identifier(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+}
+
 impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
@@ -122,5 +131,31 @@ pub struct Token {
 impl Token {
     pub fn new(l: u32, s: Lex) -> Token {
         Token { l, s }
+    }
+
+    pub fn token_eq(&self, a: &Lex) -> bool {
+        match self.s {
+            Lex::Integer(_) => match a {
+                Lex::Integer(_) => true,
+                _ => false,
+            },
+            Lex::Bool(_) => match a {
+                Lex::Bool(_) => true,
+                _ => false,
+            },
+            Lex::Identifier(_) => match a {
+                Lex::Identifier(_) => true,
+                _ => false,
+            },
+            Lex::StringLiteral(_) => match a {
+                Lex::StringLiteral(_) => true,
+                _ => false,
+            },
+            Lex::Primitive(_) => match a {
+                Lex::Primitive(_) => true,
+                _ => false,
+            },
+            _ => *a == self.s,
+        }
     }
 }

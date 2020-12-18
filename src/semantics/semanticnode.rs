@@ -1,7 +1,7 @@
 use crate::ast;
 use crate::ast::*;
-use crate::parser::PNode;
 use crate::semantics::symbol_table::*;
+use crate::syntax::pnode::PNode;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
