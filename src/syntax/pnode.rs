@@ -1,5 +1,5 @@
 use super::{ast::*, tokenstream::TokenStream};
-use crate::lexer::tokens::Lex;
+use crate::lexer::tokens::{Lex, Token};
 
 pub type ParserInfo = u32;
 pub type PResult = Result<Option<PNode>, String>;
@@ -12,10 +12,24 @@ impl Fluent for PResult {
             Err(e) => Err(e.clone()),
         }
     }
+
+    fn pif_then(&self, cond: Vec<Lex>, then: fn(PNode, Token, &mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult {
+        match self {
+            Ok(Some(s)) => {
+                match ts.next_if_one_of(cond) {
+                    Some(result) => then(s.clone(), result, ts),
+                    None => Ok(Some(s.clone())),
+                }
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(e.clone()),
+        }
+    }
 }
 
 pub trait Fluent {
     fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult;
+    fn pif_then(&self, cond: Vec<Lex>, f: fn(PNode, Token, &mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult;
 }
 
 pub type PNode = Ast<ParserInfo>;
