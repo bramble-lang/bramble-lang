@@ -263,12 +263,12 @@ fn logical_or(stream: &mut TokenStream) -> PResult {
         |t1, op, stream| {
             let t2 =
                 logical_or(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(
+            PNode::binary_op(
                 op.l,
                 &op.s,
                 Box::new(t1),
                 Box::new(t2),
-            )?))
+            )
         },
         stream,
     )
@@ -281,12 +281,12 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
         |t1, op, stream| {
             let t2 =
                 logical_and(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(
+            PNode::binary_op(
                 op.l,
                 &op.s,
                 Box::new(t1),
                 Box::new(t2),
-            )?))
+            )
         },
         stream,
     )
@@ -299,12 +299,12 @@ fn comparison(stream: &mut TokenStream) -> PResult {
         |t1, op, stream| {
             let t2 =
                 comparison(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(
+            PNode::binary_op(
                 op.l,
                 &op.s,
                 Box::new(t1),
                 Box::new(t2),
-            )?))
+            )
         },
         stream,
     )
@@ -316,12 +316,12 @@ fn sum(stream: &mut TokenStream) -> PResult {
         vec![Lex::Add, Lex::Minus],
         |t1, op, stream| {
             let t2 = sum(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(
+            PNode::binary_op(
                 op.l,
                 &op.s,
                 Box::new(t1),
                 Box::new(t2),
-            )?))
+            )
         },
         stream,
     )
@@ -333,12 +333,12 @@ fn term(stream: &mut TokenStream) -> PResult {
         vec![Lex::Mul, Lex::Div],
         |t1, op, stream| {
             let t2 = term(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            Ok(Some(PNode::binary_op(
+            PNode::binary_op(
                 op.l,
                 &op.s,
                 Box::new(t1),
                 Box::new(t2),
-            )?))
+            )
         },
         stream,
     )

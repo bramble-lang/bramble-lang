@@ -84,21 +84,21 @@ impl PNode {
         op: &Lex,
         left: Box<Self>,
         right: Box<Self>,
-    ) -> Result<Self, String> {
+    ) -> PResult {
         let i = line; //ParserInfo{l: line};
         match op {
-            Lex::Eq => Ok(Ast::BinaryOp(i, BinaryOperator::Eq, left, right)),
-            Lex::NEq => Ok(Ast::BinaryOp(i, BinaryOperator::NEq, left, right)),
-            Lex::Ls => Ok(Ast::BinaryOp(i, BinaryOperator::Ls, left, right)),
-            Lex::LsEq => Ok(Ast::BinaryOp(i, BinaryOperator::LsEq, left, right)),
-            Lex::Gr => Ok(Ast::BinaryOp(i, BinaryOperator::Gr, left, right)),
-            Lex::GrEq => Ok(Ast::BinaryOp(i, BinaryOperator::GrEq, left, right)),
-            Lex::BAnd => Ok(Ast::BinaryOp(i, BinaryOperator::BAnd, left, right)),
-            Lex::BOr => Ok(Ast::BinaryOp(i, BinaryOperator::BOr, left, right)),
-            Lex::Add => Ok(Ast::BinaryOp(i, BinaryOperator::Add, left, right)),
-            Lex::Minus => Ok(Ast::BinaryOp(i, BinaryOperator::Sub, left, right)),
-            Lex::Mul => Ok(Ast::BinaryOp(i, BinaryOperator::Mul, left, right)),
-            Lex::Div => Ok(Ast::BinaryOp(i, BinaryOperator::Div, left, right)),
+            Lex::Eq => Ok(Some(Ast::BinaryOp(i, BinaryOperator::Eq, left, right))),
+            Lex::NEq => Ok(Some(Ast::BinaryOp(i, BinaryOperator::NEq, left, right))),
+            Lex::Ls => Ok(Some(Ast::BinaryOp(i, BinaryOperator::Ls, left, right))),
+            Lex::LsEq => Ok(Some(Ast::BinaryOp(i, BinaryOperator::LsEq, left, right))),
+            Lex::Gr => Ok(Some(Ast::BinaryOp(i, BinaryOperator::Gr, left, right))),
+            Lex::GrEq => Ok(Some(Ast::BinaryOp(i, BinaryOperator::GrEq, left, right))),
+            Lex::BAnd => Ok(Some(Ast::BinaryOp(i, BinaryOperator::BAnd, left, right))),
+            Lex::BOr => Ok(Some(Ast::BinaryOp(i, BinaryOperator::BOr, left, right))),
+            Lex::Add => Ok(Some(Ast::BinaryOp(i, BinaryOperator::Add, left, right))),
+            Lex::Minus => Ok(Some(Ast::BinaryOp(i, BinaryOperator::Sub, left, right))),
+            Lex::Mul => Ok(Some(Ast::BinaryOp(i, BinaryOperator::Mul, left, right))),
+            Lex::Div => Ok(Some(Ast::BinaryOp(i, BinaryOperator::Div, left, right))),
             _ => Err(format!("L{}: {} is not a binary operator", line, op)),
         }
     }
