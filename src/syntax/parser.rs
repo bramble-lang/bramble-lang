@@ -74,16 +74,12 @@ fn module(stream: &mut TokenStream) -> PResult {
     }
 
     Ok(
-        if functions.len() > 0 || coroutines.len() > 0 || structs.len() > 0 {
-            Some(Ast::Module {
-                meta: module_line,
-                functions,
-                coroutines,
-                structs,
-            })
-        } else {
-            None
-        },
+        Some(Ast::Module {
+            meta: module_line,
+            functions,
+            coroutines,
+            structs,
+        })
     )
 }
 
@@ -204,15 +200,14 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String
 fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
     let mut decls = vec![];
 
-    // TODO: Replace with call to id_declaration
-    while let Some(tokens) = stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
-        let id = match &tokens[0].s {
-            Lex::Identifier(id) => id.clone(),
-            _ => panic!(),
-        };
-        let ty = consume_type(stream).ok_or("Expected type after :")?;
-        decls.push((id, ty));
-        stream.next_if(&Lex::Comma);
+    while let Some(token) = id_declaration(stream)? {
+        match token {
+            Ast::IdentifierDeclare(line, id, ty) => {
+                decls.push((id, ty));
+                stream.next_if(&Lex::Comma);
+            },
+            _ => panic!("CRITICAL: IdDeclaration not returned by id_declaration")
+        }
     }
 
     Ok(decls)
