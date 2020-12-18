@@ -96,7 +96,7 @@ impl<'a> TokenStream<'a> {
     pub fn test_if(&self, test: &Lex) -> bool {
         match self.peek() {
             None => false,
-            Some(t) => t.ty_eq(test),
+            Some(t) => t.token_eq(test),
         }
     }
 
@@ -105,7 +105,7 @@ impl<'a> TokenStream<'a> {
             match self.peek_at(i) {
                 None => return false,
                 Some(token) => {
-                    if !token.ty_eq(&test[i]) {
+                    if !token.token_eq(&test[i]) {
                         return false;
                     }
                 }
@@ -118,7 +118,7 @@ impl<'a> TokenStream<'a> {
     pub fn test_if_one_of(&self, set: Vec<Lex>) -> bool {
         match self.peek() {
             None => false,
-            Some(t) => set.iter().find(|l| t.ty_eq(l)).is_some(),
+            Some(t) => set.iter().find(|l| t.token_eq(l)).is_some(),
         }
     }
 }

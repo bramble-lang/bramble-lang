@@ -133,7 +133,7 @@ impl Token {
         Token { l, s }
     }
 
-    pub fn ty_eq(&self, a: &Lex) -> bool {
+    pub fn token_eq(&self, a: &Lex) -> bool {
         match self.s {
             Lex::Integer(_) => match a {
                 Lex::Integer(_) => true,
