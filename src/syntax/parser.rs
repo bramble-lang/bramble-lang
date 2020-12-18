@@ -378,22 +378,12 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let line = token.l;
             let mut stmts = block(stream)?;
-            match stream.peek() {
-                Some(Token { l, s: Lex::RBrace }) => (),
-                Some(token) => {
-                    let line = token.l;
-                    let exp = expression(stream)?
-                        .ok_or(format!("L{}: Expected expression at end of block", line))?;
-                    stmts.push(exp);
-                }
-                None => {
-                    return Err(format!(
-                        "L{}: expected {}, but found EOF",
-                        line,
-                        Lex::RBrace
-                    ))
-                }
-            };
+
+            match expression(stream)? {
+                Some(e) => stmts.push(e),
+                None => (),
+            }
+
             stream.next_must_be(&Lex::RBrace)?;
             Ok(Some(Ast::ExpressionBlock(line, stmts)))
         }
