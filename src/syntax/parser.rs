@@ -263,12 +263,7 @@ fn logical_or(stream: &mut TokenStream) -> PResult {
         |t1, op, stream| {
             let t2 =
                 logical_or(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(
-                op.l,
-                &op.s,
-                Box::new(t1),
-                Box::new(t2),
-            )
+            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
         },
         stream,
     )
@@ -281,12 +276,7 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
         |t1, op, stream| {
             let t2 =
                 logical_and(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(
-                op.l,
-                &op.s,
-                Box::new(t1),
-                Box::new(t2),
-            )
+            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
         },
         stream,
     )
@@ -299,12 +289,7 @@ fn comparison(stream: &mut TokenStream) -> PResult {
         |t1, op, stream| {
             let t2 =
                 comparison(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(
-                op.l,
-                &op.s,
-                Box::new(t1),
-                Box::new(t2),
-            )
+            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
         },
         stream,
     )
@@ -316,12 +301,7 @@ fn sum(stream: &mut TokenStream) -> PResult {
         vec![Lex::Add, Lex::Minus],
         |t1, op, stream| {
             let t2 = sum(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(
-                op.l,
-                &op.s,
-                Box::new(t1),
-                Box::new(t2),
-            )
+            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
         },
         stream,
     )
@@ -333,12 +313,7 @@ fn term(stream: &mut TokenStream) -> PResult {
         vec![Lex::Mul, Lex::Div],
         |t1, op, stream| {
             let t2 = term(stream)?.ok_or(&format!("L{}: An expression after {}", op.l, op.s))?;
-            PNode::binary_op(
-                op.l,
-                &op.s,
-                Box::new(t1),
-                Box::new(t2),
-            )
+            PNode::binary_op(op.l, &op.s, Box::new(t1), Box::new(t2))
         },
         stream,
     )
@@ -350,8 +325,7 @@ fn negate(stream: &mut TokenStream) -> PResult {
         Some(op) => {
             let factor =
                 negate(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
-            let r = Ok(Some(PNode::unary_op(op.l, &op.s, Box::new(factor))?));
-            r
+            PNode::unary_op(op.l, &op.s, Box::new(factor))
         }
         None => member_access(stream),
     }
@@ -542,10 +516,7 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let line = token.l;
             match expression(stream)? {
-                Some(coroutine) => Ok(Some(PNode::new_yield(
-                    *coroutine.get_metadata(),
-                    Box::new(coroutine),
-                ))),
+                Some(coroutine) => PNode::new_yield(*coroutine.get_metadata(), Box::new(coroutine)),
                 None => Err(format!("L{}: expected an identifier after yield", line)),
             }
         }
@@ -587,12 +558,7 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
                 None => expression(stream)?
                     .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
             };
-            Ok(Some(PNode::new_bind(
-                token.l,
-                Box::new(id_decl),
-                is_mutable,
-                Box::new(exp),
-            )?))
+            PNode::new_bind(token.l, Box::new(id_decl), is_mutable, Box::new(exp))
         }
         None => Ok(None),
     }
@@ -610,7 +576,7 @@ fn mutate(stream: &mut TokenStream) -> PResult {
                 "L{}: expected expression on LHS of assignment",
                 tokens[2].l
             ))?;
-            Ok(Some(PNode::new_mutate(tokens[0].l, &id, Box::new(exp))?))
+            PNode::new_mutate(tokens[0].l, &id, Box::new(exp))
         }
     }
 }
