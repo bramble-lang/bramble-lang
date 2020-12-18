@@ -1,6 +1,7 @@
 fn my_main() {
     let s: string := create_a_string();
-    return say_something("hello, ", s);
+    say_something("hello, ", s);
+    return;
 }
 
 fn create_a_string() -> string {
