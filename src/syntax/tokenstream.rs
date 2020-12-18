@@ -17,6 +17,10 @@ impl<'a> TokenStream<'a> {
         self.index
     }
 
+    pub fn set_index(&mut self, i: usize) {
+        self.index = i;
+    }
+
     pub fn next(&mut self) -> Option<&Token> {
         if self.index >= self.tokens.len() {
             None
