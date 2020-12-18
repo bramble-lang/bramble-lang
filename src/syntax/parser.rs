@@ -6,10 +6,10 @@ use crate::lexer::tokens::{Lex, Primitive, Token};
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::{ast::*, pnode::Fluent};
 use super::pnode::PNode;
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
+use super::{ast::*, pnode::Fluent};
 
 macro_rules! trace {
     ($fn_name:expr, $ts:expr) => {
@@ -264,7 +264,10 @@ fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
 fn statement(stream: &mut TokenStream) -> PResult {
     let start_index = stream.index();
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
-    let stm = let_bind(stream).por(mutate, stream).por(println_stmt, stream).por(expression, stream)?;
+    let stm = let_bind(stream)
+        .por(mutate, stream)
+        .por(println_stmt, stream)
+        .por(expression, stream)?;
 
     match stm {
         Some(stm) => match stream.next_if(&Lex::Semicolon) {
@@ -272,7 +275,14 @@ fn statement(stream: &mut TokenStream) -> PResult {
             _ => {
                 if must_have_semicolon {
                     let line = *stm.get_metadata();
-                    Err(format!("L{}: Expected ;, but found {}", line, match stream.peek() { Some(x) => format!("{}", x.s), None => "EOF".into()}))
+                    Err(format!(
+                        "L{}: Expected ;, but found {}",
+                        line,
+                        match stream.peek() {
+                            Some(x) => format!("{}", x.s),
+                            None => "EOF".into(),
+                        }
+                    ))
                 } else {
                     stream.set_index(start_index);
                     Ok(None)
@@ -335,9 +345,14 @@ fn mutate(stream: &mut TokenStream) -> PResult {
     match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
         None => Ok(None),
         Some(tokens) => {
-            let id = tokens[1].s.get_str().expect("CRITICAL: identifier token cannot be converted to string");
-            let exp = expression(stream)?
-                .ok_or(format!("L{}: expected expression on LHS of assignment", tokens[2].l))?;
+            let id = tokens[1]
+                .s
+                .get_str()
+                .expect("CRITICAL: identifier token cannot be converted to string");
+            let exp = expression(stream)?.ok_or(format!(
+                "L{}: expected expression on LHS of assignment",
+                tokens[2].l
+            ))?;
             Ok(Some(PNode::new_mutate(tokens[0].l, &id, Box::new(exp))?))
         }
     }
@@ -517,8 +532,11 @@ fn factor(stream: &mut TokenStream) -> PResult {
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::RParen)?;
             Ok(exp)
-        },
-        _ => if_expression(stream).por(function_call_or_variable, stream).por(co_yield, stream).por(constant, stream)
+        }
+        _ => if_expression(stream)
+            .por(function_call_or_variable, stream)
+            .por(co_yield, stream)
+            .por(constant, stream),
     }
 }
 
@@ -629,7 +647,9 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
 }
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
-    function_call(stream).por(struct_expression, stream).por(identifier, stream)
+    function_call(stream)
+        .por(struct_expression, stream)
+        .por(identifier, stream)
 }
 
 fn function_call(stream: &mut TokenStream) -> PResult {
@@ -1405,7 +1425,10 @@ pub mod tests {
                 _ => panic!("No body: {:?}", &body[0]),
             }
             match &body[1] {
-                Ast::Statement(_, box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params)) => {
+                Ast::Statement(
+                    _,
+                    box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params),
+                ) => {
                     assert_eq!(fn_name, "f");
                     assert_eq!(params[0], Ast::Identifier(1, "x".into()));
                 }
