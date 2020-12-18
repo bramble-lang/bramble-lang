@@ -184,29 +184,6 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
     )))
 }
 
-fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
-    stream.next_must_be(&Lex::LParen)?;
-    let params = id_declaration_list(stream)?;
-    stream.next_must_be(&Lex::RParen)?;
-
-    Ok(params)
-}
-
-fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
-    let mut decls = vec![];
-
-    while let Some(token) = id_declaration(stream)? {
-        match token {
-            Ast::IdentifierDeclare(line, id, ty) => {
-                decls.push((id, ty));
-                stream.next_if(&Lex::Comma);
-            }
-            _ => panic!("CRITICAL: IdDeclaration not returned by id_declaration"),
-        }
-    }
-
-    Ok(decls)
-}
 
 fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     let mut stmts = vec![];
@@ -222,34 +199,6 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
         stmts.push(s);
     }
     Ok(stmts)
-}
-
-fn return_stmt(stream: &mut TokenStream) -> PResult {
-    Ok(match stream.next_if(&Lex::Return) {
-        Some(token) => {
-            let exp = expression(stream)?;
-            stream.next_must_be(&Lex::Semicolon)?;
-            match exp {
-                Some(exp) => Some(Ast::Return(token.l, Some(Box::new(exp)))),
-                None => Some(Ast::Return(token.l, None)),
-            }
-        }
-        _ => None,
-    })
-}
-
-fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
-    Ok(match stream.next_if(&Lex::YieldReturn) {
-        Some(token) => {
-            let exp = expression(stream)?;
-            stream.next_must_be(&Lex::Semicolon)?;
-            match exp {
-                Some(exp) => Some(Ast::YieldReturn(token.l, Some(Box::new(exp)))),
-                None => Some(Ast::YieldReturn(token.l, None)),
-            }
-        }
-        _ => None,
-    })
 }
 
 fn statement(stream: &mut TokenStream) -> PResult {
@@ -286,93 +235,6 @@ fn statement(stream: &mut TokenStream) -> PResult {
         }
     }
 }
-
-fn println_stmt(stream: &mut TokenStream) -> PResult {
-    let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
-        Some(print) => {
-            let exp = expression(stream)?
-                .ok_or(format!("L{}: Expected expression after println", print.l))?;
-            match print.s {
-                Lex::Printiln => Some(Ast::Printiln(print.l, Box::new(exp))),
-                Lex::Prints => Some(Ast::Prints(print.l, Box::new(exp))),
-                Lex::Printbln => Some(Ast::Printbln(print.l, Box::new(exp))),
-                _ => panic!(
-                    "CRITICAL: already tested for a print token but found {}",
-                    print.s
-                ),
-            }
-        }
-        _ => None,
-    };
-    Ok(syntax)
-}
-
-fn let_bind(stream: &mut TokenStream) -> PResult {
-    match stream.next_if(&Lex::Let) {
-        Some(token) => {
-            let is_mutable = stream.next_if(&Lex::Mut).is_some();
-            let id_decl = id_declaration(stream)?.ok_or(format!(
-                "L{}: Expected identifier declaration (`<id> : <type>`) after let",
-                token.l
-            ))?;
-            stream.next_must_be(&Lex::Assign)?;
-            let exp = match co_init(stream)? {
-                Some(co_init) => co_init,
-                None => expression(stream)?
-                    .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
-            };
-            Ok(Some(PNode::new_bind(
-                token.l,
-                Box::new(id_decl),
-                is_mutable,
-                Box::new(exp),
-            )?))
-        }
-        None => Ok(None),
-    }
-}
-
-fn mutate(stream: &mut TokenStream) -> PResult {
-    match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
-        None => Ok(None),
-        Some(tokens) => {
-            let id = tokens[1]
-                .s
-                .get_str()
-                .expect("CRITICAL: identifier token cannot be converted to string");
-            let exp = expression(stream)?.ok_or(format!(
-                "L{}: expected expression on LHS of assignment",
-                tokens[2].l
-            ))?;
-            Ok(Some(PNode::new_mutate(tokens[0].l, &id, Box::new(exp))?))
-        }
-    }
-}
-
-fn co_init(stream: &mut TokenStream) -> PResult {
-    match stream.next_if(&Lex::Init) {
-        Some(token) => match stream.next_if_id() {
-            Some((l, id)) => {
-                let params = fn_call_params(stream)?
-                    .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Ast::RoutineCall(
-                    l,
-                    RoutineCall::CoroutineInit,
-                    id,
-                    params,
-                )))
-            }
-            None => Err(format!("L{}: expected identifier after init", token.l)),
-        },
-        _ => Ok(None),
-    }
-}
-
-fn expression(stream: &mut TokenStream) -> PResult {
-    trace!("expression", stream);
-    logical_or(stream)
-}
-
 fn expression_block(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
@@ -388,6 +250,11 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
         }
         None => Ok(None),
     }
+}
+
+fn expression(stream: &mut TokenStream) -> PResult {
+    trace!("expression", stream);
+    logical_or(stream)
 }
 
 fn logical_or(stream: &mut TokenStream) -> PResult {
@@ -535,6 +402,30 @@ fn if_expression(stream: &mut TokenStream) -> PResult {
     })
 }
 
+fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
+    stream.next_must_be(&Lex::LParen)?;
+    let params = id_declaration_list(stream)?;
+    stream.next_must_be(&Lex::RParen)?;
+
+    Ok(params)
+}
+
+fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
+    let mut decls = vec![];
+
+    while let Some(token) = id_declaration(stream)? {
+        match token {
+            Ast::IdentifierDeclare(line, id, ty) => {
+                decls.push((id, ty));
+                stream.next_if(&Lex::Comma);
+            }
+            _ => panic!("CRITICAL: IdDeclaration not returned by id_declaration"),
+        }
+    }
+
+    Ok(decls)
+}
+
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
     match stream.next_if(&Lex::LParen) {
@@ -583,6 +474,34 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
     }
 }
 
+fn return_stmt(stream: &mut TokenStream) -> PResult {
+    Ok(match stream.next_if(&Lex::Return) {
+        Some(token) => {
+            let exp = expression(stream)?;
+            stream.next_must_be(&Lex::Semicolon)?;
+            match exp {
+                Some(exp) => Some(Ast::Return(token.l, Some(Box::new(exp)))),
+                None => Some(Ast::Return(token.l, None)),
+            }
+        }
+        _ => None,
+    })
+}
+
+fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
+    Ok(match stream.next_if(&Lex::YieldReturn) {
+        Some(token) => {
+            let exp = expression(stream)?;
+            stream.next_must_be(&Lex::Semicolon)?;
+            match exp {
+                Some(exp) => Some(Ast::YieldReturn(token.l, Some(Box::new(exp)))),
+                None => Some(Ast::YieldReturn(token.l, None)),
+            }
+        }
+        _ => None,
+    })
+}
+
 fn co_yield(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::Yield) {
         Some(token) => {
@@ -598,6 +517,88 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
         None => Ok(None),
     }
 }
+
+fn println_stmt(stream: &mut TokenStream) -> PResult {
+    let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
+        Some(print) => {
+            let exp = expression(stream)?
+                .ok_or(format!("L{}: Expected expression after println", print.l))?;
+            match print.s {
+                Lex::Printiln => Some(Ast::Printiln(print.l, Box::new(exp))),
+                Lex::Prints => Some(Ast::Prints(print.l, Box::new(exp))),
+                Lex::Printbln => Some(Ast::Printbln(print.l, Box::new(exp))),
+                _ => panic!(
+                    "CRITICAL: already tested for a print token but found {}",
+                    print.s
+                ),
+            }
+        }
+        _ => None,
+    };
+    Ok(syntax)
+}
+
+fn let_bind(stream: &mut TokenStream) -> PResult {
+    match stream.next_if(&Lex::Let) {
+        Some(token) => {
+            let is_mutable = stream.next_if(&Lex::Mut).is_some();
+            let id_decl = id_declaration(stream)?.ok_or(format!(
+                "L{}: Expected identifier declaration (`<id> : <type>`) after let",
+                token.l
+            ))?;
+            stream.next_must_be(&Lex::Assign)?;
+            let exp = match co_init(stream)? {
+                Some(co_init) => co_init,
+                None => expression(stream)?
+                    .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
+            };
+            Ok(Some(PNode::new_bind(
+                token.l,
+                Box::new(id_decl),
+                is_mutable,
+                Box::new(exp),
+            )?))
+        }
+        None => Ok(None),
+    }
+}
+
+fn mutate(stream: &mut TokenStream) -> PResult {
+    match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
+        None => Ok(None),
+        Some(tokens) => {
+            let id = tokens[1]
+                .s
+                .get_str()
+                .expect("CRITICAL: identifier token cannot be converted to string");
+            let exp = expression(stream)?.ok_or(format!(
+                "L{}: expected expression on LHS of assignment",
+                tokens[2].l
+            ))?;
+            Ok(Some(PNode::new_mutate(tokens[0].l, &id, Box::new(exp))?))
+        }
+    }
+}
+
+fn co_init(stream: &mut TokenStream) -> PResult {
+    match stream.next_if(&Lex::Init) {
+        Some(token) => match stream.next_if_id() {
+            Some((l, id)) => {
+                let params = fn_call_params(stream)?
+                    .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
+                Ok(Some(Ast::RoutineCall(
+                    l,
+                    RoutineCall::CoroutineInit,
+                    id,
+                    params,
+                )))
+            }
+            None => Err(format!("L{}: expected identifier after init", token.l)),
+        },
+        _ => Ok(None),
+    }
+}
+
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     function_call(stream)
