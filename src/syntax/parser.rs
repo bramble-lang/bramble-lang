@@ -9,7 +9,7 @@ use crate::lexer::tokens::{Lex, Primitive, Token};
 use super::pnode::PNode;
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
-use super::{ast::*, pnode::Fluent};
+use super::{ast::*, pnode::ParserCombinator};
 
 macro_rules! trace {
     ($fn_name:expr, $ts:expr) => {

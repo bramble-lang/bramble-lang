@@ -4,7 +4,7 @@ use crate::lexer::tokens::{Lex, Token};
 pub type ParserInfo = u32;
 pub type PResult = Result<Option<PNode>, String>;
 
-impl Fluent for PResult {
+impl ParserCombinator<PResult> for PResult {
     fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult {
         match self {
             Ok(Some(s)) => Ok(Some(s.clone())),
@@ -30,14 +30,14 @@ impl Fluent for PResult {
     }
 }
 
-pub trait Fluent {
-    fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult;
+pub trait ParserCombinator<R> {
+    fn por(&self, f: fn(&mut TokenStream) -> R, ts: &mut TokenStream) -> R;
     fn pif_then(
         &self,
         cond: Vec<Lex>,
-        f: fn(PNode, Token, &mut TokenStream) -> PResult,
+        f: fn(PNode, Token, &mut TokenStream) -> R,
         ts: &mut TokenStream,
-    ) -> PResult;
+    ) -> R;
 }
 
 pub type PNode = Ast<ParserInfo>;
