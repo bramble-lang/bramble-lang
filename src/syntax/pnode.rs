@@ -30,6 +30,7 @@ impl ParserCombinator<PResult> for PResult {
     }
 }
 
+
 pub trait ParserCombinator<R> {
     fn por(&self, f: fn(&mut TokenStream) -> R, ts: &mut TokenStream) -> R;
     fn pif_then(
