@@ -1,3 +1,4 @@
+#[derive(Clone)]
 struct TokenStream {
     v: Vec<i32>,
     index: usize,
@@ -9,7 +10,36 @@ struct TokenResult {
 }
 
 impl TokenResult {
-    pub fn pif(&self, test: i32) -> TokenResult {
+    pub fn if_then(&self, test: i32, f: fn (i32) -> Result<i32, String>) -> TokenResult {
+        let token = self.stream.v[self.stream.index];
+        if token == test {
+            let result = f(token);
+            match result {
+                Ok(t) => {
+                    TokenResult {
+                        tokens: Ok(vec![t]),
+                        stream: TokenStream {
+                            v: self.stream.v.clone(),
+                            index: self.stream.index + 1,
+                        }
+                    }
+                }
+                Err(e) => {
+                    TokenResult {
+                        tokens: Err(e),
+                        stream: self.stream.clone(),
+                    }
+                }
+            }
+        } else {
+            TokenResult {
+                tokens: Err(format!("Expected {}", test)),
+                stream: self.stream.clone(),
+            }
+        }
+    }
+
+    pub fn or_else(&self, test: i32) -> TokenResult {
         if self.stream.v[self.stream.index] == test {
             let tokens = &self.stream.v[self.stream.index..=self.stream.index];
             TokenResult {
@@ -21,8 +51,8 @@ impl TokenResult {
             }
         } else {
             TokenResult {
-                tokens: Err("Expected {}", test),
-                stream: self,
+                tokens: Err(format!("Expected {}", test)),
+                stream: self.stream.clone(),
             }
         }
     }
