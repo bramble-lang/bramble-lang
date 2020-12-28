@@ -75,13 +75,7 @@ impl Scope {
     }
 
     pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
-        match ty {
-            ast::Type::I32 => Some(4),
-            ast::Type::Bool => Some(4),
-            ast::Type::Custom(name) => self.structs.get(name).map(|st| st.size).flatten(),
-            ast::Type::Coroutine(..) => Some(4),
-            _ => None,
-        }
+        self.structs.size_of(ty)
     }
 
     pub fn local_from(
