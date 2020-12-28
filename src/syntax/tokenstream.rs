@@ -14,6 +14,10 @@ impl<'a> TokenStream<'a> {
         self.index
     }
 
+    pub fn set_index(&mut self, i: usize) {
+        self.index = i;
+    }
+
     pub fn next(&mut self) -> Option<Token> {
         if self.index >= self.tokens.len() {
             None
@@ -55,10 +59,10 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_ifn(&mut self, test: Vec<Lex>) -> Option<&[Token]> {
+    pub fn next_ifn(&mut self, test: Vec<Lex>) -> Option<Vec<Token>> {
         let end = self.index + test.len();
         if self.test_ifn(test) {
-            let v = &self.tokens[self.index..end];
+            let v: Vec<Token> = self.tokens[self.index..end].into();
             self.index = end;
             Some(v)
         } else {
