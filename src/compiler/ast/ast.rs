@@ -2,7 +2,7 @@ use crate::compiler::ast::scope::{LayoutData, Level, Scope};
 
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
-use super::scope::StructTable;
+use super::struct_table::StructTable;
 
 pub type CompilerNode = Ast<Scope>;
 

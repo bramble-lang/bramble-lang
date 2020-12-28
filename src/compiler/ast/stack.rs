@@ -1,9 +1,9 @@
 use crate::ast::RoutineDef;
 use crate::ast::Type;
 use crate::compiler::ast::ast::CompilerNode;
-use crate::compiler::ast::scope::{Level, Symbol};
+use crate::compiler::ast::scope::{Level};
 
-use super::scope::StructDefinition;
+use super::{struct_table::StructDefinition, symbol_table::Symbol};
 
 #[derive(Debug)]
 pub struct ScopeStack<'a> {
