@@ -4,7 +4,7 @@ use crate::syntax::ast;
 
 
 #[derive(Debug, PartialEq)]
-pub struct StructTable {
+pub(super) struct StructTable {
     pub structs: HashMap<String, StructDefinition>,
 }
 
@@ -35,7 +35,7 @@ impl StructTable {
             ast::Type::Bool => Some(4),
             ast::Type::StringLiteral => Some(4),
             ast::Type::Coroutine(_) => Some(4),
-            ast::Type::Custom(name) => self.get(name).expect("Could not find struct").size,
+            ast::Type::Custom(name) => self.get(name).map(|st| st.size).flatten(),
             ast::Type::FunctionDef(..) => Some(0),
             ast::Type::CoroutineDef(..) => Some(0),
             ast::Type::StructDef(..) => Some(0),

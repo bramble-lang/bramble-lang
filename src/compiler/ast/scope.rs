@@ -78,7 +78,7 @@ impl Scope {
         self.structs.size_of(ty)
     }
 
-    pub fn local_from(
+    pub(super) fn local_from(
         m: &SemanticMetadata,
         struct_table: &StructTable,
         current_layout: LayoutData,
@@ -93,7 +93,7 @@ impl Scope {
         (scope, layout)
     }
 
-    pub fn routine_from(
+    pub(super) fn routine_from(
         m: &SemanticMetadata,
         struct_table: &StructTable,
         current_offset: i32,
