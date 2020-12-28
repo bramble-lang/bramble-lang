@@ -3,7 +3,7 @@ use crate::ast::Type;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::{Level};
 
-use super::{struct_table::StructDefinition, symboltable::Symbol};
+use super::{struct_table::StructDefinition, symbol_table::Symbol};
 
 #[derive(Debug)]
 pub struct ScopeStack<'a> {

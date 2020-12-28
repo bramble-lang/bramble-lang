@@ -1,6 +1,6 @@
 use crate::{semantics::semanticnode::SemanticMetadata, syntax::ast};
 
-use super::{struct_table::{StructDefinition, StructTable}, symboltable::{Symbol, SymbolTable}};
+use super::{struct_table::{StructDefinition, StructTable}, symbol_table::{Symbol, SymbolTable}};
 
 #[derive(Debug, PartialEq)]
 pub struct LayoutData {
