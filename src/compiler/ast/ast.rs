@@ -224,7 +224,7 @@ impl CompilerNode {
                 )
             }
             StructDef(..) => panic!("StructDef Unimplemented"),
-            StructInit(meta, struct_name, fields) => {
+            StructExpression(meta, struct_name, fields) => {
                 let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
@@ -232,7 +232,7 @@ impl CompilerNode {
                     nlayout = no;
                     nfields.push((fname.clone(), nfv));
                 }
-                (StructInit(meta, struct_name.clone(), nfields), nlayout)
+                (StructExpression(meta, struct_name.clone(), nfields), nlayout)
             }
         }
     }

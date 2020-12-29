@@ -611,7 +611,7 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
             "L{}: Expected valid field assignments in struct expression",
             line
         ))?;
-        Ok(Some(Ast::StructInit(line, struct_name, fields)))
+        Ok(Some(Ast::StructExpression(line, struct_name, fields)))
     } else {
         Ok(None)
     }
@@ -1435,14 +1435,14 @@ pub mod tests {
     #[test]
     fn parse_struct_init() {
         for (text, expected) in vec![
-            ("MyStruct{}", Ast::StructInit(1, "MyStruct".into(), vec![])),
+            ("MyStruct{}", Ast::StructExpression(1, "MyStruct".into(), vec![])),
             (
                 "MyStruct{x: 5}",
-                Ast::StructInit(1, "MyStruct".into(), vec![("x".into(), Ast::Integer(1, 5))]),
+                Ast::StructExpression(1, "MyStruct".into(), vec![("x".into(), Ast::Integer(1, 5))]),
             ),
             (
                 "MyStruct{x: 5, y: false}",
-                Ast::StructInit(
+                Ast::StructExpression(
                     1,
                     "MyStruct".into(),
                     vec![
@@ -1453,14 +1453,14 @@ pub mod tests {
             ),
             (
                 "MyStruct{x: 5, y: MyStruct2{z:3}}",
-                Ast::StructInit(
+                Ast::StructExpression(
                     1,
                     "MyStruct".into(),
                     vec![
                         ("x".into(), Ast::Integer(1, 5)),
                         (
                             "y".into(),
-                            Ast::StructInit(
+                            Ast::StructExpression(
                                 1,
                                 "MyStruct2".into(),
                                 vec![("z".into(), Ast::Integer(1, 3))],
