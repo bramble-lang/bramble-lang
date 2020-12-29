@@ -612,7 +612,7 @@ impl<'a> Compiler<'a> {
                     call @{fn_name};
                 }};
             }
-            Ast::StructInit(_, struct_name, fields) => {
+            Ast::StructExpression(_, struct_name, fields) => {
                 let asm = self.init_struct(current_func, struct_name, fields, 0, true)?;
                 assembly! {(code){
                     {{asm}}
@@ -741,7 +741,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
 
         match fvalue {
-            Ast::StructInit(_, substruct_name, substruct_values) => {
+            Ast::StructExpression(_, substruct_name, substruct_values) => {
                 let asm = self.init_struct(
                     current_func,
                     substruct_name,

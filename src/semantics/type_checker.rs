@@ -365,7 +365,7 @@ pub mod checker {
                     let mut pty = vec![];
                     for param in params.iter_mut() {
                         match param {
-                            StructInit(..) => return Err(format!("Cannot pass struct expression as function parameter (future feature)")),
+                            StructExpression(..) => return Err(format!("Cannot pass struct expression as function parameter (future feature)")),
                             _ => (),
                         }
                         let ty = self.traverse(param, current_func, sym)?;
@@ -506,7 +506,7 @@ pub mod checker {
                     }
                     Ok(Unit)
                 }
-                StructInit(meta, struct_name, params) => {
+                StructExpression(meta, struct_name, params) => {
                     // Validate the types in the initialization parameters
                     // match their respective members in the struct
                     let struct_def = self.lookup(sym, &struct_name)?.ty.clone();

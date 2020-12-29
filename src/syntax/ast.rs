@@ -125,7 +125,7 @@ pub enum Ast<I> {
         structs: Vec<Ast<I>>,
     },
     StructDef(I, String, Vec<(String, Type)>),
-    StructInit(I, String, Vec<(String, Ast<I>)>),
+    StructExpression(I, String, Vec<(String, Ast<I>)>),
 }
 
 impl<I> Ast<I> {
@@ -163,7 +163,7 @@ impl<I> Ast<I> {
 
             Module { .. } => "module".into(),
             StructDef(_, name, ..) => format!("definition of struct {}", name),
-            StructInit(_, name, ..) => format!("intialization for struct {}", name),
+            StructExpression(_, name, ..) => format!("intialization for struct {}", name),
         }
     }
 
@@ -195,7 +195,7 @@ impl<I> Ast<I> {
             | RoutineCall(m, ..)
             | Module { meta: m, .. }
             | StructDef(m, ..) => m,
-            StructInit(m, ..) => m,
+            StructExpression(m, ..) => m,
         }
     }
 

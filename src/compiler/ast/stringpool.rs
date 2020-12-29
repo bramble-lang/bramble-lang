@@ -123,7 +123,7 @@ impl StringPool {
                 }
             }
             StructDef(..) => {}
-            StructInit(_, _, fields) => {
+            StructExpression(_, _, fields) => {
                 for (_, f) in fields.iter() {
                     self.extract_from(f);
                 }

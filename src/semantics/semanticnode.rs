@@ -159,13 +159,13 @@ impl SemanticNode {
                 name.clone(),
                 fields.clone(),
             ))),
-            StructInit(l, name, fields) => {
+            StructExpression(l, name, fields) => {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
                     let fvalue2 = SemanticNode::from_parser_ast(fvalue)?;
                     nfields.push((fname.clone(), *fvalue2));
                 }
-                Ok(Box::new(StructInit(sm_from(*l), name.clone(), nfields)))
+                Ok(Box::new(StructExpression(sm_from(*l), name.clone(), nfields)))
             }
         }
     }
