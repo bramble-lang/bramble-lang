@@ -364,10 +364,10 @@ pub mod checker {
                     // parameter types
                     let mut pty = vec![];
                     for param in params.iter_mut() {
-                        match param {
+                        /*match param {
                             StructExpression(..) => return Err(format!("Cannot pass struct expression as function parameter (future feature)")),
                             _ => (),
-                        }
+                        }*/
                         let ty = self.traverse(param, current_func, sym)?;
 
                         pty.push(ty);

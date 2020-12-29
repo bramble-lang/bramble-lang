@@ -3,7 +3,7 @@ fn my_main() {
     let y:i32 := test(10, MyStruct{x: 1111, y: 2222, z: 3333});
     printiln y;
 
-    let c: co i32 := test_co(10, MyStruct{x: 11, y: 22, z: 33});
+    let c: co i32 := init test_co(10, MyStruct{x: 11, y: 22, z: 33});
     let h: i32 := yield c;
     printiln h;
 

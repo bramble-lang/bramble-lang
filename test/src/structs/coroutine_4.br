@@ -9,9 +9,9 @@ fn my_main( p: bool) {
 
 co my_co (x: MyStruct) -> i32 {
     printiln x.x;
-    yret x.y + y.y;
+    yret x.y + x.y;
     printiln x.y;
-    return x.x * y.x;
+    return x.x * x.x;
 }
 
 struct MyStruct {
