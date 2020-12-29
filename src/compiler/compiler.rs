@@ -613,7 +613,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::StructExpression(_, struct_name, fields) => {
-                let asm = self.init_struct(current_func, struct_name, fields, 0, true)?;
+                let asm = self.struct_exression(current_func, struct_name, fields, 0, true)?;
                 assembly! {(code){
                     {{asm}}
                 }};
@@ -678,7 +678,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn init_struct(
+    fn struct_exression(
         &mut self,
         current_func: &String,
         struct_name: &str,
@@ -742,7 +742,7 @@ impl<'a> Compiler<'a> {
 
         match fvalue {
             Ast::StructExpression(_, substruct_name, substruct_values) => {
-                let asm = self.init_struct(
+                let asm = self.struct_exression(
                     current_func,
                     substruct_name,
                     substruct_values,
