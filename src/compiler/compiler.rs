@@ -615,9 +615,10 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::StructExpression(_, struct_name, fields) => {
-                //println!("Struct: {}", struct_name);
                 let anonymous_name = format!("!{}_{}", struct_name, self.anonymous_counter);
                 self.anonymous_counter += 1;
+                //let line = m.line();
+                //println!("Struct:{}: {}: {}", line, anonymous_name, struct_name);
                 let anonymous_offset = self
                     .scope
                     .find(&anonymous_name)
@@ -762,6 +763,7 @@ impl<'a> Compiler<'a> {
 
         match fvalue {
             Ast::StructExpression(_, substruct_name, substruct_values) => {
+                self.anonymous_counter += 1;
                 let asm = self.struct_exression(
                     current_func,
                     substruct_name,

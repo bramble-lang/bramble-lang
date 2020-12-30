@@ -28,6 +28,7 @@ impl LayoutData {
 
 #[derive(Debug, PartialEq)]
 pub struct Scope {
+    pub(super) line: u32,
     pub(super) level: Level,
     pub(super) ty: ast::Type,
     pub(super) symbols: SymbolTable,
@@ -38,6 +39,7 @@ pub struct Scope {
 impl Scope {
     pub fn new(level: Level, label: i32, ty: ast::Type) -> Scope {
         Scope {
+            line: 0,
             level,
             ty,
             symbols: SymbolTable::new(),
@@ -69,6 +71,10 @@ impl Scope {
         self.structs.get(name)
     }
 
+    pub fn line(&self) -> u32 {
+        self.line
+    }
+
     pub fn label(&self) -> i32 {
         self.label
     }
@@ -88,6 +94,7 @@ impl Scope {
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
         let mut scope = Scope::new(Level::Local, 0, m.ty.clone());
+        scope.line = m.ln;
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
             layout.offset =
@@ -109,6 +116,7 @@ impl Scope {
             0,
             m.ty.clone(),
         );
+        scope.line = m.ln;
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
             current_offset = scope.insert(

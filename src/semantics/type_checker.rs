@@ -513,6 +513,7 @@ pub mod checker {
                     self.anonymous_counter += 1;
 
                     //println!("struct: {}: {}", anonymouse_name, struct_name);
+
                     // Validate the types in the initialization parameters
                     // match their respective members in the struct
                     let struct_def = self.lookup(sym, &struct_name)?.ty.clone();
