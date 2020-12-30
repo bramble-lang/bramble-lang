@@ -22,14 +22,12 @@ pub mod checker {
 
     pub struct SemanticAnalyzer {
         stack: ScopeStack,
-        anonymous_counter: u32,
     }
 
     impl SemanticAnalyzer {
         pub fn new() -> SemanticAnalyzer {
             SemanticAnalyzer {
                 stack: ScopeStack::new(),
-                anonymous_counter: 0,
             }
         }
 

@@ -28,7 +28,6 @@ pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
     string_pool: StringPool,
-    anonymous_counter: u32,
 }
 
 impl<'a> Compiler<'a> {
@@ -57,7 +56,6 @@ impl<'a> Compiler<'a> {
             code: vec![],
             scope: ScopeStack::new(),
             string_pool,
-            anonymous_counter: 0,
         };
 
         let global_func = "".into();
@@ -762,7 +760,6 @@ impl<'a> Compiler<'a> {
 
         match fvalue {
             Ast::StructExpression(_, substruct_name, substruct_values) => {
-                self.anonymous_counter += 1;
                 let asm = self.struct_exression(
                     current_func,
                     substruct_name,
