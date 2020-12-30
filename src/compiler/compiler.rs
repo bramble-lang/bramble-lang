@@ -621,7 +621,7 @@ impl<'a> Compiler<'a> {
                     .scope
                     .find(&anonymous_name)
                     .expect(&format!(
-                        "Anonymous Struct Expression, {}, is not in symbol table: {:?}",
+                        "Anonymous Struct Expression, {}, is not in symbol table: \n{}",
                         anonymous_name,
                         self.scope,
                     ))
