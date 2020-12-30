@@ -253,6 +253,27 @@ mod ast_tests {
     use super::*;
 
     #[test]
+    pub fn test_node_id_is_copied() {
+        let sn = SemanticNode::Integer(
+            SemanticMetadata {
+                id: 3,
+                ln: 0,
+                ty: Type::I32,
+                sym: symbol_table::SymbolTable::new(),
+            },
+            0,
+        );
+        let empty_struct_table = StructTable::new();
+        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
+        match cn.0 {
+            CompilerNode::Integer(m, _) => {
+                assert_eq!(m, Scope::new(3, scope::Level::Local, 0, m.ty.clone()));
+            }
+            _ => assert_eq!(true, false),
+        }
+    }
+
+    #[test]
     pub fn test_integer() {
         let sn = SemanticNode::Integer(
             SemanticMetadata {
@@ -288,7 +309,7 @@ mod ast_tests {
         );
         let sn2 = SemanticNode::Integer(
             SemanticMetadata {
-                id: 0,
+                id: 1,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
@@ -297,7 +318,7 @@ mod ast_tests {
         );
         let snmul = SemanticNode::BinaryOp(
             SemanticMetadata {
-                id: 0,
+                id: 2,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
@@ -311,11 +332,12 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope::new(0, Level::Local, 2, m.ty.clone()),);
+                assert_eq!(m, Scope::new(2, Level::Local, 2, m.ty.clone()),);
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
                         assert_eq!(m.label, 0);
+                        assert_eq!(m.id, 0);
                         assert_eq!(v, 1);
                     }
                     _ => assert!(false),
@@ -323,6 +345,7 @@ mod ast_tests {
                 match *r {
                     CompilerNode::Integer(m, v) => {
                         assert_eq!(m.label, 1);
+                        assert_eq!(m.id, 1);
                         assert_eq!(v, 2);
                     }
                     _ => assert!(false),
