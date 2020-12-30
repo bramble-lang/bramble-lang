@@ -1,8 +1,14 @@
 fn my_main() {
-    let y: MyStruct := test4(MyStruct{ x: 10, y: 100, z: 20}, MyStruct{ x: 10, y: 100, z: 20});
+    // Test to make sure that empty structs can be returned and do not mess up anything
+    let e: EmptyStruct := return_empty();
+
+    // Test that struct expressions can be passed and returned
+    // Pass two to test if multiple parameters cause corruption 
+    let y: MyStruct := test4(MyStruct{ x: 5, y: 75, z: 18}, MyStruct{ x: 15, y: 125, z: 22});
     printiln y.x;
     printiln y.y;
     printiln y.z;
+
     
     return;
 }
@@ -19,4 +25,11 @@ fn test4(x: MyStruct, y: MyStruct) -> MyStruct {
         y: x.y + y.y,
         z: x.z + y.z,
     };
+}
+
+struct EmptyStruct {
+}
+
+fn return_empty() -> EmptyStruct {
+    return EmptyStruct{};
 }
