@@ -1,7 +1,5 @@
 
 fn my_main() {
-    //let ms: MyStruct := MyStruct{x: 1111, y: 2222, z: 3333};
-    //let y:i32 := test(10, ms);
     let y:i32 := test(10, MyStruct{x: 1111, y: 2222, z: 3333});
     printiln y;
     

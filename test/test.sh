@@ -64,6 +64,7 @@ then
     run_test "structs/passing"
     run_test "structs/pass_struct_expr"
     run_test "structs/return_nested"
+    run_test "structs/return_struct_expr"
     run_test "structs/returning"
     run_test "structs/coroutine_1"
     run_test "structs/coroutine_2"
