@@ -614,8 +614,7 @@ impl<'a> Compiler<'a> {
             }
             Ast::StructExpression(meta, struct_name, fields) => {
                 let anonymous_name = format!("!{}_{}", struct_name, meta.id());
-                //let line = m.line();
-                //println!("Struct:{}: {}: {}", line, anonymous_name, struct_name);
+
                 let anonymous_offset = self
                     .scope
                     .find(&anonymous_name)
@@ -820,8 +819,7 @@ impl<'a> Compiler<'a> {
                     }
                     _ => {
                         assembly! {(code){
-                            // TODO: This seems wrong?
-                            //{{self.pop_struct_into(name, dst_offset as u32)?}}
+                            // TODO: Double check the 0 here:
                             {{self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?}}
                         }}
                     }
