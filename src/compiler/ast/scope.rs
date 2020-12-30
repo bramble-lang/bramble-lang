@@ -28,6 +28,7 @@ impl LayoutData {
 
 #[derive(Debug, PartialEq)]
 pub struct Scope {
+    pub(super) id: u32,
     pub(super) line: u32,
     pub(super) level: Level,
     pub(super) ty: ast::Type,
@@ -37,8 +38,9 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn new(level: Level, label: i32, ty: ast::Type) -> Scope {
+    pub fn new(id: u32, level: Level, label: i32, ty: ast::Type) -> Scope {
         Scope {
+            id,
             line: 0,
             level,
             ty,
@@ -46,6 +48,10 @@ impl Scope {
             structs: StructTable::new(),
             label,
         }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.id
     }
 
     pub fn level(&self) -> &Level {
@@ -93,7 +99,7 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(Level::Local, 0, m.ty.clone());
+        let mut scope = Scope::new(m.id, Level::Local, 0, m.ty.clone());
         scope.line = m.ln;
         scope.label = layout.get_label();
         for s in m.sym.table().iter() {
@@ -109,6 +115,7 @@ impl Scope {
         current_offset: i32,
     ) -> (Scope, i32) {
         let mut scope = Scope::new(
+            m.id,
             Level::Routine {
                 next_label: 0,
                 allocation: 0,

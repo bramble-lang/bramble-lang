@@ -256,6 +256,7 @@ mod ast_tests {
     pub fn test_integer() {
         let sn = SemanticNode::Integer(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
@@ -268,7 +269,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
-                assert_eq!(m, Scope::new(scope::Level::Local, 0, m.ty.clone()));
+                assert_eq!(m, Scope::new(0, scope::Level::Local, 0, m.ty.clone()));
             }
             _ => assert_eq!(true, false),
         }
@@ -278,6 +279,7 @@ mod ast_tests {
     pub fn test_operator() {
         let sn1 = SemanticNode::Integer(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
@@ -286,6 +288,7 @@ mod ast_tests {
         );
         let sn2 = SemanticNode::Integer(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
@@ -294,6 +297,7 @@ mod ast_tests {
         );
         let snmul = SemanticNode::BinaryOp(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
@@ -307,7 +311,7 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope::new(Level::Local, 2, m.ty.clone()),);
+                assert_eq!(m, Scope::new(0, Level::Local, 2, m.ty.clone()),);
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
@@ -335,6 +339,7 @@ mod ast_tests {
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
@@ -363,6 +368,7 @@ mod ast_tests {
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
@@ -375,6 +381,7 @@ mod ast_tests {
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
@@ -413,6 +420,7 @@ mod ast_tests {
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
@@ -457,6 +465,7 @@ mod ast_tests {
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
@@ -473,6 +482,7 @@ mod ast_tests {
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
@@ -517,6 +527,7 @@ mod ast_tests {
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::RoutineDef(
             SemanticMetadata {
+                id: 0,
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
