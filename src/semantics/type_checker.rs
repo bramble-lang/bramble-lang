@@ -509,6 +509,10 @@ pub mod checker {
                     Ok(Unit)
                 }
                 StructExpression(meta, struct_name, params) => {
+                    let anonymouse_name = format!("!{}_{}", struct_name, self.anonymous_counter);
+                    self.anonymous_counter += 1;
+
+                    //println!("struct: {}: {}", anonymouse_name, struct_name);
                     // Validate the types in the initialization parameters
                     // match their respective members in the struct
                     let struct_def = self.lookup(sym, &struct_name)?.ty.clone();
@@ -534,8 +538,6 @@ pub mod checker {
                             ));
                         }
                     }
-                    let anonymouse_name = format!("!{}_{}", struct_name, self.anonymous_counter);
-                    self.anonymous_counter += 1;
                     sym.add(&anonymouse_name, Type::Custom(struct_name.clone()), false)?;
                     meta.ty = Custom(struct_name.clone());
                     Ok(meta.ty.clone())

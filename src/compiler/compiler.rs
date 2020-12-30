@@ -615,6 +615,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::StructExpression(_, struct_name, fields) => {
+                //println!("Struct: {}", struct_name);
                 let anonymous_name = format!("!{}_{}", struct_name, self.anonymous_counter);
                 self.anonymous_counter += 1;
                 let anonymous_offset = self
