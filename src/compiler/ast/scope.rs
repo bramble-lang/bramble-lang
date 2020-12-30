@@ -124,6 +124,18 @@ impl Scope {
     }
 }
 
+impl std::fmt::Display for Scope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("Level: {} | ", self.level))?;
+        f.write_fmt(format_args!("Type: {} |", self.ty))?;
+        f.write_fmt(format_args!("Label: {}\n", self.label))?;
+        f.write_fmt(format_args!("Symbols:\n{}\n", self.symbols))?;
+        f.write_fmt(format_args!("Structs:\n{}\n", self.structs))?;
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Level {
     Local,
@@ -135,6 +147,17 @@ impl Level {
         match self {
             Level::Local => None,
             Level::Routine { allocation, .. } => Some(*allocation),
+        }
+    }
+}
+
+impl std::fmt::Display for Level {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Level::Local => f.write_str("Local"),
+            Level::Routine{next_label, allocation} => {
+                f.write_fmt(format_args!("Next Label: {} | Allocation: {}", next_label, allocation))
+            }
         }
     }
 }
