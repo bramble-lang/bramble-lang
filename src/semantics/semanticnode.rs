@@ -16,6 +16,7 @@ pub type SemanticNode = Ast<SemanticMetadata>;
 pub struct SemanticAst {
     next_id: u32,
 }
+
 impl SemanticAst {
     pub fn new() -> SemanticAst {
         SemanticAst { next_id: 0 }
