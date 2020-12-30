@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use crate::syntax::ast;
 
-
 #[derive(Debug, PartialEq)]
 pub(super) struct StructTable {
     pub structs: HashMap<String, StructDefinition>,

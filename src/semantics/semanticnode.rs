@@ -165,7 +165,11 @@ impl SemanticNode {
                     let fvalue2 = SemanticNode::from_parser_ast(fvalue)?;
                     nfields.push((fname.clone(), *fvalue2));
                 }
-                Ok(Box::new(StructExpression(sm_from(*l), name.clone(), nfields)))
+                Ok(Box::new(StructExpression(
+                    sm_from(*l),
+                    name.clone(),
+                    nfields,
+                )))
             }
         }
     }

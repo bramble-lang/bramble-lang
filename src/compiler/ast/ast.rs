@@ -232,7 +232,10 @@ impl CompilerNode {
                     nlayout = no;
                     nfields.push((fname.clone(), nfv));
                 }
-                (StructExpression(meta, struct_name.clone(), nfields), nlayout)
+                (
+                    StructExpression(meta, struct_name.clone(), nfields),
+                    nlayout,
+                )
             }
         }
     }

@@ -21,12 +21,14 @@ pub mod checker {
 
     pub struct SemanticAnalyzer {
         stack: ScopeStack,
+        anonymous_counter: u32,
     }
 
     impl SemanticAnalyzer {
         pub fn new() -> SemanticAnalyzer {
             SemanticAnalyzer {
                 stack: ScopeStack::new(),
+                anonymous_counter: 0,
             }
         }
 
@@ -532,6 +534,9 @@ pub mod checker {
                             ));
                         }
                     }
+                    let anonymouse_name = format!("!{}_{}", struct_name, self.anonymous_counter);
+                    self.anonymous_counter += 1;
+                    sym.add(&anonymouse_name, Type::Custom(struct_name.clone()), false)?;
                     meta.ty = Custom(struct_name.clone());
                     Ok(meta.ty.clone())
                 }
