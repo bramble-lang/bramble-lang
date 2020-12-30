@@ -688,11 +688,7 @@ pub mod checker {
                 let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Integer(1, 5)));
 
                 let mut sa = SemanticAst::new();
-                let ty = start(
-                    &mut sa.from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Ok(ast::Type::I32));
             }
             // operand is not i32
@@ -700,11 +696,7 @@ pub mod checker {
                 let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Boolean(1, true)));
 
                 let mut sa = SemanticAst::new();
-                let ty = start(
-                    &mut sa.from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Err("L1: - expected i32 but found bool".into()));
             }
         }
@@ -728,11 +720,7 @@ pub mod checker {
                 );
 
                 let mut sa = SemanticAst::new();
-                let ty = start(
-                    &mut sa.from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Ok(ast::Type::I32));
             }
 
@@ -808,11 +796,7 @@ pub mod checker {
                 );
 
                 let mut sa = SemanticAst::new();
-                let ty = start(
-                    &mut sa.from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Ok(ast::Type::I32));
             }
 
@@ -885,11 +869,7 @@ pub mod checker {
 
             let mut sa = SemanticAst::new();
             for (test, expected) in tests.iter() {
-                let ty = start(
-                    &mut sa.from_parser_ast(&test).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope);
                 assert_eq!(ty, *expected);
             }
         }
@@ -929,11 +909,7 @@ pub mod checker {
 
             for (test, expected) in tests.iter() {
                 let mut sa = SemanticAst::new();
-                let ty = start(
-                    &mut sa.from_parser_ast(&test).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope);
                 assert_eq!(ty, *expected);
             }
         }
@@ -1296,11 +1272,7 @@ pub mod checker {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Ok(I32));
 
             let node = Ast::RoutineDef(
@@ -1313,11 +1285,7 @@ pub mod checker {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
@@ -1336,11 +1304,7 @@ pub mod checker {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Ok(I32));
 
             let node = Ast::RoutineDef(
@@ -1353,11 +1317,7 @@ pub mod checker {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 

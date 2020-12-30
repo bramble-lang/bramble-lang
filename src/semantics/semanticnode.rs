@@ -18,9 +18,7 @@ pub struct SemanticAst {
 }
 impl SemanticAst {
     pub fn new() -> SemanticAst {
-        SemanticAst{
-            next_id: 0,
-        }
+        SemanticAst { next_id: 0 }
     }
 
     pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>, String> {
@@ -222,7 +220,7 @@ mod tests {
         ]
         .iter()
         {
-            let mut sa = SemanticAst{next_id: 0};
+            let mut sa = SemanticAst { next_id: 0 };
             let snode = sa.from_parser_ast(&node).unwrap();
             assert_eq!(*snode, *expected);
         }
@@ -274,7 +272,7 @@ mod tests {
             )]
             .iter()
             {
-                let mut sa = SemanticAst{next_id: 0};
+                let mut sa = SemanticAst { next_id: 0 };
                 let snode = sa.from_parser_ast(tree).unwrap();
                 assert_eq!(*snode, *expected);
             }

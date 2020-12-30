@@ -621,8 +621,7 @@ impl<'a> Compiler<'a> {
                     .find(&anonymous_name)
                     .expect(&format!(
                         "Anonymous Struct Expression, {}, is not in symbol table: \n{}",
-                        anonymous_name,
-                        self.scope,
+                        anonymous_name, self.scope,
                     ))
                     .offset;
                 let asm = self.struct_exression(

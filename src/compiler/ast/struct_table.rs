@@ -140,7 +140,12 @@ impl std::fmt::Display for StructTable {
             f.write_fmt(format_args!("\t{} | {:?} | ", st.name, st.size))?;
 
             for (field_name, field_type, field_size) in st.fields.iter() {
-                f.write_fmt(format_args!("[{}, {}, {}], ", field_name, field_type, field_size.unwrap_or(0)))?;
+                f.write_fmt(format_args!(
+                    "[{}, {}, {}], ",
+                    field_name,
+                    field_type,
+                    field_size.unwrap_or(0)
+                ))?;
             }
 
             f.write_str("\n")?;

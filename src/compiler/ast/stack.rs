@@ -212,7 +212,8 @@ mod tests {
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
 
-        let mut fun_scope = Scope::new(0, 
+        let mut fun_scope = Scope::new(
+            0,
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
@@ -246,7 +247,8 @@ mod tests {
     fn test_get_routine_parameters() {
         let mut stack = ScopeStack::new();
 
-        let mut fun_scope = Scope::new(0, 
+        let mut fun_scope = Scope::new(
+            0,
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
@@ -275,7 +277,8 @@ mod tests {
         };
         stack.push(&module_node);
 
-        let fun2_scope = Scope::new(0, 
+        let fun2_scope = Scope::new(
+            0,
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
@@ -312,7 +315,8 @@ mod tests {
     fn test_get_coroutine_parameters() {
         let mut stack = ScopeStack::new();
 
-        let mut cor_scope = Scope::new(0, 
+        let mut cor_scope = Scope::new(
+            0,
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
@@ -341,7 +345,8 @@ mod tests {
         };
         stack.push(&module_node);
 
-        let fun2_scope = Scope::new(0, 
+        let fun2_scope = Scope::new(
+            0,
             Level::Routine {
                 next_label: 0,
                 allocation: 0,

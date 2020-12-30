@@ -147,7 +147,10 @@ impl std::fmt::Display for Scope {
         f.write_fmt(format_args!("Level: {} | ", self.level))?;
         f.write_fmt(format_args!("Type: {} |", self.ty))?;
         f.write_fmt(format_args!("Label: {}\n", self.label))?;
-        f.write_fmt(format_args!("Symbols (! prefix indicates anonymous symbol):\n{}", self.symbols))?;
+        f.write_fmt(format_args!(
+            "Symbols (! prefix indicates anonymous symbol):\n{}",
+            self.symbols
+        ))?;
         f.write_fmt(format_args!("Structs:\n{}\n", self.structs))?;
 
         Ok(())
@@ -173,9 +176,13 @@ impl std::fmt::Display for Level {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Level::Local => f.write_str("Local"),
-            Level::Routine{next_label, allocation} => {
-                f.write_fmt(format_args!("Routine: [Next Label: {}, Allocation: {}]", next_label, allocation))
-            }
+            Level::Routine {
+                next_label,
+                allocation,
+            } => f.write_fmt(format_args!(
+                "Routine: [Next Label: {}, Allocation: {}]",
+                next_label, allocation
+            )),
         }
     }
 }
