@@ -2,17 +2,6 @@
 fn my_main() {
     let y:i32 := test(10, MyStruct{x: 1111, y: 2222, z: 3333});
     printiln y;
-
-    let c: co i32 := test_co(10, MyStruct{x: 11, y: 22, z: 33});
-    let h: i32 := yield c;
-    printiln h;
-
-    let i: i32 := yield c;
-    printiln i;
-    let j: i32 := yield c;
-    printiln j;
-    let k: i32 := yield c;
-    printiln k;
     
     return;
 }
@@ -30,11 +19,4 @@ fn test(x: i32, t: MyStruct) -> i32 {
     printiln t.z;
 
     return x * (t.x + t.y + t.z);
-}
-
-co test_co(x: i32, t: MyStruct) -> i32 {
-    yret x;
-    yret t.x;
-    yret t.y;
-    return t.z;
 }

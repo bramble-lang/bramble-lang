@@ -1,14 +1,15 @@
 pub mod checker {
     use crate::ast;
     use crate::ast::{BinaryOperator, UnaryOperator};
-    use crate::semantics::semanticnode::SemanticNode;
+    use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
     use crate::semantics::symbol_table::*;
     use crate::syntax::ast::Type;
     use crate::syntax::ast::Type::*;
     use crate::syntax::pnode::PNode;
 
     pub fn type_check(ast: &PNode) -> Result<Box<SemanticNode>, String> {
-        let mut sm_ast = SemanticNode::from_parser_ast(&ast)?;
+        let mut sa = SemanticAst::new();
+        let mut sm_ast = sa.from_parser_ast(&ast)?;
         SymbolTable::generate(&mut sm_ast)?;
 
         let mut root_table = SymbolTable::new();
@@ -364,10 +365,10 @@ pub mod checker {
                     // parameter types
                     let mut pty = vec![];
                     for param in params.iter_mut() {
-                        match param {
+                        /*match param {
                             StructExpression(..) => return Err(format!("Cannot pass struct expression as function parameter (future feature)")),
                             _ => (),
-                        }
+                        }*/
                         let ty = self.traverse(param, current_func, sym)?;
 
                         pty.push(ty);
@@ -532,6 +533,9 @@ pub mod checker {
                             ));
                         }
                     }
+
+                    let anonymouse_name = format!("!{}_{}", struct_name, meta.id);
+                    sym.add(&anonymouse_name, Type::Custom(struct_name.clone()), false)?;
                     meta.ty = Custom(struct_name.clone());
                     Ok(meta.ty.clone())
                 }
@@ -647,11 +651,8 @@ pub mod checker {
             let node = Ast::Integer(1, 5);
             let scope = Scope::new();
 
-            let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let mut sa = SemanticAst::new();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Ok(ast::Type::I32));
         }
 
@@ -662,8 +663,9 @@ pub mod checker {
 
             let node = Ast::Identifier(1, "x".into());
 
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_main".into()),
                 &scope,
             );
@@ -683,22 +685,16 @@ pub mod checker {
             {
                 let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Integer(1, 5)));
 
-                let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let mut sa = SemanticAst::new();
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Ok(ast::Type::I32));
             }
             // operand is not i32
             {
                 let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Boolean(1, true)));
 
-                let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let mut sa = SemanticAst::new();
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Err("L1: - expected i32 but found bool".into()));
             }
         }
@@ -721,11 +717,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
-                let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let mut sa = SemanticAst::new();
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Ok(ast::Type::I32));
             }
 
@@ -738,8 +731,9 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -754,8 +748,9 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -770,8 +765,9 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -797,11 +793,8 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
-                let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let mut sa = SemanticAst::new();
+                let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
                 assert_eq!(ty, Ok(ast::Type::I32));
             }
 
@@ -814,8 +807,9 @@ pub mod checker {
                     Box::new(Ast::Integer(1, 10)),
                 );
 
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -830,8 +824,9 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -846,8 +841,9 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "b".into())),
                 );
 
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -869,12 +865,9 @@ pub mod checker {
                 Err("L1: && expected bool but found bool and i32".into()),
             )];
 
+            let mut sa = SemanticAst::new();
             for (test, expected) in tests.iter() {
-                let ty = start(
-                    &mut SemanticNode::from_parser_ast(&test).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope);
                 assert_eq!(ty, *expected);
             }
         }
@@ -913,11 +906,8 @@ pub mod checker {
             ];
 
             for (test, expected) in tests.iter() {
-                let ty = start(
-                    &mut SemanticNode::from_parser_ast(&test).unwrap(),
-                    &None,
-                    &scope,
-                );
+                let mut sa = SemanticAst::new();
+                let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope);
                 assert_eq!(ty, *expected);
             }
         }
@@ -936,8 +926,9 @@ pub mod checker {
                     ast::Type::I32,
                     Box::new(Ast::Integer(1, 5)),
                 );
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -956,8 +947,9 @@ pub mod checker {
                     ast::Type::Bool,
                     Box::new(Ast::Integer(1, 5)),
                 );
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -977,8 +969,9 @@ pub mod checker {
                     Box::new(Ast::Identifier(1, "x".into())),
                 );
 
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -991,8 +984,9 @@ pub mod checker {
                 scope.add("my_func", vec![], Unit, vec![]);
 
                 let node = Ast::Identifier(1, "x".into());
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -1013,8 +1007,9 @@ pub mod checker {
                 );
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -1031,8 +1026,9 @@ pub mod checker {
                 );
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -1049,8 +1045,9 @@ pub mod checker {
                 );
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -1067,8 +1064,9 @@ pub mod checker {
                 );
 
                 let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
+                let mut sa = SemanticAst::new();
                 let ty = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_func".into()),
                     &scope,
                 );
@@ -1083,8 +1081,9 @@ pub mod checker {
 
             let node = Ast::Return(1, None);
 
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
                 &scope,
             );
@@ -1097,8 +1096,9 @@ pub mod checker {
             scope.add("my_func", vec![], I32, vec![]);
 
             let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
                 &scope,
             );
@@ -1111,8 +1111,9 @@ pub mod checker {
             scope.add("my_func", vec![], I32, vec![]);
 
             let node = Ast::RoutineCall(1, ast::RoutineCall::Function, "my_func".into(), vec![]);
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
                 &scope,
             );
@@ -1127,8 +1128,9 @@ pub mod checker {
                 vec![Ast::Integer(1, 5)],
             );
 
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func2".into()),
                 &scope,
             );
@@ -1137,8 +1139,9 @@ pub mod checker {
             // test incorrect parameters passed in call
             let node = Ast::RoutineCall(1, ast::RoutineCall::Function, "my_func2".into(), vec![]);
 
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func2".into()),
                 &scope,
             );
@@ -1155,8 +1158,9 @@ pub mod checker {
             scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
             let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, "my_co".into(), vec![]);
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
                 &scope,
             );
@@ -1170,8 +1174,9 @@ pub mod checker {
                 vec![Ast::Integer(1, 5)],
             );
 
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
                 &scope,
             );
@@ -1181,8 +1186,9 @@ pub mod checker {
             let node =
                 Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, "my_co2".into(), vec![]);
 
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
                 &scope,
             );
@@ -1199,8 +1205,9 @@ pub mod checker {
             scope.add("my_co2", vec![], I32, vec![]);
 
             let node = Ast::YieldReturn(1, None);
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_co".into()),
                 &scope,
             );
@@ -1208,8 +1215,9 @@ pub mod checker {
 
             // test correct type for yield return
             let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
                 &scope,
             );
@@ -1217,8 +1225,9 @@ pub mod checker {
 
             // test incorrect type for yield return
             let node = Ast::YieldReturn(1, None);
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_co2".into()),
                 &scope,
             );
@@ -1237,8 +1246,9 @@ pub mod checker {
             scope.add("my_co2", vec![], I32, vec![]);
 
             let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
+            let mut sa = SemanticAst::new();
             let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_main".into()),
                 &scope,
             );
@@ -1259,11 +1269,8 @@ pub mod checker {
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
 
-            let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let mut sa = SemanticAst::new();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Ok(I32));
 
             let node = Ast::RoutineDef(
@@ -1275,11 +1282,8 @@ pub mod checker {
                 vec![Ast::Return(1, None)],
             );
 
-            let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let mut sa = SemanticAst::new();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
@@ -1297,11 +1301,8 @@ pub mod checker {
                 vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
             );
 
-            let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let mut sa = SemanticAst::new();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Ok(I32));
 
             let node = Ast::RoutineDef(
@@ -1313,11 +1314,8 @@ pub mod checker {
                 vec![Ast::Return(1, None)],
             );
 
-            let ty = start(
-                &mut SemanticNode::from_parser_ast(&node).unwrap(),
-                &None,
-                &scope,
-            );
+            let mut sa = SemanticAst::new();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
             assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
         }
 
@@ -1360,8 +1358,9 @@ pub mod checker {
             ] {
                 let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
 
+                let mut sa = SemanticAst::new();
                 let result = start(
-                    &mut SemanticNode::from_parser_ast(&node).unwrap(),
+                    &mut sa.from_parser_ast(&node).unwrap(),
                     &Some("my_main".into()),
                     &scope,
                 );

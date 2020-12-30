@@ -268,7 +268,11 @@ fn logical_and(stream: &mut TokenStream) -> PResult {
 
 fn comparison(stream: &mut TokenStream) -> PResult {
     trace!("comparison", stream);
-    binary_op(stream, &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq], sum)
+    binary_op(
+        stream,
+        &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
+        sum,
+    )
 }
 
 fn sum(stream: &mut TokenStream) -> PResult {
@@ -281,17 +285,20 @@ fn term(stream: &mut TokenStream) -> PResult {
     binary_op(stream, &vec![Lex::Mul, Lex::Div], negate)
 }
 
-fn binary_op(stream: &mut TokenStream, test: &Vec<Lex>, left_pattern: fn(&mut TokenStream) -> PResult) -> PResult {
+fn binary_op(
+    stream: &mut TokenStream,
+    test: &Vec<Lex>,
+    left_pattern: fn(&mut TokenStream) -> PResult,
+) -> PResult {
     trace!(format!("binary_op {:?}", test), stream);
     match left_pattern(stream)? {
-        Some(left) => {
-            match stream.next_if_one_of(test.clone()) {
-                Some(op) => {
-                    let right = binary_op(stream, test, left_pattern)?.ok_or(format!("L{}: expected expression after {}", op.l, op.s))?;
-                    PNode::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
-                },
-                None => Ok(Some(left)),
+        Some(left) => match stream.next_if_one_of(test.clone()) {
+            Some(op) => {
+                let right = binary_op(stream, test, left_pattern)?
+                    .ok_or(format!("L{}: expected expression after {}", op.l, op.s))?;
+                PNode::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
             }
+            None => Ok(Some(left)),
         },
         None => Ok(None),
     }
@@ -1435,7 +1442,10 @@ pub mod tests {
     #[test]
     fn parse_struct_init() {
         for (text, expected) in vec![
-            ("MyStruct{}", Ast::StructExpression(1, "MyStruct".into(), vec![])),
+            (
+                "MyStruct{}",
+                Ast::StructExpression(1, "MyStruct".into(), vec![]),
+            ),
             (
                 "MyStruct{x: 5}",
                 Ast::StructExpression(1, "MyStruct".into(), vec![("x".into(), Ast::Integer(1, 5))]),

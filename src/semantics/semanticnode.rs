@@ -5,6 +5,7 @@ use crate::syntax::pnode::PNode;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
+    pub id: u32,
     pub ln: u32,
     pub ty: ast::Type,
     pub sym: SymbolTable,
@@ -12,85 +13,92 @@ pub struct SemanticMetadata {
 
 pub type SemanticNode = Ast<SemanticMetadata>;
 
-impl SemanticNode {
-    pub fn from_parser_ast(ast: &PNode) -> Result<Box<SemanticNode>, String> {
+pub struct SemanticAst {
+    next_id: u32,
+}
+impl SemanticAst {
+    pub fn new() -> SemanticAst {
+        SemanticAst { next_id: 0 }
+    }
+
+    pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>, String> {
         use Ast::*;
         match ast {
-            Integer(ln, val) => Ok(Box::new(Integer(sm_from(*ln), *val))),
-            Boolean(ln, val) => Ok(Box::new(Boolean(sm_from(*ln), *val))),
-            StringLiteral(ln, val) => Ok(Box::new(StringLiteral(sm_from(*ln), val.clone()))),
-            CustomType(ln, val) => Ok(Box::new(CustomType(sm_from(*ln), val.clone()))),
+            Integer(ln, val) => Ok(Box::new(Integer(self.sm_from(*ln), *val))),
+            Boolean(ln, val) => Ok(Box::new(Boolean(self.sm_from(*ln), *val))),
+            StringLiteral(ln, val) => Ok(Box::new(StringLiteral(self.sm_from(*ln), val.clone()))),
+            CustomType(ln, val) => Ok(Box::new(CustomType(self.sm_from(*ln), val.clone()))),
             IdentifierDeclare(ln, name, p) => Ok(Box::new(IdentifierDeclare(
-                sm_from(*ln),
+                self.sm_from(*ln),
                 name.clone(),
                 p.clone(),
             ))),
-            Identifier(ln, id) => Ok(Box::new(Identifier(sm_from(*ln), id.clone()))),
+            Identifier(ln, id) => Ok(Box::new(Identifier(self.sm_from(*ln), id.clone()))),
             MemberAccess(ln, src, member) => Ok(Box::new(MemberAccess(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(src)?,
+                self.sm_from(*ln),
+                self.from_parser_ast(src)?,
                 member.clone(),
             ))),
             BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
-                sm_from(*ln),
+                self.sm_from(*ln),
                 *op,
-                SemanticNode::from_parser_ast(l)?,
-                SemanticNode::from_parser_ast(r)?,
+                self.from_parser_ast(l)?,
+                self.from_parser_ast(r)?,
             ))),
             UnaryOp(ln, op, ref operand) => Ok(Box::new(UnaryOp(
-                sm_from(*ln),
+                self.sm_from(*ln),
                 *op,
-                SemanticNode::from_parser_ast(operand)?,
+                self.from_parser_ast(operand)?,
             ))),
             If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
-                sm_from(*ln),
-                SemanticNode::from_parser_ast(cond)?,
-                SemanticNode::from_parser_ast(true_arm)?,
-                SemanticNode::from_parser_ast(false_arm)?,
+                self.sm_from(*ln),
+                self.from_parser_ast(cond)?,
+                self.from_parser_ast(true_arm)?,
+                self.from_parser_ast(false_arm)?,
             ))),
             Mutate(ln, name, ref exp) => Ok(Box::new(Mutate(
-                sm_from(*ln),
+                self.sm_from(*ln),
                 name.clone(),
-                SemanticNode::from_parser_ast(exp)?,
+                self.from_parser_ast(exp)?,
             ))),
             Bind(ln, name, mutable, p, ref exp) => Ok(Box::new(Bind(
-                sm_from(*ln),
+                self.sm_from(*ln),
                 name.clone(),
                 *mutable,
                 p.clone(),
-                SemanticNode::from_parser_ast(exp)?,
+                self.from_parser_ast(exp)?,
             ))),
-            Return(l, None) => Ok(Box::new(Return(sm_from(*l), None))),
+            Return(l, None) => Ok(Box::new(Return(self.sm_from(*l), None))),
             Return(l, Some(exp)) => Ok(Box::new(Return(
-                sm_from(*l),
-                Some(SemanticNode::from_parser_ast(exp)?),
+                self.sm_from(*l),
+                Some(self.from_parser_ast(exp)?),
             ))),
             Yield(l, box exp) => Ok(Box::new(Yield(
-                sm_from(*l),
-                SemanticNode::from_parser_ast(exp)?,
+                self.sm_from(*l),
+                self.from_parser_ast(exp)?,
             ))),
-            YieldReturn(l, None) => Ok(Box::new(YieldReturn(sm_from(*l), None))),
+            YieldReturn(l, None) => Ok(Box::new(YieldReturn(self.sm_from(*l), None))),
             YieldReturn(l, Some(exp)) => Ok(Box::new(YieldReturn(
-                sm_from(*l),
-                Some(SemanticNode::from_parser_ast(exp)?),
+                self.sm_from(*l),
+                Some(self.from_parser_ast(exp)?),
             ))),
             ExpressionBlock(ln, body) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
-                    let r = SemanticNode::from_parser_ast(stmt)?;
+                    let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Box::new(ExpressionBlock(sm_from(*ln), nbody)))
+                Ok(Box::new(ExpressionBlock(self.sm_from(*ln), nbody)))
             }
-            Statement(_, stmt) => Ok(SemanticNode::from_parser_ast(stmt)?),
+            Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
             RoutineDef(ln, def, fname, params, p, body) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
-                    let r = SemanticNode::from_parser_ast(stmt)?;
+                    let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
                 Ok(Box::new(RoutineDef(
-                    sm_from(*ln),
+                    self.sm_from(*ln),
                     *def,
                     fname.clone(),
                     params.clone(),
@@ -103,31 +111,31 @@ impl SemanticNode {
                 // parameter types
                 let mut nparams = vec![];
                 for param in params.iter() {
-                    let np = SemanticNode::from_parser_ast(param)?;
+                    let np = self.from_parser_ast(param)?;
                     nparams.push(*np);
                 }
                 Ok(Box::new(RoutineCall(
-                    sm_from(*l),
+                    self.sm_from(*l),
                     *call,
                     name.clone(),
                     nparams,
                 )))
             }
             Printi(l, exp) => Ok(Box::new(Printi(
-                sm_from(*l),
-                SemanticNode::from_parser_ast(exp)?,
+                self.sm_from(*l),
+                self.from_parser_ast(exp)?,
             ))),
             Printiln(l, exp) => Ok(Box::new(Printiln(
-                sm_from(*l),
-                SemanticNode::from_parser_ast(exp)?,
+                self.sm_from(*l),
+                self.from_parser_ast(exp)?,
             ))),
             Prints(l, exp) => Ok(Box::new(Prints(
-                sm_from(*l),
-                SemanticNode::from_parser_ast(exp)?,
+                self.sm_from(*l),
+                self.from_parser_ast(exp)?,
             ))),
             Printbln(l, exp) => Ok(Box::new(Printbln(
-                sm_from(*l),
-                SemanticNode::from_parser_ast(exp)?,
+                self.sm_from(*l),
+                self.from_parser_ast(exp)?,
             ))),
             Module {
                 meta: ln,
@@ -137,50 +145,57 @@ impl SemanticNode {
             } => {
                 let mut nfuncs = vec![];
                 for func in functions.iter() {
-                    nfuncs.push(*SemanticNode::from_parser_ast(func)?);
+                    nfuncs.push(*self.from_parser_ast(func)?);
                 }
                 let mut ncors = vec![];
                 for cor in coroutines.iter() {
-                    ncors.push(*SemanticNode::from_parser_ast(cor)?);
+                    ncors.push(*self.from_parser_ast(cor)?);
                 }
                 let mut nstructs = vec![];
                 for st in structs.iter() {
-                    nstructs.push(*SemanticNode::from_parser_ast(st)?);
+                    nstructs.push(*self.from_parser_ast(st)?);
                 }
                 Ok(Box::new(Module {
-                    meta: sm_from(*ln),
+                    meta: self.sm_from(*ln),
                     functions: nfuncs,
                     coroutines: ncors,
                     structs: nstructs,
                 }))
             }
             StructDef(l, name, fields) => Ok(Box::new(StructDef(
-                sm_from(*l),
+                self.sm_from(*l),
                 name.clone(),
                 fields.clone(),
             ))),
             StructExpression(l, name, fields) => {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
-                    let fvalue2 = SemanticNode::from_parser_ast(fvalue)?;
+                    let fvalue2 = self.from_parser_ast(fvalue)?;
                     nfields.push((fname.clone(), *fvalue2));
                 }
-                Ok(Box::new(StructExpression(sm_from(*l), name.clone(), nfields)))
+                Ok(Box::new(StructExpression(
+                    self.sm_from(*l),
+                    name.clone(),
+                    nfields,
+                )))
             }
         }
     }
+
+    fn sm_from(&mut self, l: u32) -> SemanticMetadata {
+        let sm_data = sm(self.next_id, l, ast::Type::Unknown);
+        self.next_id += 1;
+        sm_data
+    }
 }
 
-fn sm(ln: u32, ty: ast::Type) -> SemanticMetadata {
+fn sm(id: u32, ln: u32, ty: ast::Type) -> SemanticMetadata {
     SemanticMetadata {
+        id,
         ln,
         ty,
         sym: SymbolTable::new(),
     }
-}
-
-fn sm_from(l: u32) -> SemanticMetadata {
-    sm(l, ast::Type::Unknown)
 }
 
 #[cfg(test)]
@@ -192,20 +207,21 @@ mod tests {
         for (node, expected) in [
             (
                 Ast::Integer(1, 3),
-                Ast::Integer(sm(1, ast::Type::Unknown), 3),
+                Ast::Integer(sm(0, 1, ast::Type::Unknown), 3),
             ),
             (
                 Ast::Boolean(1, true),
-                Ast::Boolean(sm(1, ast::Type::Unknown), true),
+                Ast::Boolean(sm(0, 1, ast::Type::Unknown), true),
             ),
             (
                 Ast::Identifier(1, "x".into()),
-                Ast::Identifier(sm(1, ast::Type::Unknown), "x".into()),
+                Ast::Identifier(sm(0, 1, ast::Type::Unknown), "x".into()),
             ),
         ]
         .iter()
         {
-            let snode = SemanticNode::from_parser_ast(&node).unwrap();
+            let mut sa = SemanticAst { next_id: 0 };
+            let snode = sa.from_parser_ast(&node).unwrap();
             assert_eq!(*snode, *expected);
         }
     }
@@ -216,8 +232,8 @@ mod tests {
             (
                 (Ast::Integer(1, 3), Ast::Integer(1, 3)),
                 (
-                    Ast::Integer(sm(1, ast::Type::Unknown), 3),
-                    Ast::Integer(sm(1, ast::Type::Unknown), 3),
+                    Ast::Integer(sm(1, 1, ast::Type::Unknown), 3),
+                    Ast::Integer(sm(2, 1, ast::Type::Unknown), 3),
                 ),
             ),
             (
@@ -226,15 +242,15 @@ mod tests {
                     Ast::Identifier(1, "y".into()),
                 ),
                 (
-                    Ast::Identifier(sm(1, ast::Type::Unknown), "x".into()),
-                    Ast::Identifier(sm(1, ast::Type::Unknown), "y".into()),
+                    Ast::Identifier(sm(1, 1, ast::Type::Unknown), "x".into()),
+                    Ast::Identifier(sm(2, 1, ast::Type::Unknown), "y".into()),
                 ),
             ),
             (
                 (Ast::Boolean(1, true), Ast::Boolean(1, false)),
                 (
-                    Ast::Boolean(sm(1, ast::Type::Unknown), true),
-                    Ast::Boolean(sm(1, ast::Type::Unknown), false),
+                    Ast::Boolean(sm(1, 1, ast::Type::Unknown), true),
+                    Ast::Boolean(sm(2, 1, ast::Type::Unknown), false),
                 ),
             ),
         ]
@@ -248,7 +264,7 @@ mod tests {
                     Box::new(r.clone()),
                 ),
                 Ast::BinaryOp(
-                    sm(1, ast::Type::Unknown),
+                    sm(0, 1, ast::Type::Unknown),
                     BinaryOperator::Mul,
                     Box::new(el.clone()),
                     Box::new(er.clone()),
@@ -256,7 +272,8 @@ mod tests {
             )]
             .iter()
             {
-                let snode = SemanticNode::from_parser_ast(tree).unwrap();
+                let mut sa = SemanticAst { next_id: 0 };
+                let snode = sa.from_parser_ast(tree).unwrap();
                 assert_eq!(*snode, *expected);
             }
         }

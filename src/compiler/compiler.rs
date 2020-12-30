@@ -612,8 +612,24 @@ impl<'a> Compiler<'a> {
                     call @{fn_name};
                 }};
             }
-            Ast::StructExpression(_, struct_name, fields) => {
-                let asm = self.struct_exression(current_func, struct_name, fields, 0, true)?;
+            Ast::StructExpression(meta, struct_name, fields) => {
+                let anonymous_name = format!("!{}_{}", struct_name, meta.id());
+
+                let anonymous_offset = self
+                    .scope
+                    .find(&anonymous_name)
+                    .expect(&format!(
+                        "Anonymous Struct Expression, {}, is not in symbol table: \n{}",
+                        anonymous_name, self.scope,
+                    ))
+                    .offset;
+                let asm = self.struct_exression(
+                    current_func,
+                    struct_name,
+                    fields,
+                    anonymous_offset,
+                    false,
+                )?;
                 assembly! {(code){
                     {{asm}}
                 }};
@@ -708,8 +724,8 @@ impl<'a> Compiler<'a> {
 
         let mut code = vec![];
         code.push(Inst::Comment(format!(
-            "Instantiate struct of type {}",
-            struct_name
+            "Instantiate struct of type {} (Offset: {})",
+            struct_name, offset,
         )));
         if allocate {
             assembly! {(code){
@@ -718,15 +734,15 @@ impl<'a> Compiler<'a> {
         }
         for (fname, fvalue) in field_values.iter() {
             let field_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
-            let relative_offset = struct_sz - field_offset + offset;
+            let relative_offset = offset - (struct_sz - field_offset);
             assembly! {(code) {
-                {{self.bind_member(fvalue, current_func, Reg32::Esp, relative_offset)?}}
+                {{self.bind_member(fvalue, current_func, Reg32::Ebp, relative_offset)?}}
             }}
         }
 
         assembly! {(code) {
             ; {format!("Done instantiating struct of type {}", struct_name)}
-            lea %eax, [%esp + {offset}];
+            lea %eax, [%ebp - {offset}];
         }};
         Ok(code)
     }
@@ -760,7 +776,7 @@ impl<'a> Compiler<'a> {
                         let asm = self.copy_struct_into(
                             struct_name,
                             dst,
-                            -dst_offset,
+                            dst_offset,
                             Reg::R32(Reg32::Eax),
                             0,
                         )?;
@@ -770,7 +786,7 @@ impl<'a> Compiler<'a> {
                     }
                     _ => {
                         assembly! {(code) {
-                            mov [%{Reg::R32(dst)}-{-dst_offset}], %eax;
+                            mov [%{Reg::R32(dst)}-{dst_offset}], %eax;
                         }};
                     }
                 }
@@ -803,7 +819,8 @@ impl<'a> Compiler<'a> {
                     }
                     _ => {
                         assembly! {(code){
-                            {{self.pop_struct_into(name, dst_offset as u32)?}}
+                            // TODO: Double check the 0 here:
+                            {{self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?}}
                         }}
                     }
                 }
