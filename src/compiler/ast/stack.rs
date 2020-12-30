@@ -121,6 +121,16 @@ impl<'a> ScopeStack<'a> {
     }
 }
 
+impl std::fmt::Display for ScopeStack<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for scope in self.stack.iter() {
+            f.write_fmt(format_args!("{}\n", scope.get_metadata()))?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

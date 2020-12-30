@@ -13,6 +13,17 @@ impl SymbolTable {
     }
 }
 
+impl std::fmt::Display for SymbolTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("\tNm | Sz | Off\n"))?;
+        for (_, symbol) in self.table.iter() {
+            f.write_fmt(format_args!("\t{} | {} | {}\n", symbol.name, symbol.size, symbol.offset))?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Symbol {
     pub name: String,
