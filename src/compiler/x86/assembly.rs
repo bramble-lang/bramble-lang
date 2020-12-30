@@ -718,12 +718,12 @@ macro_rules! assembly2 {
     /********************/
     // local
     (($buf:expr, $info:expr) {^{$label:expr}: $($tail:tt)*}) => {
-        $buf.push(Inst::Label(format!(".{}_{}", $label, $info.label())));
+        $buf.push(Inst::Label(format!(".{}_{}", $label, $info.id())));
         assembly2!(($buf, $info) {$($tail)*})
     };
     (($buf:expr, $info:expr) {^$label:tt: $($tail:tt)*}) => {
         let lbl = stringify!($label);
-        $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.label())));
+        $buf.push(Inst::Label(format!(".{}_{}", lbl, $info.id())));
         assembly2!(($buf, $info) {$($tail)*})
     };
 
@@ -795,14 +795,14 @@ macro_rules! assembly2 {
     };
 
     (($buf:expr, $info:expr) {$inst:tt ^{$a:expr}; $($tail:tt)*}) => {
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, $info.label())));
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, $info.id())));
         $buf.push(unary_op!($inst)(lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };
 
     (($buf:expr, $info:expr) {$inst:tt ^ $a:tt; $($tail:tt)*}) => {
         let lbl = stringify!($a);
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label())));
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.id())));
         $buf.push(unary_op!($inst)(lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };
@@ -829,7 +829,7 @@ macro_rules! assembly2 {
     // reg, local label
     (($buf:expr, $info:expr) {$inst:tt % $a:tt, ^ $b:tt; $($tail:tt)*}) => {
         let lbl = stringify!($b);
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.label())));
+        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.id())));
         $buf.push(binary_op!($inst)(operand!(% $a), lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };

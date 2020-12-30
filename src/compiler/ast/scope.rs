@@ -8,21 +8,13 @@ use super::{
 #[derive(Debug, PartialEq)]
 pub struct LayoutData {
     pub(super) offset: i32,
-    pub(super) next_label: i32,
 }
 
 impl LayoutData {
     pub fn new(offset: i32) -> LayoutData {
         LayoutData {
             offset,
-            next_label: 0,
         }
-    }
-
-    pub fn get_label(&mut self) -> i32 {
-        let label = self.next_label;
-        self.next_label += 1;
-        label
     }
 }
 
@@ -34,11 +26,10 @@ pub struct Scope {
     pub(super) ty: ast::Type,
     pub(super) symbols: SymbolTable,
     pub(super) structs: StructTable,
-    pub(super) label: i32,
 }
 
 impl Scope {
-    pub fn new(id: u32, level: Level, label: i32, ty: ast::Type) -> Scope {
+    pub fn new(id: u32, level: Level, ty: ast::Type) -> Scope {
         Scope {
             id,
             line: 0,
@@ -46,7 +37,6 @@ impl Scope {
             ty,
             symbols: SymbolTable::new(),
             structs: StructTable::new(),
-            label,
         }
     }
 
@@ -81,10 +71,6 @@ impl Scope {
         self.line
     }
 
-    pub fn label(&self) -> i32 {
-        self.label
-    }
-
     pub fn ty(&self) -> &ast::Type {
         &self.ty
     }
@@ -99,9 +85,8 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(m.id, Level::Local, 0, m.ty.clone());
+        let mut scope = Scope::new(m.id, Level::Local, m.ty.clone());
         scope.line = m.ln;
-        scope.label = layout.get_label();
         for s in m.sym.table().iter() {
             layout.offset =
                 scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
@@ -120,7 +105,6 @@ impl Scope {
                 next_label: 0,
                 allocation: 0,
             },
-            0,
             m.ty.clone(),
         );
         scope.line = m.ln;
@@ -145,8 +129,7 @@ impl Scope {
 impl std::fmt::Display for Scope {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("Level: {} | ", self.level))?;
-        f.write_fmt(format_args!("Type: {} |", self.ty))?;
-        f.write_fmt(format_args!("Label: {}\n", self.label))?;
+        f.write_fmt(format_args!("Type: {}\n", self.ty))?;
         f.write_fmt(format_args!(
             "Symbols (! prefix indicates anonymous symbol):\n{}",
             self.symbols
