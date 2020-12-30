@@ -1,5 +1,5 @@
 fn my_main() {
-    let y: MyStruct := test4(10);
+    let y: MyStruct := test4(MyStruct{ x: 10, y: 100, z: 20}, MyStruct{ x: 10, y: 100, z: 20});
     printiln y.x;
     printiln y.y;
     printiln y.z;
@@ -13,10 +13,10 @@ struct MyStruct {
     z: i32,
 }
 
-fn test4(x: i32) -> MyStruct {
+fn test4(x: MyStruct, y: MyStruct) -> MyStruct {
     return MyStruct{
-        x: x,
-        y: x * x,
-        z: x + x,
+        x: x.x + y.x,
+        y: x.y + y.y,
+        z: x.z + y.z,
     };
 }
