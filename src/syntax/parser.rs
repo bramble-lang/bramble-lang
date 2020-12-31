@@ -357,6 +357,7 @@ fn factor(stream: &mut TokenStream) -> PResult {
 }
 
 fn if_expression(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     Ok(match stream.next_if(&Lex::If) {
         Some(token) => {
             stream.next_must_be(&Lex::LParen)?;
@@ -399,6 +400,7 @@ fn if_expression(stream: &mut TokenStream) -> PResult {
 }
 
 fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
+    trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
     let params = id_declaration_list(stream)?;
     stream.next_must_be(&Lex::RParen)?;
@@ -407,6 +409,7 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String
 }
 
 fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
+    trace!(stream);
     let mut decls = vec![];
 
     while let Some(token) = id_declaration(stream)? {
@@ -424,6 +427,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
+    trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
             let mut params = vec![];
@@ -447,6 +451,7 @@ fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String
 }
 
 fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>, String> {
+    trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
             let mut params = vec![];
@@ -471,6 +476,7 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
 }
 
 fn return_stmt(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     Ok(match stream.next_if(&Lex::Return) {
         Some(token) => {
             let exp = expression(stream)?;
@@ -485,6 +491,7 @@ fn return_stmt(stream: &mut TokenStream) -> PResult {
 }
 
 fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     Ok(match stream.next_if(&Lex::YieldReturn) {
         Some(token) => {
             let exp = expression(stream)?;
@@ -499,6 +506,7 @@ fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
 }
 
 fn co_yield(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     match stream.next_if(&Lex::Yield) {
         Some(token) => {
             let line = token.l;
@@ -512,6 +520,7 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
 }
 
 fn println_stmt(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
         Some(print) => {
             let exp = expression(stream)?
@@ -532,6 +541,7 @@ fn println_stmt(stream: &mut TokenStream) -> PResult {
 }
 
 fn let_bind(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     match stream.next_if(&Lex::Let) {
         Some(token) => {
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
@@ -552,6 +562,7 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
 }
 
 fn mutate(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
         None => Ok(None),
         Some(tokens) => {
@@ -569,6 +580,7 @@ fn mutate(stream: &mut TokenStream) -> PResult {
 }
 
 fn co_init(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     match stream.next_if(&Lex::Init) {
         Some(token) => match stream.next_if_id() {
             Some((l, id)) => {
@@ -588,12 +600,14 @@ fn co_init(stream: &mut TokenStream) -> PResult {
 }
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     function_call(stream)
         .por(struct_expression, stream)
         .por(identifier, stream)
 }
 
 fn function_call(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
         let (line, fn_name) = stream
             .next_if_id()
@@ -612,6 +626,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
 }
 
 fn struct_expression(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LBrace]) {
         let (line, struct_name) = stream
             .next_if_id()
@@ -627,6 +642,7 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
 }
 
 fn identifier(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     match stream.next_if_id() {
         Some((line, id)) => Ok(Some(Ast::Identifier(line, id))),
         _ => Ok(None),
@@ -634,6 +650,7 @@ fn identifier(stream: &mut TokenStream) -> PResult {
 }
 
 fn consume_type(stream: &mut TokenStream) -> Option<Type> {
+    trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
     match stream.peek() {
         Some(Token {
@@ -668,6 +685,7 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
 }
 
 fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
+    trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
             let line_id = t[0].l;
@@ -704,6 +722,7 @@ fn number(stream: &mut TokenStream) -> PResult {
 }
 
 fn boolean(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
         Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Ast::Boolean(l, b))),
         _ => Ok(None),
@@ -711,6 +730,7 @@ fn boolean(stream: &mut TokenStream) -> PResult {
 }
 
 fn string_literal(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
     match stream.next_if(&Lex::StringLiteral("".into())) {
         Some(Token {
             l,
