@@ -8,7 +8,7 @@ mod syntax;
 
 use clap::{App, Arg};
 use compiler::compiler::*;
-use lexer::tokens::Token;
+use lexer::{lexer::TracingConfig, tokens::Token};
 use semantics::type_checker::*;
 use syntax::ast;
 use syntax::parser;
@@ -39,6 +39,13 @@ fn main() {
                 .help("Prints out a trace of all the steps the parser follows as it converts the token vector into an AST.  The current token is printed next to the step.
                 This is for debugging the parser when adding new syntactical elements.")
         )
+        .arg(
+            Arg::with_name("trace-lexer")
+                .long("trace-lexer")
+                .takes_value(true)
+                .help("Prints out a trace of all the steps the lexer follows as it converts the token vector into an AST.  The current token is printed next to the step.
+                This is for debugging the lexer when adding new tokens.")
+        )
         .get_matches();
 
     let input = matches
@@ -46,7 +53,9 @@ fn main() {
         .expect("Expected an input source file to compile");
     let text = std::fs::read_to_string(input).expect("Failed to read input file");
 
+    let trace_lexer = parse_trace_config(matches.value_of("trace-lexer"));
     let mut lexer = crate::lexer::lexer::Lexer::new(&text);
+    lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let tokens: Vec<Token> = tokens
         .into_iter()
@@ -90,4 +99,31 @@ fn main() {
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
     Compiler::print(&program, &mut output).expect("Failed to write assembly");
+}
+
+fn parse_trace_config(v: Option<&str>) -> TracingConfig {
+    match v {
+        Some(v) => {
+            let split: Vec<_> = v.split(':').collect();
+            if split.len() == 1 {
+                let line = split[0].parse::<usize>().expect("Expected integer in Trace Configuration");
+                TracingConfig::Only(line)
+            } else if split.len() == 2{
+                if split[0].len() == 0 {
+                    let before = split[1].parse::<usize>().expect("Expected integer in Trace Configuration");
+                    TracingConfig::Before(before)
+                } else if split[1].len() == 0 {
+                    let after = split[0].parse::<usize>().expect("Expected integer in Trace Configuration");
+                    TracingConfig::After(after)
+                } else {
+                    let start = split[0].parse::<usize>().expect("Expected integer in Trace Configuration");
+                    let end = split[1].parse::<usize>().expect("Expected integer in Trace Configuration");
+                    TracingConfig::Between(start, end)
+                }
+            }else {
+                TracingConfig::Off
+            }
+        },
+        None => TracingConfig::Off,
+    }
 }

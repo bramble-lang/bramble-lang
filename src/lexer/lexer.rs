@@ -1,5 +1,7 @@
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
+use stdext::function_name;
+
 use super::tokens::{Lex, Primitive, Token};
 use Lex::*;
 
@@ -93,10 +95,44 @@ impl<'a> LexerBranch<'a> {
         self.lexer.chars[self.index..].starts_with(&tc)
     }
 }
+
+pub enum TracingConfig {
+    All,
+    Between(usize, usize),
+    Before(usize),
+    After(usize),
+    Only(usize),
+    Off,
+}
+
 pub struct Lexer {
     chars: Vec<char>,
     index: usize,
     line: u32,
+    tracing: TracingConfig,
+}
+
+macro_rules! trace {
+    ($ts:expr) => {
+        match &$ts.tracing {
+            &TracingConfig::Only(ln) if ($ts.line as usize) == ln => {
+                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
+            },
+            &TracingConfig::Before(ln) if ($ts.line as usize) <= ln => {
+                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
+            },
+            &TracingConfig::After(ln) if ($ts.line as usize) >= ln => {
+                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
+            },
+            &TracingConfig::Between(start, end) if ($ts.line as usize) >= start && ($ts.line as usize) <= end => {
+                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
+            },
+            &TracingConfig::All => {
+                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
+            }
+            _ => {}
+        }
+    };
 }
 
 impl Lexer {
@@ -105,7 +141,12 @@ impl Lexer {
             chars: text.chars().collect(),
             index: 0,
             line: 1,
+            tracing: TracingConfig::Off,
         }
+    }
+
+    pub fn set_tracing(&mut self, config: TracingConfig) {
+        self.tracing = config;
     }
 
     pub fn tokenize(&mut self) -> Vec<Result<Token, String>> {
@@ -153,6 +194,7 @@ impl Lexer {
     }
 
     fn consume_literal(&mut self) -> Result<Option<Token>, String> {
+        trace!(self);
         match self.consume_integer()? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_string_literal()? {
@@ -163,6 +205,7 @@ impl Lexer {
     }
 
     pub fn consume_whitespace(&mut self) {
+        trace!(self);
         while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
             if self.chars[self.index] == '\n' {
                 self.line += 1;
@@ -172,6 +215,7 @@ impl Lexer {
     }
 
     pub fn consume_identifier(&mut self) -> Result<Option<Token>, String> {
+        trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch
             .peek()
@@ -197,6 +241,7 @@ impl Lexer {
     }
 
     fn consume_string_literal(&mut self) -> Result<Option<Token>, String> {
+        trace!(self);
         let mut branch = LexerBranch::from(self);
 
         if branch.next_if('"') {
@@ -216,6 +261,7 @@ impl Lexer {
     }
 
     pub fn consume_integer(&mut self) -> Result<Option<Token>, String> {
+        trace!(self);
         let mut branch = LexerBranch::from(self);
 
         if !branch.peek().map_or(false, |c| c.is_numeric()) {
@@ -244,6 +290,7 @@ impl Lexer {
     }
 
     pub fn consume_operator(&mut self) -> Result<Option<Token>, String> {
+        trace!(self);
         let line = self.line;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
@@ -285,6 +332,7 @@ impl Lexer {
     }
 
     fn consume_line_comment(&mut self) {
+        trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch.next_ifn("//") {
             while let Some(c) = branch.next() {
@@ -297,6 +345,7 @@ impl Lexer {
     }
 
     fn consume_block_comment(&mut self) {
+        trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch.next_ifn("/*") {
             while !branch.next_ifn("*/") {
@@ -307,6 +356,7 @@ impl Lexer {
     }
 
     pub fn if_boolean_map(&self, token: Token) -> Token {
+        trace!(self);
         match &token {
             Token {
                 l: _,
@@ -321,6 +371,7 @@ impl Lexer {
     }
 
     pub fn if_primitive_map(&self, token: Token) -> Token {
+        trace!(self);
         match token {
             Token {
                 l: _,
@@ -336,6 +387,7 @@ impl Lexer {
     }
 
     pub fn if_keyword_map(&self, token: Token) -> Token {
+        trace!(self);
         match token {
             Token {
                 l: _,
