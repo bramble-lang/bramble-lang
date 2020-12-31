@@ -32,6 +32,13 @@ fn main() {
                 .takes_value(true)
                 .help("Name the output file that the assembly will be written to"),
         )
+        .arg(
+            Arg::with_name("trace-parser")
+                .long("trace-parser")
+                .takes_value(false)
+                .help("Prints out a trace of all the steps the parser follows as it converts the token vector into an AST.  The current token is printed next to the step.
+                This is for debugging the parser when adding new syntactical elements.")
+        )
         .get_matches();
 
     let input = matches
@@ -53,6 +60,8 @@ fn main() {
         .map(|t| t.unwrap())
         .collect();
 
+    let trace_parser = matches.is_present("trace-parser");
+    parser::set_tracing(trace_parser);
     let ast = match parser::parse(tokens) {
         Ok(Some(ast)) => ast,
         Ok(None) => {

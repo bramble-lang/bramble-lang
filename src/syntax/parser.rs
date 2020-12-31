@@ -1,5 +1,8 @@
 #![allow(unused_mut, unused_variables)]
 
+use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicBool;
+
 use stdext::function_name;
 
 use crate::lexer::tokens::{Lex, Primitive, Token};
@@ -13,9 +16,15 @@ use super::pnode::PResult;
 use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};
 
+static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
+
+pub fn set_tracing(enable: bool) {
+    ENABLE_TRACING.store(enable, Ordering::SeqCst)
+}
+
 macro_rules! trace {
     ($ts:expr) => {
-        if true {
+        if ENABLE_TRACING.load(Ordering::SeqCst) {
             println!("{} <- {:?}", function_name!(), $ts.peek())
         }
     };
