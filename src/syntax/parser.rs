@@ -1,5 +1,7 @@
 #![allow(unused_mut, unused_variables)]
 
+use stdext::function_name;
+
 use crate::lexer::tokens::{Lex, Primitive, Token};
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -12,9 +14,9 @@ use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};
 
 macro_rules! trace {
-    ($fn_name:expr, $ts:expr) => {
-        if false {
-            println!("{} <- {:?}", $fn_name, $ts.peek())
+    ($ts:expr) => {
+        if true {
+            println!("{} <- {:?}", function_name!(), $ts.peek())
         }
     };
 }
@@ -252,22 +254,22 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
 }
 
 fn expression(stream: &mut TokenStream) -> PResult {
-    trace!("expression", stream);
+    trace!(stream);
     logical_or(stream)
 }
 
 fn logical_or(stream: &mut TokenStream) -> PResult {
-    trace!("logical_or", stream);
+    trace!(stream);
     binary_op(stream, &vec![Lex::BOr], logical_and)
 }
 
 fn logical_and(stream: &mut TokenStream) -> PResult {
-    trace!("logical_and", stream);
+    trace!(stream);
     binary_op(stream, &vec![Lex::BAnd], comparison)
 }
 
 fn comparison(stream: &mut TokenStream) -> PResult {
-    trace!("comparison", stream);
+    trace!(stream);
     binary_op(
         stream,
         &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
@@ -276,12 +278,12 @@ fn comparison(stream: &mut TokenStream) -> PResult {
 }
 
 fn sum(stream: &mut TokenStream) -> PResult {
-    trace!("sum", stream);
+    trace!(stream);
     binary_op(stream, &vec![Lex::Add, Lex::Minus], term)
 }
 
 fn term(stream: &mut TokenStream) -> PResult {
-    trace!("term", stream);
+    trace!(stream);
     binary_op(stream, &vec![Lex::Mul, Lex::Div], negate)
 }
 
@@ -290,7 +292,7 @@ fn binary_op(
     test: &Vec<Lex>,
     left_pattern: fn(&mut TokenStream) -> PResult,
 ) -> PResult {
-    trace!(format!("binary_op {:?}", test), stream);
+    trace!(stream);
     match left_pattern(stream)? {
         Some(left) => match stream.next_if_one_of(test.clone()) {
             Some(op) => {
@@ -305,7 +307,7 @@ fn binary_op(
 }
 
 fn negate(stream: &mut TokenStream) -> PResult {
-    trace!("negate", stream);
+    trace!(stream);
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
             let factor =
@@ -317,7 +319,7 @@ fn negate(stream: &mut TokenStream) -> PResult {
 }
 
 fn member_access(stream: &mut TokenStream) -> PResult {
-    trace!("member_access", stream);
+    trace!(stream);
     match factor(stream)? {
         Some(f) => {
             let mut ma = f;
@@ -336,7 +338,7 @@ fn member_access(stream: &mut TokenStream) -> PResult {
 }
 
 fn factor(stream: &mut TokenStream) -> PResult {
-    trace!("factor", stream);
+    trace!(stream);
     match stream.peek() {
         Some(Token {
             l: _,
@@ -684,14 +686,14 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
 }
 
 fn constant(stream: &mut TokenStream) -> PResult {
-    trace!("constant", stream);
+    trace!(stream);
     number(stream)
         .por(boolean, stream)
         .por(string_literal, stream)
 }
 
 fn number(stream: &mut TokenStream) -> PResult {
-    trace!("number", stream);
+    trace!(stream);
     match stream.next_if(&Lex::Integer(0)) {
         Some(Token {
             l,
