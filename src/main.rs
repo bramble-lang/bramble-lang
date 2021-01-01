@@ -5,10 +5,12 @@ mod compiler;
 mod lexer;
 mod semantics;
 mod syntax;
+mod diagnostics;
 
 use clap::{App, Arg};
 use compiler::compiler::*;
-use lexer::{lexer::TracingConfig, tokens::Token};
+use diagnostics::config::TracingConfig;
+use lexer::{tokens::Token};
 use semantics::type_checker::*;
 use syntax::ast;
 use syntax::parser;
@@ -121,7 +123,7 @@ fn parse_trace_config(v: Option<&str>) -> TracingConfig {
                     TracingConfig::Between(start, end)
                 }
             }else {
-                TracingConfig::Off
+                panic!("Invalid configuration value provided for tracing");
             }
         },
         None => TracingConfig::Off,

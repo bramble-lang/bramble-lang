@@ -63,6 +63,20 @@ macro_rules! trace {
     compile - takes an AST and converts it to assembly
 */
 
+pub struct Parser {
+    current_line: usize,
+    tracing: bool,
+}
+
+impl Parser {
+    pub fn new(tracing: bool) -> Parser {
+        Parser{
+            tracing,
+            current_line: 0,
+        }
+    }
+}
+
 pub fn parse(tokens: Vec<Token>) -> PResult {
     let mut stream = TokenStream::new(&tokens);
     module(&mut stream).map_err(|e| format!("Parser: {}", e))

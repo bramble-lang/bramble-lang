@@ -2,6 +2,9 @@
 // by tokenize
 use stdext::function_name;
 
+use crate::diagnostics::config::TracingConfig;
+use crate::trace;
+
 use super::tokens::{Lex, Primitive, Token};
 use Lex::*;
 
@@ -96,43 +99,11 @@ impl<'a> LexerBranch<'a> {
     }
 }
 
-pub enum TracingConfig {
-    All,
-    Between(usize, usize),
-    Before(usize),
-    After(usize),
-    Only(usize),
-    Off,
-}
-
 pub struct Lexer {
     chars: Vec<char>,
     index: usize,
     line: u32,
     tracing: TracingConfig,
-}
-
-macro_rules! trace {
-    ($ts:expr) => {
-        match &$ts.tracing {
-            &TracingConfig::Only(ln) if ($ts.line as usize) == ln => {
-                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
-            },
-            &TracingConfig::Before(ln) if ($ts.line as usize) <= ln => {
-                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
-            },
-            &TracingConfig::After(ln) if ($ts.line as usize) >= ln => {
-                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
-            },
-            &TracingConfig::Between(start, end) if ($ts.line as usize) >= start && ($ts.line as usize) <= end => {
-                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
-            },
-            &TracingConfig::All => {
-                println!("{} <- L{}:{:?}", function_name!(), $ts.line, $ts.chars[$ts.index])
-            }
-            _ => {}
-        }
-    };
 }
 
 impl Lexer {
@@ -147,6 +118,18 @@ impl Lexer {
 
     pub fn set_tracing(&mut self, config: TracingConfig) {
         self.tracing = config;
+    }
+
+    pub fn line(&self) -> u32 {
+        self.line as u32
+    }
+
+    pub fn current_token(&self) -> Option<char> {
+        if self.index < self.chars.len() {
+            Some(self.chars[self.index])
+        } else {
+            None
+        }
     }
 
     pub fn tokenize(&mut self) -> Vec<Result<Token, String>> {
