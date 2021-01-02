@@ -1,11 +1,11 @@
 #![allow(unused_mut, unused_variables)]
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::atomic::AtomicBool;
 
 use stdext::function_name;
 
-use crate::lexer::tokens::{Lex, Primitive, Token};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}};
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
@@ -17,15 +17,60 @@ use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
+static TRACE_START: AtomicUsize = AtomicUsize::new(0);
+static TRACE_END: AtomicUsize = AtomicUsize::new(0);
 
-pub fn set_tracing(enable: bool) {
-    ENABLE_TRACING.store(enable, Ordering::SeqCst)
+pub fn set_tracing(config: TracingConfig) {
+    match config {
+        TracingConfig::All => {
+            ENABLE_TRACING.store(true, Ordering::SeqCst);
+            TRACE_START.store(0, Ordering::SeqCst);
+            TRACE_END.store(0, Ordering::SeqCst);
+        },
+        TracingConfig::After(start) => {
+            ENABLE_TRACING.store(true, Ordering::SeqCst);
+            TRACE_START.store(start, Ordering::SeqCst);
+            TRACE_END.store(0, Ordering::SeqCst);
+        },
+        TracingConfig::Before(end) => {
+            ENABLE_TRACING.store(true, Ordering::SeqCst);
+            TRACE_START.store(0, Ordering::SeqCst);
+            TRACE_END.store(end, Ordering::SeqCst);
+        }
+        TracingConfig::Between(start, end) => {
+            ENABLE_TRACING.store(true, Ordering::SeqCst);
+            TRACE_START.store(start, Ordering::SeqCst);
+            TRACE_END.store(end, Ordering::SeqCst);
+        }
+        TracingConfig::Only(line) => {
+            ENABLE_TRACING.store(true, Ordering::SeqCst);
+            TRACE_START.store(line, Ordering::SeqCst);
+            TRACE_END.store(line, Ordering::SeqCst);
+        }
+        _ => (),
+    }
 }
 
 macro_rules! trace {
     ($ts:expr) => {
         if ENABLE_TRACING.load(Ordering::SeqCst) {
-            println!("{} <- {:?}", function_name!(), $ts.peek())
+            match $ts.peek() {
+                None => (),
+                Some(token) => {
+                    if TRACE_START.load(Ordering::SeqCst) == 0 && TRACE_END.load(Ordering::SeqCst) == 0 {
+                        println!("{} <- {:?}", function_name!(), token)
+                    }
+                    else if TRACE_END.load(Ordering::SeqCst) == 0 && TRACE_START.load(Ordering::SeqCst) <= token.l as usize {
+                        println!("{} <- {:?}", function_name!(), token)
+                    }
+                    else if TRACE_START.load(Ordering::SeqCst) == 0 && token.l as usize <= TRACE_END.load(Ordering::SeqCst) {
+                        println!("{} <- {:?}", function_name!(), token)
+                    }
+                    else if TRACE_START.load(Ordering::SeqCst) <= token.l as usize && token.l as usize <= TRACE_END.load(Ordering::SeqCst) {
+                        println!("{} <- {:?}", function_name!(), token)
+                    }
+                }
+            }
         }
     };
 }

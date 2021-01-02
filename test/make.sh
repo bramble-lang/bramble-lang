@@ -4,7 +4,7 @@ function run() {
     test=$1
     rm -f ./target/*
     echo "Compiling"
-    cargo run -- --trace-lexer :4 -i ${test} -o ./target/output.asm
+    cargo run -- --trace-parser 5: -i ${test} -o ./target/output.asm
     echo ""
     echo "Assembling"
 

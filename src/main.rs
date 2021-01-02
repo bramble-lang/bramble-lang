@@ -37,7 +37,7 @@ fn main() {
         .arg(
             Arg::with_name("trace-parser")
                 .long("trace-parser")
-                .takes_value(false)
+                .takes_value(true)
                 .help("Prints out a trace of all the steps the parser follows as it converts the token vector into an AST.  The current token is printed next to the step.
                 This is for debugging the parser when adding new syntactical elements.")
         )
@@ -71,7 +71,8 @@ fn main() {
         .map(|t| t.unwrap())
         .collect();
 
-    let trace_parser = matches.is_present("trace-parser");
+    let trace_parser = parse_trace_config(matches.value_of("trace-parser"));
+    //let trace_parser = if matches.is_present("trace-parser") {TracingConfig::All} else {TracingConfig::Off};
     parser::set_tracing(trace_parser);
     let ast = match parser::parse(tokens) {
         Ok(Some(ast)) => ast,
