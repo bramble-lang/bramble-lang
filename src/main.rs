@@ -48,6 +48,12 @@ fn main() {
                 .help("Prints out a trace of all the steps the lexer follows as it converts the token vector into an AST.  The current token is printed next to the step.
                 This is for debugging the lexer when adding new tokens.")
         )
+        .arg(
+            Arg::with_name("trace-semantic-analysis")
+                .long("trace-semantic-analysis")
+                .takes_value(true)
+                .help("Prints out a trace of all the steps the semantic analyzer when it computes the type for every node in the AST.")
+        )
         .get_matches();
 
     let input = matches
@@ -87,7 +93,9 @@ fn main() {
     };
 
     // Type Check
-    let semantic_ast = match checker::type_check(&ast) {
+    let trace_semantic_analysis = parse_trace_config(matches.value_of("trace-semantic-analysis"));
+    println!("{:?}", trace_semantic_analysis);
+    let semantic_ast = match checker::type_check(&ast, trace_semantic_analysis) {
         Ok(ast) => {
             //func_table = FunctionTable::from_semantic_ast(&ast);
             ast
@@ -114,7 +122,9 @@ fn parse_trace_config(v: Option<&str>) -> TracingConfig {
                     .expect("Expected integer in Trace Configuration");
                 TracingConfig::Only(line)
             } else if split.len() == 2 {
-                if split[0].len() == 0 {
+                if split[0].len() == 0 && split[1].len() == 0 {
+                    TracingConfig::All
+                } else if split[0].len() == 0 {
                     let before = split[1]
                         .parse::<usize>()
                         .expect("Expected integer in Trace Configuration");

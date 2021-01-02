@@ -1,4 +1,4 @@
-use crate::ast;
+use crate::{ast, diagnostics::config::{Tracing, TracingConfig}};
 use crate::ast::*;
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
@@ -15,16 +15,23 @@ pub type SemanticNode = Ast<SemanticMetadata>;
 
 pub struct SemanticAst {
     next_id: u32,
+    tracing: TracingConfig,
+}
+
+impl Tracing for SemanticAst {
+    fn set_tracing(&mut self, config: TracingConfig) {
+        self.tracing = config;
+    }
 }
 
 impl SemanticAst {
     pub fn new() -> SemanticAst {
-        SemanticAst { next_id: 0 }
+        SemanticAst { next_id: 0, tracing: TracingConfig::Off }
     }
 
     pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>, String> {
         use Ast::*;
-        match ast {
+        let node = match ast {
             Integer(ln, val) => Ok(Box::new(Integer(self.sm_from(*ln), *val))),
             Boolean(ln, val) => Ok(Box::new(Boolean(self.sm_from(*ln), *val))),
             StringLiteral(ln, val) => Ok(Box::new(StringLiteral(self.sm_from(*ln), val.clone()))),
@@ -180,6 +187,36 @@ impl SemanticAst {
                     nfields,
                 )))
             }
+        };
+
+        match &node {
+            Ok(node) => self.trace(node),
+            _ => (),
+        }
+
+        node
+    }
+
+    fn trace(&self, node: &SemanticNode) {
+        let md = node.get_metadata();
+        let line = md.ln as usize;
+        match self.tracing {
+            TracingConfig::All => {
+                println!("L{}: {:?}", line, node);
+            },
+            TracingConfig::After(start) if start <= line => {
+                println!("L{}: {:?}", line, node);
+            },
+            TracingConfig::Before(end) if line <= end => {
+                println!("L{}: {:?}", line, node);
+            },
+            TracingConfig::Between(start, end) if start <= line && line <= end => {
+                println!("L{}: {:?}", line, node);
+            },
+            TracingConfig::Only(only) if line == only => {
+                println!("L{}: {:?}", line, node);
+            },
+            _ => {},
         }
     }
 
@@ -221,7 +258,7 @@ mod tests {
         ]
         .iter()
         {
-            let mut sa = SemanticAst { next_id: 0 };
+            let mut sa = SemanticAst::new();
             let snode = sa.from_parser_ast(&node).unwrap();
             assert_eq!(*snode, *expected);
         }
@@ -273,7 +310,7 @@ mod tests {
             )]
             .iter()
             {
-                let mut sa = SemanticAst { next_id: 0 };
+                let mut sa = SemanticAst::new();
                 let snode = sa.from_parser_ast(tree).unwrap();
                 assert_eq!(*snode, *expected);
             }

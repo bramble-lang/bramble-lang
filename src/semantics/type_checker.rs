@@ -1,5 +1,5 @@
 pub mod checker {
-    use crate::ast;
+    use crate::{ast, diagnostics::config::{Tracing, TracingConfig}};
     use crate::ast::{BinaryOperator, UnaryOperator};
     use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
     use crate::semantics::symbol_table::*;
@@ -7,8 +7,9 @@ pub mod checker {
     use crate::syntax::ast::Type::*;
     use crate::syntax::pnode::PNode;
 
-    pub fn type_check(ast: &PNode) -> Result<Box<SemanticNode>, String> {
+    pub fn type_check(ast: &PNode, trace: TracingConfig) -> Result<Box<SemanticNode>, String> {
         let mut sa = SemanticAst::new();
+        sa.set_tracing(trace);
         let mut sm_ast = sa.from_parser_ast(&ast)?;
         SymbolTable::generate(&mut sm_ast)?;
 
@@ -1389,7 +1390,7 @@ pub mod checker {
                     .collect::<Result<_, _>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = type_check(&ast);
+                let result = type_check(&ast, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok()),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -1422,7 +1423,7 @@ pub mod checker {
                     .collect::<Result<_, _>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = type_check(&ast);
+                let result = type_check(&ast, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok()),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
