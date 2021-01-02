@@ -1,11 +1,14 @@
 #![allow(unused_mut, unused_variables)]
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+};
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
@@ -26,12 +29,12 @@ pub fn set_tracing(config: TracingConfig) {
             ENABLE_TRACING.store(true, Ordering::SeqCst);
             TRACE_START.store(0, Ordering::SeqCst);
             TRACE_END.store(0, Ordering::SeqCst);
-        },
+        }
         TracingConfig::After(start) => {
             ENABLE_TRACING.store(true, Ordering::SeqCst);
             TRACE_START.store(start, Ordering::SeqCst);
             TRACE_END.store(0, Ordering::SeqCst);
-        },
+        }
         TracingConfig::Before(end) => {
             ENABLE_TRACING.store(true, Ordering::SeqCst);
             TRACE_START.store(0, Ordering::SeqCst);
@@ -57,16 +60,21 @@ macro_rules! trace {
             match $ts.peek() {
                 None => (),
                 Some(token) => {
-                    if TRACE_START.load(Ordering::SeqCst) == 0 && TRACE_END.load(Ordering::SeqCst) == 0 {
+                    if TRACE_START.load(Ordering::SeqCst) == 0
+                        && TRACE_END.load(Ordering::SeqCst) == 0
+                    {
                         println!("{} <- {:?}", function_name!(), token)
-                    }
-                    else if TRACE_END.load(Ordering::SeqCst) == 0 && TRACE_START.load(Ordering::SeqCst) <= token.l as usize {
+                    } else if TRACE_END.load(Ordering::SeqCst) == 0
+                        && TRACE_START.load(Ordering::SeqCst) <= token.l as usize
+                    {
                         println!("{} <- {:?}", function_name!(), token)
-                    }
-                    else if TRACE_START.load(Ordering::SeqCst) == 0 && token.l as usize <= TRACE_END.load(Ordering::SeqCst) {
+                    } else if TRACE_START.load(Ordering::SeqCst) == 0
+                        && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
+                    {
                         println!("{} <- {:?}", function_name!(), token)
-                    }
-                    else if TRACE_START.load(Ordering::SeqCst) <= token.l as usize && token.l as usize <= TRACE_END.load(Ordering::SeqCst) {
+                    } else if TRACE_START.load(Ordering::SeqCst) <= token.l as usize
+                        && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
+                    {
                         println!("{} <- {:?}", function_name!(), token)
                     }
                 }
@@ -115,7 +123,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tracing: bool) -> Parser {
-        Parser{
+        Parser {
             tracing,
             current_line: 0,
         }

@@ -2,15 +2,15 @@
 #![feature(box_syntax, box_patterns)]
 
 mod compiler;
+mod diagnostics;
 mod lexer;
 mod semantics;
 mod syntax;
-mod diagnostics;
 
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
-use lexer::{tokens::Token};
+use lexer::tokens::Token;
 use semantics::type_checker::*;
 use syntax::ast;
 use syntax::parser;
@@ -109,24 +109,34 @@ fn parse_trace_config(v: Option<&str>) -> TracingConfig {
         Some(v) => {
             let split: Vec<_> = v.split(':').collect();
             if split.len() == 1 {
-                let line = split[0].parse::<usize>().expect("Expected integer in Trace Configuration");
+                let line = split[0]
+                    .parse::<usize>()
+                    .expect("Expected integer in Trace Configuration");
                 TracingConfig::Only(line)
-            } else if split.len() == 2{
+            } else if split.len() == 2 {
                 if split[0].len() == 0 {
-                    let before = split[1].parse::<usize>().expect("Expected integer in Trace Configuration");
+                    let before = split[1]
+                        .parse::<usize>()
+                        .expect("Expected integer in Trace Configuration");
                     TracingConfig::Before(before)
                 } else if split[1].len() == 0 {
-                    let after = split[0].parse::<usize>().expect("Expected integer in Trace Configuration");
+                    let after = split[0]
+                        .parse::<usize>()
+                        .expect("Expected integer in Trace Configuration");
                     TracingConfig::After(after)
                 } else {
-                    let start = split[0].parse::<usize>().expect("Expected integer in Trace Configuration");
-                    let end = split[1].parse::<usize>().expect("Expected integer in Trace Configuration");
+                    let start = split[0]
+                        .parse::<usize>()
+                        .expect("Expected integer in Trace Configuration");
+                    let end = split[1]
+                        .parse::<usize>()
+                        .expect("Expected integer in Trace Configuration");
                     TracingConfig::Between(start, end)
                 }
-            }else {
+            } else {
                 panic!("Invalid configuration value provided for tracing");
             }
-        },
+        }
         None => TracingConfig::Off,
     }
 }

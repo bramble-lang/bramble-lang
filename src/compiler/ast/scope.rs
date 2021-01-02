@@ -12,9 +12,7 @@ pub struct LayoutData {
 
 impl LayoutData {
     pub fn new(offset: i32) -> LayoutData {
-        LayoutData {
-            offset,
-        }
+        LayoutData { offset }
     }
 }
 
