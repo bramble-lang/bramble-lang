@@ -135,7 +135,7 @@ impl StringPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{checker::type_check, diagnostics::config::TracingConfig};
+    use crate::{type_check, diagnostics::config::TracingConfig};
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::syntax::parser;

@@ -49,10 +49,10 @@ fn main() {
                 This is for debugging the lexer when adding new tokens.")
         )
         .arg(
-            Arg::with_name("trace-semantic-analysis")
-                .long("trace-semantic-analysis")
+            Arg::with_name("trace-symbol-table")
+                .long("trace-symbol-table")
                 .takes_value(true)
-                .help("Prints out a trace of all the steps the semantic analyzer when it computes the type for every node in the AST.")
+                .help("Prints out a trace of the value of the symbol table at each node in the AST.  You can specify specify to only trace specific lines in the source code file.")
         )
         .get_matches();
 
@@ -94,8 +94,7 @@ fn main() {
 
     // Type Check
     let trace_semantic_analysis = parse_trace_config(matches.value_of("trace-semantic-analysis"));
-    println!("{:?}", trace_semantic_analysis);
-    let semantic_ast = match checker::type_check(&ast, trace_semantic_analysis) {
+    let semantic_ast = match type_check(&ast, trace_semantic_analysis) {
         Ok(ast) => {
             //func_table = FunctionTable::from_semantic_ast(&ast);
             ast
