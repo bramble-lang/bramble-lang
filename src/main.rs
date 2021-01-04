@@ -61,7 +61,7 @@ fn main() {
         .expect("Expected an input source file to compile");
     let text = std::fs::read_to_string(input).expect("Failed to read input file");
 
-    let trace_lexer = parse_trace_config(matches.value_of("trace-lexer"));
+    let trace_lexer = TracingConfig::parse(matches.value_of("trace-lexer"));
     let mut lexer = crate::lexer::lexer::Lexer::new(&text);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
@@ -77,7 +77,7 @@ fn main() {
         .map(|t| t.unwrap())
         .collect();
 
-    let trace_parser = parse_trace_config(matches.value_of("trace-parser"));
+    let trace_parser = TracingConfig::parse(matches.value_of("trace-parser"));
     //let trace_parser = if matches.is_present("trace-parser") {TracingConfig::All} else {TracingConfig::Off};
     parser::set_tracing(trace_parser);
     let ast = match parser::parse(tokens) {
@@ -93,7 +93,7 @@ fn main() {
     };
 
     // Type Check
-    let trace_semantic_analysis = parse_trace_config(matches.value_of("trace-symbol-table"));
+    let trace_semantic_analysis = TracingConfig::parse(matches.value_of("trace-symbol-table"));
     let semantic_ast = match type_check(&ast, trace_semantic_analysis) {
         Ok(ast) => {
             //func_table = FunctionTable::from_semantic_ast(&ast);
@@ -109,43 +109,4 @@ fn main() {
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
     Compiler::print(&program, &mut output).expect("Failed to write assembly");
-}
-
-fn parse_trace_config(v: Option<&str>) -> TracingConfig {
-    match v {
-        Some(v) => {
-            let split: Vec<_> = v.split(':').collect();
-            if split.len() == 1 {
-                let line = split[0]
-                    .parse::<usize>()
-                    .expect("Expected integer in Trace Configuration");
-                TracingConfig::Only(line)
-            } else if split.len() == 2 {
-                if split[0].len() == 0 && split[1].len() == 0 {
-                    TracingConfig::All
-                } else if split[0].len() == 0 {
-                    let before = split[1]
-                        .parse::<usize>()
-                        .expect("Expected integer in Trace Configuration");
-                    TracingConfig::Before(before)
-                } else if split[1].len() == 0 {
-                    let after = split[0]
-                        .parse::<usize>()
-                        .expect("Expected integer in Trace Configuration");
-                    TracingConfig::After(after)
-                } else {
-                    let start = split[0]
-                        .parse::<usize>()
-                        .expect("Expected integer in Trace Configuration");
-                    let end = split[1]
-                        .parse::<usize>()
-                        .expect("Expected integer in Trace Configuration");
-                    TracingConfig::Between(start, end)
-                }
-            } else {
-                panic!("Invalid configuration value provided for tracing");
-            }
-        }
-        None => TracingConfig::Off,
-    }
 }

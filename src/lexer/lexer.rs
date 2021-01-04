@@ -3,10 +3,32 @@
 use stdext::function_name;
 
 use crate::diagnostics::config::TracingConfig;
-use crate::trace;
 
 use super::tokens::{Lex, Primitive, Token};
 use Lex::*;
+
+macro_rules! trace {
+    ($ts:expr) => {
+        let print_trace = match &$ts.tracing {
+            &TracingConfig::Only(ln) => ($ts.line() as usize) == ln,
+            &TracingConfig::Before(ln) => ($ts.line() as usize) <= ln,
+            &TracingConfig::After(ln) => ($ts.line() as usize) >= ln,
+            &TracingConfig::Between(start, end) => {
+                ($ts.line() as usize) >= start && ($ts.line() as usize) <= end
+            }
+            &TracingConfig::All => true,
+            &TracingConfig::Off => false,
+        };
+        if print_trace {
+            println!(
+                "{} <- L{}:{:?}",
+                function_name!(),
+                $ts.line(),
+                $ts.current_token()
+            )
+        }
+    };
+}
 
 struct LexerBranch<'a> {
     lexer: &'a mut Lexer,
