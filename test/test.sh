@@ -32,6 +32,7 @@ then
     run_test "simple"
     run_test "simple_coroutine"
     run_test "coroutine_too_many_calls"
+    run_test "coroutine_infinite"
     run_test "boolean"
     run_test "comparison"
     run_test "boolean_complex"
