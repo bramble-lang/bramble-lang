@@ -14,6 +14,11 @@ fn my_main( p: bool) {
     printiln w2.y;
     printbln w2.z;
     
+    let w3 : MyStruct := yield c;
+    printiln w3.x;
+    printiln w3.y;
+    printbln w3.z;
+    
     return;
 }
 
