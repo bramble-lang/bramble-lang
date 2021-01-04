@@ -128,6 +128,12 @@ pub struct Token {
     pub s: Lex,
 }
 
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("L{}: {}", self.l, self.s))
+    }
+}
+
 impl Token {
     pub fn new(l: u32, s: Lex) -> Token {
         Token { l, s }

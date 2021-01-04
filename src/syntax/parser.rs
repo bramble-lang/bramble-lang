@@ -63,19 +63,19 @@ macro_rules! trace {
                     if TRACE_START.load(Ordering::SeqCst) == 0
                         && TRACE_END.load(Ordering::SeqCst) == 0
                     {
-                        println!("{} <- {:?}", function_name!(), token)
+                        println!("{} <- {}", function_name!(), token)
                     } else if TRACE_END.load(Ordering::SeqCst) == 0
                         && TRACE_START.load(Ordering::SeqCst) <= token.l as usize
                     {
-                        println!("{} <- {:?}", function_name!(), token)
+                        println!("{} <- {}", function_name!(), token)
                     } else if TRACE_START.load(Ordering::SeqCst) == 0
                         && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
                     {
-                        println!("{} <- {:?}", function_name!(), token)
+                        println!("{} <- {}", function_name!(), token)
                     } else if TRACE_START.load(Ordering::SeqCst) <= token.l as usize
                         && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
                     {
-                        println!("{} <- {:?}", function_name!(), token)
+                        println!("{} <- {}", function_name!(), token)
                     }
                 }
             }
