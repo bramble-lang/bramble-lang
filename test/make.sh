@@ -1,10 +1,10 @@
 #!/bin/sh
 
 function run() {
-    test=$1
+    # test=$1
     rm -f ./target/*
     echo "Compiling"
-    cargo run -- --trace-parser 7:8 -i ${test} -o ./target/output.asm
+    cargo run -- "$@" -o ./target/output.asm
     echo ""
     echo "Assembling"
 
@@ -17,4 +17,4 @@ function run() {
 }
 
 echo "Compile ${1}"
-run $1
+run "$@"
