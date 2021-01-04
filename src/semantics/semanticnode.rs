@@ -1,7 +1,7 @@
-use crate::ast;
 use crate::ast::*;
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
+use crate::{ast, diagnostics::config::TracingConfig};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
@@ -13,17 +13,28 @@ pub struct SemanticMetadata {
 
 pub type SemanticNode = Ast<SemanticMetadata>;
 
+impl std::fmt::Display for SemanticNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.root_str())
+    }
+}
+
 pub struct SemanticAst {
     next_id: u32,
+    tracing: TracingConfig,
 }
+
 impl SemanticAst {
     pub fn new() -> SemanticAst {
-        SemanticAst { next_id: 0 }
+        SemanticAst {
+            next_id: 0,
+            tracing: TracingConfig::Off,
+        }
     }
 
     pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>, String> {
         use Ast::*;
-        match ast {
+        let node = match ast {
             Integer(ln, val) => Ok(Box::new(Integer(self.sm_from(*ln), *val))),
             Boolean(ln, val) => Ok(Box::new(Boolean(self.sm_from(*ln), *val))),
             StringLiteral(ln, val) => Ok(Box::new(StringLiteral(self.sm_from(*ln), val.clone()))),
@@ -179,7 +190,9 @@ impl SemanticAst {
                     nfields,
                 )))
             }
-        }
+        };
+
+        node
     }
 
     fn sm_from(&mut self, l: u32) -> SemanticMetadata {
@@ -220,7 +233,7 @@ mod tests {
         ]
         .iter()
         {
-            let mut sa = SemanticAst { next_id: 0 };
+            let mut sa = SemanticAst::new();
             let snode = sa.from_parser_ast(&node).unwrap();
             assert_eq!(*snode, *expected);
         }
@@ -272,7 +285,7 @@ mod tests {
             )]
             .iter()
             {
-                let mut sa = SemanticAst { next_id: 0 };
+                let mut sa = SemanticAst::new();
                 let snode = sa.from_parser_ast(tree).unwrap();
                 assert_eq!(*snode, *expected);
             }

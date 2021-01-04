@@ -31,6 +31,7 @@ name = "braid-lang"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "stdext",
 ]
 
 [[package]]
@@ -62,6 +63,12 @@ name = "libc"
 version = "0.2.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1482821306169ec4d07f6aca392a4681f66c75c9918aa49641a2595db64053cb"
+
+[[package]]
+name = "stdext"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a61b4ae487cb43d0479907e74d36f8813e9940bd3b1adcbecc69fe8a0cee3ec"
 
 [[package]]
 name = "strsim"

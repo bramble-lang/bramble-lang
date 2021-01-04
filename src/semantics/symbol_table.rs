@@ -10,9 +10,28 @@ pub struct Symbol {
     pub mutable: bool,
 }
 
+impl std::fmt::Display for Symbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{} | {} | {}",
+            self.name, self.ty, self.mutable
+        ))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     sym: Vec<Symbol>,
+}
+
+impl std::fmt::Display for SymbolTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("\tName | Type | Mutable\n")?;
+        for symbol in self.sym.iter() {
+            f.write_fmt(format_args!("\t{}\n", symbol))?;
+        }
+        Ok(())
+    }
 }
 
 impl SymbolTable {
@@ -113,6 +132,17 @@ impl SymbolTable {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScopeStack {
     stack: Vec<SymbolTable>,
+}
+
+impl std::fmt::Display for ScopeStack {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut i = 0;
+        for scope in self.stack.iter() {
+            f.write_fmt(format_args!("{}: {}\n", i, scope))?;
+            i += 1;
+        }
+        Ok(())
+    }
 }
 
 impl ScopeStack {

@@ -2,12 +2,14 @@
 #![feature(box_syntax, box_patterns)]
 
 mod compiler;
+mod diagnostics;
 mod lexer;
 mod semantics;
 mod syntax;
 
 use clap::{App, Arg};
 use compiler::compiler::*;
+use diagnostics::config::TracingConfig;
 use lexer::tokens::Token;
 use semantics::type_checker::*;
 use syntax::ast;
@@ -32,6 +34,26 @@ fn main() {
                 .takes_value(true)
                 .help("Name the output file that the assembly will be written to"),
         )
+        .arg(
+            Arg::with_name("trace-parser")
+                .long("trace-parser")
+                .takes_value(true)
+                .help("Prints out a trace of all the steps the parser follows as it converts the token vector into an AST.  The current token is printed next to the step.
+                This is for debugging the parser when adding new syntactical elements.")
+        )
+        .arg(
+            Arg::with_name("trace-lexer")
+                .long("trace-lexer")
+                .takes_value(true)
+                .help("Prints out a trace of all the steps the lexer follows as it converts the token vector into an AST.  The current token is printed next to the step.
+                This is for debugging the lexer when adding new tokens.")
+        )
+        .arg(
+            Arg::with_name("trace-symbol-table")
+                .long("trace-symbol-table")
+                .takes_value(true)
+                .help("Prints out a trace of the value of the symbol table at each node in the AST.  You can specify specify to only trace specific lines in the source code file.")
+        )
         .get_matches();
 
     let input = matches
@@ -39,7 +61,9 @@ fn main() {
         .expect("Expected an input source file to compile");
     let text = std::fs::read_to_string(input).expect("Failed to read input file");
 
+    let trace_lexer = TracingConfig::parse(matches.value_of("trace-lexer"));
     let mut lexer = crate::lexer::lexer::Lexer::new(&text);
+    lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let tokens: Vec<Token> = tokens
         .into_iter()
@@ -53,6 +77,9 @@ fn main() {
         .map(|t| t.unwrap())
         .collect();
 
+    let trace_parser = TracingConfig::parse(matches.value_of("trace-parser"));
+    //let trace_parser = if matches.is_present("trace-parser") {TracingConfig::All} else {TracingConfig::Off};
+    parser::set_tracing(trace_parser);
     let ast = match parser::parse(tokens) {
         Ok(Some(ast)) => ast,
         Ok(None) => {
@@ -66,7 +93,8 @@ fn main() {
     };
 
     // Type Check
-    let semantic_ast = match checker::type_check(&ast) {
+    let trace_semantic_analysis = TracingConfig::parse(matches.value_of("trace-symbol-table"));
+    let semantic_ast = match type_check(&ast, trace_semantic_analysis) {
         Ok(ast) => {
             //func_table = FunctionTable::from_semantic_ast(&ast);
             ast

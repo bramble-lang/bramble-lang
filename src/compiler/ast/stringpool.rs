@@ -135,10 +135,10 @@ impl StringPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::checker::type_check;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::syntax::parser;
+    use crate::{diagnostics::config::TracingConfig, type_check};
 
     #[test]
     fn insert_string() {
@@ -176,7 +176,7 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast).unwrap();
+            let result = type_check(&ast, TracingConfig::Off).unwrap();
             let (compiler_ast, _) = CompilerNode::from(result.as_ref());
             let mut sp = StringPool::new();
             sp.extract_from(&compiler_ast);
