@@ -1,0 +1,21 @@
+fn my_main( p: bool) {
+    let c: co i32 := init my_co(5, 13);
+    let w : i32 := yield c;
+    let x : i32 := 1;
+    printiln x;
+    printiln w;
+    let z : i32 := yield c;
+    printiln z;
+    let q : i32 := yield c;
+    printiln q;
+    return;
+}
+
+co my_co (x: i32, y: i32) -> i32 {
+    let mut z : i32 := y;
+    yret x;
+    return {
+        mut z := z + 1;
+        z - 1
+    };
+}

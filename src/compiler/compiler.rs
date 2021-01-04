@@ -519,7 +519,7 @@ impl<'a> Compiler<'a> {
             }
             Ast::RoutineDef(_, RoutineDef::Coroutine, ref fn_name, _, _, stmts) => {
                 assembly! {(code) {
-                @{fn_name}:
+                    @{fn_name}:
                 }};
 
                 // Prepare stack frame for this function
@@ -527,6 +527,7 @@ impl<'a> Compiler<'a> {
                     self.traverse(s, fn_name, code)?;
                 }
                 assembly! {(code) {
+                    mov %ebx, ^terminus;
                     jmp @runtime_yield_return;
                 }};
             }
@@ -902,9 +903,12 @@ impl<'a> Compiler<'a> {
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
+        code.push(Inst::Label(".terminus".into()));
         match exp {
             Some(e) => {
                 self.traverse(e, current_func, &mut code)?;
+                // If the expression is a custom type then copy the value into the stack frame
+                // of the caller (or the yielder in the case of coroutines)
                 match e.get_metadata().ty() {
                     Type::Custom(struct_name) => {
                         // Copy the structure into the stack frame of the calling function
