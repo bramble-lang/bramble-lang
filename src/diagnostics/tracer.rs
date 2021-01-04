@@ -2,16 +2,14 @@
 macro_rules! trace {
     ($ts:expr) => {
         let print_trace = match &$ts.tracing {
-            &TracingConfig::Only(ln) if ($ts.line() as usize) == ln => true,
-            &TracingConfig::Before(ln) if ($ts.line() as usize) <= ln => true,
-            &TracingConfig::After(ln) if ($ts.line() as usize) >= ln => true,
-            &TracingConfig::Between(start, end)
-                if ($ts.line() as usize) >= start && ($ts.line() as usize) <= end =>
-            {
-                true
+            &TracingConfig::Only(ln) => ($ts.line() as usize) == ln,
+            &TracingConfig::Before(ln) => ($ts.line() as usize) <= ln,
+            &TracingConfig::After(ln) => ($ts.line() as usize) >= ln,
+            &TracingConfig::Between(start, end) => {
+                ($ts.line() as usize) >= start && ($ts.line() as usize) <= end
             }
             &TracingConfig::All => true,
-            _ => false,
+            &TracingConfig::Off => false,
         };
         if print_trace {
             println!(
