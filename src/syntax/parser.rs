@@ -1,5 +1,3 @@
-#![allow(unused_mut, unused_variables)]
-
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -490,7 +488,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
 
     while let Some(token) = id_declaration(stream)? {
         match token {
-            Ast::IdentifierDeclare(line, id, ty) => {
+            Ast::IdentifierDeclare(_line, id, ty) => {
                 decls.push((id, ty));
                 stream.next_if(&Lex::Comma);
             }
@@ -529,7 +527,7 @@ fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String
 fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>, String> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
-        Some(token) => {
+        Some(_token) => {
             let mut params = vec![];
             while let Some((line, field_name)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
@@ -1256,7 +1254,7 @@ pub mod tests {
         }) = module(&mut stream).unwrap()
         {
             assert_eq!(meta, 1);
-            if let Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body) =
+            if let Ast::RoutineDef(_l, RoutineDef::Coroutine, name, params, ty, body) =
                 &coroutines[0]
             {
                 assert_eq!(name, "test");
@@ -1350,13 +1348,13 @@ pub mod tests {
         if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
             assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(l, body) = *if_arm {
+            if let Ast::ExpressionBlock(_l, body) = *if_arm {
                 assert_eq!(body[0], Ast::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
-            if let Ast::ExpressionBlock(l, body) = *else_arm {
+            if let Ast::ExpressionBlock(_l, body) = *else_arm {
                 assert_eq!(body[0], Ast::Integer(1, 7));
             } else {
                 panic!("Expected Expression block");
@@ -1379,13 +1377,13 @@ pub mod tests {
         if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
             assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(l, body) = *if_arm {
+            if let Ast::ExpressionBlock(_l, body) = *if_arm {
                 assert_eq!(body[0], Ast::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
-            if let Ast::If(l, cond, if_arm, else_arm) = *else_arm {
+            if let Ast::If(_l, cond, if_arm, else_arm) = *else_arm {
                 assert_eq!(
                     *cond,
                     Ast::BinaryOp(
@@ -1395,13 +1393,13 @@ pub mod tests {
                         Box::new(Ast::Identifier(1, "z".into()))
                     )
                 );
-                if let Ast::ExpressionBlock(l, body) = *if_arm {
+                if let Ast::ExpressionBlock(_l, body) = *if_arm {
                     assert_eq!(body[0], Ast::Integer(1, 7));
                 } else {
                     panic!("Expected Expression block");
                 }
 
-                if let Ast::ExpressionBlock(l, body) = *else_arm {
+                if let Ast::ExpressionBlock(_l, body) = *else_arm {
                     assert_eq!(body[0], Ast::Integer(1, 8));
                 } else {
                     panic!("Expected Expression block");
