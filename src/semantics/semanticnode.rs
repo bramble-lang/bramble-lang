@@ -1,4 +1,4 @@
-use crate::{ast, diagnostics::config::{Tracing, TracingConfig}};
+use crate::{ast, diagnostics::config::TracingConfig};
 use crate::ast::*;
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
@@ -13,15 +13,15 @@ pub struct SemanticMetadata {
 
 pub type SemanticNode = Ast<SemanticMetadata>;
 
+impl std::fmt::Display for SemanticNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.root_str())
+    }
+}
+
 pub struct SemanticAst {
     next_id: u32,
     tracing: TracingConfig,
-}
-
-impl Tracing for SemanticAst {
-    fn set_tracing(&mut self, config: TracingConfig) {
-        self.tracing = config;
-    }
 }
 
 impl SemanticAst {
@@ -189,35 +189,7 @@ impl SemanticAst {
             }
         };
 
-        match &node {
-            Ok(node) => self.trace(node),
-            _ => (),
-        }
-
         node
-    }
-
-    fn trace(&self, node: &SemanticNode) {
-        let md = node.get_metadata();
-        let line = md.ln as usize;
-        match self.tracing {
-            TracingConfig::All => {
-                println!("L{}: {:?}", line, node);
-            },
-            TracingConfig::After(start) if start <= line => {
-                println!("L{}: {:?}", line, node);
-            },
-            TracingConfig::Before(end) if line <= end => {
-                println!("L{}: {:?}", line, node);
-            },
-            TracingConfig::Between(start, end) if start <= line && line <= end => {
-                println!("L{}: {:?}", line, node);
-            },
-            TracingConfig::Only(only) if line == only => {
-                println!("L{}: {:?}", line, node);
-            },
-            _ => {},
-        }
     }
 
     fn sm_from(&mut self, l: u32) -> SemanticMetadata {

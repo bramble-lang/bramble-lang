@@ -42,6 +42,9 @@ impl<'a> LexerBranch<'a> {
         if self.index < self.lexer.chars.len() {
             let c = self.lexer.chars[self.index];
             self.index += 1;
+            if c == '\n' {
+                self.line += 1;
+            }
             Some(c)
         } else {
             None

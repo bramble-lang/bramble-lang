@@ -4,7 +4,7 @@ function run() {
     test=$1
     rm -f ./target/*
     echo "Compiling"
-    cargo run -- --trace-symbol-table : -i ${test} -o ./target/output.asm
+    cargo run -- --trace-symbol-table 7:8 -i ${test} -o ./target/output.asm
     echo ""
     echo "Assembling"
 

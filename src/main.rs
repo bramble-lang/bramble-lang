@@ -93,7 +93,7 @@ fn main() {
     };
 
     // Type Check
-    let trace_semantic_analysis = parse_trace_config(matches.value_of("trace-semantic-analysis"));
+    let trace_semantic_analysis = parse_trace_config(matches.value_of("trace-symbol-table"));
     let semantic_ast = match type_check(&ast, trace_semantic_analysis) {
         Ok(ast) => {
             //func_table = FunctionTable::from_semantic_ast(&ast);
