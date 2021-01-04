@@ -310,6 +310,7 @@ fn statement(stream: &mut TokenStream) -> PResult {
         }
     }
 }
+
 fn expression_block(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
@@ -424,6 +425,7 @@ fn factor(stream: &mut TokenStream) -> PResult {
             Ok(exp)
         }
         _ => if_expression(stream)
+            .por(expression_block, stream)
             .por(function_call_or_variable, stream)
             .por(co_yield, stream)
             .por(constant, stream),

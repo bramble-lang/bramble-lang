@@ -12,6 +12,10 @@ fn my_main( p: bool) {
 }
 
 co my_co (x: i32, y: i32) -> i32 {
+    let mut z : i32 := y;
     yret x;
-    return y;
+    return {
+        mut z := z + 1;
+        z - 1
+    };
 }
