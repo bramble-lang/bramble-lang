@@ -135,10 +135,10 @@ impl StringPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{type_check, diagnostics::config::TracingConfig};
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::syntax::parser;
+    use crate::{diagnostics::config::TracingConfig, type_check};
 
     #[test]
     fn insert_string() {

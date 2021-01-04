@@ -46,26 +46,19 @@ impl SemanticAnalyzer {
         let md = node.get_metadata();
         let line = md.ln as usize;
         let print_trace = match self.tracing {
-            TracingConfig::All => {
-                true
-            },
-            TracingConfig::After(start) if start <= line => {
-                true
-            },
-            TracingConfig::Before(end) if line <= end => {
-                true
-            },
-            TracingConfig::Between(start, end) if start <= line && line <= end => {
-                true
-            },
-            TracingConfig::Only(only) if line == only => {
-                true
-            },
+            TracingConfig::All => true,
+            TracingConfig::After(start) if start <= line => true,
+            TracingConfig::Before(end) if line <= end => true,
+            TracingConfig::Between(start, end) if start <= line && line <= end => true,
+            TracingConfig::Only(only) if line == only => true,
             _ => false,
         };
 
         if print_trace {
-            let func = match current_func {Some(f) => format!("{}: ", f), None => "".into()};
+            let func = match current_func {
+                Some(f) => format!("{}: ", f),
+                None => "".into(),
+            };
             println!("L{}: {}{}\n{}", line, func, node, self.stack);
         }
     }

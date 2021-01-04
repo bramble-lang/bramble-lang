@@ -1,7 +1,7 @@
-use crate::{ast, diagnostics::config::TracingConfig};
 use crate::ast::*;
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
+use crate::{ast, diagnostics::config::TracingConfig};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
@@ -26,7 +26,10 @@ pub struct SemanticAst {
 
 impl SemanticAst {
     pub fn new() -> SemanticAst {
-        SemanticAst { next_id: 0, tracing: TracingConfig::Off }
+        SemanticAst {
+            next_id: 0,
+            tracing: TracingConfig::Off,
+        }
     }
 
     pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>, String> {

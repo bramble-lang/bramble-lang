@@ -12,7 +12,10 @@ pub struct Symbol {
 
 impl std::fmt::Display for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} | {} | {}", self.name, self.ty, self.mutable))
+        f.write_fmt(format_args!(
+            "{} | {} | {}",
+            self.name, self.ty, self.mutable
+        ))
     }
 }
 
