@@ -1223,10 +1223,11 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta,..}) =
+        if let Some(Ast::Module{meta, name, ..}) =
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
+            assert_eq!(name, "test_mod");
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1234,7 +1235,7 @@ pub mod tests {
 
     #[test]
     fn parse_module_with_function() {
-        let text = "mod test_mod { fn test(x:i32) {return;} }";
+        let text = "mod test_fn_mod { fn test(x:i32) {return;} }";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1245,6 +1246,7 @@ pub mod tests {
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
+            assert_eq!(name, "test_fn_mod");
             assert_eq!(functions.len(), 1);
             assert_eq!(coroutines.len(), 0);
             assert_eq!(structs.len(), 0);
@@ -1271,7 +1273,7 @@ pub mod tests {
 
     #[test]
     fn parse_module_with_coroutine() {
-        let text = "mod test_mod { co test(x:i32) {return;} }";
+        let text = "mod test_co_mod { co test(x:i32) {return;} }";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1282,6 +1284,7 @@ pub mod tests {
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
+            assert_eq!(name, "test_co_mod");
             assert_eq!(functions.len(), 0);
             assert_eq!(coroutines.len(), 1);
             assert_eq!(structs.len(), 0);
@@ -1308,7 +1311,7 @@ pub mod tests {
 
     #[test]
     fn parse_module_with_struct() {
-        let text = "mod test_mod { struct my_struct{x: i32} }";
+        let text = "mod test_struct_mod { struct my_struct{x: i32} }";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1319,6 +1322,7 @@ pub mod tests {
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
+            assert_eq!(name, "test_struct_mod");
             assert_eq!(functions.len(), 0);
             assert_eq!(coroutines.len(), 0);
             assert_eq!(structs.len(), 1);
