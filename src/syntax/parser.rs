@@ -769,6 +769,25 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
     }
 }
 
+fn path(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
+    match stream.next_if_id() {
+        Some((line, id)) => {
+            let mut path = vec![id];
+            while let Some(token) = stream.next_if(&Lex::PathSeparator) {
+                let line = token.l;
+                let (_, id) = stream.next_if_id().ok_or(format!(
+                    "L{}: expect identifier after path separator '::'",
+                    line
+                ))?;
+                path.push(id);
+            }
+            Ok(Some(Ast::Path(line, path)))
+        }
+        None => Ok(None),
+    }
+}
+
 fn identifier(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     match stream.next_if_id() {
@@ -1022,6 +1041,40 @@ pub mod tests {
             assert_eq!(*right, Ast::Boolean(1, false));
         } else {
             panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_path() {
+        for (text, expected) in vec![
+                ("thing", Ok(vec!["thing"])),
+                ("thing::first", Ok(vec!["thing", "first"])),
+                ("thing::first::second", Ok(vec!["thing", "first", "second"])),
+                ("thing::", Err("L1: expect identifier after path separator '::'")),
+            ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            match path(&mut stream) {
+                Ok(Some(Ast::Path(l, path))) => {
+                    assert_eq!(l, 1);
+                    match expected {
+                        Ok(expected) =>  assert_eq!(path, expected),
+                        Err(msg) => assert!(false, msg),
+                    }
+                }
+                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
+                Ok(None) => panic!("No node returned for {}", text),
+                Err(msg) => {
+                    match expected {
+                        Ok(_) =>  assert!(false, msg),
+                        Err(expected) => assert_eq!(expected, msg),
+                    }
+                },
+            }
         }
     }
 
