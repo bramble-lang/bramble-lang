@@ -186,7 +186,6 @@ fn module(stream: &mut TokenStream) -> PResult {
             },
         },
         None => {
-            stream.next_must_be(&Lex::LBrace)?;
             let start_index = stream.index();
             while stream.peek().is_some() {
                 if let Some(f) = function_def(stream)? {
@@ -198,10 +197,6 @@ fn module(stream: &mut TokenStream) -> PResult {
 
                 if let Some(s) = struct_def(stream)? {
                     structs.push(s);
-                }
-
-                if stream.next_if(&Lex::RBrace).is_some() {
-                    break;
                 }
 
                 if stream.index() == start_index {
