@@ -745,7 +745,7 @@ fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
             match fn_call_params(stream)? {
                 Some(params) => Some(Ast::RoutineCall(line, RoutineCall::Function, path, params.clone())),
                 None => match struct_init_params(stream)? {
-                    Some(params) => Some(Ast::StructExpression(line, path[0], params.clone())),
+                    Some(params) => Some(Ast::StructExpression(line, path[0].clone(), params.clone())),
                     None => Some(Ast::Path(line, path)),
                 },
             }
