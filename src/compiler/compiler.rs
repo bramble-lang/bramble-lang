@@ -532,6 +532,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
+                let co = co.last().unwrap();
                 let total_offset = self
                     .scope
                     .get_routine_allocation(co)
@@ -590,6 +591,7 @@ impl<'a> Compiler<'a> {
             Ast::RoutineCall(meta, RoutineCall::Function, ref fn_name, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
+                let fn_name = fn_name.last().unwrap();
                 self.validate_routine_call(fn_name, params)?;
                 self.scope.find_func(fn_name);
 

@@ -404,6 +404,7 @@ impl SemanticAnalyzer {
 
                     pty.push(ty);
                 }
+                let fname = fname.last().unwrap();
                 let (expected_param_tys, ret_ty) = match sym.get(fname).or(self.stack.get(fname)) {
                     Some(Symbol {
                         ty: Type::FunctionDef(pty, rty),
@@ -415,13 +416,13 @@ impl SemanticAnalyzer {
                     }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
                         (pty, Type::Coroutine(rty.clone()))
                     }
-                    Some(_) => return Err(format!("{} found but was not a function", fname)),
-                    None => return Err(format!("function {} not declared", fname)),
+                    Some(_) => return Err(format!("{:?} found but was not a function", fname)),
+                    None => return Err(format!("function {:?} not declared", fname)),
                 };
 
                 if pty.len() != expected_param_tys.len() {
                     Err(format!(
-                        "Incorrect number of parameters passed to routine: {}",
+                        "Incorrect number of parameters passed to routine: {:?}",
                         fname
                     ))
                 } else {
@@ -432,7 +433,7 @@ impl SemanticAnalyzer {
                         Ok(meta.ty.clone())
                     } else {
                         Err(format!(
-                            "One or more parameters had mismatching types for function {}",
+                            "One or more parameters had mismatching types for function {:?}",
                             fname
                         ))
                     }
@@ -1166,7 +1167,7 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_func", vec![], I32, vec![]);
 
-        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, "my_func".into(), vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func".into()], vec![]);
         let mut sa = SemanticAst::new();
         let ty = start(
             &mut sa.from_parser_ast(&node).unwrap(),
@@ -1180,7 +1181,7 @@ mod tests {
         let node = Ast::RoutineCall(
             1,
             ast::RoutineCall::Function,
-            "my_func2".into(),
+            vec!["my_func2".into()],
             vec![Ast::Integer(1, 5)],
         );
 
@@ -1193,7 +1194,7 @@ mod tests {
         assert_eq!(ty, Ok(I32));
 
         // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, "my_func2".into(), vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func2".into()], vec![]);
 
         let mut sa = SemanticAst::new();
         let ty = start(
@@ -1213,7 +1214,7 @@ mod tests {
         scope.add("my_co", vec![], I32, vec![]);
         scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
-        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, "my_co".into(), vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co".into()], vec![]);
         let mut sa = SemanticAst::new();
         let ty = start(
             &mut sa.from_parser_ast(&node).unwrap(),
@@ -1226,7 +1227,7 @@ mod tests {
         let node = Ast::RoutineCall(
             1,
             ast::RoutineCall::CoroutineInit,
-            "my_co2".into(),
+            vec!["my_co2".into()],
             vec![Ast::Integer(1, 5)],
         );
 
@@ -1239,7 +1240,7 @@ mod tests {
         assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
         // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, "my_co2".into(), vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co2".into()], vec![]);
 
         let mut sa = SemanticAst::new();
         let ty = start(

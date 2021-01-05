@@ -161,7 +161,7 @@ impl<I> Ast<I> {
             YieldReturn(_, _) => "yret".into(),
 
             RoutineDef(_, def, name, ..) => format!("{} for {}", def, name),
-            RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
+            RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
             Module { .. } => "module".into(),
             StructDef(_, name, ..) => format!("definition of struct {}", name),
