@@ -149,30 +149,75 @@ fn module(stream: &mut TokenStream) -> PResult {
     let mut structs = vec![];
 
     let module_line = stream.peek().map_or(1, |t| t.l);
-    let start_index = stream.index();
-    while stream.peek().is_some() {
-        if let Some(f) = function_def(stream)? {
-            functions.push(f);
-        }
-        if let Some(c) = coroutine_def(stream)? {
-            coroutines.push(c);
-        }
+    let mod_def = match stream.next_if(&Lex::ModuleDef) {
+        Some(token) => match stream.next_if_id() {
+            Some((line, module_name)) => {
+                stream.next_must_be(&Lex::LBrace)?;
+                let start_index = stream.index();
+                while stream.peek().is_some() {
+                    if let Some(f) = function_def(stream)? {
+                        functions.push(f);
+                    }
+                    if let Some(c) = coroutine_def(stream)? {
+                        coroutines.push(c);
+                    }
 
-        if let Some(s) = struct_def(stream)? {
-            structs.push(s);
-        }
+                    if let Some(s) = struct_def(stream)? {
+                        structs.push(s);
+                    }
 
-        if stream.index() == start_index {
-            return Err(format!("Parser cannot advance past {:?}", stream.peek()));
-        }
-    }
+                    if stream.next_if(&Lex::RBrace).is_some() {
+                        break;
+                    }
 
-    Ok(Some(Ast::Module {
-        meta: module_line,
-        functions,
-        coroutines,
-        structs,
-    }))
+                    if stream.index() == start_index {
+                        return Err(format!("L{}: Parser cannot advance past {:?}", line, stream.peek()));
+                    }
+                }
+                Some(Ast::Module {
+                    meta: module_line,
+                    functions,
+                    coroutines,
+                    structs,
+                })
+            },
+            _ => {
+                return Err(format!("L{}: expected name after mod keyword", token.l));
+            },
+        },
+        None => {
+            stream.next_must_be(&Lex::LBrace)?;
+            let start_index = stream.index();
+            while stream.peek().is_some() {
+                if let Some(f) = function_def(stream)? {
+                    functions.push(f);
+                }
+                if let Some(c) = coroutine_def(stream)? {
+                    coroutines.push(c);
+                }
+
+                if let Some(s) = struct_def(stream)? {
+                    structs.push(s);
+                }
+
+                if stream.next_if(&Lex::RBrace).is_some() {
+                    break;
+                }
+
+                if stream.index() == start_index {
+                    return Err(format!("Parser cannot advance past {:?}", stream.peek()));
+                }
+            }
+            Some(Ast::Module {
+                meta: module_line,
+                functions,
+                coroutines,
+                structs,
+            })
+        },
+    };
+
+    Ok(mod_def)
 }
 
 fn struct_def(stream: &mut TokenStream) -> PResult {
@@ -1169,6 +1214,125 @@ pub mod tests {
                 _ => panic!("Not a binding statement"),
             },
             _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_module_empty() {
+        let text = "mod test_mod {}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::Module{meta,..}) =
+            module(&mut iter).unwrap()
+        {
+            assert_eq!(meta, 1);
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_function() {
+        let text = "mod test_mod { fn test(x:i32) {return;} }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::Module{meta, functions, coroutines, structs}) =
+            module(&mut iter).unwrap()
+        {
+            assert_eq!(meta, 1);
+            assert_eq!(functions.len(), 1);
+            assert_eq!(coroutines.len(), 0);
+            assert_eq!(structs.len(), 0);
+
+            if let Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body) =
+                &functions[0]
+            {
+                assert_eq!(*l, 1);
+                assert_eq!(name, "test");
+                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(ty, &Type::Unit);
+                assert_eq!(body.len(), 1);
+                match &body[0] {
+                    Ast::Return(_, None) => {}
+                    _ => panic!("Wrong body, expected unit return"),
+                }
+            } else {
+                panic!("Expected function definition")
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_coroutine() {
+        let text = "mod test_mod { co test(x:i32) {return;} }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::Module{meta, functions, coroutines, structs}) =
+            module(&mut iter).unwrap()
+        {
+            assert_eq!(meta, 1);
+            assert_eq!(functions.len(), 0);
+            assert_eq!(coroutines.len(), 1);
+            assert_eq!(structs.len(), 0);
+
+            if let Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body) =
+                &coroutines[0]
+            {
+                assert_eq!(*l, 1);
+                assert_eq!(name, "test");
+                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(ty, &Type::Unit);
+                assert_eq!(body.len(), 1);
+                match &body[0] {
+                    Ast::Return(_, None) => {}
+                    _ => panic!("Wrong body, expected unit return"),
+                }
+            } else {
+                panic!("Expected coroutine definition")
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_struct() {
+        let text = "mod test_mod { struct my_struct{x: i32} }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::Module{meta, functions, coroutines, structs}) =
+            module(&mut iter).unwrap()
+        {
+            assert_eq!(meta, 1);
+            assert_eq!(functions.len(), 0);
+            assert_eq!(coroutines.len(), 0);
+            assert_eq!(structs.len(), 1);
+
+            if let Ast::StructDef(l, name, fields) = &structs[0] {
+                assert_eq!(*l, 1);
+                assert_eq!(name, "my_struct");
+                assert_eq!(fields, &vec![("x".into(), Type::I32)]);
+            }
+        } else {
+            panic!("No nodes returned by parser")
         }
     }
 
