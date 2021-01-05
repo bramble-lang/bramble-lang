@@ -1,0 +1,25 @@
+fn my_main() {
+    let x:i32 := {
+        let x: i32 := 1;
+        x + {
+            let x: i32 := 2;
+            2 * x
+        }
+    };
+    printiln x;
+
+    let b:bool := {
+        let b: bool := true;
+        b && {
+            let b: bool := my_bool();
+            b
+        }
+    };
+    printbln b;
+    return;
+}
+
+fn my_bool() -> bool {
+    let b:bool := false;
+    return b;
+}

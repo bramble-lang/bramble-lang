@@ -1,0 +1,20 @@
+fn my_main() {
+    let x:i32 := {
+        let x: i32 := 1;
+        let y: i32 := 4;
+        x + y
+    };
+    printiln x;
+
+    let b:bool := {
+        let b: bool := true;
+        b && my_bool()
+    };
+    printbln b;
+    return;
+}
+
+fn my_bool() -> bool {
+    let b:bool := false;
+    return b;
+}
