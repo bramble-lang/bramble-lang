@@ -78,6 +78,10 @@ impl CompilerNode {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 (Ast::Identifier(meta, id.clone()), layout)
             }
+            Path(m, path) => {
+                let (meta, layout) = Scope::local_from(m, struct_table, layout);
+                (Ast::Path(meta, path.clone()), layout)
+            }
             Ast::IdentifierDeclare(m, id, p) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 (Ast::IdentifierDeclare(meta, id.clone(), p.clone()), layout)

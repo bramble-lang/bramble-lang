@@ -89,6 +89,7 @@ pub enum Ast<I> {
     StringLiteral(I, String),
     CustomType(I, String),
     Identifier(I, String),
+    Path(I, Vec<String>),
     MemberAccess(I, Box<Ast<I>>, String),
     IdentifierDeclare(I, String, Type),
 
@@ -140,7 +141,7 @@ impl<I> Ast<I> {
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
             MemberAccess(_, s, m) => format!("{}.{}", s.root_str(), m),
-
+            Path(_, path) => path.join("::"),
             BinaryOp(_, op, _, _) => format!("{}", op),
             UnaryOp(_, op, _) => format!("{}", op),
 
@@ -177,6 +178,7 @@ impl<I> Ast<I> {
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
+            | Path(m, ..)
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)

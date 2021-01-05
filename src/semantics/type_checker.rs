@@ -232,6 +232,9 @@ impl SemanticAnalyzer {
                     Ok(meta.ty.clone())
                 }
             },
+            Path(..) => {
+                todo!("Check to make sure that each identifier in the path is a valid module or a item in that module");
+            }
             MemberAccess(meta, src, member) => {
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`

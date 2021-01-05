@@ -59,6 +59,7 @@ pub enum Lex {
     Else,
     Colon,
     MemberAccess,
+    PathSeparator,
     LArrow,
     Primitive(Primitive),
 }
@@ -118,6 +119,7 @@ impl std::fmt::Display for Lex {
             Else => f.write_str("else"),
             Colon => f.write_str(":"),
             MemberAccess => f.write_str("."),
+            PathSeparator => f.write_str("::"),
             LArrow => f.write_str("->"),
             Primitive(p) => f.write_str(&format!("{}", p)),
         }
