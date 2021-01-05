@@ -150,6 +150,7 @@ impl SemanticAst {
             ))),
             Module {
                 meta: ln,
+                name,
                 functions,
                 coroutines,
                 structs,
@@ -168,6 +169,7 @@ impl SemanticAst {
                 }
                 Ok(Box::new(Module {
                     meta: self.sm_from(*ln),
+                    name: name.clone(),
                     functions: nfuncs,
                     coroutines: ncors,
                     structs: nstructs,

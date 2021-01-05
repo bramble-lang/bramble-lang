@@ -180,6 +180,7 @@ impl CompilerNode {
             }
             Module {
                 meta,
+                name,
                 functions,
                 coroutines,
                 structs,
@@ -216,6 +217,7 @@ impl CompilerNode {
                 (
                     Module {
                         meta,
+                        name: name.clone(),
                         functions: nfuncs,
                         coroutines: ncors,
                         structs: vec![],

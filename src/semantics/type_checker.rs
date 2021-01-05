@@ -500,6 +500,7 @@ impl SemanticAnalyzer {
                 functions,
                 coroutines,
                 structs,
+                ..
             } => {
                 let tmp_sym = sym.clone();
                 self.stack.push(tmp_sym);

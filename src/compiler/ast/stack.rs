@@ -269,6 +269,7 @@ mod tests {
         module_scope.insert("func", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,
+            name: "test".into(),
             functions: vec![fun_node],
             coroutines: vec![],
             structs: vec![],
@@ -335,6 +336,7 @@ mod tests {
         module_scope.insert("cor", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,
+            name: "test".into(),
             functions: vec![],
             coroutines: vec![cor_node],
             structs: vec![],
