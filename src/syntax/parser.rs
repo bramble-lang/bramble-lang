@@ -717,7 +717,7 @@ fn co_init(stream: &mut TokenStream) -> PResult {
                 Ok(Some(Ast::RoutineCall(
                     l,
                     RoutineCall::CoroutineInit,
-                    id,
+                    vec![id],
                     params,
                 )))
             }
@@ -729,11 +729,35 @@ fn co_init(stream: &mut TokenStream) -> PResult {
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     trace!(stream);
+    // parse path
+    // has function parameters
+    // has struct expression parameters
     function_call(stream)
         .por(struct_expression, stream)
+        //.por(path, stream)
         .por(identifier, stream)
 }
 
+fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
+    trace!(stream);
+    let s: Option<Ast<u32>> = match path(stream)? {
+        Some((line, path)) => {
+            match fn_call_params(stream)? {
+                Some(params) => Some(Ast::RoutineCall(line, RoutineCall::Function, path, params.clone())),
+                None => match struct_init_params(stream)? {
+                    Some(params) => Some(Ast::StructExpression(line, path[0], params.clone())),
+                    None => Some(Ast::Path(line, path)),
+                },
+            }
+        }
+        _ => None
+    };
+
+    Ok(s)
+}
+
+// TODO: I think what I want ot do is pull the ID/Path parsing up in to `function_call_or_variable` and then
+// determine if it's a function, struct expressoin, or variable by if there is a LParen or LBrace after the path.
 fn function_call(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
@@ -745,7 +769,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
         Ok(Some(Ast::RoutineCall(
             line,
             RoutineCall::Function,
-            fn_name,
+            vec![fn_name],
             params,
         )))
     } else {
@@ -769,11 +793,18 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn path(stream: &mut TokenStream) -> PResult {
+fn path(stream: &mut TokenStream) -> Result<Option<(u32, Vec<String>)>, String> {
     trace!(stream);
+    let mut path = vec![];
+
+    // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
+    if stream.next_if(&Lex::PathSeparator).is_some() {
+        path.push("root".into());
+    }
+
     match stream.next_if_id() {
         Some((line, id)) => {
-            let mut path = vec![id];
+            path.push(id);
             while let Some(token) = stream.next_if(&Lex::PathSeparator) {
                 let line = token.l;
                 let (_, id) = stream.next_if_id().ok_or(format!(
@@ -782,7 +813,7 @@ fn path(stream: &mut TokenStream) -> PResult {
                 ))?;
                 path.push(id);
             }
-            Ok(Some(Ast::Path(line, path)))
+            Ok(Some((line, path)))
         }
         None => Ok(None),
     }
@@ -1048,9 +1079,11 @@ pub mod tests {
     fn parse_path() {
         for (text, expected) in vec![
                 ("thing", Ok(vec!["thing"])),
+                ("::thing", Ok(vec!["root", "thing"])),
                 ("thing::first", Ok(vec!["thing", "first"])),
                 ("thing::first::second", Ok(vec!["thing", "first", "second"])),
                 ("thing::", Err("L1: expect identifier after path separator '::'")),
+                ("thing::first::", Err("L1: expect identifier after path separator '::'")),
             ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -1058,7 +1091,7 @@ pub mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            match path(&mut stream) {
+            match expression(&mut stream) {
                 Ok(Some(Ast::Path(l, path))) => {
                     assert_eq!(l, 1);
                     match expected {
@@ -1066,8 +1099,8 @@ pub mod tests {
                         Err(msg) => assert!(false, msg),
                     }
                 }
-                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
-                Ok(None) => panic!("No node returned for {}", text),
+                Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
+                Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => {
                     match expected {
                         Ok(_) =>  assert!(false, msg),
@@ -1457,7 +1490,7 @@ pub mod tests {
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(name, "test");
+            assert_eq!(name, vec!["test"]);
             assert_eq!(
                 params,
                 vec![
@@ -1523,7 +1556,7 @@ pub mod tests {
                         Box::new(Ast::RoutineCall(
                             1,
                             RoutineCall::CoroutineInit,
-                            "c".into(),
+                            vec!["c".into()],
                             vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
                         ))
                     );
@@ -1716,7 +1749,7 @@ pub mod tests {
                     _,
                     box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params),
                 ) => {
-                    assert_eq!(fn_name, "f");
+                    assert_eq!(*fn_name, vec!["f"]);
                     assert_eq!(params[0], Ast::Identifier(1, "x".into()));
                 }
                 _ => panic!("No body: {:?}", &body[1]),
