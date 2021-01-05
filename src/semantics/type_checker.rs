@@ -700,6 +700,35 @@ mod tests {
     }
 
     #[test]
+    pub fn test_path() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+                ("mod my_mod{ 
+                    fn test() -> i32{ return 0;} 
+                    fn main() {
+                        let i: i32 := self::test(); 
+                        return;
+                    }
+                }",
+                Ok(())),
+                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
+                Err("Semantic: L1: MyStruct does not have member y")),
+            ] {
+                let tokens: Vec<Token> = Lexer::new(&text)
+                    .tokenize()
+                    .into_iter()
+                    .collect::<Result<_, _>>()
+                    .unwrap();
+                let ast = parser::parse(tokens).unwrap().unwrap();
+                let result = type_check(&ast, TracingConfig::Off);
+                match expected {
+                    Ok(_) => assert!(result.is_ok()),
+                    Err(msg) => assert_eq!(result.err().unwrap(), msg),
+                }
+            }
+    }
+
+    #[test]
     pub fn test_unary_ops() {
         let mut scope = Scope::new();
         scope.add(

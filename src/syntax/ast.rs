@@ -118,7 +118,7 @@ pub enum Ast<I> {
         ty: Type,
         body: Vec<Ast<I>>,
     },
-    RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
+    RoutineCall(I, RoutineCall, Vec<String>, Vec<Ast<I>>),
     Module {
         meta: I,
         name: String,
