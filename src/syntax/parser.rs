@@ -130,7 +130,17 @@ impl Parser {
 
 pub fn parse(tokens: Vec<Token>) -> PResult {
     let mut stream = TokenStream::new(&tokens);
-    module(&mut stream).map_err(|e| format!("Parser: {}", e))
+    let start_index = stream.index();
+    let mut item = None;
+    while stream.peek().is_some() {
+        item = module(&mut stream).map_err(|e| format!("Parser: {}", e))?;
+
+        if stream.index() == start_index {
+            return Err(format!("Parser cannot advance past {:?}", stream.peek()));
+        }
+    }
+
+    Ok(item)
 }
 
 fn module(stream: &mut TokenStream) -> PResult {
