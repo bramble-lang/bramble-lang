@@ -176,6 +176,7 @@ fn module(stream: &mut TokenStream) -> PResult {
                 }
                 Some(Ast::Module {
                     meta: module_line,
+                    name: module_name,
                     functions,
                     coroutines,
                     structs,
@@ -205,6 +206,7 @@ fn module(stream: &mut TokenStream) -> PResult {
             }
             Some(Ast::Module {
                 meta: module_line,
+                name: "root".into(),
                 functions,
                 coroutines,
                 structs,
@@ -1239,7 +1241,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, functions, coroutines, structs}) =
+        if let Some(Ast::Module{meta, name, functions, coroutines, structs}) =
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
@@ -1276,7 +1278,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, functions, coroutines, structs}) =
+        if let Some(Ast::Module{meta, name, functions, coroutines, structs}) =
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
@@ -1313,7 +1315,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, functions, coroutines, structs}) =
+        if let Some(Ast::Module{meta, name, functions, coroutines, structs}) =
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);

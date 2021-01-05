@@ -120,6 +120,7 @@ pub enum Ast<I> {
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
     Module {
         meta: I,
+        name: String,
         functions: Vec<Ast<I>>,
         coroutines: Vec<Ast<I>>,
         structs: Vec<Ast<I>>,
