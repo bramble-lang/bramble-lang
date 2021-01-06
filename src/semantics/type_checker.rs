@@ -1167,7 +1167,7 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_func", vec![], I32, vec![]);
 
-        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func".into()], vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func"].into(), vec![]);
         let mut sa = SemanticAst::new();
         let ty = start(
             &mut sa.from_parser_ast(&node).unwrap(),
@@ -1181,7 +1181,7 @@ mod tests {
         let node = Ast::RoutineCall(
             1,
             ast::RoutineCall::Function,
-            vec!["my_func2".into()],
+            vec!["my_func2"].into(),
             vec![Ast::Integer(1, 5)],
         );
 
@@ -1194,7 +1194,7 @@ mod tests {
         assert_eq!(ty, Ok(I32));
 
         // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func2".into()], vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func2"].into(), vec![]);
 
         let mut sa = SemanticAst::new();
         let ty = start(
@@ -1214,7 +1214,7 @@ mod tests {
         scope.add("my_co", vec![], I32, vec![]);
         scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
-        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co".into()], vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co"].into(), vec![]);
         let mut sa = SemanticAst::new();
         let ty = start(
             &mut sa.from_parser_ast(&node).unwrap(),
@@ -1227,7 +1227,7 @@ mod tests {
         let node = Ast::RoutineCall(
             1,
             ast::RoutineCall::CoroutineInit,
-            vec!["my_co2".into()],
+            vec!["my_co2"].into(),
             vec![Ast::Integer(1, 5)],
         );
 
@@ -1240,7 +1240,7 @@ mod tests {
         assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
         // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co2".into()], vec![]);
+        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co2"].into(), vec![]);
 
         let mut sa = SemanticAst::new();
         let ty = start(

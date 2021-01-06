@@ -83,13 +83,50 @@ impl std::fmt::Display for RoutineCall {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct Path {
+    path: Vec<String>,
+}
+
+impl Path {
+    pub fn len(&self) -> usize {
+        self.path.len()
+    }
+
+    pub fn last(&self) -> Option<&String> {
+        self.path.last()
+    }
+}
+
+impl std::fmt::Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.path.join("::"))
+    }
+}
+
+impl From<Vec<String>> for Path {
+    fn from(v: Vec<String>) -> Self {
+        Path {
+            path: v.clone(),
+        }
+    }
+}
+
+impl From<Vec<&str>> for Path {
+    fn from(v: Vec<&str>) -> Self {
+        Path {
+            path: v.into_iter().map(|e| e.into()).collect(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
     Boolean(I, bool),
     StringLiteral(I, String),
     CustomType(I, String),
     Identifier(I, String),
-    Path(I, Vec<String>),
+    Path(I, Path),
     MemberAccess(I, Box<Ast<I>>, String),
     IdentifierDeclare(I, String, Type),
 
@@ -118,7 +155,7 @@ pub enum Ast<I> {
         Type,
         Vec<Ast<I>>,
     ),
-    RoutineCall(I, RoutineCall, Vec<String>, Vec<Ast<I>>),
+    RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     Module {
         meta: I,
         name: String,
@@ -141,7 +178,7 @@ impl<I> Ast<I> {
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
             MemberAccess(_, s, m) => format!("{}.{}", s.root_str(), m),
-            Path(_, path) => path.join("::"),
+            Path(_, path) => format!("{}", path),
             BinaryOp(_, op, _, _) => format!("{}", op),
             UnaryOp(_, op, _) => format!("{}", op),
 

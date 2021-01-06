@@ -717,7 +717,7 @@ fn co_init(stream: &mut TokenStream) -> PResult {
                 Ok(Some(Ast::RoutineCall(
                     l,
                     RoutineCall::CoroutineInit,
-                    vec![id],
+                    vec![id].into(),
                     params,
                 )))
             }
@@ -746,11 +746,11 @@ fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
             match fn_call_params(stream)? {
                 Some(params) => Some(Ast::RoutineCall(line, RoutineCall::Function, path, params.clone())),
                 None => match struct_init_params(stream)? {
-                    Some(params) => Some(Ast::StructExpression(line, path[0].clone(), params.clone())),
+                    Some(params) => Some(Ast::StructExpression(line, path.last().unwrap().clone(), params.clone())),
                     None => if path.len() > 1 {
-                        Some(Ast::Path(line, path))
+                        Some(Ast::Path(line, path.into()))
                     } else {
-                        Some(Ast::Identifier(line, path[0].clone()))
+                        Some(Ast::Identifier(line, path.last().unwrap().clone()))
                     },
                 },
             }
@@ -774,7 +774,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
         Ok(Some(Ast::RoutineCall(
             line,
             RoutineCall::Function,
-            vec![fn_name],
+            vec![fn_name].into(),
             params,
         )))
     } else {
@@ -798,7 +798,7 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn path(stream: &mut TokenStream) -> Result<Option<(u32, Vec<String>)>, String> {
+fn path(stream: &mut TokenStream) -> Result<Option<(u32, Path)>, String> {
     trace!(stream);
     let mut path = vec![];
 
@@ -818,7 +818,7 @@ fn path(stream: &mut TokenStream) -> Result<Option<(u32, Vec<String>)>, String> 
                 ))?;
                 path.push(id);
             }
-            Ok(Some((line, path)))
+            Ok(Some((line, path.into())))
         }
         None => Ok(None),
     }
@@ -1100,7 +1100,7 @@ pub mod tests {
                 Ok(Some(Ast::Path(l, path))) => {
                     assert_eq!(l, 1);
                     match expected {
-                        Ok(expected) =>  assert_eq!(path, expected),
+                        Ok(expected) =>  assert_eq!(path, expected.into()),
                         Err(msg) => assert!(false, msg),
                     }
                 }
@@ -1505,7 +1505,7 @@ pub mod tests {
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(name, vec!["test"]);
+            assert_eq!(name, vec!["test"].into());
             assert_eq!(
                 params,
                 vec![
@@ -1531,7 +1531,7 @@ pub mod tests {
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(name, vec!["self", "test"]);
+            assert_eq!(name, vec!["self", "test"].into());
             assert_eq!(
                 params,
                 vec![
@@ -1597,7 +1597,7 @@ pub mod tests {
                         Box::new(Ast::RoutineCall(
                             1,
                             RoutineCall::CoroutineInit,
-                            vec!["c".into()],
+                            vec!["c"].into(),
                             vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
                         ))
                     );
@@ -1790,7 +1790,7 @@ pub mod tests {
                     _,
                     box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params),
                 ) => {
-                    assert_eq!(*fn_name, vec!["f"]);
+                    assert_eq!(*fn_name, vec!["f"].into());
                     assert_eq!(params[0], Ast::Identifier(1, "x".into()));
                 }
                 _ => panic!("No body: {:?}", &body[1]),
