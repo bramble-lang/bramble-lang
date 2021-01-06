@@ -178,7 +178,7 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off).unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let (compiler_ast, _) = CompilerNode::from(result.as_ref());
             let mut sp = StringPool::new();
             sp.extract_from(&compiler_ast);
