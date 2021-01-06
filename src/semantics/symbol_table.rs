@@ -191,7 +191,7 @@ impl ScopeStack {
     /// Starting from the bottom of the stack this builds a path
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
-    pub fn to_path(&self, current: Option<&SymbolTable>) -> Option<Path> {
+    pub fn to_path(&self, current: &SymbolTable) -> Option<Path> {
         let mut steps = vec![];
 
         for node in self.stack.iter() {
@@ -204,7 +204,7 @@ impl ScopeStack {
         }
 
         match current {
-            Some(SymbolTable{ ty: ScopeType::Module{name}, ..}) => steps.push(name.clone()),
+            SymbolTable{ ty: ScopeType::Module{name}, ..} => steps.push(name.clone()),
             _ => (),
         }
 
@@ -224,7 +224,8 @@ mod tests {
     #[test]
     fn test_empty_stack_to_path() {
         let stack = ScopeStack::new();
-        let path = stack.to_path(None);
+        let local = SymbolTable::new();
+        let path = stack.to_path(&local);
         assert_eq!(path, None);
     }
 
@@ -233,8 +234,20 @@ mod tests {
         let mut stack = ScopeStack::new();
         let sym = SymbolTable::new_module("root");
         stack.push(sym);
-        let path = stack.to_path(None).unwrap();
+        let local = SymbolTable::new();
+        let path = stack.to_path(&local).unwrap();
         let expected = vec!["root"].into();
+        assert_eq!(path, expected);
+    }
+
+    #[test]
+    fn test_one_module_stack_module_current_to_path() {
+        let mut stack = ScopeStack::new();
+        let sym = SymbolTable::new_module("root");
+        stack.push(sym);
+        let current = SymbolTable::new_module("inner");
+        let path = stack.to_path(&current).unwrap();
+        let expected = vec!["root", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -245,7 +258,8 @@ mod tests {
         stack.push(module);
         let local = SymbolTable::new();
         stack.push(local);
-        let path = stack.to_path(None).unwrap();
+        let local2 = SymbolTable::new();
+        let path = stack.to_path(&local2).unwrap();
         let expected = vec!["root"].into();
         assert_eq!(path, expected);
     }
@@ -259,7 +273,8 @@ mod tests {
         stack.push(module2);
         let local = SymbolTable::new();
         stack.push(local);
-        let path = stack.to_path(None).unwrap();
+        let local2 = SymbolTable::new();
+        let path = stack.to_path(&local2).unwrap();
         let expected = vec!["first", "second"].into();
         assert_eq!(path, expected);
     }

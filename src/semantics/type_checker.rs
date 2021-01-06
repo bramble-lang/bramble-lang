@@ -78,7 +78,7 @@ impl SemanticAnalyzer {
                 Some(f) => format!("{}: ", f),
                 None => "".into(),
             };
-            let path = self.stack.to_path(Some(current_scope)).map_or("[]".into(), |p| format!("{}", p));
+            let path = self.stack.to_path(current_scope).map_or("[]".into(), |p| format!("{}", p));
             println!("L{}: {}{} <- {}", line, func, node, path);
         }
     }
