@@ -1,4 +1,4 @@
-use crate::ast;
+use crate::{ast, syntax::ast::Path};
 use crate::ast::Type;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
@@ -46,6 +46,14 @@ impl SymbolTable {
     pub fn get(&self, name: &str) -> Option<&Symbol> {
         //self.sym.get(name)
         self.sym.iter().find(|s| s.name == name)
+    }
+
+    pub fn get_path(&self, name: &Path) -> Option<&Symbol> {
+        if name.len() == 1 {
+            self.sym.iter().find(|s| s.name == name[0])
+        } else {
+            None
+        }
     }
 
     pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<(), String> {
