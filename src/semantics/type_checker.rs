@@ -9,7 +9,7 @@ use crate::{
     diagnostics::config::{Tracing, TracingConfig},
 };
 
-pub fn type_check(ast: &PNode, trace: TracingConfig) -> Result<Box<SemanticNode>, String> {
+pub fn type_check(ast: &PNode, trace: TracingConfig, trace_path: TracingConfig) -> Result<Box<SemanticNode>, String> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_parser_ast(&ast)?;
     SymbolTable::generate(&mut sm_ast)?;
@@ -17,6 +17,7 @@ pub fn type_check(ast: &PNode, trace: TracingConfig) -> Result<Box<SemanticNode>
     let mut root_table = SymbolTable::new();
     let mut semantic = SemanticAnalyzer::new();
     semantic.set_tracing(trace);
+    semantic.path_tracing = trace_path;
     semantic
         .traverse(&mut sm_ast, &None, &mut root_table)
         .map_err(|e| format!("Semantic: {}", e))?;
@@ -26,6 +27,7 @@ pub fn type_check(ast: &PNode, trace: TracingConfig) -> Result<Box<SemanticNode>
 pub struct SemanticAnalyzer {
     stack: ScopeStack,
     tracing: TracingConfig,
+    path_tracing: TracingConfig,
 }
 
 impl Tracing for SemanticAnalyzer {
@@ -39,13 +41,22 @@ impl SemanticAnalyzer {
         SemanticAnalyzer {
             stack: ScopeStack::new(),
             tracing: TracingConfig::Off,
+            path_tracing: TracingConfig::Off,
         }
     }
 
-    fn trace(&self, node: &SemanticNode, current_func: &Option<String>) {
+    fn trace(&self, node: &SemanticNode, current_func: &Option<String>, current_scope: &SymbolTable) {
         let md = node.get_metadata();
         let line = md.ln as usize;
         let print_trace = match self.tracing {
+            TracingConfig::All => true,
+            TracingConfig::After(start) if start <= line => true,
+            TracingConfig::Before(end) if line <= end => true,
+            TracingConfig::Between(start, end) if start <= line && line <= end => true,
+            TracingConfig::Only(only) if line == only => true,
+            _ => false,
+        };
+        let print_path = match self.path_tracing {
             TracingConfig::All => true,
             TracingConfig::After(start) if start <= line => true,
             TracingConfig::Before(end) if line <= end => true,
@@ -60,6 +71,15 @@ impl SemanticAnalyzer {
                 None => "".into(),
             };
             println!("L{}: {}{}\n{}", line, func, node, self.stack);
+        }
+
+        if print_path {
+            let func = match current_func {
+                Some(f) => format!("{}: ", f),
+                None => "".into(),
+            };
+            let path = self.stack.to_path(Some(current_scope)).map_or("[]".into(), |p| format!("{}", p));
+            println!("L{}: {}{} <- {}", line, func, node, path);
         }
     }
 
@@ -139,7 +159,7 @@ impl SemanticAnalyzer {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<ast::Type, String> {
-        self.trace(ast, current_func);
+        self.trace(ast, current_func, sym);
         self.analyize_node(ast, current_func, sym).map_err(|e| {
             if !e.starts_with("L") {
                 format!("L{}: {}", ast.get_metadata().ln, e)
@@ -721,7 +741,7 @@ mod tests {
                     .collect::<Result<_, _>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = type_check(&ast, TracingConfig::Off);
+                let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok()),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -1455,7 +1475,7 @@ mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off);
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => assert!(result.is_ok()),
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -1488,7 +1508,7 @@ mod tests {
                     .collect::<Result<_, _>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = type_check(&ast, TracingConfig::Off);
+                let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok()),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),

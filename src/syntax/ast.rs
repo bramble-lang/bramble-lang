@@ -213,7 +213,7 @@ impl<I> Ast<I> {
             RoutineDef(_, def, name, ..) => format!("{} for {}", def, name),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
-            Module { .. } => "module".into(),
+            Module { name, .. } => format!("module {}", name),
             StructDef(_, name, ..) => format!("definition of struct {}", name),
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
         }

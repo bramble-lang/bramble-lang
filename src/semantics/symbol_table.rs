@@ -191,7 +191,7 @@ impl ScopeStack {
     /// Starting from the bottom of the stack this builds a path
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
-    pub fn to_path(&self) -> Option<Path> {
+    pub fn to_path(&self, current: Option<&SymbolTable>) -> Option<Path> {
         let mut steps = vec![];
 
         for node in self.stack.iter() {
@@ -201,6 +201,11 @@ impl ScopeStack {
                 },
                 _ => (),
             }
+        }
+
+        match current {
+            Some(SymbolTable{ ty: ScopeType::Module{name}, ..}) => steps.push(name.clone()),
+            _ => (),
         }
 
         if steps.len() > 0 {
@@ -219,7 +224,7 @@ mod tests {
     #[test]
     fn test_empty_stack_to_path() {
         let stack = ScopeStack::new();
-        let path = stack.to_path();
+        let path = stack.to_path(None);
         assert_eq!(path, None);
     }
 
@@ -228,7 +233,7 @@ mod tests {
         let mut stack = ScopeStack::new();
         let sym = SymbolTable::new_module("root");
         stack.push(sym);
-        let path = stack.to_path().unwrap();
+        let path = stack.to_path(None).unwrap();
         let expected = vec!["root"].into();
         assert_eq!(path, expected);
     }
@@ -240,7 +245,7 @@ mod tests {
         stack.push(module);
         let local = SymbolTable::new();
         stack.push(local);
-        let path = stack.to_path().unwrap();
+        let path = stack.to_path(None).unwrap();
         let expected = vec!["root"].into();
         assert_eq!(path, expected);
     }
@@ -254,7 +259,7 @@ mod tests {
         stack.push(module2);
         let local = SymbolTable::new();
         stack.push(local);
-        let path = stack.to_path().unwrap();
+        let path = stack.to_path(None).unwrap();
         let expected = vec!["first", "second"].into();
         assert_eq!(path, expected);
     }

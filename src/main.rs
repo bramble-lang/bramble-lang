@@ -54,6 +54,12 @@ fn main() {
                 .takes_value(true)
                 .help("Prints out a trace of the value of the symbol table at each node in the AST.  You can specify specify to only trace specific lines in the source code file.")
         )
+        .arg(
+            Arg::with_name("trace-path")
+                .long("trace-path")
+                .takes_value(true)
+                .help("Prints out the current module path at the current line of code.")
+        )
         .get_matches();
 
     let input = matches
@@ -94,7 +100,8 @@ fn main() {
 
     // Type Check
     let trace_semantic_analysis = TracingConfig::parse(matches.value_of("trace-symbol-table"));
-    let semantic_ast = match type_check(&ast, trace_semantic_analysis) {
+    let trace_path = TracingConfig::parse(matches.value_of("trace-path"));
+    let semantic_ast = match type_check(&ast, trace_semantic_analysis, trace_path) {
         Ok(ast) => {
             //func_table = FunctionTable::from_semantic_ast(&ast);
             ast
