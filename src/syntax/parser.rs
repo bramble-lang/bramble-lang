@@ -732,10 +732,11 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     // parse path
     // has function parameters
     // has struct expression parameters
-    function_call(stream)
+    /*function_call(stream)
         .por(struct_expression, stream)
         //.por(path, stream)
-        .por(identifier, stream)
+        .por(identifier, stream)*/
+    function_call_or_variable2(stream)
 }
 
 fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
@@ -746,7 +747,11 @@ fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
                 Some(params) => Some(Ast::RoutineCall(line, RoutineCall::Function, path, params.clone())),
                 None => match struct_init_params(stream)? {
                     Some(params) => Some(Ast::StructExpression(line, path[0].clone(), params.clone())),
-                    None => Some(Ast::Path(line, path)),
+                    None => if path.len() > 1 {
+                        Some(Ast::Path(line, path))
+                    } else {
+                        Some(Ast::Identifier(line, path[0].clone()))
+                    },
                 },
             }
         }
@@ -1096,6 +1101,16 @@ pub mod tests {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) =>  assert_eq!(path, expected),
+                        Err(msg) => assert!(false, msg),
+                    }
+                }
+                Ok(Some(Ast::Identifier(l, id))) => {
+                    assert_eq!(l, 1);
+                    match expected {
+                        Ok(expected) =>  {
+                            assert_eq!(expected.len(), 1);
+                            assert_eq!(id, expected[0]);
+                        }
                         Err(msg) => assert!(false, msg),
                     }
                 }
@@ -1491,6 +1506,32 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, vec!["test"]);
+            assert_eq!(
+                params,
+                vec![
+                    Ast::Identifier(1, "x".into()),
+                    Ast::Identifier(1, "y".into())
+                ]
+            );
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_routine_by_path_call() {
+        let text = "self::test(x, y)";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::RoutineCall(l, RoutineCall::Function, name, params)) =
+            expression(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(name, vec!["self", "test"]);
             assert_eq!(
                 params,
                 vec![
