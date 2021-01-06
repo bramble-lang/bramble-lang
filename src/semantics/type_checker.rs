@@ -422,7 +422,7 @@ impl SemanticAnalyzer {
 
                 if pty.len() != expected_param_tys.len() {
                     Err(format!(
-                        "Incorrect number of parameters passed to routine: {:?}",
+                        "Incorrect number of parameters passed to routine: {}",
                         fname
                     ))
                 } else {
@@ -433,7 +433,7 @@ impl SemanticAnalyzer {
                         Ok(meta.ty.clone())
                     } else {
                         Err(format!(
-                            "One or more parameters had mismatching types for function {:?}",
+                            "One or more parameters had mismatching types for function {}",
                             fname
                         ))
                     }
