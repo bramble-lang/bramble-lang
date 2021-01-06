@@ -95,6 +95,10 @@ impl Path {
     pub fn last(&self) -> Option<&String> {
         self.path.last()
     }
+
+    pub fn iter(&self) -> std::slice::Iter<String> {
+        self.path.iter()
+    }
 }
 
 impl<I: std::slice::SliceIndex<[String]>> std::ops::Index<I> for Path {
@@ -273,6 +277,50 @@ impl<I> Ast<I> {
             _ => None,
         }
     }
+
+    pub fn go_to(&self, path: &Path) -> Option<&Self> {
+        if path.len() == 0 {
+            return None;
+        }
+
+        let mut iter = path.iter();
+        if let Ast::Module{name, ..} = self {
+            match iter.next() {
+                Some(step) if step == name => (),
+                _ => return None
+            }
+        } else {
+            return None
+        }
+
+        let mut current = self;
+        for step in iter {
+            match current {
+                Ast::Module{..} => {
+                    if let Some(node) = current.get_item(step) {
+                        current = node;
+                    } else {
+                        return None
+                    }
+                }
+                _ => return None,
+            }
+        }
+        Some(current)
+    }
+
+    /// If a Node contains an Item (function, coroutine, module, or struct)
+    /// Then return it
+    pub fn get_item(&self, name: &str) -> Option<&Self> {
+        match self {
+            Ast::Module{functions, coroutines, structs, ..} => {
+                functions.iter().find(|f| f.get_name().map_or(false, |n| n == name))
+                .or(coroutines.iter().find(|c| c.get_name().map_or(false, |n| n == name)))
+                .or(structs.iter().find(|s| s.get_name().map_or(false, |n| n == name)))
+            },
+            _ => None
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -340,5 +388,51 @@ impl std::fmt::Display for Type {
             }
             Unknown => f.write_str("unknown"),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_go_to_shallow() {
+        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let path = vec!["root"].into();
+        let node = ast.go_to(&path).unwrap();
+        assert_eq!(node, &ast);
+    }
+
+    #[test]
+    fn test_go_to_not_found_root() {
+        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let path = vec!["wrong"].into();
+        let node = ast.go_to(&path);
+        assert_eq!(node, None);
+    }
+
+    #[test]
+    fn test_go_to_not_found() {
+        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let path = vec!["root::test::blah"].into();
+        let node = ast.go_to(&path);
+        assert_eq!(node, None);
+    }
+
+    #[test]
+    fn test_go_to_empty_path() {
+        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let path = Vec::<String>::new().into();
+        let node = ast.go_to(&path);
+        assert_eq!(node, None);
+    }
+
+    #[test]
+    fn test_go_to_function() {
+        let func = Ast::RoutineDef(0, RoutineDef::Function, "func".into(), vec![], Type::I32, vec![]);
+        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![func.clone()], coroutines: vec![], structs: vec![]};
+        let path = vec!["root", "func"].into();
+        let node = ast.go_to(&path).unwrap();
+        assert_eq!(*node, func);
     }
 }
