@@ -20,7 +20,15 @@ impl std::fmt::Display for Symbol {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+enum ScopeType {
+    Local,
+    Routine,
+    Module{name: String},
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
+    ty: ScopeType,
     sym: Vec<Symbol>,
 }
 
@@ -36,7 +44,11 @@ impl std::fmt::Display for SymbolTable {
 
 impl SymbolTable {
     pub fn new() -> Self {
-        SymbolTable { sym: vec![] }
+        SymbolTable { ty: ScopeType::Local, sym: vec![] }
+    }
+
+    pub fn new_module(name: &str) -> Self {
+        SymbolTable { ty: ScopeType::Module{name: name.into()}, sym: vec![] }
     }
 
     pub fn table(&self) -> &Vec<Symbol> {
@@ -174,5 +186,76 @@ impl ScopeStack {
             };
         }
         None
+    }
+
+    /// Starting from the bottom of the stack this builds a path
+    /// of all the modules that we are current in, in effect
+    /// the current path within the AST.
+    pub fn to_path(&self) -> Option<Path> {
+        let mut steps = vec![];
+
+        for node in self.stack.iter() {
+            match &node.ty {
+                ScopeType::Module{name} => {
+                    steps.push(name.clone());
+                },
+                _ => (),
+            }
+        }
+
+        if steps.len() > 0 {
+            Some(steps.into())
+        } else {
+            None
+        }
+        
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_stack_to_path() {
+        let stack = ScopeStack::new();
+        let path = stack.to_path();
+        assert_eq!(path, None);
+    }
+
+    #[test]
+    fn test_one_module_stack_to_path() {
+        let mut stack = ScopeStack::new();
+        let sym = SymbolTable::new_module("root");
+        stack.push(sym);
+        let path = stack.to_path().unwrap();
+        let expected = vec!["root"].into();
+        assert_eq!(path, expected);
+    }
+
+    #[test]
+    fn test_local_then_one_module_stack_to_path() {
+        let mut stack = ScopeStack::new();
+        let module = SymbolTable::new_module("root");
+        stack.push(module);
+        let local = SymbolTable::new();
+        stack.push(local);
+        let path = stack.to_path().unwrap();
+        let expected = vec!["root"].into();
+        assert_eq!(path, expected);
+    }
+
+    #[test]
+    fn test_local_then_two_module_stack_to_path() {
+        let mut stack = ScopeStack::new();
+        let module = SymbolTable::new_module("first");
+        stack.push(module);
+        let module2 = SymbolTable::new_module("second");
+        stack.push(module2);
+        let local = SymbolTable::new();
+        stack.push(local);
+        let path = stack.to_path().unwrap();
+        let expected = vec!["first", "second"].into();
+        assert_eq!(path, expected);
     }
 }

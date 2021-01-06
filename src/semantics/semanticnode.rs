@@ -172,7 +172,7 @@ impl SemanticAst {
                     nstructs.push(*self.from_parser_ast(st)?);
                 }
                 Ok(Box::new(Module {
-                    meta: self.sm_from(*ln),
+                    meta: self.module_sm_from(*ln, name),
                     name: name.clone(),
                     functions: nfuncs,
                     coroutines: ncors,
@@ -203,6 +203,17 @@ impl SemanticAst {
 
     fn sm_from(&mut self, l: u32) -> SemanticMetadata {
         let sm_data = sm(self.next_id, l, ast::Type::Unknown);
+        self.next_id += 1;
+        sm_data
+    }
+
+    fn module_sm_from(&mut self, ln: u32, name: &str) -> SemanticMetadata {
+        let sm_data = SemanticMetadata {
+            id: self.next_id,
+            ln,
+            ty: ast::Type::Unknown,
+            sym: SymbolTable::new_module(name),
+        };
         self.next_id += 1;
         sm_data
     }
