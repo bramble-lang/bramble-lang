@@ -97,6 +97,15 @@ impl Path {
     }
 }
 
+impl<I: std::slice::SliceIndex<[String]>> std::ops::Index<I> for Path {
+    type Output = I::Output;
+
+    #[inline]
+    fn index(&self, index: I) -> &Self::Output {
+        std::ops::Index::index(&*self.path, index)
+    }
+}
+
 impl std::fmt::Display for Path {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.path.join("::"))
