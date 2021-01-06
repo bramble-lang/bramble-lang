@@ -189,7 +189,7 @@ impl CompilerNode {
                 coroutines,
                 structs,
             } => {
-                let (mut meta, layout) = Scope::local_from(meta, struct_table, layout);
+                let (mut meta, layout) = Scope::module_from(meta, name, struct_table, layout);
 
                 for st in structs.iter() {
                     // at this point I could compute the size of each struct and test for

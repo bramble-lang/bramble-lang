@@ -122,6 +122,22 @@ impl Scope {
         };
         (scope, current_offset)
     }
+
+    pub(super) fn module_from(
+        m: &SemanticMetadata,
+        name: &str,
+        struct_table: &StructTable,
+        current_layout: LayoutData,
+    ) -> (Scope, LayoutData) {
+        let mut layout = current_layout;
+        let mut scope = Scope::new(m.id, Level::Module{name: name.into()}, m.ty.clone());
+        scope.line = m.ln;
+        for s in m.sym.table().iter() {
+            layout.offset =
+                scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
+        }
+        (scope, layout)
+    }
 }
 
 impl std::fmt::Display for Scope {
@@ -142,12 +158,13 @@ impl std::fmt::Display for Scope {
 pub enum Level {
     Local,
     Routine { next_label: i32, allocation: i32 },
+    Module{ name: String},
 }
 
 impl Level {
     pub fn allocation(&self) -> Option<i32> {
         match self {
-            Level::Local => None,
+            Level::Local | Level::Module{..} => None,
             Level::Routine { allocation, .. } => Some(*allocation),
         }
     }
@@ -164,6 +181,9 @@ impl std::fmt::Display for Level {
                 "Routine: [Next Label: {}, Allocation: {}]",
                 next_label, allocation
             )),
+            Level::Module{name} => {
+                f.write_fmt(format_args!("Module: {}", name))
+            }
         }
     }
 }
