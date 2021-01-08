@@ -16,30 +16,32 @@ pub fn type_check(ast: &PNode, trace: TracingConfig, trace_path: TracingConfig) 
     SymbolTable::generate(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
-    let mut semantic = SemanticAnalyzer::new();
+    let mut semantic = SemanticAnalyzer::new(&sm_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
     let ast_typed = semantic
-        .traverse(&mut sm_ast, &None, &mut root_table)
+        .traverse(&sm_ast, &None, &mut root_table)
         .map_err(|e| format!("Semantic: {}", e))?;
     Ok(ast_typed)
 }
 
-pub struct SemanticAnalyzer {
+pub struct SemanticAnalyzer<'a> {
+    root: &'a SemanticNode,
     stack: ScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
 }
 
-impl Tracing for SemanticAnalyzer {
+impl<'a> Tracing for SemanticAnalyzer<'a> {
     fn set_tracing(&mut self, config: TracingConfig) {
         self.tracing = config;
     }
 }
 
-impl SemanticAnalyzer {
-    pub fn new() -> SemanticAnalyzer {
+impl<'a> SemanticAnalyzer<'a> {
+    pub fn new(root: &'a SemanticNode) -> SemanticAnalyzer {
         SemanticAnalyzer {
+            root,
             stack: ScopeStack::new(),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
@@ -170,13 +172,13 @@ impl SemanticAnalyzer {
         })
     }
 
-    fn lookup<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
+    fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
         sym.get(id)
             .or(self.stack.get(id))
             .ok_or(format!("{} is not defined", id))
     }
 
-    fn lookup_func_or_cor<'a>(
+    fn lookup_func_or_cor(
         &'a self,
         sym: &'a SymbolTable,
         id: &str,
@@ -194,7 +196,7 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn lookup_coroutine<'a>(
+    fn lookup_coroutine(
         &'a self,
         sym: &'a SymbolTable,
         id: &str,
@@ -208,7 +210,7 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn lookup_var<'a>(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
+    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
         let p = &self.lookup(sym, id)?.ty;
         match p {
             Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
@@ -731,7 +733,7 @@ mod tests {
             }
         }
 
-        let mut semantic = SemanticAnalyzer::new();
+        let mut semantic = SemanticAnalyzer::new(&ast);
         semantic.traverse(ast, current_func, &mut sym)
     }
 
