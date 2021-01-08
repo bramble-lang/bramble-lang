@@ -14,9 +14,9 @@ pub struct SemanticMetadata {
 pub type SemanticNode = Ast<SemanticMetadata>;
 
 impl SemanticNode {
-    pub fn get_type(&self) -> ast::Type {
+    pub fn get_type(&self) -> &ast::Type {
         let meta = self.get_metadata();
-        meta.ty.clone()
+        &meta.ty
     }
 }
 
