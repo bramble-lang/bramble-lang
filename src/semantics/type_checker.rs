@@ -797,6 +797,14 @@ mod tests {
                 Ok(())),
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
                 Err("Semantic: L1: MyStruct does not have member y")),
+                /*("mod my_mod{ 
+                    fn test() -> i32{ return 0;} 
+                    fn main() {
+                        let i: i32 := my_mod::test(); 
+                        return;
+                    }
+                }",
+                Err("Semantic: L4: my_mod does not have member test")),*/
             ] {
                 let tokens: Vec<Token> = Lexer::new(&text)
                     .tokenize()
@@ -807,7 +815,7 @@ mod tests {
                 let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{:?}", result),
-                    Err(msg) => assert_eq!(result.err().unwrap(), msg),
+                    Err(msg) => assert_eq!(result.err(), Some(msg.into())),
                 }
             }
     }
