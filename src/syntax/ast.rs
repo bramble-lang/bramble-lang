@@ -381,7 +381,13 @@ impl Type {
 
 impl PartialEq<Type> for &Type {
     fn eq(&self, other: &Type) -> bool {
-        self == other
+        *self == other
+    }
+}
+
+impl PartialEq<&Type> for Type {
+    fn eq(&self, other: &&Type) -> bool {
+        self == *other
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{
 };
 
 
-pub fn type_check(ast: &PNode, trace: TracingConfig, trace_path: TracingConfig) -> Result<Box<SemanticNode>, String> {
+pub fn type_check(ast: &PNode, trace: TracingConfig, trace_path: TracingConfig) -> Result<SemanticNode, String> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_parser_ast(&ast)?;
     SymbolTable::generate(&mut sm_ast)?;
@@ -19,10 +19,10 @@ pub fn type_check(ast: &PNode, trace: TracingConfig, trace_path: TracingConfig) 
     let mut semantic = SemanticAnalyzer::new();
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
-    semantic
+    let ast_typed = semantic
         .traverse(&mut sm_ast, &None, &mut root_table)
         .map_err(|e| format!("Semantic: {}", e))?;
-    Ok(sm_ast)
+    Ok(ast_typed)
 }
 
 pub struct SemanticAnalyzer {
@@ -300,7 +300,7 @@ impl SemanticAnalyzer {
                     let true_arm = self.traverse(&true_arm, current_func, sym)?;
                     let false_arm = self.traverse(&false_arm, current_func, sym)?;
                     if true_arm.get_type() == false_arm.get_type() {
-                        meta.ty = true_arm.get_type();
+                        meta.ty = true_arm.get_type().clone();
                         Ok(If(meta.clone(), Box::new(cond), Box::new(true_arm), Box::new(false_arm)))
                     } else {
                         Err(format!(
@@ -323,7 +323,7 @@ impl SemanticAnalyzer {
                         symbol => {
                             if symbol.mutable {
                                 if symbol.ty == rhs.get_type() {
-                                    meta.ty = rhs.get_type();
+                                    meta.ty = rhs.get_type().clone();
                                     Ok(Mutate(meta.clone(), id.clone(), Box::new(rhs)))
                                 } else {
                                     Err(format!(
@@ -525,7 +525,7 @@ impl SemanticAnalyzer {
                 self.stack.push(tmp_sym);
                 for stmt in body.iter() {
                     let exp = self.traverse(stmt, current_func, &mut meta.sym)?;
-                    ty = exp.get_type();
+                    ty = exp.get_type().clone();
                     resolved_body.push(exp);
                 }
                 self.stack.pop();
@@ -741,8 +741,8 @@ mod tests {
         let scope = Scope::new();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).unwrap().get_type();
-        assert_eq!(ty, ast::Type::I32);
+        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone());
+        assert_eq!(ty, Ok(ast::Type::I32));
     }
 
     #[test]
@@ -757,7 +757,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_main".into()),
             &scope,
-        ).unwrap().get_type();
+        ).map(|n| n.get_type().clone()).unwrap();
         assert_eq!(ty, ast::Type::Bool);
     }
 
@@ -804,7 +804,7 @@ mod tests {
             let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Integer(1, 5)));
 
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).unwrap().get_type();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone()).unwrap();
             assert_eq!(ty, ast::Type::I32);
         }
         // operand is not i32
@@ -836,7 +836,7 @@ mod tests {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).unwrap().get_type();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone()).unwrap();
             assert_eq!(ty, ast::Type::I32);
         }
 
@@ -912,7 +912,7 @@ mod tests {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).unwrap().get_type();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone()).unwrap();
             assert_eq!(ty, ast::Type::I32);
         }
 
@@ -985,7 +985,7 @@ mod tests {
 
         let mut sa = SemanticAst::new();
         for (test, expected) in tests.iter() {
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope).map(|n| n.get_type());
+            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope).map(|n| n.get_type().clone());
             assert_eq!(ty, *expected);
         }
     }
@@ -1025,7 +1025,7 @@ mod tests {
 
         for (test, expected) in tests.iter() {
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope).map(|n| n.get_type());
+            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope).map(|n| n.get_type().clone());
             assert_eq!(ty, *expected);
         }
     }
@@ -1049,7 +1049,7 @@ mod tests {
                 &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
                 &scope,
-            ).map(|n| n.get_type());
+            ).map(|n| n.get_type().clone());
             assert_eq!(ty, Ok(ast::Type::I32));
         }
 
@@ -1130,7 +1130,7 @@ mod tests {
                 &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
                 &scope,
-            ).map(|n| n.get_type());
+            ).map(|n| n.get_type().clone());
             assert_eq!(ty, Ok(ast::Type::I32));
         }
         // Variable is immutable
@@ -1204,7 +1204,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Unit));
     }
 
@@ -1219,7 +1219,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
     }
 
@@ -1234,7 +1234,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         scope.add("my_func2", vec![("x", I32)], I32, vec![]);
@@ -1251,7 +1251,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func2".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         // test incorrect parameters passed in call
@@ -1262,7 +1262,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func2".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(
             ty,
             Err("L1: Incorrect number of parameters passed to routine: my_func2".into())
@@ -1281,7 +1281,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
         // test correct parameters passed in call
@@ -1297,7 +1297,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co2".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
         // test incorrect parameters passed in call
@@ -1327,7 +1327,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Unit));
 
         // test correct type for yield return
@@ -1337,7 +1337,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co2".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         // test incorrect type for yield return
@@ -1368,7 +1368,7 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_main".into()),
             &scope,
-        ).map(|n| n.get_type());
+        ).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
     }
 
@@ -1387,7 +1387,7 @@ mod tests {
         );
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type());
+        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         let node = Ast::RoutineDef(
@@ -1419,7 +1419,7 @@ mod tests {
         );
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type());
+        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         let node = Ast::RoutineDef(
@@ -1480,7 +1480,7 @@ mod tests {
                 &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_main".into()),
                 &scope,
-            ).map(|n| n.get_type());
+            ).map(|n| n.get_type().clone());
             assert_eq!(result, ex);
         }
     }
