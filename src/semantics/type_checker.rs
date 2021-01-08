@@ -20,7 +20,7 @@ pub fn type_check(ast: &PNode, trace: TracingConfig, trace_path: TracingConfig) 
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
     let ast_typed = semantic
-        .traverse(&sm_ast, &None, &mut root_table)
+        .resolve_types(&mut root_table)
         .map_err(|e| format!("Semantic: {}", e))?;
     Ok(ast_typed)
 }
@@ -156,7 +156,11 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    pub fn traverse(
+    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<SemanticNode, String> {
+        self.traverse(self.root, &None, sym)
+    }
+
+    fn traverse(
         &mut self,
         ast: &SemanticNode,
         current_func: &Option<String>,
