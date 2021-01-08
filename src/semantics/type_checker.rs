@@ -176,6 +176,19 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
+    fn lookup_path(&'a self, sym: &'a SymbolTable, path: &ast::Path) -> Result<Option<&'a Symbol>, String> {
+        if path.len() > 1 {
+            let current_path = self.stack.to_path(sym).expect("A valid path is expected");
+            let mut path = path.to_canonical(&current_path)?;
+            let item = path.truncate().unwrap();
+            let node = self.root.go_to(&path).ok_or(format!("Could not find node with the given path: {}", path))?;
+            Ok(node.get_metadata().sym.get(&item))
+        } else {
+            let item = &path[0];
+            Ok(sym.get(item).or(self.stack.get(item)))
+        }
+    }
+
     fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
         sym.get(id)
             .or(self.stack.get(id))
@@ -447,8 +460,9 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     resolved_params.push(ty);
                 }
-                let fname0 = fname.last().unwrap();
-                let (expected_param_tys, ret_ty) = match sym.get(fname0).or(self.stack.get(fname0)) {
+                let symbol = self.lookup_path(sym, fname)?;
+                
+                let (expected_param_tys, ret_ty) = match symbol {
                     Some(Symbol {
                         ty: Type::FunctionDef(pty, rty),
                         ..
@@ -737,7 +751,7 @@ mod tests {
             }
         }
 
-        let mut semantic = SemanticAnalyzer::new(&ast);
+        let mut semantic = SemanticAnalyzer::new(ast);
         semantic.traverse(ast, current_func, &mut sym)
     }
 
@@ -770,11 +784,13 @@ mod tests {
     #[test]
     pub fn test_path() {
         use crate::syntax::parser;
+        // TODO: finish this test
         for (text, expected) in vec![
                 ("mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                     fn main() {
                         let i: i32 := self::test(); 
+                        //let j: i32 := root::my_mod::test();
                         return;
                     }
                 }",
@@ -790,7 +806,7 @@ mod tests {
                 let ast = parser::parse(tokens).unwrap().unwrap();
                 let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
-                    Ok(_) => assert!(result.is_ok()),
+                    Ok(_) => assert!(result.is_ok(), "{:?}", result),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
                 }
             }
