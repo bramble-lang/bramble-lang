@@ -379,6 +379,12 @@ impl Type {
     }
 }
 
+impl PartialEq<Type> for &Type {
+    fn eq(&self, other: &Type) -> bool {
+        self == other
+    }
+}
+
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Type::*;
