@@ -100,6 +100,13 @@ impl Path {
         self.path.iter()
     }
 
+    /// Remove the last step in the path
+    pub fn truncate(&mut self) -> Option<String> {
+        let last = self.path.last().map(|s| s.clone());
+        self.path.truncate(1);
+        last
+    }
+
     /**
     Converts this path into a canonical path by merging it
     with the given current path.
@@ -112,8 +119,9 @@ impl Path {
         if self.path[0] == "root" {
             Ok(self.clone())
         } else {
+            let path = if self.path[0] == "self" {&self.path[1..]} else {&self.path};
             let mut merged = current_path.path.clone();
-            for step in self.path.iter() {
+            for step in path.iter() {
                 if step == "super" {
                     merged.pop().ok_or("Use of super in path exceeded the depth of the current path")?;
                     if merged.len() == 0 {
@@ -492,6 +500,15 @@ mod test_path {
     #[test]
     fn test_relative_to_canonical() {
         let path: Path = vec!["relative"].into();
+        let current = vec!["root", "current"].into();
+        let canonized_path = path.to_canonical(&current);
+        let expected = vec!["root", "current", "relative"].into();
+        assert_eq!(canonized_path, Ok(expected));
+    }
+
+    #[test]
+    fn test_self_to_canonical() {
+        let path: Path = vec!["self", "relative"].into();
         let current = vec!["root", "current"].into();
         let canonized_path = path.to_canonical(&current);
         let expected = vec!["root", "current", "relative"].into();
