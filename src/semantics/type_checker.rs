@@ -886,7 +886,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_path() {
+    pub fn test_path_to_function() {
         use crate::syntax::parser;
         for (text, expected) in vec![
             (
