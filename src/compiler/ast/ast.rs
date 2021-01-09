@@ -185,6 +185,7 @@ impl CompilerNode {
             Module {
                 meta,
                 name,
+                modules,
                 functions,
                 coroutines,
                 structs,
@@ -204,6 +205,13 @@ impl CompilerNode {
                 meta.structs.resolve_sizes().unwrap();
 
                 let mut nlayout = layout;
+                let mut nmods = vec![];
+                for module in modules.iter() {
+                    let (nm, no) = CompilerNode::compute_offsets(module, nlayout, &meta.structs);
+                    nlayout = no;
+                    nmods.push(nm);
+                }
+
                 let mut nfuncs = vec![];
                 for f in functions.iter() {
                     let (nf, no) = CompilerNode::compute_offsets(f, nlayout, &meta.structs);
@@ -222,6 +230,7 @@ impl CompilerNode {
                     Module {
                         meta,
                         name: name.clone(),
+                        modules: nmods,
                         functions: nfuncs,
                         coroutines: ncors,
                         structs: vec![],

@@ -133,7 +133,8 @@ pub fn parse(tokens: Vec<Token>) -> PResult {
     let start_index = stream.index();
     let mut item = None;
     while stream.peek().is_some() {
-        item = module(&mut stream).map_err(|e| format!("Parser: {}", e))?;
+        //item = module(&mut stream).map_err(|e| format!("Parser: {}", e))?;
+        item = parse_items("root", &mut stream)?;
 
         if stream.index() == start_index {
             return Err(format!("Parser cannot advance past {:?}", stream.peek()));
@@ -144,77 +145,64 @@ pub fn parse(tokens: Vec<Token>) -> PResult {
 }
 
 fn module(stream: &mut TokenStream) -> PResult {
-    let mut functions = vec![];
-    let mut coroutines = vec![];
-    let mut structs = vec![];
-
-    let module_line = stream.peek().map_or(1, |t| t.l);
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
-            Some((line, module_name)) => {
+            Some((_, module_name)) => {
                 stream.next_must_be(&Lex::LBrace)?;
-                let start_index = stream.index();
-                while stream.peek().is_some() {
-                    if let Some(f) = function_def(stream)? {
-                        functions.push(f);
-                    }
-                    if let Some(c) = coroutine_def(stream)? {
-                        coroutines.push(c);
-                    }
-
-                    if let Some(s) = struct_def(stream)? {
-                        structs.push(s);
-                    }
-
-                    if stream.next_if(&Lex::RBrace).is_some() {
-                        break;
-                    }
-
-                    if stream.index() == start_index {
-                        return Err(format!("L{}: Parser cannot advance past {:?}", line, stream.peek()));
-                    }
-                }
-                Some(Ast::Module {
-                    meta: module_line,
-                    name: module_name,
-                    functions,
-                    coroutines,
-                    structs,
-                })
+                let module = parse_items(&module_name, stream)?;
+                stream.next_must_be(&Lex::RBrace)?;
+                module
             },
             _ => {
                 return Err(format!("L{}: expected name after mod keyword", token.l));
             },
         },
         None => {
-            let start_index = stream.index();
-            while stream.peek().is_some() {
-                if let Some(f) = function_def(stream)? {
-                    functions.push(f);
-                }
-                if let Some(c) = coroutine_def(stream)? {
-                    coroutines.push(c);
-                }
-
-                if let Some(s) = struct_def(stream)? {
-                    structs.push(s);
-                }
-
-                if stream.index() == start_index {
-                    return Err(format!("Parser cannot advance past {:?}", stream.peek()));
-                }
-            }
-            Some(Ast::Module {
-                meta: module_line,
-                name: "root".into(),
-                functions,
-                coroutines,
-                structs,
-            })
+            None
         },
     };
 
     Ok(mod_def)
+}
+
+fn parse_items(name: &str, stream: &mut TokenStream) -> PResult {
+    let mut functions = vec![];
+    let mut coroutines = vec![];
+    let mut structs = vec![];
+    let mut modules = vec![];
+
+    let module_line = stream.peek().map_or(1, |t| t.l);
+    while stream.peek().is_some() {
+        let start_index = stream.index();
+        if let Some(m) = module(stream)? {
+            modules.push(m);
+        }
+
+        if let Some(f) = function_def(stream)? {
+            functions.push(f);
+        }
+        if let Some(c) = coroutine_def(stream)? {
+            coroutines.push(c);
+        }
+
+        if let Some(s) = struct_def(stream)? {
+            structs.push(s);
+        }
+
+        if stream.index() == start_index {
+            //return Err(format!("Parser cannot advance past {:?}", stream.peek()));
+            break;
+        }
+    }
+
+    Ok(Some(Ast::Module {
+        meta: module_line,
+        name: name.into(),
+        modules,
+        functions,
+        coroutines,
+        structs,
+    }))
 }
 
 fn struct_def(stream: &mut TokenStream) -> PResult {
@@ -1342,31 +1330,43 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, name, functions, coroutines, structs}) =
-            module(&mut iter).unwrap()
+        
+        if let Some(Ast::Module{meta, name, modules, functions, coroutines, structs}) =
+            parse(tokens).unwrap()
         {
             assert_eq!(meta, 1);
-            assert_eq!(name, "test_fn_mod");
-            assert_eq!(functions.len(), 1);
+            assert_eq!(name, "root");
+
+            assert_eq!(modules.len(), 1);
+            assert_eq!(functions.len(), 0);
             assert_eq!(coroutines.len(), 0);
             assert_eq!(structs.len(), 0);
 
-            if let Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body) =
-                &functions[0]
-            {
-                assert_eq!(*l, 1);
-                assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I32)]);
-                assert_eq!(ty, &Type::Unit);
-                assert_eq!(body.len(), 1);
-                match &body[0] {
-                    Ast::Return(_, None) => {}
-                    _ => panic!("Wrong body, expected unit return"),
+            if let Ast::Module{meta, name, modules, functions, coroutines, structs} = &modules[0] {
+                assert_eq!(*meta, 1);
+                assert_eq!(name, "test_fn_mod");
+
+                assert_eq!(modules.len(), 0);
+                assert_eq!(functions.len(), 1);
+                assert_eq!(coroutines.len(), 0);
+                assert_eq!(structs.len(), 0);
+                if let Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body) =
+                    &functions[0]
+                {
+                    assert_eq!(*l, 1);
+                    assert_eq!(name, "test");
+                    assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                    assert_eq!(ty, &Type::Unit);
+                    assert_eq!(body.len(), 1);
+                    match &body[0] {
+                        Ast::Return(_, None) => {}
+                        _ => panic!("Wrong body, expected unit return"),
+                    }
+                } else {
+                    panic!("Expected function definition")
                 }
-            } else {
-                panic!("Expected function definition")
             }
+
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1381,11 +1381,12 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, name, functions, coroutines, structs}) =
+        if let Some(Ast::Module{meta, name, modules, functions, coroutines, structs}) =
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
             assert_eq!(name, "test_co_mod");
+            assert_eq!(modules.len(), 0);
             assert_eq!(functions.len(), 0);
             assert_eq!(coroutines.len(), 1);
             assert_eq!(structs.len(), 0);
@@ -1419,11 +1420,12 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, name, functions, coroutines, structs}) =
+        if let Some(Ast::Module{meta, name, modules, functions, coroutines, structs}) =
             module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
             assert_eq!(name, "test_struct_mod");
+            assert_eq!(modules.len(), 0);
             assert_eq!(functions.len(), 0);
             assert_eq!(coroutines.len(), 0);
             assert_eq!(structs.len(), 1);
@@ -1552,10 +1554,9 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::Module {
             meta, coroutines, ..
-        }) = module(&mut stream).unwrap()
+        }) = parse(tokens).unwrap()
         {
             assert_eq!(meta, 1);
             if let Ast::RoutineDef(_l, RoutineDef::Coroutine, name, params, ty, body) =

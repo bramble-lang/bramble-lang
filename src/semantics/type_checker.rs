@@ -179,9 +179,9 @@ impl<'a> SemanticAnalyzer<'a> {
     fn lookup_path(&'a self, sym: &'a SymbolTable, path: &ast::Path) -> Result<Option<&'a Symbol>, String> {
         if path.len() > 1 {
             let current_path = self.stack.to_path(sym).expect("A valid path is expected");
-            let mut path = path.to_canonical(&current_path)?;
-            let item = path.truncate().unwrap();
-            let node = self.root.go_to(&path).ok_or(format!("Could not find node with the given path: {}", path))?;
+            let mut canon_path = path.to_canonical(&current_path)?;
+            let item = canon_path.truncate().unwrap();
+            let node = self.root.go_to(&canon_path).ok_or(format!("Could not find item with the given path: {}", path))?;
             Ok(node.get_metadata().sym.get(&item))
         } else {
             let item = &path[0];
@@ -571,6 +571,7 @@ impl<'a> SemanticAnalyzer<'a> {
             &Module {
                 meta,
                 name,
+                modules,
                 functions,
                 coroutines,
                 structs,
@@ -578,6 +579,11 @@ impl<'a> SemanticAnalyzer<'a> {
                 let mut meta = meta.clone();
                 let tmp_sym = sym.clone();
                 self.stack.push(tmp_sym);
+                let mut resolved_modules = vec![];
+                for module in modules.iter() {
+                    let module = self.traverse(module, &None, &mut meta.sym)?;
+                    resolved_modules.push(module);
+                }
                 let mut resolved_functions = vec![];
                 for func in functions.iter() {
                     let func = self.traverse(func, &None, &mut meta.sym)?;
@@ -595,7 +601,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = Unit;
-                Ok(Module{meta: meta.clone(), name: name.clone(), functions: resolved_functions, coroutines: resolved_coroutines, structs: resolved_structs})
+                Ok(Module{meta: meta.clone(), name: name.clone(), modules: resolved_modules, functions: resolved_functions, coroutines: resolved_coroutines, structs: resolved_structs})
             }
             &StructDef(meta, struct_name, members) => {
                 let mut meta = meta.clone();
@@ -784,27 +790,27 @@ mod tests {
     #[test]
     pub fn test_path() {
         use crate::syntax::parser;
-        // TODO: finish this test
         for (text, expected) in vec![
                 ("mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                     fn main() {
+                        let k: i32 := test();
                         let i: i32 := self::test(); 
-                        //let j: i32 := root::my_mod::test();
+                        let j: i32 := root::my_mod::test();
                         return;
                     }
                 }",
                 Ok(())),
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
                 Err("Semantic: L1: MyStruct does not have member y")),
-                /*("mod my_mod{ 
+                ("mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                     fn main() {
                         let i: i32 := my_mod::test(); 
                         return;
                     }
                 }",
-                Err("Semantic: L4: my_mod does not have member test")),*/
+                Err("Semantic: L4: Could not find item with the given path: my_mod::test")),
             ] {
                 let tokens: Vec<Token> = Lexer::new(&text)
                     .tokenize()
@@ -814,7 +820,7 @@ mod tests {
                 let ast = parser::parse(tokens).unwrap().unwrap();
                 let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
-                    Ok(_) => assert!(result.is_ok(), "{:?}", result),
+                    Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
                     Err(msg) => assert_eq!(result.err(), Some(msg.into())),
                 }
             }
