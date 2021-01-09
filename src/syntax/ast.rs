@@ -102,9 +102,7 @@ impl Path {
 
     /// Remove the last step in the path
     pub fn truncate(&mut self) -> Option<String> {
-        let last = self.path.last().map(|s| s.clone());
-        self.path.truncate(1);
-        last
+        self.path.pop()
     }
 
     /**
@@ -207,6 +205,7 @@ pub enum Ast<I> {
     Module {
         meta: I,
         name: String,
+        modules: Vec<Ast<I>>,
         functions: Vec<Ast<I>>,
         coroutines: Vec<Ast<I>>,
         structs: Vec<Ast<I>>,
@@ -308,7 +307,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef{name, ..} | Ast::Identifier(_, name) => Some(name),
+            Ast::RoutineDef{name, ..} | Ast::Identifier(_, name) | Ast::Module{name, ..} => Some(name),
             _ => None,
         }
     }
@@ -348,8 +347,9 @@ impl<I> Ast<I> {
     /// Then return it
     pub fn get_item(&self, name: &str) -> Option<&Self> {
         match self {
-            Ast::Module{functions, coroutines, structs, ..} => {
-                functions.iter().find(|f| f.get_name().map_or(false, |n| n == name))
+            Ast::Module{modules, functions, coroutines, structs, ..} => {
+                modules.iter().find(|f| f.get_name().map_or(false, |n| n == name))
+                .or(functions.iter().find(|c| c.get_name().map_or(false, |n| n == name)))
                 .or(coroutines.iter().find(|c| c.get_name().map_or(false, |n| n == name)))
                 .or(structs.iter().find(|s| s.get_name().map_or(false, |n| n == name)))
             },
@@ -444,15 +444,42 @@ mod test {
 
     #[test]
     fn test_go_to_shallow() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
         let path = vec!["root"].into();
         let node = ast.go_to(&path).unwrap();
         assert_eq!(node, &ast);
     }
 
     #[test]
+    fn test_go_to_nested() {
+        let inner = Ast::Module{meta: 0, name: "inner".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
+        let middle = Ast::Module{meta: 0, name: "middle".into(), modules: vec![inner.clone()], functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![middle.clone()], functions: vec![], coroutines: vec![], structs: vec![]};
+
+        let path = vec!["root"].into();
+        let node = ast.go_to(&path).unwrap();
+        assert_eq!(*node, ast);
+
+        let path = vec!["root", "middle"].into();
+        let node = ast.go_to(&path).unwrap();
+        assert_eq!(*node, middle);
+
+        let path = vec!["root", "middle", "inner"].into();
+        let node = ast.go_to(&path).unwrap();
+        assert_eq!(*node, inner);
+
+        let path = vec!["root", "middle", "nothing"].into();
+        let node = ast.go_to(&path);
+        assert_eq!(node, None);
+
+        let path = vec!["root", "middle", "inner", "nothing"].into();
+        let node = ast.go_to(&path);
+        assert_eq!(node, None);
+    }
+
+    #[test]
     fn test_go_to_not_found_root() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
         let path = vec!["wrong"].into();
         let node = ast.go_to(&path);
         assert_eq!(node, None);
@@ -460,7 +487,7 @@ mod test {
 
     #[test]
     fn test_go_to_not_found() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
         let path = vec!["root::test::blah"].into();
         let node = ast.go_to(&path);
         assert_eq!(node, None);
@@ -468,7 +495,7 @@ mod test {
 
     #[test]
     fn test_go_to_empty_path() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
         let path = Vec::<String>::new().into();
         let node = ast.go_to(&path);
         assert_eq!(node, None);
@@ -477,7 +504,7 @@ mod test {
     #[test]
     fn test_go_to_function() {
         let func = Ast::RoutineDef(0, RoutineDef::Function, "func".into(), vec![], Type::I32, vec![]);
-        let ast = Ast::Module{meta: 0, name: "root".into(), functions: vec![func.clone()], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![func.clone()], coroutines: vec![], structs: vec![]};
         let path = vec!["root", "func"].into();
         let node = ast.go_to(&path).unwrap();
         assert_eq!(*node, func);
@@ -549,5 +576,16 @@ mod test_path {
         let canonized_path = path.to_canonical(&current);
         let expected = vec!["root"].into();
         assert_eq!(canonized_path, Ok(expected));
+    }
+
+    #[test]
+    fn test_split_off_item() {
+        let path: Path = vec!["self", "item"].into();
+        let current = vec!["root", "current"].into();
+        let mut canonized_path = path.to_canonical(&current).unwrap();
+        let expected = vec!["root", "current"].into();
+        let item = canonized_path.truncate();
+        assert_eq!(canonized_path, expected);
+        assert_eq!(item, Some("item".into()));
     }
 }

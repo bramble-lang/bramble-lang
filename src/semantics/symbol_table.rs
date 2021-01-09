@@ -86,6 +86,7 @@ impl SymbolTable {
         match ast {
             Ast::Module {
                 meta,
+                modules,
                 functions,
                 coroutines,
                 structs,
@@ -99,6 +100,9 @@ impl SymbolTable {
                 }
                 for st in structs.iter_mut() {
                     SymbolTable::traverse(st, meta)?;
+                }
+                for m in modules.iter_mut() {
+                    SymbolTable::generate(m)?;
                 }
             }
             _ => panic!("Type analysis: expected Module at root level of the AST"),

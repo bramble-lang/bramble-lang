@@ -293,6 +293,7 @@ mod tests {
         let module_node = CompilerNode::Module {
             meta: module_scope,
             name: "test".into(),
+            modules: vec![],
             functions: vec![fun_node],
             coroutines: vec![],
             structs: vec![],
@@ -360,6 +361,7 @@ mod tests {
         let module_node = CompilerNode::Module {
             meta: module_scope,
             name: "test".into(),
+            modules: vec![],
             functions: vec![],
             coroutines: vec![cor_node],
             structs: vec![],
@@ -405,6 +407,7 @@ mod tests {
         let module_node = CompilerNode::Module {
             meta: module_scope,
             name: "root".into(),
+            modules: vec![],
             functions: vec![],
             coroutines: vec![],
             structs: vec![],
@@ -424,6 +427,7 @@ mod tests {
         let module_node = CompilerNode::Module {
             meta: module_scope,
             name: "root".into(),
+            modules: vec![],
             functions: vec![],
             coroutines: vec![],
             structs: vec![],
@@ -460,6 +464,7 @@ mod tests {
         let module_node = CompilerNode::Module {
             meta: module_scope,
             name: "root".into(),
+            modules: vec![],
             functions: vec![],
             coroutines: vec![],
             structs: vec![],
@@ -470,6 +475,7 @@ mod tests {
         let module2_node = CompilerNode::Module {
             meta: module2_scope,
             name: "inner".into(),
+            modules: vec![],
             functions: vec![],
             coroutines: vec![],
             structs: vec![],

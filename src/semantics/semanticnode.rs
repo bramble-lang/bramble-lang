@@ -162,10 +162,15 @@ impl SemanticAst {
             Module {
                 meta: ln,
                 name,
+                modules,
                 functions,
                 coroutines,
                 structs,
             } => {
+                let mut nmods = vec![];
+                for module in modules.iter() {
+                    nmods.push(*self.from_parser_ast(module)?);
+                }
                 let mut nfuncs = vec![];
                 for func in functions.iter() {
                     nfuncs.push(*self.from_parser_ast(func)?);
@@ -181,6 +186,7 @@ impl SemanticAst {
                 Ok(Box::new(Module {
                     meta: self.module_sm_from(*ln, name),
                     name: name.clone(),
+                    modules: nmods,
                     functions: nfuncs,
                     coroutines: ncors,
                     structs: nstructs,
