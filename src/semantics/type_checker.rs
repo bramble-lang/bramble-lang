@@ -902,10 +902,6 @@ mod tests {
                 Ok(()),
             ),
             (
-                "struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
-                Err("Semantic: L1: MyStruct does not have member y"),
-            ),
-            (
                 "mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                     fn main() {
@@ -933,7 +929,7 @@ mod tests {
     #[test]
     pub fn test_path_to_function_in_different_module() {
         use crate::syntax::parser;
-        for (text, expected) in vec![
+        for (text,) in vec![
             (
                 "mod my_mod{ 
                     fn test() -> i32{ return 0;} 
@@ -944,7 +940,6 @@ mod tests {
                         return;
                     }
                 }",
-                Ok(()),
             ),
             (
                 "mod my_mod{ 
@@ -958,7 +953,6 @@ mod tests {
                         return;
                     }
                 }",
-                Ok(()),
             ),
             (
                 "
@@ -974,11 +968,44 @@ mod tests {
                         fn test() -> i32{ return 0;} 
                     }
                 }",
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    pub fn test_path_to_struct() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "mod my_mod{ 
+                    struct test{i: i32}; 
+                    fn main() {
+                        let k: test := test{i: 5};
+                        let i: self::test := self::test{i: 5}; 
+                        let j: root::my_mod::test := root::my_mod::test{i: 5};
+                        return;
+                    }
+                }",
                 Ok(()),
             ),
             (
-                "struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
-                Err("Semantic: L1: MyStruct does not have member y"),
+                "mod my_mod{ 
+                    fn test() -> i32{ return 0;} 
+                    fn main() {
+                        let i: i32 := my_mod::test(); 
+                        return;
+                    }
+                }",
+                Err("Semantic: L4: Could not find item with the given path: my_mod::test"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
