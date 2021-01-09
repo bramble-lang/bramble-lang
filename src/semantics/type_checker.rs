@@ -827,6 +827,62 @@ mod tests {
     }
 
     #[test]
+    pub fn test_path_to_function_in_different_module() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+                ("mod my_mod{ 
+                    fn test() -> i32{ return 0;} 
+                }
+                mod main_mod{
+                    fn main() {
+                        let j: i32 := root::my_mod::test();
+                        return;
+                    }
+                }",
+                Ok(())),
+                ("mod my_mod{ 
+                    mod inner {
+                        fn test() -> i32{ return 0;} 
+                    }
+                }
+                mod main_mod{
+                    fn main() {
+                        let j: i32 := root::my_mod::inner::test();
+                        return;
+                    }
+                }",
+                Ok(())),
+                ("
+                mod main_mod{
+                    fn main() {
+                        let j: i32 := root::main_mod::inner::test();
+                        let k: i32 := inner::test();
+                        return;
+                    }
+
+                    mod inner {
+                        fn test() -> i32{ return 0;} 
+                    }
+                }",
+                Ok(())),
+                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
+                Err("Semantic: L1: MyStruct does not have member y")),
+            ] {
+                let tokens: Vec<Token> = Lexer::new(&text)
+                    .tokenize()
+                    .into_iter()
+                    .collect::<Result<_, _>>()
+                    .unwrap();
+                let ast = parser::parse(tokens).unwrap().unwrap();
+                let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+                match expected {
+                    Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                    Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+                }
+            }
+    }
+
+    #[test]
     pub fn test_unary_ops() {
         let mut scope = Scope::new();
         scope.add(
