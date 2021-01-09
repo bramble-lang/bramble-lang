@@ -174,7 +174,10 @@ impl Lexer {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(Err(format!("The lexer is locked, at {:?}, and cannot proceed", self.current_token())));
+                tokens.push(Err(format!(
+                    "The lexer is locked, at {:?}, and cannot proceed",
+                    self.current_token()
+                )));
                 break;
             }
         }

@@ -117,19 +117,27 @@ impl Path {
         if self.path[0] == "root" {
             Ok(self.clone())
         } else {
-            let path = if self.path[0] == "self" {&self.path[1..]} else {&self.path};
+            let path = if self.path[0] == "self" {
+                &self.path[1..]
+            } else {
+                &self.path
+            };
             let mut merged = current_path.path.clone();
             for step in path.iter() {
                 if step == "super" {
-                    merged.pop().ok_or("Use of super in path exceeded the depth of the current path")?;
+                    merged
+                        .pop()
+                        .ok_or("Use of super in path exceeded the depth of the current path")?;
                     if merged.len() == 0 {
-                        return Err("Use of super in path exceeded the depth of the current path".into());
+                        return Err(
+                            "Use of super in path exceeded the depth of the current path".into(),
+                        );
                     }
                 } else {
                     merged.push(step.clone());
                 }
             }
-            Ok(Path {path: merged})
+            Ok(Path { path: merged })
         }
     }
 }
@@ -151,9 +159,7 @@ impl std::fmt::Display for Path {
 
 impl From<Vec<String>> for Path {
     fn from(v: Vec<String>) -> Self {
-        Path {
-            path: v.clone(),
-        }
+        Path { path: v.clone() }
     }
 }
 
@@ -307,7 +313,9 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef(_, _, name, _, ..) | Ast::Identifier(_, name) | Ast::Module{name, ..} => Some(name),
+            Ast::RoutineDef(_, _, name, _, ..)
+            | Ast::Identifier(_, name)
+            | Ast::Module { name, .. } => Some(name),
             _ => None,
         }
     }
@@ -318,23 +326,23 @@ impl<I> Ast<I> {
         }
 
         let mut iter = path.iter();
-        if let Ast::Module{name, ..} = self {
+        if let Ast::Module { name, .. } = self {
             match iter.next() {
                 Some(step) if step == name => (),
-                _ => return None
+                _ => return None,
             }
         } else {
-            return None
+            return None;
         }
 
         let mut current = self;
         for step in iter {
             match current {
-                Ast::Module{..} => {
+                Ast::Module { .. } => {
                     if let Some(node) = current.get_item(step) {
                         current = node;
                     } else {
-                        return None
+                        return None;
                     }
                 }
                 _ => return None,
@@ -347,13 +355,25 @@ impl<I> Ast<I> {
     /// Then return it
     pub fn get_item(&self, name: &str) -> Option<&Self> {
         match self {
-            Ast::Module{modules, functions, coroutines, structs, ..} => {
-                modules.iter().find(|f| f.get_name().map_or(false, |n| n == name))
-                .or(functions.iter().find(|c| c.get_name().map_or(false, |n| n == name)))
-                .or(coroutines.iter().find(|c| c.get_name().map_or(false, |n| n == name)))
-                .or(structs.iter().find(|s| s.get_name().map_or(false, |n| n == name)))
-            },
-            _ => None
+            Ast::Module {
+                modules,
+                functions,
+                coroutines,
+                structs,
+                ..
+            } => modules
+                .iter()
+                .find(|f| f.get_name().map_or(false, |n| n == name))
+                .or(functions
+                    .iter()
+                    .find(|c| c.get_name().map_or(false, |n| n == name)))
+                .or(coroutines
+                    .iter()
+                    .find(|c| c.get_name().map_or(false, |n| n == name)))
+                .or(structs
+                    .iter()
+                    .find(|s| s.get_name().map_or(false, |n| n == name))),
+            _ => None,
         }
     }
 }
@@ -444,7 +464,14 @@ mod test {
 
     #[test]
     fn test_go_to_shallow() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module {
+            meta: 0,
+            name: "root".into(),
+            modules: vec![],
+            functions: vec![],
+            coroutines: vec![],
+            structs: vec![],
+        };
         let path = vec!["root"].into();
         let node = ast.go_to(&path).unwrap();
         assert_eq!(node, &ast);
@@ -452,9 +479,30 @@ mod test {
 
     #[test]
     fn test_go_to_nested() {
-        let inner = Ast::Module{meta: 0, name: "inner".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
-        let middle = Ast::Module{meta: 0, name: "middle".into(), modules: vec![inner.clone()], functions: vec![], coroutines: vec![], structs: vec![]};
-        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![middle.clone()], functions: vec![], coroutines: vec![], structs: vec![]};
+        let inner = Ast::Module {
+            meta: 0,
+            name: "inner".into(),
+            modules: vec![],
+            functions: vec![],
+            coroutines: vec![],
+            structs: vec![],
+        };
+        let middle = Ast::Module {
+            meta: 0,
+            name: "middle".into(),
+            modules: vec![inner.clone()],
+            functions: vec![],
+            coroutines: vec![],
+            structs: vec![],
+        };
+        let ast = Ast::Module {
+            meta: 0,
+            name: "root".into(),
+            modules: vec![middle.clone()],
+            functions: vec![],
+            coroutines: vec![],
+            structs: vec![],
+        };
 
         let path = vec!["root"].into();
         let node = ast.go_to(&path).unwrap();
@@ -479,7 +527,14 @@ mod test {
 
     #[test]
     fn test_go_to_not_found_root() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module {
+            meta: 0,
+            name: "root".into(),
+            modules: vec![],
+            functions: vec![],
+            coroutines: vec![],
+            structs: vec![],
+        };
         let path = vec!["wrong"].into();
         let node = ast.go_to(&path);
         assert_eq!(node, None);
@@ -487,7 +542,14 @@ mod test {
 
     #[test]
     fn test_go_to_not_found() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module {
+            meta: 0,
+            name: "root".into(),
+            modules: vec![],
+            functions: vec![],
+            coroutines: vec![],
+            structs: vec![],
+        };
         let path = vec!["root::test::blah"].into();
         let node = ast.go_to(&path);
         assert_eq!(node, None);
@@ -495,7 +557,14 @@ mod test {
 
     #[test]
     fn test_go_to_empty_path() {
-        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![], coroutines: vec![], structs: vec![]};
+        let ast = Ast::Module {
+            meta: 0,
+            name: "root".into(),
+            modules: vec![],
+            functions: vec![],
+            coroutines: vec![],
+            structs: vec![],
+        };
         let path = Vec::<String>::new().into();
         let node = ast.go_to(&path);
         assert_eq!(node, None);
@@ -503,8 +572,22 @@ mod test {
 
     #[test]
     fn test_go_to_function() {
-        let func = Ast::RoutineDef(0, RoutineDef::Function, "func".into(), vec![], Type::I32, vec![]);
-        let ast = Ast::Module{meta: 0, name: "root".into(), modules: vec![], functions: vec![func.clone()], coroutines: vec![], structs: vec![]};
+        let func = Ast::RoutineDef(
+            0,
+            RoutineDef::Function,
+            "func".into(),
+            vec![],
+            Type::I32,
+            vec![],
+        );
+        let ast = Ast::Module {
+            meta: 0,
+            name: "root".into(),
+            modules: vec![],
+            functions: vec![func.clone()],
+            coroutines: vec![],
+            structs: vec![],
+        };
         let path = vec!["root", "func"].into();
         let node = ast.go_to(&path).unwrap();
         assert_eq!(*node, func);

@@ -1,7 +1,7 @@
-use crate::{ast, syntax::ast::Path};
 use crate::ast::Type;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
+use crate::{ast, syntax::ast::Path};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
@@ -23,7 +23,7 @@ impl std::fmt::Display for Symbol {
 enum ScopeType {
     Local,
     Routine,
-    Module{name: String},
+    Module { name: String },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -44,11 +44,17 @@ impl std::fmt::Display for SymbolTable {
 
 impl SymbolTable {
     pub fn new() -> Self {
-        SymbolTable { ty: ScopeType::Local, sym: vec![] }
+        SymbolTable {
+            ty: ScopeType::Local,
+            sym: vec![],
+        }
     }
 
     pub fn new_module(name: &str) -> Self {
-        SymbolTable { ty: ScopeType::Module{name: name.into()}, sym: vec![] }
+        SymbolTable {
+            ty: ScopeType::Module { name: name.into() },
+            sym: vec![],
+        }
     }
 
     pub fn table(&self) -> &Vec<Symbol> {
@@ -200,15 +206,18 @@ impl ScopeStack {
 
         for node in self.stack.iter() {
             match &node.ty {
-                ScopeType::Module{name} => {
+                ScopeType::Module { name } => {
                     steps.push(name.clone());
-                },
+                }
                 _ => (),
             }
         }
 
         match current {
-            SymbolTable{ ty: ScopeType::Module{name}, ..} => steps.push(name.clone()),
+            SymbolTable {
+                ty: ScopeType::Module { name },
+                ..
+            } => steps.push(name.clone()),
             _ => (),
         }
 
@@ -217,7 +226,6 @@ impl ScopeStack {
         } else {
             None
         }
-        
     }
 }
 
