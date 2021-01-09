@@ -857,6 +857,7 @@ mod tests {
                     fn main() {
                         let j: i32 := root::main_mod::inner::test();
                         let k: i32 := inner::test();
+                        let l: i32 := self::inner::test();
                         return;
                     }
 
