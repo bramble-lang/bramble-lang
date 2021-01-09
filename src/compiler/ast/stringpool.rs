@@ -113,10 +113,14 @@ impl StringPool {
                 }
             }
             Module {
+                modules,
                 functions,
                 coroutines,
                 ..
             } => {
+                for m in modules.iter() {
+                    self.extract_from(m);
+                }
                 for f in functions.iter() {
                     self.extract_from(f);
                 }
@@ -169,6 +173,14 @@ mod test {
             ("fn test() -> string {return \"test2\";}", vec!["test2"]),
             (
                 "fn test() -> string {let s: string := \"hello\"; return \"test2\";}",
+                vec!["hello", "test2"],
+            ),
+            (
+                "mod my_mod{fn test() -> string {let s: string := \"hello\"; return \"test2\";}}",
+                vec!["hello", "test2"],
+            ),
+            (
+                "mod my_mod{ mod inner{fn test() -> string {let s: string := \"hello\"; return \"test2\";}}}",
                 vec!["hello", "test2"],
             ),
         ] {
