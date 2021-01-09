@@ -61,8 +61,7 @@ impl StringPool {
             MemberAccess(_, src, _) => {
                 self.extract_from(src);
             }
-            Path(..) => {
-            }
+            Path(..) => {}
             UnaryOp(_, _, ref operand) => {
                 self.extract_from(operand);
             }

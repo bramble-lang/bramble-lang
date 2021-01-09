@@ -9,8 +9,11 @@ use crate::{
     diagnostics::config::{Tracing, TracingConfig},
 };
 
-
-pub fn type_check(ast: &PNode, trace: TracingConfig, trace_path: TracingConfig) -> Result<SemanticNode, String> {
+pub fn type_check(
+    ast: &PNode,
+    trace: TracingConfig,
+    trace_path: TracingConfig,
+) -> Result<SemanticNode, String> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_parser_ast(&ast)?;
     SymbolTable::generate(&mut sm_ast)?;
@@ -48,7 +51,12 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn trace(&self, node: &SemanticNode, current_func: &Option<String>, current_scope: &SymbolTable) {
+    fn trace(
+        &self,
+        node: &SemanticNode,
+        current_func: &Option<String>,
+        current_scope: &SymbolTable,
+    ) {
         let md = node.get_metadata();
         let line = md.ln as usize;
         let print_trace = match self.tracing {
@@ -81,7 +89,10 @@ impl<'a> SemanticAnalyzer<'a> {
                 Some(f) => format!("{}: ", f),
                 None => "".into(),
             };
-            let path = self.stack.to_path(current_scope).map_or("[]".into(), |p| format!("{}", p));
+            let path = self
+                .stack
+                .to_path(current_scope)
+                .map_or("[]".into(), |p| format!("{}", p));
             println!("L{}: {}{} <- {}", line, func, node, path);
         }
     }
@@ -102,14 +113,22 @@ impl<'a> SemanticAnalyzer<'a> {
                 if operand.get_type() == I32 {
                     Ok((I32, operand))
                 } else {
-                    Err(format!("{} expected i32 but found {}", op, operand.get_type()))
+                    Err(format!(
+                        "{} expected i32 but found {}",
+                        op,
+                        operand.get_type()
+                    ))
                 }
             }
             Not => {
                 if operand.get_type() == Bool {
                     Ok((Bool, operand))
                 } else {
-                    Err(format!("{} expected bool but found {}", op, operand.get_type()))
+                    Err(format!(
+                        "{} expected bool but found {}",
+                        op,
+                        operand.get_type()
+                    ))
                 }
             }
         }
@@ -133,7 +152,12 @@ impl<'a> SemanticAnalyzer<'a> {
                 if l.get_type() == I32 && r.get_type() == I32 {
                     Ok((I32, l, r))
                 } else {
-                    Err(format!("{} expected i32 but found {} and {}", op, l.get_type(), r.get_type()))
+                    Err(format!(
+                        "{} expected i32 but found {} and {}",
+                        op,
+                        l.get_type(),
+                        r.get_type()
+                    ))
                 }
             }
             BAnd | BOr => {
@@ -142,7 +166,9 @@ impl<'a> SemanticAnalyzer<'a> {
                 } else {
                     Err(format!(
                         "{} expected bool but found {} and {}",
-                        op, l.get_type(), r.get_type()
+                        op,
+                        l.get_type(),
+                        r.get_type()
                     ))
                 }
             }
@@ -150,7 +176,12 @@ impl<'a> SemanticAnalyzer<'a> {
                 if l.get_type() == r.get_type() {
                     Ok((Bool, l, r))
                 } else {
-                    Err(format!("{} expected {} but found {}", op, l.get_type(), r.get_type()))
+                    Err(format!(
+                        "{} expected {} but found {}",
+                        op,
+                        l.get_type(),
+                        r.get_type()
+                    ))
                 }
             }
         }
@@ -176,12 +207,19 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    fn lookup_path(&'a self, sym: &'a SymbolTable, path: &ast::Path) -> Result<Option<&'a Symbol>, String> {
+    fn lookup_path(
+        &'a self,
+        sym: &'a SymbolTable,
+        path: &ast::Path,
+    ) -> Result<Option<&'a Symbol>, String> {
         if path.len() > 1 {
             let current_path = self.stack.to_path(sym).expect("A valid path is expected");
             let mut canon_path = path.to_canonical(&current_path)?;
             let item = canon_path.truncate().unwrap();
-            let node = self.root.go_to(&canon_path).ok_or(format!("Could not find item with the given path: {}", path))?;
+            let node = self
+                .root
+                .go_to(&canon_path)
+                .ok_or(format!("Could not find item with the given path: {}", path))?;
             Ok(node.get_metadata().sym.get(&item))
         } else {
             let item = &path[0];
@@ -302,7 +340,7 @@ impl<'a> SemanticAnalyzer<'a> {
             }
             &BinaryOp(meta, op, l, r) => {
                 let mut meta = meta.clone();
-                let (ty, l,r) = self.binary_op(*op, &l, &r, current_func, sym)?;
+                let (ty, l, r) = self.binary_op(*op, &l, &r, current_func, sym)?;
                 meta.ty = ty;
                 Ok(BinaryOp(meta.clone(), *op, Box::new(l), Box::new(r)))
             }
@@ -320,11 +358,17 @@ impl<'a> SemanticAnalyzer<'a> {
                     let false_arm = self.traverse(&false_arm, current_func, sym)?;
                     if true_arm.get_type() == false_arm.get_type() {
                         meta.ty = true_arm.get_type().clone();
-                        Ok(If(meta.clone(), Box::new(cond), Box::new(true_arm), Box::new(false_arm)))
+                        Ok(If(
+                            meta.clone(),
+                            Box::new(cond),
+                            Box::new(true_arm),
+                            Box::new(false_arm),
+                        ))
                     } else {
                         Err(format!(
                             "If expression has mismatching arms: expected {} got {}",
-                            true_arm.get_type(), false_arm.get_type()
+                            true_arm.get_type(),
+                            false_arm.get_type()
                         ))
                     }
                 } else {
@@ -347,7 +391,9 @@ impl<'a> SemanticAnalyzer<'a> {
                                 } else {
                                     Err(format!(
                                         "{} is of type {} but is assigned {}",
-                                        id, symbol.ty, rhs.get_type()
+                                        id,
+                                        symbol.ty,
+                                        rhs.get_type()
                                     ))
                                 }
                             } else {
@@ -368,7 +414,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     if *p == rhs.get_type() {
                         sym.add(&name, p.clone(), *mutable)?;
                         meta.ty = p.clone();
-                        Ok(Bind(meta.clone(), name.clone(), *mutable, p.clone(), Box::new(rhs)))
+                        Ok(Bind(
+                            meta.clone(),
+                            name.clone(),
+                            *mutable,
+                            p.clone(),
+                            Box::new(rhs),
+                        ))
                     } else {
                         Err(format!("Bind expected {} but got {}", p, rhs.get_type()))
                     }
@@ -401,7 +453,11 @@ impl<'a> SemanticAnalyzer<'a> {
                         meta.ty = fty.clone();
                         Ok(Return(meta.clone(), Some(Box::new(exp))))
                     } else {
-                        Err(format!("Return expected {} but got {}", fty, exp.get_type()))
+                        Err(format!(
+                            "Return expected {} but got {}",
+                            fty,
+                            exp.get_type()
+                        ))
                     }
                 }
             },
@@ -440,7 +496,11 @@ impl<'a> SemanticAnalyzer<'a> {
                         meta.ty = ret_ty.clone();
                         Ok(YieldReturn(meta.clone(), Some(Box::new(exp))))
                     } else {
-                        Err(format!("Yield return expected {} but got {}", ret_ty, exp.get_type()))
+                        Err(format!(
+                            "Yield return expected {} but got {}",
+                            ret_ty,
+                            exp.get_type()
+                        ))
                     }
                 }
             },
@@ -461,7 +521,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     resolved_params.push(ty);
                 }
                 let symbol = self.lookup_path(sym, fname)?;
-                
+
                 let (expected_param_tys, ret_ty) = match symbol {
                     Some(Symbol {
                         ty: Type::FunctionDef(pty, rty),
@@ -484,10 +544,17 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 } else {
                     let z = resolved_params.iter().zip(expected_param_tys.iter());
-                    let all_params_match = z.map(|(up, fp)| up.get_type() == *fp).fold(true, |x, y| x && y);
+                    let all_params_match = z
+                        .map(|(up, fp)| up.get_type() == *fp)
+                        .fold(true, |x, y| x && y);
                     if all_params_match {
                         meta.ty = ret_ty;
-                        Ok(RoutineCall(meta.clone(), *call, fname.clone(), resolved_params))
+                        Ok(RoutineCall(
+                            meta.clone(),
+                            *call,
+                            fname.clone(),
+                            resolved_params,
+                        ))
                     } else {
                         Err(format!(
                             "One or more parameters had mismatching types for function {}",
@@ -523,7 +590,10 @@ impl<'a> SemanticAnalyzer<'a> {
                     meta.ty = Unit;
                     Ok(Prints(meta.clone(), Box::new(exp)))
                 } else {
-                    Err(format!("Expected string for printiln got {}", exp.get_type()))
+                    Err(format!(
+                        "Expected string for printiln got {}",
+                        exp.get_type()
+                    ))
                 }
             }
             &Printbln(meta, exp) => {
@@ -566,7 +636,14 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = p.clone();
-                Ok(RoutineDef(meta.clone(), def.clone(), name.clone(), params.clone(), p.clone(), resolved_body))
+                Ok(RoutineDef(
+                    meta.clone(),
+                    def.clone(),
+                    name.clone(),
+                    params.clone(),
+                    p.clone(),
+                    resolved_body,
+                ))
             }
             &Module {
                 meta,
@@ -601,7 +678,14 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = Unit;
-                Ok(Module{meta: meta.clone(), name: name.clone(), modules: resolved_modules, functions: resolved_functions, coroutines: resolved_coroutines, structs: resolved_structs})
+                Ok(Module {
+                    meta: meta.clone(),
+                    name: name.clone(),
+                    modules: resolved_modules,
+                    functions: resolved_functions,
+                    coroutines: resolved_coroutines,
+                    structs: resolved_structs,
+                })
             }
             &StructDef(meta, struct_name, members) => {
                 let mut meta = meta.clone();
@@ -617,7 +701,11 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
                 meta.ty = Unit;
-                Ok(StructDef(meta.clone(), struct_name.clone(), members.clone()))
+                Ok(StructDef(
+                    meta.clone(),
+                    struct_name.clone(),
+                    members.clone(),
+                ))
             }
             &StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();
@@ -643,7 +731,10 @@ impl<'a> SemanticAnalyzer<'a> {
                     if param.get_type() != *member_ty {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
-                            struct_name, pn, member_ty, param.get_type()
+                            struct_name,
+                            pn,
+                            member_ty,
+                            param.get_type()
                         ));
                     }
                     resolved_params.push((pn.clone(), param));
@@ -652,7 +743,11 @@ impl<'a> SemanticAnalyzer<'a> {
                 let anonymouse_name = format!("!{}_{}", struct_name, meta.id);
                 sym.add(&anonymouse_name, Type::Custom(struct_name.clone()), false)?;
                 meta.ty = Custom(struct_name.clone());
-                Ok(StructExpression(meta.clone(), struct_name.clone(), resolved_params))
+                Ok(StructExpression(
+                    meta.clone(),
+                    struct_name.clone(),
+                    resolved_params,
+                ))
             }
         }
     }
@@ -767,7 +862,8 @@ mod tests {
         let scope = Scope::new();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone());
+        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
+            .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(ast::Type::I32));
     }
 
@@ -783,7 +879,9 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_main".into()),
             &scope,
-        ).map(|n| n.get_type().clone()).unwrap();
+        )
+        .map(|n| n.get_type().clone())
+        .unwrap();
         assert_eq!(ty, ast::Type::Bool);
     }
 
@@ -791,7 +889,8 @@ mod tests {
     pub fn test_path() {
         use crate::syntax::parser;
         for (text, expected) in vec![
-                ("mod my_mod{ 
+            (
+                "mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                     fn main() {
                         let k: i32 := test();
@@ -800,37 +899,43 @@ mod tests {
                         return;
                     }
                 }",
-                Ok(())),
-                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
-                Err("Semantic: L1: MyStruct does not have member y")),
-                ("mod my_mod{ 
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
+                Err("Semantic: L1: MyStruct does not have member y"),
+            ),
+            (
+                "mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                     fn main() {
                         let i: i32 := my_mod::test(); 
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test")),
-            ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
-                    .tokenize()
-                    .into_iter()
-                    .collect::<Result<_, _>>()
-                    .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
-                match expected {
-                    Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
-                    Err(msg) => assert_eq!(result.err(), Some(msg.into())),
-                }
+                Err("Semantic: L4: Could not find item with the given path: my_mod::test"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
             }
+        }
     }
 
     #[test]
     pub fn test_path_to_function_in_different_module() {
         use crate::syntax::parser;
         for (text, expected) in vec![
-                ("mod my_mod{ 
+            (
+                "mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                 }
                 mod main_mod{
@@ -839,8 +944,10 @@ mod tests {
                         return;
                     }
                 }",
-                Ok(())),
-                ("mod my_mod{ 
+                Ok(()),
+            ),
+            (
+                "mod my_mod{ 
                     mod inner {
                         fn test() -> i32{ return 0;} 
                     }
@@ -851,8 +958,10 @@ mod tests {
                         return;
                     }
                 }",
-                Ok(())),
-                ("
+                Ok(()),
+            ),
+            (
+                "
                 mod main_mod{
                     fn main() {
                         let j: i32 := root::main_mod::inner::test();
@@ -865,22 +974,25 @@ mod tests {
                         fn test() -> i32{ return 0;} 
                     }
                 }",
-                Ok(())),
-                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
-                Err("Semantic: L1: MyStruct does not have member y")),
-            ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
-                    .tokenize()
-                    .into_iter()
-                    .collect::<Result<_, _>>()
-                    .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
-                match expected {
-                    Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
-                    Err(msg) => assert_eq!(result.err(), Some(msg.into())),
-                }
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
+                Err("Semantic: L1: MyStruct does not have member y"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
             }
+        }
     }
 
     #[test]
@@ -897,7 +1009,9 @@ mod tests {
             let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Integer(1, 5)));
 
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone()).unwrap();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
+                .map(|n| n.get_type().clone())
+                .unwrap();
             assert_eq!(ty, ast::Type::I32);
         }
         // operand is not i32
@@ -929,7 +1043,9 @@ mod tests {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone()).unwrap();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
+                .map(|n| n.get_type().clone())
+                .unwrap();
             assert_eq!(ty, ast::Type::I32);
         }
 
@@ -1005,7 +1121,9 @@ mod tests {
             );
 
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone()).unwrap();
+            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
+                .map(|n| n.get_type().clone())
+                .unwrap();
             assert_eq!(ty, ast::Type::I32);
         }
 
@@ -1078,7 +1196,8 @@ mod tests {
 
         let mut sa = SemanticAst::new();
         for (test, expected) in tests.iter() {
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope).map(|n| n.get_type().clone());
+            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope)
+                .map(|n| n.get_type().clone());
             assert_eq!(ty, *expected);
         }
     }
@@ -1118,7 +1237,8 @@ mod tests {
 
         for (test, expected) in tests.iter() {
             let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope).map(|n| n.get_type().clone());
+            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope)
+                .map(|n| n.get_type().clone());
             assert_eq!(ty, *expected);
         }
     }
@@ -1142,7 +1262,8 @@ mod tests {
                 &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
                 &scope,
-            ).map(|n| n.get_type().clone());
+            )
+            .map(|n| n.get_type().clone());
             assert_eq!(ty, Ok(ast::Type::I32));
         }
 
@@ -1223,7 +1344,8 @@ mod tests {
                 &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_func".into()),
                 &scope,
-            ).map(|n| n.get_type().clone());
+            )
+            .map(|n| n.get_type().clone());
             assert_eq!(ty, Ok(ast::Type::I32));
         }
         // Variable is immutable
@@ -1297,7 +1419,8 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Unit));
     }
 
@@ -1312,7 +1435,8 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
     }
 
@@ -1321,13 +1445,19 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_func", vec![], I32, vec![]);
 
-        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func"].into(), vec![]);
+        let node = Ast::RoutineCall(
+            1,
+            ast::RoutineCall::Function,
+            vec!["my_func"].into(),
+            vec![],
+        );
         let mut sa = SemanticAst::new();
         let ty = start(
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         scope.add("my_func2", vec![("x", I32)], I32, vec![]);
@@ -1344,18 +1474,25 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func2".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(1, ast::RoutineCall::Function, vec!["my_func2"].into(), vec![]);
+        let node = Ast::RoutineCall(
+            1,
+            ast::RoutineCall::Function,
+            vec!["my_func2"].into(),
+            vec![],
+        );
 
         let mut sa = SemanticAst::new();
         let ty = start(
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_func2".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(
             ty,
             Err("L1: Incorrect number of parameters passed to routine: my_func2".into())
@@ -1368,13 +1505,19 @@ mod tests {
         scope.add("my_co", vec![], I32, vec![]);
         scope.add("my_co2", vec![("x", I32)], I32, vec![]);
 
-        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co"].into(), vec![]);
+        let node = Ast::RoutineCall(
+            1,
+            ast::RoutineCall::CoroutineInit,
+            vec!["my_co"].into(),
+            vec![],
+        );
         let mut sa = SemanticAst::new();
         let ty = start(
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
         // test correct parameters passed in call
@@ -1390,11 +1533,17 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co2".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
 
         // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(1, ast::RoutineCall::CoroutineInit, vec!["my_co2"].into(), vec![]);
+        let node = Ast::RoutineCall(
+            1,
+            ast::RoutineCall::CoroutineInit,
+            vec!["my_co2"].into(),
+            vec![],
+        );
 
         let mut sa = SemanticAst::new();
         let ty = start(
@@ -1420,7 +1569,8 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Unit));
 
         // test correct type for yield return
@@ -1430,7 +1580,8 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_co2".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         // test incorrect type for yield return
@@ -1461,7 +1612,8 @@ mod tests {
             &mut sa.from_parser_ast(&node).unwrap(),
             &Some("my_main".into()),
             &scope,
-        ).map(|n| n.get_type().clone());
+        )
+        .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
     }
 
@@ -1480,7 +1632,8 @@ mod tests {
         };
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone());
+        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
+            .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         let node = Ast::RoutineDef{
@@ -1512,7 +1665,8 @@ mod tests {
         };
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope).map(|n| n.get_type().clone());
+        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
+            .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
         let node = Ast::RoutineDef{
@@ -1573,7 +1727,8 @@ mod tests {
                 &mut sa.from_parser_ast(&node).unwrap(),
                 &Some("my_main".into()),
                 &scope,
-            ).map(|n| n.get_type().clone());
+            )
+            .map(|n| n.get_type().clone());
             assert_eq!(result, ex);
         }
     }

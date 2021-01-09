@@ -52,10 +52,7 @@ impl SemanticAst {
                 p.clone(),
             ))),
             Identifier(ln, id) => Ok(Box::new(Identifier(self.sm_from(*ln), id.clone()))),
-            Path(ln, path) => Ok(Box::new(Path(
-                self.sm_from(*ln),
-                path.clone(),
-            ))),
+            Path(ln, path) => Ok(Box::new(Path(self.sm_from(*ln), path.clone()))),
             MemberAccess(ln, src, member) => Ok(Box::new(MemberAccess(
                 self.sm_from(*ln),
                 self.from_parser_ast(src)?,

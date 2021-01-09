@@ -1,7 +1,7 @@
-use crate::{ast::RoutineDef, syntax::ast::Path};
 use crate::ast::Type;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level;
+use crate::{ast::RoutineDef, syntax::ast::Path};
 
 use super::{struct_table::StructDefinition, symbol_table::Symbol};
 
@@ -37,7 +37,7 @@ impl<'a> ScopeStack<'a> {
             }
             match scope.level {
                 Level::Local => (),
-                Level::Routine { .. } | Level::Module{..} => return None,
+                Level::Routine { .. } | Level::Module { .. } => return None,
             }
         }
 
@@ -128,9 +128,9 @@ impl<'a> ScopeStack<'a> {
 
         for node in self.stack.iter() {
             match node {
-                CompilerNode::Module{name, ..} => {
+                CompilerNode::Module { name, .. } => {
                     steps.push(name.clone());
-                },
+                }
                 _ => (),
             }
         }
@@ -140,7 +140,6 @@ impl<'a> ScopeStack<'a> {
         } else {
             None
         }
-        
     }
 }
 
@@ -402,7 +401,13 @@ mod tests {
     #[test]
     fn test_single_level_to_path() {
         let mut stack = ScopeStack::new();
-        let mut module_scope = Scope::new(0, Level::Module{name: "root".into()}, Type::Unit);
+        let mut module_scope = Scope::new(
+            0,
+            Level::Module {
+                name: "root".into(),
+            },
+            Type::Unit,
+        );
         module_scope.insert("cor", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,
@@ -422,7 +427,13 @@ mod tests {
     #[test]
     fn test_func_in_module_to_path() {
         let mut stack = ScopeStack::new();
-        let mut module_scope = Scope::new(0, Level::Module{name: "root".into()}, Type::Unit);
+        let mut module_scope = Scope::new(
+            0,
+            Level::Module {
+                name: "root".into(),
+            },
+            Type::Unit,
+        );
         module_scope.insert("cor", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,
@@ -460,7 +471,13 @@ mod tests {
     #[test]
     fn test_nested_module_to_path() {
         let mut stack = ScopeStack::new();
-        let module_scope = Scope::new(0, Level::Module{name: "root".into()}, Type::Unit);
+        let module_scope = Scope::new(
+            0,
+            Level::Module {
+                name: "root".into(),
+            },
+            Type::Unit,
+        );
         let module_node = CompilerNode::Module {
             meta: module_scope,
             name: "root".into(),
@@ -470,8 +487,14 @@ mod tests {
             structs: vec![],
         };
         stack.push(&module_node);
-        
-        let module2_scope = Scope::new(0, Level::Module{name: "inner".into()}, Type::Unit);
+
+        let module2_scope = Scope::new(
+            0,
+            Level::Module {
+                name: "inner".into(),
+            },
+            Type::Unit,
+        );
         let module2_node = CompilerNode::Module {
             meta: module2_scope,
             name: "inner".into(),
@@ -481,7 +504,6 @@ mod tests {
             structs: vec![],
         };
         stack.push(&module2_node);
-
 
         let fun2_scope = Scope::new(
             0,

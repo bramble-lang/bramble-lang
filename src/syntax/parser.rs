@@ -151,14 +151,12 @@ fn module(stream: &mut TokenStream) -> PResult {
                 let module = parse_items(&module_name, stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
                 module
-            },
+            }
             _ => {
                 return Err(format!("L{}: expected name after mod keyword", token.l));
-            },
+            }
         },
-        None => {
-            None
-        },
+        None => None,
     };
 
     Ok(mod_def)
@@ -720,29 +718,38 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     // has function parameters
     // has struct expression parameters
     /*function_call(stream)
-        .por(struct_expression, stream)
-        //.por(path, stream)
-        .por(identifier, stream)*/
+    .por(struct_expression, stream)
+    //.por(path, stream)
+    .por(identifier, stream)*/
     function_call_or_variable2(stream)
 }
 
 fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     let s: Option<Ast<u32>> = match path(stream)? {
-        Some((line, path)) => {
-            match fn_call_params(stream)? {
-                Some(params) => Some(Ast::RoutineCall(line, RoutineCall::Function, path, params.clone())),
-                None => match struct_init_params(stream)? {
-                    Some(params) => Some(Ast::StructExpression(line, path.last().unwrap().clone(), params.clone())),
-                    None => if path.len() > 1 {
+        Some((line, path)) => match fn_call_params(stream)? {
+            Some(params) => Some(Ast::RoutineCall(
+                line,
+                RoutineCall::Function,
+                path,
+                params.clone(),
+            )),
+            None => match struct_init_params(stream)? {
+                Some(params) => Some(Ast::StructExpression(
+                    line,
+                    path.last().unwrap().clone(),
+                    params.clone(),
+                )),
+                None => {
+                    if path.len() > 1 {
                         Some(Ast::Path(line, path.into()))
                     } else {
                         Some(Ast::Identifier(line, path.last().unwrap().clone()))
-                    },
-                },
-            }
-        }
-        _ => None
+                    }
+                }
+            },
+        },
+        _ => None,
     };
 
     Ok(s)
@@ -1070,13 +1077,19 @@ pub mod tests {
     #[test]
     fn parse_path() {
         for (text, expected) in vec![
-                ("thing", Ok(vec!["thing"])),
-                ("::thing", Ok(vec!["root", "thing"])),
-                ("thing::first", Ok(vec!["thing", "first"])),
-                ("thing::first::second", Ok(vec!["thing", "first", "second"])),
-                ("thing::", Err("L1: expect identifier after path separator '::'")),
-                ("thing::first::", Err("L1: expect identifier after path separator '::'")),
-            ] {
+            ("thing", Ok(vec!["thing"])),
+            ("::thing", Ok(vec!["root", "thing"])),
+            ("thing::first", Ok(vec!["thing", "first"])),
+            ("thing::first::second", Ok(vec!["thing", "first", "second"])),
+            (
+                "thing::",
+                Err("L1: expect identifier after path separator '::'"),
+            ),
+            (
+                "thing::first::",
+                Err("L1: expect identifier after path separator '::'"),
+            ),
+        ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -1087,14 +1100,14 @@ pub mod tests {
                 Ok(Some(Ast::Path(l, path))) => {
                     assert_eq!(l, 1);
                     match expected {
-                        Ok(expected) =>  assert_eq!(path, expected.into()),
+                        Ok(expected) => assert_eq!(path, expected.into()),
                         Err(msg) => assert!(false, msg),
                     }
                 }
                 Ok(Some(Ast::Identifier(l, id))) => {
                     assert_eq!(l, 1);
                     match expected {
-                        Ok(expected) =>  {
+                        Ok(expected) => {
                             assert_eq!(expected.len(), 1);
                             assert_eq!(id, expected[0]);
                         }
@@ -1103,11 +1116,9 @@ pub mod tests {
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
-                Err(msg) => {
-                    match expected {
-                        Ok(_) =>  assert!(false, msg),
-                        Err(expected) => assert_eq!(expected, msg),
-                    }
+                Err(msg) => match expected {
+                    Ok(_) => assert!(false, msg),
+                    Err(expected) => assert_eq!(expected, msg),
                 },
             }
         }
@@ -1311,9 +1322,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, name, ..}) =
-            module(&mut iter).unwrap()
-        {
+        if let Some(Ast::Module { meta, name, .. }) = module(&mut iter).unwrap() {
             assert_eq!(meta, 1);
             assert_eq!(name, "test_mod");
         } else {
@@ -1329,9 +1338,15 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        
-        if let Some(Ast::Module{meta, name, modules, functions, coroutines, structs}) =
-            parse(tokens).unwrap()
+
+        if let Some(Ast::Module {
+            meta,
+            name,
+            modules,
+            functions,
+            coroutines,
+            structs,
+        }) = parse(tokens).unwrap()
         {
             assert_eq!(meta, 1);
             assert_eq!(name, "root");
@@ -1341,7 +1356,15 @@ pub mod tests {
             assert_eq!(coroutines.len(), 0);
             assert_eq!(structs.len(), 0);
 
-            if let Ast::Module{meta, name, modules, functions, coroutines, structs} = &modules[0] {
+            if let Ast::Module {
+                meta,
+                name,
+                modules,
+                functions,
+                coroutines,
+                structs,
+            } = &modules[0]
+            {
                 assert_eq!(*meta, 1);
                 assert_eq!(name, "test_fn_mod");
 
@@ -1365,7 +1388,6 @@ pub mod tests {
                     panic!("Expected function definition")
                 }
             }
-
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1380,8 +1402,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, name, modules, functions, coroutines, structs}) =
-            module(&mut iter).unwrap()
+        if let Some(Ast::Module {
+            meta,
+            name,
+            modules,
+            functions,
+            coroutines,
+            structs,
+        }) = module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
             assert_eq!(name, "test_co_mod");
@@ -1419,8 +1447,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module{meta, name, modules, functions, coroutines, structs}) =
-            module(&mut iter).unwrap()
+        if let Some(Ast::Module {
+            meta,
+            name,
+            modules,
+            functions,
+            coroutines,
+            structs,
+        }) = module(&mut iter).unwrap()
         {
             assert_eq!(meta, 1);
             assert_eq!(name, "test_struct_mod");
