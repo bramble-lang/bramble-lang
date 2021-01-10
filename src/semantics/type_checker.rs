@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOperator, UnaryOperator};
+use crate::ast::{Ast, Ast::*, BinaryOperator, UnaryOperator};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
 use crate::syntax::ast::Type;
@@ -279,22 +279,21 @@ impl<'a> SemanticAnalyzer<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode, String> {
-        use ast::Ast::*;
         match &ast {
             &Integer(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = I32;
                 Ok(Integer(meta, *v))
             }
-            &Boolean(meta, v) => {
+            Boolean(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Bool;
                 Ok(Boolean(meta.clone(), *v))
             }
-            &StringLiteral(meta, v) => {
+            &Ast::StringLiteral(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = ast::Type::StringLiteral;
-                Ok(StringLiteral(meta.clone(), v.clone()))
+                Ok(Ast::StringLiteral(meta.clone(), v.clone()))
             }
             &CustomType(meta, name) => {
                 let mut meta = meta.clone();
@@ -687,7 +686,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     structs: resolved_structs,
                 })
             }
-            &StructDef(meta, struct_name, members) => {
+            &Ast::StructDef(meta, struct_name, members) => {
                 let mut meta = meta.clone();
                 // Check the type of each member
                 for (mname, mtype) in members.iter() {
@@ -701,7 +700,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
                 meta.ty = Unit;
-                Ok(StructDef(
+                Ok(Ast::StructDef(
                     meta.clone(),
                     struct_name.clone(),
                     members.clone(),
