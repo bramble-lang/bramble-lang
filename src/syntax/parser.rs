@@ -228,7 +228,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
         .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
     let params = fn_def_params(stream)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream).ok_or(format!("L{}: Expected type after ->", fn_line))?
+        consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
     } else {
         Type::Unit
     };
@@ -269,7 +269,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
         .ok_or(format!("L{}: Expected identifier after co", co_line))?;
     let params = fn_def_params(stream)?;
     let co_type = match stream.next_if(&Lex::LArrow) {
-        Some(t) => consume_type(stream).ok_or(format!("L{}: Expected type after ->", t.l))?,
+        Some(t) => consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", t.l))?,
         _ => Type::Unit,
     };
 
@@ -828,10 +828,10 @@ fn identifier(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn consume_type(stream: &mut TokenStream) -> Option<Type> {
+fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>, String> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
-    match stream.peek() {
+    Ok(match stream.peek() {
         Some(Token {
             l: _,
             s: Lex::Primitive(primitive),
@@ -844,15 +844,18 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
             stream.next();
             ty
         }
-        Some(Token {
+        /*Some(Token {
             l: _,
             s: Lex::Identifier(name),
         }) => {
             let ty = Some(Type::Custom(name.clone()));
             stream.next();
             ty
-        }
-        _ => None,
+        }*/
+        _ => match path(stream)? {
+            Some(path) => Some(Type::Custom(path.1.into())),
+            None => None,
+        },
     }
     .map(|ty| {
         if is_coroutine {
@@ -860,7 +863,7 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
         } else {
             ty
         }
-    })
+    }))
 }
 
 fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
@@ -872,7 +875,7 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
             let id = t[0].s.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let ty = consume_type(stream).ok_or(format!(
+            let ty = consume_type(stream)?.ok_or(format!(
                 "L{}: expected type after : in type declaration",
                 line_value
             ))?;
@@ -1200,6 +1203,29 @@ pub mod tests {
                 Ast::Bind(_, id, false, p, exp) => {
                     assert_eq!(id, "x");
                     assert_eq!(*p, Type::I32);
+                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_bind_with_path() {
+        let text = "let x:my_mod::x := 5;";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, false, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Type::Custom("my_mod::x".into()));
                     assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
