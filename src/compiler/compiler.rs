@@ -541,9 +541,9 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
-                let co_def = self.root.go_to(co_path).expect("Could not find coroutine");
+                let co_def = self.root.go_to(co_path).expect("Could not find coroutine").is_routine()?;
                 let total_offset = co_def.get_metadata().local_allocation()
-                    .ok_or(format!("Coroutine {} has not allocation size", co_path))?;
+                    .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
                 co_def.validate_parameters(params)?;
 
@@ -599,7 +599,7 @@ impl<'a> Compiler<'a> {
             Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                let fn_def = self.root.go_to(fn_path).ok_or(format!("Could not find: {}", fn_path))?;
+                let fn_def = self.root.go_to(fn_path).ok_or(format!("Could not find: {}", fn_path))?.is_routine()?;
                 fn_def.validate_parameters(params)?;
 
                 let return_type = meta.ty();
