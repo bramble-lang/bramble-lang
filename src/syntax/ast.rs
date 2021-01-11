@@ -570,14 +570,14 @@ mod test {
 
     #[test]
     fn test_go_to_function() {
-        let func = Ast::RoutineDef(
-            0,
-            RoutineDef::Function,
-            "func".into(),
-            vec![],
-            Type::I32,
-            vec![],
-        );
+        let func = Ast::RoutineDef{
+            meta: 0,
+            def: RoutineDef::Function,
+            name: "func".into(),
+            params: vec![],
+            ty: Type::I32,
+            body: vec![],
+        };
         let ast = Ast::Module {
             meta: 0,
             name: "root".into(),

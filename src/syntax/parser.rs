@@ -1372,10 +1372,10 @@ pub mod tests {
                 assert_eq!(functions.len(), 1);
                 assert_eq!(coroutines.len(), 0);
                 assert_eq!(structs.len(), 0);
-                if let Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body) =
+                if let Ast::RoutineDef{meta, def: RoutineDef::Function, name, params, ty, body} =
                     &functions[0]
                 {
-                    assert_eq!(*l, 1);
+                    assert_eq!(*meta, 1);
                     assert_eq!(name, "test");
                     assert_eq!(params, &vec![("x".into(), Type::I32)]);
                     assert_eq!(ty, &Type::Unit);
@@ -1418,10 +1418,10 @@ pub mod tests {
             assert_eq!(coroutines.len(), 1);
             assert_eq!(structs.len(), 0);
 
-            if let Ast::RoutineDef(l, RoutineDef::Coroutine, name, params, ty, body) =
+            if let Ast::RoutineDef{meta, def: RoutineDef::Coroutine, name, params, ty, body} =
                 &coroutines[0]
             {
-                assert_eq!(*l, 1);
+                assert_eq!(*meta, 1);
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
                 assert_eq!(ty, &Type::Unit);

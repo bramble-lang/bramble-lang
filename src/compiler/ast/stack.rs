@@ -453,14 +453,14 @@ mod tests {
             },
             Type::Unit,
         );
-        let fun2_node = CompilerNode::RoutineDef(
-            fun2_scope,
-            RoutineDef::Coroutine,
-            "func2".into(),
-            vec![],
-            Type::I32,
-            vec![],
-        );
+        let fun2_node = CompilerNode::RoutineDef{
+            meta: fun2_scope,
+            def: RoutineDef::Coroutine,
+            name: "func2".into(),
+            params: vec![],
+            ty: Type::I32,
+            body: vec![],
+        };
         stack.push(&fun2_node);
 
         let path = stack.to_path().unwrap();
@@ -513,14 +513,14 @@ mod tests {
             },
             Type::Unit,
         );
-        let fun2_node = CompilerNode::RoutineDef(
-            fun2_scope,
-            RoutineDef::Coroutine,
-            "func2".into(),
-            vec![],
-            Type::I32,
-            vec![],
-        );
+        let fun2_node = CompilerNode::RoutineDef{
+            meta: fun2_scope,
+            def: RoutineDef::Coroutine,
+            name: "func2".into(),
+            params: vec![],
+            ty: Type::I32,
+            body: vec![],
+        };
         stack.push(&fun2_node);
 
         let path = stack.to_path().unwrap();

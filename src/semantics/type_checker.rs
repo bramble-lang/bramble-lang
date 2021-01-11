@@ -622,7 +622,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = ty;
                 Ok(ExpressionBlock(meta.clone(), resolved_body))
             }
-            RoutineDef{meta, name, params, ty: p, body, ..} => {
+            RoutineDef{meta, def, name, params, ty: p, body} => {
                 let mut meta = meta.clone();
                 for (pname, pty) in params.iter() {
                     meta.sym.add(pname, pty.clone(), false)?;
@@ -636,14 +636,14 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = p.clone();
-                Ok(RoutineDef(
-                    meta.clone(),
-                    def.clone(),
-                    name.clone(),
-                    params.clone(),
-                    p.clone(),
-                    resolved_body,
-                ))
+                Ok(RoutineDef{
+                    meta: meta.clone(),
+                    def: def.clone(),
+                    name: name.clone(),
+                    params: params.clone(),
+                    ty: p.clone(),
+                    body: resolved_body,
+                })
             }
             &Module {
                 meta,
