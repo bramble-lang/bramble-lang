@@ -275,7 +275,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: Path::new(),
+                path: vec!["root"].into(),
             },
             0,
         );
@@ -297,7 +297,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: Path::new(),
+                path: vec!["root"].into(),
             },
             0,
         );
@@ -321,7 +321,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: Path::new(),
+                path: vec!["root"].into(),
             },
             1,
         );
@@ -331,7 +331,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: Path::new(),
+                path: vec!["root"].into(),
             },
             2,
         );
@@ -341,7 +341,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: Path::new(),
+                path: vec!["root"].into(),
             },
             BinaryOperator::Mul,
             Box::new(sn1),

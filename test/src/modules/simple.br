@@ -1,0 +1,19 @@
+fn my_main() {
+    let x:i32 := my_mod::add(3, 2);
+    printiln x;
+
+    let b:bool := my_mod::my_bool();
+    printbln b;
+    return;
+}
+
+mod my_mod {
+    fn my_bool() -> bool {
+        let b:bool := false;
+        return b;
+    }
+
+    fn add(a: i32, b: i32) -> i32 {
+        return a + b;
+    }
+}

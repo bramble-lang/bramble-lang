@@ -28,6 +28,7 @@ pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
     string_pool: StringPool,
+    root: &'a CompilerNode,
 }
 
 impl<'a> Compiler<'a> {
@@ -56,6 +57,7 @@ impl<'a> Compiler<'a> {
             code: vec![],
             scope: ScopeStack::new(),
             string_pool,
+            root: &compiler_ast,
         };
 
         let global_func = "".into();
@@ -491,15 +493,21 @@ impl<'a> Compiler<'a> {
                 }}
             }
             Ast::Module {
+                meta: _,
+                name: _,
+                modules,
                 functions,
                 coroutines,
-                ..
+                structs: _,
             } => {
                 for f in functions.iter() {
                     self.traverse(f, current_func, code)?;
                 }
                 for co in coroutines.iter() {
                     self.traverse(co, current_func, code)?;
+                }
+                for m in modules.iter() {
+                    self.traverse(m, current_func, code)?;
                 }
             }
             Ast::Return(_, ref exp) => {
@@ -597,7 +605,7 @@ impl<'a> Compiler<'a> {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 let fn_name = fn_path.last().unwrap();
-                self.validate_routine_call(fn_name, params)?;
+                self.validate_routine_call_by_path(fn_path, params)?;
                 self.scope.find_func(fn_name);
 
                 let return_type = meta.ty();
@@ -1119,7 +1127,7 @@ impl<'a> Compiler<'a> {
             .scope
             .find_func(routine_name)
             .or_else(|| self.scope.find_coroutine(routine_name))
-            .expect("Could not find routine in any symbol table in the scope stack");
+            .expect(&format!("Could not find routine in any symbol table in the scope stack: {}", routine_name));
         let expected_params = routine.get_params().ok_or(format!(
             "Critical: node for {} does not have a params field",
             routine_name
@@ -1131,6 +1139,29 @@ impl<'a> Compiler<'a> {
             Err(format!(
                 "Compiler: expected {} but got {} parameters for function/coroutine `{}`",
                 expected_num_params, got_num_params, routine_name
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn validate_routine_call_by_path(
+        &self,
+        routine_path: &crate::syntax::ast::Path,
+        params: &Vec<CompilerNode>,
+    ) -> Result<(), String> {
+        let routine = self.root.go_to(routine_path).ok_or(format!("Function {} was not found", routine_path))?;
+        let expected_params = routine.get_params().ok_or(format!(
+            "Critical: node for {} does not have a params field",
+            routine_path
+        ))?;
+
+        let expected_num_params = expected_params.len();
+        let got_num_params = params.len();
+        if expected_num_params != got_num_params {
+            Err(format!(
+                "Compiler: expected {} but got {} parameters for function/coroutine `{}`",
+                expected_num_params, got_num_params, routine_path
             ))
         } else {
             Ok(())
