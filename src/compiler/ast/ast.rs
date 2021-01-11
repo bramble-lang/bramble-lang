@@ -258,7 +258,7 @@ impl CompilerNode {
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::compiler::ast::scope;
+    use crate::{compiler::ast::scope, syntax::ast::Path};
     use crate::semantics::symbol_table;
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
@@ -275,6 +275,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: Path::new(),
             },
             0,
         );
@@ -296,6 +297,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: Path::new(),
             },
             0,
         );
@@ -319,6 +321,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: Path::new(),
             },
             1,
         );
@@ -328,6 +331,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: Path::new(),
             },
             2,
         );
@@ -337,6 +341,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: Path::new(),
             },
             BinaryOperator::Mul,
             Box::new(sn1),
@@ -379,6 +384,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             vec![],
         );
@@ -408,6 +414,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             vec![],
         );
@@ -421,6 +428,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             vec![sn],
         );
@@ -460,6 +468,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -505,6 +514,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -522,6 +532,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "outer_func".into(),
@@ -567,6 +578,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Coroutine,
             name: "coroutine".into(),

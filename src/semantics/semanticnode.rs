@@ -9,6 +9,7 @@ pub struct SemanticMetadata {
     pub ln: u32,
     pub ty: ast::Type,
     pub sym: SymbolTable,
+    pub path: Path,
 }
 
 pub type SemanticNode = Ast<SemanticMetadata>;
@@ -17,6 +18,11 @@ impl SemanticNode {
     pub fn get_type(&self) -> &ast::Type {
         let meta = self.get_metadata();
         &meta.ty
+    }
+
+    pub fn get_path(&self) -> &Path {
+        let meta = self.get_metadata();
+        &meta.path
     }
 }
 
@@ -223,6 +229,7 @@ impl SemanticAst {
             ln,
             ty: ast::Type::Unknown,
             sym: SymbolTable::new_module(name),
+            path: Path::new(),
         };
         self.next_id += 1;
         sm_data
@@ -235,6 +242,7 @@ fn sm(id: u32, ln: u32, ty: ast::Type) -> SemanticMetadata {
         ln,
         ty,
         sym: SymbolTable::new(),
+        path: Path::new(),
     }
 }
 

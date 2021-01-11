@@ -211,19 +211,22 @@ impl<'a> SemanticAnalyzer<'a> {
         &'a self,
         sym: &'a SymbolTable,
         path: &ast::Path,
-    ) -> Result<Option<&'a Symbol>, String> {
+    ) -> Result<Option<(&'a Symbol, ast::Path)>, String> {
+        let current_path = self.stack.to_path(sym).expect("A valid path is expected");
+        let canon_path = path.to_canonical(&current_path)?;
         if path.len() > 1 {
-            let current_path = self.stack.to_path(sym).expect("A valid path is expected");
-            let mut canon_path = path.to_canonical(&current_path)?;
-            let item = canon_path.truncate().unwrap();
+            let mut trunc_canon_path = canon_path.clone();
+            let item = trunc_canon_path.truncate().unwrap();
             let node = self
                 .root
-                .go_to(&canon_path)
+                .go_to(&trunc_canon_path)
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
-            Ok(node.get_metadata().sym.get(&item))
-        } else {
+            Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
+        } else if path.len() == 1 {
             let item = &path[0];
-            Ok(sym.get(item).or(self.stack.get(item)))
+            Ok(sym.get(item).or(self.stack.get(item)).map(|i| (i, canon_path)))
+        } else {
+            Err("empty path passed to lookup_path".into())
         }
     }
 
@@ -519,21 +522,20 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     resolved_params.push(ty);
                 }
-                let symbol = self.lookup_path(sym, fname)?;
+                let (symbol, canon_path) = self.lookup_path(sym, fname)?.ok_or(format!("function {} not declared", fname))?;
 
                 let (expected_param_tys, ret_ty) = match symbol {
-                    Some(Symbol {
+                    Symbol {
                         ty: Type::FunctionDef(pty, rty),
                         ..
-                    }) if *call == crate::syntax::ast::RoutineCall::Function => (pty, *rty.clone()),
-                    Some(Symbol {
+                    } if *call == crate::syntax::ast::RoutineCall::Function => (pty, *rty.clone()),
+                    Symbol {
                         ty: Type::CoroutineDef(pty, rty),
                         ..
-                    }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
+                    } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
                         (pty, Type::Coroutine(rty.clone()))
                     }
-                    Some(_) => return Err(format!("{:?} found but was not a function", fname)),
-                    None => return Err(format!("function {:?} not declared", fname)),
+                    _ => return Err(format!("{:?} found but was not a function", fname)),
                 };
 
                 if resolved_params.len() != expected_param_tys.len() {
@@ -551,7 +553,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         Ok(RoutineCall(
                             meta.clone(),
                             *call,
-                            fname.clone(),
+                            canon_path,
                             resolved_params,
                         ))
                     } else {
@@ -812,7 +814,7 @@ mod tests {
         current_func: &Option<String>,
         scope: &Scope,
     ) -> Result<SemanticNode, String> {
-        let mut sym = SymbolTable::new();
+        let mut sym = SymbolTable::new_module("root");
         match current_func {
             Some(cf) => {
                 for (vname, mutable, vty) in scope

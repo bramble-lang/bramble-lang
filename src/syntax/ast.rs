@@ -88,6 +88,9 @@ pub struct Path {
 }
 
 impl Path {
+    pub fn new() -> Path {
+        Path{path: vec![]}
+    }
     pub fn len(&self) -> usize {
         self.path.len()
     }
