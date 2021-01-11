@@ -483,7 +483,7 @@ impl SemanticAnalyzer {
                 meta.ty = ty;
                 Ok(meta.ty.clone())
             }
-            RoutineDef(meta, _, name, params, p, body) => {
+            RoutineDef{meta, name, params, ty: p, body, ..} => {
                 for (pname, pty) in params.iter() {
                     meta.sym.add(pname, pty.clone(), false)?;
                 }
@@ -1282,27 +1282,27 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_func", vec![], I32, vec![]);
 
-        let node = Ast::RoutineDef(
-            1,
-            ast::RoutineDef::Function,
-            "my_func".into(),
-            vec![],
-            I32,
-            vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
-        );
+        let node = Ast::RoutineDef{
+            meta: 1,
+            def: ast::RoutineDef::Function,
+            name: "my_func".into(),
+            params: vec![],
+            ty: I32,
+            body: vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
+        };
 
         let mut sa = SemanticAst::new();
         let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
         assert_eq!(ty, Ok(I32));
 
-        let node = Ast::RoutineDef(
-            1,
-            ast::RoutineDef::Function,
-            "my_func".into(),
-            vec![],
-            I32,
-            vec![Ast::Return(1, None)],
-        );
+        let node = Ast::RoutineDef{
+            meta: 1,
+            def: ast::RoutineDef::Function,
+            name: "my_func".into(),
+            params: vec![],
+            ty: I32,
+            body: vec![Ast::Return(1, None)],
+        };
 
         let mut sa = SemanticAst::new();
         let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
@@ -1314,27 +1314,27 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_co", vec![], I32, vec![]);
 
-        let node = Ast::RoutineDef(
-            1,
-            ast::RoutineDef::Coroutine,
-            "my_co".into(),
-            vec![],
-            I32,
-            vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
-        );
+        let node = Ast::RoutineDef{
+            meta: 1,
+            def: ast::RoutineDef::Coroutine,
+            name: "my_co".into(),
+            params: vec![],
+            ty: I32,
+            body: vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
+        };
 
         let mut sa = SemanticAst::new();
         let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
         assert_eq!(ty, Ok(I32));
 
-        let node = Ast::RoutineDef(
-            1,
-            ast::RoutineDef::Coroutine,
-            "my_co".into(),
-            vec![],
-            I32,
-            vec![Ast::Return(1, None)],
-        );
+        let node = Ast::RoutineDef{
+            meta: 1,
+            def: ast::RoutineDef::Coroutine,
+            name: "my_co".into(),
+            params: vec![],
+            ty: I32,
+            body: vec![Ast::Return(1, None)],
+        };
 
         let mut sa = SemanticAst::new();
         let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);

@@ -102,20 +102,20 @@ impl SemanticAst {
                 Ok(Box::new(ExpressionBlock(self.sm_from(*ln), nbody)))
             }
             Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
-            RoutineDef(ln, def, fname, params, p, body) => {
+            RoutineDef{meta: ln, def, name: fname, params, ty, body} => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
                     let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Box::new(RoutineDef(
-                    self.sm_from(*ln),
-                    *def,
-                    fname.clone(),
-                    params.clone(),
-                    p.clone(),
-                    nbody,
-                )))
+                Ok(Box::new(RoutineDef{
+                    meta: self.sm_from(*ln),
+                    def: *def,
+                    name: fname.clone(),
+                    params: params.clone(),
+                    ty: ty.clone(),
+                    body: nbody,
+                }))
             }
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions

@@ -109,14 +109,14 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    RoutineDef(
-        I,
-        RoutineDef,
-        String,
-        Vec<(String, Type)>,
-        Type,
-        Vec<Ast<I>>,
-    ),
+    RoutineDef{
+        meta: I,
+        def: RoutineDef,
+        name: String,
+        params: Vec<(String, Type)>,
+        ty: Type,
+        body: Vec<Ast<I>>,
+    },
     RoutineCall(I, RoutineCall, String, Vec<Ast<I>>),
     Module {
         meta: I,
@@ -158,7 +158,7 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            RoutineDef(_, def, name, ..) => format!("{} for {}", def, name),
+            RoutineDef{def, name, ..} => format!("{} for {}", def, name),
             RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
 
             Module { .. } => "module".into(),
@@ -191,7 +191,7 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineDef(m, ..)
+            | RoutineDef{meta: m, ..}
             | RoutineCall(m, ..)
             | Module { meta: m, .. }
             | StructDef(m, ..) => m,
@@ -203,7 +203,7 @@ impl<I> Ast<I> {
     /// the node is not a function or coroutine, this will return None.
     pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
         match self {
-            Ast::RoutineDef(_, _, _, params, ..) => Some(params),
+            Ast::RoutineDef{params, ..} => Some(params),
             _ => None,
         }
     }
@@ -212,7 +212,7 @@ impl<I> Ast<I> {
     /// otherwise return None.
     pub fn get_return_type(&self) -> Option<&Type> {
         match self {
-            Ast::RoutineDef(_, _, _, _, ret, _) => Some(ret),
+            Ast::RoutineDef{ty, ..} => Some(ty),
             _ => None,
         }
     }
@@ -220,7 +220,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef(_, _, name, _, ..) | Ast::Identifier(_, name) => Some(name),
+            Ast::RoutineDef{name, ..} | Ast::Identifier(_, name) => Some(name),
             _ => None,
         }
     }

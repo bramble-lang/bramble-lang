@@ -517,7 +517,7 @@ impl<'a> Compiler<'a> {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
-            Ast::RoutineDef(_, RoutineDef::Coroutine, ref fn_name, _, _, stmts) => {
+            Ast::RoutineDef{def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
                 assembly! {(code) {
                     @{fn_name}:
                 }};
@@ -559,7 +559,7 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::RoutineDef(scope, RoutineDef::Function, ref fn_name, _, _, stmts) => {
+            Ast::RoutineDef{meta: scope, def: RoutineDef::Function, name: ref fn_name, body: stmts, ..} => {
                 let total_offset = match scope.level() {
                     Routine { allocation, .. } => allocation,
                     _ => panic!("Invalid scope for function definition"),

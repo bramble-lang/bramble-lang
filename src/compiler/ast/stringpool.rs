@@ -45,7 +45,7 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
-            RoutineDef(.., body) => {
+            RoutineDef{body, ..} => {
                 for e in body.iter() {
                     self.extract_from(e);
                 }

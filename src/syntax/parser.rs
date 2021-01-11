@@ -211,14 +211,14 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef(
-        fn_line,
-        RoutineDef::Function,
-        fn_name,
+    Ok(Some(Ast::RoutineDef{
+        meta: fn_line,
+        def: RoutineDef::Function,
+        name: fn_name,
         params,
-        fn_type,
-        stmts,
-    )))
+        ty: fn_type,
+        body: stmts,
+    }))
 }
 
 fn coroutine_def(stream: &mut TokenStream) -> PResult {
@@ -250,14 +250,14 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef(
-        co_line,
-        RoutineDef::Coroutine,
-        co_name,
+    Ok(Some(Ast::RoutineDef{
+        meta: co_line,
+        def: RoutineDef::Coroutine,
+        name: co_name,
         params,
-        co_type,
-        stmts,
-    )))
+        ty: co_type,
+        body: stmts,
+    }))
 }
 
 fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
@@ -1171,7 +1171,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) =
+        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
             function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -1197,7 +1197,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) =
+        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
             function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -1256,7 +1256,7 @@ pub mod tests {
         }) = module(&mut stream).unwrap()
         {
             assert_eq!(meta, 1);
-            if let Ast::RoutineDef(_l, RoutineDef::Coroutine, name, params, ty, body) =
+            if let Ast::RoutineDef{def: RoutineDef::Coroutine, name, params, ty, body, ..} =
                 &coroutines[0]
             {
                 assert_eq!(name, "test");
@@ -1315,7 +1315,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef(l, RoutineDef::Function, name, params, ty, body)) =
+        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
             function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -1603,7 +1603,7 @@ pub mod tests {
             let ast = parse(tokens).unwrap().unwrap();
             match ast {
                 Ast::Module { functions, .. } => match &functions[0] {
-                    Ast::RoutineDef(.., body) => match &body[0] {
+                    Ast::RoutineDef{body, ..} => match &body[0] {
                         Ast::Return(.., Some(rv)) => {
                             assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))
                         }
