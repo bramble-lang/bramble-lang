@@ -716,18 +716,6 @@ fn co_init(stream: &mut TokenStream) -> PResult {
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     trace!(stream);
-    // parse path
-    // has function parameters
-    // has struct expression parameters
-    /*function_call(stream)
-    .por(struct_expression, stream)
-    //.por(path, stream)
-    .por(identifier, stream)*/
-    function_call_or_variable2(stream)
-}
-
-fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
     let s: Option<Ast<u32>> = match path(stream)? {
         Some((line, path)) => match routine_call_params(stream)? {
             Some(params) => Some(Ast::RoutineCall(
