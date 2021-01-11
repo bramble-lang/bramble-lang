@@ -5,6 +5,11 @@ fn my_main() {
     let b:bool := my_mod::my_bool();
     printbln b;
 
+    let c: co i32 := init my_mod::count();
+    printiln (yield c);
+    printiln (yield c);
+    printiln (yield c);
+
     return;
 }
 
@@ -16,5 +21,11 @@ mod my_mod {
 
     fn add(a: i32, b: i32) -> i32 {
         return a + b;
+    }
+
+    co count() -> i32 {
+        yret 1;
+        yret 2;
+        return 3;
     }
 }
