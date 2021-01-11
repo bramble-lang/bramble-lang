@@ -422,7 +422,7 @@ impl<I> Ast<I> {
     /// Returns an error if the current node is not a routine node.
     /// Useful in the Translation layer or the Semantic layer for validating
     /// That paths and identifiers are associated with valid routines.
-    pub fn is_routine(&self) -> Result<&Ast<I>, String> {
+    pub fn is_routine_def(&self) -> Result<&Ast<I>, String> {
         match self {
             Ast::RoutineDef{..} => Ok(self),
             _ => Err(format!("Expected routine, but was {}", self.root_str()))
