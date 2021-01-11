@@ -81,7 +81,7 @@ impl<'a> Compiler<'a> {
                     sub %eax, [@stack_size];
                     mov [@next_stack_addr], %eax;
 
-                    call @my_main;
+                    call @root_my_main;
 
                     mov %esp, %ebp;
                     pop %ebp;
@@ -517,9 +517,11 @@ impl<'a> Compiler<'a> {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
-            Ast::RoutineDef{def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
+            Ast::RoutineDef{meta, def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
                 assembly! {(code) {
-                    @{fn_name}:
+                    @{meta.canon_path().to_label()}:
+                    //@{fn_name}:
+                    ; {{format!("Define {}", meta.canon_path())}}
                 }};
 
                 // Prepare stack frame for this function
@@ -532,20 +534,20 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
-                let co = co_path.last().unwrap();
+                let co_name = co_path.last().unwrap();
                 let total_offset = self
                     .scope
-                    .get_routine_allocation(co)
-                    .ok_or(format!("Coroutine {} has not allocation size", co))?;
+                    .get_routine_allocation(co_name)
+                    .ok_or(format!("Coroutine {} has not allocation size", co_path))?;
 
-                self.validate_routine_call(co, params)?;
+                self.validate_routine_call(co_name, params)?;
 
                 assembly! {(code) {
                     ; {format!("Call {}", co_path)}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
-                    lea %eax, [@{co}];
+                    lea %eax, [@{co_path.to_label()}];
                     mov %edi, {total_offset};
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
@@ -554,7 +556,7 @@ impl<'a> Compiler<'a> {
 
                     ; "move parameters into the stack frame of the coroutine"
                     {{{
-                        let codef = self.scope.find_coroutine(co).ok_or(format!("Could not find {} when looking up parameter offsets", co))?;
+                        let codef = self.scope.find_coroutine(co_name).ok_or(format!("Could not find {} when looking up parameter offsets", co_path))?;
                         self.move_params_into_stackframe(codef, &co_param_registers)?
                     }}}
                     ; "leave coroutine's stack frame"
@@ -568,7 +570,9 @@ impl<'a> Compiler<'a> {
                 };
 
                 assembly! {(code) {
-                @{fn_name}:
+                @{scope.canon_path().to_label()}:
+                //@{fn_name}:
+                    ; {{format!("Define {}", scope.canon_path())}}
                     ;"Prepare stack frame for this function"
                     push %ebp;
                     mov %ebp, %esp;
@@ -614,7 +618,7 @@ impl<'a> Compiler<'a> {
                     ; {{format!("Call {}", fn_path)}}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
-                    call @{fn_name};
+                    call @{fn_path.to_label()};
                 }};
             }
             Ast::StructExpression(meta, struct_name, fields) => {

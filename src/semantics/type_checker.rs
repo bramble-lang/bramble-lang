@@ -637,6 +637,9 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = p.clone();
+
+                let canon_path = self.stack.to_path(sym).map(|mut p| {p.push(name); p}).expect("Failed to create canonical path for function");
+                meta.path = canon_path;
                 Ok(RoutineDef{
                     meta: meta.clone(),
                     def: def.clone(),

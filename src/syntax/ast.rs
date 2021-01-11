@@ -99,6 +99,10 @@ impl Path {
         self.path.last()
     }
 
+    pub fn push(&mut self, step: &str) {
+        self.path.push(step.into())
+    }
+
     pub fn iter(&self) -> std::slice::Iter<String> {
         self.path.iter()
     }
@@ -142,6 +146,10 @@ impl Path {
             }
             Ok(Path { path: merged })
         }
+    }
+
+    pub fn to_label(&self) -> String {
+        self.path.join("_")
     }
 }
 
@@ -263,6 +271,39 @@ impl<I> Ast<I> {
     }
 
     pub fn get_metadata(&self) -> &I {
+        use Ast::*;
+        match self {
+            Integer(m, ..)
+            | Boolean(m, ..)
+            | StringLiteral(m, ..)
+            | CustomType(m, ..)
+            | Identifier(m, ..)
+            | IdentifierDeclare(m, ..)
+            | Path(m, ..)
+            | MemberAccess(m, ..)
+            | BinaryOp(m, ..)
+            | UnaryOp(m, ..)
+            | Printi(m, ..)
+            | Printiln(m, ..)
+            | Prints(m, ..)
+            | Printbln(m, ..)
+            | If(m, ..)
+            | ExpressionBlock(m, ..)
+            | Statement(m, ..)
+            | Bind(m, ..)
+            | Mutate(m, ..)
+            | Return(m, ..)
+            | Yield(m, ..)
+            | YieldReturn(m, ..)
+            | RoutineDef{meta: m, ..}
+            | RoutineCall(m, ..)
+            | Module { meta: m, .. }
+            | StructDef(m, ..) => m,
+            StructExpression(m, ..) => m,
+        }
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut I {
         use Ast::*;
         match self {
             Integer(m, ..)
@@ -671,5 +712,22 @@ mod test_path {
         let item = canonized_path.truncate();
         assert_eq!(canonized_path, expected);
         assert_eq!(item, Some("item".into()));
+    }
+
+    #[test]
+    fn test_push_step() {
+        let mut path: Path = vec!["self", "item"].into();
+        path.push("test");
+        
+        let expected = vec!["self", "item", "test"].into();
+        assert_eq!(path, expected);
+    }
+
+    #[test]
+    fn test_to_label() {
+        let path: Path = vec!["self", "item"].into();
+        
+        let expected = "self_item";
+        assert_eq!(path.to_label(), expected);
     }
 }

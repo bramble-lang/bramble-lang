@@ -24,6 +24,11 @@ impl SemanticNode {
         let meta = self.get_metadata();
         &meta.path
     }
+
+    pub fn set_path(&mut self, path: Path) {
+        let mut meta = self.get_metadata_mut();
+        meta.path = path;
+    }
 }
 
 impl std::fmt::Display for SemanticNode {

@@ -283,7 +283,7 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         match cn.0 {
             CompilerNode::Integer(m, _) => {
-                assert_eq!(m, Scope::new(3, scope::Level::Local, m.ty.clone()));
+                assert_eq!(m, Scope::new(3, scope::Level::Local, vec!["root"].into(), m.ty.clone()));
             }
             _ => assert_eq!(true, false),
         }
@@ -307,7 +307,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
-                assert_eq!(m, Scope::new(0, scope::Level::Local, m.ty.clone()));
+                assert_eq!(m, Scope::new(0, scope::Level::Local, vec!["root"].into(), m.ty.clone()));
             }
             _ => assert_eq!(true, false),
         }
@@ -352,7 +352,7 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope::new(2, Level::Local, m.ty.clone()),);
+                assert_eq!(m, Scope::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),);
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
