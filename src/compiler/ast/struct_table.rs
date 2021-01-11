@@ -34,7 +34,7 @@ impl StructTable {
             ast::Type::Bool => Some(4),
             ast::Type::StringLiteral => Some(4),
             ast::Type::Coroutine(_) => Some(4),
-            ast::Type::Custom(name) => self.get(name).map(|st| st.size).flatten(),
+            ast::Type::Custom(name) => self.get(name.last().unwrap()).map(|st| st.size).flatten(),
             ast::Type::FunctionDef(..) => Some(0),
             ast::Type::CoroutineDef(..) => Some(0),
             ast::Type::StructDef(..) => Some(0),
@@ -120,7 +120,7 @@ impl StructTable {
             match ty {
                 ast::Type::I32 => Some(4),
                 ast::Type::Bool => Some(4),
-                ast::Type::Custom(name) => Some(resolved_structs.get(name)?.iter().sum()),
+                ast::Type::Custom(name) => Some(resolved_structs.get(name.last().unwrap())?.iter().sum()),
                 ast::Type::Coroutine(_) => Some(4),
                 _ => None,
             }

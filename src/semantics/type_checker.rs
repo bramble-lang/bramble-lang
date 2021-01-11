@@ -329,12 +329,13 @@ impl<'a> SemanticAnalyzer<'a> {
                 let src = self.traverse(&src, current_func, sym)?;
                 match src.get_type() {
                     Custom(struct_name) => {
-                        let member_ty = self
-                            .lookup(sym, &struct_name)?
+                        let (struct_def, canonical_path) = self.lookup_symbol_by_path(sym, &struct_name)?.ok_or(format!("{} was not found", struct_name))?;
+                        let member_ty = struct_def
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
                         meta.ty = member_ty.clone();
+                        meta.path = canonical_path;
                         Ok(MemberAccess(meta.clone(), Box::new(src), member.clone()))
                     }
                     _ => Err(format!("Type {} does not have members", src.get_type())),
@@ -697,7 +698,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 for (mname, mtype) in members.iter() {
                     match mtype {
                         Custom(ty_name) => {
-                            self.lookup(sym, ty_name).map_err(|e| {
+                            self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
                                 format!("member {}.{} invalid: {}", struct_name, mname, e)
                             })?;
                         }
@@ -715,9 +716,10 @@ impl<'a> SemanticAnalyzer<'a> {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
-                let struct_def = self.lookup(sym, &struct_name)?.ty.clone();
+                let (struct_def, canonical_path) = self.lookup_symbol_by_path(sym, &struct_name)?.ok_or(format!("Could not find struct {}", struct_name))?;
+                let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params =
-                    struct_def.get_members().ok_or("Invalid structure")?.len();
+                    struct_def_ty.get_members().ok_or("Invalid structure")?.len();
                 if params.len() != expected_num_params {
                     return Err(format!(
                         "expected {} parameters but found {}",
@@ -728,10 +730,10 @@ impl<'a> SemanticAnalyzer<'a> {
 
                 let mut resolved_params = vec![];
                 for (pn, pv) in params.iter() {
-                    let param = self.traverse(pv, current_func, sym)?;
-                    let member_ty = struct_def
+                    let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, struct_name))?;
+                    let param = self.traverse(pv, current_func, sym)?;
                     if param.get_type() != *member_ty {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
@@ -745,8 +747,8 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
 
                 let anonymouse_name = format!("!{}_{}", struct_name, meta.id);
-                sym.add(&anonymouse_name, Type::Custom(struct_name.clone()), false)?;
-                meta.ty = Custom(struct_name.clone());
+                meta.ty = Custom(canonical_path);
+                sym.add(&anonymouse_name, meta.ty.clone(), false)?;
                 Ok(StructExpression(
                     meta.clone(),
                     struct_name.clone(),
@@ -1798,7 +1800,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
-                Ok(_) => assert!(result.is_ok()),
+                Ok(_) => {result.unwrap();},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
             }
         }

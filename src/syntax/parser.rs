@@ -228,7 +228,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
         .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
     let params = fn_def_params(stream)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream).ok_or(format!("L{}: Expected type after ->", fn_line))?
+        consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
     } else {
         Type::Unit
     };
@@ -269,7 +269,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
         .ok_or(format!("L{}: Expected identifier after co", co_line))?;
     let params = fn_def_params(stream)?;
     let co_type = match stream.next_if(&Lex::LArrow) {
-        Some(t) => consume_type(stream).ok_or(format!("L{}: Expected type after ->", t.l))?,
+        Some(t) => consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", t.l))?,
         _ => Type::Unit,
     };
 
@@ -727,12 +727,12 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
             None => match struct_init_params(stream)? {
                 Some(params) => Some(Ast::StructExpression(
                     line,
-                    path.last().unwrap().clone(),
+                    path,
                     params.clone(),
                 )),
                 None => {
                     if path.len() > 1 {
-                        Some(Ast::Path(line, path.into()))
+                        Some(Ast::Path(line, path))
                     } else {
                         Some(Ast::Identifier(line, path.last().unwrap().clone()))
                     }
@@ -769,9 +769,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
 fn struct_expression(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LBrace]) {
-        let (line, struct_name) = stream
-            .next_if_id()
-            .expect("CRITICAL: failed to get identifier");
+        let (line, struct_name) = path(stream)?.ok_or("CRITICAL: failed to get identifier")?;
         let fields = struct_init_params(stream)?.ok_or(format!(
             "L{}: Expected valid field assignments in struct expression",
             line
@@ -816,10 +814,10 @@ fn identifier(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn consume_type(stream: &mut TokenStream) -> Option<Type> {
+fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>, String> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
-    match stream.peek() {
+    let ty = match stream.peek() {
         Some(Token {
             l: _,
             s: Lex::Primitive(primitive),
@@ -832,15 +830,18 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
             stream.next();
             ty
         }
-        Some(Token {
+        /*Some(Token {
             l: _,
             s: Lex::Identifier(name),
         }) => {
             let ty = Some(Type::Custom(name.clone()));
             stream.next();
             ty
-        }
-        _ => None,
+        }*/
+        _ => match path(stream)? {
+            Some((_, path)) => Some(Type::Custom(path)),
+            _ => None,
+        },
     }
     .map(|ty| {
         if is_coroutine {
@@ -848,7 +849,8 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
         } else {
             ty
         }
-    })
+    });
+    Ok(ty)
 }
 
 fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
@@ -860,7 +862,7 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
             let id = t[0].s.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let ty = consume_type(stream).ok_or(format!(
+            let ty = consume_type(stream)?.ok_or(format!(
                 "L{}: expected type after : in type declaration",
                 line_value
             ))?;
@@ -1899,17 +1901,17 @@ pub mod tests {
         for (text, expected) in vec![
             (
                 "MyStruct{}",
-                Ast::StructExpression(1, "MyStruct".into(), vec![]),
+                Ast::StructExpression(1, vec!["MyStruct"].into(), vec![]),
             ),
             (
                 "MyStruct{x: 5}",
-                Ast::StructExpression(1, "MyStruct".into(), vec![("x".into(), Ast::Integer(1, 5))]),
+                Ast::StructExpression(1, vec!["MyStruct"].into(), vec![("x".into(), Ast::Integer(1, 5))]),
             ),
             (
                 "MyStruct{x: 5, y: false}",
                 Ast::StructExpression(
                     1,
-                    "MyStruct".into(),
+                    vec!["MyStruct"].into(),
                     vec![
                         ("x".into(), Ast::Integer(1, 5)),
                         ("y".into(), Ast::Boolean(1, false)),
@@ -1920,14 +1922,14 @@ pub mod tests {
                 "MyStruct{x: 5, y: MyStruct2{z:3}}",
                 Ast::StructExpression(
                     1,
-                    "MyStruct".into(),
+                    vec!["MyStruct"].into(),
                     vec![
                         ("x".into(), Ast::Integer(1, 5)),
                         (
                             "y".into(),
                             Ast::StructExpression(
                                 1,
-                                "MyStruct2".into(),
+                                vec!["MyStruct2"].into(),
                                 vec![("z".into(), Ast::Integer(1, 3))],
                             ),
                         ),

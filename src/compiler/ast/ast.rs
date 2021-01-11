@@ -274,6 +274,13 @@ impl CompilerNode {
             _ => Err("Cannot validate parameters: this is not a routine definition (function or coroutine)".into())
         }
     }
+
+    pub fn get_struct(&self, path: &syntax::ast::Path) -> Option<&super::struct_table::StructDefinition> {
+        let mut tail = path.clone();
+        let item = tail.truncate()?;
+        let parent_module = self.go_to(&tail)?;
+        parent_module.get_metadata().get_struct(&item)
+    }
 }
 
 #[cfg(test)]

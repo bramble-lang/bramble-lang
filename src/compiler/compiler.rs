@@ -667,16 +667,17 @@ impl<'a> Compiler<'a> {
 
                 self.traverse(src, current_func, code)?;
 
-                let st = self
+                let struct_def = self.root.get_struct(struct_name).ok_or(format!("Could not find struct definition for {}", struct_name))?;
+                /*let st = self
                     .scope
                     .get_struct(struct_name)
-                    .ok_or(format!("no definition for {} found", struct_name))?;
-                let field_info = st
+                    .ok_or(format!("no definition for {} found", struct_name))?;*/
+                let field_info = struct_def
                     .get_fields()
                     .iter()
                     .find(|(n, ..)| n == member)
                     .ok_or(format!("member {} not found on {}", member, struct_name))?;
-                let field_offset = st.get_offset_of(member).ok_or(format!(
+                let field_offset = struct_def.get_offset_of(member).ok_or(format!(
                     "No field offset found for {}.{}",
                     struct_name, member
                 ))?;
@@ -708,17 +709,18 @@ impl<'a> Compiler<'a> {
     fn struct_exression(
         &mut self,
         current_func: &String,
-        struct_name: &str,
+        struct_name: &crate::syntax::ast::Path,
         field_values: &'a Vec<(String, CompilerNode)>,
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
-        let st = self
+        let struct_def = self.root.get_struct(struct_name).ok_or(format!("{} was not found", struct_name))?;
+        /*let st = self
             .scope
             .get_struct(struct_name)
-            .ok_or(format!("no definition for {} found", struct_name))?;
-        let struct_sz = st.size.unwrap();
-        let field_info = st
+            .ok_or(format!("no definition for {} found", struct_name))?;*/
+        let struct_sz = struct_def.size.unwrap();
+        let field_info = struct_def
             .get_fields()
             .iter()
             .map(|(n, _, o)| (n.clone(), o.unwrap()))
@@ -728,7 +730,7 @@ impl<'a> Compiler<'a> {
             return Err(format!(
                 "{} expected {} fields but found {}",
                 struct_name,
-                st.get_fields().len(),
+                struct_def.get_fields().len(),
                 field_values.len()
             ));
         }
@@ -855,8 +857,8 @@ impl<'a> Compiler<'a> {
         self.traverse(exp, current_func, &mut code)?;
         match meta.ty() {
             Type::Custom(struct_name) => {
-                let st = self
-                    .scope
+
+                let st = self.root
                     .get_struct(struct_name)
                     .ok_or(format!("no definition for {} found", struct_name))?;
                 let st_sz = st
@@ -952,10 +954,10 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn pop_struct_into(&self, struct_name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
+    fn pop_struct_into(&self, struct_name: &crate::syntax::ast::Path, id_offset: u32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
-            .scope
+            .root
             .get_struct(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
         for (field_name, field_ty, _) in ty_def.get_fields().iter().rev() {
@@ -984,17 +986,18 @@ impl<'a> Compiler<'a> {
 
     fn copy_struct_into(
         &self,
-        struct_name: &str,
+        struct_name: &crate::syntax::ast::Path,
         dst_reg: Reg32,
         dst_offset: i32,
         src_reg: Reg,
         src_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        let ty_def = self
+        let ty_def = self.root.get_struct(struct_name).ok_or(format!("Could nto find definition for {}", struct_name))?;
+        /*let ty_def = self
             .scope
             .get_struct(struct_name)
-            .ok_or(format!("Could not find definition for {}", struct_name))?;
+            .ok_or(format!("Could not find definition for {}", struct_name))?;*/
         let struct_sz = ty_def
             .size
             .ok_or(format!("struct {} has an unknown size", struct_name))?;
