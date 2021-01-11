@@ -531,8 +531,8 @@ impl<'a> Compiler<'a> {
                     jmp @runtime_yield_return;
                 }};
             }
-            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
-                let co = co.last().unwrap();
+            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
+                let co = co_path.last().unwrap();
                 let total_offset = self
                     .scope
                     .get_routine_allocation(co)
@@ -541,6 +541,7 @@ impl<'a> Compiler<'a> {
                 self.validate_routine_call(co, params)?;
 
                 assembly! {(code) {
+                    ; {format!("Call {}", co_path)}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
@@ -588,10 +589,10 @@ impl<'a> Compiler<'a> {
                     ret;
                 }};
             }
-            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_name, params) => {
+            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                let fn_name = fn_name.last().unwrap();
+                let fn_name = fn_path.last().unwrap();
                 self.validate_routine_call(fn_name, params)?;
                 self.scope.find_func(fn_name);
 
@@ -610,6 +611,7 @@ impl<'a> Compiler<'a> {
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
                 assembly! {(code) {
+                    ; {{format!("Call {}", fn_path)}}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
                     call @{fn_name};
