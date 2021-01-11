@@ -1,0 +1,12 @@
+fn my_main() {
+    let ms: my_mod::MyStruct := my_mod::MyStruct{a: 5};
+    printiln ms.a;
+    
+    return;
+}
+
+mod my_mod {
+    struct MyStruct {
+        a: i32,
+    }
+}

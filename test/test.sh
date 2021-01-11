@@ -78,4 +78,8 @@ then
     run_test "structs/errors/field"
     run_test "structs/errors/missing_member"
     run_test "structs/errors/type_mismatch"
+
+    run_test "modules/simple"
+    run_test "modules/coroutine"
+    run_test "modules/nested"
 fi

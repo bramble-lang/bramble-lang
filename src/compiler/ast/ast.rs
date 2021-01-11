@@ -254,11 +254,31 @@ impl CompilerNode {
             }
         }
     }
+
+    pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String>{
+        match self {
+            Ast::RoutineDef{..} => {
+                let expected_params = self.get_params().ok_or(format!(
+                    "Critical: node for {} does not have a params field",
+                    self.root_str()
+                ))?;
+                if params.len() == expected_params.len() {
+                    Ok(())
+                } else {
+                    Err(format!("Critical: expected {} but go {} parameters for {}",
+                    expected_params.len(),
+                    params.len(),
+                    self.root_str()))
+                }
+            },
+            _ => Err("Cannot validate parameters: this is not a routine definition (function or coroutine)".into())
+        }
+    }
 }
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::compiler::ast::scope;
+    use crate::{compiler::ast::scope, syntax::ast::Path};
     use crate::semantics::symbol_table;
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
@@ -275,6 +295,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: vec!["root"].into(),
             },
             0,
         );
@@ -282,7 +303,7 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         match cn.0 {
             CompilerNode::Integer(m, _) => {
-                assert_eq!(m, Scope::new(3, scope::Level::Local, m.ty.clone()));
+                assert_eq!(m, Scope::new(3, scope::Level::Local, vec!["root"].into(), m.ty.clone()));
             }
             _ => assert_eq!(true, false),
         }
@@ -296,6 +317,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: vec!["root"].into(),
             },
             0,
         );
@@ -305,7 +327,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
-                assert_eq!(m, Scope::new(0, scope::Level::Local, m.ty.clone()));
+                assert_eq!(m, Scope::new(0, scope::Level::Local, vec!["root"].into(), m.ty.clone()));
             }
             _ => assert_eq!(true, false),
         }
@@ -319,6 +341,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: vec!["root"].into(),
             },
             1,
         );
@@ -328,6 +351,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: vec!["root"].into(),
             },
             2,
         );
@@ -337,6 +361,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                path: vec!["root"].into(),
             },
             BinaryOperator::Mul,
             Box::new(sn1),
@@ -347,7 +372,7 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope::new(2, Level::Local, m.ty.clone()),);
+                assert_eq!(m, Scope::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),);
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
@@ -379,6 +404,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             vec![],
         );
@@ -408,6 +434,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             vec![],
         );
@@ -421,6 +448,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             vec![sn],
         );
@@ -460,6 +488,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -505,6 +534,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -522,6 +552,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "outer_func".into(),
@@ -567,6 +598,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
+                path: Path::new(),
             },
             def: RoutineDef::Coroutine,
             name: "coroutine".into(),

@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOperator, UnaryOperator};
+use crate::ast::{Ast, Ast::*, BinaryOperator, UnaryOperator};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
 use crate::syntax::ast::Type;
@@ -207,23 +207,26 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    fn lookup_path(
+    fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
         path: &ast::Path,
-    ) -> Result<Option<&'a Symbol>, String> {
+    ) -> Result<Option<(&'a Symbol, ast::Path)>, String> {
+        let current_path = self.stack.to_path(sym).expect("A valid path is expected");
+        let canon_path = path.to_canonical(&current_path)?;
         if path.len() > 1 {
-            let current_path = self.stack.to_path(sym).expect("A valid path is expected");
-            let mut canon_path = path.to_canonical(&current_path)?;
-            let item = canon_path.truncate().unwrap();
+            let mut trunc_canon_path = canon_path.clone();
+            let item = trunc_canon_path.truncate().unwrap();
             let node = self
                 .root
-                .go_to(&canon_path)
+                .go_to(&trunc_canon_path)
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
-            Ok(node.get_metadata().sym.get(&item))
-        } else {
+            Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
+        } else if path.len() == 1 {
             let item = &path[0];
-            Ok(sym.get(item).or(self.stack.get(item)))
+            Ok(sym.get(item).or(self.stack.get(item)).map(|i| (i, canon_path)))
+        } else {
+            Err("empty path passed to lookup_path".into())
         }
     }
 
@@ -279,22 +282,21 @@ impl<'a> SemanticAnalyzer<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode, String> {
-        use ast::Ast::*;
         match &ast {
             &Integer(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = I32;
                 Ok(Integer(meta, *v))
             }
-            &Boolean(meta, v) => {
+            Boolean(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Bool;
                 Ok(Boolean(meta.clone(), *v))
             }
-            &StringLiteral(meta, v) => {
+            &Ast::StringLiteral(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = ast::Type::StringLiteral;
-                Ok(StringLiteral(meta.clone(), v.clone()))
+                Ok(Ast::StringLiteral(meta.clone(), v.clone()))
             }
             &CustomType(meta, name) => {
                 let mut meta = meta.clone();
@@ -510,7 +512,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = Unit;
                 Ok(Statement(meta.clone(), Box::new(stmt)))
             }
-            &RoutineCall(meta, call, fname, params) => {
+            &RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -520,27 +522,26 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     resolved_params.push(ty);
                 }
-                let symbol = self.lookup_path(sym, fname)?;
+                let (symbol, canon_path) = self.lookup_symbol_by_path(sym, routine_path)?.ok_or(format!("function {} not declared", routine_path))?;
 
                 let (expected_param_tys, ret_ty) = match symbol {
-                    Some(Symbol {
+                    Symbol {
                         ty: Type::FunctionDef(pty, rty),
                         ..
-                    }) if *call == crate::syntax::ast::RoutineCall::Function => (pty, *rty.clone()),
-                    Some(Symbol {
+                    } if *call == crate::syntax::ast::RoutineCall::Function => (pty, *rty.clone()),
+                    Symbol {
                         ty: Type::CoroutineDef(pty, rty),
                         ..
-                    }) if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
+                    } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
                         (pty, Type::Coroutine(rty.clone()))
                     }
-                    Some(_) => return Err(format!("{:?} found but was not a function", fname)),
-                    None => return Err(format!("function {:?} not declared", fname)),
+                    _ => return Err(format!("{} found but was not a function", routine_path)),
                 };
 
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
                         "Incorrect number of parameters passed to routine: {}",
-                        fname
+                        routine_path
                     ))
                 } else {
                     let z = resolved_params.iter().zip(expected_param_tys.iter());
@@ -552,13 +553,13 @@ impl<'a> SemanticAnalyzer<'a> {
                         Ok(RoutineCall(
                             meta.clone(),
                             *call,
-                            fname.clone(),
+                            canon_path,
                             resolved_params,
                         ))
                     } else {
                         Err(format!(
                             "One or more parameters had mismatching types for function {}",
-                            fname
+                            routine_path
                         ))
                     }
                 }
@@ -636,6 +637,9 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = p.clone();
+
+                let canon_path = self.stack.to_path(sym).map(|mut p| {p.push(name); p}).expect("Failed to create canonical path for function");
+                meta.path = canon_path;
                 Ok(RoutineDef{
                     meta: meta.clone(),
                     def: def.clone(),
@@ -687,7 +691,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     structs: resolved_structs,
                 })
             }
-            &StructDef(meta, struct_name, members) => {
+            &Ast::StructDef(meta, struct_name, members) => {
                 let mut meta = meta.clone();
                 // Check the type of each member
                 for (mname, mtype) in members.iter() {
@@ -701,7 +705,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
                 meta.ty = Unit;
-                Ok(StructDef(
+                Ok(Ast::StructDef(
                     meta.clone(),
                     struct_name.clone(),
                     members.clone(),
@@ -813,7 +817,7 @@ mod tests {
         current_func: &Option<String>,
         scope: &Scope,
     ) -> Result<SemanticNode, String> {
-        let mut sym = SymbolTable::new();
+        let mut sym = SymbolTable::new_module("root");
         match current_func {
             Some(cf) => {
                 for (vname, mutable, vty) in scope

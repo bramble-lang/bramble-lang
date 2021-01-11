@@ -1,4 +1,4 @@
-use crate::{semantics::semanticnode::SemanticMetadata, syntax::ast};
+use crate::{semantics::semanticnode::SemanticMetadata, syntax::ast::{self, Path}};
 
 use super::{
     struct_table::{StructDefinition, StructTable},
@@ -24,10 +24,11 @@ pub struct Scope {
     pub(super) ty: ast::Type,
     pub(super) symbols: SymbolTable,
     pub(super) structs: StructTable,
+    pub(super) canon_path: Path,
 }
 
 impl Scope {
-    pub fn new(id: u32, level: Level, ty: ast::Type) -> Scope {
+    pub fn new(id: u32, level: Level, canon_path: Path, ty: ast::Type) -> Scope {
         Scope {
             id,
             line: 0,
@@ -35,6 +36,7 @@ impl Scope {
             ty,
             symbols: SymbolTable::new(),
             structs: StructTable::new(),
+            canon_path,
         }
     }
 
@@ -73,6 +75,10 @@ impl Scope {
         &self.ty
     }
 
+    pub fn canon_path(&self) -> &Path {
+        &self.canon_path
+    }
+
     pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
         self.structs.size_of(ty)
     }
@@ -83,7 +89,7 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(m.id, Level::Local, m.ty.clone());
+        let mut scope = Scope::new(m.id, Level::Local, m.path.clone(), m.ty.clone());
         scope.line = m.ln;
         for s in m.sym.table().iter() {
             layout.offset =
@@ -103,6 +109,7 @@ impl Scope {
                 next_label: 0,
                 allocation: 0,
             },
+            m.path.clone(),
             m.ty.clone(),
         );
         scope.line = m.ln;
@@ -130,7 +137,7 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(m.id, Level::Module { name: name.into() }, m.ty.clone());
+        let mut scope = Scope::new(m.id, Level::Module { name: name.into() }, m.path.clone(), m.ty.clone());
         scope.line = m.ln;
         for s in m.sym.table().iter() {
             layout.offset =

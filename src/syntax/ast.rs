@@ -88,12 +88,19 @@ pub struct Path {
 }
 
 impl Path {
+    pub fn new() -> Path {
+        Path{path: vec![]}
+    }
     pub fn len(&self) -> usize {
         self.path.len()
     }
 
     pub fn last(&self) -> Option<&String> {
         self.path.last()
+    }
+
+    pub fn push(&mut self, step: &str) {
+        self.path.push(step.into())
     }
 
     pub fn iter(&self) -> std::slice::Iter<String> {
@@ -139,6 +146,10 @@ impl Path {
             }
             Ok(Path { path: merged })
         }
+    }
+
+    pub fn to_label(&self) -> String {
+        self.path.join("_")
     }
 }
 
@@ -292,6 +303,39 @@ impl<I> Ast<I> {
         }
     }
 
+    pub fn get_metadata_mut(&mut self) -> &mut I {
+        use Ast::*;
+        match self {
+            Integer(m, ..)
+            | Boolean(m, ..)
+            | StringLiteral(m, ..)
+            | CustomType(m, ..)
+            | Identifier(m, ..)
+            | IdentifierDeclare(m, ..)
+            | Path(m, ..)
+            | MemberAccess(m, ..)
+            | BinaryOp(m, ..)
+            | UnaryOp(m, ..)
+            | Printi(m, ..)
+            | Printiln(m, ..)
+            | Prints(m, ..)
+            | Printbln(m, ..)
+            | If(m, ..)
+            | ExpressionBlock(m, ..)
+            | Statement(m, ..)
+            | Bind(m, ..)
+            | Mutate(m, ..)
+            | Return(m, ..)
+            | Yield(m, ..)
+            | YieldReturn(m, ..)
+            | RoutineDef{meta: m, ..}
+            | RoutineCall(m, ..)
+            | Module { meta: m, .. }
+            | StructDef(m, ..) => m,
+            StructExpression(m, ..) => m,
+        }
+    }
+
     /// If a node is a function or a coroutine this will return its parameter vector.  If
     /// the node is not a function or coroutine, this will return None.
     pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
@@ -372,6 +416,16 @@ impl<I> Ast<I> {
                     .iter()
                     .find(|s| s.get_name().map_or(false, |n| n == name))),
             _ => None,
+        }
+    }
+
+    /// Returns an error if the current node is not a routine node.
+    /// Useful in the Translation layer or the Semantic layer for validating
+    /// That paths and identifiers are associated with valid routines.
+    pub fn is_routine_def(&self) -> Result<&Ast<I>, String> {
+        match self {
+            Ast::RoutineDef{..} => Ok(self),
+            _ => Err(format!("Expected routine, but was {}", self.root_str()))
         }
     }
 }
@@ -668,5 +722,22 @@ mod test_path {
         let item = canonized_path.truncate();
         assert_eq!(canonized_path, expected);
         assert_eq!(item, Some("item".into()));
+    }
+
+    #[test]
+    fn test_push_step() {
+        let mut path: Path = vec!["self", "item"].into();
+        path.push("test");
+        
+        let expected = vec!["self", "item", "test"].into();
+        assert_eq!(path, expected);
+    }
+
+    #[test]
+    fn test_to_label() {
+        let path: Path = vec!["self", "item"].into();
+        
+        let expected = "self_item";
+        assert_eq!(path.to_label(), expected);
     }
 }

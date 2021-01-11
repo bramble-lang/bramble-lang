@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_find_symbol_in_current_scope() {
-        let mut scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         scope.insert("x", 4, 4);
         let node = CompilerNode::ExpressionBlock(scope, vec![]);
         let mut stack = ScopeStack::new();
@@ -177,11 +177,11 @@ mod tests {
     fn test_find_symbol_in_outer_scope() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
-        let inner_scope = Scope::new(0, Level::Local, Type::Unit);
+        let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
 
@@ -195,11 +195,11 @@ mod tests {
     fn test_find_symbol_defined_in_both_scopes() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
-        let mut inner_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 16);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
@@ -214,11 +214,11 @@ mod tests {
     fn test_find_symbol_does_not_exist() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
-        let inner_scope = Scope::new(0, Level::Local, Type::Unit);
+        let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
 
@@ -229,7 +229,7 @@ mod tests {
     fn test_find_symbol_does_not_pass_function() {
         let mut stack = ScopeStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("nope", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
         stack.push(&outer_node);
@@ -239,7 +239,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         fun_scope.insert("y", 4, 4);
@@ -254,7 +254,7 @@ mod tests {
         };
         stack.push(&outer_node);
 
-        let mut inner_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
         stack.push(&inner_node);
@@ -273,7 +273,8 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
-            },
+            }, 
+            vec!["root"].into(),
             Type::Unit,
         );
         fun_scope.insert("y", 4, 0);
@@ -287,7 +288,7 @@ mod tests {
             body: vec![],
         };
 
-        let mut module_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("func", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,
@@ -304,7 +305,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         let fun2_node = CompilerNode::RoutineDef{
@@ -341,7 +342,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         cor_scope.insert("y", 4, 20);
@@ -355,7 +356,7 @@ mod tests {
             body: vec![],
         };
 
-        let mut module_scope = Scope::new(0, Level::Local, Type::Unit);
+        let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("cor", 0, 0);
         let module_node = CompilerNode::Module {
             meta: module_scope,
@@ -372,7 +373,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         let fun2_node = CompilerNode::RoutineDef{
@@ -405,7 +406,7 @@ mod tests {
             0,
             Level::Module {
                 name: "root".into(),
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         module_scope.insert("cor", 0, 0);
@@ -431,7 +432,7 @@ mod tests {
             0,
             Level::Module {
                 name: "root".into(),
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         module_scope.insert("cor", 0, 0);
@@ -450,7 +451,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         let fun2_node = CompilerNode::RoutineDef{
@@ -475,7 +476,7 @@ mod tests {
             0,
             Level::Module {
                 name: "root".into(),
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         let module_node = CompilerNode::Module {
@@ -492,7 +493,7 @@ mod tests {
             0,
             Level::Module {
                 name: "inner".into(),
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         let module2_node = CompilerNode::Module {
@@ -510,7 +511,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            },
+            }, vec!["root"].into(),
             Type::Unit,
         );
         let fun2_node = CompilerNode::RoutineDef{

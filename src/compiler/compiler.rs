@@ -28,6 +28,7 @@ pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
     string_pool: StringPool,
+    root: &'a CompilerNode,
 }
 
 impl<'a> Compiler<'a> {
@@ -56,6 +57,7 @@ impl<'a> Compiler<'a> {
             code: vec![],
             scope: ScopeStack::new(),
             string_pool,
+            root: &compiler_ast,
         };
 
         let global_func = "".into();
@@ -81,7 +83,7 @@ impl<'a> Compiler<'a> {
                     sub %eax, [@stack_size];
                     mov [@next_stack_addr], %eax;
 
-                    call @my_main;
+                    call @root_my_main;
 
                     mov %esp, %ebp;
                     pop %ebp;
@@ -491,15 +493,21 @@ impl<'a> Compiler<'a> {
                 }}
             }
             Ast::Module {
+                meta: _,
+                name: _,
+                modules,
                 functions,
                 coroutines,
-                ..
+                structs: _,
             } => {
                 for f in functions.iter() {
                     self.traverse(f, current_func, code)?;
                 }
                 for co in coroutines.iter() {
                     self.traverse(co, current_func, code)?;
+                }
+                for m in modules.iter() {
+                    self.traverse(m, current_func, code)?;
                 }
             }
             Ast::Return(_, ref exp) => {
@@ -517,9 +525,10 @@ impl<'a> Compiler<'a> {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
-            Ast::RoutineDef{def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
+            Ast::RoutineDef{meta, def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
                 assembly! {(code) {
-                    @{fn_name}:
+                    @{meta.canon_path().to_label()}:
+                    ; {{format!("Define {}", meta.canon_path())}}
                 }};
 
                 // Prepare stack frame for this function
@@ -531,20 +540,19 @@ impl<'a> Compiler<'a> {
                     jmp @runtime_yield_return;
                 }};
             }
-            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
-                let co = co.last().unwrap();
-                let total_offset = self
-                    .scope
-                    .get_routine_allocation(co)
-                    .ok_or(format!("Coroutine {} has not allocation size", co))?;
+            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
+                let co_def = self.root.go_to(co_path).expect("Could not find coroutine").is_routine_def()?;
+                let total_offset = co_def.get_metadata().local_allocation()
+                    .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
-                self.validate_routine_call(co, params)?;
+                co_def.validate_parameters(params)?;
 
                 assembly! {(code) {
+                    ; {format!("Call {}", co_path)}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
-                    lea %eax, [@{co}];
+                    lea %eax, [@{co_path.to_label()}];
                     mov %edi, {total_offset};
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
@@ -553,8 +561,7 @@ impl<'a> Compiler<'a> {
 
                     ; "move parameters into the stack frame of the coroutine"
                     {{{
-                        let codef = self.scope.find_coroutine(co).ok_or(format!("Could not find {} when looking up parameter offsets", co))?;
-                        self.move_params_into_stackframe(codef, &co_param_registers)?
+                        self.move_params_into_stackframe(co_def, &co_param_registers)?
                     }}}
                     ; "leave coroutine's stack frame"
                     pop %ebp;
@@ -567,7 +574,8 @@ impl<'a> Compiler<'a> {
                 };
 
                 assembly! {(code) {
-                @{fn_name}:
+                @{scope.canon_path().to_label()}:
+                    ; {{format!("Define {}", scope.canon_path())}}
                     ;"Prepare stack frame for this function"
                     push %ebp;
                     mov %ebp, %esp;
@@ -588,12 +596,11 @@ impl<'a> Compiler<'a> {
                     ret;
                 }};
             }
-            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_name, params) => {
+            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                let fn_name = fn_name.last().unwrap();
-                self.validate_routine_call(fn_name, params)?;
-                self.scope.find_func(fn_name);
+                let fn_def = self.root.go_to(fn_path).ok_or(format!("Could not find: {}", fn_path))?.is_routine_def()?;
+                fn_def.validate_parameters(params)?;
 
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
@@ -610,9 +617,10 @@ impl<'a> Compiler<'a> {
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
                 assembly! {(code) {
+                    ; {{format!("Call {}", fn_path)}}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
-                    call @{fn_name};
+                    call @{fn_path.to_label()};
                 }};
             }
             Ast::StructExpression(meta, struct_name, fields) => {
@@ -1102,32 +1110,5 @@ impl<'a> Compiler<'a> {
             }};
         }
         Ok(code)
-    }
-
-    fn validate_routine_call(
-        &self,
-        routine_name: &str,
-        params: &Vec<CompilerNode>,
-    ) -> Result<(), String> {
-        let routine = self
-            .scope
-            .find_func(routine_name)
-            .or_else(|| self.scope.find_coroutine(routine_name))
-            .expect("Could not find routine in any symbol table in the scope stack");
-        let expected_params = routine.get_params().ok_or(format!(
-            "Critical: node for {} does not have a params field",
-            routine_name
-        ))?;
-
-        let expected_num_params = expected_params.len();
-        let got_num_params = params.len();
-        if expected_num_params != got_num_params {
-            Err(format!(
-                "Compiler: expected {} but got {} parameters for function/coroutine `{}`",
-                expected_num_params, got_num_params, routine_name
-            ))
-        } else {
-            Ok(())
-        }
     }
 }
