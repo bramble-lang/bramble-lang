@@ -695,18 +695,20 @@ fn mutate(stream: &mut TokenStream) -> PResult {
 fn co_init(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     match stream.next_if(&Lex::Init) {
-        Some(token) => match stream.next_if_id() {
-            Some((l, id)) => {
-                let params = fn_call_params(stream)?
-                    .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Ast::RoutineCall(
-                    l,
-                    RoutineCall::CoroutineInit,
-                    vec![id].into(),
-                    params,
-                )))
+        Some(token) => {
+                match path(stream)? {
+                Some((l, path)) => {
+                    let params = fn_call_params(stream)?
+                        .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
+                    Ok(Some(Ast::RoutineCall(
+                        l,
+                        RoutineCall::CoroutineInit,
+                        path,
+                        params,
+                    )))
+                }
+                None => Err(format!("L{}: expected identifier after init", token.l)),
             }
-            None => Err(format!("L{}: expected identifier after init", token.l)),
         },
         _ => Ok(None),
     }
@@ -1632,6 +1634,37 @@ pub mod tests {
                             1,
                             RoutineCall::CoroutineInit,
                             vec!["c"].into(),
+                            vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                        ))
+                    );
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_coroutine_path_init() {
+        let text = "let x:co i32 := init a::b::c(1, 2);";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, false, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Type::Coroutine(Box::new(Type::I32)));
+                    assert_eq!(
+                        *exp,
+                        Box::new(Ast::RoutineCall(
+                            1,
+                            RoutineCall::CoroutineInit,
+                            vec!["a", "b", "c"].into(),
                             vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
                         ))
                     );

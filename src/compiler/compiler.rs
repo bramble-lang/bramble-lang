@@ -528,7 +528,6 @@ impl<'a> Compiler<'a> {
             Ast::RoutineDef{meta, def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
                 assembly! {(code) {
                     @{meta.canon_path().to_label()}:
-                    //@{fn_name}:
                     ; {{format!("Define {}", meta.canon_path())}}
                 }};
 
@@ -542,13 +541,11 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
-                let co_name = co_path.last().unwrap();
-                let total_offset = self
-                    .scope
-                    .get_routine_allocation(co_name)
+                let co_def = self.root.go_to(co_path).expect("Could not find coroutine");
+                let total_offset = co_def.get_metadata().local_allocation()
                     .ok_or(format!("Coroutine {} has not allocation size", co_path))?;
 
-                self.validate_routine_call(co_name, params)?;
+                self.validate_routine_call_by_path(co_path, params)?;
 
                 assembly! {(code) {
                     ; {format!("Call {}", co_path)}
@@ -564,8 +561,7 @@ impl<'a> Compiler<'a> {
 
                     ; "move parameters into the stack frame of the coroutine"
                     {{{
-                        let codef = self.scope.find_coroutine(co_name).ok_or(format!("Could not find {} when looking up parameter offsets", co_path))?;
-                        self.move_params_into_stackframe(codef, &co_param_registers)?
+                        self.move_params_into_stackframe(co_def, &co_param_registers)?
                     }}}
                     ; "leave coroutine's stack frame"
                     pop %ebp;
@@ -579,7 +575,6 @@ impl<'a> Compiler<'a> {
 
                 assembly! {(code) {
                 @{scope.canon_path().to_label()}:
-                //@{fn_name}:
                     ; {{format!("Define {}", scope.canon_path())}}
                     ;"Prepare stack frame for this function"
                     push %ebp;
@@ -1116,33 +1111,6 @@ impl<'a> Compiler<'a> {
             }};
         }
         Ok(code)
-    }
-
-    fn validate_routine_call(
-        &self,
-        routine_name: &str,
-        params: &Vec<CompilerNode>,
-    ) -> Result<(), String> {
-        let routine = self
-            .scope
-            .find_func(routine_name)
-            .or_else(|| self.scope.find_coroutine(routine_name))
-            .expect(&format!("Could not find routine in any symbol table in the scope stack: {}", routine_name));
-        let expected_params = routine.get_params().ok_or(format!(
-            "Critical: node for {} does not have a params field",
-            routine_name
-        ))?;
-
-        let expected_num_params = expected_params.len();
-        let got_num_params = params.len();
-        if expected_num_params != got_num_params {
-            Err(format!(
-                "Compiler: expected {} but got {} parameters for function/coroutine `{}`",
-                expected_num_params, got_num_params, routine_name
-            ))
-        } else {
-            Ok(())
-        }
     }
 
     fn validate_routine_call_by_path(

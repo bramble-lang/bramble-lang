@@ -1,11 +1,5 @@
 fn my_main() {
-    let x:i32 := my_mod::add(3, 2);
-    printiln x;
-
-    let b:bool := my_mod::my_bool();
-    printbln b;
-
-    let c: co i32 := init my_mod::count();
+    let c: co i32 := init my_mod::count(3);
     printiln (yield c);
     printiln (yield c);
     printiln (yield c);
@@ -23,9 +17,9 @@ mod my_mod {
         return a + b;
     }
 
-    co count() -> i32 {
-        yret 1;
-        yret 2;
-        return 3;
+    co count(start: i32) -> i32 {
+        yret start + 1;
+        yret start + 2;
+        return start + 3;
     }
 }
