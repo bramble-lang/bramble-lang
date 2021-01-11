@@ -182,12 +182,6 @@ impl From<Vec<&str>> for Path {
     }
 }
 
-impl From<Path> for String {
-    fn from(path: Path) -> Self {
-        path.path.join("::")
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
