@@ -207,7 +207,7 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    fn lookup_path(
+    fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
         path: &ast::Path,
@@ -512,7 +512,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = Unit;
                 Ok(Statement(meta.clone(), Box::new(stmt)))
             }
-            &RoutineCall(meta, call, fname, params) => {
+            &RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -522,7 +522,7 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     resolved_params.push(ty);
                 }
-                let (symbol, canon_path) = self.lookup_path(sym, fname)?.ok_or(format!("function {} not declared", fname))?;
+                let (symbol, canon_path) = self.lookup_symbol_by_path(sym, routine_path)?.ok_or(format!("function {} not declared", routine_path))?;
 
                 let (expected_param_tys, ret_ty) = match symbol {
                     Symbol {
@@ -535,13 +535,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
                         (pty, Type::Coroutine(rty.clone()))
                     }
-                    _ => return Err(format!("{:?} found but was not a function", fname)),
+                    _ => return Err(format!("{} found but was not a function", routine_path)),
                 };
 
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
                         "Incorrect number of parameters passed to routine: {}",
-                        fname
+                        routine_path
                     ))
                 } else {
                     let z = resolved_params.iter().zip(expected_param_tys.iter());
@@ -559,7 +559,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     } else {
                         Err(format!(
                             "One or more parameters had mismatching types for function {}",
-                            fname
+                            routine_path
                         ))
                     }
                 }
