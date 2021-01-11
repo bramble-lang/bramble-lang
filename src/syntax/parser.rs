@@ -539,7 +539,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
+fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -698,7 +698,7 @@ fn co_init(stream: &mut TokenStream) -> PResult {
         Some(token) => {
                 match path(stream)? {
                 Some((l, path)) => {
-                    let params = fn_call_params(stream)?
+                    let params = routine_call_params(stream)?
                         .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
                     Ok(Some(Ast::RoutineCall(
                         l,
@@ -729,7 +729,7 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
 fn function_call_or_variable2(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     let s: Option<Ast<u32>> = match path(stream)? {
-        Some((line, path)) => match fn_call_params(stream)? {
+        Some((line, path)) => match routine_call_params(stream)? {
             Some(params) => Some(Ast::RoutineCall(
                 line,
                 RoutineCall::Function,
@@ -765,7 +765,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
         let (line, fn_name) = stream
             .next_if_id()
             .expect("CRITICAL: failed to get identifier");
-        let params = fn_call_params(stream)?
+        let params = routine_call_params(stream)?
             .ok_or(format!("L{}: expected parameters in function call", line))?;
         Ok(Some(Ast::RoutineCall(
             line,
