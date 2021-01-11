@@ -545,7 +545,7 @@ impl<'a> Compiler<'a> {
                 let total_offset = co_def.get_metadata().local_allocation()
                     .ok_or(format!("Coroutine {} has not allocation size", co_path))?;
 
-                self.validate_routine_call_by_path(co_path, params)?;
+                co_def.validate_parameters(params)?;
 
                 assembly! {(code) {
                     ; {format!("Call {}", co_path)}
@@ -599,9 +599,8 @@ impl<'a> Compiler<'a> {
             Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                let fn_name = fn_path.last().unwrap();
-                self.validate_routine_call_by_path(fn_path, params)?;
-                self.scope.find_func(fn_name);
+                let fn_def = self.root.go_to(fn_path).ok_or(format!("Could not find: {}", fn_path))?;
+                fn_def.validate_parameters(params)?;
 
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
@@ -1111,28 +1110,5 @@ impl<'a> Compiler<'a> {
             }};
         }
         Ok(code)
-    }
-
-    fn validate_routine_call_by_path(
-        &self,
-        routine_path: &crate::syntax::ast::Path,
-        params: &Vec<CompilerNode>,
-    ) -> Result<(), String> {
-        let routine = self.root.go_to(routine_path).ok_or(format!("Function {} was not found", routine_path))?;
-        let expected_params = routine.get_params().ok_or(format!(
-            "Critical: node for {} does not have a params field",
-            routine_path
-        ))?;
-
-        let expected_num_params = expected_params.len();
-        let got_num_params = params.len();
-        if expected_num_params != got_num_params {
-            Err(format!(
-                "Compiler: expected {} but got {} parameters for function/coroutine `{}`",
-                expected_num_params, got_num_params, routine_path
-            ))
-        } else {
-            Ok(())
-        }
     }
 }

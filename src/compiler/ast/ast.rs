@@ -254,6 +254,26 @@ impl CompilerNode {
             }
         }
     }
+
+    pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String>{
+        match self {
+            Ast::RoutineDef{..} => {
+                let expected_params = self.get_params().ok_or(format!(
+                    "Critical: node for {} does not have a params field",
+                    self.root_str()
+                ))?;
+                if params.len() == expected_params.len() {
+                    Ok(())
+                } else {
+                    Err(format!("Critical: expected {} but go {} parameters for {}",
+                    expected_params.len(),
+                    params.len(),
+                    self.root_str()))
+                }
+            },
+            _ => Err("Cannot validate parameters: this is not a routine definition (function or coroutine)".into())
+        }
+    }
 }
 
 #[cfg(test)]
