@@ -25,3 +25,11 @@ Unresolved -> Resolved
 ```
 The Unresolved state is when the StructTable has been populated with all the struct definitions in the program, but the memory layouts and sizes of
 the structs have not been resolved.  `Resolved` is when the structs have all successfully had their layouts and sizes resolved.
+
+The SymbolTable will need to take an AST, traverse the AST and put each StructDef found into the SymbolTable (by its canonical name).  This will
+output an `Unresolved` symbol table (or unrealized?).  Then a second function will take the Unresolved table, and attempt to resolve the layout
+and sizes of all the structs that are defined within: if this is not possible it will return an error, otherwise it returns a Resolved table.
+The Resolved table is what the compiler will use to look up struct definition information.
+
+I want to use the same phantom type concept to create `Path` and `CanonicalPath` types so that I can make sure that all Paths passed to the compiler
+are canonical.  This will be supported by allowing only a single function to generate the `CanonicalPath` type from a `Path`.
