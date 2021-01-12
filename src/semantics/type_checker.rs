@@ -220,6 +220,14 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
+    fn params_to_canonical(&self, sym: &'a SymbolTable, params: &Vec<(String, Type)>) -> Result<Vec<(String, Type)>, String> {
+        let mut canonical_params = vec![];
+        for (name, ty) in params.iter() {
+            canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
+        }
+        Ok(canonical_params)
+    }
+
     fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
@@ -665,10 +673,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 self.stack.pop();
                 meta.ty = self.type_to_canonical(sym, p)?;
 
-                let mut canonical_params = vec![];
-                for (name, ty) in params.iter() {
-                    canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
-                }
+                let canonical_params = self.params_to_canonical(sym, &params)?;
 
                 let canon_path = self.stack.to_path(sym).map(|mut p| {p.push(name); p}).expect("Failed to create canonical path for function");
                 meta.path = canon_path;
@@ -723,24 +728,22 @@ impl<'a> SemanticAnalyzer<'a> {
                     structs: resolved_structs,
                 })
             }
-            &Ast::StructDef(meta, struct_name, members) => {
+            &Ast::StructDef(meta, struct_name, fields) => {
                 let mut meta = meta.clone();
                 // Check the type of each member
-                for (mname, mtype) in members.iter() {
-                    match mtype {
-                        Custom(ty_name) => {
-                            self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
-                                format!("member {}.{} invalid: {}", struct_name, mname, e)
-                            })?;
-                        }
-                        _ => (),
+                for (mname, field_type) in fields.iter() {
+                    if let Custom(ty_name) = field_type {
+                        self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
+                            format!("member {}.{} invalid: {}", struct_name, mname, e)
+                        })?;
                     }
                 }
+                let canonical_fields = self.params_to_canonical(sym, &fields)?;
                 meta.ty = Unit;
                 Ok(Ast::StructDef(
                     meta.clone(),
                     struct_name.clone(),
-                    members.clone(),
+                    canonical_fields,
                 ))
             }
             &StructExpression(meta, struct_name, params) => {
@@ -1182,7 +1185,41 @@ mod tests {
                         panic!("Not a custom type")
                     }
                 } else {
-                    panic!("Not a function")
+                    panic!("Not a coroutine")
+                }
+            } else {
+                panic!("Not a module")
+            }
+        }
+    }
+
+    #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
+    pub fn test_struct_def_fields_are_converted_to_canonical_paths() {
+        use crate::syntax::parser;
+        for text in vec![
+                "
+                struct test{i: i32}
+
+                struct test2{t: test}
+                ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            if let Module{structs, ..} = result {
+                if let Ast::StructDef(_, _, fields) = &structs[1] {
+                    if let (_, Custom(ty_path)) = &fields[0] {
+                        let expected: ast::Path = vec!["root", "test"].into();
+                        assert_eq!(ty_path, &expected)
+                    } else {
+                        panic!("Not a custom type")
+                    }
+                } else {
+                    panic!("Not a structure")
                 }
             } else {
                 panic!("Not a module")
