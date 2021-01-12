@@ -80,10 +80,7 @@ mod test {
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         semantics::type_checker::type_check,
-        syntax::{
-            ast::{self, Ast, Type},
-            parser,
-        },
+        syntax::ast::Type,
     };
     use super::*;
 
@@ -104,6 +101,7 @@ mod test {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(unrealized_st.table["root::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
             assert_eq!(unrealized_st.table["root::test2"], StructDefinition::new("test2", vec![("t".into(), Type::Custom(vec!["root", "test"].into()))]))
         }
@@ -129,8 +127,35 @@ mod test {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(unrealized_st.table["root::my_mod::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
             assert_eq!(unrealized_st.table["root::test2"], StructDefinition::new("test2", vec![("t".into(), Type::Custom(vec!["root", "my_mod", "test"].into()))]))
+        }
+    }
+
+    #[test]
+    pub fn test_same_names_different_modules() {
+        use crate::syntax::parser;
+        for text in vec![
+            "
+            mod my_mod {
+                struct test{i: i32}
+            }
+
+            struct test{t: my_mod::test}
+            ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            assert_eq!(unrealized_st.table.len(), 2);
+            assert_eq!(unrealized_st.table["root::my_mod::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
+            assert_eq!(unrealized_st.table["root::test"], StructDefinition::new("test", vec![("t".into(), Type::Custom(vec!["root", "my_mod", "test"].into()))]))
         }
     }
 
