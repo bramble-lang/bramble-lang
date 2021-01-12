@@ -117,7 +117,7 @@ impl Scope {
         for s in m.sym.table().iter() {
             current_offset = scope.insert(
                 &s.name,
-                struct_table.size_of(&s.ty).unwrap(),
+                struct_table.size_of(&s.ty).expect(&format!("Cannot get size for {}\nStruct Table:\n{}\n", s.ty, struct_table)),
                 current_offset,
             );
         }
