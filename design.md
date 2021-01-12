@@ -19,4 +19,9 @@ is already done at the module level)
 
 ```
 Map: Canonical Path -> StructDefinition
+
+State Transition:
+Unresolved -> Resolved
 ```
+The Unresolved state is when the StructTable has been populated with all the struct definitions in the program, but the memory layouts and sizes of
+the structs have not been resolved.  `Resolved` is when the structs have all successfully had their layouts and sizes resolved.
