@@ -989,7 +989,7 @@ impl<'a> Compiler<'a> {
         src_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        let ty_def = self.root.get_struct(struct_name).ok_or(format!("Could nto find definition for {}", struct_name))?;
+        let ty_def = self.root.get_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name)).unwrap();
         /*let ty_def = self
             .scope
             .get_struct(struct_name)

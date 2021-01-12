@@ -665,13 +665,18 @@ impl<'a> SemanticAnalyzer<'a> {
                 self.stack.pop();
                 meta.ty = self.type_to_canonical(sym, p)?;
 
+                let mut canonical_params = vec![];
+                for (name, ty) in params.iter() {
+                    canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
+                }
+
                 let canon_path = self.stack.to_path(sym).map(|mut p| {p.push(name); p}).expect("Failed to create canonical path for function");
                 meta.path = canon_path;
                 Ok(RoutineDef{
                     meta: meta.clone(),
                     def: def.clone(),
                     name: name.clone(),
-                    params: params.clone(),
+                    params: canonical_params,
                     ty: meta.ty.clone(),
                     body: resolved_body,
                 })
@@ -1103,6 +1108,78 @@ mod tests {
                         }
                     } else {
                         panic!("Not a bind")
+                    }
+                } else {
+                    panic!("Not a function")
+                }
+            } else {
+                panic!("Not a module")
+            }
+        }
+    }
+
+    #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
+    pub fn test_function_params_renamed_with_canonical_path() {
+        use crate::syntax::parser;
+        for text in vec![
+                "
+                struct test{i: i32}
+
+                fn main(t: test) {
+                    return;
+                }
+                ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            if let Module{functions, ..} = result {
+                if let RoutineDef{params, ..} = &functions[0] {
+                    if let (_, Custom(ty_path)) = &params[0] {
+                        let expected: ast::Path = vec!["root", "test"].into();
+                        assert_eq!(ty_path, &expected)
+                    } else {
+                        panic!("Not a custom type")
+                    }
+                } else {
+                    panic!("Not a function")
+                }
+            } else {
+                panic!("Not a module")
+            }
+        }
+    }
+
+    #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
+    pub fn test_coroutine_params_renamed_with_canonical_path() {
+        use crate::syntax::parser;
+        for text in vec![
+                "
+                struct test{i: i32}
+
+                co main(t: test) {
+                    return;
+                }
+                ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            if let Module{coroutines, ..} = result {
+                if let RoutineDef{params, ..} = &coroutines[0] {
+                    if let (_, Custom(ty_path)) = &params[0] {
+                        let expected: ast::Path = vec!["root", "test"].into();
+                        assert_eq!(ty_path, &expected)
+                    } else {
+                        panic!("Not a custom type")
                     }
                 } else {
                     panic!("Not a function")
