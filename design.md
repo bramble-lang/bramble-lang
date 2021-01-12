@@ -16,3 +16,7 @@ be satisfied and the data can be stored in the way that is most efficient for co
 The compiler will be changed so that there is a global table mapping Canonical Paths for structs to their memory data.  There will be a stage in the
 process which takes an AST and traverses the AST adding all the structs to the table. Then a stage that resolves struct memory layouts (mirroring what
 is already done at the module level)
+
+```
+Map: Canonical Path -> StructDefinition
+```
