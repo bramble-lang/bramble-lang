@@ -182,12 +182,24 @@ impl From<Vec<&str>> for Path {
     }
 }
 
+impl std::hash::Hash for Path {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        for s in self.path.iter() {
+            s.hash(state);
+        }
+    }
+}
+
+impl Eq for Path {
+
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
     Boolean(I, bool),
     StringLiteral(I, String),
-    CustomType(I, String),
+    CustomType(I, Path),
     Identifier(I, String),
     Path(I, Path),
     MemberAccess(I, Box<Ast<I>>, String),
@@ -228,7 +240,7 @@ pub enum Ast<I> {
         structs: Vec<Ast<I>>,
     },
     StructDef(I, String, Vec<(String, Type)>),
-    StructExpression(I, String, Vec<(String, Ast<I>)>),
+    StructExpression(I, Path, Vec<(String, Ast<I>)>),
 }
 
 impl<I> Ast<I> {
@@ -436,7 +448,7 @@ pub enum Type {
     Bool,
     StringLiteral,
     Unit,
-    Custom(String),
+    Custom(Path),
     StructDef(Vec<(String, Type)>),
     FunctionDef(Vec<Type>, Box<Type>),
     CoroutineDef(Vec<Type>, Box<Type>),
@@ -479,7 +491,7 @@ impl std::fmt::Display for Type {
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
             Unit => f.write_str("unit"),
-            Custom(name) => f.write_str(name),
+            Custom(path) => f.write_str(&format!("{}", path)),
             StructDef(members) => {
                 let members = members
                     .iter()
