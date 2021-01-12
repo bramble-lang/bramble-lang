@@ -325,7 +325,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 Some(_) => {
                     let mut meta = meta.clone();
                     match self.lookup(sym, &id)? {
-                        Symbol { ty: p, .. } => meta.ty = p.clone(),
+                        Symbol { ty: p, .. } => meta.ty = self.type_to_canonical(sym, p)?,
                     };
                     Ok(Identifier(meta.clone(), id.clone()))
                 }
@@ -572,7 +572,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
 
                     if mismatches.len() == 0 {
-                        meta.ty = ret_ty;
+                        meta.ty = self.type_to_canonical(sym, &ret_ty)?;
                         Ok(RoutineCall(
                             meta.clone(),
                             *call,
@@ -1882,6 +1882,17 @@ mod tests {
                     let x: root::MyStruct := self::MyStruct{x: 1};
                     let y: i32 := test2(x);
                     return y;
+                }",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                fn test2(ms: MyStruct) -> MyStruct {return ms;}
+                fn test() -> i32
+                {
+                    let x: root::MyStruct := self::MyStruct{x: 1};
+                    let y: MyStruct := test2(x);
+                    return y.x;
                 }",
                 Ok(()),
             ),
