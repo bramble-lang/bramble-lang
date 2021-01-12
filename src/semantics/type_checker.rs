@@ -207,11 +207,13 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
+    /// Convert a path to its canonical form by merging with the ancestors in the AST.
     fn to_canonical(&self, sym: &'a SymbolTable, path: &ast::Path) -> Result<ast::Path, String> {
         let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
         path.to_canonical(&current_path)
     }
 
+    /// Convert any custom type to its canonical form by merging with the current AST ancestors
     fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type, String> {
         match ty {
             Custom(path) => Ok(Custom(self.to_canonical(sym, &path)?)),
@@ -220,6 +222,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
+    /// Convert any parameter that is a custom type, to its canonical form.
     fn params_to_canonical(&self, sym: &'a SymbolTable, params: &Vec<(String, Type)>) -> Result<Vec<(String, Type)>, String> {
         let mut canonical_params = vec![];
         for (name, ty) in params.iter() {
@@ -731,10 +734,10 @@ impl<'a> SemanticAnalyzer<'a> {
             &Ast::StructDef(meta, struct_name, fields) => {
                 let mut meta = meta.clone();
                 // Check the type of each member
-                for (mname, field_type) in fields.iter() {
+                for (field_name, field_type) in fields.iter() {
                     if let Custom(ty_name) = field_type {
                         self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
-                            format!("member {}.{} invalid: {}", struct_name, mname, e)
+                            format!("member {}.{} invalid: {}", struct_name, field_name, e)
                         })?;
                     }
                 }

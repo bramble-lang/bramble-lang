@@ -100,7 +100,7 @@ impl Scope {
 
     pub(super) fn routine_from(
         m: &SemanticMetadata,
-        struct_table: &StructTable,     // Instead of passing the StructTable, pass the AST root, then use the Canonical Path to traverse to the correct struct table
+        struct_table: &StructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
         let mut scope = Scope::new(
