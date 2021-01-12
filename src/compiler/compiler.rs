@@ -710,7 +710,7 @@ impl<'a> Compiler<'a> {
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
-        let struct_def = self.root.get_struct(struct_name).ok_or(format!("{} was not found", struct_name))?;
+        let struct_def = self.root.get_struct(struct_name).expect(&format!("{}, used in {}, was not found", struct_name, current_func));
         /*let st = self
             .scope
             .get_struct(struct_name)

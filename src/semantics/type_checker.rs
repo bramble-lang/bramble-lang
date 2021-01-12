@@ -758,13 +758,13 @@ impl<'a> SemanticAnalyzer<'a> {
                 for (pn, pv) in params.iter() {
                     let member_ty = struct_def_ty
                         .get_member(pn)
-                        .ok_or(format!("member {} not found on {}", pn, struct_name))?;
+                        .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
                     let member_ty = self.type_to_canonical(sym, member_ty)?;
                     let param = self.traverse(pv, current_func, sym)?;
                     if param.get_type() != member_ty {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
-                            struct_name,
+                            canonical_path,
                             pn,
                             member_ty,
                             param.get_type()
@@ -773,12 +773,12 @@ impl<'a> SemanticAnalyzer<'a> {
                     resolved_params.push((pn.clone(), param));
                 }
 
-                let anonymouse_name = format!("!{}_{}", struct_name, meta.id);
-                meta.ty = Custom(canonical_path);
+                let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
+                meta.ty = Custom(canonical_path.clone());
                 sym.add(&anonymouse_name, meta.ty.clone(), false)?;
                 Ok(StructExpression(
                     meta.clone(),
-                    struct_name.clone(),
+                    canonical_path,
                     resolved_params,
                 ))
             }
@@ -1014,7 +1014,7 @@ mod tests {
         }
     }
 
-    #[test] #[ignore] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
+    #[test] 
     pub fn test_path_to_struct() {
         use crate::syntax::parser;
         for (text, expected) in vec![
@@ -1052,6 +1052,63 @@ mod tests {
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+            }
+        }
+    }
+
+    #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
+    pub fn test_struct_expression_renamed_with_canonical_path() {
+        use crate::syntax::parser;
+        for text in vec![
+                "
+                struct test{i: i32}
+
+                fn main() {
+                    let k: test := test{i: 5};
+                    return;
+                }
+                ",
+                "
+                struct test{i: i32}
+
+                fn main() {
+                    let k: test := root::test{i: 5};
+                    return;
+                }
+                ",
+                "
+                struct test{i: i32}
+
+                fn main() {
+                    let k: test := self::test{i: 5};
+                    return;
+                }
+                ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            if let Module{functions, ..} = result {
+                if let RoutineDef{body, ..} = &functions[0] {
+                    if let Bind(.., exp) = &body[0] {
+                        if let box StructExpression(_, struct_name, ..) = exp {
+                            let expected: ast::Path = vec!["root", "test"].into();
+                            assert_eq!(struct_name, &expected)
+                        } else {
+                            panic!("Not a struct expression")
+                        }
+                    } else {
+                        panic!("Not a bind")
+                    }
+                } else {
+                    panic!("Not a function")
+                }
+            } else {
+                panic!("Not a module")
             }
         }
     }
@@ -1946,7 +2003,7 @@ mod tests {
             ),
             (
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:false};}",
-                Err("Semantic: L1: MyStruct.x expects i32 but got bool"),
+                Err("Semantic: L1: root::MyStruct.x expects i32 but got bool"),
             ),
             (
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{};}",
@@ -1982,7 +2039,7 @@ mod tests {
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
-                Err("Semantic: L1: MyStruct does not have member y")),
+                Err("Semantic: L1: root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> bool{return ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
                 ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.x;}",
