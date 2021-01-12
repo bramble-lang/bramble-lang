@@ -207,13 +207,25 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
+    fn to_canonical(&self, sym: &'a SymbolTable, path: &ast::Path) -> Result<ast::Path, String> {
+        let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
+        path.to_canonical(&current_path)
+    }
+
+    fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type, String> {
+        match ty {
+            Custom(path) => Ok(Custom(self.to_canonical(sym, &path)?)),
+            _ => Ok(ty.clone()),
+        }
+    }
+
     fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
         path: &ast::Path,
     ) -> Result<Option<(&'a Symbol, ast::Path)>, String> {
-        let current_path = self.stack.to_path(sym).expect("A valid path is expected");
-        let canon_path = path.to_canonical(&current_path)?;
+        //let current_path = self.stack.to_path(sym).expect("A valid path is expected");
+        let canon_path = self.to_canonical(sym, path)?; //.to_canonical(&current_path)?;
         if path.len() > 1 {
             let mut trunc_canon_path = canon_path.clone();
             let item = trunc_canon_path.truncate().unwrap();
@@ -334,7 +346,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
-                        meta.ty = member_ty.clone();
+                        meta.ty = self.type_to_canonical(sym, member_ty)?;
                         meta.path = canonical_path;
                         Ok(MemberAccess(meta.clone(), Box::new(src), member.clone()))
                     }
@@ -413,12 +425,12 @@ impl<'a> SemanticAnalyzer<'a> {
             &Bind(meta, name, mutable, p, rhs) => match current_func {
                 Some(_) => {
                     let mut meta = meta.clone();
+                    meta.ty = self.type_to_canonical(sym, p)?;
                     let rhs = self.traverse(&rhs, current_func, sym)?;
-                    if *p == rhs.get_type() {
-                        sym.add(&name, p.clone(), *mutable)?;
-                        meta.ty = p.clone();
+                    if meta.ty == rhs.get_type() {
+                        sym.add(&name, meta.ty.clone(), *mutable)?;
                         Ok(Bind(
-                            meta.clone(),
+                            meta,
                             name.clone(),
                             *mutable,
                             p.clone(),
@@ -452,8 +464,9 @@ impl<'a> SemanticAnalyzer<'a> {
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
-                    if *fty == exp.get_type() {
-                        meta.ty = fty.clone();
+                    let fty = self.type_to_canonical(sym, fty)?;
+                    if fty == exp.get_type() {
+                        meta.ty = fty;
                         Ok(Return(meta.clone(), Some(Box::new(exp))))
                     } else {
                         Err(format!(
@@ -637,7 +650,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     resolved_body.push(exp);
                 }
                 self.stack.pop();
-                meta.ty = p.clone();
+                meta.ty = self.type_to_canonical(sym, p)?;
 
                 let canon_path = self.stack.to_path(sym).map(|mut p| {p.push(name); p}).expect("Failed to create canonical path for function");
                 meta.path = canon_path;
@@ -646,7 +659,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     def: def.clone(),
                     name: name.clone(),
                     params: params.clone(),
-                    ty: p.clone(),
+                    ty: meta.ty.clone(),
                     body: resolved_body,
                 })
             }
@@ -1772,8 +1785,81 @@ mod tests {
         use crate::syntax::parser;
         for (text, expected) in vec![
             (
+                "struct MyStruct{x:i32} fn test() -> root::MyStruct {return MyStruct{x:1};}",
+                Ok(()),
+            ),
+            (
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:1};}",
                 Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32} fn test() -> self::MyStruct {return MyStruct{x:1};}",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32} fn test() -> MyStruct {return self::MyStruct{x:1};}",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32} fn test() -> MyStruct {return root::MyStruct{x:1};}",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                fn test() -> MyStruct 
+                {
+                    let x: MyStruct := MyStruct{x: 1};
+                    return x;
+                }",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                fn test() -> MyStruct 
+                {
+                    let x: root::MyStruct := MyStruct{x: 1};
+                    return x;
+                }",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                fn test() -> MyStruct 
+                {
+                    let x: root::MyStruct := self::MyStruct{x: 1};
+                    return x;
+                }",
+                Ok(()),
+            ),
+            (
+                "mod my_mod{struct MyStruct{x:i32}}
+                fn test() -> my_mod::MyStruct 
+                {
+                    let x: root::my_mod::MyStruct := self::my_mod::MyStruct{x: 1};
+                    return x;
+                }",
+                Ok(()),
+            ),
+            (
+                "mod my_mod{struct MyStruct{x:i32}}
+                mod fn_mod {
+                    fn test() -> self::super::my_mod::MyStruct 
+                    {
+                        let x: root::my_mod::MyStruct := super::my_mod::MyStruct{x: 1};
+                        return x;
+                    }
+                }",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                struct MyStruct2{x:i32}
+                fn test() -> MyStruct 
+                {
+                    let x: root::MyStruct2 := self::MyStruct{x: 1};
+                    return x;
+                }",
+                Err("Semantic: L5: Bind expected root::MyStruct2 but got root::MyStruct"),
             ),
             (
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:false};}",
@@ -1785,7 +1871,7 @@ mod tests {
             ),
             (
                 "struct MyStruct{x:i32} fn test() -> i32 {return MyStruct{x:5};}",
-                Err("Semantic: L1: Return expected i32 but got MyStruct"),
+                Err("Semantic: L1: Return expected i32 but got root::MyStruct"),
             ),
             (
                 "struct MyStruct{x:co i32} fn test(c: co i32) -> MyStruct {return MyStruct{x: c};}",
@@ -1800,7 +1886,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
-                Ok(_) => {result.unwrap();},
+                Ok(_) => {assert!(result.is_ok(), "{} => {:?}", text, result)},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
             }
         }
@@ -1821,7 +1907,7 @@ mod tests {
                 ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
                 ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.y;}",
-                Err("Semantic: L1: MyStruct does not have member y")),
+                Err("Semantic: L1: root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
             ] {
@@ -1833,7 +1919,7 @@ mod tests {
                 let ast = parser::parse(tokens).unwrap().unwrap();
                 let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
-                    Ok(_) => assert!(result.is_ok()),
+                    Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
                 }
             }
