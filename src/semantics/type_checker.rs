@@ -215,6 +215,7 @@ impl<'a> SemanticAnalyzer<'a> {
     fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type, String> {
         match ty {
             Custom(path) => Ok(Custom(self.to_canonical(sym, &path)?)),
+            Coroutine(ty) => Ok(Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
             _ => Ok(ty.clone()),
         }
     }
@@ -437,7 +438,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             Box::new(rhs),
                         ))
                     } else {
-                        Err(format!("Bind expected {} but got {}", p, rhs.get_type()))
+                        Err(format!("Bind expected {} but got {}", meta.ty, rhs.get_type()))
                     }
                 }
                 None => Err(format!(
@@ -483,10 +484,10 @@ impl<'a> SemanticAnalyzer<'a> {
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     meta.ty = match exp.get_type() {
-                        Coroutine(ret_ty) => *ret_ty.clone(),
+                        Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
                         _ => return Err(format!("yield expects co<_> but got {}", exp.get_type())),
                     };
-                    Ok(Yield(meta.clone(), Box::new(exp)))
+                    Ok(Yield(meta, Box::new(exp)))
                 }
             },
             &YieldReturn(meta, None) => match current_func {
@@ -496,7 +497,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
                     if *ret_ty == Unit {
                         meta.ty = Unit;
-                        Ok(YieldReturn(meta.clone(), None))
+                        Ok(YieldReturn(meta, None))
                     } else {
                         Err(format!("Yield return expected {} but got unit", ret_ty))
                     }
@@ -508,9 +509,10 @@ impl<'a> SemanticAnalyzer<'a> {
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
-                    if *ret_ty == exp.get_type() {
-                        meta.ty = ret_ty.clone();
-                        Ok(YieldReturn(meta.clone(), Some(Box::new(exp))))
+                    let ret_ty = self.type_to_canonical(sym, ret_ty)?;
+                    if ret_ty == exp.get_type() {
+                        meta.ty = ret_ty;
+                        Ok(YieldReturn(meta, Some(Box::new(exp))))
                     } else {
                         Err(format!(
                             "Yield return expected {} but got {}",
@@ -524,7 +526,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 let mut meta = meta.clone();
                 let stmt = self.traverse(&stmt, current_func, sym)?;
                 meta.ty = Unit;
-                Ok(Statement(meta.clone(), Box::new(stmt)))
+                Ok(Statement(meta, Box::new(stmt)))
             }
             &RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
@@ -1902,6 +1904,21 @@ mod tests {
                     let x: root::MyStruct := self::MyStruct{x: 1};
                     let y: MyStruct := test2(x);
                     return y.x;
+                }",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                co test2(ms: MyStruct) -> MyStruct { 
+                    yret ms; 
+                    return ms;
+                }
+                fn test() -> root::MyStruct
+                {
+                    let x: root::MyStruct := self::MyStruct{x: 1};
+                    let y: co self::MyStruct := init test2(x);
+                    let z: MyStruct := yield (y);
+                    return z;
                 }",
                 Ok(()),
             ),
