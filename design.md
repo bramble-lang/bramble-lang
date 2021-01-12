@@ -33,3 +33,14 @@ The Resolved table is what the compiler will use to look up struct definition in
 
 I want to use the same phantom type concept to create `Path` and `CanonicalPath` types so that I can make sure that all Paths passed to the compiler
 are canonical.  This will be supported by allowing only a single function to generate the `CanonicalPath` type from a `Path`.
+
+Things that will be required:
+- All fields in a struct will have to use the canonical path to identify their type: this is because the canonical path is required to look the struct
+up in the struct table
+- Need to compute the canonical path of the structs.  I think that might be in the struct meta data, I should double check.  I want to avoid doing it
+in the compiler layer: it should not have to figure out anything necessary to identify items correctly, it should be as dumb as possible on that front.
+
+- Creating an Unresolved StructTable from an AST:
+    start at the root of the ast:
+        - if it is a module: loop through all the structs, convert the struct name to canonical (it is currently not a path), and add to the StructTable
+        - Loop through all the modules: for each module, call this function
