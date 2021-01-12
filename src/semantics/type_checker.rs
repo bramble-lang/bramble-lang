@@ -771,6 +771,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 let canonical_fields = self.params_to_canonical(sym, &fields)?;
                 meta.ty = Unit;
+                meta.path = self.to_canonical(sym, &vec![struct_name.clone()].into())?;
                 Ok(Ast::StructDef(
                     meta.clone(),
                     struct_name.clone(),
