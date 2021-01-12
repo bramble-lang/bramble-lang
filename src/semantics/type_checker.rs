@@ -349,7 +349,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
                         meta.ty = self.type_to_canonical(sym, member_ty)?;
                         meta.path = canonical_path;
-                        Ok(MemberAccess(meta.clone(), Box::new(src), member.clone()))
+                        Ok(MemberAccess(meta, Box::new(src), member.clone()))
                     }
                     _ => Err(format!("Type {} does not have members", src.get_type())),
                 }

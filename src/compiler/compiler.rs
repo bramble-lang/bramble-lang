@@ -668,10 +668,6 @@ impl<'a> Compiler<'a> {
                 self.traverse(src, current_func, code)?;
 
                 let struct_def = self.root.get_struct(struct_name).ok_or(format!("Could not find struct definition for {}", struct_name))?;
-                /*let st = self
-                    .scope
-                    .get_struct(struct_name)
-                    .ok_or(format!("no definition for {} found", struct_name))?;*/
                 let field_info = struct_def
                     .get_fields()
                     .iter()
