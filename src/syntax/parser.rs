@@ -248,7 +248,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef{
+    Ok(Some(Ast::RoutineDef {
         meta: fn_line,
         def: RoutineDef::Function,
         name: fn_name,
@@ -287,7 +287,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef{
+    Ok(Some(Ast::RoutineDef {
         meta: co_line,
         def: RoutineDef::Coroutine,
         name: co_name,
@@ -695,20 +695,18 @@ fn mutate(stream: &mut TokenStream) -> PResult {
 fn co_init(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     match stream.next_if(&Lex::Init) {
-        Some(token) => {
-                match path(stream)? {
-                Some((l, path)) => {
-                    let params = routine_call_params(stream)?
-                        .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                    Ok(Some(Ast::RoutineCall(
-                        l,
-                        RoutineCall::CoroutineInit,
-                        path,
-                        params,
-                    )))
-                }
-                None => Err(format!("L{}: expected identifier after init", token.l)),
+        Some(token) => match path(stream)? {
+            Some((l, path)) => {
+                let params = routine_call_params(stream)?
+                    .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
+                Ok(Some(Ast::RoutineCall(
+                    l,
+                    RoutineCall::CoroutineInit,
+                    path,
+                    params,
+                )))
             }
+            None => Err(format!("L{}: expected identifier after init", token.l)),
         },
         _ => Ok(None),
     }
@@ -725,11 +723,7 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
                 params.clone(),
             )),
             None => match struct_init_params(stream)? {
-                Some(params) => Some(Ast::StructExpression(
-                    line,
-                    path,
-                    params.clone(),
-                )),
+                Some(params) => Some(Ast::StructExpression(line, path, params.clone())),
                 None => {
                     if path.len() > 1 {
                         Some(Ast::Path(line, path))
@@ -1364,8 +1358,14 @@ pub mod tests {
                 assert_eq!(functions.len(), 1);
                 assert_eq!(coroutines.len(), 0);
                 assert_eq!(structs.len(), 0);
-                if let Ast::RoutineDef{meta, def: RoutineDef::Function, name, params, ty, body} =
-                    &functions[0]
+                if let Ast::RoutineDef {
+                    meta,
+                    def: RoutineDef::Function,
+                    name,
+                    params,
+                    ty,
+                    body,
+                } = &functions[0]
                 {
                     assert_eq!(*meta, 1);
                     assert_eq!(name, "test");
@@ -1410,8 +1410,14 @@ pub mod tests {
             assert_eq!(coroutines.len(), 1);
             assert_eq!(structs.len(), 0);
 
-            if let Ast::RoutineDef{meta, def: RoutineDef::Coroutine, name, params, ty, body} =
-                &coroutines[0]
+            if let Ast::RoutineDef {
+                meta,
+                def: RoutineDef::Coroutine,
+                name,
+                params,
+                ty,
+                body,
+            } = &coroutines[0]
             {
                 assert_eq!(*meta, 1);
                 assert_eq!(name, "test");
@@ -1474,8 +1480,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
-            function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef {
+            meta: l,
+            def: RoutineDef::Function,
+            name,
+            params,
+            ty,
+            body,
+        }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -1500,8 +1512,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
-            function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef {
+            meta: l,
+            def: RoutineDef::Function,
+            name,
+            params,
+            ty,
+            body,
+        }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -1584,8 +1602,14 @@ pub mod tests {
         }) = parse(tokens).unwrap()
         {
             assert_eq!(meta, 1);
-            if let Ast::RoutineDef{def: RoutineDef::Coroutine, name, params, ty, body, ..} =
-                &coroutines[0]
+            if let Ast::RoutineDef {
+                def: RoutineDef::Coroutine,
+                name,
+                params,
+                ty,
+                body,
+                ..
+            } = &coroutines[0]
             {
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
@@ -1674,8 +1698,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
-            function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef {
+            meta: l,
+            def: RoutineDef::Function,
+            name,
+            params,
+            ty,
+            body,
+        }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -1905,7 +1935,11 @@ pub mod tests {
             ),
             (
                 "MyStruct{x: 5}",
-                Ast::StructExpression(1, vec!["MyStruct"].into(), vec![("x".into(), Ast::Integer(1, 5))]),
+                Ast::StructExpression(
+                    1,
+                    vec!["MyStruct"].into(),
+                    vec![("x".into(), Ast::Integer(1, 5))],
+                ),
             ),
             (
                 "MyStruct{x: 5, y: false}",
@@ -1962,7 +1996,7 @@ pub mod tests {
             let ast = parse(tokens).unwrap().unwrap();
             match ast {
                 Ast::Module { functions, .. } => match &functions[0] {
-                    Ast::RoutineDef{body, ..} => match &body[0] {
+                    Ast::RoutineDef { body, .. } => match &body[0] {
                         Ast::Return(.., Some(rv)) => {
                             assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))
                         }

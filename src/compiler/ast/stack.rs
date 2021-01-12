@@ -64,7 +64,11 @@ impl<'a> ScopeStack<'a> {
         match self.find_global(name) {
             Some(ref node) => match node {
                 CompilerNode::Module { functions, .. } => functions.iter().find(|v| match v {
-                    CompilerNode::RoutineDef{def: RoutineDef::Function, name: n, ..} => n == name,
+                    CompilerNode::RoutineDef {
+                        def: RoutineDef::Function,
+                        name: n,
+                        ..
+                    } => n == name,
                     _ => false,
                 }),
                 _ => None,
@@ -77,7 +81,11 @@ impl<'a> ScopeStack<'a> {
         match self.find_global(name) {
             Some(ref node) => match node {
                 CompilerNode::Module { coroutines, .. } => coroutines.iter().find(|v| match v {
-                    CompilerNode::RoutineDef{def: RoutineDef::Coroutine, name: n, ..} => n == name,
+                    CompilerNode::RoutineDef {
+                        def: RoutineDef::Coroutine,
+                        name: n,
+                        ..
+                    } => n == name,
                     _ => false,
                 }),
                 _ => None,
@@ -239,12 +247,13 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
         fun_scope.insert("y", 4, 4);
         fun_scope.insert("z", 4, 8);
-        let outer_node = CompilerNode::RoutineDef{
+        let outer_node = CompilerNode::RoutineDef {
             meta: fun_scope,
             def: RoutineDef::Function,
             name: "func".into(),
@@ -273,13 +282,13 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
-            }, 
+            },
             vec!["root"].into(),
             Type::Unit,
         );
         fun_scope.insert("y", 4, 0);
         fun_scope.insert("z", 4, 4);
-        let fun_node = CompilerNode::RoutineDef{
+        let fun_node = CompilerNode::RoutineDef {
             meta: fun_scope,
             def: RoutineDef::Function,
             name: "func".into(),
@@ -305,10 +314,11 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
-        let fun2_node = CompilerNode::RoutineDef{
+        let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
             def: RoutineDef::Function,
             name: "func2".into(),
@@ -322,7 +332,13 @@ mod tests {
 
         let node = stack.find_func("func").unwrap();
         match node {
-            CompilerNode::RoutineDef{meta, def: RoutineDef::Function, name, params, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Function,
+                name,
+                params,
+                ..
+            } => {
                 assert_eq!(name, "func");
                 assert_eq!(params.len(), 1);
                 let y_param = meta.get("y").unwrap();
@@ -342,12 +358,13 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
         cor_scope.insert("y", 4, 20);
         cor_scope.insert("z", 4, 24);
-        let cor_node = CompilerNode::RoutineDef{
+        let cor_node = CompilerNode::RoutineDef {
             meta: cor_scope,
             def: RoutineDef::Coroutine,
             name: "cor".into(),
@@ -373,10 +390,11 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
-        let fun2_node = CompilerNode::RoutineDef{
+        let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
             def: RoutineDef::Coroutine,
             name: "func2".into(),
@@ -388,7 +406,13 @@ mod tests {
 
         let node = stack.find_coroutine("cor").unwrap();
         match node {
-            CompilerNode::RoutineDef{meta, def: RoutineDef::Coroutine, name, params, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Coroutine,
+                name,
+                params,
+                ..
+            } => {
                 assert_eq!(name, "cor");
                 assert_eq!(params.len(), 1);
                 let y_param = meta.get("y").unwrap();
@@ -406,7 +430,8 @@ mod tests {
             0,
             Level::Module {
                 name: "root".into(),
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
         module_scope.insert("cor", 0, 0);
@@ -432,7 +457,8 @@ mod tests {
             0,
             Level::Module {
                 name: "root".into(),
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
         module_scope.insert("cor", 0, 0);
@@ -451,10 +477,11 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
-        let fun2_node = CompilerNode::RoutineDef{
+        let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
             def: RoutineDef::Coroutine,
             name: "func2".into(),
@@ -476,7 +503,8 @@ mod tests {
             0,
             Level::Module {
                 name: "root".into(),
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
         let module_node = CompilerNode::Module {
@@ -493,7 +521,8 @@ mod tests {
             0,
             Level::Module {
                 name: "inner".into(),
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
         let module2_node = CompilerNode::Module {
@@ -511,10 +540,11 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
-            }, vec!["root"].into(),
+            },
+            vec!["root"].into(),
             Type::Unit,
         );
-        let fun2_node = CompilerNode::RoutineDef{
+        let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
             def: RoutineDef::Coroutine,
             name: "func2".into(),

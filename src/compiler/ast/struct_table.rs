@@ -120,7 +120,9 @@ impl StructTable {
             match ty {
                 ast::Type::I32 => Some(4),
                 ast::Type::Bool => Some(4),
-                ast::Type::Custom(name) => Some(resolved_structs.get(name.last().unwrap())?.iter().sum()),
+                ast::Type::Custom(name) => {
+                    Some(resolved_structs.get(name.last().unwrap())?.iter().sum())
+                }
                 ast::Type::Coroutine(_) => Some(4),
                 _ => None,
             }

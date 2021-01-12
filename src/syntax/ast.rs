@@ -89,7 +89,7 @@ pub struct Path {
 
 impl Path {
     pub fn new() -> Path {
-        Path{path: vec![]}
+        Path { path: vec![] }
     }
     pub fn len(&self) -> usize {
         self.path.len()
@@ -190,9 +190,7 @@ impl std::hash::Hash for Path {
     }
 }
 
-impl Eq for Path {
-
-}
+impl Eq for Path {}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
@@ -222,7 +220,7 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    RoutineDef{
+    RoutineDef {
         meta: I,
         def: RoutineDef,
         name: String,
@@ -273,7 +271,7 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            RoutineDef{def, name, ..} => format!("{} for {}", def, name),
+            RoutineDef { def, name, .. } => format!("{} for {}", def, name),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
             Module { name, .. } => format!("module {}", name),
@@ -307,7 +305,7 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineDef{meta: m, ..}
+            | RoutineDef { meta: m, .. }
             | RoutineCall(m, ..)
             | Module { meta: m, .. }
             | StructDef(m, ..) => m,
@@ -340,7 +338,7 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineDef{meta: m, ..}
+            | RoutineDef { meta: m, .. }
             | RoutineCall(m, ..)
             | Module { meta: m, .. }
             | StructDef(m, ..) => m,
@@ -352,7 +350,7 @@ impl<I> Ast<I> {
     /// the node is not a function or coroutine, this will return None.
     pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
         match self {
-            Ast::RoutineDef{params, ..} => Some(params),
+            Ast::RoutineDef { params, .. } => Some(params),
             _ => None,
         }
     }
@@ -361,7 +359,7 @@ impl<I> Ast<I> {
     /// otherwise return None.
     pub fn get_return_type(&self) -> Option<&Type> {
         match self {
-            Ast::RoutineDef{ty, ..} => Some(ty),
+            Ast::RoutineDef { ty, .. } => Some(ty),
             _ => None,
         }
     }
@@ -369,7 +367,9 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef{name, ..} | Ast::Identifier(_, name) | Ast::Module{name, ..} => Some(name),
+            Ast::RoutineDef { name, .. } | Ast::Identifier(_, name) | Ast::Module { name, .. } => {
+                Some(name)
+            }
             _ => None,
         }
     }
@@ -436,8 +436,8 @@ impl<I> Ast<I> {
     /// That paths and identifiers are associated with valid routines.
     pub fn is_routine_def(&self) -> Result<&Ast<I>, String> {
         match self {
-            Ast::RoutineDef{..} => Ok(self),
-            _ => Err(format!("Expected routine, but was {}", self.root_str()))
+            Ast::RoutineDef { .. } => Ok(self),
+            _ => Err(format!("Expected routine, but was {}", self.root_str())),
         }
     }
 }
@@ -636,7 +636,7 @@ mod test {
 
     #[test]
     fn test_go_to_function() {
-        let func = Ast::RoutineDef{
+        let func = Ast::RoutineDef {
             meta: 0,
             def: RoutineDef::Function,
             name: "func".into(),
@@ -740,7 +740,7 @@ mod test_path {
     fn test_push_step() {
         let mut path: Path = vec!["self", "item"].into();
         path.push("test");
-        
+
         let expected = vec!["self", "item", "test"].into();
         assert_eq!(path, expected);
     }
@@ -748,7 +748,7 @@ mod test_path {
     #[test]
     fn test_to_label() {
         let path: Path = vec!["self", "item"].into();
-        
+
         let expected = "self_item";
         assert_eq!(path.to_label(), expected);
     }

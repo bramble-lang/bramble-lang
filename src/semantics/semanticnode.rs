@@ -121,13 +121,20 @@ impl SemanticAst {
                 Ok(Box::new(ExpressionBlock(self.sm_from(*ln), nbody)))
             }
             Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
-            RoutineDef{meta: ln, def, name: fname, params, ty, body} => {
+            RoutineDef {
+                meta: ln,
+                def,
+                name: fname,
+                params,
+                ty,
+                body,
+            } => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
                     let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Box::new(RoutineDef{
+                Ok(Box::new(RoutineDef {
                     meta: self.sm_from(*ln),
                     def: *def,
                     name: fname.clone(),

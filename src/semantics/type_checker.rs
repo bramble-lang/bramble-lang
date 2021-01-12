@@ -223,7 +223,11 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     /// Convert any parameter that is a custom type, to its canonical form.
-    fn params_to_canonical(&self, sym: &'a SymbolTable, params: &Vec<(String, Type)>) -> Result<Vec<(String, Type)>, String> {
+    fn params_to_canonical(
+        &self,
+        sym: &'a SymbolTable,
+        params: &Vec<(String, Type)>,
+    ) -> Result<Vec<(String, Type)>, String> {
         let mut canonical_params = vec![];
         for (name, ty) in params.iter() {
             canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
@@ -248,7 +252,10 @@ impl<'a> SemanticAnalyzer<'a> {
             Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
         } else if path.len() == 1 {
             let item = &path[0];
-            Ok(sym.get(item).or(self.stack.get(item)).map(|i| (i, canon_path)))
+            Ok(sym
+                .get(item)
+                .or(self.stack.get(item))
+                .map(|i| (i, canon_path)))
         } else {
             Err("empty path passed to lookup_path".into())
         }
@@ -353,7 +360,9 @@ impl<'a> SemanticAnalyzer<'a> {
                 let src = self.traverse(&src, current_func, sym)?;
                 match src.get_type() {
                     Custom(struct_name) => {
-                        let (struct_def, canonical_path) = self.lookup_symbol_by_path(sym, &struct_name)?.ok_or(format!("{} was not found", struct_name))?;
+                        let (struct_def, canonical_path) = self
+                            .lookup_symbol_by_path(sym, &struct_name)?
+                            .ok_or(format!("{} was not found", struct_name))?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
@@ -441,15 +450,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     let rhs = self.traverse(&rhs, current_func, sym)?;
                     if meta.ty == rhs.get_type() {
                         sym.add(&name, meta.ty.clone(), *mutable)?;
-                        Ok(Bind(
-                            meta,
-                            name.clone(),
-                            *mutable,
-                            p.clone(),
-                            Box::new(rhs),
-                        ))
+                        Ok(Bind(meta, name.clone(), *mutable, p.clone(), Box::new(rhs)))
                     } else {
-                        Err(format!("Bind expected {} but got {}", meta.ty, rhs.get_type()))
+                        Err(format!(
+                            "Bind expected {} but got {}",
+                            meta.ty,
+                            rhs.get_type()
+                        ))
                     }
                 }
                 None => Err(format!(
@@ -549,7 +556,9 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     resolved_params.push(ty);
                 }
-                let (symbol, canon_path) = self.lookup_symbol_by_path(sym, routine_path)?.ok_or(format!("function {} not declared", routine_path))?;
+                let (symbol, canon_path) = self
+                    .lookup_symbol_by_path(sym, routine_path)?
+                    .ok_or(format!("function {} not declared", routine_path))?;
 
                 let (expected_param_tys, ret_ty) = match symbol {
                     Symbol {
@@ -593,7 +602,12 @@ impl<'a> SemanticAnalyzer<'a> {
                             resolved_params,
                         ))
                     } else {
-                        let errors: Vec<String> = mismatches.iter().map(|(idx, expected, got)| format!("parameter {} expected {} got {}", idx, expected, got)).collect();
+                        let errors: Vec<String> = mismatches
+                            .iter()
+                            .map(|(idx, expected, got)| {
+                                format!("parameter {} expected {} got {}", idx, expected, got)
+                            })
+                            .collect();
                         Err(format!(
                             "One or more parameters have mismatching types for function {}: {}",
                             routine_path,
@@ -661,7 +675,14 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = ty;
                 Ok(ExpressionBlock(meta.clone(), resolved_body))
             }
-            RoutineDef{meta, def, name, params, ty: p, body} => {
+            RoutineDef {
+                meta,
+                def,
+                name,
+                params,
+                ty: p,
+                body,
+            } => {
                 let mut meta = meta.clone();
                 for (pname, pty) in params.iter() {
                     meta.sym.add(pname, pty.clone(), false)?;
@@ -678,9 +699,16 @@ impl<'a> SemanticAnalyzer<'a> {
 
                 let canonical_params = self.params_to_canonical(sym, &params)?;
 
-                let canon_path = self.stack.to_path(sym).map(|mut p| {p.push(name); p}).expect("Failed to create canonical path for function");
+                let canon_path = self
+                    .stack
+                    .to_path(sym)
+                    .map(|mut p| {
+                        p.push(name);
+                        p
+                    })
+                    .expect("Failed to create canonical path for function");
                 meta.path = canon_path;
-                Ok(RoutineDef{
+                Ok(RoutineDef {
                     meta: meta.clone(),
                     def: def.clone(),
                     name: name.clone(),
@@ -753,10 +781,14 @@ impl<'a> SemanticAnalyzer<'a> {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
-                let (struct_def, canonical_path) = self.lookup_symbol_by_path(sym, &struct_name)?.ok_or(format!("Could not find struct {}", struct_name))?;
+                let (struct_def, canonical_path) =
+                    self.lookup_symbol_by_path(sym, &struct_name)?
+                        .ok_or(format!("Could not find struct {}", struct_name))?;
                 let struct_def_ty = struct_def.ty.clone();
-                let expected_num_params =
-                    struct_def_ty.get_members().ok_or("Invalid structure")?.len();
+                let expected_num_params = struct_def_ty
+                    .get_members()
+                    .ok_or("Invalid structure")?
+                    .len();
                 if params.len() != expected_num_params {
                     return Err(format!(
                         "expected {} parameters but found {}",
@@ -974,8 +1006,7 @@ mod tests {
     pub fn test_path_to_function_in_different_module() {
         use crate::syntax::parser;
         for (text,) in vec![
-            (
-                "mod my_mod{ 
+            ("mod my_mod{ 
                     fn test() -> i32{ return 0;} 
                 }
                 mod main_mod{
@@ -983,10 +1014,8 @@ mod tests {
                         let j: i32 := root::my_mod::test();
                         return;
                     }
-                }",
-            ),
-            (
-                "mod my_mod{ 
+                }",),
+            ("mod my_mod{ 
                     mod inner {
                         fn test() -> i32{ return 0;} 
                     }
@@ -996,10 +1025,8 @@ mod tests {
                         let j: i32 := root::my_mod::inner::test();
                         return;
                     }
-                }",
-            ),
-            (
-                "
+                }",),
+            ("
                 mod main_mod{
                     fn main() {
                         let j: i32 := root::main_mod::inner::test();
@@ -1011,8 +1038,7 @@ mod tests {
                     mod inner {
                         fn test() -> i32{ return 0;} 
                     }
-                }",
-            ),
+                }",),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -1025,7 +1051,7 @@ mod tests {
         }
     }
 
-    #[test] 
+    #[test]
     pub fn test_path_to_struct() {
         use crate::syntax::parser;
         for (text, expected) in vec![
@@ -1071,7 +1097,7 @@ mod tests {
     pub fn test_struct_expression_renamed_with_canonical_path() {
         use crate::syntax::parser;
         for text in vec![
-                "
+            "
                 struct test{i: i32}
 
                 fn main() {
@@ -1079,7 +1105,7 @@ mod tests {
                     return;
                 }
                 ",
-                "
+            "
                 struct test{i: i32}
 
                 fn main() {
@@ -1087,7 +1113,7 @@ mod tests {
                     return;
                 }
                 ",
-                "
+            "
                 struct test{i: i32}
 
                 fn main() {
@@ -1103,8 +1129,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module{functions, ..} = result {
-                if let RoutineDef{body, ..} = &functions[0] {
+            if let Module { functions, .. } = result {
+                if let RoutineDef { body, .. } = &functions[0] {
                     if let Bind(.., exp) = &body[0] {
                         if let box StructExpression(_, struct_name, ..) = exp {
                             let expected: ast::Path = vec!["root", "test"].into();
@@ -1128,7 +1154,7 @@ mod tests {
     pub fn test_function_params_renamed_with_canonical_path() {
         use crate::syntax::parser;
         for text in vec![
-                "
+            "
                 struct test{i: i32}
 
                 fn main(t: test) {
@@ -1143,8 +1169,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module{functions, ..} = result {
-                if let RoutineDef{params, ..} = &functions[0] {
+            if let Module { functions, .. } = result {
+                if let RoutineDef { params, .. } = &functions[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
                         let expected: ast::Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1164,7 +1190,7 @@ mod tests {
     pub fn test_coroutine_params_renamed_with_canonical_path() {
         use crate::syntax::parser;
         for text in vec![
-                "
+            "
                 struct test{i: i32}
 
                 co main(t: test) {
@@ -1179,8 +1205,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module{coroutines, ..} = result {
-                if let RoutineDef{params, ..} = &coroutines[0] {
+            if let Module { coroutines, .. } = result {
+                if let RoutineDef { params, .. } = &coroutines[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
                         let expected: ast::Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1200,7 +1226,7 @@ mod tests {
     pub fn test_struct_def_fields_are_converted_to_canonical_paths() {
         use crate::syntax::parser;
         for text in vec![
-                "
+            "
                 struct test{i: i32}
 
                 struct test2{t: test}
@@ -1213,7 +1239,7 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module{structs, ..} = result {
+            if let Module { structs, .. } = result {
                 if let Ast::StructDef(_, _, fields) = &structs[1] {
                     if let (_, Custom(ty_path)) = &fields[0] {
                         let expected: ast::Path = vec!["root", "test"].into();
@@ -1857,7 +1883,7 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_func", vec![], I32, vec![]);
 
-        let node = Ast::RoutineDef{
+        let node = Ast::RoutineDef {
             meta: 1,
             def: ast::RoutineDef::Function,
             name: "my_func".into(),
@@ -1871,7 +1897,7 @@ mod tests {
             .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
-        let node = Ast::RoutineDef{
+        let node = Ast::RoutineDef {
             meta: 1,
             def: ast::RoutineDef::Function,
             name: "my_func".into(),
@@ -1890,7 +1916,7 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_co", vec![], I32, vec![]);
 
-        let node = Ast::RoutineDef{
+        let node = Ast::RoutineDef {
             meta: 1,
             def: ast::RoutineDef::Coroutine,
             name: "my_co".into(),
@@ -1904,7 +1930,7 @@ mod tests {
             .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(I32));
 
-        let node = Ast::RoutineDef{
+        let node = Ast::RoutineDef {
             meta: 1,
             def: ast::RoutineDef::Coroutine,
             name: "my_co".into(),

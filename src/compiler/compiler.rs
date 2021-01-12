@@ -1,7 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{assembly, syntax::ast::Path};
 use crate::assembly2;
 use crate::ast::Ast;
 use crate::ast::RoutineCall;
@@ -19,6 +18,7 @@ use crate::register;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::unary_op;
 use crate::unit_op;
+use crate::{assembly, syntax::ast::Path};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ast::Type,
@@ -525,7 +525,13 @@ impl<'a> Compiler<'a> {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
-            Ast::RoutineDef{meta, def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
+            Ast::RoutineDef {
+                meta,
+                def: RoutineDef::Coroutine,
+                name: ref fn_name,
+                body: stmts,
+                ..
+            } => {
                 assembly! {(code) {
                     @{meta.canon_path().to_label()}:
                     ; {{format!("Define {}", meta.canon_path())}}
@@ -541,8 +547,14 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
-                let co_def = self.root.go_to(co_path).expect("Could not find coroutine").is_routine_def()?;
-                let total_offset = co_def.get_metadata().local_allocation()
+                let co_def = self
+                    .root
+                    .go_to(co_path)
+                    .expect("Could not find coroutine")
+                    .is_routine_def()?;
+                let total_offset = co_def
+                    .get_metadata()
+                    .local_allocation()
                     .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
                 co_def.validate_parameters(params)?;
@@ -567,7 +579,13 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::RoutineDef{meta: scope, def: RoutineDef::Function, name: ref fn_name, body: stmts, ..} => {
+            Ast::RoutineDef {
+                meta: scope,
+                def: RoutineDef::Function,
+                name: ref fn_name,
+                body: stmts,
+                ..
+            } => {
                 let total_offset = match scope.level() {
                     Routine { allocation, .. } => allocation,
                     _ => panic!("Invalid scope for function definition"),
@@ -599,7 +617,11 @@ impl<'a> Compiler<'a> {
             Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                let fn_def = self.root.go_to(fn_path).ok_or(format!("Could not find: {}", fn_path))?.is_routine_def()?;
+                let fn_def = self
+                    .root
+                    .go_to(fn_path)
+                    .ok_or(format!("Could not find: {}", fn_path))?
+                    .is_routine_def()?;
                 fn_def.validate_parameters(params)?;
 
                 let return_type = meta.ty();
@@ -667,7 +689,10 @@ impl<'a> Compiler<'a> {
 
                 self.traverse(src, current_func, code)?;
 
-                let struct_def = self.root.get_struct(struct_name).ok_or(format!("Could not find struct definition for {}", struct_name))?;
+                let struct_def = self.root.get_struct(struct_name).ok_or(format!(
+                    "Could not find struct definition for {}",
+                    struct_name
+                ))?;
                 let field_info = struct_def
                     .get_fields()
                     .iter()
@@ -710,7 +735,10 @@ impl<'a> Compiler<'a> {
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
-        let struct_def = self.root.get_struct(struct_name).expect(&format!("{}, used in {}, was not found", struct_name, current_func));
+        let struct_def = self.root.get_struct(struct_name).expect(&format!(
+            "{}, used in {}, was not found",
+            struct_name, current_func
+        ));
         let struct_sz = struct_def.size.unwrap();
         let field_info = struct_def
             .get_fields()
@@ -849,8 +877,8 @@ impl<'a> Compiler<'a> {
         self.traverse(exp, current_func, &mut code)?;
         match meta.ty() {
             Type::Custom(struct_name) => {
-
-                let st = self.root
+                let st = self
+                    .root
                     .get_struct(struct_name)
                     .ok_or(format!("no definition for {} found", struct_name))?;
                 let st_sz = st
@@ -985,7 +1013,11 @@ impl<'a> Compiler<'a> {
         src_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        let ty_def = self.root.get_struct(struct_name).ok_or(format!("Could not find definition for {}", struct_name)).unwrap();
+        let ty_def = self
+            .root
+            .get_struct(struct_name)
+            .ok_or(format!("Could not find definition for {}", struct_name))
+            .unwrap();
         let struct_sz = ty_def
             .size
             .ok_or(format!("struct {} has an unknown size", struct_name))?;

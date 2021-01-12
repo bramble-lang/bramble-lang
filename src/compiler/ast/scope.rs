@@ -1,4 +1,7 @@
-use crate::{semantics::semanticnode::SemanticMetadata, syntax::ast::{self, Path}};
+use crate::{
+    semantics::semanticnode::SemanticMetadata,
+    syntax::ast::{self, Path},
+};
 
 use super::{
     struct_table::{StructDefinition, StructTable},
@@ -117,7 +120,10 @@ impl Scope {
         for s in m.sym.table().iter() {
             current_offset = scope.insert(
                 &s.name,
-                struct_table.size_of(&s.ty).expect(&format!("Cannot get size for {}\nStruct Table:\n{}\n", s.ty, struct_table)),
+                struct_table.size_of(&s.ty).expect(&format!(
+                    "Cannot get size for {}\nStruct Table:\n{}\n",
+                    s.ty, struct_table
+                )),
                 current_offset,
             );
         }
@@ -137,7 +143,12 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(m.id, Level::Module { name: name.into() }, m.path.clone(), m.ty.clone());
+        let mut scope = Scope::new(
+            m.id,
+            Level::Module { name: name.into() },
+            m.path.clone(),
+            m.ty.clone(),
+        );
         scope.line = m.ln;
         for s in m.sym.table().iter() {
             layout.offset =

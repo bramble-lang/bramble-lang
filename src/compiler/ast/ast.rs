@@ -29,12 +29,20 @@ impl CompilerNode {
                 }
                 (ExpressionBlock(meta, nbody), nlayout)
             }
-            RoutineDef{meta, def, name, params, ty, body} => {
+            RoutineDef {
+                meta,
+                def,
+                name,
+                params,
+                ty,
+                body,
+            } => {
                 let initial_frame_size = match def {
                     syntax::ast::RoutineDef::Function => 0,
                     syntax::ast::RoutineDef::Coroutine => 20,
                 };
-                let (mut meta, offset2) = Scope::routine_from(meta, struct_table, initial_frame_size);
+                let (mut meta, offset2) =
+                    Scope::routine_from(meta, struct_table, initial_frame_size);
                 let mut nbody = vec![];
                 let mut nlayout = LayoutData::new(offset2);
                 for e in body.iter() {
@@ -47,7 +55,7 @@ impl CompilerNode {
                     allocation: nlayout.offset,
                 };
                 (
-                    RoutineDef{
+                    RoutineDef {
                         meta,
                         def: *def,
                         name: name.clone(),
@@ -255,7 +263,7 @@ impl CompilerNode {
         }
     }
 
-    pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String>{
+    pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String> {
         match self {
             Ast::RoutineDef{..} => {
                 let expected_params = self.get_params().ok_or(format!(
@@ -275,7 +283,10 @@ impl CompilerNode {
         }
     }
 
-    pub fn get_struct(&self, path: &syntax::ast::Path) -> Option<&super::struct_table::StructDefinition> {
+    pub fn get_struct(
+        &self,
+        path: &syntax::ast::Path,
+    ) -> Option<&super::struct_table::StructDefinition> {
         let mut tail = path.clone();
         let item = tail.truncate()?;
         let parent_module = self.go_to(&tail)?;
@@ -285,11 +296,11 @@ impl CompilerNode {
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::{compiler::ast::scope, syntax::ast::Path};
     use crate::semantics::symbol_table;
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
     use crate::syntax::ast::Type;
+    use crate::{compiler::ast::scope, syntax::ast::Path};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
 
     use super::*;
@@ -310,7 +321,10 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         match cn.0 {
             CompilerNode::Integer(m, _) => {
-                assert_eq!(m, Scope::new(3, scope::Level::Local, vec!["root"].into(), m.ty.clone()));
+                assert_eq!(
+                    m,
+                    Scope::new(3, scope::Level::Local, vec!["root"].into(), m.ty.clone())
+                );
             }
             _ => assert_eq!(true, false),
         }
@@ -334,7 +348,10 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
-                assert_eq!(m, Scope::new(0, scope::Level::Local, vec!["root"].into(), m.ty.clone()));
+                assert_eq!(
+                    m,
+                    Scope::new(0, scope::Level::Local, vec!["root"].into(), m.ty.clone())
+                );
             }
             _ => assert_eq!(true, false),
         }
@@ -379,7 +396,10 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),);
+                assert_eq!(
+                    m,
+                    Scope::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),
+                );
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
@@ -489,7 +509,7 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -507,7 +527,12 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef{meta, def: RoutineDef::Function, name, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Function,
+                name,
+                ..
+            } => {
                 assert_eq!(name, "func");
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
@@ -535,7 +560,7 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -553,7 +578,7 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -572,7 +597,12 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef{meta,def: RoutineDef::Function, body, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Function,
+                body,
+                ..
+            } => {
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
                 assert_eq!(meta.symbols.table["x"].offset, 4);
@@ -580,7 +610,11 @@ mod ast_tests {
                 assert_eq!(meta.symbols.table["y"].offset, 8);
 
                 match body.iter().nth(0) {
-                    Some(CompilerNode::RoutineDef{meta, def: RoutineDef::Function, ..}) => {
+                    Some(CompilerNode::RoutineDef {
+                        meta,
+                        def: RoutineDef::Function,
+                        ..
+                    }) => {
                         assert_eq!(meta.symbols.table.len(), 2);
                         assert_eq!(meta.symbols.table["x"].size, 4);
                         assert_eq!(meta.symbols.table["x"].offset, 4);
@@ -599,7 +633,7 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -617,7 +651,12 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef{meta, def: RoutineDef::Coroutine, name, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Coroutine,
+                name,
+                ..
+            } => {
                 assert_eq!(name, "coroutine");
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
