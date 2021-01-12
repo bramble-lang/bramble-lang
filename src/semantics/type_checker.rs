@@ -559,10 +559,19 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 } else {
                     let z = resolved_params.iter().zip(expected_param_tys.iter());
-                    let all_params_match = z
-                        .map(|(up, fp)| up.get_type() == *fp)
-                        .fold(true, |x, y| x && y);
-                    if all_params_match {
+                    let mut idx = 0;
+                    let mut mismatches = vec![];
+
+                    for (user, expected) in z {
+                        idx += 1;
+                        let expected = self.type_to_canonical(sym, expected)?;
+                        let user_ty = user.get_type();
+                        if user_ty != expected {
+                            mismatches.push((idx, expected, user_ty));
+                        }
+                    }
+
+                    if mismatches.len() == 0 {
                         meta.ty = ret_ty;
                         Ok(RoutineCall(
                             meta.clone(),
@@ -571,9 +580,11 @@ impl<'a> SemanticAnalyzer<'a> {
                             resolved_params,
                         ))
                     } else {
+                        let errors: Vec<String> = mismatches.iter().map(|(idx, expected, got)| format!("parameter {} expected {} got {}", idx, expected, got)).collect();
                         Err(format!(
-                            "One or more parameters had mismatching types for function {}",
-                            routine_path
+                            "One or more parameters have mismatching types for function {}: {}",
+                            routine_path,
+                            errors.join(", ")
                         ))
                     }
                 }
@@ -746,8 +757,9 @@ impl<'a> SemanticAnalyzer<'a> {
                     let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, struct_name))?;
+                    let member_ty = self.type_to_canonical(sym, member_ty)?;
                     let param = self.traverse(pv, current_func, sym)?;
-                    if param.get_type() != *member_ty {
+                    if param.get_type() != member_ty {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
                             struct_name,
@@ -1781,7 +1793,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_struct_init() {
+    pub fn test_struct_expression() {
         use crate::syntax::parser;
         for (text, expected) in vec![
             (
@@ -1850,6 +1862,40 @@ mod tests {
                     }
                 }",
                 Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                struct MyStruct2{ms: MyStruct}
+                fn test() -> MyStruct2
+                {
+                    let x: root::MyStruct := self::MyStruct{x: 1};
+                    let y: root::MyStruct2 := self::MyStruct2{ ms: x};
+                    return y;
+                }",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                fn test2(ms: MyStruct) -> i32 {return ms.x;}
+                fn test() -> i32
+                {
+                    let x: root::MyStruct := self::MyStruct{x: 1};
+                    let y: i32 := test2(x);
+                    return y;
+                }",
+                Ok(()),
+            ),
+            (
+                "struct MyStruct{x:i32}
+                struct MyStruct2{ms: MyStruct}
+                fn test2(ms2: MyStruct2) -> i32 {return ms2.ms.x;}
+                fn test() -> i32
+                {
+                    let x: root::MyStruct := self::MyStruct{x: 1};
+                    let y: i32 := test2(x);
+                    return y;
+                }",
+                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 got root::MyStruct"),
             ),
             (
                 "struct MyStruct{x:i32}
