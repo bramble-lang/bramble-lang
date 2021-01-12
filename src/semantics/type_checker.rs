@@ -1844,6 +1844,15 @@ mod tests {
                 Ok(()),
             ),
             (
+                "struct MyStruct{x:i32}
+                fn test() -> MyStruct 
+                {
+                    let x: root::MyStruct := {self::MyStruct{x: 1}};
+                    return x;
+                }",
+                Ok(()),
+            ),
+            (
                 "mod my_mod{struct MyStruct{x:i32}}
                 fn test() -> my_mod::MyStruct 
                 {
