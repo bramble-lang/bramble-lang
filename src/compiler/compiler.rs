@@ -24,7 +24,7 @@ use crate::{
     syntax::ast::Type,
 };
 
-use super::ast::struct_table::ResolvedStructTable;
+use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,
@@ -698,14 +698,14 @@ impl<'a> Compiler<'a> {
                 let field_info = struct_def
                     .get_fields()
                     .iter()
-                    .find(|(n, ..)| n == member)
+                    .find(|FieldInfo{name, ..}| name == member)
                     .ok_or(format!("Member {} not found on {}", member, struct_name))?;
                 let field_offset = struct_def.get_offset_of(member).ok_or(format!(
                     "No field offset found for {}.{}",
                     struct_name, member
                 ))?;
 
-                match &field_info.1 {
+                match &field_info.ty() {
                     Type::Custom(_substruct_name) => {
                         assembly! {(code) {
                             lea %eax, [%eax+{field_offset}];
@@ -747,7 +747,7 @@ impl<'a> Compiler<'a> {
         let field_info = struct_def
             .get_fields()
             .iter()
-            .map(|(n, _, o)| (n.clone(), o.unwrap()))
+            .map(|FieldInfo{name, offset, ..}| (name.clone(), offset.unwrap()))
             .collect::<Vec<(String, i32)>>();
 
         if field_values.len() != field_info.len() {
@@ -984,7 +984,7 @@ impl<'a> Compiler<'a> {
             .struct_table
             .get(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
-        for (field_name, field_ty, _) in ty_def.get_fields().iter().rev() {
+        for FieldInfo{name: field_name, ty: field_ty, ..} in ty_def.get_fields().iter().rev() {
             let rel_field_offset = ty_def.get_offset_of(field_name).expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",
                 struct_name, field_name,
@@ -1024,7 +1024,7 @@ impl<'a> Compiler<'a> {
         let struct_sz = ty_def
             .size
             .expect(&format!("Struct {} has an unknown size", struct_name));
-        for (field_name, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
+        for FieldInfo{name: field_name, ty: field_ty, offset: field_offset} in ty_def.get_fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",
                 struct_name, field_name
