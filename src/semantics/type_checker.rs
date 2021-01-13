@@ -325,6 +325,20 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
+    fn check_for_invalid_routine_parameters<'b>(given: &'b Vec<SemanticNode>, expected_types: &'b Vec<Type>) -> Result<Vec<(i32, &'b Type, &'b Type)>,String>{
+        let mut mismatches = vec![];
+        let mut idx = 0;
+        for (user, expected) in given.iter().zip(expected_types.iter()) {
+            idx += 1;
+            let user_ty = user.get_type();
+            if user_ty != expected {
+                mismatches.push((idx, user_ty, expected));
+            }
+        }
+
+        Ok(mismatches)
+    }
+
     fn analyize_node(
         &mut self,
         ast: &SemanticNode,
@@ -601,25 +615,17 @@ impl<'a> SemanticAnalyzer<'a> {
                     _ => return Err(format!("{} found but was not a function", routine_path)),
                 };
 
+                let expected_param_tys = expected_param_tys.iter().map(
+                    |pty| Self::type_to_canonical_with_path(&routine_canon_path_tail, pty)
+                ).collect::<Result<Vec<Type>, String>>()?;
+
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
                         "Incorrect number of parameters passed to routine: {}",
                         routine_path
                     ))
                 } else {
-                    let z = resolved_params.iter().zip(expected_param_tys.iter());
-                    let mut idx = 0;
-                    let mut mismatches = vec![];
-
-                    for (user, expected) in z {
-                        idx += 1;
-                        let expected =
-                            Self::type_to_canonical_with_path(&routine_canon_path_tail, expected)?;
-                        let user_ty = user.get_type();
-                        if user_ty != expected {
-                            mismatches.push((idx, expected, user_ty));
-                        }
-                    }
+                    let mismatches = Self::check_for_invalid_routine_parameters(&resolved_params, &expected_param_tys)?;
 
                     if mismatches.len() == 0 {
                         meta.ty = self.type_to_canonical(sym, &ret_ty)?;
@@ -632,7 +638,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     } else {
                         let errors: Vec<String> = mismatches
                             .iter()
-                            .map(|(idx, expected, got)| {
+                            .map(|(idx, got, expected)| {
                                 format!("parameter {} expected {} got {}", idx, expected, got)
                             })
                             .collect();
