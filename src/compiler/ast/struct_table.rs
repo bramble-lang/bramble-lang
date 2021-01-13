@@ -1,6 +1,9 @@
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{semantics::semanticnode::SemanticNode, syntax::ast::{self, Path}};
+use crate::{
+    semantics::semanticnode::SemanticNode,
+    syntax::ast::{self, Path},
+};
 
 use super::struct_definition::StructDefinition;
 
@@ -13,7 +16,10 @@ pub struct StructTable<S> {
 impl<S> std::fmt::Display for StructTable<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (canon_path, st) in self.table.iter() {
-            f.write_fmt(format_args!("\t{} => {} | {:?} | ", canon_path, st.name, st.size))?;
+            f.write_fmt(format_args!(
+                "\t{} => {} | {:?} | ",
+                canon_path, st.name, st.size
+            ))?;
 
             for (field_name, field_type, field_size) in st.fields.iter() {
                 f.write_fmt(format_args!(
@@ -30,15 +36,15 @@ impl<S> std::fmt::Display for StructTable<S> {
     }
 }
 
-pub struct Unrealized{}
-pub struct Resolved{}
+pub struct Unrealized {}
+pub struct Resolved {}
 
 pub type UnresolvedStructTable = StructTable<Unrealized>;
 pub type ResolvedStructTable = StructTable<Resolved>;
 
 impl UnresolvedStructTable {
     pub fn new() -> UnresolvedStructTable {
-        UnresolvedStructTable{
+        UnresolvedStructTable {
             table: HashMap::new(),
             state: PhantomData,
         }
@@ -54,7 +60,10 @@ impl UnresolvedStructTable {
         Ok(table)
     }
 
-    fn traverse(node: &SemanticNode, table: &mut HashMap<String, StructDefinition>) -> Result<(), String> {
+    fn traverse(
+        node: &SemanticNode,
+        table: &mut HashMap<String, StructDefinition>,
+    ) -> Result<(), String> {
         match node {
             SemanticNode::Module {
                 structs, modules, ..
@@ -64,7 +73,10 @@ impl UnresolvedStructTable {
                         let struct_def = StructDefinition::new(name, fields.clone());
                         Self::insert_struct(table, &meta.path, struct_def)?;
                     } else {
-                        return Err(format!("Found {} in the structs section of a module", s.root_str()));
+                        return Err(format!(
+                            "Found {} in the structs section of a module",
+                            s.root_str()
+                        ));
                     }
                 }
 
@@ -78,7 +90,10 @@ impl UnresolvedStructTable {
     }
 
     pub fn resolve(&self) -> Result<ResolvedStructTable, String> {
-        let mut resolved = ResolvedStructTable { table: HashMap::new(), state: PhantomData};
+        let mut resolved = ResolvedStructTable {
+            table: HashMap::new(),
+            state: PhantomData,
+        };
         // for each struct in the table
         loop {
             let mut num_resolved = 0;
@@ -93,7 +108,7 @@ impl UnresolvedStructTable {
                 // for each field in the struct
                 // check if field has a size
                 if let Some(sz) = self.attempt_size_resolution(value, &resolved.table) {
-                    let mut sd = StructDefinition{
+                    let mut sd = StructDefinition {
                         name: value.name.clone(),
                         size: None,
                         fields: value.fields.clone(),
@@ -122,7 +137,10 @@ impl UnresolvedStructTable {
             Ok(resolved)
         } else {
             unresolved_structs.sort();
-            Err(format!("Could not resolve these structs: {}", unresolved_structs.join(", ")))
+            Err(format!(
+                "Could not resolve these structs: {}",
+                unresolved_structs.join(", ")
+            ))
         }
     }
 
@@ -138,9 +156,7 @@ impl UnresolvedStructTable {
             match ty {
                 ast::Type::I32 => Some(4),
                 ast::Type::Bool => Some(4),
-                ast::Type::Custom(name) => {
-                    resolved_structs.get(&name.to_string())?.size
-                }
+                ast::Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
                 ast::Type::Coroutine(_) => Some(4),
                 ast::Type::StringLiteral => Some(4),
                 ast::Type::Unit => None,
@@ -175,7 +191,7 @@ impl UnresolvedStructTable {
         def: StructDefinition,
     ) -> Result<(), String> {
         if canon_path.len() == 0 {
-            return Err("Cannot insert empty path into StructTable".into())
+            return Err("Cannot insert empty path into StructTable".into());
         }
 
         let canon_name = canon_path.to_string();
@@ -186,7 +202,6 @@ impl UnresolvedStructTable {
             Ok(())
         }
     }
-
 }
 
 impl ResolvedStructTable {
@@ -212,13 +227,13 @@ impl ResolvedStructTable {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::{
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         semantics::type_checker::type_check,
         syntax::ast::Type,
     };
-    use super::*;
 
     #[test]
     pub fn test_adding_a_struct_that_references_a_struct() {
@@ -238,8 +253,17 @@ mod test {
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
-            assert_eq!(unrealized_st.table["root::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
-            assert_eq!(unrealized_st.table["root::test2"], StructDefinition::new("test2", vec![("t".into(), Type::Custom(vec!["root", "test"].into()))]))
+            assert_eq!(
+                unrealized_st.table["root::test"],
+                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+            );
+            assert_eq!(
+                unrealized_st.table["root::test2"],
+                StructDefinition::new(
+                    "test2",
+                    vec![("t".into(), Type::Custom(vec!["root", "test"].into()))]
+                )
+            )
         }
     }
 
@@ -264,8 +288,20 @@ mod test {
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
-            assert_eq!(unrealized_st.table["root::my_mod::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
-            assert_eq!(unrealized_st.table["root::test2"], StructDefinition::new("test2", vec![("t".into(), Type::Custom(vec!["root", "my_mod", "test"].into()))]))
+            assert_eq!(
+                unrealized_st.table["root::my_mod::test"],
+                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+            );
+            assert_eq!(
+                unrealized_st.table["root::test2"],
+                StructDefinition::new(
+                    "test2",
+                    vec![(
+                        "t".into(),
+                        Type::Custom(vec!["root", "my_mod", "test"].into())
+                    )]
+                )
+            )
         }
     }
 
@@ -290,20 +326,40 @@ mod test {
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
-            assert_eq!(unrealized_st.table["root::my_mod::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
-            assert_eq!(unrealized_st.table["root::test"], StructDefinition::new("test", vec![("t".into(), Type::Custom(vec!["root", "my_mod", "test"].into()))]))
+            assert_eq!(
+                unrealized_st.table["root::my_mod::test"],
+                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+            );
+            assert_eq!(
+                unrealized_st.table["root::test"],
+                StructDefinition::new(
+                    "test",
+                    vec![(
+                        "t".into(),
+                        Type::Custom(vec!["root", "my_mod", "test"].into())
+                    )]
+                )
+            )
         }
     }
 
     #[test]
     pub fn test_duplicate() {
-        let mut st = UnresolvedStructTable{
+        let mut st = UnresolvedStructTable {
             table: HashMap::new(),
             state: PhantomData,
         };
-        let result = UnresolvedStructTable::insert_struct(&mut st.table, &vec!["root", "test"].into(), StructDefinition::new("test", vec![("i".into(), Type::I32)]));
+        let result = UnresolvedStructTable::insert_struct(
+            &mut st.table,
+            &vec!["root", "test"].into(),
+            StructDefinition::new("test", vec![("i".into(), Type::I32)]),
+        );
         assert_eq!(result, Ok(()));
-        let result = UnresolvedStructTable::insert_struct(&mut st.table, &vec!["root", "test"].into(), StructDefinition::new("test", vec![("i".into(), Type::I32)]));
+        let result = UnresolvedStructTable::insert_struct(
+            &mut st.table,
+            &vec!["root", "test"].into(),
+            StructDefinition::new("test", vec![("i".into(), Type::I32)]),
+        );
         assert_eq!(result, Err("Struct root::test already exists".into()));
     }
 
@@ -316,41 +372,57 @@ mod test {
     pub fn test_resolving_a_flat_struct() {
         use crate::syntax::parser;
         for (text, canonical_name, expected) in vec![
-            ("struct test{i: i32}",
-            "root::test",
-            StructDefinition {
-                name: "test".into(),
-                size: Some(4),
-                fields: vec![("i".into(), Type::I32, Some(4))],
-            }),
-            ("struct test{y: bool}",
-            "root::test",
-            StructDefinition {
-                name: "test".into(),
-                size: Some(4),
-                fields: vec![("y".into(), Type::Bool, Some(4))],
-            }),
-            ("struct test{i: i32, y: bool}",
-            "root::test",
-            StructDefinition {
-                name: "test".into(),
-                size: Some(8),
-                fields: vec![("i".into(), Type::I32, Some(4)), ("y".into(), Type::Bool, Some(8))],
-            }),
-            ("struct test{s: string}",
-            "root::test",
-            StructDefinition {
-                name: "test".into(),
-                size: Some(4),
-                fields: vec![("s".into(), Type::StringLiteral, Some(4))],
-            }),
-            ("mod my_mod{struct inner_test{i: i32, y: bool}}",
-            "root::my_mod::inner_test",
-            StructDefinition {
-                name: "inner_test".into(),
-                size: Some(8),
-                fields: vec![("i".into(), Type::I32, Some(4)), ("y".into(), Type::Bool, Some(8))],
-            }),
+            (
+                "struct test{i: i32}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(4),
+                    fields: vec![("i".into(), Type::I32, Some(4))],
+                },
+            ),
+            (
+                "struct test{y: bool}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(4),
+                    fields: vec![("y".into(), Type::Bool, Some(4))],
+                },
+            ),
+            (
+                "struct test{i: i32, y: bool}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(8),
+                    fields: vec![
+                        ("i".into(), Type::I32, Some(4)),
+                        ("y".into(), Type::Bool, Some(8)),
+                    ],
+                },
+            ),
+            (
+                "struct test{s: string}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(4),
+                    fields: vec![("s".into(), Type::StringLiteral, Some(4))],
+                },
+            ),
+            (
+                "mod my_mod{struct inner_test{i: i32, y: bool}}",
+                "root::my_mod::inner_test",
+                StructDefinition {
+                    name: "inner_test".into(),
+                    size: Some(8),
+                    fields: vec![
+                        ("i".into(), Type::I32, Some(4)),
+                        ("y".into(), Type::Bool, Some(8)),
+                    ],
+                },
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -370,47 +442,79 @@ mod test {
     pub fn test_nested_struct() {
         use crate::syntax::parser;
         for (text, canonical_name, expected) in vec![
-            ("
+            (
+                "
             struct test{i: i32}
             struct test2{t: test}
             ",
-            "root::test2",
-            StructDefinition {
-                name: "test2".into(),
-                size: Some(4),
-                fields: vec![("t".into(), Type::Custom(vec!["root", "test"].into()), Some(4))],
-            }),
-            ("
+                "root::test2",
+                StructDefinition {
+                    name: "test2".into(),
+                    size: Some(4),
+                    fields: vec![(
+                        "t".into(),
+                        Type::Custom(vec!["root", "test"].into()),
+                        Some(4),
+                    )],
+                },
+            ),
+            (
+                "
             struct test{i: i32}
             struct test2{x: i32, t: test, b: bool}
             ",
-            "root::test2",
-            StructDefinition {
-                name: "test2".into(),
-                size: Some(12),
-                fields: vec![("x".into(), Type::I32, Some(4)), ("t".into(), Type::Custom(vec!["root", "test"].into()), Some(8)), ("b".into(), Type::Bool, Some(12))],
-            }),
-            ("
+                "root::test2",
+                StructDefinition {
+                    name: "test2".into(),
+                    size: Some(12),
+                    fields: vec![
+                        ("x".into(), Type::I32, Some(4)),
+                        (
+                            "t".into(),
+                            Type::Custom(vec!["root", "test"].into()),
+                            Some(8),
+                        ),
+                        ("b".into(), Type::Bool, Some(12)),
+                    ],
+                },
+            ),
+            (
+                "
             struct test{i: i32, j: i32}
             struct test2{x: i32, b: bool, t: test}
             ",
-            "root::test2",
-            StructDefinition {
-                name: "test2".into(),
-                size: Some(16),
-                fields: vec![("x".into(), Type::I32, Some(4)), ("b".into(), Type::Bool, Some(8)), ("t".into(), Type::Custom(vec!["root", "test"].into()), Some(16))],
-            }),
-            ("
+                "root::test2",
+                StructDefinition {
+                    name: "test2".into(),
+                    size: Some(16),
+                    fields: vec![
+                        ("x".into(), Type::I32, Some(4)),
+                        ("b".into(), Type::Bool, Some(8)),
+                        (
+                            "t".into(),
+                            Type::Custom(vec!["root", "test"].into()),
+                            Some(16),
+                        ),
+                    ],
+                },
+            ),
+            (
+                "
             struct test{i: i32}
             struct test2{t: test}
             struct test3{t2: test2}
             ",
-            "root::test3",
-            StructDefinition {
-                name: "test3".into(),
-                size: Some(4),
-                fields: vec![("t2".into(), Type::Custom(vec!["root", "test2"].into()), Some(4))],
-            }),
+                "root::test3",
+                StructDefinition {
+                    name: "test3".into(),
+                    size: Some(4),
+                    fields: vec![(
+                        "t2".into(),
+                        Type::Custom(vec!["root", "test2"].into()),
+                        Some(4),
+                    )],
+                },
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -456,7 +560,10 @@ mod test {
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved = unrealized_st.resolve();
 
-            assert_eq!(resolved.err(), Some("Could not resolve these structs: root::test, root::test2".into()));
+            assert_eq!(
+                resolved.err(),
+                Some("Could not resolve these structs: root::test, root::test2".into())
+            );
         }
     }
 }
