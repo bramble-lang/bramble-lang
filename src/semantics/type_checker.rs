@@ -583,12 +583,12 @@ impl<'a> SemanticAnalyzer<'a> {
                     Symbol {
                         ty: Type::FunctionDef(pty, rty),
                         ..
-                    } if *call == crate::syntax::ast::RoutineCall::Function => (pty, *rty.clone()),
+                    } if *call == crate::syntax::ast::RoutineCall::Function => (pty, Self::type_to_canonical_with_path(&canon_path.tail(), rty)?),
                     Symbol {
                         ty: Type::CoroutineDef(pty, rty),
                         ..
                     } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
-                        (pty, Type::Coroutine(rty.clone()))
+                        (pty, Type::Coroutine(Box::new(Self::type_to_canonical_with_path(&canon_path.tail(), rty)?)))
                     }
                     _ => return Err(format!("{} found but was not a function", routine_path)),
                 };

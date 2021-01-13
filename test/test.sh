@@ -83,4 +83,5 @@ then
     run_test "modules/coroutine"
     run_test "modules/nested"
     run_test "modules/struct"
+    run_test "modules/return"
 fi
