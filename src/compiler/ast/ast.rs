@@ -10,7 +10,8 @@ pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
     pub fn from(ast: &SemanticNode) -> (CompilerNode, LayoutData) {
-        let struct_table = struct_table2::UnresolvedStructTable::from(ast).unwrap().resolve().unwrap();
+        let unresolved_struct_table = struct_table2::UnresolvedStructTable::from(ast).unwrap();
+        let struct_table = unresolved_struct_table.resolve().unwrap();
         CompilerNode::compute_offsets(ast, LayoutData::new(0), &struct_table)
     }
 

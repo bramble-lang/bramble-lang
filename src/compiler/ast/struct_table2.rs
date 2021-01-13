@@ -12,8 +12,8 @@ pub struct StructTable<S> {
 
 impl<S> std::fmt::Display for StructTable<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (_, st) in self.table.iter() {
-            f.write_fmt(format_args!("\t{} | {:?} | ", st.name, st.size))?;
+        for (canon_path, st) in self.table.iter() {
+            f.write_fmt(format_args!("\t{} => {} | {:?} | ", canon_path, st.name, st.size))?;
 
             for (field_name, field_type, field_size) in st.fields.iter() {
                 f.write_fmt(format_args!(
@@ -51,7 +51,6 @@ impl UnresolvedStructTable {
         };
 
         Self::traverse(root, &mut table.table)?;
-
         Ok(table)
     }
 
@@ -201,7 +200,7 @@ impl ResolvedStructTable {
             ast::Type::Bool => Some(4),
             ast::Type::StringLiteral => Some(4),
             ast::Type::Coroutine(_) => Some(4),
-            ast::Type::Custom(name) => self.get(name.last().unwrap()).map(|st| st.size).flatten(),
+            ast::Type::Custom(canon_path) => self.get(&canon_path.to_string()).map(|st| st.size).flatten(),
             ast::Type::FunctionDef(..) => Some(0),
             ast::Type::CoroutineDef(..) => Some(0),
             ast::Type::StructDef(..) => Some(0),
