@@ -24,7 +24,7 @@ use crate::{
     syntax::ast::Type,
 };
 
-use super::ast::struct_table2::ResolvedStructTable;
+use super::ast::struct_table::ResolvedStructTable;
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,

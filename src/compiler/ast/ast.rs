@@ -1,16 +1,16 @@
-use struct_table2::ResolvedStructTable;
+use struct_table::ResolvedStructTable;
 
 use crate::compiler::ast::scope::{LayoutData, Level, Scope};
 
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
-use super::struct_table2;
+use super::struct_table;
 
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
     pub fn from(ast: &SemanticNode) -> Result<(CompilerNode, ResolvedStructTable), String> {
-        let unresolved_struct_table = struct_table2::UnresolvedStructTable::from(ast)?;
+        let unresolved_struct_table = struct_table::UnresolvedStructTable::from(ast)?;
         let struct_table = unresolved_struct_table.resolve()?;
         let (compiler_ast, _) = CompilerNode::compute_offsets(ast, LayoutData::new(0), &struct_table);
         Ok((compiler_ast, struct_table))
@@ -278,7 +278,7 @@ impl CompilerNode {
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::{compiler::ast::struct_table2::UnresolvedStructTable, semantics::symbol_table};
+    use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
     use crate::syntax::ast::Type;

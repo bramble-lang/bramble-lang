@@ -3,7 +3,7 @@ use crate::{
     syntax::ast::{self, Path},
 };
 
-use super::{struct_table2::ResolvedStructTable, symbol_table::{Symbol, SymbolTable}};
+use super::{struct_table::ResolvedStructTable, symbol_table::{Symbol, SymbolTable}};
 
 #[derive(Debug, PartialEq)]
 pub struct LayoutData {
