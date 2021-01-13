@@ -205,38 +205,20 @@ impl CompilerNode {
             } => {
                 let (meta, layout) = Scope::module_from(meta, name, struct_table, layout);
 
-                let mut nlayout = layout;
-                let mut nmods = vec![];
-                for module in modules.iter() {
-                    let (nm, no) = CompilerNode::compute_offsets(module, nlayout, struct_table);
-                    nlayout = no;
-                    nmods.push(nm);
-                }
-
-                let mut nfuncs = vec![];
-                for f in functions.iter() {
-                    let (nf, no) = CompilerNode::compute_offsets(f, nlayout, struct_table);
-                    nlayout = no;
-                    nfuncs.push(nf);
-                }
-
-                let mut ncors = vec![];
-                for co in coroutines.iter() {
-                    let (nco, no) = CompilerNode::compute_offsets(co, nlayout, struct_table);
-                    nlayout = no;
-                    ncors.push(nco);
-                }
+                let (modules, layout) = Self::compute_layouts_for(modules, layout, struct_table);
+                let (functions, layout) = Self::compute_layouts_for(functions, layout, struct_table);
+                let (coroutines, layout) = Self::compute_layouts_for(coroutines, layout, struct_table);
 
                 (
                     Module {
                         meta,
                         name: name.clone(),
-                        modules: nmods,
-                        functions: nfuncs,
-                        coroutines: ncors,
+                        modules,
+                        functions,
+                        coroutines,
                         structs: vec![],
                     },
-                    nlayout,
+                    layout,
                 )
             }
             StructDef(..) => panic!("StructDef Unimplemented"),
@@ -254,6 +236,18 @@ impl CompilerNode {
                 )
             }
         }
+    }
+
+    fn compute_layouts_for(items: &Vec<SemanticNode>, layout: LayoutData, struct_table: &ResolvedStructTable) -> (Vec<CompilerNode>, LayoutData) {
+        let mut compiler_ast_items = vec![];
+        let mut layout = layout;
+        for item in items.iter() {
+            let (c_ast_item, no) = CompilerNode::compute_offsets(item, layout, struct_table);
+            layout = no;
+            compiler_ast_items.push(c_ast_item);
+        }
+
+        (compiler_ast_items, layout)
     }
 
     pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String> {
