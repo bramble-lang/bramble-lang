@@ -107,9 +107,26 @@ impl Path {
         self.path.iter()
     }
 
+    pub fn item(&self) -> Option<&str> {
+        let l = self.path.len();
+        if l == 0 {
+            None
+        } else {
+            Some(&self.path[l - 1])
+        }
+    }
+
     /// Remove the last step in the path
     pub fn truncate(&mut self) -> Option<String> {
         self.path.pop()
+    }
+
+    pub fn tail(&self) -> Path {
+        let mut path = Path {
+            path: self.path.clone(),
+        };
+        path.path.pop();
+        path
     }
 
     /**
@@ -751,5 +768,28 @@ mod test_path {
 
         let expected = "self_item";
         assert_eq!(path.to_label(), expected);
+    }
+
+    #[test]
+    fn test_item() {
+        let path: Path = vec!["self", "item"].into();
+
+        let expected = "item";
+        assert_eq!(path.item(), Some(expected));
+    }
+
+    #[test]
+    fn test_item_empty_path() {
+        let path: Path = Path::new();
+
+        assert_eq!(path.item(), None);
+    }
+
+    #[test]
+    fn test_tail() {
+        let path: Path = vec!["self", "item"].into();
+
+        let expected = vec!["self"].into();
+        assert_eq!(path.tail(), expected);
     }
 }

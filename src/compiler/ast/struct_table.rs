@@ -1,145 +1,25 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
-use crate::syntax::ast;
+use crate::{
+    semantics::semanticnode::SemanticNode,
+    syntax::ast::{self, Path},
+};
 
-#[derive(Debug, PartialEq)]
-pub(super) struct StructTable {
-    pub structs: HashMap<String, StructDefinition>,
+use super::struct_definition::StructDefinition;
+
+#[derive(Debug)]
+pub struct StructTable<S> {
+    table: HashMap<String, StructDefinition>,
+    state: PhantomData<S>,
 }
 
-impl StructTable {
-    pub fn new() -> StructTable {
-        StructTable {
-            structs: HashMap::new(),
-        }
-    }
-
-    pub fn insert(&mut self, name: &str, fields: Vec<(String, ast::Type)>) -> Result<(), String> {
-        if self.structs.contains_key(name) {
-            Err(format!("Struct {} is already in the StructTable", name))
-        } else {
-            let struct_def = StructDefinition::new(name, fields);
-            self.structs.insert(name.into(), struct_def);
-            Ok(())
-        }
-    }
-
-    pub fn get(&self, name: &str) -> Option<&StructDefinition> {
-        self.structs.get(name)
-    }
-
-    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
-        match ty {
-            ast::Type::I32 => Some(4),
-            ast::Type::Bool => Some(4),
-            ast::Type::StringLiteral => Some(4),
-            ast::Type::Coroutine(_) => Some(4),
-            ast::Type::Custom(name) => self.get(name.last().unwrap()).map(|st| st.size).flatten(),
-            ast::Type::FunctionDef(..) => Some(0),
-            ast::Type::CoroutineDef(..) => Some(0),
-            ast::Type::StructDef(..) => Some(0),
-            ast::Type::Unit => Some(0),
-            ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
-        }
-    }
-
-    /// Attempt to resolve the size of every struct in this table
-    /// On success, the StructTable will be updated such that every
-    /// struct in the table has a Some value for its size.
-    ///
-    /// If a struct cannot have its size resolved (because of a circular
-    /// dependency) then an error is returned. The StructTable will then
-    /// be left with one or more Structs that do not have a resolved size.
-    pub fn resolve_sizes(&mut self) -> Result<(), String> {
-        // Create a counter that will count every time a struct is resolved
-        let resolved_sizes = self.compute_struct_sizes();
-
-        // Run through all the structs and update their sizes
-        for (_, st) in self.structs.iter_mut() {
-            match resolved_sizes.get(&st.name) {
-                Some(sz) => {
-                    let mut total_offset = 0;
-                    st.fields.iter_mut().zip(sz.iter()).for_each(|(f, sz)| {
-                        total_offset += *sz;
-                        f.2 = Some(total_offset);
-                    });
-                    st.size = Some(sz.iter().sum());
-                }
-                None => (),
-            }
-        }
-
-        // If any struct has None for its size then return an error
-        // Otherwise, return success
-        match self.structs.iter().find(|(_, st)| st.size.is_none()) {
-            Some((n, _)) => Err(format!("Struct {} cannot be resolved", n)),
-            None => Ok(()),
-        }
-    }
-
-    fn compute_struct_sizes(&mut self) -> HashMap<String, Vec<i32>> {
-        let mut counter = 0;
-        let mut resolved_sizes: HashMap<String, Vec<i32>> = HashMap::new();
-        loop {
-            for (_, st) in self.structs.iter() {
-                // Check if we have already resolved this struct
-                if resolved_sizes.contains_key(&st.name) {
-                    continue;
-                }
-
-                match self.attempt_size_resolution(st, &resolved_sizes) {
-                    Some(sz) => {
-                        resolved_sizes.insert(st.name.clone(), sz);
-                        counter += 1;
-                    }
-                    None => (),
-                }
-            }
-
-            // If one or more structs were resolved then reset te counter and repeate
-            // If no structs were resolved then equilibrium is reached and we stop the loop
-            if counter > 0 {
-                counter = 0;
-            } else {
-                break;
-            }
-        }
-
-        resolved_sizes
-    }
-
-    fn attempt_size_resolution(
-        &self,
-        st: &StructDefinition,
-        resolved_structs: &HashMap<String, Vec<i32>>,
-    ) -> Option<Vec<i32>> {
-        fn get_resolved_size(
-            ty: &ast::Type,
-            resolved_structs: &HashMap<String, Vec<i32>>,
-        ) -> Option<i32> {
-            match ty {
-                ast::Type::I32 => Some(4),
-                ast::Type::Bool => Some(4),
-                ast::Type::Custom(name) => {
-                    Some(resolved_structs.get(name.last().unwrap())?.iter().sum())
-                }
-                ast::Type::Coroutine(_) => Some(4),
-                _ => None,
-            }
-        }
-
-        // Loop through each struct in the table and attempt to resolve its size
-        st.fields
-            .iter()
-            .map(|(_, ty, _)| get_resolved_size(ty, resolved_structs))
-            .collect::<Option<Vec<i32>>>()
-    }
-}
-
-impl std::fmt::Display for StructTable {
+impl<S> std::fmt::Display for StructTable<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (_, st) in self.structs.iter() {
-            f.write_fmt(format_args!("\t{} | {:?} | ", st.name, st.size))?;
+        for (canon_path, st) in self.table.iter() {
+            f.write_fmt(format_args!(
+                "\t{} => {} | {:?} | ",
+                canon_path, st.name, st.size
+            ))?;
 
             for (field_name, field_type, field_size) in st.fields.iter() {
                 f.write_fmt(format_args!(
@@ -156,40 +36,526 @@ impl std::fmt::Display for StructTable {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct StructDefinition {
-    pub name: String,
-    pub size: Option<i32>,
-    pub fields: Vec<(String, ast::Type, Option<i32>)>,
+pub struct Unrealized {}
+pub struct Resolved {}
+
+pub type UnresolvedStructTable = StructTable<Unrealized>;
+pub type ResolvedStructTable = StructTable<Resolved>;
+
+impl UnresolvedStructTable {
+    pub fn new() -> UnresolvedStructTable {
+        UnresolvedStructTable {
+            table: HashMap::new(),
+            state: PhantomData,
+        }
+    }
+
+    pub fn from(root: &SemanticNode) -> Result<UnresolvedStructTable, String> {
+        let mut table = UnresolvedStructTable {
+            table: HashMap::new(),
+            state: PhantomData,
+        };
+
+        Self::traverse(root, &mut table.table)?;
+        Ok(table)
+    }
+
+    fn traverse(
+        node: &SemanticNode,
+        table: &mut HashMap<String, StructDefinition>,
+    ) -> Result<(), String> {
+        match node {
+            SemanticNode::Module {
+                structs, modules, ..
+            } => {
+                for s in structs.iter() {
+                    if let SemanticNode::StructDef(meta, name, fields) = s {
+                        let struct_def = StructDefinition::new(name, fields.clone());
+                        Self::insert_struct(table, &meta.path, struct_def)?;
+                    } else {
+                        return Err(format!(
+                            "Found {} in the structs section of a module",
+                            s.root_str()
+                        ));
+                    }
+                }
+
+                for m in modules.iter() {
+                    Self::traverse(m, table)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    pub fn resolve(&self) -> Result<ResolvedStructTable, String> {
+        let mut resolved = ResolvedStructTable {
+            table: HashMap::new(),
+            state: PhantomData,
+        };
+        // for each struct in the table
+        loop {
+            let mut num_resolved = 0;
+
+            for (key, value) in self.table.iter() {
+                // If no more structs can be resolved then break
+                // If the struct is resolved, then skip
+                if resolved.table.contains_key(key) {
+                    continue;
+                }
+
+                // for each field in the struct
+                // check if field has a size
+                if let Some(sz) = self.attempt_size_resolution(value, &resolved.table) {
+                    let resolved_struct_def = value.resolve_size(&sz);
+                    resolved.table.insert(key.clone(), resolved_struct_def);
+                    num_resolved += 1;
+                }
+            }
+
+            if num_resolved == 0 {
+                break;
+            }
+        }
+
+        self.validate_resolution_attempt(&resolved)
+            .map(|()| resolved)
+    }
+
+    fn validate_resolution_attempt(&self, resolved: &ResolvedStructTable) -> Result<(), String> {
+        let mut unresolved_structs = self.get_unresolved_structs(resolved);
+        if unresolved_structs.len() == 0 {
+            Ok(())
+        } else {
+            unresolved_structs.sort();
+            Err(format!(
+                "Could not resolve these structs: {}",
+                unresolved_structs.join(", ")
+            ))
+        }
+    }
+
+    fn attempt_size_resolution(
+        &self,
+        st: &StructDefinition,
+        resolved_structs: &HashMap<String, StructDefinition>,
+    ) -> Option<Vec<i32>> {
+        fn get_resolved_size(
+            ty: &ast::Type,
+            resolved_structs: &HashMap<String, StructDefinition>,
+        ) -> Option<i32> {
+            match ty {
+                ast::Type::I32 => Some(4),
+                ast::Type::Bool => Some(4),
+                ast::Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
+                ast::Type::Coroutine(_) => Some(4),
+                ast::Type::StringLiteral => Some(4),
+                ast::Type::Unit => None,
+                ast::Type::StructDef(_) => None,
+                ast::Type::FunctionDef(_, _) => None,
+                ast::Type::CoroutineDef(_, _) => None,
+                ast::Type::Unknown => None,
+            }
+        }
+
+        // Loop through each struct in the table and attempt to resolve its size
+        st.fields
+            .iter()
+            .map(|(_, ty, _)| get_resolved_size(ty, resolved_structs))
+            .collect::<Option<Vec<i32>>>()
+    }
+
+    fn get_unresolved_structs(&self, resolved_structs: &ResolvedStructTable) -> Vec<String> {
+        let mut unresolved_structs = vec![];
+        for st in self.table.keys() {
+            if !resolved_structs.table.contains_key(st) {
+                unresolved_structs.push(st.clone());
+            }
+        }
+
+        unresolved_structs
+    }
+
+    fn insert_struct(
+        table: &mut HashMap<String, StructDefinition>,
+        canon_path: &Path,
+        def: StructDefinition,
+    ) -> Result<(), String> {
+        if canon_path.len() == 0 {
+            return Err("Cannot insert empty path into StructTable".into());
+        }
+
+        let canon_name = canon_path.to_string();
+        let already_exists = table.insert(canon_name.clone(), def).is_some();
+        if already_exists {
+            Err(format!("Struct {} already exists", canon_name))
+        } else {
+            Ok(())
+        }
+    }
 }
 
-impl StructDefinition {
-    pub fn new(name: &str, fields: Vec<(String, ast::Type)>) -> StructDefinition {
-        let mut nfields = vec![];
-        for (fname, fty) in fields.iter() {
-            nfields.push((fname.clone(), fty.clone(), None));
-        }
+impl ResolvedStructTable {
+    pub fn get(&self, canon_path: &Path) -> Option<&StructDefinition> {
+        self.table.get(&canon_path.to_string())
+    }
 
-        StructDefinition {
-            name: name.into(),
-            fields: nfields,
-            size: None,
+    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
+        match ty {
+            ast::Type::I32 => Some(4),
+            ast::Type::Bool => Some(4),
+            ast::Type::StringLiteral => Some(4),
+            ast::Type::Coroutine(_) => Some(4),
+            ast::Type::Custom(canon_path) => self.get(canon_path).map(|st| st.size).flatten(),
+            ast::Type::FunctionDef(..) => Some(0),
+            ast::Type::CoroutineDef(..) => Some(0),
+            ast::Type::StructDef(..) => Some(0),
+            ast::Type::Unit => Some(0),
+            ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{
+        diagnostics::config::TracingConfig,
+        lexer::{lexer::Lexer, tokens::Token},
+        semantics::type_checker::type_check,
+        syntax::ast::Type,
+    };
+
+    #[test]
+    pub fn test_adding_a_struct_that_references_a_struct() {
+        use crate::syntax::parser;
+        for text in vec![
+            "
+                struct test{i: i32}
+                struct test2{t: test}
+                ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            assert_eq!(unrealized_st.table.len(), 2);
+            assert_eq!(
+                unrealized_st.table["root::test"],
+                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+            );
+            assert_eq!(
+                unrealized_st.table["root::test2"],
+                StructDefinition::new(
+                    "test2",
+                    vec![("t".into(), Type::Custom(vec!["root", "test"].into()))]
+                )
+            )
         }
     }
 
-    pub fn get_offset_of(&self, field: &str) -> Option<i32> {
-        match self.size {
-            None => None,
-            Some(sz) => self
-                .fields
-                .iter()
-                .find(|(fname, _, _)| fname == field)
-                .map_or(None, |f| f.2)
-                .map_or(None, |x| Some(sz - x)),
+    #[test]
+    pub fn test_nested_in_module() {
+        use crate::syntax::parser;
+        for text in vec![
+            "
+            mod my_mod {
+                struct test{i: i32}
+            }
+
+            struct test2{t: my_mod::test}
+            ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            assert_eq!(unrealized_st.table.len(), 2);
+            assert_eq!(
+                unrealized_st.table["root::my_mod::test"],
+                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+            );
+            assert_eq!(
+                unrealized_st.table["root::test2"],
+                StructDefinition::new(
+                    "test2",
+                    vec![(
+                        "t".into(),
+                        Type::Custom(vec!["root", "my_mod", "test"].into())
+                    )]
+                )
+            )
         }
     }
 
-    pub fn get_fields(&self) -> &Vec<(String, ast::Type, Option<i32>)> {
-        &self.fields
+    #[test]
+    pub fn test_same_names_different_modules() {
+        use crate::syntax::parser;
+        for text in vec![
+            "
+            mod my_mod {
+                struct test{i: i32}
+            }
+
+            struct test{t: my_mod::test}
+            ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            assert_eq!(unrealized_st.table.len(), 2);
+            assert_eq!(
+                unrealized_st.table["root::my_mod::test"],
+                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+            );
+            assert_eq!(
+                unrealized_st.table["root::test"],
+                StructDefinition::new(
+                    "test",
+                    vec![(
+                        "t".into(),
+                        Type::Custom(vec!["root", "my_mod", "test"].into())
+                    )]
+                )
+            )
+        }
+    }
+
+    #[test]
+    pub fn test_duplicate() {
+        let mut st = UnresolvedStructTable {
+            table: HashMap::new(),
+            state: PhantomData,
+        };
+        let result = UnresolvedStructTable::insert_struct(
+            &mut st.table,
+            &vec!["root", "test"].into(),
+            StructDefinition::new("test", vec![("i".into(), Type::I32)]),
+        );
+        assert_eq!(result, Ok(()));
+        let result = UnresolvedStructTable::insert_struct(
+            &mut st.table,
+            &vec!["root", "test"].into(),
+            StructDefinition::new("test", vec![("i".into(), Type::I32)]),
+        );
+        assert_eq!(result, Err("Struct root::test already exists".into()));
+    }
+
+    /*
+    Tests to add:
+    1. recursive and cyclical structs and test that they fail
+     */
+
+    #[test]
+    pub fn test_resolving_a_flat_struct() {
+        use crate::syntax::parser;
+        for (text, canonical_name, expected) in vec![
+            (
+                "struct test{i: i32}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(4),
+                    fields: vec![("i".into(), Type::I32, Some(4))],
+                },
+            ),
+            (
+                "struct test{y: bool}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(4),
+                    fields: vec![("y".into(), Type::Bool, Some(4))],
+                },
+            ),
+            (
+                "struct test{i: i32, y: bool}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(8),
+                    fields: vec![
+                        ("i".into(), Type::I32, Some(4)),
+                        ("y".into(), Type::Bool, Some(8)),
+                    ],
+                },
+            ),
+            (
+                "struct test{s: string}",
+                "root::test",
+                StructDefinition {
+                    name: "test".into(),
+                    size: Some(4),
+                    fields: vec![("s".into(), Type::StringLiteral, Some(4))],
+                },
+            ),
+            (
+                "mod my_mod{struct inner_test{i: i32, y: bool}}",
+                "root::my_mod::inner_test",
+                StructDefinition {
+                    name: "inner_test".into(),
+                    size: Some(8),
+                    fields: vec![
+                        ("i".into(), Type::I32, Some(4)),
+                        ("y".into(), Type::Bool, Some(8)),
+                    ],
+                },
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let resolved_st = unrealized_st.resolve().unwrap();
+
+            assert_eq!(resolved_st.table[canonical_name], expected);
+        }
+    }
+
+    #[test]
+    pub fn test_nested_struct() {
+        use crate::syntax::parser;
+        for (text, canonical_name, expected) in vec![
+            (
+                "
+            struct test{i: i32}
+            struct test2{t: test}
+            ",
+                "root::test2",
+                StructDefinition {
+                    name: "test2".into(),
+                    size: Some(4),
+                    fields: vec![(
+                        "t".into(),
+                        Type::Custom(vec!["root", "test"].into()),
+                        Some(4),
+                    )],
+                },
+            ),
+            (
+                "
+            struct test{i: i32}
+            struct test2{x: i32, t: test, b: bool}
+            ",
+                "root::test2",
+                StructDefinition {
+                    name: "test2".into(),
+                    size: Some(12),
+                    fields: vec![
+                        ("x".into(), Type::I32, Some(4)),
+                        (
+                            "t".into(),
+                            Type::Custom(vec!["root", "test"].into()),
+                            Some(8),
+                        ),
+                        ("b".into(), Type::Bool, Some(12)),
+                    ],
+                },
+            ),
+            (
+                "
+            struct test{i: i32, j: i32}
+            struct test2{x: i32, b: bool, t: test}
+            ",
+                "root::test2",
+                StructDefinition {
+                    name: "test2".into(),
+                    size: Some(16),
+                    fields: vec![
+                        ("x".into(), Type::I32, Some(4)),
+                        ("b".into(), Type::Bool, Some(8)),
+                        (
+                            "t".into(),
+                            Type::Custom(vec!["root", "test"].into()),
+                            Some(16),
+                        ),
+                    ],
+                },
+            ),
+            (
+                "
+            struct test{i: i32}
+            struct test2{t: test}
+            struct test3{t2: test2}
+            ",
+                "root::test3",
+                StructDefinition {
+                    name: "test3".into(),
+                    size: Some(4),
+                    fields: vec![(
+                        "t2".into(),
+                        Type::Custom(vec!["root", "test2"].into()),
+                        Some(4),
+                    )],
+                },
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let resolved_st = unrealized_st.resolve().unwrap();
+
+            assert_eq!(resolved_st.table[canonical_name], expected);
+        }
+    }
+
+    #[test]
+    pub fn test_cyclical_fails() {
+        use crate::syntax::parser;
+        for text in vec![
+            "
+                struct test{t2: test2}
+                struct test2{t: test}
+                ",
+            "
+                struct test{t2: test2}
+                struct test2{t: test}
+                struct good{i: i32, b: bool}
+                ",
+            "
+                struct test{t2: test2}
+                struct test2{t: test}
+                struct good{i: i32, b: bool}
+                struct good2{g: good}
+                ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let resolved = unrealized_st.resolve();
+
+            assert_eq!(
+                resolved.err(),
+                Some("Could not resolve these structs: root::test, root::test2".into())
+            );
+        }
     }
 }

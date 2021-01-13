@@ -4,7 +4,7 @@ use crate::{
 };
 
 use super::{
-    struct_table::{StructDefinition, StructTable},
+    struct_table::ResolvedStructTable,
     symbol_table::{Symbol, SymbolTable},
 };
 
@@ -26,7 +26,6 @@ pub struct Scope {
     pub(super) level: Level,
     pub(super) ty: ast::Type,
     pub(super) symbols: SymbolTable,
-    pub(super) structs: StructTable,
     pub(super) canon_path: Path,
 }
 
@@ -38,7 +37,6 @@ impl Scope {
             level,
             ty,
             symbols: SymbolTable::new(),
-            structs: StructTable::new(),
             canon_path,
         }
     }
@@ -66,10 +64,6 @@ impl Scope {
         self.symbols.table.get(name)
     }
 
-    pub fn get_struct(&self, name: &str) -> Option<&StructDefinition> {
-        self.structs.get(name)
-    }
-
     pub fn line(&self) -> u32 {
         self.line
     }
@@ -82,13 +76,9 @@ impl Scope {
         &self.canon_path
     }
 
-    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
-        self.structs.size_of(ty)
-    }
-
     pub(super) fn local_from(
         m: &SemanticMetadata,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
@@ -103,7 +93,7 @@ impl Scope {
 
     pub(super) fn routine_from(
         m: &SemanticMetadata,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
         let mut scope = Scope::new(
@@ -139,7 +129,7 @@ impl Scope {
     pub(super) fn module_from(
         m: &SemanticMetadata,
         name: &str,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
@@ -166,7 +156,6 @@ impl std::fmt::Display for Scope {
             "Symbols (! prefix indicates anonymous symbol):\n{}",
             self.symbols
         ))?;
-        f.write_fmt(format_args!("Structs:\n{}\n", self.structs))?;
 
         Ok(())
     }

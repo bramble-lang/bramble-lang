@@ -1,9 +1,8 @@
-use crate::ast::Type;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level;
 use crate::{ast::RoutineDef, syntax::ast::Path};
 
-use super::{struct_table::StructDefinition, symbol_table::Symbol};
+use super::symbol_table::Symbol;
 
 #[derive(Debug)]
 pub struct ScopeStack<'a> {
@@ -104,28 +103,6 @@ impl<'a> ScopeStack<'a> {
         }
         .get_metadata()
         .local_allocation()
-    }
-
-    pub fn get_struct(&self, name: &str) -> Option<&StructDefinition> {
-        for node in self.stack.iter().rev() {
-            match node.get_metadata().get_struct(name) {
-                Some(def) => return Some(def),
-                None => (),
-            }
-        }
-
-        None
-    }
-
-    pub fn size_of(&self, ty: &Type) -> Option<i32> {
-        for node in self.stack.iter().rev() {
-            match node.get_metadata().size_of(ty) {
-                Some(def) => return Some(def),
-                None => (),
-            }
-        }
-
-        None
     }
 
     /// Starting from the bottom of the stack this builds a path
