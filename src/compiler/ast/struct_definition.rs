@@ -36,4 +36,20 @@ impl StructDefinition {
     pub fn get_fields(&self) -> &Vec<(String, ast::Type, Option<i32>)> {
         &self.fields
     }
+
+    pub fn resolve_size(&self, sizes: &Vec<i32>) -> StructDefinition {
+        let mut sd = StructDefinition {
+            name: self.name.clone(),
+            size: None,
+            fields: self.fields.clone(),
+        };
+        let mut total_sz = 0;
+        for idx in 0..sizes.len() {
+            let field_sz = sizes[idx];
+            total_sz += field_sz;
+            sd.fields[idx].2 = Some(total_sz);
+        }
+        sd.size = Some(total_sz);
+        sd
+    }
 }

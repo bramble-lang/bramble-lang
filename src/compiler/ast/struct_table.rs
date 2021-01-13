@@ -132,9 +132,13 @@ impl UnresolvedStructTable {
             }
         }
 
-        let mut unresolved_structs = self.get_unresolved_structs(&resolved);
+        self.validate_resolution_attempt(&resolved).map(|()| resolved)
+    }
+
+    fn validate_resolution_attempt(&self, resolved: &ResolvedStructTable) -> Result<(), String> {
+        let mut unresolved_structs = self.get_unresolved_structs(resolved);
         if unresolved_structs.len() == 0 {
-            Ok(resolved)
+            Ok(())
         } else {
             unresolved_structs.sort();
             Err(format!(
