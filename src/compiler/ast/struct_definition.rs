@@ -39,7 +39,11 @@ impl StructDefinition {
 
     pub fn set_field_sizes(&self, sizes: &Vec<i32>) -> Result<StructDefinition, String> {
         if self.fields.len() != sizes.len() {
-            return Err(format!("Cannot set field sizes: expected {} sizes but got {}", self.fields.len(), sizes.len()));
+            return Err(format!(
+                "Cannot set field sizes: expected {} sizes but got {}",
+                self.fields.len(),
+                sizes.len()
+            ));
         }
         let mut sd = StructDefinition {
             name: self.name.clone(),

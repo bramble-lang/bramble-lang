@@ -56,9 +56,7 @@ impl Scope {
     pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &ast::Type) -> Scope {
         Scope::new(
             id,
-            Level::Module {
-                name: name.into(),
-            },
+            Level::Module { name: name.into() },
             canon_path.clone(),
             ty.clone(),
         )
@@ -105,7 +103,12 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(m.id, Level::Local, m.get_canonical_path().clone(), m.ty.clone());
+        let mut scope = Scope::new(
+            m.id,
+            Level::Local,
+            m.get_canonical_path().clone(),
+            m.ty.clone(),
+        );
         scope.line = m.ln;
         for s in m.sym.table().iter() {
             layout.offset =
@@ -119,11 +122,7 @@ impl Scope {
         struct_table: &ResolvedStructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
-        let mut scope = Scope::new_routine(
-            m.id,
-            m.get_canonical_path(),
-            &m.ty,
-        );
+        let mut scope = Scope::new_routine(m.id, m.get_canonical_path(), &m.ty);
         scope.line = m.ln;
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
@@ -152,12 +151,7 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new_module(
-            m.id,
-            &name,
-            m.get_canonical_path(),
-            &m.ty,
-        );
+        let mut scope = Scope::new_module(m.id, &name, m.get_canonical_path(), &m.ty);
         scope.line = m.ln;
         for s in m.sym.table().iter() {
             layout.offset =

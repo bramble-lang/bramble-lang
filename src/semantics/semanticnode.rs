@@ -65,15 +65,27 @@ impl SemanticAst {
         let node = match ast {
             Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
             Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_metadata_from(*ln), *val))),
-            StringLiteral(ln, val) => Ok(Box::new(StringLiteral(self.semantic_metadata_from(*ln), val.clone()))),
-            CustomType(ln, val) => Ok(Box::new(CustomType(self.semantic_metadata_from(*ln), val.clone()))),
+            StringLiteral(ln, val) => Ok(Box::new(StringLiteral(
+                self.semantic_metadata_from(*ln),
+                val.clone(),
+            ))),
+            CustomType(ln, val) => Ok(Box::new(CustomType(
+                self.semantic_metadata_from(*ln),
+                val.clone(),
+            ))),
             IdentifierDeclare(ln, name, p) => Ok(Box::new(IdentifierDeclare(
                 self.semantic_metadata_from(*ln),
                 name.clone(),
                 p.clone(),
             ))),
-            Identifier(ln, id) => Ok(Box::new(Identifier(self.semantic_metadata_from(*ln), id.clone()))),
-            Path(ln, path) => Ok(Box::new(Path(self.semantic_metadata_from(*ln), path.clone()))),
+            Identifier(ln, id) => Ok(Box::new(Identifier(
+                self.semantic_metadata_from(*ln),
+                id.clone(),
+            ))),
+            Path(ln, path) => Ok(Box::new(Path(
+                self.semantic_metadata_from(*ln),
+                path.clone(),
+            ))),
             MemberAccess(ln, src, member) => Ok(Box::new(MemberAccess(
                 self.semantic_metadata_from(*ln),
                 self.from_parser_ast(src)?,
@@ -117,7 +129,9 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            YieldReturn(l, None) => Ok(Box::new(YieldReturn(self.semantic_metadata_from(*l), None))),
+            YieldReturn(l, None) => {
+                Ok(Box::new(YieldReturn(self.semantic_metadata_from(*l), None)))
+            }
             YieldReturn(l, Some(exp)) => Ok(Box::new(YieldReturn(
                 self.semantic_metadata_from(*l),
                 Some(self.from_parser_ast(exp)?),
@@ -128,7 +142,10 @@ impl SemanticAst {
                     let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Box::new(ExpressionBlock(self.semantic_metadata_from(*ln), nbody)))
+                Ok(Box::new(ExpressionBlock(
+                    self.semantic_metadata_from(*ln),
+                    nbody,
+                )))
             }
             Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
             RoutineDef {

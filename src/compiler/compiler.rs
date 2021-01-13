@@ -741,7 +741,9 @@ impl<'a> Compiler<'a> {
             "{}, used in {}, was not found",
             struct_name, current_func
         ));
-        let struct_sz = struct_def.size.expect(&format!("Size is not known for {}", struct_name));
+        let struct_sz = struct_def
+            .size
+            .expect(&format!("Size is not known for {}", struct_name));
         let field_info = struct_def
             .get_fields()
             .iter()

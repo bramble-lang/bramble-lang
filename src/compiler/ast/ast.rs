@@ -206,8 +206,10 @@ impl CompilerNode {
                 let (meta, layout) = Scope::module_from(meta, name, struct_table, layout);
 
                 let (modules, layout) = Self::compute_layouts_for(modules, layout, struct_table);
-                let (functions, layout) = Self::compute_layouts_for(functions, layout, struct_table);
-                let (coroutines, layout) = Self::compute_layouts_for(coroutines, layout, struct_table);
+                let (functions, layout) =
+                    Self::compute_layouts_for(functions, layout, struct_table);
+                let (coroutines, layout) =
+                    Self::compute_layouts_for(coroutines, layout, struct_table);
 
                 (
                     Module {
@@ -238,7 +240,11 @@ impl CompilerNode {
         }
     }
 
-    fn compute_layouts_for(items: &Vec<SemanticNode>, layout: LayoutData, struct_table: &ResolvedStructTable) -> (Vec<CompilerNode>, LayoutData) {
+    fn compute_layouts_for(
+        items: &Vec<SemanticNode>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Vec<CompilerNode>, LayoutData) {
         let mut compiler_ast_items = vec![];
         let mut layout = layout;
         for item in items.iter() {

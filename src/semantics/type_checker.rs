@@ -325,7 +325,11 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn check_for_invalid_routine_parameters<'b>(routine_path: &ast::Path, given: &'b Vec<SemanticNode>, expected_types: &'b Vec<Type>) -> Result<(),String>{
+    fn check_for_invalid_routine_parameters<'b>(
+        routine_path: &ast::Path,
+        given: &'b Vec<SemanticNode>,
+        expected_types: &'b Vec<Type>,
+    ) -> Result<(), String> {
         let mut mismatches = vec![];
         let mut idx = 0;
         for (user, expected) in given.iter().zip(expected_types.iter()) {
@@ -628,9 +632,10 @@ impl<'a> SemanticAnalyzer<'a> {
                     _ => return Err(format!("{} found but was not a function", routine_path)),
                 };
 
-                let expected_param_tys = expected_param_tys.iter().map(
-                    |pty| Self::type_to_canonical_with_path(&routine_canon_path_tail, pty)
-                ).collect::<Result<Vec<Type>, String>>()?;
+                let expected_param_tys = expected_param_tys
+                    .iter()
+                    .map(|pty| Self::type_to_canonical_with_path(&routine_canon_path_tail, pty))
+                    .collect::<Result<Vec<Type>, String>>()?;
 
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
@@ -638,7 +643,11 @@ impl<'a> SemanticAnalyzer<'a> {
                         routine_path
                     ))
                 } else {
-                    match Self::check_for_invalid_routine_parameters(&routine_path, &resolved_params, &expected_param_tys) {
+                    match Self::check_for_invalid_routine_parameters(
+                        &routine_path,
+                        &resolved_params,
+                        &expected_param_tys,
+                    ) {
                         Err(msg) => Err(msg),
                         Ok(()) => {
                             meta.ty = self.type_to_canonical(sym, &ret_ty)?;
@@ -765,19 +774,31 @@ impl<'a> SemanticAnalyzer<'a> {
                 let mut meta = meta.clone();
                 let tmp_sym = sym.clone();
                 self.stack.push(tmp_sym);
-                let resolved_modules = modules.iter().map(|m| self.traverse(m, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
-                let resolved_functions = functions.iter().map(|f| self.traverse(f, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
-                let resolved_coroutines = coroutines.iter().map(|c| self.traverse(c, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
-                let resolved_structs = structs.iter().map(|s| self.traverse(s, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
+                let modules = modules
+                    .iter()
+                    .map(|m| self.traverse(m, &None, &mut meta.sym))
+                    .collect::<Result<Vec<SemanticNode>, String>>()?;
+                let functions = functions
+                    .iter()
+                    .map(|f| self.traverse(f, &None, &mut meta.sym))
+                    .collect::<Result<Vec<SemanticNode>, String>>()?;
+                let coroutines = coroutines
+                    .iter()
+                    .map(|c| self.traverse(c, &None, &mut meta.sym))
+                    .collect::<Result<Vec<SemanticNode>, String>>()?;
+                let structs = structs
+                    .iter()
+                    .map(|s| self.traverse(s, &None, &mut meta.sym))
+                    .collect::<Result<Vec<SemanticNode>, String>>()?;
                 self.stack.pop();
                 meta.ty = Unit;
                 Ok(Module {
                     meta: meta.clone(),
                     name: name.clone(),
-                    modules: resolved_modules,
-                    functions: resolved_functions,
-                    coroutines: resolved_coroutines,
-                    structs: resolved_structs,
+                    modules,
+                    functions,
+                    coroutines,
+                    structs,
                 })
             }
             Ast::StructDef(meta, struct_name, fields) => {
