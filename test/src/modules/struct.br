@@ -19,14 +19,20 @@ mod my_mod {
         struct MyStruct {
             b: i32,
         }
+        
+        struct MyStruct2 {
+            ms: super::MyStruct,
+        }
     }
 
     fn test() {
         let ms: self::MyStruct := self::MyStruct{a: 11};
         let ms2: self::inner::MyStruct := inner::MyStruct{b: 33};
+        let ms3: self::inner::MyStruct2 := inner::MyStruct2{ms: ms};
 
         printiln ms.a;
         printiln ms2.b;
+        printiln ms3.ms.a;
         
         return;
     }
