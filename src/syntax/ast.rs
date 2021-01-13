@@ -769,4 +769,27 @@ mod test_path {
         let expected = "self_item";
         assert_eq!(path.to_label(), expected);
     }
+
+    #[test]
+    fn test_item() {
+        let path: Path = vec!["self", "item"].into();
+
+        let expected = "item";
+        assert_eq!(path.item(), Some(expected));
+    }
+
+    #[test]
+    fn test_item_empty_path() {
+        let path: Path = Path::new();
+
+        assert_eq!(path.item(), None);
+    }
+
+    #[test]
+    fn test_tail() {
+        let path: Path = vec!["self", "item"].into();
+
+        let expected = vec!["self"].into();
+        assert_eq!(path.tail(), expected);
+    }
 }
