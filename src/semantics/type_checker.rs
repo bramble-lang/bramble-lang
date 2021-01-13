@@ -684,7 +684,8 @@ impl<'a> SemanticAnalyzer<'a> {
                 body,
             } => {
                 let mut meta = meta.clone();
-                for (pname, pty) in params.iter() {
+                let canonical_params = self.params_to_canonical(sym, &params)?;
+                for (pname, pty) in canonical_params.iter() {
                     meta.sym.add(pname, pty.clone(), false)?;
                 }
                 let tmp_sym = sym.clone();
@@ -697,7 +698,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 self.stack.pop();
                 meta.ty = self.type_to_canonical(sym, p)?;
 
-                let canonical_params = self.params_to_canonical(sym, &params)?;
+                let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
 
                 let canon_path = self
                     .stack
@@ -713,7 +714,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     def: def.clone(),
                     name: name.clone(),
                     params: canonical_params,
-                    ty: meta.ty.clone(),
+                    ty: canonical_ret_ty,
                     body: resolved_body,
                 })
             }
