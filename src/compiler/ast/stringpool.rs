@@ -45,7 +45,7 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
-            RoutineDef{body, ..} => {
+            RoutineDef { body, .. } => {
                 for e in body.iter() {
                     self.extract_from(e);
                 }
@@ -61,6 +61,7 @@ impl StringPool {
             MemberAccess(_, src, _) => {
                 self.extract_from(src);
             }
+            Path(..) => {}
             UnaryOp(_, _, ref operand) => {
                 self.extract_from(operand);
             }
@@ -111,10 +112,14 @@ impl StringPool {
                 }
             }
             Module {
+                modules,
                 functions,
                 coroutines,
                 ..
             } => {
+                for m in modules.iter() {
+                    self.extract_from(m);
+                }
                 for f in functions.iter() {
                     self.extract_from(f);
                 }
@@ -169,6 +174,14 @@ mod test {
                 "fn test() -> string {let s: string := \"hello\"; return \"test2\";}",
                 vec!["hello", "test2"],
             ),
+            (
+                "mod my_mod{fn test() -> string {let s: string := \"hello\"; return \"test2\";}}",
+                vec!["hello", "test2"],
+            ),
+            (
+                "mod my_mod{ mod inner{fn test() -> string {let s: string := \"hello\"; return \"test2\";}}}",
+                vec!["hello", "test2"],
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -176,8 +189,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off).unwrap();
-            let (compiler_ast, _) = CompilerNode::from(result.as_ref());
+            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let (compiler_ast, ..) = CompilerNode::from(&result).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from(&compiler_ast);
 

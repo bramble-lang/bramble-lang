@@ -174,7 +174,10 @@ impl Lexer {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(Err(format!("The lexer is locked, at {:?}, and cannot proceed", self.current_token())));
+                tokens.push(Err(format!(
+                    "The lexer is locked, at {:?}, and cannot proceed",
+                    self.current_token()
+                )));
                 break;
             }
         }
@@ -305,6 +308,7 @@ impl Lexer {
             ("->", LArrow),
             ("&&", BAnd),
             ("||", BOr),
+            ("::", PathSeparator),
             (":=", Assign),
             ("!=", NEq),
             ("==", Eq),
@@ -408,6 +412,7 @@ impl Lexer {
                 "yret" => Token::new(self.line, YieldReturn),
                 "fn" => Token::new(self.line, FunctionDef),
                 "co" => Token::new(self.line, CoroutineDef),
+                "mod" => Token::new(self.line, ModuleDef),
                 "struct" => Token::new(self.line, Struct),
                 "init" => Token::new(self.line, Init),
                 "printi" => Token::new(self.line, Printi),
@@ -492,6 +497,7 @@ mod tests {
             (")", Token::new(1, RParen)),
             (":=", Token::new(1, Assign)),
             (".", Token::new(1, MemberAccess)),
+            ("::", Token::new(1, PathSeparator)),
             ("->", Token::new(1, LArrow)),
             (":", Token::new(1, Colon)),
             (",", Token::new(1, Comma)),
@@ -537,6 +543,7 @@ mod tests {
             ("init", Token::new(1, Init)),
             ("co", Token::new(1, CoroutineDef)),
             ("fn", Token::new(1, FunctionDef)),
+            ("mod", Token::new(1, ModuleDef)),
             ("struct", Token::new(1, Struct)),
             ("printi", Token::new(1, Printi)),
             ("printiln", Token::new(1, Printiln)),

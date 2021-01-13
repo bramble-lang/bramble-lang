@@ -130,17 +130,51 @@ impl Parser {
 
 pub fn parse(tokens: Vec<Token>) -> PResult {
     let mut stream = TokenStream::new(&tokens);
-    module(&mut stream).map_err(|e| format!("Parser: {}", e))
+    let start_index = stream.index();
+    let mut item = None;
+    while stream.peek().is_some() {
+        item = parse_items("root", &mut stream).map_err(|e| format!("Parser: {}", e))?;
+
+        if stream.index() == start_index {
+            return Err(format!("Parser cannot advance past {:?}", stream.peek()));
+        }
+    }
+
+    Ok(item)
 }
 
 fn module(stream: &mut TokenStream) -> PResult {
+    let mod_def = match stream.next_if(&Lex::ModuleDef) {
+        Some(token) => match stream.next_if_id() {
+            Some((_, module_name)) => {
+                stream.next_must_be(&Lex::LBrace)?;
+                let module = parse_items(&module_name, stream)?;
+                stream.next_must_be(&Lex::RBrace)?;
+                module
+            }
+            _ => {
+                return Err(format!("L{}: expected name after mod keyword", token.l));
+            }
+        },
+        None => None,
+    };
+
+    Ok(mod_def)
+}
+
+fn parse_items(name: &str, stream: &mut TokenStream) -> PResult {
     let mut functions = vec![];
     let mut coroutines = vec![];
     let mut structs = vec![];
+    let mut modules = vec![];
 
     let module_line = stream.peek().map_or(1, |t| t.l);
-    let start_index = stream.index();
     while stream.peek().is_some() {
+        let start_index = stream.index();
+        if let Some(m) = module(stream)? {
+            modules.push(m);
+        }
+
         if let Some(f) = function_def(stream)? {
             functions.push(f);
         }
@@ -153,12 +187,15 @@ fn module(stream: &mut TokenStream) -> PResult {
         }
 
         if stream.index() == start_index {
-            return Err(format!("Parser cannot advance past {:?}", stream.peek()));
+            //return Err(format!("Parser cannot advance past {:?}", stream.peek()));
+            break;
         }
     }
 
     Ok(Some(Ast::Module {
         meta: module_line,
+        name: name.into(),
+        modules,
         functions,
         coroutines,
         structs,
@@ -191,7 +228,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
         .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
     let params = fn_def_params(stream)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream).ok_or(format!("L{}: Expected type after ->", fn_line))?
+        consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
     } else {
         Type::Unit
     };
@@ -211,7 +248,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef{
+    Ok(Some(Ast::RoutineDef {
         meta: fn_line,
         def: RoutineDef::Function,
         name: fn_name,
@@ -232,7 +269,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
         .ok_or(format!("L{}: Expected identifier after co", co_line))?;
     let params = fn_def_params(stream)?;
     let co_type = match stream.next_if(&Lex::LArrow) {
-        Some(t) => consume_type(stream).ok_or(format!("L{}: Expected type after ->", t.l))?,
+        Some(t) => consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", t.l))?,
         _ => Type::Unit,
     };
 
@@ -250,7 +287,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef{
+    Ok(Some(Ast::RoutineDef {
         meta: co_line,
         def: RoutineDef::Coroutine,
         name: co_name,
@@ -502,7 +539,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn fn_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
+fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -658,14 +695,14 @@ fn mutate(stream: &mut TokenStream) -> PResult {
 fn co_init(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     match stream.next_if(&Lex::Init) {
-        Some(token) => match stream.next_if_id() {
-            Some((l, id)) => {
-                let params = fn_call_params(stream)?
+        Some(token) => match path(stream)? {
+            Some((l, path)) => {
+                let params = routine_call_params(stream)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
                 Ok(Some(Ast::RoutineCall(
                     l,
                     RoutineCall::CoroutineInit,
-                    id,
+                    path,
                     params,
                 )))
             }
@@ -677,23 +714,45 @@ fn co_init(stream: &mut TokenStream) -> PResult {
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     trace!(stream);
-    function_call(stream)
-        .por(struct_expression, stream)
-        .por(identifier, stream)
+    let s: Option<Ast<u32>> = match path(stream)? {
+        Some((line, path)) => match routine_call_params(stream)? {
+            Some(params) => Some(Ast::RoutineCall(
+                line,
+                RoutineCall::Function,
+                path,
+                params.clone(),
+            )),
+            None => match struct_init_params(stream)? {
+                Some(params) => Some(Ast::StructExpression(line, path, params.clone())),
+                None => {
+                    if path.len() > 1 {
+                        Some(Ast::Path(line, path))
+                    } else {
+                        Some(Ast::Identifier(line, path.last().unwrap().clone()))
+                    }
+                }
+            },
+        },
+        _ => None,
+    };
+
+    Ok(s)
 }
 
+// TODO: I think what I want ot do is pull the ID/Path parsing up in to `function_call_or_variable` and then
+// determine if it's a function, struct expressoin, or variable by if there is a LParen or LBrace after the path.
 fn function_call(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
         let (line, fn_name) = stream
             .next_if_id()
             .expect("CRITICAL: failed to get identifier");
-        let params = fn_call_params(stream)?
+        let params = routine_call_params(stream)?
             .ok_or(format!("L{}: expected parameters in function call", line))?;
         Ok(Some(Ast::RoutineCall(
             line,
             RoutineCall::Function,
-            fn_name,
+            vec![fn_name].into(),
             params,
         )))
     } else {
@@ -704,9 +763,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
 fn struct_expression(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LBrace]) {
-        let (line, struct_name) = stream
-            .next_if_id()
-            .expect("CRITICAL: failed to get identifier");
+        let (line, struct_name) = path(stream)?.ok_or("CRITICAL: failed to get identifier")?;
         let fields = struct_init_params(stream)?.ok_or(format!(
             "L{}: Expected valid field assignments in struct expression",
             line
@@ -714,6 +771,32 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
         Ok(Some(Ast::StructExpression(line, struct_name, fields)))
     } else {
         Ok(None)
+    }
+}
+
+fn path(stream: &mut TokenStream) -> Result<Option<(u32, Path)>, String> {
+    trace!(stream);
+    let mut path = vec![];
+
+    // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
+    if stream.next_if(&Lex::PathSeparator).is_some() {
+        path.push("root".into());
+    }
+
+    match stream.next_if_id() {
+        Some((line, id)) => {
+            path.push(id);
+            while let Some(token) = stream.next_if(&Lex::PathSeparator) {
+                let line = token.l;
+                let (_, id) = stream.next_if_id().ok_or(format!(
+                    "L{}: expect identifier after path separator '::'",
+                    line
+                ))?;
+                path.push(id);
+            }
+            Ok(Some((line, path.into())))
+        }
+        None => Ok(None),
     }
 }
 
@@ -725,10 +808,10 @@ fn identifier(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn consume_type(stream: &mut TokenStream) -> Option<Type> {
+fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>, String> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
-    match stream.peek() {
+    let ty = match stream.peek() {
         Some(Token {
             l: _,
             s: Lex::Primitive(primitive),
@@ -741,15 +824,10 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
             stream.next();
             ty
         }
-        Some(Token {
-            l: _,
-            s: Lex::Identifier(name),
-        }) => {
-            let ty = Some(Type::Custom(name.clone()));
-            stream.next();
-            ty
-        }
-        _ => None,
+        _ => match path(stream)? {
+            Some((_, path)) => Some(Type::Custom(path)),
+            _ => None,
+        },
     }
     .map(|ty| {
         if is_coroutine {
@@ -757,7 +835,8 @@ fn consume_type(stream: &mut TokenStream) -> Option<Type> {
         } else {
             ty
         }
-    })
+    });
+    Ok(ty)
 }
 
 fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
@@ -769,7 +848,7 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
             let id = t[0].s.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let ty = consume_type(stream).ok_or(format!(
+            let ty = consume_type(stream)?.ok_or(format!(
                 "L{}: expected type after : in type declaration",
                 line_value
             ))?;
@@ -974,6 +1053,56 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_path() {
+        for (text, expected) in vec![
+            ("thing", Ok(vec!["thing"])),
+            ("::thing", Ok(vec!["root", "thing"])),
+            ("thing::first", Ok(vec!["thing", "first"])),
+            ("thing::first::second", Ok(vec!["thing", "first", "second"])),
+            (
+                "thing::",
+                Err("L1: expect identifier after path separator '::'"),
+            ),
+            (
+                "thing::first::",
+                Err("L1: expect identifier after path separator '::'"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            match expression(&mut stream) {
+                Ok(Some(Ast::Path(l, path))) => {
+                    assert_eq!(l, 1);
+                    match expected {
+                        Ok(expected) => assert_eq!(path, expected.into()),
+                        Err(msg) => assert!(false, msg),
+                    }
+                }
+                Ok(Some(Ast::Identifier(l, id))) => {
+                    assert_eq!(l, 1);
+                    match expected {
+                        Ok(expected) => {
+                            assert_eq!(expected.len(), 1);
+                            assert_eq!(id, expected[0]);
+                        }
+                        Err(msg) => assert!(false, msg),
+                    }
+                }
+                Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
+                Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
+                Err(msg) => match expected {
+                    Ok(_) => assert!(false, msg),
+                    Err(expected) => assert_eq!(expected, msg),
+                },
+            }
+        }
+    }
+
+    #[test]
     fn parse_member_access() {
         for text in vec!["thing.first", "(thing).first", "(thing.first)"] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1163,6 +1292,178 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_module_empty() {
+        let text = "mod test_mod {}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::Module { meta, name, .. }) = module(&mut iter).unwrap() {
+            assert_eq!(meta, 1);
+            assert_eq!(name, "test_mod");
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_function() {
+        let text = "mod test_fn_mod { fn test(x:i32) {return;} }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        if let Some(Ast::Module {
+            meta,
+            name,
+            modules,
+            functions,
+            coroutines,
+            structs,
+        }) = parse(tokens).unwrap()
+        {
+            assert_eq!(meta, 1);
+            assert_eq!(name, "root");
+
+            assert_eq!(modules.len(), 1);
+            assert_eq!(functions.len(), 0);
+            assert_eq!(coroutines.len(), 0);
+            assert_eq!(structs.len(), 0);
+
+            if let Ast::Module {
+                meta,
+                name,
+                modules,
+                functions,
+                coroutines,
+                structs,
+            } = &modules[0]
+            {
+                assert_eq!(*meta, 1);
+                assert_eq!(name, "test_fn_mod");
+
+                assert_eq!(modules.len(), 0);
+                assert_eq!(functions.len(), 1);
+                assert_eq!(coroutines.len(), 0);
+                assert_eq!(structs.len(), 0);
+                if let Ast::RoutineDef {
+                    meta,
+                    def: RoutineDef::Function,
+                    name,
+                    params,
+                    ty,
+                    body,
+                } = &functions[0]
+                {
+                    assert_eq!(*meta, 1);
+                    assert_eq!(name, "test");
+                    assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                    assert_eq!(ty, &Type::Unit);
+                    assert_eq!(body.len(), 1);
+                    match &body[0] {
+                        Ast::Return(_, None) => {}
+                        _ => panic!("Wrong body, expected unit return"),
+                    }
+                } else {
+                    panic!("Expected function definition")
+                }
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_coroutine() {
+        let text = "mod test_co_mod { co test(x:i32) {return;} }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::Module {
+            meta,
+            name,
+            modules,
+            functions,
+            coroutines,
+            structs,
+        }) = module(&mut iter).unwrap()
+        {
+            assert_eq!(meta, 1);
+            assert_eq!(name, "test_co_mod");
+            assert_eq!(modules.len(), 0);
+            assert_eq!(functions.len(), 0);
+            assert_eq!(coroutines.len(), 1);
+            assert_eq!(structs.len(), 0);
+
+            if let Ast::RoutineDef {
+                meta,
+                def: RoutineDef::Coroutine,
+                name,
+                params,
+                ty,
+                body,
+            } = &coroutines[0]
+            {
+                assert_eq!(*meta, 1);
+                assert_eq!(name, "test");
+                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(ty, &Type::Unit);
+                assert_eq!(body.len(), 1);
+                match &body[0] {
+                    Ast::Return(_, None) => {}
+                    _ => panic!("Wrong body, expected unit return"),
+                }
+            } else {
+                panic!("Expected coroutine definition")
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_struct() {
+        let text = "mod test_struct_mod { struct my_struct{x: i32} }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::Module {
+            meta,
+            name,
+            modules,
+            functions,
+            coroutines,
+            structs,
+        }) = module(&mut iter).unwrap()
+        {
+            assert_eq!(meta, 1);
+            assert_eq!(name, "test_struct_mod");
+            assert_eq!(modules.len(), 0);
+            assert_eq!(functions.len(), 0);
+            assert_eq!(coroutines.len(), 0);
+            assert_eq!(structs.len(), 1);
+
+            if let Ast::StructDef(l, name, fields) = &structs[0] {
+                assert_eq!(*l, 1);
+                assert_eq!(name, "my_struct");
+                assert_eq!(fields, &vec![("x".into(), Type::I32)]);
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
     fn parse_unit_function_def() {
         let text = "fn test(x:i32) {return;}";
         let tokens: Vec<Token> = Lexer::new(&text)
@@ -1171,8 +1472,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
-            function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef {
+            meta: l,
+            def: RoutineDef::Function,
+            name,
+            params,
+            ty,
+            body,
+        }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -1197,8 +1504,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
-            function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef {
+            meta: l,
+            def: RoutineDef::Function,
+            name,
+            params,
+            ty,
+            body,
+        }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -1229,7 +1542,33 @@ pub mod tests {
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(name, "test");
+            assert_eq!(name, vec!["test"].into());
+            assert_eq!(
+                params,
+                vec![
+                    Ast::Identifier(1, "x".into()),
+                    Ast::Identifier(1, "y".into())
+                ]
+            );
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_routine_by_path_call() {
+        let text = "self::test(x, y)";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(Ast::RoutineCall(l, RoutineCall::Function, name, params)) =
+            expression(&mut iter).unwrap()
+        {
+            assert_eq!(l, 1);
+            assert_eq!(name, vec!["self", "test"].into());
             assert_eq!(
                 params,
                 vec![
@@ -1250,14 +1589,19 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::Module {
             meta, coroutines, ..
-        }) = module(&mut stream).unwrap()
+        }) = parse(tokens).unwrap()
         {
             assert_eq!(meta, 1);
-            if let Ast::RoutineDef{def: RoutineDef::Coroutine, name, params, ty, body, ..} =
-                &coroutines[0]
+            if let Ast::RoutineDef {
+                def: RoutineDef::Coroutine,
+                name,
+                params,
+                ty,
+                body,
+                ..
+            } = &coroutines[0]
             {
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
@@ -1295,7 +1639,38 @@ pub mod tests {
                         Box::new(Ast::RoutineCall(
                             1,
                             RoutineCall::CoroutineInit,
-                            "c".into(),
+                            vec!["c"].into(),
+                            vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                        ))
+                    );
+                }
+                _ => panic!("Not a binding statement"),
+            },
+            _ => panic!("No body: {:?}", stm),
+        }
+    }
+
+    #[test]
+    fn parse_coroutine_path_init() {
+        let text = "let x:co i32 := init a::b::c(1, 2);";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let stm = statement(&mut stream).unwrap().unwrap();
+        match stm {
+            Ast::Statement(_, stm) => match stm.as_ref() {
+                Ast::Bind(_, id, false, p, exp) => {
+                    assert_eq!(id, "x");
+                    assert_eq!(*p, Type::Coroutine(Box::new(Type::I32)));
+                    assert_eq!(
+                        *exp,
+                        Box::new(Ast::RoutineCall(
+                            1,
+                            RoutineCall::CoroutineInit,
+                            vec!["a", "b", "c"].into(),
                             vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
                         ))
                     );
@@ -1315,8 +1690,14 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef{meta: l, def: RoutineDef::Function, name, params, ty, body}) =
-            function_def(&mut iter).unwrap()
+        if let Some(Ast::RoutineDef {
+            meta: l,
+            def: RoutineDef::Function,
+            name,
+            params,
+            ty,
+            body,
+        }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
@@ -1488,7 +1869,7 @@ pub mod tests {
                     _,
                     box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params),
                 ) => {
-                    assert_eq!(fn_name, "f");
+                    assert_eq!(*fn_name, vec!["f"].into());
                     assert_eq!(params[0], Ast::Identifier(1, "x".into()));
                 }
                 _ => panic!("No body: {:?}", &body[1]),
@@ -1542,17 +1923,21 @@ pub mod tests {
         for (text, expected) in vec![
             (
                 "MyStruct{}",
-                Ast::StructExpression(1, "MyStruct".into(), vec![]),
+                Ast::StructExpression(1, vec!["MyStruct"].into(), vec![]),
             ),
             (
                 "MyStruct{x: 5}",
-                Ast::StructExpression(1, "MyStruct".into(), vec![("x".into(), Ast::Integer(1, 5))]),
+                Ast::StructExpression(
+                    1,
+                    vec!["MyStruct"].into(),
+                    vec![("x".into(), Ast::Integer(1, 5))],
+                ),
             ),
             (
                 "MyStruct{x: 5, y: false}",
                 Ast::StructExpression(
                     1,
-                    "MyStruct".into(),
+                    vec!["MyStruct"].into(),
                     vec![
                         ("x".into(), Ast::Integer(1, 5)),
                         ("y".into(), Ast::Boolean(1, false)),
@@ -1563,14 +1948,14 @@ pub mod tests {
                 "MyStruct{x: 5, y: MyStruct2{z:3}}",
                 Ast::StructExpression(
                     1,
-                    "MyStruct".into(),
+                    vec!["MyStruct"].into(),
                     vec![
                         ("x".into(), Ast::Integer(1, 5)),
                         (
                             "y".into(),
                             Ast::StructExpression(
                                 1,
-                                "MyStruct2".into(),
+                                vec!["MyStruct2"].into(),
                                 vec![("z".into(), Ast::Integer(1, 3))],
                             ),
                         ),
@@ -1603,7 +1988,7 @@ pub mod tests {
             let ast = parse(tokens).unwrap().unwrap();
             match ast {
                 Ast::Module { functions, .. } => match &functions[0] {
-                    Ast::RoutineDef{body, ..} => match &body[0] {
+                    Ast::RoutineDef { body, .. } => match &body[0] {
                         Ast::Return(.., Some(rv)) => {
                             assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))
                         }

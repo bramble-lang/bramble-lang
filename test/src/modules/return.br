@@ -1,0 +1,45 @@
+fn my_main() {
+    let x:my_mod::MyStruct := my_mod::add(3, 2);
+    printiln x.a;
+
+    let y: root::my_mod::MyStruct := my_mod::add_ms(x, x);
+    printiln y.a;
+
+    let b:bool := my_mod::my_bool();
+    printbln b;
+
+    let c: co my_mod::MyStruct := init root::my_mod::count(x);
+    printiln (yield c).a;
+    printiln (yield c).a;
+    printiln (yield c).a;
+    printiln (yield c).a;
+    printiln (yield c).a;
+
+    return;
+}
+
+mod my_mod {
+    fn my_bool() -> bool {
+        let b:bool := false;
+        return b;
+    }
+
+    fn add(a: i32, b: i32) -> self::MyStruct {
+        return MyStruct{a: a + b};
+    }
+
+    fn add_ms(a: MyStruct, b: self::MyStruct) -> self::MyStruct {
+        return MyStruct{a: self::add(a.a, b.a).a};
+    }
+
+    struct MyStruct {
+        a: i32,
+    }
+
+    co count(start: root::my_mod::MyStruct) -> MyStruct {
+        yret (MyStruct{ a: start.a + 1});
+        yret (MyStruct{ a: start.a + 2});
+        yret (MyStruct{ a: start.a + 3});
+        return (MyStruct{ a: start.a + 4});
+    }
+}

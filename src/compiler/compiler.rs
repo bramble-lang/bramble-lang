@@ -1,7 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::assembly;
 use crate::assembly2;
 use crate::ast::Ast;
 use crate::ast::RoutineCall;
@@ -19,15 +18,20 @@ use crate::register;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::unary_op;
 use crate::unit_op;
+use crate::{assembly, syntax::ast::Path};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ast::Type,
 };
 
+use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
+
 pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
     string_pool: StringPool,
+    struct_table: &'a ResolvedStructTable,
+    root: &'a CompilerNode,
 }
 
 impl<'a> Compiler<'a> {
@@ -40,7 +44,7 @@ impl<'a> Compiler<'a> {
 
     pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, _) = CompilerNode::from(ast);
+        let (compiler_ast, struct_table) = CompilerNode::from(ast).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from(&compiler_ast);
@@ -56,6 +60,8 @@ impl<'a> Compiler<'a> {
             code: vec![],
             scope: ScopeStack::new(),
             string_pool,
+            root: &compiler_ast,
+            struct_table: &struct_table,
         };
 
         let global_func = "".into();
@@ -81,7 +87,7 @@ impl<'a> Compiler<'a> {
                     sub %eax, [@stack_size];
                     mov [@next_stack_addr], %eax;
 
-                    call @my_main;
+                    call @root_my_main;
 
                     mov %esp, %ebp;
                     pop %ebp;
@@ -491,6 +497,7 @@ impl<'a> Compiler<'a> {
                 }}
             }
             Ast::Module {
+                modules,
                 functions,
                 coroutines,
                 ..
@@ -500,6 +507,9 @@ impl<'a> Compiler<'a> {
                 }
                 for co in coroutines.iter() {
                     self.traverse(co, current_func, code)?;
+                }
+                for m in modules.iter() {
+                    self.traverse(m, current_func, code)?;
                 }
             }
             Ast::Return(_, ref exp) => {
@@ -517,9 +527,16 @@ impl<'a> Compiler<'a> {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
-            Ast::RoutineDef{def: RoutineDef::Coroutine, name: ref fn_name, body: stmts, ..} => {
+            Ast::RoutineDef {
+                meta,
+                def: RoutineDef::Coroutine,
+                name: ref fn_name,
+                body: stmts,
+                ..
+            } => {
                 assembly! {(code) {
-                    @{fn_name}:
+                    @{meta.canon_path().to_label()}:
+                    ; {{format!("Define {}", meta.canon_path())}}
                 }};
 
                 // Prepare stack frame for this function
@@ -531,19 +548,25 @@ impl<'a> Compiler<'a> {
                     jmp @runtime_yield_return;
                 }};
             }
-            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co, params) => {
-                let total_offset = self
-                    .scope
-                    .get_routine_allocation(co)
-                    .ok_or(format!("Coroutine {} has not allocation size", co))?;
+            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
+                let co_def = self
+                    .root
+                    .go_to(co_path)
+                    .expect("Could not find coroutine")
+                    .is_routine_def()?;
+                let total_offset = co_def
+                    .get_metadata()
+                    .local_allocation()
+                    .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
-                self.validate_routine_call(co, params)?;
+                co_def.validate_parameters(params)?;
 
                 assembly! {(code) {
+                    ; {format!("Call {}", co_path)}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
-                    lea %eax, [@{co}];
+                    lea %eax, [@{co_path.to_label()}];
                     mov %edi, {total_offset};
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
@@ -552,21 +575,27 @@ impl<'a> Compiler<'a> {
 
                     ; "move parameters into the stack frame of the coroutine"
                     {{{
-                        let codef = self.scope.find_coroutine(co).ok_or(format!("Could not find {} when looking up parameter offsets", co))?;
-                        self.move_params_into_stackframe(codef, &co_param_registers)?
+                        self.move_params_into_stackframe(co_def, &co_param_registers)?
                     }}}
                     ; "leave coroutine's stack frame"
                     pop %ebp;
                 }};
             }
-            Ast::RoutineDef{meta: scope, def: RoutineDef::Function, name: ref fn_name, body: stmts, ..} => {
+            Ast::RoutineDef {
+                meta: scope,
+                def: RoutineDef::Function,
+                name: ref fn_name,
+                body: stmts,
+                ..
+            } => {
                 let total_offset = match scope.level() {
                     Routine { allocation, .. } => allocation,
                     _ => panic!("Invalid scope for function definition"),
                 };
 
                 assembly! {(code) {
-                @{fn_name}:
+                @{scope.canon_path().to_label()}:
+                    ; {{format!("Define {}", scope.canon_path())}}
                     ;"Prepare stack frame for this function"
                     push %ebp;
                     mov %ebp, %esp;
@@ -587,16 +616,20 @@ impl<'a> Compiler<'a> {
                     ret;
                 }};
             }
-            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_name, params) => {
+            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
-                self.validate_routine_call(fn_name, params)?;
-                self.scope.find_func(fn_name);
+                let fn_def = self
+                    .root
+                    .go_to(fn_path)
+                    .ok_or(format!("Could not find: {}", fn_path))?
+                    .is_routine_def()?;
+                fn_def.validate_parameters(params)?;
 
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
-                        .scope
+                        .struct_table
                         .size_of(return_type)
                         .ok_or(format!("no size for {} found", return_type))?;
 
@@ -608,9 +641,10 @@ impl<'a> Compiler<'a> {
                 // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
                 // calling the function
                 assembly! {(code) {
+                    ; {{format!("Call {}", fn_path)}}
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
-                    call @{fn_name};
+                    call @{fn_path.to_label()};
                 }};
             }
             Ast::StructExpression(meta, struct_name, fields) => {
@@ -657,21 +691,21 @@ impl<'a> Compiler<'a> {
 
                 self.traverse(src, current_func, code)?;
 
-                let st = self
-                    .scope
-                    .get_struct(struct_name)
-                    .ok_or(format!("no definition for {} found", struct_name))?;
-                let field_info = st
+                let struct_def = self.struct_table.get(struct_name).ok_or(format!(
+                    "Could not find struct definition for {}",
+                    struct_name
+                ))?;
+                let field_info = struct_def
                     .get_fields()
                     .iter()
-                    .find(|(n, ..)| n == member)
-                    .ok_or(format!("member {} not found on {}", member, struct_name))?;
-                let field_offset = st.get_offset_of(member).ok_or(format!(
+                    .find(|FieldInfo{name, ..}| name == member)
+                    .ok_or(format!("Member {} not found on {}", member, struct_name))?;
+                let field_offset = struct_def.get_offset_of(member).ok_or(format!(
                     "No field offset found for {}.{}",
                     struct_name, member
                 ))?;
 
-                match &field_info.1 {
+                match &field_info.ty() {
                     Type::Custom(_substruct_name) => {
                         assembly! {(code) {
                             lea %eax, [%eax+{field_offset}];
@@ -698,27 +732,29 @@ impl<'a> Compiler<'a> {
     fn struct_exression(
         &mut self,
         current_func: &String,
-        struct_name: &str,
+        struct_name: &Path,
         field_values: &'a Vec<(String, CompilerNode)>,
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
-        let st = self
-            .scope
-            .get_struct(struct_name)
-            .ok_or(format!("no definition for {} found", struct_name))?;
-        let struct_sz = st.size.unwrap();
-        let field_info = st
+        let struct_def = self.struct_table.get(struct_name).expect(&format!(
+            "{}, used in {}, was not found",
+            struct_name, current_func
+        ));
+        let struct_sz = struct_def
+            .size
+            .expect(&format!("Size is not known for {}", struct_name));
+        let field_info = struct_def
             .get_fields()
             .iter()
-            .map(|(n, _, o)| (n.clone(), o.unwrap()))
+            .map(|FieldInfo{name, offset, ..}| (name.clone(), offset.unwrap()))
             .collect::<Vec<(String, i32)>>();
 
         if field_values.len() != field_info.len() {
             return Err(format!(
                 "{} expected {} fields but found {}",
                 struct_name,
-                st.get_fields().len(),
+                struct_def.get_fields().len(),
                 field_values.len()
             ));
         }
@@ -846,8 +882,8 @@ impl<'a> Compiler<'a> {
         match meta.ty() {
             Type::Custom(struct_name) => {
                 let st = self
-                    .scope
-                    .get_struct(struct_name)
+                    .struct_table
+                    .get(struct_name)
                     .ok_or(format!("no definition for {} found", struct_name))?;
                 let st_sz = st
                     .size
@@ -942,13 +978,13 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn pop_struct_into(&self, struct_name: &str, id_offset: u32) -> Result<Vec<Inst>, String> {
+    fn pop_struct_into(&self, struct_name: &Path, id_offset: u32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
-            .scope
-            .get_struct(struct_name)
+            .struct_table
+            .get(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
-        for (field_name, field_ty, _) in ty_def.get_fields().iter().rev() {
+        for FieldInfo{name: field_name, ty: field_ty, ..} in ty_def.get_fields().iter().rev() {
             let rel_field_offset = ty_def.get_offset_of(field_name).expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",
                 struct_name, field_name,
@@ -974,7 +1010,7 @@ impl<'a> Compiler<'a> {
 
     fn copy_struct_into(
         &self,
-        struct_name: &str,
+        struct_name: &Path,
         dst_reg: Reg32,
         dst_offset: i32,
         src_reg: Reg,
@@ -982,13 +1018,13 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
-            .scope
-            .get_struct(struct_name)
-            .ok_or(format!("Could not find definition for {}", struct_name))?;
+            .struct_table
+            .get(struct_name)
+            .expect(&format!("Could not find definition for {}", struct_name));
         let struct_sz = ty_def
             .size
-            .ok_or(format!("struct {} has an unknown size", struct_name))?;
-        for (field_name, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
+            .expect(&format!("Struct {} has an unknown size", struct_name));
+        for FieldInfo{name: field_name, ty: field_ty, offset: field_offset} in ty_def.get_fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",
                 struct_name, field_name
@@ -1100,32 +1136,5 @@ impl<'a> Compiler<'a> {
             }};
         }
         Ok(code)
-    }
-
-    fn validate_routine_call(
-        &self,
-        routine_name: &str,
-        params: &Vec<CompilerNode>,
-    ) -> Result<(), String> {
-        let routine = self
-            .scope
-            .find_func(routine_name)
-            .or_else(|| self.scope.find_coroutine(routine_name))
-            .expect("Could not find routine in any symbol table in the scope stack");
-        let expected_params = routine.get_params().ok_or(format!(
-            "Critical: node for {} does not have a params field",
-            routine_name
-        ))?;
-
-        let expected_num_params = expected_params.len();
-        let got_num_params = params.len();
-        if expected_num_params != got_num_params {
-            Err(format!(
-                "Compiler: expected {} but got {} parameters for function/coroutine `{}`",
-                expected_num_params, got_num_params, routine_name
-            ))
-        } else {
-            Ok(())
-        }
     }
 }

@@ -1,21 +1,26 @@
+use struct_table::ResolvedStructTable;
+
 use crate::compiler::ast::scope::{LayoutData, Level, Scope};
 
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
-use super::struct_table::StructTable;
+use super::struct_table;
 
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
-    pub fn from(ast: &SemanticNode) -> (CompilerNode, LayoutData) {
-        let empty_struct_table = StructTable::new();
-        CompilerNode::compute_offsets(ast, LayoutData::new(0), &empty_struct_table)
+    pub fn from(ast: &SemanticNode) -> Result<(CompilerNode, ResolvedStructTable), String> {
+        let unresolved_struct_table = struct_table::UnresolvedStructTable::from(ast)?;
+        let struct_table = unresolved_struct_table.resolve()?;
+        let (compiler_ast, _) =
+            CompilerNode::compute_offsets(ast, LayoutData::new(0), &struct_table);
+        Ok((compiler_ast, struct_table))
     }
 
     fn compute_offsets(
         ast: &SemanticNode,
         layout: LayoutData,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         use Ast::*;
         match ast {
@@ -29,14 +34,22 @@ impl CompilerNode {
                 }
                 (ExpressionBlock(meta, nbody), nlayout)
             }
-            RoutineDef{meta, def, name, params, ty, body} => {
+            RoutineDef {
+                meta,
+                def,
+                name,
+                params,
+                ty,
+                body,
+            } => {
                 let initial_frame_size = match def {
                     syntax::ast::RoutineDef::Function => 0,
                     syntax::ast::RoutineDef::Coroutine => 20,
                 };
-                let (mut meta, offset2) = Scope::routine_from(meta, struct_table, initial_frame_size);
+                let (mut meta, offset) =
+                    Scope::routine_from(meta, struct_table, initial_frame_size);
                 let mut nbody = vec![];
-                let mut nlayout = LayoutData::new(offset2);
+                let mut nlayout = LayoutData::new(offset);
                 for e in body.iter() {
                     let (e, layout) = CompilerNode::compute_offsets(e, nlayout, struct_table);
                     nlayout = layout;
@@ -47,7 +60,7 @@ impl CompilerNode {
                     allocation: nlayout.offset,
                 };
                 (
-                    RoutineDef{
+                    RoutineDef {
                         meta,
                         def: *def,
                         name: name.clone(),
@@ -77,6 +90,10 @@ impl CompilerNode {
             Ast::Identifier(m, id) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 (Ast::Identifier(meta, id.clone()), layout)
+            }
+            Path(m, path) => {
+                let (meta, layout) = Scope::local_from(m, struct_table, layout);
+                (Ast::Path(meta, path.clone()), layout)
             }
             Ast::IdentifierDeclare(m, id, p) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
@@ -180,47 +197,30 @@ impl CompilerNode {
             }
             Module {
                 meta,
+                name,
+                modules,
                 functions,
                 coroutines,
-                structs,
+                ..
             } => {
-                let (mut meta, layout) = Scope::local_from(meta, struct_table, layout);
+                let (meta, layout) = Scope::module_from(meta, name, struct_table, layout);
 
-                for st in structs.iter() {
-                    // at this point I could compute the size of each struct and test for
-                    // circular dependencies
-                    match st {
-                        Ast::StructDef(_, name, fields) => {
-                            meta.structs.insert(name, fields.clone()).unwrap()
-                        }
-                        _ => panic!("Expected only structs in Module.structs, got {:?}", st),
-                    }
-                }
-                meta.structs.resolve_sizes().unwrap();
-
-                let mut nlayout = layout;
-                let mut nfuncs = vec![];
-                for f in functions.iter() {
-                    let (nf, no) = CompilerNode::compute_offsets(f, nlayout, &meta.structs);
-                    nlayout = no;
-                    nfuncs.push(nf);
-                }
-
-                let mut ncors = vec![];
-                for co in coroutines.iter() {
-                    let (nco, no) = CompilerNode::compute_offsets(co, nlayout, &meta.structs);
-                    nlayout = no;
-                    ncors.push(nco);
-                }
+                let (modules, layout) = Self::compute_layouts_for(modules, layout, struct_table);
+                let (functions, layout) =
+                    Self::compute_layouts_for(functions, layout, struct_table);
+                let (coroutines, layout) =
+                    Self::compute_layouts_for(coroutines, layout, struct_table);
 
                 (
                     Module {
                         meta,
-                        functions: nfuncs,
-                        coroutines: ncors,
+                        name: name.clone(),
+                        modules,
+                        functions,
+                        coroutines,
                         structs: vec![],
                     },
-                    nlayout,
+                    layout,
                 )
             }
             StructDef(..) => panic!("StructDef Unimplemented"),
@@ -239,15 +239,51 @@ impl CompilerNode {
             }
         }
     }
+
+    fn compute_layouts_for(
+        items: &Vec<SemanticNode>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Vec<CompilerNode>, LayoutData) {
+        let mut compiler_ast_items = vec![];
+        let mut layout = layout;
+        for item in items.iter() {
+            let (c_ast_item, no) = CompilerNode::compute_offsets(item, layout, struct_table);
+            layout = no;
+            compiler_ast_items.push(c_ast_item);
+        }
+
+        (compiler_ast_items, layout)
+    }
+
+    pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String> {
+        match self {
+            Ast::RoutineDef{..} => {
+                let expected_params = self.get_params().ok_or(format!(
+                    "Critical: node for {} does not have a params field",
+                    self.root_str()
+                ))?;
+                if params.len() == expected_params.len() {
+                    Ok(())
+                } else {
+                    Err(format!("Critical: expected {} but go {} parameters for {}",
+                    expected_params.len(),
+                    params.len(),
+                    self.root_str()))
+                }
+            },
+            _ => Err("Cannot validate parameters: this is not a routine definition (function or coroutine)".into())
+        }
+    }
 }
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::compiler::ast::scope;
-    use crate::semantics::symbol_table;
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
     use crate::syntax::ast::Type;
+    use crate::{compiler::ast::scope, syntax::ast::Path};
+    use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
 
     use super::*;
@@ -260,14 +296,18 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                canonical_path: vec!["root"].into(),
             },
             0,
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         match cn.0 {
             CompilerNode::Integer(m, _) => {
-                assert_eq!(m, Scope::new(3, scope::Level::Local, m.ty.clone()));
+                assert_eq!(
+                    m,
+                    Scope::new(3, scope::Level::Local, vec!["root"].into(), m.ty.clone())
+                );
             }
             _ => assert_eq!(true, false),
         }
@@ -281,16 +321,20 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                canonical_path: vec!["root"].into(),
             },
             0,
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::Integer(m, v) => {
                 assert_eq!(v, 0);
-                assert_eq!(m, Scope::new(0, scope::Level::Local, m.ty.clone()));
+                assert_eq!(
+                    m,
+                    Scope::new(0, scope::Level::Local, vec!["root"].into(), m.ty.clone())
+                );
             }
             _ => assert_eq!(true, false),
         }
@@ -304,6 +348,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                canonical_path: vec!["root"].into(),
             },
             1,
         );
@@ -313,6 +358,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                canonical_path: vec!["root"].into(),
             },
             2,
         );
@@ -322,17 +368,21 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
+                canonical_path: vec!["root"].into(),
             },
             BinaryOperator::Mul,
             Box::new(sn1),
             Box::new(sn2),
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&snmul, LayoutData::new(8), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                assert_eq!(m, Scope::new(2, Level::Local, m.ty.clone()),);
+                assert_eq!(
+                    m,
+                    Scope::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),
+                );
 
                 match *l {
                     CompilerNode::Integer(m, v) => {
@@ -364,10 +414,11 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                canonical_path: Path::new(),
             },
             vec![],
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
@@ -393,6 +444,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                canonical_path: Path::new(),
             },
             vec![],
         );
@@ -406,10 +458,11 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                canonical_path: Path::new(),
             },
             vec![sn],
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 16);
         match cn.0 {
@@ -439,12 +492,13 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -452,11 +506,16 @@ mod ast_tests {
             ty: Type::I32,
             body: vec![],
         };
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef{meta, def: RoutineDef::Function, name, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Function,
+                name,
+                ..
+            } => {
                 assert_eq!(name, "func");
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
@@ -484,12 +543,13 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -501,12 +561,13 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "outer_func".into(),
@@ -515,11 +576,16 @@ mod ast_tests {
             body: vec![sn],
         };
 
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef{meta,def: RoutineDef::Function, body, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Function,
+                body,
+                ..
+            } => {
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
                 assert_eq!(meta.symbols.table["x"].offset, 4);
@@ -527,7 +593,11 @@ mod ast_tests {
                 assert_eq!(meta.symbols.table["y"].offset, 8);
 
                 match body.iter().nth(0) {
-                    Some(CompilerNode::RoutineDef{meta, def: RoutineDef::Function, ..}) => {
+                    Some(CompilerNode::RoutineDef {
+                        meta,
+                        def: RoutineDef::Function,
+                        ..
+                    }) => {
                         assert_eq!(meta.symbols.table.len(), 2);
                         assert_eq!(meta.symbols.table["x"].size, 4);
                         assert_eq!(meta.symbols.table["x"].offset, 4);
@@ -546,12 +616,13 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef{
+        let sn = SemanticNode::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Coroutine,
             name: "coroutine".into(),
@@ -559,11 +630,16 @@ mod ast_tests {
             ty: Type::I32,
             body: vec![],
         };
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef{meta, def: RoutineDef::Coroutine, name, ..} => {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Coroutine,
+                name,
+                ..
+            } => {
                 assert_eq!(name, "coroutine");
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
