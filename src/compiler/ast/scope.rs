@@ -3,7 +3,7 @@ use crate::{
     syntax::ast::{self, Path},
 };
 
-use super::{struct_table::{StructDefinition, StructTable}, struct_table2::ResolvedStructTable, symbol_table::{Symbol, SymbolTable}};
+use super::{struct_table2::ResolvedStructTable, symbol_table::{Symbol, SymbolTable}};
 
 #[derive(Debug, PartialEq)]
 pub struct LayoutData {
@@ -23,7 +23,6 @@ pub struct Scope {
     pub(super) level: Level,
     pub(super) ty: ast::Type,
     pub(super) symbols: SymbolTable,
-    pub(super) structs: StructTable,
     pub(super) canon_path: Path,
 }
 
@@ -35,7 +34,6 @@ impl Scope {
             level,
             ty,
             symbols: SymbolTable::new(),
-            structs: StructTable::new(),
             canon_path,
         }
     }
@@ -63,10 +61,6 @@ impl Scope {
         self.symbols.table.get(name)
     }
 
-    pub fn get_struct(&self, name: &str) -> Option<&StructDefinition> {
-        self.structs.get(name)
-    }
-
     pub fn line(&self) -> u32 {
         self.line
     }
@@ -77,10 +71,6 @@ impl Scope {
 
     pub fn canon_path(&self) -> &Path {
         &self.canon_path
-    }
-
-    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
-        self.structs.size_of(ty)
     }
 
     pub(super) fn local_from(
@@ -163,7 +153,6 @@ impl std::fmt::Display for Scope {
             "Symbols (! prefix indicates anonymous symbol):\n{}",
             self.symbols
         ))?;
-        f.write_fmt(format_args!("Structs:\n{}\n", self.structs))?;
 
         Ok(())
     }
