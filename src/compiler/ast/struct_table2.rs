@@ -190,8 +190,8 @@ impl UnresolvedStructTable {
 }
 
 impl ResolvedStructTable {
-    pub fn get(&self, name: &str) -> Option<&StructDefinition> {
-        self.table.get(name)
+    pub fn get(&self, canon_path: &Path) -> Option<&StructDefinition> {
+        self.table.get(&canon_path.to_string())
     }
 
     pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
@@ -200,7 +200,7 @@ impl ResolvedStructTable {
             ast::Type::Bool => Some(4),
             ast::Type::StringLiteral => Some(4),
             ast::Type::Coroutine(_) => Some(4),
-            ast::Type::Custom(canon_path) => self.get(&canon_path.to_string()).map(|st| st.size).flatten(),
+            ast::Type::Custom(canon_path) => self.get(canon_path).map(|st| st.size).flatten(),
             ast::Type::FunctionDef(..) => Some(0),
             ast::Type::CoroutineDef(..) => Some(0),
             ast::Type::StructDef(..) => Some(0),

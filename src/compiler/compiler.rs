@@ -24,10 +24,13 @@ use crate::{
     syntax::ast::Type,
 };
 
+use super::ast::struct_table2::ResolvedStructTable;
+
 pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
     string_pool: StringPool,
+    struct_table: &'a ResolvedStructTable,
     root: &'a CompilerNode,
 }
 
@@ -41,7 +44,7 @@ impl<'a> Compiler<'a> {
 
     pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, _) = CompilerNode::from(ast);
+        let (compiler_ast, struct_table) = CompilerNode::from(ast).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from(&compiler_ast);
@@ -58,6 +61,7 @@ impl<'a> Compiler<'a> {
             scope: ScopeStack::new(),
             string_pool,
             root: &compiler_ast,
+            struct_table: &struct_table,
         };
 
         let global_func = "".into();
@@ -689,7 +693,7 @@ impl<'a> Compiler<'a> {
 
                 self.traverse(src, current_func, code)?;
 
-                let struct_def = self.root.get_struct(struct_name).ok_or(format!(
+                let struct_def = self.struct_table.get(struct_name).ok_or(format!(
                     "Could not find struct definition for {}",
                     struct_name
                 ))?;
@@ -735,7 +739,7 @@ impl<'a> Compiler<'a> {
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
-        let struct_def = self.root.get_struct(struct_name).expect(&format!(
+        let struct_def = self.struct_table.get(struct_name).expect(&format!(
             "{}, used in {}, was not found",
             struct_name, current_func
         ));
@@ -878,8 +882,8 @@ impl<'a> Compiler<'a> {
         match meta.ty() {
             Type::Custom(struct_name) => {
                 let st = self
-                    .root
-                    .get_struct(struct_name)
+                    .struct_table
+                    .get(struct_name)
                     .ok_or(format!("no definition for {} found", struct_name))?;
                 let st_sz = st
                     .size
@@ -977,8 +981,8 @@ impl<'a> Compiler<'a> {
     fn pop_struct_into(&self, struct_name: &Path, id_offset: u32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
-            .root
-            .get_struct(struct_name)
+            .struct_table
+            .get(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
         for (field_name, field_ty, _) in ty_def.get_fields().iter().rev() {
             let rel_field_offset = ty_def.get_offset_of(field_name).expect(&format!(
@@ -1014,8 +1018,8 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
-            .root
-            .get_struct(struct_name)
+            .struct_table
+            .get(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))
             .unwrap();
         let struct_sz = ty_def

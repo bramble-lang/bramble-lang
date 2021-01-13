@@ -9,10 +9,11 @@ use super::struct_table2;
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
-    pub fn from(ast: &SemanticNode) -> (CompilerNode, LayoutData) {
-        let unresolved_struct_table = struct_table2::UnresolvedStructTable::from(ast).unwrap();
-        let struct_table = unresolved_struct_table.resolve().unwrap();
-        CompilerNode::compute_offsets(ast, LayoutData::new(0), &struct_table)
+    pub fn from(ast: &SemanticNode) -> Result<(CompilerNode, ResolvedStructTable), String> {
+        let unresolved_struct_table = struct_table2::UnresolvedStructTable::from(ast)?;
+        let struct_table = unresolved_struct_table.resolve()?;
+        let (compiler_ast, _) = CompilerNode::compute_offsets(ast, LayoutData::new(0), &struct_table);
+        Ok((compiler_ast, struct_table))
     }
 
     fn compute_offsets(
@@ -199,9 +200,9 @@ impl CompilerNode {
                 modules,
                 functions,
                 coroutines,
-                structs,
+                ..
             } => {
-                let (mut meta, layout) = Scope::module_from(meta, name, struct_table, layout);
+                let (meta, layout) = Scope::module_from(meta, name, struct_table, layout);
 
                 let mut nlayout = layout;
                 let mut nmods = vec![];
@@ -272,16 +273,6 @@ impl CompilerNode {
             },
             _ => Err("Cannot validate parameters: this is not a routine definition (function or coroutine)".into())
         }
-    }
-
-    pub fn get_struct(
-        &self,
-        path: &syntax::ast::Path,
-    ) -> Option<&super::struct_table::StructDefinition> {
-        let mut tail = path.clone();
-        let item = tail.truncate()?;
-        let parent_module = self.go_to(&tail)?;
-        parent_module.get_metadata().get_struct(&item)
     }
 }
 
