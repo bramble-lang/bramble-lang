@@ -765,26 +765,10 @@ impl<'a> SemanticAnalyzer<'a> {
                 let mut meta = meta.clone();
                 let tmp_sym = sym.clone();
                 self.stack.push(tmp_sym);
-                let mut resolved_modules = vec![];
-                for module in modules.iter() {
-                    let module = self.traverse(module, &None, &mut meta.sym)?;
-                    resolved_modules.push(module);
-                }
-                let mut resolved_functions = vec![];
-                for func in functions.iter() {
-                    let func = self.traverse(func, &None, &mut meta.sym)?;
-                    resolved_functions.push(func);
-                }
-                let mut resolved_coroutines = vec![];
-                for cor in coroutines.iter() {
-                    let cor = self.traverse(cor, &None, &mut meta.sym)?;
-                    resolved_coroutines.push(cor);
-                }
-                let mut resolved_structs = vec![];
-                for st in structs.iter() {
-                    let st = self.traverse(st, &None, &mut meta.sym)?;
-                    resolved_structs.push(st);
-                }
+                let resolved_modules = modules.iter().map(|m| self.traverse(m, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
+                let resolved_functions = functions.iter().map(|f| self.traverse(f, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
+                let resolved_coroutines = coroutines.iter().map(|c| self.traverse(c, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
+                let resolved_structs = structs.iter().map(|s| self.traverse(s, &None, &mut meta.sym)).collect::<Result<Vec<SemanticNode>, String>>()?;
                 self.stack.pop();
                 meta.ty = Unit;
                 Ok(Module {
