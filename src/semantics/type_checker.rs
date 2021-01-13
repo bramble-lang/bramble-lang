@@ -253,14 +253,12 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &'a SymbolTable,
         path: &ast::Path,
     ) -> Result<Option<(&'a Symbol, ast::Path)>, String> {
-        //let current_path = self.stack.to_path(sym).expect("A valid path is expected");
-        let canon_path = self.to_canonical(sym, path)?; //.to_canonical(&current_path)?;
+        let canon_path = self.to_canonical(sym, path)?;
         if path.len() > 1 {
-            let mut trunc_canon_path = canon_path.clone();
-            let item = trunc_canon_path.truncate().unwrap();
+            let item = canon_path.item().expect("Expected a canonical path with at least one step in it");
             let node = self
                 .root
-                .go_to(&trunc_canon_path)
+                .go_to(&canon_path.tail())
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
             Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
         } else if path.len() == 1 {

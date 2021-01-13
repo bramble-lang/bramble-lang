@@ -107,6 +107,15 @@ impl Path {
         self.path.iter()
     }
 
+    pub fn item(&self) -> Option<&str> {
+        let l = self.path.len();
+        if l == 0 {
+            None
+        } else {
+            Some(&self.path[l-1])
+        }
+    }
+
     /// Remove the last step in the path
     pub fn truncate(&mut self) -> Option<String> {
         self.path.pop()
