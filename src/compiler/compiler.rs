@@ -631,7 +631,7 @@ impl<'a> Compiler<'a> {
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
-                        .scope
+                        .struct_table
                         .size_of(return_type)
                         .ok_or(format!("no size for {} found", return_type))?;
 
