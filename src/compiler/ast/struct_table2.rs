@@ -93,8 +93,8 @@ impl UnrealizedStructTable {
                     let mut total_sz = 0;
                     for idx in 0..sz.len() {
                         let field_sz = sz[idx];
-                        sd.fields[idx].2 = Some(field_sz);
                         total_sz += field_sz;
+                        sd.fields[idx].2 = Some(total_sz);
                     }
                     sd.size = Some(total_sz);
                     // if all fields have sizes, compute the total size
@@ -131,15 +131,7 @@ impl UnrealizedStructTable {
                 ast::Type::I32 => Some(4),
                 ast::Type::Bool => Some(4),
                 ast::Type::Custom(name) => {
-                    let mut sum = 0;
-                    for f in resolved_structs.get(&name.to_string())?.fields.iter() {
-                        if let Some(sz) = f.2 {
-                            sum += sz;
-                        } else {
-                            return None;
-                        }
-                    }
-                    Some(sum)
+                    resolved_structs.get(&name.to_string())?.size
                 }
                 ast::Type::Coroutine(_) => Some(4),
                 ast::Type::StringLiteral => Some(4),
@@ -295,7 +287,7 @@ mod test {
             StructDefinition {
                 name: "test".into(),
                 size: Some(8),
-                fields: vec![("i".into(), Type::I32, Some(4)), ("y".into(), Type::Bool, Some(4))],
+                fields: vec![("i".into(), Type::I32, Some(4)), ("y".into(), Type::Bool, Some(8))],
             }),
             ("struct test{s: string}",
             "root::test",
@@ -309,7 +301,7 @@ mod test {
             StructDefinition {
                 name: "inner_test".into(),
                 size: Some(8),
-                fields: vec![("i".into(), Type::I32, Some(4)), ("y".into(), Type::Bool, Some(4))],
+                fields: vec![("i".into(), Type::I32, Some(4)), ("y".into(), Type::Bool, Some(8))],
             }),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -342,13 +334,13 @@ mod test {
             }),
             ("
             struct test{i: i32}
-            struct test2{x: i32, b: bool, t: test}
+            struct test2{x: i32, t: test, b: bool}
             ",
             "root::test2",
             StructDefinition {
                 name: "test2".into(),
                 size: Some(12),
-                fields: vec![("x".into(), Type::I32, Some(4)), ("b".into(), Type::Bool, Some(4)), ("t".into(), Type::Custom(vec!["root", "test"].into()), Some(4))],
+                fields: vec![("x".into(), Type::I32, Some(4)), ("t".into(), Type::Custom(vec!["root", "test"].into()), Some(8)), ("b".into(), Type::Bool, Some(12))],
             }),
             ("
             struct test{i: i32, j: i32}
@@ -358,7 +350,7 @@ mod test {
             StructDefinition {
                 name: "test2".into(),
                 size: Some(16),
-                fields: vec![("x".into(), Type::I32, Some(4)), ("b".into(), Type::Bool, Some(4)), ("t".into(), Type::Custom(vec!["root", "test"].into()), Some(8))],
+                fields: vec![("x".into(), Type::I32, Some(4)), ("b".into(), Type::Bool, Some(8)), ("t".into(), Type::Custom(vec!["root", "test"].into()), Some(16))],
             }),
             ("
             struct test{i: i32}
