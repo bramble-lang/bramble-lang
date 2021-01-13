@@ -325,6 +325,36 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
+    fn extract_routine_type_info<'b>(
+        symbol: &'b Symbol,
+        call: &ast::RoutineCall,
+        routine_path: &ast::Path,
+    ) -> Result<(&'b Vec<Type>, Type), String> {
+        let routine_path_tail = routine_path.tail();
+        let (expected_param_tys, ret_ty) = match symbol {
+            Symbol {
+                ty: Type::FunctionDef(pty, rty),
+                ..
+            } if *call == crate::syntax::ast::RoutineCall::Function => (
+                pty,
+                Self::type_to_canonical_with_path(&routine_path_tail, rty)?,
+            ),
+            Symbol {
+                ty: Type::CoroutineDef(pty, rty),
+                ..
+            } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (
+                pty,
+                Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
+                    &routine_path_tail,
+                    rty,
+                )?)),
+            ),
+            _ => return Err(format!("{} found but was not a function", routine_path)),
+        };
+
+        Ok((expected_param_tys, ret_ty))
+    }
+
     fn check_for_invalid_routine_parameters<'b>(
         routine_path: &ast::Path,
         given: &'b Vec<SemanticNode>,
@@ -611,26 +641,8 @@ impl<'a> SemanticAnalyzer<'a> {
                         .ok_or(format!("function {} not declared", routine_path))?;
                 let routine_canon_path_tail = routine_canon_path.tail();
 
-                let (expected_param_tys, ret_ty) = match symbol {
-                    Symbol {
-                        ty: Type::FunctionDef(pty, rty),
-                        ..
-                    } if *call == crate::syntax::ast::RoutineCall::Function => (
-                        pty,
-                        Self::type_to_canonical_with_path(&routine_canon_path_tail, rty)?,
-                    ),
-                    Symbol {
-                        ty: Type::CoroutineDef(pty, rty),
-                        ..
-                    } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (
-                        pty,
-                        Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
-                            &routine_canon_path_tail,
-                            rty,
-                        )?)),
-                    ),
-                    _ => return Err(format!("{} found but was not a function", routine_path)),
-                };
+                let (expected_param_tys, ret_ty) =
+                    Self::extract_routine_type_info(symbol, call, &routine_path)?;
 
                 let expected_param_tys = expected_param_tys
                     .iter()
