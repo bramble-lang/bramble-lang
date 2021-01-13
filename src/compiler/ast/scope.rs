@@ -3,10 +3,7 @@ use crate::{
     syntax::ast::{self, Path},
 };
 
-use super::{
-    struct_table::{StructDefinition, StructTable},
-    symbol_table::{Symbol, SymbolTable},
-};
+use super::{struct_table::{StructDefinition, StructTable}, struct_table2::ResolvedStructTable, symbol_table::{Symbol, SymbolTable}};
 
 #[derive(Debug, PartialEq)]
 pub struct LayoutData {
@@ -88,7 +85,7 @@ impl Scope {
 
     pub(super) fn local_from(
         m: &SemanticMetadata,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
@@ -103,7 +100,7 @@ impl Scope {
 
     pub(super) fn routine_from(
         m: &SemanticMetadata,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
         let mut scope = Scope::new(
@@ -139,7 +136,7 @@ impl Scope {
     pub(super) fn module_from(
         m: &SemanticMetadata,
         name: &str,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;

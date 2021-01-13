@@ -10,33 +10,42 @@ pub struct StructTable<S> {
     state: PhantomData<S>,
 }
 
+impl<S> std::fmt::Display for StructTable<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (_, st) in self.table.iter() {
+            f.write_fmt(format_args!("\t{} | {:?} | ", st.name, st.size))?;
+
+            for (field_name, field_type, field_size) in st.fields.iter() {
+                f.write_fmt(format_args!(
+                    "[{}, {}, {}], ",
+                    field_name,
+                    field_type,
+                    field_size.unwrap_or(0)
+                ))?;
+            }
+
+            f.write_str("\n")?;
+        }
+        Ok(())
+    }
+}
+
 pub struct Unrealized{}
 pub struct Resolved{}
 
-type UnrealizedStructTable = StructTable<Unrealized>;
-type ResolvedStructTable = StructTable<Resolved>;
+pub type UnresolvedStructTable = StructTable<Unrealized>;
+pub type ResolvedStructTable = StructTable<Resolved>;
 
-impl UnrealizedStructTable {
-    fn insert_struct(
-        table: &mut HashMap<String, StructDefinition>,
-        canon_path: &Path,
-        def: StructDefinition,
-    ) -> Result<(), String> {
-        if canon_path.len() == 0 {
-            return Err("Cannot insert empty path into StructTable".into())
-        }
-
-        let canon_name = canon_path.to_string();
-        let already_exists = table.insert(canon_name.clone(), def).is_some();
-        if already_exists {
-            Err(format!("Struct {} already exists", canon_name))
-        } else {
-            Ok(())
+impl UnresolvedStructTable {
+    pub fn new() -> UnresolvedStructTable {
+        UnresolvedStructTable{
+            table: HashMap::new(),
+            state: PhantomData,
         }
     }
 
-    pub fn from(root: &SemanticNode) -> Result<UnrealizedStructTable, String> {
-        let mut table = UnrealizedStructTable {
+    pub fn from(root: &SemanticNode) -> Result<UnresolvedStructTable, String> {
+        let mut table = UnresolvedStructTable {
             table: HashMap::new(),
             state: PhantomData,
         };
@@ -160,6 +169,46 @@ impl UnrealizedStructTable {
 
         unresolved_structs
     }
+
+    fn insert_struct(
+        table: &mut HashMap<String, StructDefinition>,
+        canon_path: &Path,
+        def: StructDefinition,
+    ) -> Result<(), String> {
+        if canon_path.len() == 0 {
+            return Err("Cannot insert empty path into StructTable".into())
+        }
+
+        let canon_name = canon_path.to_string();
+        let already_exists = table.insert(canon_name.clone(), def).is_some();
+        if already_exists {
+            Err(format!("Struct {} already exists", canon_name))
+        } else {
+            Ok(())
+        }
+    }
+
+}
+
+impl ResolvedStructTable {
+    pub fn get(&self, name: &str) -> Option<&StructDefinition> {
+        self.table.get(name)
+    }
+
+    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
+        match ty {
+            ast::Type::I32 => Some(4),
+            ast::Type::Bool => Some(4),
+            ast::Type::StringLiteral => Some(4),
+            ast::Type::Coroutine(_) => Some(4),
+            ast::Type::Custom(name) => self.get(name.last().unwrap()).map(|st| st.size).flatten(),
+            ast::Type::FunctionDef(..) => Some(0),
+            ast::Type::CoroutineDef(..) => Some(0),
+            ast::Type::StructDef(..) => Some(0),
+            ast::Type::Unit => Some(0),
+            ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -188,7 +237,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(unrealized_st.table["root::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
             assert_eq!(unrealized_st.table["root::test2"], StructDefinition::new("test2", vec![("t".into(), Type::Custom(vec!["root", "test"].into()))]))
@@ -214,7 +263,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(unrealized_st.table["root::my_mod::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
             assert_eq!(unrealized_st.table["root::test2"], StructDefinition::new("test2", vec![("t".into(), Type::Custom(vec!["root", "my_mod", "test"].into()))]))
@@ -240,7 +289,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(unrealized_st.table["root::my_mod::test"], StructDefinition::new("test", vec![("i".into(), Type::I32)]));
             assert_eq!(unrealized_st.table["root::test"], StructDefinition::new("test", vec![("t".into(), Type::Custom(vec!["root", "my_mod", "test"].into()))]))
@@ -249,13 +298,13 @@ mod test {
 
     #[test]
     pub fn test_duplicate() {
-        let mut st = UnrealizedStructTable{
+        let mut st = UnresolvedStructTable{
             table: HashMap::new(),
             state: PhantomData,
         };
-        let result = UnrealizedStructTable::insert_struct(&mut st.table, &vec!["root", "test"].into(), StructDefinition::new("test", vec![("i".into(), Type::I32)]));
+        let result = UnresolvedStructTable::insert_struct(&mut st.table, &vec!["root", "test"].into(), StructDefinition::new("test", vec![("i".into(), Type::I32)]));
         assert_eq!(result, Ok(()));
-        let result = UnrealizedStructTable::insert_struct(&mut st.table, &vec!["root", "test"].into(), StructDefinition::new("test", vec![("i".into(), Type::I32)]));
+        let result = UnresolvedStructTable::insert_struct(&mut st.table, &vec!["root", "test"].into(), StructDefinition::new("test", vec![("i".into(), Type::I32)]));
         assert_eq!(result, Err("Struct root::test already exists".into()));
     }
 
@@ -311,7 +360,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
             assert_eq!(resolved_st.table[canonical_name], expected);
@@ -371,7 +420,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
             assert_eq!(resolved_st.table[canonical_name], expected);
@@ -405,7 +454,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let unrealized_st = UnrealizedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved = unrealized_st.resolve();
 
             assert_eq!(resolved.err(), Some("Could not resolve these structs: root::test, root::test2".into()));

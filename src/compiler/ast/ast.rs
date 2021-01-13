@@ -1,21 +1,23 @@
+use struct_table2::ResolvedStructTable;
+
 use crate::compiler::ast::scope::{LayoutData, Level, Scope};
 
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
-use super::struct_table::StructTable;
+use super::struct_table2;
 
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
     pub fn from(ast: &SemanticNode) -> (CompilerNode, LayoutData) {
-        let empty_struct_table = StructTable::new();
-        CompilerNode::compute_offsets(ast, LayoutData::new(0), &empty_struct_table)
+        let struct_table = struct_table2::UnresolvedStructTable::from(ast).unwrap().resolve().unwrap();
+        CompilerNode::compute_offsets(ast, LayoutData::new(0), &struct_table)
     }
 
     fn compute_offsets(
         ast: &SemanticNode,
         layout: LayoutData,
-        struct_table: &StructTable,
+        struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         use Ast::*;
         match ast {
@@ -200,36 +202,24 @@ impl CompilerNode {
             } => {
                 let (mut meta, layout) = Scope::module_from(meta, name, struct_table, layout);
 
-                for st in structs.iter() {
-                    // at this point I could compute the size of each struct and test for
-                    // circular dependencies
-                    match st {
-                        Ast::StructDef(_, name, fields) => {
-                            meta.structs.insert(name, fields.clone()).unwrap()
-                        }
-                        _ => panic!("Expected only structs in Module.structs, got {:?}", st),
-                    }
-                }
-                meta.structs.resolve_sizes().unwrap();
-
                 let mut nlayout = layout;
                 let mut nmods = vec![];
                 for module in modules.iter() {
-                    let (nm, no) = CompilerNode::compute_offsets(module, nlayout, &meta.structs);
+                    let (nm, no) = CompilerNode::compute_offsets(module, nlayout, struct_table);
                     nlayout = no;
                     nmods.push(nm);
                 }
 
                 let mut nfuncs = vec![];
                 for f in functions.iter() {
-                    let (nf, no) = CompilerNode::compute_offsets(f, nlayout, &meta.structs);
+                    let (nf, no) = CompilerNode::compute_offsets(f, nlayout, struct_table);
                     nlayout = no;
                     nfuncs.push(nf);
                 }
 
                 let mut ncors = vec![];
                 for co in coroutines.iter() {
-                    let (nco, no) = CompilerNode::compute_offsets(co, nlayout, &meta.structs);
+                    let (nco, no) = CompilerNode::compute_offsets(co, nlayout, struct_table);
                     nlayout = no;
                     ncors.push(nco);
                 }
@@ -296,7 +286,7 @@ impl CompilerNode {
 
 #[cfg(test)]
 mod ast_tests {
-    use crate::semantics::symbol_table;
+    use crate::{compiler::ast::struct_table2::UnresolvedStructTable, semantics::symbol_table};
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
     use crate::syntax::ast::Type;
@@ -317,7 +307,7 @@ mod ast_tests {
             },
             0,
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         match cn.0 {
             CompilerNode::Integer(m, _) => {
@@ -342,7 +332,7 @@ mod ast_tests {
             },
             0,
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(8), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
@@ -391,7 +381,7 @@ mod ast_tests {
             Box::new(sn1),
             Box::new(sn2),
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&snmul, LayoutData::new(8), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
@@ -435,7 +425,7 @@ mod ast_tests {
             },
             vec![],
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
@@ -479,7 +469,7 @@ mod ast_tests {
             },
             vec![sn],
         );
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 16);
         match cn.0 {
@@ -523,7 +513,7 @@ mod ast_tests {
             ty: Type::I32,
             body: vec![],
         };
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
@@ -593,7 +583,7 @@ mod ast_tests {
             body: vec![sn],
         };
 
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
@@ -647,7 +637,7 @@ mod ast_tests {
             ty: Type::I32,
             body: vec![],
         };
-        let empty_struct_table = StructTable::new();
+        let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
