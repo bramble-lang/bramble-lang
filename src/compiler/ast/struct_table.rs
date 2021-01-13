@@ -119,7 +119,8 @@ impl UnresolvedStructTable {
             }
         }
 
-        self.validate_resolution_attempt(&resolved).map(|()| resolved)
+        self.validate_resolution_attempt(&resolved)
+            .map(|()| resolved)
     }
 
     fn validate_resolution_attempt(&self, resolved: &ResolvedStructTable) -> Result<(), String> {

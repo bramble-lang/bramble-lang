@@ -112,7 +112,7 @@ impl Path {
         if l == 0 {
             None
         } else {
-            Some(&self.path[l-1])
+            Some(&self.path[l - 1])
         }
     }
 
@@ -122,7 +122,7 @@ impl Path {
     }
 
     pub fn tail(&self) -> Path {
-        let mut path = Path{
+        let mut path = Path {
             path: self.path.clone(),
         };
         path.path.pop();

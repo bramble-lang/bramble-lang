@@ -208,7 +208,9 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     fn get_current_path(&self, sym: &'a SymbolTable) -> Result<ast::Path, String> {
-        self.stack.to_path(sym).ok_or("A valid path is expected".into())
+        self.stack
+            .to_path(sym)
+            .ok_or("A valid path is expected".into())
     }
 
     /// Convert a path to its canonical form by merging with the ancestors in the AST.
@@ -230,7 +232,10 @@ impl<'a> SemanticAnalyzer<'a> {
     fn type_to_canonical_with_path(parent_path: &ast::Path, ty: &Type) -> Result<Type, String> {
         match ty {
             Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
-            Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(parent_path, &ty)?))),
+            Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(
+                parent_path,
+                &ty,
+            )?))),
             _ => Ok(ty.clone()),
         }
     }
@@ -255,7 +260,9 @@ impl<'a> SemanticAnalyzer<'a> {
     ) -> Result<Option<(&'a Symbol, ast::Path)>, String> {
         let canon_path = self.to_canonical(sym, path)?;
         if path.len() > 1 {
-            let item = canon_path.item().expect("Expected a canonical path with at least one step in it");
+            let item = canon_path
+                .item()
+                .expect("Expected a canonical path with at least one step in it");
             let node = self
                 .root
                 .go_to(&canon_path.tail())
@@ -378,7 +385,8 @@ impl<'a> SemanticAnalyzer<'a> {
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
-                        meta.ty = Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
+                        meta.ty =
+                            Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
                         meta.path = canonical_path;
                         Ok(MemberAccess(meta, Box::new(src), member.clone()))
                     }
@@ -815,7 +823,8 @@ impl<'a> SemanticAnalyzer<'a> {
                     let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
-                    let member_ty_canon = Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
+                    let member_ty_canon =
+                        Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
                     let param = self.traverse(pv, current_func, sym)?;
                     if param.get_type() != member_ty_canon {
                         return Err(format!(
