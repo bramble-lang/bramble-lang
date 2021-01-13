@@ -575,20 +575,21 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     resolved_params.push(ty);
                 }
-                let (symbol, canon_path) = self
+                let (symbol, routine_canon_path) = self
                     .lookup_symbol_by_path(sym, routine_path)?
                     .ok_or(format!("function {} not declared", routine_path))?;
+                let routine_canon_path_tail = routine_canon_path.tail();
 
                 let (expected_param_tys, ret_ty) = match symbol {
                     Symbol {
                         ty: Type::FunctionDef(pty, rty),
                         ..
-                    } if *call == crate::syntax::ast::RoutineCall::Function => (pty, Self::type_to_canonical_with_path(&canon_path.tail(), rty)?),
+                    } if *call == crate::syntax::ast::RoutineCall::Function => (pty, Self::type_to_canonical_with_path(&routine_canon_path_tail, rty)?),
                     Symbol {
                         ty: Type::CoroutineDef(pty, rty),
                         ..
                     } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => {
-                        (pty, Type::Coroutine(Box::new(Self::type_to_canonical_with_path(&canon_path.tail(), rty)?)))
+                        (pty, Type::Coroutine(Box::new(Self::type_to_canonical_with_path(&routine_canon_path_tail, rty)?)))
                     }
                     _ => return Err(format!("{} found but was not a function", routine_path)),
                 };
@@ -605,7 +606,7 @@ impl<'a> SemanticAnalyzer<'a> {
 
                     for (user, expected) in z {
                         idx += 1;
-                        let expected = self.type_to_canonical(sym, expected)?;
+                        let expected = Self::type_to_canonical_with_path(&routine_canon_path_tail, expected)?;
                         let user_ty = user.get_type();
                         if user_ty != expected {
                             mismatches.push((idx, expected, user_ty));
@@ -617,7 +618,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         Ok(RoutineCall(
                             meta.clone(),
                             *call,
-                            canon_path,
+                            routine_canon_path,
                             resolved_params,
                         ))
                     } else {
