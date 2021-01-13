@@ -824,14 +824,6 @@ fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>, String> {
             stream.next();
             ty
         }
-        /*Some(Token {
-            l: _,
-            s: Lex::Identifier(name),
-        }) => {
-            let ty = Some(Type::Custom(name.clone()));
-            stream.next();
-            ty
-        }*/
         _ => match path(stream)? {
             Some((_, path)) => Some(Type::Custom(path)),
             _ => None,

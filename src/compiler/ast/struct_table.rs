@@ -98,18 +98,18 @@ impl UnresolvedStructTable {
         loop {
             let mut num_resolved = 0;
 
-            for (key, value) in self.table.iter() {
+            for (name, def) in self.table.iter() {
                 // If no more structs can be resolved then break
                 // If the struct is resolved, then skip
-                if resolved.table.contains_key(key) {
+                if resolved.table.contains_key(name) {
                     continue;
                 }
 
                 // for each field in the struct
                 // check if field has a size
-                if let Some(sz) = self.attempt_size_resolution(value, &resolved.table) {
-                    let resolved_struct_def = value.set_field_sizes(&sz)?;
-                    resolved.table.insert(key.clone(), resolved_struct_def);
+                if let Some(sz) = self.attempt_size_resolution(def, &resolved.table) {
+                    let resolved_struct_def = def.set_field_sizes(&sz)?;
+                    resolved.table.insert(name.clone(), resolved_struct_def);
                     num_resolved += 1;
                 }
             }

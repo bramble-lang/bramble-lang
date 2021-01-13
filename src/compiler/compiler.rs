@@ -497,12 +497,10 @@ impl<'a> Compiler<'a> {
                 }}
             }
             Ast::Module {
-                meta: _,
-                name: _,
                 modules,
                 functions,
                 coroutines,
-                structs: _,
+                ..
             } => {
                 for f in functions.iter() {
                     self.traverse(f, current_func, code)?;

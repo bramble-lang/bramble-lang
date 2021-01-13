@@ -116,11 +116,6 @@ impl Path {
         }
     }
 
-    /// Remove the last step in the path
-    pub fn truncate(&mut self) -> Option<String> {
-        self.path.pop()
-    }
-
     pub fn tail(&self) -> Path {
         let mut path = Path {
             path: self.path.clone(),
@@ -740,17 +735,6 @@ mod test_path {
         let canonized_path = path.to_canonical(&current);
         let expected = vec!["root"].into();
         assert_eq!(canonized_path, Ok(expected));
-    }
-
-    #[test]
-    fn test_split_off_item() {
-        let path: Path = vec!["self", "item"].into();
-        let current = vec!["root", "current"].into();
-        let mut canonized_path = path.to_canonical(&current).unwrap();
-        let expected = vec!["root", "current"].into();
-        let item = canonized_path.truncate();
-        assert_eq!(canonized_path, expected);
-        assert_eq!(item, Some("item".into()));
     }
 
     #[test]
