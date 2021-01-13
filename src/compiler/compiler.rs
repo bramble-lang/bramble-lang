@@ -734,7 +734,7 @@ impl<'a> Compiler<'a> {
     fn struct_exression(
         &mut self,
         current_func: &String,
-        struct_name: &crate::syntax::ast::Path,
+        struct_name: &Path,
         field_values: &'a Vec<(String, CompilerNode)>,
         offset: i32,
         allocate: bool,
@@ -743,7 +743,7 @@ impl<'a> Compiler<'a> {
             "{}, used in {}, was not found",
             struct_name, current_func
         ));
-        let struct_sz = struct_def.size.unwrap();
+        let struct_sz = struct_def.size.expect(&format!("Size is not known for {}", struct_name));
         let field_info = struct_def
             .get_fields()
             .iter()
@@ -1020,11 +1020,10 @@ impl<'a> Compiler<'a> {
         let ty_def = self
             .struct_table
             .get(struct_name)
-            .ok_or(format!("Could not find definition for {}", struct_name))
-            .unwrap();
+            .expect(&format!("Could not find definition for {}", struct_name));
         let struct_sz = ty_def
             .size
-            .ok_or(format!("struct {} has an unknown size", struct_name))?;
+            .expect(&format!("Struct {} has an unknown size", struct_name));
         for (field_name, field_ty, field_offset) in ty_def.get_fields().iter().rev() {
             let rel_field_offset = field_offset.expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",

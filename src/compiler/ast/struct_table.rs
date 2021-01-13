@@ -71,7 +71,7 @@ impl UnresolvedStructTable {
                 for s in structs.iter() {
                     if let SemanticNode::StructDef(meta, name, fields) = s {
                         let struct_def = StructDefinition::new(name, fields.clone());
-                        Self::insert_struct(table, &meta.path, struct_def)?;
+                        Self::insert_struct(table, meta.get_canonical_path(), struct_def)?;
                     } else {
                         return Err(format!(
                             "Found {} in the structs section of a module",

@@ -387,7 +387,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
                         meta.ty =
                             Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
-                        meta.path = canonical_path;
+                        meta.set_canonical_path(canonical_path);
                         Ok(MemberAccess(meta, Box::new(src), member.clone()))
                     }
                     _ => Err(format!("Type {} does not have members", src.get_type())),
@@ -736,7 +736,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         p
                     })
                     .expect("Failed to create canonical path for function");
-                meta.path = canon_path;
+                meta.set_canonical_path(canon_path);
                 Ok(RoutineDef {
                     meta: meta.clone(),
                     def: def.clone(),
@@ -800,7 +800,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 let canonical_fields = self.params_to_canonical(sym, &fields)?;
                 meta.ty = Unit;
-                meta.path = self.to_canonical(sym, &vec![struct_name.clone()].into())?;
+                meta.set_canonical_path(self.to_canonical(sym, &vec![struct_name.clone()].into())?);
                 Ok(Ast::StructDef(
                     meta.clone(),
                     struct_name.clone(),

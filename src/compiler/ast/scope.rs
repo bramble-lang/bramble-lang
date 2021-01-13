@@ -41,6 +41,29 @@ impl Scope {
         }
     }
 
+    pub fn new_routine(id: u32, canon_path: &Path, ty: &ast::Type) -> Scope {
+        Scope::new(
+            id,
+            Level::Routine {
+                next_label: 0,
+                allocation: 0,
+            },
+            canon_path.clone(),
+            ty.clone(),
+        )
+    }
+
+    pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &ast::Type) -> Scope {
+        Scope::new(
+            id,
+            Level::Module {
+                name: name.into(),
+            },
+            canon_path.clone(),
+            ty.clone(),
+        )
+    }
+
     pub fn id(&self) -> u32 {
         self.id
     }
@@ -82,7 +105,7 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(m.id, Level::Local, m.path.clone(), m.ty.clone());
+        let mut scope = Scope::new(m.id, Level::Local, m.get_canonical_path().clone(), m.ty.clone());
         scope.line = m.ln;
         for s in m.sym.table().iter() {
             layout.offset =
@@ -96,14 +119,10 @@ impl Scope {
         struct_table: &ResolvedStructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
-        let mut scope = Scope::new(
+        let mut scope = Scope::new_routine(
             m.id,
-            Level::Routine {
-                next_label: 0,
-                allocation: 0,
-            },
-            m.path.clone(),
-            m.ty.clone(),
+            m.get_canonical_path(),
+            &m.ty,
         );
         scope.line = m.ln;
         let mut current_offset = current_offset;
@@ -133,11 +152,11 @@ impl Scope {
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = Scope::new(
+        let mut scope = Scope::new_module(
             m.id,
-            Level::Module { name: name.into() },
-            m.path.clone(),
-            m.ty.clone(),
+            &name,
+            m.get_canonical_path(),
+            &m.ty,
         );
         scope.line = m.ln;
         for s in m.sym.table().iter() {

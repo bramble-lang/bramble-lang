@@ -46,10 +46,10 @@ impl CompilerNode {
                     syntax::ast::RoutineDef::Function => 0,
                     syntax::ast::RoutineDef::Coroutine => 20,
                 };
-                let (mut meta, offset2) =
+                let (mut meta, offset) =
                     Scope::routine_from(meta, struct_table, initial_frame_size);
                 let mut nbody = vec![];
-                let mut nlayout = LayoutData::new(offset2);
+                let mut nlayout = LayoutData::new(offset);
                 for e in body.iter() {
                     let (e, layout) = CompilerNode::compute_offsets(e, nlayout, struct_table);
                     nlayout = layout;
@@ -296,7 +296,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: vec!["root"].into(),
+                canonical_path: vec!["root"].into(),
             },
             0,
         );
@@ -321,7 +321,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: vec!["root"].into(),
+                canonical_path: vec!["root"].into(),
             },
             0,
         );
@@ -348,7 +348,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: vec!["root"].into(),
+                canonical_path: vec!["root"].into(),
             },
             1,
         );
@@ -358,7 +358,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: vec!["root"].into(),
+                canonical_path: vec!["root"].into(),
             },
             2,
         );
@@ -368,7 +368,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: symbol_table::SymbolTable::new(),
-                path: vec!["root"].into(),
+                canonical_path: vec!["root"].into(),
             },
             BinaryOperator::Mul,
             Box::new(sn1),
@@ -414,7 +414,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
-                path: Path::new(),
+                canonical_path: Path::new(),
             },
             vec![],
         );
@@ -444,7 +444,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
-                path: Path::new(),
+                canonical_path: Path::new(),
             },
             vec![],
         );
@@ -458,7 +458,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
-                path: Path::new(),
+                canonical_path: Path::new(),
             },
             vec![sn],
         );
@@ -498,7 +498,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
-                path: Path::new(),
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -549,7 +549,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
-                path: Path::new(),
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
@@ -567,7 +567,7 @@ mod ast_tests {
                 ln: 0,
                 ty: crate::syntax::ast::Type::I32,
                 sym: semantic_table,
-                path: Path::new(),
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "outer_func".into(),
@@ -622,7 +622,7 @@ mod ast_tests {
                 ln: 0,
                 ty: Type::I32,
                 sym: semantic_table,
-                path: Path::new(),
+                canonical_path: Path::new(),
             },
             def: RoutineDef::Coroutine,
             name: "coroutine".into(),
