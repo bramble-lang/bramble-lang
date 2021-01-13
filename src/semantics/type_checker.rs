@@ -325,7 +325,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn check_for_invalid_routine_parameters<'b>(given: &'b Vec<SemanticNode>, expected_types: &'b Vec<Type>) -> Result<Vec<(i32, &'b Type, &'b Type)>,String>{
+    fn check_for_invalid_routine_parameters<'b>(routine_path: &ast::Path, given: &'b Vec<SemanticNode>, expected_types: &'b Vec<Type>) -> Result<(),String>{
         let mut mismatches = vec![];
         let mut idx = 0;
         for (user, expected) in given.iter().zip(expected_types.iter()) {
@@ -335,8 +335,21 @@ impl<'a> SemanticAnalyzer<'a> {
                 mismatches.push((idx, user_ty, expected));
             }
         }
-
-        Ok(mismatches)
+        if mismatches.len() > 0 || given.len() != expected_types.len() {
+            let errors: Vec<String> = mismatches
+                .iter()
+                .map(|(idx, got, expected)| {
+                    format!("parameter {} expected {} got {}", idx, expected, got)
+                })
+                .collect();
+            Err(format!(
+                "One or more parameters have mismatching types for function {}: {}",
+                routine_path,
+                errors.join(", ")
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     fn analyize_node(
@@ -625,28 +638,17 @@ impl<'a> SemanticAnalyzer<'a> {
                         routine_path
                     ))
                 } else {
-                    let mismatches = Self::check_for_invalid_routine_parameters(&resolved_params, &expected_param_tys)?;
-
-                    if mismatches.len() == 0 {
-                        meta.ty = self.type_to_canonical(sym, &ret_ty)?;
-                        Ok(RoutineCall(
-                            meta.clone(),
-                            *call,
-                            routine_canon_path,
-                            resolved_params,
-                        ))
-                    } else {
-                        let errors: Vec<String> = mismatches
-                            .iter()
-                            .map(|(idx, got, expected)| {
-                                format!("parameter {} expected {} got {}", idx, expected, got)
-                            })
-                            .collect();
-                        Err(format!(
-                            "One or more parameters have mismatching types for function {}: {}",
-                            routine_path,
-                            errors.join(", ")
-                        ))
+                    match Self::check_for_invalid_routine_parameters(&routine_path, &resolved_params, &expected_param_tys) {
+                        Err(msg) => Err(msg),
+                        Ok(()) => {
+                            meta.ty = self.type_to_canonical(sym, &ret_ty)?;
+                            Ok(RoutineCall(
+                                meta.clone(),
+                                *call,
+                                routine_canon_path,
+                                resolved_params,
+                            ))
+                        }
                     }
                 }
             }
