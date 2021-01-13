@@ -108,7 +108,7 @@ impl UnresolvedStructTable {
                 // for each field in the struct
                 // check if field has a size
                 if let Some(sz) = self.attempt_size_resolution(value, &resolved.table) {
-                    let resolved_struct_def = value.resolve_size(&sz);
+                    let resolved_struct_def = value.set_field_sizes(&sz)?;
                     resolved.table.insert(key.clone(), resolved_struct_def);
                     num_resolved += 1;
                 }
