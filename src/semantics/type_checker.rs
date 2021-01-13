@@ -207,6 +207,10 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
+    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<ast::Path, String> {
+        self.stack.to_path(sym).ok_or("A valid path is expected".into())
+    }
+
     /// Convert a path to its canonical form by merging with the ancestors in the AST.
     fn to_canonical(&self, sym: &'a SymbolTable, path: &ast::Path) -> Result<ast::Path, String> {
         let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
@@ -216,8 +220,17 @@ impl<'a> SemanticAnalyzer<'a> {
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
     fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type, String> {
         match ty {
-            Custom(path) => Ok(Custom(self.to_canonical(sym, &path)?)),
+            Custom(path) => Ok(Custom(path.to_canonical(&self.get_current_path(sym)?)?)),
             Coroutine(ty) => Ok(Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
+            _ => Ok(ty.clone()),
+        }
+    }
+
+    /// Convert any custom type to its canonical form by merging with the current AST ancestors
+    fn type_to_canonical_with_path(parent_path: &ast::Path, ty: &Type) -> Result<Type, String> {
+        match ty {
+            Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
+            Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(parent_path, &ty)?))),
             _ => Ok(ty.clone()),
         }
     }
@@ -367,7 +380,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
-                        meta.ty = self.type_to_canonical(sym, member_ty)?;
+                        meta.ty = Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
                         meta.path = canonical_path;
                         Ok(MemberAccess(meta, Box::new(src), member.clone()))
                     }
@@ -804,14 +817,16 @@ impl<'a> SemanticAnalyzer<'a> {
                     let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
-                    let member_ty = self.type_to_canonical(sym, member_ty)?;
+                    let mut canonical_path_tail = canonical_path.clone();
+                    canonical_path_tail.truncate();
+                    let member_ty_canon = Self::type_to_canonical_with_path(&canonical_path_tail, member_ty)?;
                     let param = self.traverse(pv, current_func, sym)?;
-                    if param.get_type() != member_ty {
+                    if param.get_type() != member_ty_canon {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
                             canonical_path,
                             pn,
-                            member_ty,
+                            member_ty_canon,
                             param.get_type()
                         ));
                     }
@@ -1999,28 +2014,34 @@ mod tests {
     #[test]
     pub fn test_struct_expression() {
         use crate::syntax::parser;
-        for (text, expected) in vec![
+        for (line, text, expected) in vec![
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> root::MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> self::MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return self::MyStruct{x:1};}",
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return root::MyStruct{x:1};}",
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 fn test() -> MyStruct 
                 {
@@ -2030,6 +2051,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 fn test() -> MyStruct 
                 {
@@ -2039,6 +2061,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 fn test() -> MyStruct 
                 {
@@ -2048,6 +2071,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 fn test() -> MyStruct 
                 {
@@ -2057,6 +2081,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "mod my_mod{struct MyStruct{x:i32}}
                 fn test() -> my_mod::MyStruct 
                 {
@@ -2066,6 +2091,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "mod my_mod{struct MyStruct{x:i32}}
                 mod fn_mod {
                     fn test() -> self::super::my_mod::MyStruct 
@@ -2077,6 +2103,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 struct MyStruct2{ms: MyStruct}
                 fn test() -> MyStruct2
@@ -2088,6 +2115,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 fn test2(ms: MyStruct) -> i32 {return ms.x;}
                 fn test() -> i32
@@ -2099,6 +2127,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 fn test2(ms: MyStruct) -> MyStruct {return ms;}
                 fn test() -> i32
@@ -2110,6 +2139,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 co test2(ms: MyStruct) -> MyStruct { 
                     yret ms; 
@@ -2125,6 +2155,7 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 struct MyStruct2{ms: MyStruct}
                 fn test2(ms2: MyStruct2) -> i32 {return ms2.ms.x;}
@@ -2137,6 +2168,7 @@ mod tests {
                 Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 got root::MyStruct"),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32}
                 struct MyStruct2{x:i32}
                 fn test() -> MyStruct 
@@ -2147,18 +2179,22 @@ mod tests {
                 Err("Semantic: L5: Bind expected root::MyStruct2 but got root::MyStruct"),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:false};}",
                 Err("Semantic: L1: root::MyStruct.x expects i32 but got bool"),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{};}",
                 Err("Semantic: L1: expected 1 parameters but found 0"),
             ),
             (
+                line!(),
                 "struct MyStruct{x:i32} fn test() -> i32 {return MyStruct{x:5};}",
                 Err("Semantic: L1: Return expected i32 but got root::MyStruct"),
             ),
             (
+                line!(),
                 "struct MyStruct{x:co i32} fn test(c: co i32) -> MyStruct {return MyStruct{x: c};}",
                 Ok(()),
             ),
@@ -2171,7 +2207,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
-                Ok(_) => {assert!(result.is_ok(), "{} => {:?}", text, result)},
+                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
             }
         }

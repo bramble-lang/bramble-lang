@@ -112,6 +112,14 @@ impl Path {
         self.path.pop()
     }
 
+    pub fn tail(&self) -> Path {
+        let mut path = Path{
+            path: self.path.clone(),
+        };
+        path.path.pop();
+        path
+    }
+
     /**
     Converts this path into a canonical path by merging it
     with the given current path.
