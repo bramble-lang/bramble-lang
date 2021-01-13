@@ -108,21 +108,8 @@ impl UnresolvedStructTable {
                 // for each field in the struct
                 // check if field has a size
                 if let Some(sz) = self.attempt_size_resolution(value, &resolved.table) {
-                    let mut sd = StructDefinition {
-                        name: value.name.clone(),
-                        size: None,
-                        fields: value.fields.clone(),
-                    };
-                    let mut total_sz = 0;
-                    for idx in 0..sz.len() {
-                        let field_sz = sz[idx];
-                        total_sz += field_sz;
-                        sd.fields[idx].2 = Some(total_sz);
-                    }
-                    sd.size = Some(total_sz);
-                    // if all fields have sizes, compute the total size
-                    // then insert into resolved table
-                    resolved.table.insert(key.clone(), sd);
+                    let resolved_struct_def = value.resolve_size(&sz);
+                    resolved.table.insert(key.clone(), resolved_struct_def);
                     num_resolved += 1;
                 }
             }
