@@ -817,9 +817,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
-                    let mut canonical_path_tail = canonical_path.clone();
-                    canonical_path_tail.truncate();
-                    let member_ty_canon = Self::type_to_canonical_with_path(&canonical_path_tail, member_ty)?;
+                    let member_ty_canon = Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
                     let param = self.traverse(pv, current_func, sym)?;
                     if param.get_type() != member_ty_canon {
                         return Err(format!(
