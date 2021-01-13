@@ -29,7 +29,7 @@ mod my_mod {
     }
 
     fn add_ms(a: MyStruct, b: self::MyStruct) -> self::MyStruct {
-        return MyStruct{a: a.a + b.a};
+        return MyStruct{a: self::add(a.a, b.a).a};
     }
 
     struct MyStruct {
