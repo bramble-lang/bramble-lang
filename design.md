@@ -76,8 +76,19 @@ must have `CanonicalPath`
 1. Module{routines, structs, modules}
 2. Routine: Function|Coroutine
 3. Struct
-4. Statement{expression}
+4. Statement Print*|Return|Bind|Yield|Mutate|YieldReturn {expression}
 5. Expression: ExpressionBlock|actual expression
-6. ExpressionBlock: {[expression]*}
+6. ExpressionBlock: {[statements]* + [expression]}
 7. Literal: Integer|Bool|String
-8. 
+8. Variable: Identifier|MemberAccess
+
+#### Idea 2
+1. Module{items, modules}
+2. Items: Struct|Function|Coroutine
+3. Statement: Print|Return|Bind|Yield|Mutate|YieldReturn + Expression + ;
+4. Expression: ExpressionBlock|_expression_
+5. ExpressionBlock: {[statements]* + [expression]}
+
+One thing that's clear to me is that I need to write out the BNF for my language and get
+the syntacts clearly defined to make this easier.  My language has grown a bit and is
+at risk of becoming hairy.
