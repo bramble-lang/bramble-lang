@@ -8,12 +8,22 @@ function run() {
     echo ""
     echo "Assembling"
 
-    nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-    gcc -w ./target/output.obj -g -o ./target/output -m32 2>&1 > gcc.log
+    built=0
+
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
+        gcc -w ./target/output.obj -g -o ./target/output -m32 2>&1 > gcc.log
+        built=1
+    fi
 
     echo ""
-    echo "Running"
-    ./target/output
+
+    if [[ $built -eq 1 ]]; then
+        echo "Running"
+        ./target/output
+    else
+        echo "Build Failed"
+    fi
 }
 
 echo "Compile ${1}"
