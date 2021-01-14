@@ -1,7 +1,7 @@
 use crate::ast::Type;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
-use crate::{ast, syntax::ast::Path};
+use crate::{ast, syntax::path::Path};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {

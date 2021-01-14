@@ -1,6 +1,7 @@
 use crate::{
     semantics::semanticnode::SemanticMetadata,
-    syntax::ast::{self, Path},
+    syntax::ast::{self},
+    syntax::path::Path,
 };
 
 use super::{

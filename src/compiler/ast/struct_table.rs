@@ -2,7 +2,8 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
     semantics::semanticnode::SemanticNode,
-    syntax::ast::{self, Path},
+    syntax::ast,
+    syntax::path::Path,
 };
 
 use super::struct_definition::{FieldInfo, StructDefinition};

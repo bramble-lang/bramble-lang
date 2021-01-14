@@ -1,6 +1,6 @@
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level;
-use crate::{ast::RoutineDef, syntax::ast::Path};
+use crate::{ast::RoutineDef, syntax::path::Path};
 
 use super::symbol_table::Symbol;
 

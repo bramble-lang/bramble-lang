@@ -4,6 +4,7 @@ use crate::semantics::symbol_table::*;
 use crate::syntax::ast::Type;
 use crate::syntax::ast::Type::*;
 use crate::syntax::pnode::PNode;
+use crate::syntax::path::Path;
 use crate::{
     ast,
     diagnostics::config::{Tracing, TracingConfig},
@@ -207,14 +208,14 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<ast::Path, String> {
+    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<Path, String> {
         self.stack
             .to_path(sym)
             .ok_or("A valid path is expected".into())
     }
 
     /// Convert a path to its canonical form by merging with the ancestors in the AST.
-    fn to_canonical(&self, sym: &'a SymbolTable, path: &ast::Path) -> Result<ast::Path, String> {
+    fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path, String> {
         let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
         path.to_canonical(&current_path)
     }
@@ -229,7 +230,7 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
-    fn type_to_canonical_with_path(parent_path: &ast::Path, ty: &Type) -> Result<Type, String> {
+    fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type, String> {
         match ty {
             Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
             Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(
@@ -256,8 +257,8 @@ impl<'a> SemanticAnalyzer<'a> {
     fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
-        path: &ast::Path,
-    ) -> Result<Option<(&'a Symbol, ast::Path)>, String> {
+        path: &Path,
+    ) -> Result<Option<(&'a Symbol, Path)>, String> {
         let canon_path = self.to_canonical(sym, path)?;
         if path.len() > 1 {
             let item = canon_path
@@ -328,7 +329,7 @@ impl<'a> SemanticAnalyzer<'a> {
     fn extract_routine_type_info<'b>(
         symbol: &'b Symbol,
         call: &ast::RoutineCall,
-        routine_path: &ast::Path,
+        routine_path: &Path,
     ) -> Result<(&'b Vec<Type>, Type), String> {
         let routine_path_tail = routine_path.tail();
         let (expected_param_tys, ret_ty) = match symbol {
@@ -356,7 +357,7 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     fn check_for_invalid_routine_parameters<'b>(
-        routine_path: &ast::Path,
+        routine_path: &Path,
         given: &'b Vec<SemanticNode>,
         expected_types: &'b Vec<Type>,
     ) -> Result<(), String> {
@@ -1189,7 +1190,7 @@ mod tests {
                 if let RoutineDef { body, .. } = &functions[0] {
                     if let Bind(.., exp) = &body[0] {
                         if let box StructExpression(_, struct_name, ..) = exp {
-                            let expected: ast::Path = vec!["root", "test"].into();
+                            let expected: Path = vec!["root", "test"].into();
                             assert_eq!(struct_name, &expected)
                         } else {
                             panic!("Not a struct expression")
@@ -1228,7 +1229,7 @@ mod tests {
             if let Module { functions, .. } = result {
                 if let RoutineDef { params, .. } = &functions[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: ast::Path = vec!["root", "test"].into();
+                        let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
                     } else {
                         panic!("Not a custom type")
@@ -1264,7 +1265,7 @@ mod tests {
             if let Module { coroutines, .. } = result {
                 if let RoutineDef { params, .. } = &coroutines[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: ast::Path = vec!["root", "test"].into();
+                        let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
                     } else {
                         panic!("Not a custom type")
@@ -1298,7 +1299,7 @@ mod tests {
             if let Module { structs, .. } = result {
                 if let Ast::StructDef(_, _, fields) = &structs[1] {
                     if let (_, Custom(ty_path)) = &fields[0] {
-                        let expected: ast::Path = vec!["root", "test"].into();
+                        let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
                     } else {
                         panic!("Not a custom type")

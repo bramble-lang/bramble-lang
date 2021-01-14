@@ -1,4 +1,4 @@
-use crate::ast::*;
+use crate::{ast::*, syntax::path::Path};
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
 use crate::{ast, diagnostics::config::TracingConfig};

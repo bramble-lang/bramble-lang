@@ -1,10 +1,9 @@
+use super::struct_table;
 use struct_table::ResolvedStructTable;
 
 use crate::compiler::ast::scope::{LayoutData, Level, Scope};
-
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
-use super::struct_table;
 
 pub type CompilerNode = Ast<Scope>;
 
@@ -282,7 +281,7 @@ mod ast_tests {
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
     use crate::syntax::ast::Type;
-    use crate::{compiler::ast::scope, syntax::ast::Path};
+    use crate::{compiler::ast::scope, syntax::path::Path};
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
 

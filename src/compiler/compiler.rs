@@ -18,7 +18,7 @@ use crate::register;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::unary_op;
 use crate::unit_op;
-use crate::{assembly, syntax::ast::Path};
+use crate::{assembly, syntax::path::Path};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ast::Type,
