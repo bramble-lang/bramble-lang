@@ -2,7 +2,7 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
     semantics::semanticnode::SemanticNode,
-    syntax::ast,
+    syntax::ty::Type,
     syntax::path::Path,
 };
 
@@ -143,20 +143,20 @@ impl UnresolvedStructTable {
         resolved_structs: &HashMap<String, StructDefinition>,
     ) -> Option<Vec<i32>> {
         fn get_resolved_size(
-            ty: &ast::Type,
+            ty: &Type,
             resolved_structs: &HashMap<String, StructDefinition>,
         ) -> Option<i32> {
             match ty {
-                ast::Type::I32 => Some(4),
-                ast::Type::Bool => Some(4),
-                ast::Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
-                ast::Type::Coroutine(_) => Some(4),
-                ast::Type::StringLiteral => Some(4),
-                ast::Type::Unit => None,
-                ast::Type::StructDef(_) => None,
-                ast::Type::FunctionDef(_, _) => None,
-                ast::Type::CoroutineDef(_, _) => None,
-                ast::Type::Unknown => None,
+                Type::I32 => Some(4),
+                Type::Bool => Some(4),
+                Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
+                Type::Coroutine(_) => Some(4),
+                Type::StringLiteral => Some(4),
+                Type::Unit => None,
+                Type::StructDef(_) => None,
+                Type::FunctionDef(_, _) => None,
+                Type::CoroutineDef(_, _) => None,
+                Type::Unknown => None,
             }
         }
 
@@ -202,18 +202,18 @@ impl ResolvedStructTable {
         self.table.get(&canon_path.to_string())
     }
 
-    pub fn size_of(&self, ty: &ast::Type) -> Option<i32> {
+    pub fn size_of(&self, ty: &Type) -> Option<i32> {
         match ty {
-            ast::Type::I32 => Some(4),
-            ast::Type::Bool => Some(4),
-            ast::Type::StringLiteral => Some(4),
-            ast::Type::Coroutine(_) => Some(4),
-            ast::Type::Custom(canon_path) => self.get(canon_path).map(|st| st.size).flatten(),
-            ast::Type::FunctionDef(..) => Some(0),
-            ast::Type::CoroutineDef(..) => Some(0),
-            ast::Type::StructDef(..) => Some(0),
-            ast::Type::Unit => Some(0),
-            ast::Type::Unknown => panic!("Requesting size for a type of Unknown"),
+            Type::I32 => Some(4),
+            Type::Bool => Some(4),
+            Type::StringLiteral => Some(4),
+            Type::Coroutine(_) => Some(4),
+            Type::Custom(canon_path) => self.get(canon_path).map(|st| st.size).flatten(),
+            Type::FunctionDef(..) => Some(0),
+            Type::CoroutineDef(..) => Some(0),
+            Type::StructDef(..) => Some(0),
+            Type::Unit => Some(0),
+            Type::Unknown => panic!("Requesting size for a type of Unknown"),
         }
     }
 }
@@ -225,7 +225,6 @@ mod test {
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         semantics::type_checker::type_check,
-        syntax::ast::Type,
     };
 
     #[test]

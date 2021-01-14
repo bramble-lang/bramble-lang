@@ -21,7 +21,7 @@ use crate::unit_op;
 use crate::{assembly, syntax::path::Path};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
-    syntax::ast::Type,
+    syntax::ty::Type,
 };
 
 use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};

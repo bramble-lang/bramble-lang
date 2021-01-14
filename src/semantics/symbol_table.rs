@@ -1,4 +1,4 @@
-use crate::ast::Type;
+use crate::syntax::ty::Type;
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::{ast, syntax::path::Path};
@@ -133,7 +133,7 @@ impl SymbolTable {
                         params
                             .iter()
                             .map(|(_, ty)| ty.clone())
-                            .collect::<Vec<ast::Type>>(),
+                            .collect::<Vec<Type>>(),
                         Box::new(ty.clone()),
                     ),
                     false,
@@ -152,7 +152,7 @@ impl SymbolTable {
                         params
                             .iter()
                             .map(|(_, ty)| ty.clone())
-                            .collect::<Vec<ast::Type>>(),
+                            .collect::<Vec<Type>>(),
                         Box::new(ty.clone()),
                     ),
                     false,

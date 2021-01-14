@@ -1,13 +1,13 @@
-use crate::{ast::*, syntax::path::Path};
+use crate::{ast::*, syntax::path::Path, syntax::ty::Type};
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
-use crate::{ast, diagnostics::config::TracingConfig};
+use crate::diagnostics::config::TracingConfig;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
     pub id: u32,
     pub ln: u32,
-    pub ty: ast::Type,
+    pub ty: Type,
     pub sym: SymbolTable,
     pub canonical_path: Path,
 }
@@ -15,14 +15,14 @@ pub struct SemanticMetadata {
 pub type SemanticNode = Ast<SemanticMetadata>;
 
 impl SemanticNode {
-    pub fn get_type(&self) -> &ast::Type {
+    pub fn get_type(&self) -> &Type {
         let meta = self.get_metadata();
         &meta.ty
     }
 }
 
 impl SemanticMetadata {
-    pub fn new(id: u32, ln: u32, ty: ast::Type) -> SemanticMetadata {
+    pub fn new(id: u32, ln: u32, ty: Type) -> SemanticMetadata {
         SemanticMetadata {
             id,
             ln,
@@ -257,7 +257,7 @@ impl SemanticAst {
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {
-        let sm_data = SemanticMetadata::new(self.next_id, l, ast::Type::Unknown);
+        let sm_data = SemanticMetadata::new(self.next_id, l, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
@@ -266,7 +266,7 @@ impl SemanticAst {
         let sm_data = SemanticMetadata {
             id: self.next_id,
             ln,
-            ty: ast::Type::Unknown,
+            ty: Type::Unknown,
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),
         };
@@ -284,15 +284,15 @@ mod tests {
         for (node, expected) in [
             (
                 Ast::Integer(1, 3),
-                Ast::Integer(SemanticMetadata::new(0, 1, ast::Type::Unknown), 3),
+                Ast::Integer(SemanticMetadata::new(0, 1, Type::Unknown), 3),
             ),
             (
                 Ast::Boolean(1, true),
-                Ast::Boolean(SemanticMetadata::new(0, 1, ast::Type::Unknown), true),
+                Ast::Boolean(SemanticMetadata::new(0, 1, Type::Unknown), true),
             ),
             (
                 Ast::Identifier(1, "x".into()),
-                Ast::Identifier(SemanticMetadata::new(0, 1, ast::Type::Unknown), "x".into()),
+                Ast::Identifier(SemanticMetadata::new(0, 1, Type::Unknown), "x".into()),
             ),
         ]
         .iter()
@@ -309,8 +309,8 @@ mod tests {
             (
                 (Ast::Integer(1, 3), Ast::Integer(1, 3)),
                 (
-                    Ast::Integer(SemanticMetadata::new(1, 1, ast::Type::Unknown), 3),
-                    Ast::Integer(SemanticMetadata::new(2, 1, ast::Type::Unknown), 3),
+                    Ast::Integer(SemanticMetadata::new(1, 1, Type::Unknown), 3),
+                    Ast::Integer(SemanticMetadata::new(2, 1, Type::Unknown), 3),
                 ),
             ),
             (
@@ -319,15 +319,15 @@ mod tests {
                     Ast::Identifier(1, "y".into()),
                 ),
                 (
-                    Ast::Identifier(SemanticMetadata::new(1, 1, ast::Type::Unknown), "x".into()),
-                    Ast::Identifier(SemanticMetadata::new(2, 1, ast::Type::Unknown), "y".into()),
+                    Ast::Identifier(SemanticMetadata::new(1, 1, Type::Unknown), "x".into()),
+                    Ast::Identifier(SemanticMetadata::new(2, 1, Type::Unknown), "y".into()),
                 ),
             ),
             (
                 (Ast::Boolean(1, true), Ast::Boolean(1, false)),
                 (
-                    Ast::Boolean(SemanticMetadata::new(1, 1, ast::Type::Unknown), true),
-                    Ast::Boolean(SemanticMetadata::new(2, 1, ast::Type::Unknown), false),
+                    Ast::Boolean(SemanticMetadata::new(1, 1, Type::Unknown), true),
+                    Ast::Boolean(SemanticMetadata::new(2, 1, Type::Unknown), false),
                 ),
             ),
         ]
@@ -341,7 +341,7 @@ mod tests {
                     Box::new(r.clone()),
                 ),
                 Ast::BinaryOp(
-                    SemanticMetadata::new(0, 1, ast::Type::Unknown),
+                    SemanticMetadata::new(0, 1, Type::Unknown),
                     BinaryOperator::Mul,
                     Box::new(el.clone()),
                     Box::new(er.clone()),
