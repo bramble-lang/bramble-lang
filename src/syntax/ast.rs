@@ -202,8 +202,6 @@ impl std::hash::Hash for Path {
     }
 }
 
-impl Eq for Path {}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
     Integer(I, i32),
