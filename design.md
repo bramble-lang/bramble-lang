@@ -44,3 +44,40 @@ in the compiler layer: it should not have to figure out anything necessary to id
     start at the root of the ast:
         - if it is a module: loop through all the structs, convert the struct name to canonical (it is currently not a path), and add to the StructTable
         - Loop through all the modules: for each module, call this function
+
+## 2021-01-14
+### Refactoring the AST
+This is something I've wanted to do for a month but kept putting off because: I thought that focusing on other features was more important and
+because I didn't have a good sense of where it should go.  This week, I read through the `lalrpop` code and finally got a good idea of how to
+design my AST in Rust in a way that balances the value of ADTs and leverages the structs effectively.
+
+Here are the big problems with the current design:
+1. The ADT is too big.  Any function dealing with traversing the AST winds up being 200 lines long to deal with all the different cases in the match statement
+2. Certain values (e.g. paths) go through state transformations in stages of the compiler pipeline.  For example: paths go from being exactly as written
+in the source code to being all canonical paths (absolute paths from `root`).  But it's really hard to remember to make sure that happens for every place
+that value appears and theres no way to feel confident that it has happened.  A lot of what time was spent fixing bugs in the module implementation caused
+by paths not being canonical when they reached the compiler layer.
+3. Working with individual nodes to get specific information or take specific actions is difficult because you have to deal with match statements for everything
+
+
+What I want:
+1. Smaller functions when dealing with an AST
+2. A way to enforce state transitions of certain values in the AST (e.g. `Path -> Canonical Path`)
+3. Make working with specific types of nodes easier (e.g. if I expect a routine definition, let me restrict to just that rather than allow ANY ast node type)
+4. Ideally would let me build some higher order functions that can be used to build a lot of the semantic and compiler transform logic
+
+Basic Design Idea:
+1. Mix structs with ADTs: have structs represent specific nodes (e.g. expressions) and then ADTs represent groupings that are related (e.g. FunctionDef and CoroutineDef)
+2. Add a generic for the Path and define a `RawPath` that can be transformed into a `CanonicalPath` and let me specify that the AST sent to the compiler
+must have `CanonicalPath`
+
+### ADT breakdown:
+#### Idea 1
+1. Module{routines, structs, modules}
+2. Routine: Function|Coroutine
+3. Struct
+4. Statement{expression}
+5. Expression: ExpressionBlock|actual expression
+6. ExpressionBlock: {[expression]*}
+7. Literal: Integer|Bool|String
+8. 
