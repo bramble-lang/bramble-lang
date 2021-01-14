@@ -1,10 +1,9 @@
+use super::struct_table;
 use struct_table::ResolvedStructTable;
 
 use crate::compiler::ast::scope::{LayoutData, Level, Scope};
-
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
-use super::struct_table;
 
 pub type CompilerNode = Ast<Scope>;
 
@@ -281,8 +280,8 @@ impl CompilerNode {
 mod ast_tests {
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::ast::RoutineDef;
-    use crate::syntax::ast::Type;
-    use crate::{compiler::ast::scope, syntax::ast::Path};
+    use crate::syntax::ty::Type;
+    use crate::{compiler::ast::scope, syntax::path::Path};
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
 
@@ -346,7 +345,7 @@ mod ast_tests {
             SemanticMetadata {
                 id: 0,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
                 canonical_path: vec!["root"].into(),
             },
@@ -356,7 +355,7 @@ mod ast_tests {
             SemanticMetadata {
                 id: 1,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
                 canonical_path: vec!["root"].into(),
             },
@@ -366,7 +365,7 @@ mod ast_tests {
             SemanticMetadata {
                 id: 2,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: symbol_table::SymbolTable::new(),
                 canonical_path: vec!["root"].into(),
             },
@@ -412,7 +411,7 @@ mod ast_tests {
             SemanticMetadata {
                 id: 0,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
@@ -442,7 +441,7 @@ mod ast_tests {
             SemanticMetadata {
                 id: 0,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
@@ -456,7 +455,7 @@ mod ast_tests {
             SemanticMetadata {
                 id: 0,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
@@ -547,14 +546,14 @@ mod ast_tests {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "func".into(),
             params: vec![],
-            ty: crate::syntax::ast::Type::I32,
+            ty: Type::I32,
             body: vec![],
         };
 
@@ -565,14 +564,14 @@ mod ast_tests {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
-                ty: crate::syntax::ast::Type::I32,
+                ty: Type::I32,
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
             def: RoutineDef::Function,
             name: "outer_func".into(),
             params: vec![],
-            ty: crate::syntax::ast::Type::I32,
+            ty: Type::I32,
             body: vec![sn],
         };
 

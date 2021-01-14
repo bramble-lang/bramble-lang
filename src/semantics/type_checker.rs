@@ -1,9 +1,10 @@
 use crate::ast::{Ast, Ast::*, BinaryOperator, UnaryOperator};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
-use crate::syntax::ast::Type;
-use crate::syntax::ast::Type::*;
+use crate::syntax::ty::Type;
+use Type::*;
 use crate::syntax::pnode::PNode;
+use crate::syntax::path::Path;
 use crate::{
     ast,
     diagnostics::config::{Tracing, TracingConfig},
@@ -103,7 +104,7 @@ impl<'a> SemanticAnalyzer<'a> {
         operand: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<(ast::Type, SemanticNode), String> {
+    ) -> Result<(Type, SemanticNode), String> {
         use UnaryOperator::*;
 
         let operand = self.traverse(operand, current_func, sym)?;
@@ -141,7 +142,7 @@ impl<'a> SemanticAnalyzer<'a> {
         r: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<(ast::Type, SemanticNode, SemanticNode), String> {
+    ) -> Result<(Type, SemanticNode, SemanticNode), String> {
         use BinaryOperator::*;
 
         let l = self.traverse(l, current_func, sym)?;
@@ -207,14 +208,14 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<ast::Path, String> {
+    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<Path, String> {
         self.stack
             .to_path(sym)
             .ok_or("A valid path is expected".into())
     }
 
     /// Convert a path to its canonical form by merging with the ancestors in the AST.
-    fn to_canonical(&self, sym: &'a SymbolTable, path: &ast::Path) -> Result<ast::Path, String> {
+    fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path, String> {
         let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
         path.to_canonical(&current_path)
     }
@@ -229,7 +230,7 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
-    fn type_to_canonical_with_path(parent_path: &ast::Path, ty: &Type) -> Result<Type, String> {
+    fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type, String> {
         match ty {
             Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
             Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(
@@ -256,8 +257,8 @@ impl<'a> SemanticAnalyzer<'a> {
     fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
-        path: &ast::Path,
-    ) -> Result<Option<(&'a Symbol, ast::Path)>, String> {
+        path: &Path,
+    ) -> Result<Option<(&'a Symbol, Path)>, String> {
         let canon_path = self.to_canonical(sym, path)?;
         if path.len() > 1 {
             let item = canon_path
@@ -289,7 +290,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &'a self,
         sym: &'a SymbolTable,
         id: &str,
-    ) -> Result<(&Vec<ast::Type>, &ast::Type), String> {
+    ) -> Result<(&Vec<Type>, &Type), String> {
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -307,7 +308,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &'a self,
         sym: &'a SymbolTable,
         id: &str,
-    ) -> Result<(&Vec<ast::Type>, &ast::Type), String> {
+    ) -> Result<(&Vec<Type>, &Type), String> {
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -317,7 +318,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&ast::Type, String> {
+    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Type, String> {
         let p = &self.lookup(sym, id)?.ty;
         match p {
             Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
@@ -328,7 +329,7 @@ impl<'a> SemanticAnalyzer<'a> {
     fn extract_routine_type_info<'b>(
         symbol: &'b Symbol,
         call: &ast::RoutineCall,
-        routine_path: &ast::Path,
+        routine_path: &Path,
     ) -> Result<(&'b Vec<Type>, Type), String> {
         let routine_path_tail = routine_path.tail();
         let (expected_param_tys, ret_ty) = match symbol {
@@ -356,7 +357,7 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     fn check_for_invalid_routine_parameters<'b>(
-        routine_path: &ast::Path,
+        routine_path: &Path,
         given: &'b Vec<SemanticNode>,
         expected_types: &'b Vec<Type>,
     ) -> Result<(), String> {
@@ -405,7 +406,7 @@ impl<'a> SemanticAnalyzer<'a> {
             }
             Ast::StringLiteral(meta, v) => {
                 let mut meta = meta.clone();
-                meta.ty = ast::Type::StringLiteral;
+                meta.ty = Type::StringLiteral;
                 Ok(Ast::StringLiteral(meta.clone(), v.clone()))
             }
             CustomType(meta, name) => {
@@ -696,7 +697,7 @@ impl<'a> SemanticAnalyzer<'a> {
             Prints(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
-                if exp.get_type() == ast::Type::StringLiteral {
+                if exp.get_type() == Type::StringLiteral {
                     meta.ty = Unit;
                     Ok(Prints(meta.clone(), Box::new(exp)))
                 } else {
@@ -898,16 +899,16 @@ mod tests {
      * map: function name -> (params, ret, vars)
      */
     struct FunInfo {
-        params: Vec<(&'static str, ast::Type)>,
-        ret: ast::Type,
-        vars: Vec<(&'static str, bool, ast::Type)>,
+        params: Vec<(&'static str, Type)>,
+        ret: Type,
+        vars: Vec<(&'static str, bool, Type)>,
     }
 
     impl FunInfo {
         pub fn new(
-            params: Vec<(&'static str, ast::Type)>,
-            ret: ast::Type,
-            vars: Vec<(&'static str, bool, ast::Type)>,
+            params: Vec<(&'static str, Type)>,
+            ret: Type,
+            vars: Vec<(&'static str, bool, Type)>,
         ) -> FunInfo {
             FunInfo {
                 params: params,
@@ -931,9 +932,9 @@ mod tests {
         pub fn add(
             &mut self,
             name: &'static str,
-            params: Vec<(&'static str, ast::Type)>,
-            ret: ast::Type,
-            vars: Vec<(&'static str, bool, ast::Type)>,
+            params: Vec<(&'static str, Type)>,
+            ret: Type,
+            vars: Vec<(&'static str, bool, Type)>,
         ) {
             self.func
                 .insert(name.into(), FunInfo::new(params, ret, vars));
@@ -967,7 +968,7 @@ mod tests {
                 .params
                 .iter()
                 .map(|(_, pty)| pty.clone())
-                .collect::<Vec<ast::Type>>();
+                .collect::<Vec<Type>>();
 
             if f.starts_with("my_co") {
                 sym.add(
@@ -996,7 +997,7 @@ mod tests {
         let mut sa = SemanticAst::new();
         let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
             .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(ast::Type::I32));
+        assert_eq!(ty, Ok(Type::I32));
     }
 
     #[test]
@@ -1014,7 +1015,7 @@ mod tests {
         )
         .map(|n| n.get_type().clone())
         .unwrap();
-        assert_eq!(ty, ast::Type::Bool);
+        assert_eq!(ty, Type::Bool);
     }
 
     #[test]
@@ -1189,7 +1190,7 @@ mod tests {
                 if let RoutineDef { body, .. } = &functions[0] {
                     if let Bind(.., exp) = &body[0] {
                         if let box StructExpression(_, struct_name, ..) = exp {
-                            let expected: ast::Path = vec!["root", "test"].into();
+                            let expected: Path = vec!["root", "test"].into();
                             assert_eq!(struct_name, &expected)
                         } else {
                             panic!("Not a struct expression")
@@ -1228,7 +1229,7 @@ mod tests {
             if let Module { functions, .. } = result {
                 if let RoutineDef { params, .. } = &functions[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: ast::Path = vec!["root", "test"].into();
+                        let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
                     } else {
                         panic!("Not a custom type")
@@ -1264,7 +1265,7 @@ mod tests {
             if let Module { coroutines, .. } = result {
                 if let RoutineDef { params, .. } = &coroutines[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: ast::Path = vec!["root", "test"].into();
+                        let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
                     } else {
                         panic!("Not a custom type")
@@ -1298,7 +1299,7 @@ mod tests {
             if let Module { structs, .. } = result {
                 if let Ast::StructDef(_, _, fields) = &structs[1] {
                     if let (_, Custom(ty_path)) = &fields[0] {
-                        let expected: ast::Path = vec!["root", "test"].into();
+                        let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
                     } else {
                         panic!("Not a custom type")
@@ -1329,7 +1330,7 @@ mod tests {
             let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
                 .map(|n| n.get_type().clone())
                 .unwrap();
-            assert_eq!(ty, ast::Type::I32);
+            assert_eq!(ty, Type::I32);
         }
         // operand is not i32
         {
@@ -1363,7 +1364,7 @@ mod tests {
             let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
                 .map(|n| n.get_type().clone())
                 .unwrap();
-            assert_eq!(ty, ast::Type::I32);
+            assert_eq!(ty, Type::I32);
         }
 
         // operands are not i32
@@ -1441,7 +1442,7 @@ mod tests {
             let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
                 .map(|n| n.get_type().clone())
                 .unwrap();
-            assert_eq!(ty, ast::Type::I32);
+            assert_eq!(ty, Type::I32);
         }
 
         // operands are not i32
@@ -1501,7 +1502,7 @@ mod tests {
     pub fn test_boolean_ops() {
         let scope = Scope::new();
 
-        let tests: Vec<(PNode, Result<ast::Type, String>)> = vec![(
+        let tests: Vec<(PNode, Result<Type, String>)> = vec![(
             Ast::BinaryOp(
                 1,
                 BinaryOperator::BAnd,
@@ -1522,7 +1523,7 @@ mod tests {
     #[test]
     pub fn test_comparison_ops() {
         let scope = Scope::new();
-        let tests: Vec<(PNode, Result<ast::Type, String>)> = vec![
+        let tests: Vec<(PNode, Result<Type, String>)> = vec![
             (
                 Ast::BinaryOp(
                     1,
@@ -1530,7 +1531,7 @@ mod tests {
                     Box::new(Ast::Integer(1, 3)),
                     Box::new(Ast::Integer(1, 5)),
                 ),
-                Ok(ast::Type::Bool),
+                Ok(Type::Bool),
             ),
             (
                 Ast::BinaryOp(
@@ -1539,7 +1540,7 @@ mod tests {
                     Box::new(Ast::Boolean(1, true)),
                     Box::new(Ast::Boolean(1, false)),
                 ),
-                Ok(ast::Type::Bool),
+                Ok(Type::Bool),
             ),
             (
                 Ast::BinaryOp(
@@ -1571,7 +1572,7 @@ mod tests {
                 1,
                 "x".into(),
                 false,
-                ast::Type::I32,
+                Type::I32,
                 Box::new(Ast::Integer(1, 5)),
             );
             let mut sa = SemanticAst::new();
@@ -1581,7 +1582,7 @@ mod tests {
                 &scope,
             )
             .map(|n| n.get_type().clone());
-            assert_eq!(ty, Ok(ast::Type::I32));
+            assert_eq!(ty, Ok(Type::I32));
         }
 
         // RHS type does not match LHS type
@@ -1593,7 +1594,7 @@ mod tests {
                 1,
                 "x".into(),
                 false,
-                ast::Type::Bool,
+                Type::Bool,
                 Box::new(Ast::Integer(1, 5)),
             );
             let mut sa = SemanticAst::new();
@@ -1614,7 +1615,7 @@ mod tests {
                 1,
                 "x".into(),
                 false,
-                ast::Type::I32,
+                Type::I32,
                 Box::new(Ast::Identifier(1, "x".into())),
             );
 
@@ -1652,7 +1653,7 @@ mod tests {
                 "my_func",
                 vec![],
                 Unit,
-                vec![("x".into(), true, ast::Type::I32)],
+                vec![("x".into(), true, Type::I32)],
             );
 
             let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
@@ -1663,7 +1664,7 @@ mod tests {
                 &scope,
             )
             .map(|n| n.get_type().clone());
-            assert_eq!(ty, Ok(ast::Type::I32));
+            assert_eq!(ty, Ok(Type::I32));
         }
         // Variable is immutable
         {
@@ -1672,7 +1673,7 @@ mod tests {
                 "my_func",
                 vec![],
                 Unit,
-                vec![("x".into(), false, ast::Type::I32)],
+                vec![("x".into(), false, Type::I32)],
             );
 
             let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
@@ -1691,7 +1692,7 @@ mod tests {
                 "my_func",
                 vec![],
                 Unit,
-                vec![("x".into(), true, ast::Type::Bool)],
+                vec![("x".into(), true, Type::Bool)],
             );
 
             let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
@@ -1710,7 +1711,7 @@ mod tests {
                 "my_func",
                 vec![],
                 Unit,
-                vec![("y".into(), false, ast::Type::I32)],
+                vec![("y".into(), false, Type::I32)],
             );
 
             let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));

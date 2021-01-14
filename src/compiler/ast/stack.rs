@@ -1,6 +1,6 @@
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level;
-use crate::{ast::RoutineDef, syntax::ast::Path};
+use crate::{ast::RoutineDef, syntax::path::Path};
 
 use super::symbol_table::Symbol;
 
@@ -142,7 +142,7 @@ impl std::fmt::Display for ScopeStack<'_> {
 mod tests {
     use super::*;
     use crate::compiler::ast::scope::Scope;
-    use crate::syntax::ast::Type;
+    use crate::syntax::ty::Type;
 
     #[test]
     fn test_find_symbol_in_current_scope() {

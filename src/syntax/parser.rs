@@ -12,7 +12,7 @@ use crate::{
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::PNode;
+use super::{path::Path, pnode::PNode, ty::Type};
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};

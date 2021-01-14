@@ -1,15 +1,15 @@
-use crate::syntax::ast;
+use crate::syntax::ty::Type;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FieldInfo {
     pub name: String,
-    pub ty: ast::Type,
+    pub ty: Type,
     pub offset: Option<i32>,
 }
 
 impl FieldInfo {
     pub fn name(&self) -> &str {&self.name}
-    pub fn ty(&self) -> &ast::Type {&self.ty}
+    pub fn ty(&self) -> &Type {&self.ty}
     pub fn offset(&self) -> Option<i32> {self.offset}
 }
 
@@ -21,7 +21,7 @@ pub struct StructDefinition {
 }
 
 impl StructDefinition {
-    pub fn new(name: &str, fields: Vec<(String, ast::Type)>) -> StructDefinition {
+    pub fn new(name: &str, fields: Vec<(String, Type)>) -> StructDefinition {
         let mut nfields = vec![];
         for (fname, fty) in fields.iter() {
             nfields.push(FieldInfo{

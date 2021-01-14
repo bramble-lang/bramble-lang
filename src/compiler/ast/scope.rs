@@ -1,6 +1,7 @@
 use crate::{
     semantics::semanticnode::SemanticMetadata,
-    syntax::ast::{self, Path},
+    syntax::path::Path,
+    syntax::ty::Type,
 };
 
 use super::{
@@ -24,13 +25,13 @@ pub struct Scope {
     pub(super) id: u32,
     pub(super) line: u32,
     pub(super) level: Level,
-    pub(super) ty: ast::Type,
+    pub(super) ty: Type,
     pub(super) symbols: SymbolTable,
     pub(super) canon_path: Path,
 }
 
 impl Scope {
-    pub fn new(id: u32, level: Level, canon_path: Path, ty: ast::Type) -> Scope {
+    pub fn new(id: u32, level: Level, canon_path: Path, ty: Type) -> Scope {
         Scope {
             id,
             line: 0,
@@ -41,7 +42,7 @@ impl Scope {
         }
     }
 
-    pub fn new_routine(id: u32, canon_path: &Path, ty: &ast::Type) -> Scope {
+    pub fn new_routine(id: u32, canon_path: &Path, ty: &Type) -> Scope {
         Scope::new(
             id,
             Level::Routine {
@@ -53,7 +54,7 @@ impl Scope {
         )
     }
 
-    pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &ast::Type) -> Scope {
+    pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &Type) -> Scope {
         Scope::new(
             id,
             Level::Module { name: name.into() },
@@ -89,7 +90,7 @@ impl Scope {
         self.line
     }
 
-    pub fn ty(&self) -> &ast::Type {
+    pub fn ty(&self) -> &Type {
         &self.ty
     }
 
