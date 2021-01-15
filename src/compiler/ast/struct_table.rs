@@ -1,6 +1,6 @@
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{semantics::semanticnode::{SemanticMetadata, SemanticNode}, syntax::path::Path, syntax::{module::Module, ty::Type}};
+use crate::{semantics::semanticnode::{SemanticMetadata, SemanticNode}, syntax::path::Path, syntax::{module::{Item, Module}, ty::Type}};
 
 use super::struct_definition::{FieldInfo, StructDefinition};
 
@@ -71,7 +71,7 @@ impl UnresolvedStructTable {
 
     fn traverse_module(module: &Module<SemanticMetadata>, table: &mut HashMap<String, StructDefinition>) -> Result<(), String> {
         for s in module.get_structs().iter() {
-            if let SemanticNode::StructDef(meta, name, fields) = s {
+            if let Item::Struct(SemanticNode::StructDef(meta, name, fields)) = s {
                 let struct_def = StructDefinition::new(name, fields.clone());
                 Self::insert_struct(table, meta.get_canonical_path(), struct_def)?;
             } else {
