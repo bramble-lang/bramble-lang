@@ -307,7 +307,7 @@ impl CompilerNode {
 mod ast_tests {
     use module::Module;
 
-    use crate::syntax::ast::BinaryOperator;
+    use crate::syntax::{ast::BinaryOperator, routinedef::RoutineDef};
     use crate::syntax::routinedef::RoutineDefType;
     use crate::syntax::ty::Type;
     use crate::{compiler::ast::scope, syntax::path::Path};
@@ -540,12 +540,12 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&Ast::Module(module), LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef {
+            CompilerNode::RoutineDef(RoutineDef {
                 meta,
                 def: RoutineDefType::Function,
                 name,
                 ..
-            } => {
+            }) => {
                 assert_eq!(name, "func");
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
@@ -568,12 +568,15 @@ mod ast_tests {
         }
     }
 
+    /*
+    Current design does not support functions defined in functions
+
     #[test]
     pub fn test_nested_function() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef {
+        let sn = RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -591,7 +594,7 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef {
+        let sn = RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -639,14 +642,14 @@ mod ast_tests {
             }
             _ => assert!(false),
         }
-    }
+    }*/
 
     #[test]
     pub fn test_coroutine() {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef {
+        let sn = RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -661,15 +664,15 @@ mod ast_tests {
             body: vec![],
         };
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
+        let cn = CompilerNode::compute_offsets(&SemanticNode::RoutineDef(sn), LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef {
+            CompilerNode::RoutineDef(RoutineDef {
                 meta,
                 def: RoutineDefType::Coroutine,
                 name,
                 ..
-            } => {
+            }) => {
                 assert_eq!(name, "coroutine");
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);
