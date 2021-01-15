@@ -238,7 +238,8 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&CompilerNode::RoutineDef(outer_node));
+        let tmp = CompilerNode::RoutineDef(outer_node);
+        stack.push(&tmp);
 
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
@@ -298,7 +299,8 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&CompilerNode::RoutineDef(fun2_node));
+        let tmp = CompilerNode::RoutineDef(fun2_node);
+        stack.push(&tmp);
 
         assert_eq!(stack.find("func").is_none(), true);
 
@@ -370,7 +372,8 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&CompilerNode::RoutineDef(fun2_node));
+        let tmp = CompilerNode::RoutineDef(fun2_node);
+        stack.push(&tmp);
 
         let node = stack.find_coroutine("cor").unwrap();
         match node {
@@ -447,7 +450,8 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&CompilerNode::RoutineDef(fun2_node));
+        let tmp = CompilerNode::RoutineDef(fun2_node);
+        stack.push(&tmp);
 
         let path = stack.to_path().unwrap();
         let expected: Path = vec!["root"].into();
@@ -500,7 +504,8 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&CompilerNode::RoutineDef(fun2_node));
+        let tmp = CompilerNode::RoutineDef(fun2_node);
+        stack.push(&tmp);
 
         let path = stack.to_path().unwrap();
         let expected: Path = vec!["root", "inner"].into();

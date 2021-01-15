@@ -92,4 +92,8 @@ impl<M> RoutineDef<M> {
     pub fn get_def(&self) -> &RoutineDefType {
         &self.def
     }
+
+    pub fn root_str(&self) -> String {
+        format!("{} {}", self.def, self.name)
+    }
 }

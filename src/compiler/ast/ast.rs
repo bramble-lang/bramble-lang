@@ -1,7 +1,7 @@
 use super::struct_table;
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item}, routinedef}};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item}, routinedef::{self, RoutineDef}}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 
 pub type CompilerNode = Ast<Scope>;
@@ -33,12 +33,7 @@ impl CompilerNode {
                 (ExpressionBlock(meta, nbody), nlayout)
             }
             RoutineDef(routinedef::RoutineDef {
-                meta,
-                def,
-                name,
-                params,
-                ty,
-                body,
+..
             }) => {
                 panic!("Should not be here!");
                 /*
@@ -281,24 +276,18 @@ impl CompilerNode {
 
         (compiler_ast_items, layout)
     }
+}
 
+impl<Scope> RoutineDef<Scope> {
     pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String> {
-        match self {
-            Ast::RoutineDef{..} => {
-                let expected_params = self.get_params().ok_or(format!(
-                    "Critical: node for {} does not have a params field",
-                    self.root_str()
-                ))?;
-                if params.len() == expected_params.len() {
-                    Ok(())
-                } else {
-                    Err(format!("Critical: expected {} but go {} parameters for {}",
-                    expected_params.len(),
-                    params.len(),
-                    self.root_str()))
-                }
-            },
-            _ => Err("Cannot validate parameters: this is not a routine definition (function or coroutine)".into())
+        let expected_params = self.get_params();
+        if params.len() == expected_params.len() {
+            Ok(())
+        } else {
+            Err(format!("Critical: expected {} but go {} parameters for {}",
+            expected_params.len(),
+            params.len(),
+            self.root_str()))
         }
     }
 }

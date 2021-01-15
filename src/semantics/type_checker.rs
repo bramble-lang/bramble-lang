@@ -735,12 +735,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 Ok(ExpressionBlock(meta.clone(), resolved_body))
             }
             RoutineDef(routinedef::RoutineDef{
-                meta,
-                def,
-                name,
-                params,
-                ty: p,
-                body,
+                ..
             }) => {
                 panic!("Should not be here");
                 /*
