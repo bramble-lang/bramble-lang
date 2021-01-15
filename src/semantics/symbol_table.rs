@@ -1,4 +1,4 @@
-use crate::syntax::{module::Module, routinedef::RoutineDefType, ty::Type};
+use crate::syntax::{module::{Item, Module}, routinedef::{RoutineDef, RoutineDefType}, ty::Type};
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::{ast, syntax::path::Path};
@@ -119,16 +119,16 @@ impl SymbolTable {
         Ok(())
     }
 
-    fn traverse(ast: &mut SemanticNode, sym: &mut SemanticMetadata) -> Result<(), String> {
+    fn traverse(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<(), String> {
         use ast::Ast;
-        match &ast {
-            Ast::RoutineDef {
+        match item {
+            Item::Routine(RoutineDef {
                 def: RoutineDefType::Function,
                 name,
                 params,
                 ty,
                 ..
-            } => {
+            }) => {
                 sym.sym.add(
                     name,
                     Type::FunctionDef(
@@ -141,13 +141,13 @@ impl SymbolTable {
                     false,
                 )?;
             }
-            Ast::RoutineDef {
+            Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
                 ty,
                 ..
-            } => {
+            }) => {
                 sym.sym.add(
                     name,
                     Type::CoroutineDef(
@@ -160,12 +160,12 @@ impl SymbolTable {
                     false,
                 )?;
             }
-            Ast::StructDef(_, name, members) => {
+            Item::Struct(Ast::StructDef(_, name, members)) => {
                 sym.sym.add(name, Type::StructDef(members.clone()), false)?;
             }
             _ => panic!(
                 "Type analysis: expected function or coroutine in module, found {}",
-                ast.root_str()
+                item.root_str()
             ),
         }
 

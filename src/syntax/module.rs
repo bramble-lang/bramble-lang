@@ -20,6 +20,13 @@ impl<M> Item<M> {
             Item::Struct(s) => s.get_metadata(),
         }
     }
+
+    pub fn root_str(&self) -> String {
+        match self {
+            Item::Routine(r) => format!("{} {}", r.get_def(), r.get_name()),
+            Item::Struct(s) => s.root_str(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
