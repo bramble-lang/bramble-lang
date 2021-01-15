@@ -45,8 +45,8 @@ impl CompilerNode {
                 body,
             } => {
                 let initial_frame_size = match def {
-                    syntax::routinedef::RoutineDef::Function => 0,
-                    syntax::routinedef::RoutineDef::Coroutine => 20,
+                    syntax::routinedef::RoutineDefType::Function => 0,
+                    syntax::routinedef::RoutineDefType::Coroutine => 20,
                 };
                 let (mut meta, offset) =
                     Scope::routine_from(meta, struct_table, initial_frame_size);
@@ -283,7 +283,7 @@ impl CompilerNode {
 #[cfg(test)]
 mod ast_tests {
     use crate::syntax::ast::BinaryOperator;
-    use crate::syntax::routinedef::RoutineDef;
+    use crate::syntax::routinedef::RoutineDefType;
     use crate::syntax::ty::Type;
     use crate::{compiler::ast::scope, syntax::path::Path};
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
@@ -503,7 +503,7 @@ mod ast_tests {
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![],
             ty: Type::I32,
@@ -515,7 +515,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::RoutineDef {
                 meta,
-                def: RoutineDef::Function,
+                def: RoutineDefType::Function,
                 name,
                 ..
             } => {
@@ -554,7 +554,7 @@ mod ast_tests {
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![],
             ty: Type::I32,
@@ -572,7 +572,7 @@ mod ast_tests {
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name: "outer_func".into(),
             params: vec![],
             ty: Type::I32,
@@ -585,7 +585,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::RoutineDef {
                 meta,
-                def: RoutineDef::Function,
+                def: RoutineDefType::Function,
                 body,
                 ..
             } => {
@@ -598,7 +598,7 @@ mod ast_tests {
                 match body.iter().nth(0) {
                     Some(CompilerNode::RoutineDef {
                         meta,
-                        def: RoutineDef::Function,
+                        def: RoutineDefType::Function,
                         ..
                     }) => {
                         assert_eq!(meta.symbols.table.len(), 2);
@@ -627,7 +627,7 @@ mod ast_tests {
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             name: "coroutine".into(),
             params: vec![],
             ty: Type::I32,
@@ -639,7 +639,7 @@ mod ast_tests {
         match cn.0 {
             CompilerNode::RoutineDef {
                 meta,
-                def: RoutineDef::Coroutine,
+                def: RoutineDefType::Coroutine,
                 name,
                 ..
             } => {

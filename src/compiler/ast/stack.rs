@@ -1,6 +1,6 @@
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level;
-use crate::{syntax::routinedef::RoutineDef, syntax::path::Path};
+use crate::{syntax::routinedef::RoutineDefType, syntax::path::Path};
 
 use super::symbol_table::Symbol;
 
@@ -64,7 +64,7 @@ impl<'a> ScopeStack<'a> {
             Some(ref node) => match node {
                 CompilerNode::Module(m)=> m.get_functions().iter().find(|v| match v {
                     CompilerNode::RoutineDef {
-                        def: RoutineDef::Function,
+                        def: RoutineDefType::Function,
                         name: n,
                         ..
                     } => n == name,
@@ -81,7 +81,7 @@ impl<'a> ScopeStack<'a> {
             Some(ref node) => match node {
                 CompilerNode::Module(m) => m.get_coroutines().iter().find(|v| match v {
                     CompilerNode::RoutineDef {
-                        def: RoutineDef::Coroutine,
+                        def: RoutineDefType::Coroutine,
                         name: n,
                         ..
                     } => n == name,
@@ -232,7 +232,7 @@ mod tests {
         fun_scope.insert("z", 4, 8);
         let outer_node = CompilerNode::RoutineDef {
             meta: fun_scope,
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![],
             ty: Type::I32,
@@ -267,7 +267,7 @@ mod tests {
         fun_scope.insert("z", 4, 4);
         let fun_node = CompilerNode::RoutineDef {
             meta: fun_scope,
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![("y".into(), Type::I32)],
             ty: Type::I32,
@@ -292,7 +292,7 @@ mod tests {
         );
         let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name: "func2".into(),
             params: vec![],
             ty: Type::I32,
@@ -306,7 +306,7 @@ mod tests {
         match node {
             CompilerNode::RoutineDef {
                 meta,
-                def: RoutineDef::Function,
+                def: RoutineDefType::Function,
                 name,
                 params,
                 ..
@@ -338,7 +338,7 @@ mod tests {
         cor_scope.insert("z", 4, 24);
         let cor_node = CompilerNode::RoutineDef {
             meta: cor_scope,
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             name: "cor".into(),
             params: vec![("y".into(), Type::I32)],
             ty: Type::I32,
@@ -364,7 +364,7 @@ mod tests {
         );
         let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             name: "func2".into(),
             params: vec![],
             ty: Type::I32,
@@ -376,7 +376,7 @@ mod tests {
         match node {
             CompilerNode::RoutineDef {
                 meta,
-                def: RoutineDef::Coroutine,
+                def: RoutineDefType::Coroutine,
                 name,
                 params,
                 ..
@@ -441,7 +441,7 @@ mod tests {
         );
         let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             name: "func2".into(),
             params: vec![],
             ty: Type::I32,
@@ -494,7 +494,7 @@ mod tests {
         );
         let fun2_node = CompilerNode::RoutineDef {
             meta: fun2_scope,
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             name: "func2".into(),
             params: vec![],
             ty: Type::I32,

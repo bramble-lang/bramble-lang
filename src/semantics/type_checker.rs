@@ -1942,7 +1942,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: routinedef::RoutineDef::Function,
+            def: routinedef::RoutineDefType::Function,
             name: "my_func".into(),
             params: vec![],
             ty: I32,
@@ -1956,7 +1956,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: routinedef::RoutineDef::Function,
+            def: routinedef::RoutineDefType::Function,
             name: "my_func".into(),
             params: vec![],
             ty: I32,
@@ -1975,7 +1975,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: routinedef::RoutineDef::Coroutine,
+            def: routinedef::RoutineDefType::Coroutine,
             name: "my_co".into(),
             params: vec![],
             ty: I32,
@@ -1989,7 +1989,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: routinedef::RoutineDef::Coroutine,
+            def: routinedef::RoutineDefType::Coroutine,
             name: "my_co".into(),
             params: vec![],
             ty: I32,

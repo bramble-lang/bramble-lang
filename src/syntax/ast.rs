@@ -1,4 +1,4 @@
-use super::{module::Module, path::Path, routinedef::RoutineDef, ty::Type};
+use super::{module::Module, path::Path, routinedef::RoutineDefType, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -100,7 +100,7 @@ pub enum Ast<I> {
 
     RoutineDef {
         meta: I,
-        def: RoutineDef,
+        def: RoutineDefType,
         name: String,
         params: Vec<(String, Type)>,
         ty: Type,

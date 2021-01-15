@@ -12,7 +12,7 @@ use crate::{
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::{module::Module, path::Path, pnode::PNode, routinedef::RoutineDef, ty::Type};
+use super::{module::Module, path::Path, pnode::PNode, routinedef::RoutineDefType, ty::Type};
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};
@@ -239,7 +239,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
 
     Ok(Some(Ast::RoutineDef {
         meta: fn_line,
-        def: RoutineDef::Function,
+        def: RoutineDefType::Function,
         name: fn_name,
         params,
         ty: fn_type,
@@ -278,7 +278,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
 
     Ok(Some(Ast::RoutineDef {
         meta: co_line,
-        def: RoutineDef::Coroutine,
+        def: RoutineDefType::Coroutine,
         name: co_name,
         params,
         ty: co_type,
@@ -1326,7 +1326,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
             if let Ast::RoutineDef {
                 meta,
-                def: RoutineDef::Function,
+                def: RoutineDefType::Function,
                 name,
                 params,
                 ty,
@@ -1371,7 +1371,7 @@ pub mod tests {
 
             if let Some(Ast::RoutineDef {
                 meta,
-                def: RoutineDef::Coroutine,
+                def: RoutineDefType::Coroutine,
                 name,
                 params,
                 ty,
@@ -1435,7 +1435,7 @@ pub mod tests {
         let mut iter = TokenStream::new(&tokens);
         if let Some(Ast::RoutineDef {
             meta: l,
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name,
             params,
             ty,
@@ -1467,7 +1467,7 @@ pub mod tests {
         let mut iter = TokenStream::new(&tokens);
         if let Some(Ast::RoutineDef {
             meta: l,
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name,
             params,
             ty,
@@ -1554,7 +1554,7 @@ pub mod tests {
         {
             assert_eq!(*m.get_metadata(), 1);
             if let Some(Ast::RoutineDef {
-                def: RoutineDef::Coroutine,
+                def: RoutineDefType::Coroutine,
                 name,
                 params,
                 ty,
@@ -1651,7 +1651,7 @@ pub mod tests {
         let mut iter = TokenStream::new(&tokens);
         if let Some(Ast::RoutineDef {
             meta: l,
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             name,
             params,
             ty,

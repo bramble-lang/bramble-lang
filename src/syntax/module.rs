@@ -173,7 +173,7 @@ impl<M> Module<M> {
 
 #[cfg(test)]
 mod test {
-    use crate::syntax::routinedef::RoutineDef;
+    use crate::syntax::routinedef::RoutineDefType;
     use crate::syntax::ty::Type;
 
     use super::*;
@@ -191,7 +191,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -207,7 +207,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -223,7 +223,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -239,7 +239,7 @@ mod test {
         let cdef = Ast::RoutineDef {
             meta: 1,
             name: "cor".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -255,7 +255,7 @@ mod test {
         let cdef = Ast::RoutineDef {
             meta: 1,
             name: "cor".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -271,7 +271,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -281,7 +281,7 @@ mod test {
         let cdef = Ast::RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -296,7 +296,7 @@ mod test {
         let cdef = Ast::RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -306,7 +306,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -321,7 +321,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -337,7 +337,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -353,7 +353,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -369,7 +369,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "co".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -385,7 +385,7 @@ mod test {
         let fdef = Ast::RoutineDef {
             meta: 1,
             name: "co".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
