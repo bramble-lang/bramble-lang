@@ -7,6 +7,7 @@ pub struct Module<M> {
     modules: Vec<Module<M>>,
     functions: Vec<Ast<M>>,
     coroutines: Vec<Ast<M>>,
+    structs: Vec<Ast<M>>,
 }
 
 impl<M> Module<M> {
@@ -17,6 +18,7 @@ impl<M> Module<M> {
             modules: Vec::new(),
             functions: Vec::new(),
             coroutines: Vec::new(),
+            structs: Vec::new(),
         }
     }
 
@@ -26,7 +28,7 @@ impl<M> Module<M> {
 
     pub fn add_function(&mut self, f: Ast<M>) -> Result<(), String> {
         let fname = f.get_name().expect("Function must have a name");
-        if self.get_item(fname).is_none(){
+        if self.get_item(fname).is_none() {
             self.functions.push(f);
             Ok(())
         } else {
@@ -36,11 +38,21 @@ impl<M> Module<M> {
 
     pub fn add_coroutine(&mut self, c: Ast<M>) -> Result<(), String> {
         let cname = c.get_name().expect("Function must have a name");
-        if self.get_item(cname).is_none(){
+        if self.get_item(cname).is_none() {
             self.coroutines.push(c);
             Ok(())
         } else {
             Err(format!("{} already exists in module", cname))
+        }
+    }
+
+    pub fn add_struct(&mut self, s: Ast<M>) -> Result<(), String> {
+        let name = s.get_name().expect("Function must have a name");
+        if self.get_item(name).is_none() {
+            self.structs.push(s);
+            Ok(())
+        } else {
+            Err(format!("{} already exists in module", name))
         }
     }
 
@@ -50,6 +62,22 @@ impl<M> Module<M> {
 
     pub fn get_metadata(&self) -> &M {
         &self.meta
+    }
+
+    pub fn get_modules(&self) -> &Vec<Module<M>> {
+        &self.modules
+    }
+
+    pub fn get_functions(&self) -> &Vec<Ast<M>> {
+        &self.functions
+    }
+
+    pub fn get_coroutines(&self) -> &Vec<Ast<M>> {
+        &self.coroutines
+    }
+
+    pub fn get_structs(&self) -> &Vec<Ast<M>> {
+        &self.structs
     }
 
     pub fn get_module(&self, name: &str) -> Option<&Module<M>> {
@@ -63,7 +91,11 @@ impl<M> Module<M> {
             .or(self
                 .coroutines
                 .iter()
-                .find(|c| c.get_name().map_or(false, |n| n == name)))
+                .find(|c| c.get_name().map_or(false, |n| n == name))
+                .or(self
+                    .structs
+                    .iter()
+                    .find(|c| c.get_name().map_or(false, |n| n == name))))
     }
 
     pub fn go_to(&self, path: &Path) -> Option<&Ast<M>> {
