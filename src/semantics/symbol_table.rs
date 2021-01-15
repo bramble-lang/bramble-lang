@@ -87,6 +87,13 @@ impl SymbolTable {
         }
     }
 
+    pub fn from_ast(ast: &mut SemanticNode) -> Result<(), String> {
+        match ast {
+            SemanticNode::Module(m) => Self::generate(m),
+            _ => Err(format!("Expected a module, but got {}", ast.root_str()))
+        }
+    }
+
     pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<(), String> {
         for f in m.get_functions().iter_mut() {
             SymbolTable::traverse(f, m.get_metadata_mut())?;
