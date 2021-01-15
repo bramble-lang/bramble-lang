@@ -12,7 +12,7 @@ use crate::{
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::{module::Module, path::Path, pnode::PNode, routinedef::RoutineDefType, ty::Type};
+use super::{module::Module, path::Path, pnode::PNode, routinedef::{RoutineDef, RoutineDefType}, ty::Type};
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};
@@ -206,7 +206,7 @@ fn struct_def(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn function_def(stream: &mut TokenStream) -> PResult {
+fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>, String> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -237,7 +237,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef {
+    Ok(Some(RoutineDef {
         meta: fn_line,
         def: RoutineDefType::Function,
         name: fn_name,
@@ -247,7 +247,7 @@ fn function_def(stream: &mut TokenStream) -> PResult {
     }))
 }
 
-fn coroutine_def(stream: &mut TokenStream) -> PResult {
+fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>, String> {
     let co_line = match stream.next_if(&Lex::CoroutineDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -276,7 +276,7 @@ fn coroutine_def(stream: &mut TokenStream) -> PResult {
     }
     stream.next_must_be(&Lex::RBrace)?;
 
-    Ok(Some(Ast::RoutineDef {
+    Ok(Some(RoutineDef {
         meta: co_line,
         def: RoutineDefType::Coroutine,
         name: co_name,
@@ -887,7 +887,7 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::lexer::lexer::Lexer;
+    use crate::{lexer::lexer::Lexer, syntax::module::Item};
 
     #[test]
     fn parse_unary_operators() {
@@ -1324,14 +1324,14 @@ pub mod tests {
             assert_eq!(m.get_functions().len(), 1);
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 0);
-            if let Ast::RoutineDef {
+            if let Item::Routine(RoutineDef {
                 meta,
                 def: RoutineDefType::Function,
                 name,
                 params,
                 ty,
                 body,
-            } = &m.get_functions()[0]
+            }) = &m.get_functions()[0]
             {
                 assert_eq!(*meta, 1);
                 assert_eq!(name, "test");
@@ -1369,14 +1369,14 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 1);
             assert_eq!(m.get_structs().len(), 0);
 
-            if let Some(Ast::RoutineDef {
+            if let Some(Item::Routine(RoutineDef {
                 meta,
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
                 ty,
                 body,
-            }) = m.get_item("test")
+            })) = m.get_item("test")
             {
                 assert_eq!(*meta, 1);
                 assert_eq!(name, "test");
@@ -1414,7 +1414,7 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 1);
 
-            if let Some(Ast::StructDef(l, name, fields)) = m.get_item("my_struct") {
+            if let Some(Item::Struct(Ast::StructDef(l, name, fields))) = m.get_item("my_struct") {
                 assert_eq!(*l, 1);
                 assert_eq!(name, "my_struct");
                 assert_eq!(fields, &vec![("x".into(), Type::I32)]);
@@ -1433,7 +1433,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef {
+        if let Some(RoutineDef {
             meta: l,
             def: RoutineDefType::Function,
             name,
@@ -1465,7 +1465,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef {
+        if let Some(RoutineDef {
             meta: l,
             def: RoutineDefType::Function,
             name,
@@ -1553,14 +1553,14 @@ pub mod tests {
         if let Some(Ast::Module(m)) = parse(tokens).unwrap()
         {
             assert_eq!(*m.get_metadata(), 1);
-            if let Some(Ast::RoutineDef {
+            if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
                 ty,
                 body,
                 ..
-            }) = m.get_item("test")
+            })) = m.get_item("test")
             {
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
@@ -1649,7 +1649,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineDef {
+        if let Some(RoutineDef {
             meta: l,
             def: RoutineDefType::Function,
             name,
@@ -1872,7 +1872,7 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             if let Some(m) = module(&mut stream).unwrap() {
-                assert_eq!(m.get_structs()[0], expected, "{:?}", text);
+                assert_eq!(m.get_structs()[0], Item::Struct(expected), "{:?}", text);
             }
         }
     }
@@ -1947,7 +1947,7 @@ pub mod tests {
             let ast = parse(tokens).unwrap().unwrap();
             match ast {
                 Ast::Module(m) => match &m.get_functions()[0] {
-                    Ast::RoutineDef { body, .. } => match &body[0] {
+                    Item::Routine(RoutineDef { body, .. }) => match &body[0] {
                         Ast::Return(.., Some(rv)) => {
                             assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))
                         }

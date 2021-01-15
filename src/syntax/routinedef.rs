@@ -18,12 +18,12 @@ impl std::fmt::Display for RoutineDefType {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
-    meta: M,
-    def: RoutineDefType,
-    name: String,
-    params: Vec<(String, Type)>,
-    ty: Type,
-    body: Vec<Ast<M>>,
+    pub meta: M,
+    pub def: RoutineDefType,
+    pub name: String,
+    pub params: Vec<(String, Type)>,
+    pub ty: Type,
+    pub body: Vec<Ast<M>>,
 }
 
 impl<M> RoutineDef<M> {
