@@ -76,8 +76,16 @@ impl<M> Module<M> {
         &self.functions
     }
 
+    pub fn get_functions_mut(&mut self) -> &mut Vec<Ast<M>> {
+        &mut self.functions
+    }
+
     pub fn get_coroutines(&self) -> &Vec<Ast<M>> {
         &self.coroutines
+    }
+
+    pub fn get_coroutines_mut(&mut self) -> &mut Vec<Ast<M>> {
+        &mut self.coroutines
     }
 
     pub fn get_structs(&self) -> &Vec<Ast<M>> {

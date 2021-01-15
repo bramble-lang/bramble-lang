@@ -1,9 +1,12 @@
 use super::struct_table;
 use struct_table::ResolvedStructTable;
 
-use crate::compiler::ast::scope::{LayoutData, Level, Scope};
+use crate::{
+    compiler::ast::scope::{LayoutData, Level, Scope},
+    semantics::semanticnode::SemanticMetadata,
+    syntax::module,
+};
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
-
 
 pub type CompilerNode = Ast<Scope>;
 
@@ -194,33 +197,10 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            Module {
-                meta,
-                name,
-                modules,
-                functions,
-                coroutines,
-                ..
-            } => {
-                let (meta, layout) = Scope::module_from(meta, name, struct_table, layout);
+            Module(m) => {
+                let (m, layout) = Self::compute_layouts_for_module(m, layout, struct_table);
 
-                let (modules, layout) = Self::compute_layouts_for(modules, layout, struct_table);
-                let (functions, layout) =
-                    Self::compute_layouts_for(functions, layout, struct_table);
-                let (coroutines, layout) =
-                    Self::compute_layouts_for(coroutines, layout, struct_table);
-
-                (
-                    Module {
-                        meta,
-                        name: name.clone(),
-                        modules,
-                        functions,
-                        coroutines,
-                        structs: vec![],
-                    },
-                    layout,
-                )
+                (Module(m), layout)
             }
             StructDef(..) => panic!("StructDef Unimplemented"),
             StructExpression(meta, struct_name, fields) => {
@@ -237,6 +217,30 @@ impl CompilerNode {
                 )
             }
         }
+    }
+
+    fn compute_layouts_for_module(
+        m: &module::Module<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (module::Module<Scope>, LayoutData) {
+        let (meta, mut layout) =
+            Scope::module_from(m.get_metadata(), m.get_name(), struct_table, layout);
+
+        let mut nmodule = module::Module::new(m.get_name(), meta);
+        for child_module in m.get_modules().iter() {
+            let (nchild_module, nlayout) =
+                Self::compute_layouts_for_module(child_module, layout, struct_table);
+            layout = nlayout;
+            nmodule.add_module(nchild_module);
+        }
+        let (functions, layout) =
+            Self::compute_layouts_for(m.get_functions(), layout, struct_table);
+        *nmodule.get_functions_mut() = functions;
+        let (coroutines, layout) =
+            Self::compute_layouts_for(m.get_coroutines(), layout, struct_table);
+        *nmodule.get_coroutines_mut() = coroutines;
+        (nmodule, layout)
     }
 
     fn compute_layouts_for(
