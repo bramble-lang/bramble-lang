@@ -45,8 +45,8 @@ impl CompilerNode {
                 body,
             } => {
                 let initial_frame_size = match def {
-                    syntax::ast::RoutineDef::Function => 0,
-                    syntax::ast::RoutineDef::Coroutine => 20,
+                    syntax::routinedef::RoutineDef::Function => 0,
+                    syntax::routinedef::RoutineDef::Coroutine => 20,
                 };
                 let (mut meta, offset) =
                     Scope::routine_from(meta, struct_table, initial_frame_size);
@@ -283,7 +283,7 @@ impl CompilerNode {
 #[cfg(test)]
 mod ast_tests {
     use crate::syntax::ast::BinaryOperator;
-    use crate::syntax::ast::RoutineDef;
+    use crate::syntax::routinedef::RoutineDef;
     use crate::syntax::ty::Type;
     use crate::{compiler::ast::scope, syntax::path::Path};
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
