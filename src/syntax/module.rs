@@ -37,7 +37,7 @@ impl<M> Module<M> {
     }
 
     pub fn add_coroutine(&mut self, c: Ast<M>) -> Result<(), String> {
-        let cname = c.get_name().expect("Function must have a name");
+        let cname = c.get_name().expect("Coroutine must have a name");
         if self.get_item(cname).is_none() {
             self.coroutines.push(c);
             Ok(())
@@ -47,7 +47,7 @@ impl<M> Module<M> {
     }
 
     pub fn add_struct(&mut self, s: Ast<M>) -> Result<(), String> {
-        let name = s.get_name().expect("Function must have a name");
+        let name = s.get_name().expect("Struct must have a name");
         if self.get_item(name).is_none() {
             self.structs.push(s);
             Ok(())

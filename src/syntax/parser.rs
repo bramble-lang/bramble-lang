@@ -1316,36 +1316,34 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 0);
 
-            if let m = &m.get_modules()[0]
-            {
-                assert_eq!(*m.get_metadata(), 1);
-                assert_eq!(m.get_name(), "test_fn_mod");
+            let m = &m.get_modules()[0];
+            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(m.get_name(), "test_fn_mod");
 
-                assert_eq!(m.get_modules().len(), 0);
-                assert_eq!(m.get_functions().len(), 1);
-                assert_eq!(m.get_coroutines().len(), 0);
-                assert_eq!(m.get_structs().len(), 0);
-                if let Ast::RoutineDef {
-                    meta,
-                    def: RoutineDef::Function,
-                    name,
-                    params,
-                    ty,
-                    body,
-                } = &m.get_functions()[0]
-                {
-                    assert_eq!(*meta, 1);
-                    assert_eq!(name, "test");
-                    assert_eq!(params, &vec![("x".into(), Type::I32)]);
-                    assert_eq!(ty, &Type::Unit);
-                    assert_eq!(body.len(), 1);
-                    match &body[0] {
-                        Ast::Return(_, None) => {}
-                        _ => panic!("Wrong body, expected unit return"),
-                    }
-                } else {
-                    panic!("Expected function definition")
+            assert_eq!(m.get_modules().len(), 0);
+            assert_eq!(m.get_functions().len(), 1);
+            assert_eq!(m.get_coroutines().len(), 0);
+            assert_eq!(m.get_structs().len(), 0);
+            if let Ast::RoutineDef {
+                meta,
+                def: RoutineDef::Function,
+                name,
+                params,
+                ty,
+                body,
+            } = &m.get_functions()[0]
+            {
+                assert_eq!(*meta, 1);
+                assert_eq!(name, "test");
+                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(ty, &Type::Unit);
+                assert_eq!(body.len(), 1);
+                match &body[0] {
+                    Ast::Return(_, None) => {}
+                    _ => panic!("Wrong body, expected unit return"),
                 }
+            } else {
+                panic!("Expected function definition")
             }
         } else {
             panic!("No nodes returned by parser")

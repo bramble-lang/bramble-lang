@@ -253,7 +253,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef { name, .. } | Ast::Identifier(_, name) => {
+            Ast::RoutineDef { name, .. } | Ast::Identifier(_, name) | Ast::StructDef(_, name, ..)=> {
                 Some(name)
             }
             _ => None,
