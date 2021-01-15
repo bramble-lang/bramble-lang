@@ -235,13 +235,13 @@ impl SemanticAst {
             nmodule.add_module(self.from_module(module)?);
         }
         for func in m.get_functions().iter() {
-           nmodule.add_function(*self.from_parser_ast(func)?);
+           nmodule.add_function(*self.from_parser_ast(func)?)?;
         }
         for cor in m.get_coroutines().iter() {
-            nmodule.add_coroutine(*self.from_parser_ast(cor)?);
+            nmodule.add_coroutine(*self.from_parser_ast(cor)?)?;
         }
         for st in m.get_structs().iter() {
-            nmodule.add_struct(*self.from_parser_ast(st)?);
+            nmodule.add_struct(*self.from_parser_ast(st)?)?;
         }
         Ok(nmodule)
     }

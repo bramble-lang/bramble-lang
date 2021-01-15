@@ -277,7 +277,7 @@ mod tests {
         let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("func", 0, 0);
         let mut module_node = module::Module::new("test", module_scope);
-        module_node.add_function(fun_node);
+        module_node.add_function(fun_node).unwrap();
         let tmp = CompilerNode::Module(module_node);
         stack.push(&tmp);
 
@@ -349,7 +349,7 @@ mod tests {
         module_scope.insert("cor", 0, 0);
 
         let mut module_node = module::Module::new("test", module_scope);
-        module_node.add_coroutine(cor_node);
+        module_node.add_coroutine(cor_node).unwrap();
         let tmp = CompilerNode::Module(module_node);
         stack.push(&tmp);
 
@@ -404,7 +404,7 @@ mod tests {
         );
         module_scope.insert("cor", 0, 0);
 
-        let mut module_node = module::Module::new("root", module_scope);
+        let module_node = module::Module::new("root", module_scope);
         let tmp = CompilerNode::Module(module_node);
         stack.push(&tmp);
 
@@ -426,7 +426,7 @@ mod tests {
         );
         module_scope.insert("cor", 0, 0);
         
-        let mut module_node = module::Module::new("root", module_scope);
+        let module_node = module::Module::new("root", module_scope);
         let tmp = CompilerNode::Module(module_node);
         stack.push(&tmp);
 
@@ -466,7 +466,7 @@ mod tests {
             Type::Unit,
         );
         
-        let mut module_node = module::Module::new("root", module_scope);
+        let module_node = module::Module::new("root", module_scope);
         let tmp = CompilerNode::Module(module_node);
         stack.push(&tmp);
 
@@ -479,7 +479,7 @@ mod tests {
             Type::Unit,
         );
         
-        let mut module2_node = module::Module::new("inner", module2_scope);
+        let module2_node = module::Module::new("inner", module2_scope);
         let tmp2 = CompilerNode::Module(module2_node);
         stack.push(&tmp2);
 
