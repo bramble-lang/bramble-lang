@@ -4,7 +4,7 @@
 use crate::{assembly2, syntax::module::Module};
 use crate::ast::Ast;
 use crate::ast::RoutineCall;
-use crate::syntax::routinedef::RoutineDef;
+use crate::syntax::routinedef::RoutineDefType;
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
@@ -517,7 +517,7 @@ impl<'a> Compiler<'a> {
             }
             Ast::RoutineDef {
                 meta,
-                def: RoutineDef::Coroutine,
+                def: RoutineDefType::Coroutine,
                 name: ref fn_name,
                 body: stmts,
                 ..
@@ -571,7 +571,7 @@ impl<'a> Compiler<'a> {
             }
             Ast::RoutineDef {
                 meta: scope,
-                def: RoutineDef::Function,
+                def: RoutineDefType::Function,
                 name: ref fn_name,
                 body: stmts,
                 ..
