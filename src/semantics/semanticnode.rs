@@ -1,4 +1,4 @@
-use crate::{ast::*, syntax::path::Path, syntax::{module, ty::Type}};
+use crate::{ast::*, syntax::path::Path, syntax::{module::{self, Item}, routinedef::{self, RoutineDef}, ty::Type}};
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
 use crate::diagnostics::config::TracingConfig;
@@ -148,27 +148,29 @@ impl SemanticAst {
                 )))
             }
             Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
-            RoutineDef {
+            RoutineDef(routinedef::RoutineDef{
                 meta: ln,
                 def,
                 name: fname,
                 params,
                 ty,
                 body,
-            } => {
-                let mut nbody = vec![];
+            }) => {
+                // TODO: this will need to be deleted!
+                panic!("This should not be called!");
+                /*let mut nbody = vec![];
                 for stmt in body.iter() {
                     let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Box::new(RoutineDef {
+                Ok(Box::new(RoutineDef(routinedef::RoutineDef {
                     meta: self.semantic_metadata_from(*ln),
                     def: *def,
                     name: fname.clone(),
                     params: params.clone(),
                     ty: ty.clone(),
                     body: nbody,
-                }))
+                })))*/
             }
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
@@ -235,15 +237,45 @@ impl SemanticAst {
             nmodule.add_module(self.from_module(module)?);
         }
         for func in m.get_functions().iter() {
-           nmodule.add_function(*self.from_parser_ast(func)?)?;
+           nmodule.add_item(self.from_item(func)?)?;
         }
         for cor in m.get_coroutines().iter() {
-            nmodule.add_coroutine(*self.from_parser_ast(cor)?)?;
+            nmodule.add_item(self.from_item(cor)?)?;
         }
         for st in m.get_structs().iter() {
-            nmodule.add_struct(*self.from_parser_ast(st)?)?;
+            nmodule.add_item(self.from_item(st)?)?;
         }
         Ok(nmodule)
+    }
+
+    fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>, String> {
+        let meta = self.module_semantic_metadata_from(*m.get_metadata(), m.get_name());
+
+        match m {
+            Item::Struct(s) => self.from_parser_ast(s).map(|s| Item::Struct(*s)),
+            Item::Routine(routinedef::RoutineDef{
+                meta: ln,
+                def,
+                name: fname,
+                params,
+                ty,
+                body,
+            }) => {
+                let mut nbody = vec![];
+                for stmt in body.iter() {
+                    let r = self.from_parser_ast(stmt)?;
+                    nbody.push(*r);
+                }
+                Ok(Item::Routine(routinedef::RoutineDef {
+                    meta: self.semantic_metadata_from(*ln),
+                    def: *def,
+                    name: fname.clone(),
+                    params: params.clone(),
+                    ty: ty.clone(),
+                    body: nbody,
+                }))
+            }
+        }
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {
