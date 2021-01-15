@@ -96,12 +96,12 @@ impl SymbolTable {
 
     pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<(), String> {
         let mut metadata = m.get_metadata().clone();
-        {
-            let fm = m.get_functions_mut();
-            for f in fm.iter_mut() {
-                SymbolTable::traverse(f, &mut metadata)?;
-            }
+        
+        let fm = m.get_functions_mut();
+        for f in fm.iter_mut() {
+            SymbolTable::traverse(f, &mut metadata)?;
         }
+
         let cm = m.get_coroutines_mut();
         for co in cm.iter_mut() {
             SymbolTable::traverse(co, &mut metadata)?;
@@ -109,9 +109,12 @@ impl SymbolTable {
         for st in m.get_structs_mut().iter_mut() {
             SymbolTable::traverse(st, &mut metadata)?;
         }
+
         for m in m.get_modules_mut().iter_mut() {
             SymbolTable::generate(m)?;
         }
+
+        *m.get_metadata_mut() = metadata;
 
         Ok(())
     }

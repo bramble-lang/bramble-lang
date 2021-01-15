@@ -283,7 +283,6 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
-        println!("lookup {} in\n{}\n\n{}", id, sym, self.stack);
         sym.get(id)
             .or(self.stack.get(id))
             .ok_or(format!("{} is not defined", id))
@@ -294,7 +293,6 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &'a SymbolTable,
         id: &str,
     ) -> Result<(&Vec<Type>, &Type), String> {
-        println!("lookup func_or_cor");
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -565,7 +563,6 @@ impl<'a> SemanticAnalyzer<'a> {
             Return(meta, Some(exp)) => match current_func {
                 None => Err(format!("Return appears outside of a function")),
                 Some(cf) => {
-                    println!("return");
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
@@ -858,8 +855,10 @@ impl<'a> SemanticAnalyzer<'a> {
     fn analyze_module(&mut self, m: &module::Module<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>, String> {
         let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
         let mut meta = nmodule.get_metadata_mut().clone();
+
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
+
         *nmodule.get_modules_mut() = m.get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
@@ -876,8 +875,11 @@ impl<'a> SemanticAnalyzer<'a> {
             .iter()
             .map(|s| self.traverse(s, &None, &mut meta.sym))
             .collect::<Result<Vec<SemanticNode>, String>>()?;
-        *nmodule.get_metadata_mut() = meta;
+
         self.stack.pop();
+
+        meta.ty = Unit;
+        *nmodule.get_metadata_mut() = meta;
         Ok(nmodule)
     }
 }
