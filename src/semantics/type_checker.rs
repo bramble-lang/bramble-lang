@@ -268,7 +268,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 .expect("Expected a canonical path with at least one step in it");
             let node = self
                 .root
-                .go_to(&canon_path.parent())
+                .go_to_module(&canon_path.parent())
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
             Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
         } else if path.len() == 1 {
@@ -283,6 +283,7 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
+        println!("lookup {} in\n{}\n\n{}", id, sym, self.stack);
         sym.get(id)
             .or(self.stack.get(id))
             .ok_or(format!("{} is not defined", id))
@@ -293,6 +294,7 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &'a SymbolTable,
         id: &str,
     ) -> Result<(&Vec<Type>, &Type), String> {
+        println!("lookup func_or_cor");
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -563,6 +565,7 @@ impl<'a> SemanticAnalyzer<'a> {
             Return(meta, Some(exp)) => match current_func {
                 None => Err(format!("Return appears outside of a function")),
                 Some(cf) => {
+                    println!("return");
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
@@ -854,26 +857,26 @@ impl<'a> SemanticAnalyzer<'a> {
 
     fn analyze_module(&mut self, m: &module::Module<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>, String> {
         let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
-        let mut meta = nmodule.get_metadata_mut();
-        let mut meta = meta.clone();
+        let mut meta = nmodule.get_metadata_mut().clone();
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
-        let modules = m.get_modules()
+        *nmodule.get_modules_mut() = m.get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
             .collect::<Result<Vec<module::Module<SemanticMetadata>>, String>>()?;
-        let functions = m.get_functions()
+        *nmodule.get_functions_mut() = m.get_functions()
             .iter()
             .map(|f| self.traverse(f, &None, &mut meta.sym))
             .collect::<Result<Vec<SemanticNode>, String>>()?;
-        let coroutines = m.get_coroutines()
+        *nmodule.get_coroutines_mut() = m.get_coroutines()
             .iter()
             .map(|c| self.traverse(c, &None, &mut meta.sym))
             .collect::<Result<Vec<SemanticNode>, String>>()?;
-        let structs = m.get_structs()
+        *nmodule.get_structs_mut() = m.get_structs()
             .iter()
             .map(|s| self.traverse(s, &None, &mut meta.sym))
             .collect::<Result<Vec<SemanticNode>, String>>()?;
+        *nmodule.get_metadata_mut() = meta;
         self.stack.pop();
         Ok(nmodule)
     }
@@ -1017,7 +1020,9 @@ mod tests {
         for (text, expected) in vec![
             (
                 "mod my_mod{ 
-                    fn test() -> i32{ return 0;} 
+                    fn test() -> i32{ 
+                        return 0;
+                    } 
                     fn main() {
                         let k: i32 := test();
                         let i: i32 := self::test(); 
@@ -2250,7 +2255,9 @@ mod tests {
     pub fn test_member_access() {
         use crate::syntax::parser;
         for (text, expected) in vec![
-                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.x;}",
+                ("struct MyStruct{x:i32}
+                fn test(ms:MyStruct) -> i32 {
+                    return ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),

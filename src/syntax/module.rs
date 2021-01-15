@@ -137,21 +137,33 @@ impl<M> Module<M> {
             // the item from the path (the last element in teh path)
             // and search the terminating module for that item and
             // return the result
-            let parent = path.parent();
+            let parent_path = path.parent();
+            match self.go_to_module(&parent_path) {
+                Some(parent) => {
+                    let item = path.item().expect("Path with >1 length has no item");
+                    parent.get_item(item)
+                }
+                None => None
+            }
+        }
+    }
 
+    pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {
+        if path.len() == 0 {
+            None
+        } else {
             // check to make sure that the first step in the path
             // is this module, and then use the path to traverse
             // through descendent modules
-            if self.name == parent[0] {
+            if self.name == path[0] {
                 let mut current = self;
-                for idx in 1..parent.len() {
-                    match current.get_module(&parent[idx]) {
+                for idx in 1..path.len() {
+                    match current.get_module(&path[idx]) {
                         Some(m) => current = m,
                         None => return None,
                     }
                 }
-                let item = path.item().expect("Path with >1 length has no item");
-                current.get_item(item)
+                Some(current)
             } else {
                 None
             }

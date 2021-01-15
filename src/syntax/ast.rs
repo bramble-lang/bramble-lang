@@ -272,6 +272,18 @@ impl<I> Ast<I> {
         }
     }
 
+    pub fn go_to_module(&self, path: &Path) -> Option<&Module<I>> {
+        if path.len() == 0 {
+            return None;
+        }
+
+        if let Ast::Module(m) = self {
+            m.go_to_module(path)
+        } else {
+            return None;
+        }
+    }
+
     /// If a Node contains an Item (function, coroutine, module, or struct)
     /// Then return it
     pub fn get_item(&self, name: &str) -> Option<&Self> {
