@@ -1,11 +1,7 @@
 use super::struct_table;
 use struct_table::ResolvedStructTable;
 
-use crate::{
-    compiler::ast::scope::{LayoutData, Level, Scope},
-    semantics::semanticnode::SemanticMetadata,
-    syntax::module,
-};
+use crate::{compiler::ast::scope::{LayoutData, Level, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item}, routinedef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax, syntax::ast::Ast};
 
 pub type CompilerNode = Ast<Scope>;
@@ -36,14 +32,16 @@ impl CompilerNode {
                 }
                 (ExpressionBlock(meta, nbody), nlayout)
             }
-            RoutineDef {
+            RoutineDef(routinedef::RoutineDef {
                 meta,
                 def,
                 name,
                 params,
                 ty,
                 body,
-            } => {
+            }) => {
+                panic!("Should not be here!");
+                /*
                 let initial_frame_size = match def {
                     syntax::routinedef::RoutineDefType::Function => 0,
                     syntax::routinedef::RoutineDefType::Coroutine => 20,
@@ -72,6 +70,7 @@ impl CompilerNode {
                     },
                     layout,
                 )
+                */
             }
             Ast::Integer(m, i) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
@@ -235,12 +234,36 @@ impl CompilerNode {
             nmodule.add_module(nchild_module);
         }
         let (functions, layout) =
-            Self::compute_layouts_for(m.get_functions(), layout, struct_table);
+            Self::compute_layouts_for_items(m.get_functions(), layout, struct_table);
         *nmodule.get_functions_mut() = functions;
         let (coroutines, layout) =
-            Self::compute_layouts_for(m.get_coroutines(), layout, struct_table);
+            Self::compute_layouts_for_items(m.get_coroutines(), layout, struct_table);
         *nmodule.get_coroutines_mut() = coroutines;
         (nmodule, layout)
+    }
+
+    fn compute_layouts_for_items(
+        items: &Vec<Item<SemanticMetadata>>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Vec<Item<Scope>>, LayoutData) {
+        let mut compiler_ast_items = vec![];
+        let mut layout = layout;
+        for item in items.iter() {
+            let (c_ast_item, no) = match item {
+                Item::Struct(s) => {
+                   let (c, l) = CompilerNode::compute_offsets(s, layout, struct_table);
+                   (Item::Struct(c), l)
+                }
+                Item::Routine(rd) => {
+                    todo!("Compute Offsets for Item::Routine")
+                }
+            };
+            layout = no;
+            compiler_ast_items.push(c_ast_item);
+        }
+
+        (compiler_ast_items, layout)
     }
 
     fn compute_layouts_for(
@@ -282,6 +305,8 @@ impl CompilerNode {
 
 #[cfg(test)]
 mod ast_tests {
+    use module::Module;
+
     use crate::syntax::ast::BinaryOperator;
     use crate::syntax::routinedef::RoutineDefType;
     use crate::syntax::ty::Type;
@@ -495,7 +520,7 @@ mod ast_tests {
         let mut semantic_table = symbol_table::SymbolTable::new();
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
-        let sn = SemanticNode::RoutineDef {
+        let sn = routinedef::RoutineDef {
             meta: SemanticMetadata {
                 id: 0,
                 ln: 0,
@@ -509,8 +534,10 @@ mod ast_tests {
             ty: Type::I32,
             body: vec![],
         };
+        let mut module = Module::new("root", SemanticMetadata::new(1, 1, Type::Unit));
+        module.add_function(sn).unwrap();
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
+        let cn = CompilerNode::compute_offsets(&Ast::Module(module), LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::RoutineDef {
