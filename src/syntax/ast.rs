@@ -1,4 +1,4 @@
-use super::{module::Module, path::Path, routinedef::RoutineDefType, ty::Type};
+use super::{module::Module, path::Path, routinedef::{RoutineDef}, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -98,14 +98,7 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    RoutineDef {
-        meta: I,
-        def: RoutineDefType,
-        name: String,
-        params: Vec<(String, Type)>,
-        ty: Type,
-        body: Vec<Ast<I>>,
-    },
+    RoutineDef(RoutineDef<I>),
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     Module(Module<I>),
     StructDef(I, String, Vec<(String, Type)>),
@@ -142,7 +135,7 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            RoutineDef { def, name, .. } => format!("{} for {}", def, name),
+            RoutineDef(rd) => format!("{} for {}", rd.get_def(), rd.get_name()),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
             Module(m) => format!("module {}", m.get_name()),
@@ -176,11 +169,11 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineDef { meta: m, .. }
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
             | Module(m) => m.get_metadata(),
+            | RoutineDef(rd) => rd.get_metadata(),
         }
     }
 
@@ -209,11 +202,11 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineDef { meta: m, .. }
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
             Module(m) => m.get_metadata_mut(),
+            RoutineDef(rd) => rd.get_metadata_mut(),
         }
     }
 
@@ -221,7 +214,6 @@ impl<I> Ast<I> {
     /// the node is not a function or coroutine, this will return None.
     pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
         match self {
-            Ast::RoutineDef { params, .. } => Some(params),
             _ => None,
         }
     }
@@ -230,7 +222,6 @@ impl<I> Ast<I> {
     /// otherwise return None.
     pub fn get_return_type(&self) -> Option<&Type> {
         match self {
-            Ast::RoutineDef { ty, .. } => Some(ty),
             _ => None,
         }
     }
@@ -238,7 +229,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef { name, .. } | Ast::Identifier(_, name) | Ast::StructDef(_, name, ..)=> {
+            Ast::Identifier(_, name) | Ast::StructDef(_, name, ..)=> {
                 Some(name)
             }
             _ => None,

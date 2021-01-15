@@ -69,6 +69,10 @@ impl<M> RoutineDef<M> {
         &mut self.meta
     }
 
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
     pub fn get_params(&self) -> &Vec<(String, Type)> {
         &self.params
     }
@@ -79,5 +83,9 @@ impl<M> RoutineDef<M> {
 
     pub fn get_return_type(&self) -> &Type {
         &self.ty
+    }
+
+    pub fn get_def(&self) -> &RoutineDefType {
+        &self.def
     }
 }
