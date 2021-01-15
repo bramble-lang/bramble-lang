@@ -4,7 +4,7 @@
 use crate::{assembly2, syntax::module::Module};
 use crate::ast::Ast;
 use crate::ast::RoutineCall;
-use crate::ast::RoutineDef;
+use crate::syntax::routinedef::RoutineDef;
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;

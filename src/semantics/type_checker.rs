@@ -887,7 +887,7 @@ impl<'a> SemanticAnalyzer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast;
+    use crate::{ast, syntax::routinedef};
     use crate::ast::Ast;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
@@ -1942,7 +1942,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Function,
+            def: routinedef::RoutineDef::Function,
             name: "my_func".into(),
             params: vec![],
             ty: I32,
@@ -1956,7 +1956,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Function,
+            def: routinedef::RoutineDef::Function,
             name: "my_func".into(),
             params: vec![],
             ty: I32,
@@ -1975,7 +1975,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Coroutine,
+            def: routinedef::RoutineDef::Coroutine,
             name: "my_co".into(),
             params: vec![],
             ty: I32,
@@ -1989,7 +1989,7 @@ mod tests {
 
         let node = Ast::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Coroutine,
+            def: routinedef::RoutineDef::Coroutine,
             name: "my_co".into(),
             params: vec![],
             ty: I32,

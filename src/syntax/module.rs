@@ -173,7 +173,7 @@ impl<M> Module<M> {
 
 #[cfg(test)]
 mod test {
-    use crate::syntax::ast::RoutineDef;
+    use crate::syntax::routinedef::RoutineDef;
     use crate::syntax::ty::Type;
 
     use super::*;

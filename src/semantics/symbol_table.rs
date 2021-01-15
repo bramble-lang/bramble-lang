@@ -1,4 +1,4 @@
-use crate::syntax::{module::Module, ty::Type};
+use crate::syntax::{module::Module, routinedef::RoutineDef, ty::Type};
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::{ast, syntax::path::Path};
@@ -123,7 +123,7 @@ impl SymbolTable {
         use ast::Ast;
         match &ast {
             Ast::RoutineDef {
-                def: ast::RoutineDef::Function,
+                def: RoutineDef::Function,
                 name,
                 params,
                 ty,
@@ -142,7 +142,7 @@ impl SymbolTable {
                 )?;
             }
             Ast::RoutineDef {
-                def: ast::RoutineDef::Coroutine,
+                def: RoutineDef::Coroutine,
                 name,
                 params,
                 ty,
