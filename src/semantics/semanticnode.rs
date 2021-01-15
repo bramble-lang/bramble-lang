@@ -253,7 +253,7 @@ impl SemanticAst {
 
         match m {
             Item::Struct(s) => self.from_parser_ast(s).map(|s| Item::Struct(*s)),
-            Item::Routine(routinedef::RoutineDef{
+            Item::Routine(RoutineDef{
                 meta: ln,
                 def,
                 name: fname,
@@ -266,7 +266,7 @@ impl SemanticAst {
                     let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
-                Ok(Item::Routine(routinedef::RoutineDef {
+                Ok(Item::Routine(RoutineDef {
                     meta: self.semantic_metadata_from(*ln),
                     def: *def,
                     name: fname.clone(),
