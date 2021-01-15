@@ -14,6 +14,13 @@ impl<M> Item<M> {
         }
     }
 
+    pub fn to_routine(&self) -> Option<&RoutineDef<M>> {
+        match self {
+            Item::Routine(r) => Some(r),
+            Item::Struct(_) => None,
+        }
+    }
+
     pub fn get_metadata(&self) -> &M {
         match self {
             Item::Routine(r) => r.get_metadata(),

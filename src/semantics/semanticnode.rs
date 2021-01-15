@@ -149,12 +149,7 @@ impl SemanticAst {
             }
             Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
             RoutineDef(routinedef::RoutineDef{
-                meta: ln,
-                def,
-                name: fname,
-                params,
-                ty,
-                body,
+                ..
             }) => {
                 // TODO: this will need to be deleted!
                 panic!("This should not be called!");
@@ -249,8 +244,6 @@ impl SemanticAst {
     }
 
     fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>, String> {
-        let meta = self.module_semantic_metadata_from(*m.get_metadata(), m.get_name());
-
         match m {
             Item::Struct(s) => self.from_parser_ast(s).map(|s| Item::Struct(*s)),
             Item::Routine(RoutineDef{
