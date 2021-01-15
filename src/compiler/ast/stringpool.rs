@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{compiler::ast::ast::CompilerNode, syntax::module};
+use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef}};
 
 use super::scope::Scope;
 
@@ -49,10 +49,11 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
-            RoutineDef { body, .. } => {
-                for e in body.iter() {
+            RoutineDef(..) => {
+                panic!("Should not come here");
+                /*jfor e in body.iter() {
                     self.extract_from(e);
-                }
+                }*/
             }
             Integer(..) => {}
             Boolean(..) => {}
@@ -133,10 +134,23 @@ impl StringPool {
         }
 
         for f in module.get_functions().iter() {
-            self.extract_from(f);
+            self.extract_from_item(f);
         }
         for c in module.get_coroutines().iter() {
-            self.extract_from(c);
+            self.extract_from_item(c);
+        }
+    }
+
+    pub fn extract_from_item(&mut self, item: &Item<Scope>) {
+        match item {
+            Item::Routine(r) => self.extract_from_routine(r),
+            Item::Struct(s) => self.extract_from(s),
+        }
+    }
+
+    pub fn extract_from_routine(&mut self, routine: &RoutineDef<Scope>) {
+        for s in routine.get_body().iter() {
+            self.extract_from(s);
         }
     }
 }

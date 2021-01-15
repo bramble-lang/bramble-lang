@@ -85,6 +85,10 @@ impl<M> RoutineDef<M> {
         &self.ty
     }
 
+    pub fn get_body(&self) -> &Vec<Ast<M>> {
+        &self.body
+    }
+
     pub fn get_def(&self) -> &RoutineDefType {
         &self.def
     }
