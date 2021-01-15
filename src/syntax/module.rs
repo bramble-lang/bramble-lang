@@ -64,6 +64,10 @@ impl<M> Module<M> {
         &self.meta
     }
 
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.meta
+    }
+
     pub fn get_modules(&self) -> &Vec<Module<M>> {
         &self.modules
     }

@@ -1,4 +1,4 @@
-use crate::syntax::ty::Type;
+use crate::syntax::{module::Module, ty::Type};
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::{ast, syntax::path::Path};
@@ -87,31 +87,18 @@ impl SymbolTable {
         }
     }
 
-    pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
-        use ast::Ast;
-        match ast {
-            Ast::Module {
-                meta,
-                modules,
-                functions,
-                coroutines,
-                structs,
-                ..
-            } => {
-                for f in functions.iter_mut() {
-                    SymbolTable::traverse(f, meta)?;
-                }
-                for co in coroutines.iter_mut() {
-                    SymbolTable::traverse(co, meta)?;
-                }
-                for st in structs.iter_mut() {
-                    SymbolTable::traverse(st, meta)?;
-                }
-                for m in modules.iter_mut() {
-                    SymbolTable::generate(m)?;
-                }
-            }
-            _ => panic!("Type analysis: expected Module at root level of the AST"),
+    pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<(), String> {
+        for f in m.get_functions().iter_mut() {
+            SymbolTable::traverse(f, m.get_metadata_mut())?;
+        }
+        for co in m.get_coroutines().iter_mut() {
+            SymbolTable::traverse(co, m.get_metadata_mut())?;
+        }
+        for st in m.get_structs().iter_mut() {
+            SymbolTable::traverse(st, m.get_metadata_mut())?;
+        }
+        for m in m.get_modules().iter_mut() {
+            SymbolTable::generate(m)?;
         }
 
         Ok(())

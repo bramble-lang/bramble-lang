@@ -1,4 +1,4 @@
-use crate::{ast::*, syntax::path::Path, syntax::ty::Type};
+use crate::{ast::*, syntax::path::Path, syntax::{module, ty::Type}};
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
 use crate::diagnostics::config::TracingConfig;
@@ -201,38 +201,9 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            Module {
-                meta: ln,
-                name,
-                modules,
-                functions,
-                coroutines,
-                structs,
-            } => {
-                let mut nmods = vec![];
-                for module in modules.iter() {
-                    nmods.push(*self.from_parser_ast(module)?);
-                }
-                let mut nfuncs = vec![];
-                for func in functions.iter() {
-                    nfuncs.push(*self.from_parser_ast(func)?);
-                }
-                let mut ncors = vec![];
-                for cor in coroutines.iter() {
-                    ncors.push(*self.from_parser_ast(cor)?);
-                }
-                let mut nstructs = vec![];
-                for st in structs.iter() {
-                    nstructs.push(*self.from_parser_ast(st)?);
-                }
-                Ok(Box::new(Module {
-                    meta: self.module_semantic_metadata_from(*ln, name),
-                    name: name.clone(),
-                    modules: nmods,
-                    functions: nfuncs,
-                    coroutines: ncors,
-                    structs: nstructs,
-                }))
+            Module(m) => {
+                let nmodule = self.from_module(m)?;
+                Ok(Box::new(Module(nmodule)))
             }
             StructDef(l, name, fields) => Ok(Box::new(StructDef(
                 self.semantic_metadata_from(*l),
@@ -254,6 +225,25 @@ impl SemanticAst {
         };
 
         node
+    }
+
+    fn from_module(&self, m: &module::Module<u32>) -> Result<module::Module<SemanticMetadata>, String> {
+        let meta = self.module_semantic_metadata_from(*m.get_metadata(), m.get_name());
+
+        let mut nmodule = module::Module::new(m.get_name(), meta);
+        for module in m.get_modules().iter() {
+            nmodule.add_module(self.from_module(module)?);
+        }
+        for func in m.get_functions().iter() {
+           nmodule.add_function(*self.from_parser_ast(func)?);
+        }
+        for cor in m.get_coroutines().iter() {
+            nmodule.add_coroutine(*self.from_parser_ast(cor)?);
+        }
+        for st in m.get_structs().iter() {
+            nmodule.add_struct(*self.from_parser_ast(st)?);
+        }
+        Ok(nmodule)
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {
