@@ -1,4 +1,4 @@
-use super::{ast::Ast, path::Path, routinedef::RoutineDef};
+use super::{ast::Ast, path::Path, routinedef::{RoutineDef, RoutineDefType}};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item<M> {
@@ -11,6 +11,13 @@ impl<M> Item<M> {
         match self {
             Item::Routine(r) => r.get_name(),
             Item::Struct(s) => s.get_name().unwrap(),
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        match self {
+            Item::Routine(r) => r.get_metadata(),
+            Item::Struct(s) => s.get_metadata(),
         }
     }
 }
@@ -68,6 +75,17 @@ impl<M> Module<M> {
             Ok(())
         } else {
             Err(format!("{} already exists in module", name))
+        }
+    }
+
+    pub fn add_item(&mut self, i: Item<M>) -> Result<(), String>{
+        match i {
+            Item::Routine(r) => if *r.get_def() == RoutineDefType::Function {
+                self.add_function(r)
+            } else {
+                self.add_coroutine(r)
+            },
+            Item::Struct(s) => self.add_struct(s)
         }
     }
 

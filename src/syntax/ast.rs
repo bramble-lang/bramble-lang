@@ -1,4 +1,4 @@
-use super::{module::Module, path::Path, routinedef::{RoutineDef}, ty::Type};
+use super::{module::{Item, Module}, path::Path, routinedef::*, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -236,7 +236,7 @@ impl<I> Ast<I> {
         }
     }
 
-    pub fn go_to(&self, path: &Path) -> Option<&Self> {
+    pub fn go_to(&self, path: &Path) -> Option<&Item<I>> {
         if path.len() == 0 {
             return None;
         }
@@ -257,15 +257,6 @@ impl<I> Ast<I> {
             m.go_to_module(path)
         } else {
             return None;
-        }
-    }
-
-    /// If a Node contains an Item (function, coroutine, module, or struct)
-    /// Then return it
-    pub fn get_item(&self, name: &str) -> Option<&Self> {
-        match self {
-            Ast::Module (m) => m.get_item(name),
-            _ => None,
         }
     }
 
