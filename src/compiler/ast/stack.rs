@@ -278,7 +278,8 @@ mod tests {
         module_scope.insert("func", 0, 0);
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_function(fun_node);
-        stack.push(&CompilerNode::Module(module_node));
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let fun2_scope = Scope::new(
             0,
@@ -349,7 +350,8 @@ mod tests {
 
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_coroutine(cor_node);
-        stack.push(&CompilerNode::Module(module_node));
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let fun2_scope = Scope::new(
             0,
@@ -403,7 +405,8 @@ mod tests {
         module_scope.insert("cor", 0, 0);
 
         let mut module_node = module::Module::new("root", module_scope);
-        stack.push(&CompilerNode::Module(module_node));
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let path = stack.to_path().unwrap();
         let expected: Path = vec!["root"].into();
@@ -424,7 +427,8 @@ mod tests {
         module_scope.insert("cor", 0, 0);
         
         let mut module_node = module::Module::new("root", module_scope);
-        stack.push(&CompilerNode::Module(module_node));
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let fun2_scope = Scope::new(
             0,
@@ -463,7 +467,8 @@ mod tests {
         );
         
         let mut module_node = module::Module::new("root", module_scope);
-        stack.push(&CompilerNode::Module(module_node));
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let module2_scope = Scope::new(
             0,
@@ -475,7 +480,8 @@ mod tests {
         );
         
         let mut module2_node = module::Module::new("inner", module2_scope);
-        stack.push(&CompilerNode::Module(module2_node));
+        let tmp2 = CompilerNode::Module(module2_node);
+        stack.push(&tmp2);
 
         let fun2_scope = Scope::new(
             0,
