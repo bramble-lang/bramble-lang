@@ -172,14 +172,14 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32
         }
 
         if let Some(f) = function_def(stream)? {
-            parent_module.add_function(f);
+            parent_module.add_function(f)?;
         }
         if let Some(c) = coroutine_def(stream)? {
-            parent_module.add_coroutine(c);
+            parent_module.add_coroutine(c)?;
         }
 
         if let Some(s) = struct_def(stream)? {
-            parent_module.add_struct(s);
+            parent_module.add_struct(s)?;
         }
 
         if stream.index() == start_index {
@@ -1316,7 +1316,7 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 0);
 
-            if let m = m.get_modules()[0]
+            if let m = &m.get_modules()[0]
             {
                 assert_eq!(*m.get_metadata(), 1);
                 assert_eq!(m.get_name(), "test_fn_mod");
@@ -1948,7 +1948,7 @@ pub mod tests {
                 .unwrap();
             let ast = parse(tokens).unwrap().unwrap();
             match ast {
-                Ast::Module(m) => match m.get_functions()[0] {
+                Ast::Module(m) => match &m.get_functions()[0] {
                     Ast::RoutineDef { body, .. } => match &body[0] {
                         Ast::Return(.., Some(rv)) => {
                             assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))

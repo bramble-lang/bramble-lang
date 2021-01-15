@@ -72,7 +72,7 @@ impl<M> Module<M> {
         &self.modules
     }
 
-    pub fn get_modules_mut(&self) -> &mut Vec<Module<M>> {
+    pub fn get_modules_mut(&mut self) -> &mut Vec<Module<M>> {
         &mut self.modules
     }
 
@@ -96,7 +96,7 @@ impl<M> Module<M> {
         &self.structs
     }
 
-    pub fn get_structs_mut(&self) -> &mut Vec<Ast<M>> {
+    pub fn get_structs_mut(&mut self) -> &mut Vec<Ast<M>> {
         &mut self.structs
     }
 

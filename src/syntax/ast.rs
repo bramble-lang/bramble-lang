@@ -228,6 +228,7 @@ impl<I> Ast<I> {
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
+            Module(m) => m.get_metadata_mut(),
         }
     }
 
@@ -264,7 +265,6 @@ impl<I> Ast<I> {
             return None;
         }
 
-        let mut iter = path.iter();
         if let Ast::Module(m) = self {
             m.go_to(path)
         } else {
