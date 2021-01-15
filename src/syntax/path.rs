@@ -32,7 +32,7 @@ impl Path {
         }
     }
 
-    pub fn tail(&self) -> Path {
+    pub fn parent(&self) -> Path {
         let mut path = Path {
             path: self.path.clone(),
         };
@@ -218,10 +218,10 @@ mod test_path {
     }
 
     #[test]
-    fn test_tail() {
+    fn test_parent() {
         let path: Path = vec!["self", "item"].into();
 
         let expected = vec!["self"].into();
-        assert_eq!(path.tail(), expected);
+        assert_eq!(path.parent(), expected);
     }
 }

@@ -266,7 +266,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 .expect("Expected a canonical path with at least one step in it");
             let node = self
                 .root
-                .go_to(&canon_path.tail())
+                .go_to(&canon_path.parent())
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
             Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
         } else if path.len() == 1 {
@@ -331,14 +331,14 @@ impl<'a> SemanticAnalyzer<'a> {
         call: &ast::RoutineCall,
         routine_path: &Path,
     ) -> Result<(&'b Vec<Type>, Type), String> {
-        let routine_path_tail = routine_path.tail();
+        let routine_path_parent = routine_path.parent();
         let (expected_param_tys, ret_ty) = match symbol {
             Symbol {
                 ty: Type::FunctionDef(pty, rty),
                 ..
             } if *call == crate::syntax::ast::RoutineCall::Function => (
                 pty,
-                Self::type_to_canonical_with_path(&routine_path_tail, rty)?,
+                Self::type_to_canonical_with_path(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
@@ -346,7 +346,7 @@ impl<'a> SemanticAnalyzer<'a> {
             } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (
                 pty,
                 Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
-                    &routine_path_tail,
+                    &routine_path_parent,
                     rty,
                 )?)),
             ),
@@ -448,7 +448,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
                         meta.ty =
-                            Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
+                            Self::type_to_canonical_with_path(&canonical_path.parent(), member_ty)?;
                         meta.set_canonical_path(canonical_path);
                         Ok(MemberAccess(meta, Box::new(src), member.clone()))
                     }
@@ -640,14 +640,13 @@ impl<'a> SemanticAnalyzer<'a> {
                 let (symbol, routine_canon_path) =
                     self.lookup_symbol_by_path(sym, routine_path)?
                         .ok_or(format!("function {} not declared", routine_path))?;
-                let routine_canon_path_tail = routine_canon_path.tail();
 
                 let (expected_param_tys, ret_ty) =
                     Self::extract_routine_type_info(symbol, call, &routine_path)?;
 
                 let expected_param_tys = expected_param_tys
                     .iter()
-                    .map(|pty| Self::type_to_canonical_with_path(&routine_canon_path_tail, pty))
+                    .map(|pty| Self::type_to_canonical_with_path(&routine_canon_path.parent(), pty))
                     .collect::<Result<Vec<Type>, String>>()?;
 
                 if resolved_params.len() != expected_param_tys.len() {
@@ -859,7 +858,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
                     let member_ty_canon =
-                        Self::type_to_canonical_with_path(&canonical_path.tail(), member_ty)?;
+                        Self::type_to_canonical_with_path(&canonical_path.parent(), member_ty)?;
                     let param = self.traverse(pv, current_func, sym)?;
                     if param.get_type() != member_ty_canon {
                         return Err(format!(
