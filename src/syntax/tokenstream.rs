@@ -1,4 +1,5 @@
 use crate::lexer::tokens::{Lex, Token};
+use braid_lang::result::Result;
 
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,
@@ -48,7 +49,7 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, String> {
+    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token> {
         let (line, found) = match self.peek() {
             Some(t) => (t.l, t.s.to_string()),
             None => (0, "EOF".into()),

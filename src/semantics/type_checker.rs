@@ -17,6 +17,7 @@ use crate::{
     semantics::semanticnode::{SemanticAst, SemanticNode},
     syntax::module::Module,
 };
+use braid_lang::result::Result;
 use Type::*;
 
 use super::semanticnode::SemanticMetadata;
@@ -25,7 +26,7 @@ pub fn type_check(
     ast: &module::Module<ParserInfo>,
     trace: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<module::Module<SemanticMetadata>, String> {
+) -> Result<module::Module<SemanticMetadata>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(&ast)?;
     SymbolTable::from_module(&mut sm_ast)?;
@@ -116,7 +117,7 @@ impl<'a> SemanticAnalyzer<'a> {
         operand: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<(Type, SemanticNode), String> {
+    ) -> Result<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
         let operand = self.traverse(operand, current_func, sym)?;
@@ -154,7 +155,7 @@ impl<'a> SemanticAnalyzer<'a> {
         r: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<(Type, SemanticNode, SemanticNode), String> {
+    ) -> Result<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
         let l = self.traverse(l, current_func, sym)?;
@@ -201,10 +202,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn resolve_types(
-        &mut self,
-        sym: &mut SymbolTable,
-    ) -> Result<module::Module<SemanticMetadata>, String> {
+    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
         self.analyze_module(self.root, sym)
     }
 
@@ -213,7 +211,7 @@ impl<'a> SemanticAnalyzer<'a> {
         ast: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<SemanticNode, String> {
+    ) -> Result<SemanticNode> {
         self.trace(ast, current_func, sym);
         self.analyize_node(ast, current_func, sym).map_err(|e| {
             if !e.starts_with("L") {
@@ -224,20 +222,20 @@ impl<'a> SemanticAnalyzer<'a> {
         })
     }
 
-    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<Path, String> {
+    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<Path> {
         self.stack
             .to_path(sym)
             .ok_or("A valid path is expected".into())
     }
 
     /// Convert a path to its canonical form by merging with the ancestors in the AST.
-    fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path, String> {
+    fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path> {
         let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
         path.to_canonical(&current_path)
     }
 
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
-    fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type, String> {
+    fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
         match ty {
             Custom(path) => Ok(Custom(path.to_canonical(&self.get_current_path(sym)?)?)),
             Coroutine(ty) => Ok(Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
@@ -246,7 +244,7 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
-    fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type, String> {
+    fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type> {
         match ty {
             Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
             Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(
@@ -262,7 +260,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &self,
         sym: &'a SymbolTable,
         params: &Vec<(String, Type)>,
-    ) -> Result<Vec<(String, Type)>, String> {
+    ) -> Result<Vec<(String, Type)>> {
         let mut canonical_params = vec![];
         for (name, ty) in params.iter() {
             canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
@@ -274,7 +272,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &'a self,
         sym: &'a SymbolTable,
         path: &Path,
-    ) -> Result<Option<(&'a Symbol, Path)>, String> {
+    ) -> Result<Option<(&'a Symbol, Path)>> {
         let canon_path = self.to_canonical(sym, path)?;
         if path.len() > 1 {
             let item = canon_path
@@ -296,17 +294,13 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol, String> {
+    fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
         sym.get(id)
             .or(self.stack.get(id))
             .ok_or(format!("{} is not defined", id))
     }
 
-    fn lookup_func_or_cor(
-        &'a self,
-        sym: &'a SymbolTable,
-        id: &str,
-    ) -> Result<(&Vec<Type>, &Type), String> {
+    fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -320,11 +314,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn lookup_coroutine(
-        &'a self,
-        sym: &'a SymbolTable,
-        id: &str,
-    ) -> Result<(&Vec<Type>, &Type), String> {
+    fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -334,7 +324,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Type, String> {
+    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Type> {
         let p = &self.lookup(sym, id)?.ty;
         match p {
             Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
@@ -346,7 +336,7 @@ impl<'a> SemanticAnalyzer<'a> {
         symbol: &'b Symbol,
         call: &ast::RoutineCall,
         routine_path: &Path,
-    ) -> Result<(&'b Vec<Type>, Type), String> {
+    ) -> Result<(&'b Vec<Type>, Type)> {
         let routine_path_parent = routine_path.parent();
         let (expected_param_tys, ret_ty) = match symbol {
             Symbol {
@@ -385,7 +375,7 @@ impl<'a> SemanticAnalyzer<'a> {
         routine_path: &Path,
         given: &'b Vec<SemanticNode>,
         expected_types: &'b Vec<Type>,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         let mut mismatches = vec![];
         let mut idx = 0;
         for (user, expected) in given.iter().zip(expected_types.iter()) {
@@ -417,7 +407,7 @@ impl<'a> SemanticAnalyzer<'a> {
         ast: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<SemanticNode, String> {
+    ) -> Result<SemanticNode> {
         match &ast {
             &Ast::Integer(meta, v) => {
                 let mut meta = meta.clone();
@@ -682,7 +672,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 let expected_param_tys = expected_param_tys
                     .iter()
                     .map(|pty| Self::type_to_canonical_with_path(&routine_canon_path.parent(), pty))
-                    .collect::<Result<Vec<Type>, String>>()?;
+                    .collect::<Result<Vec<Type>>>()?;
 
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
@@ -848,7 +838,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         m: &module::Module<SemanticMetadata>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Module<SemanticMetadata>, String> {
+    ) -> Result<module::Module<SemanticMetadata>> {
         let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
         let mut meta = nmodule.get_metadata_mut().clone();
 
@@ -859,22 +849,22 @@ impl<'a> SemanticAnalyzer<'a> {
             .get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
-            .collect::<Result<Vec<module::Module<SemanticMetadata>>, String>>()?;
+            .collect::<Result<Vec<module::Module<SemanticMetadata>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
             .map(|f| self.analyze_item(f, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
             .map(|s| self.analyze_item(s, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
 
         self.stack.pop();
 
@@ -887,7 +877,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         i: &module::Item<SemanticMetadata>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Item<SemanticMetadata>, String> {
+    ) -> Result<module::Item<SemanticMetadata>> {
         match i {
             Item::Struct(s) => self.analyize_node(s, &None, sym).map(|n| Item::Struct(n)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
@@ -898,7 +888,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         routine: &routinedef::RoutineDef<SemanticMetadata>,
         sym: &mut SymbolTable,
-    ) -> Result<routinedef::RoutineDef<SemanticMetadata>, String> {
+    ) -> Result<routinedef::RoutineDef<SemanticMetadata>> {
         let routinedef::RoutineDef {
             meta,
             name,
@@ -996,7 +986,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1051,7 +1041,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1103,7 +1093,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1142,7 +1132,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1185,7 +1175,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -1221,7 +1211,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -1254,7 +1244,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -1286,7 +1276,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -1339,7 +1329,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1398,7 +1388,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1468,7 +1458,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1538,7 +1528,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1608,7 +1598,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1687,7 +1677,7 @@ mod tests {
                 let tokens: Vec<Token> = Lexer::new(&text)
                     .tokenize()
                     .into_iter()
-                    .collect::<Result<_, _>>()
+                    .collect::<Result<_>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
                 let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1766,7 +1756,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1848,7 +1838,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -1926,7 +1916,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2041,7 +2031,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2129,7 +2119,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2212,7 +2202,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2284,7 +2274,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2345,7 +2335,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2407,7 +2397,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2481,7 +2471,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2698,7 +2688,7 @@ mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
@@ -2733,7 +2723,7 @@ mod tests {
                 let tokens: Vec<Token> = Lexer::new(&text)
                     .tokenize()
                     .into_iter()
-                    .collect::<Result<_, _>>()
+                    .collect::<Result<_>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
                 let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);

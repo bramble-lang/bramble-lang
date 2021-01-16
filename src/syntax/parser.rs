@@ -7,6 +7,7 @@ use crate::{
     diagnostics::config::TracingConfig,
     lexer::tokens::{Lex, Primitive, Token},
 };
+use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
@@ -134,7 +135,7 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>, String> {
+pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>> {
     let mut stream = TokenStream::new(&tokens);
     let start_index = stream.index();
     let mut item = None;
@@ -149,7 +150,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>, String> {
     Ok(item)
 }
 
-fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>, String> {
+fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
             Some((_, module_name)) => {
@@ -168,7 +169,7 @@ fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>, String> {
     Ok(mod_def)
 }
 
-fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32>>, String> {
+fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
     let module_line = stream.peek().map_or(1, |t| t.l);
     let mut parent_module = Module::new(name, module_line);
     while stream.peek().is_some() {
@@ -212,7 +213,7 @@ fn struct_def(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>, String> {
+fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -253,7 +254,7 @@ fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>, Str
     }))
 }
 
-fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>, String> {
+fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
     let co_line = match stream.next_if(&Lex::CoroutineDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -292,7 +293,7 @@ fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>, St
     }))
 }
 
-fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
+fn block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
         stmts.push(s);
@@ -300,7 +301,7 @@ fn block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
     Ok(stmts)
 }
 
-fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>, String> {
+fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
     let mut stmts = vec![];
     while let Some(s) = statement(stream).por(yield_return_stmt, stream)? {
         stmts.push(s);
@@ -507,7 +508,7 @@ fn if_expression(stream: &mut TokenStream) -> PResult {
     })
 }
 
-fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
+fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
     let params = id_declaration_list(stream)?;
@@ -516,7 +517,7 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String
     Ok(params)
 }
 
-fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, String> {
+fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
     trace!(stream);
     let mut decls = vec![];
 
@@ -534,7 +535,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>, 
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, String> {
+fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -558,7 +559,7 @@ fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>, S
     }
 }
 
-fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>, String> {
+fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
@@ -769,7 +770,7 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn path(stream: &mut TokenStream) -> Result<Option<(u32, Path)>, String> {
+fn path(stream: &mut TokenStream) -> Result<Option<(u32, Path)>> {
     trace!(stream);
     let mut path = vec![];
 
@@ -803,7 +804,7 @@ fn identifier(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>, String> {
+fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
     let ty = match stream.peek() {
@@ -834,7 +835,7 @@ fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>, String> {
     Ok(ty)
 }
 
-fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>, String> {
+fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
@@ -903,7 +904,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let exp = expression(&mut stream).unwrap();
@@ -925,7 +926,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let exp = expression(&mut stream).unwrap();
@@ -962,7 +963,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             if let Some(Ast::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
@@ -987,7 +988,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             if let Some(Ast::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
@@ -1007,7 +1008,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::BinaryOp(l, BinaryOperator::Mul, left, right)) =
@@ -1033,7 +1034,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::BinaryOp(l, BinaryOperator::BOr, left, right)) =
@@ -1066,7 +1067,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
@@ -1103,7 +1104,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match member_access(&mut stream) {
@@ -1131,7 +1132,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
@@ -1162,7 +1163,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1185,7 +1186,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1207,7 +1208,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1229,7 +1230,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1250,7 +1251,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1271,7 +1272,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1292,7 +1293,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
@@ -1309,7 +1310,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
 
         if let Some(m) = parse(tokens).unwrap() {
@@ -1361,7 +1362,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
@@ -1405,7 +1406,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
@@ -1433,7 +1434,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
@@ -1465,7 +1466,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
@@ -1499,7 +1500,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(Ast::RoutineCall(l, RoutineCall::Function, name, params)) =
@@ -1525,7 +1526,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(Ast::RoutineCall(l, RoutineCall::Function, name, params)) =
@@ -1551,7 +1552,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         if let Some(m) = parse(tokens).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
@@ -1586,7 +1587,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1617,7 +1618,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
@@ -1648,7 +1649,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
@@ -1685,7 +1686,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
@@ -1714,7 +1715,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
@@ -1762,7 +1763,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut stream).unwrap() {
@@ -1790,7 +1791,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             assert_eq!(
@@ -1808,7 +1809,7 @@ pub mod tests {
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut stream).unwrap() {
@@ -1870,7 +1871,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             if let Some(m) = module(&mut stream).unwrap() {
@@ -1927,7 +1928,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let result = expression(&mut stream);
@@ -1944,7 +1945,7 @@ pub mod tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let module = parse(tokens).unwrap();
             match module {

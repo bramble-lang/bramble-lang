@@ -3,6 +3,7 @@ use super::{
     path::Path,
     routinedef::{RoutineDef, RoutineDefType},
 };
+use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item<M> {
@@ -66,7 +67,7 @@ impl<M> Module<M> {
         self.modules.push(m);
     }
 
-    pub fn add_function(&mut self, f: RoutineDef<M>) -> Result<(), String> {
+    pub fn add_function(&mut self, f: RoutineDef<M>) -> Result<()> {
         let fname = f.get_name();
         if self.get_item(fname).is_none() {
             self.functions.push(Item::Routine(f));
@@ -76,7 +77,7 @@ impl<M> Module<M> {
         }
     }
 
-    pub fn add_coroutine(&mut self, c: RoutineDef<M>) -> Result<(), String> {
+    pub fn add_coroutine(&mut self, c: RoutineDef<M>) -> Result<()> {
         let cname = c.get_name();
         if self.get_item(cname).is_none() {
             self.coroutines.push(Item::Routine(c));
@@ -86,7 +87,7 @@ impl<M> Module<M> {
         }
     }
 
-    pub fn add_struct(&mut self, s: Ast<M>) -> Result<(), String> {
+    pub fn add_struct(&mut self, s: Ast<M>) -> Result<()> {
         let name = s.get_name().expect("Struct must have a name");
         if self.get_item(name).is_none() {
             self.structs.push(Item::Struct(s));
@@ -96,7 +97,7 @@ impl<M> Module<M> {
         }
     }
 
-    pub fn add_item(&mut self, i: Item<M>) -> Result<(), String> {
+    pub fn add_item(&mut self, i: Item<M>) -> Result<()> {
         match i {
             Item::Routine(r) => {
                 if *r.get_def() == RoutineDefType::Function {

@@ -1,8 +1,9 @@
 use super::{ast::*, tokenstream::TokenStream};
 use crate::lexer::tokens::{Lex, Token};
+use braid_lang::result::Result;
 
 pub type ParserInfo = u32;
-pub type PResult = Result<Option<PNode>, String>;
+pub type PResult = Result<Option<PNode>>;
 
 impl ParserCombinator<PResult> for PResult {
     fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult {
