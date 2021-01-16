@@ -59,6 +59,23 @@ impl<'a> ScopeStack<'a> {
         None
     }
 
+    pub fn find_func(&self, name: &str) -> Option<&CompilerNode> {
+        match self.find_global(name) {
+            Some(ref node) => match node {
+                CompilerNode::Module(m)=> m.get_functions().iter().find(|v| match v {
+                    CompilerNode::RoutineDef {
+                        def: RoutineDef::Function,
+                        name: n,
+                        ..
+                    } => n == name,
+                    _ => false,
+                }),
+                _ => None,
+            },
+            None => None,
+        }
+    }
+
     pub fn find_coroutine(&self, name: &str) -> Option<&CompilerNode> {
         match self.find_global(name) {
             Some(ref node) => match node {
@@ -74,6 +91,18 @@ impl<'a> ScopeStack<'a> {
             },
             None => None,
         }
+    }
+
+    pub fn get_routine_allocation(&self, name: &str) -> Option<i32> {
+        match self.find_func(name) {
+            Some(func) => func,
+            None => match self.find_coroutine(name) {
+                Some(co) => co,
+                None => return None,
+            },
+        }
+        .get_metadata()
+        .local_allocation()
     }
 
     /// Starting from the bottom of the stack this builds a path
@@ -272,6 +301,24 @@ mod tests {
         stack.push(&fun2_node);
 
         assert_eq!(stack.find("func").is_none(), true);
+
+        let node = stack.find_func("func").unwrap();
+        match node {
+            CompilerNode::RoutineDef {
+                meta,
+                def: RoutineDef::Function,
+                name,
+                params,
+                ..
+            } => {
+                assert_eq!(name, "func");
+                assert_eq!(params.len(), 1);
+                let y_param = meta.get("y").unwrap();
+                assert_eq!(y_param.offset, 4);
+                assert_eq!(y_param.size, 4);
+            }
+            _ => assert!(false),
+        }
     }
 
     #[test]
