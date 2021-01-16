@@ -1035,24 +1035,6 @@ mod tests {
     }
 
     #[test]
-    pub fn test_identifier() {
-        let mut scope = Scope::new();
-        scope.add("my_main", vec![], Unit, vec![("x", false, Bool)]);
-
-        let node = Ast::Identifier(1, "x".into());
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_main".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone())
-        .unwrap();
-        assert_eq!(ty, Type::Bool);
-    }
-
-    #[test]
     pub fn test_identifiers() {
         use crate::syntax::parser;
         for (text, expected) in vec![
@@ -1061,14 +1043,35 @@ mod tests {
                     let k: i32 := 5;
                     return k;
                 }",
-                I32,
+                Ok(I32),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := false;
                     return k;
                 }",
-                Bool,
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> string {
+                    let k: string := \"hello\";
+                    return k;
+                }",
+                Ok(Type::StringLiteral),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := false;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i32 but got bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Err("Semantic: L3: Return expected bool but got i32"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1077,19 +1080,23 @@ mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let fn_main = module.get_functions()[0].to_routine().unwrap();
-            let ret_stm = &fn_main.get_body()[1];
-            assert_eq!(ret_stm.get_type(), expected);
-            if let Ast::Return(_, Some(value)) = ret_stm {
-                assert_eq!(value.get_type(), expected);
-            } else {
-                panic!("Expected a return statement")
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
             }
-            /*match expected {
-                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
-                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
-            }*/
         }
     }
 
