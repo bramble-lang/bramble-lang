@@ -1,13 +1,20 @@
-use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::{module::{self, Item}, pnode::ParserInfo, routinedef}};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
-use crate::syntax::ty::Type;
-use Type::*;
 use crate::syntax::path::Path;
+use crate::syntax::ty::Type;
 use crate::{
     ast,
     diagnostics::config::{Tracing, TracingConfig},
 };
+use crate::{
+    ast::{Ast, Ast::*, BinaryOperator, UnaryOperator},
+    syntax::{
+        module::{self, Item},
+        pnode::ParserInfo,
+        routinedef,
+    },
+};
+use Type::*;
 
 use super::semanticnode::SemanticMetadata;
 
@@ -180,8 +187,9 @@ impl<'a> SemanticAnalyzer<'a> {
                     Ok((Bool, l, r))
                 } else {
                     Err(format!(
-                        "{} expected {} but found {}",
+                        "{} expected {} but found {} and {}",
                         op,
+                        l.get_type(),
                         l.get_type(),
                         r.get_type()
                     ))
@@ -190,7 +198,10 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>, String> {
+    fn resolve_types(
+        &mut self,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Module<SemanticMetadata>, String> {
         if let Module(m) = self.root {
             self.analyze_module(m, sym)
         } else {
@@ -813,26 +824,34 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn analyze_module(&mut self, m: &module::Module<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>, String> {
+    fn analyze_module(
+        &mut self,
+        m: &module::Module<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Module<SemanticMetadata>, String> {
         let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
         let mut meta = nmodule.get_metadata_mut().clone();
 
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
 
-        *nmodule.get_modules_mut() = m.get_modules()
+        *nmodule.get_modules_mut() = m
+            .get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
             .collect::<Result<Vec<module::Module<SemanticMetadata>>, String>>()?;
-        *nmodule.get_functions_mut() = m.get_functions()
+        *nmodule.get_functions_mut() = m
+            .get_functions()
             .iter()
             .map(|f| self.analyze_item(f, &mut meta.sym))
             .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
-        *nmodule.get_coroutines_mut() = m.get_coroutines()
+        *nmodule.get_coroutines_mut() = m
+            .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c, &mut meta.sym))
             .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
-        *nmodule.get_structs_mut() = m.get_structs()
+        *nmodule.get_structs_mut() = m
+            .get_structs()
             .iter()
             .map(|s| self.analyze_item(s, &mut meta.sym))
             .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
@@ -844,15 +863,23 @@ impl<'a> SemanticAnalyzer<'a> {
         Ok(nmodule)
     }
 
-    fn analyze_item(&mut self, i: &module::Item<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Item<SemanticMetadata>, String> {
+    fn analyze_item(
+        &mut self,
+        i: &module::Item<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Item<SemanticMetadata>, String> {
         match i {
             Item::Struct(s) => self.analyize_node(s, &None, sym).map(|n| Item::Struct(n)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
         }
     }
 
-    fn analyze_routine(&mut self, routine: &routinedef::RoutineDef<SemanticMetadata>, sym: &mut SymbolTable) -> Result<routinedef::RoutineDef<SemanticMetadata>, String> {
-        let routinedef::RoutineDef{
+    fn analyze_routine(
+        &mut self,
+        routine: &routinedef::RoutineDef<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<routinedef::RoutineDef<SemanticMetadata>, String> {
+        let routinedef::RoutineDef {
             meta,
             name,
             def,
@@ -901,10 +928,13 @@ impl<'a> SemanticAnalyzer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ast, syntax::{module::Item, pnode::PNode, routinedef}};
     use crate::ast::Ast;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
+    use crate::{
+        ast,
+        syntax::{module::Item, pnode::PNode, routinedef},
+    };
     use std::collections::HashMap;
 
     /*
@@ -1008,7 +1038,9 @@ mod tests {
         let ast = sa.from_parser_ast(&node).unwrap();
         let mut semantic = SemanticAnalyzer::new(&ast);
         let mut sym = SymbolTable::new_module("root");
-        let ty = semantic.traverse(&ast, &None, &mut sym).map(|n| n.get_type().clone());
+        let ty = semantic
+            .traverse(&ast, &None, &mut sym)
+            .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Type::I32));
     }
 
@@ -1019,7 +1051,9 @@ mod tests {
         let ast = sa.from_parser_ast(&node).unwrap();
         let mut semantic = SemanticAnalyzer::new(&ast);
         let mut sym = SymbolTable::new_module("root");
-        let ty = semantic.traverse(&ast, &None, &mut sym).map(|n| n.get_type().clone());
+        let ty = semantic
+            .traverse(&ast, &None, &mut sym)
+            .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Type::Bool));
     }
 
@@ -1030,7 +1064,9 @@ mod tests {
         let ast = sa.from_parser_ast(&node).unwrap();
         let mut semantic = SemanticAnalyzer::new(&ast);
         let mut sym = SymbolTable::new_module("root");
-        let ty = semantic.traverse(&ast, &None, &mut sym).map(|n| n.get_type().clone());
+        let ty = semantic
+            .traverse(&ast, &None, &mut sym)
+            .map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Type::StringLiteral));
     }
 
@@ -1306,16 +1342,17 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0] {
-                    if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: Path = vec!["root", "test"].into();
-                        assert_eq!(ty_path, &expected)
-                    } else {
-                        panic!("Not a custom type")
-                    }
+            if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0]
+            {
+                if let (_, Custom(ty_path)) = &params[0] {
+                    let expected: Path = vec!["root", "test"].into();
+                    assert_eq!(ty_path, &expected)
                 } else {
-                    panic!("Not a function")
+                    panic!("Not a custom type")
                 }
+            } else {
+                panic!("Not a function")
+            }
         }
     }
 
@@ -1338,7 +1375,9 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_coroutines()[0] {
+            if let Item::Routine(routinedef::RoutineDef { params, .. }) =
+                &result.get_coroutines()[0]
+            {
                 if let (_, Custom(ty_path)) = &params[0] {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
@@ -1721,43 +1760,70 @@ mod tests {
     }
 
     #[test]
-    pub fn test_comparison_ops() {
-        let scope = Scope::new();
-        let tests: Vec<(PNode, Result<Type, String>)> = vec![
-            (
-                Ast::BinaryOp(
-                    1,
-                    BinaryOperator::Eq,
-                    Box::new(Ast::Integer(1, 3)),
-                    Box::new(Ast::Integer(1, 5)),
+    pub fn test_comparison_op() {
+        use crate::syntax::parser;
+        for op in vec!["<", ">", "<=", ">=", "==", "!="] {
+            for (text, expected) in vec![
+                (
+                    String::from(&format!(
+                        "fn main() -> bool {{
+                            let k: bool := 1 {} 5;
+                            return k;
+                        }}", op)),
+                    Ok(Bool),
                 ),
-                Ok(Type::Bool),
-            ),
-            (
-                Ast::BinaryOp(
-                    1,
-                    BinaryOperator::Eq,
-                    Box::new(Ast::Boolean(1, true)),
-                    Box::new(Ast::Boolean(1, false)),
+                (
+                    String::from(&format!(
+                        "fn main() -> bool {{
+                            let k: bool := 1 {} true;
+                            return k;
+                        }}", op)),
+                    Err(format!("Semantic: L2: {} expected i32 but found i32 and bool", op)),
                 ),
-                Ok(Type::Bool),
-            ),
-            (
-                Ast::BinaryOp(
-                    1,
-                    BinaryOperator::Eq,
-                    Box::new(Ast::Integer(1, 3)),
-                    Box::new(Ast::Boolean(1, true)),
+                (
+                    String::from(&format!(
+                        "fn main() -> bool {{
+                            let k: bool := false {} 5;
+                            return k;
+                        }}", op)),
+                    Err(format!("Semantic: L2: {} expected bool but found bool and i32", op)),
                 ),
-                Err("L1: == expected i32 but found bool".into()),
-            ),
-        ];
+            ] {
+                let tokens: Vec<Token> = Lexer::new(&text)
+                    .tokenize()
+                    .into_iter()
+                    .collect::<Result<_, _>>()
+                    .unwrap();
+                let ast = parser::parse(tokens).unwrap().unwrap();
+                let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+                match expected {
+                    Ok(expected_ty) => {
+                        let module = module.unwrap();
+                        let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-        for (test, expected) in tests.iter() {
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone());
-            assert_eq!(ty, *expected);
+                        // validate that the RHS of the bind is the correct type
+                        let bind_stm = &fn_main.get_body()[0];
+                        assert_eq!(bind_stm.get_type(), expected_ty);
+                        if let Ast::Bind(.., lhs) = bind_stm {
+                            assert_eq!(lhs.get_type(), expected_ty);
+                        } else {
+                            panic!("Expected a bind statement");
+                        }
+
+                        // Validate that the return statement is the correct type
+                        let ret_stm = &fn_main.get_body()[1];
+                        assert_eq!(ret_stm.get_type(), expected_ty);
+                        if let Ast::Return(_, Some(value)) = ret_stm {
+                            assert_eq!(value.get_type(), expected_ty);
+                        } else {
+                            panic!("Expected a return statement")
+                        }
+                    }
+                    Err(msg) => {
+                        assert_eq!(module.unwrap_err(), msg);
+                    }
+                }
+            }
         }
     }
 
@@ -1849,12 +1915,7 @@ mod tests {
         // RHS type matches the LHS type
         {
             let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("x".into(), true, Type::I32)],
-            );
+            scope.add("my_func", vec![], Unit, vec![("x".into(), true, Type::I32)]);
 
             let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
             let mut sa = SemanticAst::new();
@@ -2153,11 +2214,16 @@ mod tests {
         module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
-            .unwrap() {
-                let typed_func = module.get_item("my_func").unwrap().to_routine().unwrap();
-                let ty = &typed_func.get_metadata().ty;
-                assert_eq!(ty, I32);
+        if let Ast::Module(module) = start(
+            &mut sa.from_parser_ast(&Ast::Module(module)).unwrap(),
+            &None,
+            &scope,
+        )
+        .unwrap()
+        {
+            let typed_func = module.get_item("my_func").unwrap().to_routine().unwrap();
+            let ty = &typed_func.get_metadata().ty;
+            assert_eq!(ty, I32);
         } else {
             panic!("Failed to deconstruct module")
         }
@@ -2175,7 +2241,11 @@ mod tests {
         module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope);
+        let ty = start(
+            &mut sa.from_parser_ast(&Ast::Module(module)).unwrap(),
+            &None,
+            &scope,
+        );
         assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
     }
 
@@ -2196,11 +2266,16 @@ mod tests {
         module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
-            .unwrap() {
-                let typed_func = module.get_item("my_co").unwrap().to_routine().unwrap();
-                let ty = &typed_func.get_metadata().ty;
-                assert_eq!(ty, I32);
+        if let Ast::Module(module) = start(
+            &mut sa.from_parser_ast(&Ast::Module(module)).unwrap(),
+            &None,
+            &scope,
+        )
+        .unwrap()
+        {
+            let typed_func = module.get_item("my_co").unwrap().to_routine().unwrap();
+            let ty = &typed_func.get_metadata().ty;
+            assert_eq!(ty, I32);
         } else {
             panic!("Failed to deconstruct module")
         }
@@ -2217,7 +2292,11 @@ mod tests {
         module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope);
+        let ty = start(
+            &mut sa.from_parser_ast(&Ast::Module(module)).unwrap(),
+            &None,
+            &scope,
+        );
         assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
     }
 
