@@ -368,8 +368,14 @@ impl<'a> SemanticAnalyzer<'a> {
                 )?)),
             ),
             _ => {
-                let expected = match call {ast::RoutineCall::Function => "function", ast::RoutineCall::CoroutineInit => "coroutine"};
-                return Err(format!("Expected {0} but {1} is a {2}", expected, routine_path, symbol.ty))
+                let expected = match call {
+                    ast::RoutineCall::Function => "function",
+                    ast::RoutineCall::CoroutineInit => "coroutine",
+                };
+                return Err(format!(
+                    "Expected {0} but {1} is a {2}",
+                    expected, routine_path, symbol.ty
+                ));
             }
         };
 
@@ -937,7 +943,7 @@ mod tests {
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::syntax::{module::Item, routinedef};
-    
+
     #[test]
     pub fn test_integer() {
         let node = Ast::Integer(1, 5);
@@ -1676,7 +1682,9 @@ mod tests {
                         "fn main() -> bool {{
                             let k: bool := 1 {} 5;
                             return k;
-                        }}", op)),
+                        }}",
+                        op
+                    )),
                     Ok(Bool),
                 ),
                 (
@@ -1684,16 +1692,26 @@ mod tests {
                         "fn main() -> bool {{
                             let k: bool := 1 {} true;
                             return k;
-                        }}", op)),
-                    Err(format!("Semantic: L2: {} expected i32 but found i32 and bool", op)),
+                        }}",
+                        op
+                    )),
+                    Err(format!(
+                        "Semantic: L2: {} expected i32 but found i32 and bool",
+                        op
+                    )),
                 ),
                 (
                     String::from(&format!(
                         "fn main() -> bool {{
                             let k: bool := false {} 5;
                             return k;
-                        }}", op)),
-                    Err(format!("Semantic: L2: {} expected bool but found bool and i32", op)),
+                        }}",
+                        op
+                    )),
+                    Err(format!(
+                        "Semantic: L2: {} expected bool but found bool and i32",
+                        op
+                    )),
                 ),
             ] {
                 let tokens: Vec<Token> = Lexer::new(&text)

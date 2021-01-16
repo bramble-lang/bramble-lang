@@ -1,4 +1,8 @@
-use super::{module::{Item, Module}, path::Path, ty::Type};
+use super::{
+    module::{Item, Module},
+    path::Path,
+    ty::Type,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -52,7 +56,6 @@ impl std::fmt::Display for UnaryOperator {
     }
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RoutineCall {
     Function,
@@ -68,7 +71,6 @@ impl std::fmt::Display for RoutineCall {
         }
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast<I> {
@@ -170,7 +172,7 @@ impl<I> Ast<I> {
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
-            | Module(m) => m.get_metadata(),
+            Module(m) => m.get_metadata(),
         }
     }
 
@@ -225,9 +227,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::Identifier(_, name) | Ast::StructDef(_, name, ..)=> {
-                Some(name)
-            }
+            Ast::Identifier(_, name) | Ast::StructDef(_, name, ..) => Some(name),
             _ => None,
         }
     }

@@ -1,7 +1,15 @@
-use crate::{ast::*, syntax::path::Path, syntax::{module::{self, Item}, routinedef::RoutineDef, ty::Type}};
+use crate::diagnostics::config::TracingConfig;
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
-use crate::diagnostics::config::TracingConfig;
+use crate::{
+    ast::*,
+    syntax::path::Path,
+    syntax::{
+        module::{self, Item},
+        routinedef::RoutineDef,
+        ty::Type,
+    },
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
@@ -205,7 +213,10 @@ impl SemanticAst {
         node
     }
 
-    pub fn from_module(&mut self, m: &module::Module<u32>) -> Result<module::Module<SemanticMetadata>, String> {
+    pub fn from_module(
+        &mut self,
+        m: &module::Module<u32>,
+    ) -> Result<module::Module<SemanticMetadata>, String> {
         let meta = self.module_semantic_metadata_from(*m.get_metadata(), m.get_name());
 
         let mut nmodule = module::Module::new(m.get_name(), meta);
@@ -213,7 +224,7 @@ impl SemanticAst {
             nmodule.add_module(self.from_module(module)?);
         }
         for func in m.get_functions().iter() {
-           nmodule.add_item(self.from_item(func)?)?;
+            nmodule.add_item(self.from_item(func)?)?;
         }
         for cor in m.get_coroutines().iter() {
             nmodule.add_item(self.from_item(cor)?)?;
@@ -227,7 +238,7 @@ impl SemanticAst {
     fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>, String> {
         match m {
             Item::Struct(s) => self.from_parser_ast(s).map(|s| Item::Struct(*s)),
-            Item::Routine(RoutineDef{
+            Item::Routine(RoutineDef {
                 meta: ln,
                 def,
                 name: fname,

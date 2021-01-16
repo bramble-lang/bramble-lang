@@ -1,4 +1,8 @@
-use crate::{semantics::semanticnode::SemanticMetadata, syntax::path::Path, syntax::{routinedef::RoutineDefType, ty::Type}};
+use crate::{
+    semantics::semanticnode::SemanticMetadata,
+    syntax::path::Path,
+    syntax::{routinedef::RoutineDefType, ty::Type},
+};
 
 use super::{
     struct_table::ResolvedStructTable,
@@ -38,7 +42,12 @@ impl Scope {
         }
     }
 
-    pub fn new_routine(id: u32, canon_path: &Path, routine_type: RoutineDefType, ret_ty: &Type) -> Scope {
+    pub fn new_routine(
+        id: u32,
+        canon_path: &Path,
+        routine_type: RoutineDefType,
+        ret_ty: &Type,
+    ) -> Scope {
         Scope::new(
             id,
             Level::Routine {
@@ -176,8 +185,14 @@ impl std::fmt::Display for Scope {
 #[derive(Debug, PartialEq)]
 pub enum Level {
     Local,
-    Routine { next_label: i32, allocation: i32, routine_type: RoutineDefType },
-    Module { name: String },
+    Routine {
+        next_label: i32,
+        allocation: i32,
+        routine_type: RoutineDefType,
+    },
+    Module {
+        name: String,
+    },
 }
 
 impl Level {

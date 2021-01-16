@@ -1,7 +1,14 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item}, routinedef::{RoutineDef, RoutineDefType}}};
+use crate::{
+    compiler::ast::scope::{LayoutData, Scope},
+    semantics::semanticnode::SemanticMetadata,
+    syntax::{
+        module::{self, Item},
+        routinedef::{RoutineDef, RoutineDefType},
+    },
+};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 
 pub type CompilerNode = Ast<Scope>;
@@ -212,8 +219,8 @@ impl CompilerNode {
         for item in items.iter() {
             let (c_ast_item, no) = match item {
                 Item::Struct(s) => {
-                   let (c, l) = CompilerNode::compute_offsets(s, layout, struct_table);
-                   (Item::Struct(c), l)
+                    let (c, l) = CompilerNode::compute_offsets(s, layout, struct_table);
+                    (Item::Struct(c), l)
                 }
                 Item::Routine(rd) => {
                     let (rd2, ld) = Self::compute_layouts_for_routine(&rd, layout, struct_table);
@@ -232,7 +239,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (RoutineDef<Scope>, LayoutData) {
-        let RoutineDef{
+        let RoutineDef {
             meta,
             def,
             name,
@@ -245,8 +252,7 @@ impl CompilerNode {
             RoutineDefType::Function => 0,
             RoutineDefType::Coroutine => 20,
         };
-        let (mut meta, offset) =
-            Scope::routine_from(meta, def, struct_table, initial_frame_size);
+        let (mut meta, offset) = Scope::routine_from(meta, def, struct_table, initial_frame_size);
         let mut nbody = vec![];
         let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
@@ -295,10 +301,12 @@ impl<Scope> RoutineDef<Scope> {
         if params.len() == expected_params.len() {
             Ok(())
         } else {
-            Err(format!("Critical: expected {} but go {} parameters for {}",
-            expected_params.len(),
-            params.len(),
-            self.root_str()))
+            Err(format!(
+                "Critical: expected {} but go {} parameters for {}",
+                expected_params.len(),
+                params.len(),
+                self.root_str()
+            ))
         }
     }
 }
@@ -307,14 +315,19 @@ impl<Scope> RoutineDef<Scope> {
 mod ast_tests {
     use module::Module;
 
-    use crate::{compiler::ast::scope::Level, diagnostics::config::TracingConfig, lexer::{lexer::Lexer, tokens::Token}, syntax::{ast::BinaryOperator, routinedef::RoutineDef}};
+    use super::*;
+    use crate::semantics::type_checker::type_check;
     use crate::syntax::routinedef::RoutineDefType;
     use crate::syntax::ty::Type;
     use crate::{compiler::ast::scope, syntax::path::Path};
+    use crate::{
+        compiler::ast::scope::Level,
+        diagnostics::config::TracingConfig,
+        lexer::{lexer::Lexer, tokens::Token},
+        syntax::{ast::BinaryOperator, routinedef::RoutineDef},
+    };
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
-    use crate::semantics::type_checker::type_check;
-    use super::*;
 
     #[test]
     pub fn test_node_id_is_copied() {
@@ -537,7 +550,11 @@ mod ast_tests {
         let mut module = Module::new("root", SemanticMetadata::new(1, 1, Type::Unit));
         module.add_function(sn).unwrap();
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_offsets(&Ast::Module(module), LayoutData::new(0), &empty_struct_table);
+        let cn = CompilerNode::compute_offsets(
+            &Ast::Module(module),
+            LayoutData::new(0),
+            &empty_struct_table,
+        );
         assert_eq!(cn.1.offset, 0);
         if let CompilerNode::Module(module) = cn.0 {
             match module.get_item("func") {
@@ -670,7 +687,8 @@ mod ast_tests {
             body: vec![],
         };
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_routine(&sn, LayoutData::new(0), &empty_struct_table);
+        let cn =
+            CompilerNode::compute_layouts_for_routine(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             RoutineDef {
@@ -726,10 +744,7 @@ mod ast_tests {
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved = unrealized_st.resolve();
 
-            assert_eq!(
-                resolved.err(),
-                None
-            );
+            assert_eq!(resolved.err(), None);
         }
     }
 }

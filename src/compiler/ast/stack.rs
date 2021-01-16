@@ -44,7 +44,9 @@ impl<'a> ScopeStack<'a> {
     pub fn in_coroutine(&self) -> bool {
         for scope in self.stack.iter().rev() {
             match scope.level {
-                Level::Routine{routine_type, ..} => return routine_type == RoutineDefType::Coroutine,
+                Level::Routine { routine_type, .. } => {
+                    return routine_type == RoutineDefType::Coroutine
+                }
                 _ => (),
             }
         }
@@ -66,8 +68,11 @@ impl std::fmt::Display for ScopeStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{compiler::ast::{ast::CompilerNode, scope::Scope}, syntax::{module, routinedef::RoutineDef}};
     use crate::syntax::ty::Type;
+    use crate::{
+        compiler::ast::{ast::CompilerNode, scope::Scope},
+        syntax::{module, routinedef::RoutineDef},
+    };
 
     #[test]
     fn test_find_symbol_in_current_scope() {
