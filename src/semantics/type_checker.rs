@@ -2544,52 +2544,76 @@ mod tests {
     }
 
     #[test]
-    fn test_if_expression() {
-        let mut scope = Scope::new();
-        scope.add("my_main", vec![], I32, vec![("c", false, I32)]);
-
-        for (c, t, f, ex) in vec![
+    pub fn test_if_expressions() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
             (
-                Ast::Boolean(1, true),
-                Ast::Integer(1, 5),
-                Ast::Integer(1, 7),
+                "fn main() {
+                    let x: i32 := if (true) {1} else {2};
+                    return;
+                }
+                ",
                 Ok(I32),
             ),
             (
-                Ast::Boolean(1, true),
-                Ast::Boolean(1, true),
-                Ast::Boolean(1, true),
-                Ok(Bool),
+                "fn main() {
+                    let x: i32 := if (4) {1} else {2};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Expected boolean expression in if conditional, got: i32"),
             ),
             (
-                Ast::Integer(1, 13),
-                Ast::Integer(1, 5),
-                Ast::Integer(1, 7),
-                Err("L1: Expected boolean expression in if conditional, got: i32".into()),
+                "fn main() {
+                    let x: i32 := if (false) {true} else {2};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: If expression has mismatching arms: expected bool got i32"),
             ),
             (
-                Ast::Boolean(1, true),
-                Ast::Integer(1, 5),
-                Ast::Boolean(1, true),
-                Err("L1: If expression has mismatching arms: expected i32 got bool".into()),
+                "fn main() {
+                    let x: i32 := if (false) {5} else {\"hello\"};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: If expression has mismatching arms: expected i32 got string"),
             ),
             (
-                Ast::Boolean(1, true),
-                Ast::Boolean(1, true),
-                Ast::Integer(1, 5),
-                Err("L1: If expression has mismatching arms: expected bool got i32".into()),
+                "fn main() {
+                    let x: i32 := if (false) {\"true\"} else {\"false\"};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Bind expected i32 but got string"),
             ),
         ] {
-            let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-            let mut sa = SemanticAst::new();
-            let result = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_main".into()),
-                &scope,
-            )
-            .map(|n| n.get_type().clone());
-            assert_eq!(result, ex);
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., rhs) = ret_stm {
+                        let rhs_ty = rhs.get_type();
+                        assert_eq!(rhs_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
     }
 
