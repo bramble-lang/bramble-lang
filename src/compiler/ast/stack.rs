@@ -1,6 +1,5 @@
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::Item, routinedef::RoutineDef}};
 use crate::compiler::ast::scope::Level;
-use crate::{syntax::routinedef::RoutineDefType, syntax::path::Path};
+use crate::syntax::routinedef::RoutineDefType;
 
 use super::{scope::Scope, symbol_table::Symbol};
 
@@ -42,7 +41,7 @@ impl<'a> ScopeStack<'a> {
         None
     }
 
-    pub fn find_coroutine(&self, name: &str) -> bool {
+    pub fn in_coroutine(&self) -> bool {
         for scope in self.stack.iter().rev() {
             match scope.level {
                 Level::Routine{routine_type, ..} => return routine_type == RoutineDefType::Coroutine,
@@ -67,7 +66,7 @@ impl std::fmt::Display for ScopeStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{compiler::ast::scope::Scope, syntax::{module, routinedef::RoutineDef}};
+    use crate::{compiler::ast::{ast::CompilerNode, scope::Scope}, syntax::{module, routinedef::RoutineDef}};
     use crate::syntax::ty::Type;
 
     #[test]
@@ -288,6 +287,6 @@ mod tests {
         let tmp = CompilerNode::RoutineDef(fun2_node);
         stack.push(&tmp.get_metadata());
 
-        assert!(stack.find_coroutine("cor"));
+        assert!(stack.in_coroutine());
     }
 }
