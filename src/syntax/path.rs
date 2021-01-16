@@ -1,3 +1,5 @@
+use braid_lang::result::Result;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path {
     path: Vec<String>,
@@ -48,7 +50,7 @@ impl Path {
     - If this path begins with `self` then `self` will be replaced with `current_path`
     - occurances of `super` will move up the current path
     */
-    pub fn to_canonical(&self, current_path: &Path) -> Result<Path, String> {
+    pub fn to_canonical(&self, current_path: &Path) -> Result<Path> {
         if self.path[0] == "root" {
             Ok(self.clone())
         } else {

@@ -5,6 +5,7 @@ use crate::syntax::{
     ty::Type,
 };
 use crate::{ast, syntax::path::Path};
+use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
@@ -77,7 +78,7 @@ impl SymbolTable {
         }
     }
 
-    pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<(), String> {
+    pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
         if self.get(name).is_some() {
             Err(format!("{} already declared", name))
         } else {
@@ -90,11 +91,11 @@ impl SymbolTable {
         }
     }
 
-    pub fn from_module(module: &mut Module<SemanticMetadata>) -> Result<(), String> {
+    pub fn from_module(module: &mut Module<SemanticMetadata>) -> Result<()> {
         Self::generate(module)
     }
 
-    pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<(), String> {
+    pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<()> {
         let mut metadata = m.get_metadata().clone();
 
         let fm = m.get_functions_mut();
@@ -122,7 +123,7 @@ impl SymbolTable {
     fn traverse(
         item: &mut Item<SemanticMetadata>,
         sym: &mut SemanticMetadata,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         use ast::Ast;
         match item {
             Item::Routine(RoutineDef {

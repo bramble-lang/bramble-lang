@@ -10,6 +10,7 @@ use crate::{
         ty::Type,
     },
 };
+use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticMetadata {
@@ -68,7 +69,7 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>, String> {
+    pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>> {
         use Ast::*;
         let node = match ast {
             Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
@@ -216,7 +217,7 @@ impl SemanticAst {
     pub fn from_module(
         &mut self,
         m: &module::Module<u32>,
-    ) -> Result<module::Module<SemanticMetadata>, String> {
+    ) -> Result<module::Module<SemanticMetadata>> {
         let meta = self.module_semantic_metadata_from(*m.get_metadata(), m.get_name());
 
         let mut nmodule = module::Module::new(m.get_name(), meta);
@@ -235,7 +236,7 @@ impl SemanticAst {
         Ok(nmodule)
     }
 
-    fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>, String> {
+    fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>> {
         match m {
             Item::Struct(s) => self.from_parser_ast(s).map(|s| Item::Struct(*s)),
             Item::Routine(RoutineDef {
