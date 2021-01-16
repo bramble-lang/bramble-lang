@@ -501,9 +501,6 @@ impl<'a> Compiler<'a> {
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
                 }}
             }
-            /*Ast::Module(m) => {
-                self.traverse_module(m, current_func, code)?;
-            }*/
             Ast::Return(_, ref exp) => {
                 assembly! {(code) {
                     {{self.return_exp(exp, current_func)?}}

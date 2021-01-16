@@ -100,7 +100,6 @@ pub enum Ast<I> {
     YieldReturn(I, Option<Box<Ast<I>>>),
 
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
-    //Module(Module<I>),
     StructDef(I, String, Vec<(String, Type)>),
     StructExpression(I, Path, Vec<(String, Ast<I>)>),
 }
@@ -137,7 +136,6 @@ impl<I> Ast<I> {
 
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
-            //Module(m) => format!("module {}", m.get_name()),
             StructDef(_, name, ..) => format!("definition of struct {}", name),
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
         }
@@ -171,7 +169,6 @@ impl<I> Ast<I> {
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
-            //Module(m) => m.get_metadata(),
         }
     }
 
@@ -203,7 +200,6 @@ impl<I> Ast<I> {
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
-            //Module(m) => m.get_metadata_mut(),
         }
     }
 

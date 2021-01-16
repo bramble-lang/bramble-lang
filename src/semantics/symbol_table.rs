@@ -66,7 +66,6 @@ impl SymbolTable {
     }
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
-        //self.sym.get(name)
         self.sym.iter().find(|s| s.name == name)
     }
 
