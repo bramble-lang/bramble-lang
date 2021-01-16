@@ -1382,31 +1382,61 @@ mod tests {
     }
 
     #[test]
-    pub fn test_unary_ops() {
-        let mut scope = Scope::new();
-        scope.add(
-            "my_func",
-            vec![],
-            Unit,
-            vec![("x", false, I32), ("b", false, Bool)],
-        );
-        // operand is i32
-        {
-            let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Integer(1, 5)));
-
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone())
+    pub fn test_unary() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return -k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := false;
+                    return -k;
+                }",
+                Err("Semantic: L3: - expected i32 but found bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := false;
+                    return !k;
+                }",
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return !k;
+                }",
+                Err("Semantic: L3: ! expected bool but found i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
                 .unwrap();
-            assert_eq!(ty, Type::I32);
-        }
-        // operand is not i32
-        {
-            let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Boolean(1, true)));
-
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
-            assert_eq!(ty, Err("L1: - expected i32 but found bool".into()));
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
     }
 
