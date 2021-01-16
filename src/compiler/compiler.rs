@@ -520,27 +520,6 @@ impl<'a> Compiler<'a> {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
-            Ast::RoutineDef(RoutineDef {
-                meta,
-                def: RoutineDefType::Coroutine,
-                name: ref fn_name,
-                body: stmts,
-                ..
-            }) => {
-                assembly! {(code) {
-                    @{meta.canon_path().to_label()}:
-                    ; {{format!("Define {}", meta.canon_path())}}
-                }};
-
-                // Prepare stack frame for this function
-                for s in stmts.iter() {
-                    self.traverse(s, fn_name, code)?;
-                }
-                assembly! {(code) {
-                    mov %ebx, ^terminus;
-                    jmp @runtime_yield_return;
-                }};
-            }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
                 let co_def = self
                     .root
@@ -575,45 +554,8 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::RoutineDef(rd) => {
-                if let RoutineDef {
-                    meta: scope,
-                    def: RoutineDefType::Function,
-                    name: ref fn_name,
-                    body: stmts,
-                    ..
-                } = rd
-                {
-                    let total_offset = match scope.level() {
-                        Routine { allocation, .. } => allocation,
-                        _ => panic!("Invalid scope for function definition"),
-                    };
-
-                    assembly! {(code) {
-                    @{scope.canon_path().to_label()}:
-                        ; {{format!("Define {}", scope.canon_path())}}
-                        ;"Prepare stack frame for this function"
-                        push %ebp;
-                        mov %ebp, %esp;
-                        sub %esp, {*total_offset};
-                        ; "Move function parameters from registers into the stack frame"
-                        {{self.move_params_into_stackframe(rd, &fn_param_registers)?}}
-                        ; "Done moving function parameters from registers into the stack frame"
-                    }};
-
-                    for s in stmts.iter() {
-                        self.traverse(s, fn_name, code)?;
-                    }
-
-                    assembly! {(code) {
-                        ; "Clean up frame before leaving function"
-                        mov %esp, %ebp;
-                        pop %ebp;
-                        ret;
-                    }};
-                } else {
-                    panic!("")
-                }
+            Ast::RoutineDef(_) => {
+                    panic!("this is being deprecated and should never be reaced")
             }
             Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
