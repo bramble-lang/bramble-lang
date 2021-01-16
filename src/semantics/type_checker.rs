@@ -2072,6 +2072,15 @@ mod tests {
                 Ok(I32),
             ),
             (
+                // test recursion
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return number();}
+                ",
+                Ok(I32),
+            ),
+            (
                 "fn main() -> bool {
                     return number();
                 }
