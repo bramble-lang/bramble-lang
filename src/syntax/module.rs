@@ -1,13 +1,49 @@
-use super::{ast::Ast, path::Path};
+use super::{ast::Ast, path::Path, routinedef::{RoutineDef, RoutineDefType}};
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Item<M> {
+    Routine(RoutineDef<M>),
+    Struct(Ast<M>)
+}
+
+impl<M> Item<M> {
+    pub fn get_name(&self) -> &str {
+        match self {
+            Item::Routine(r) => r.get_name(),
+            Item::Struct(s) => s.get_name().unwrap(),
+        }
+    }
+
+    pub fn to_routine(&self) -> Option<&RoutineDef<M>> {
+        match self {
+            Item::Routine(r) => Some(r),
+            Item::Struct(_) => None,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        match self {
+            Item::Routine(r) => r.get_metadata(),
+            Item::Struct(s) => s.get_metadata(),
+        }
+    }
+
+    pub fn root_str(&self) -> String {
+        match self {
+            Item::Routine(r) => format!("{} {}", r.get_def(), r.get_name()),
+            Item::Struct(s) => s.root_str(),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module<M> {
     meta: M,
     name: String,
     modules: Vec<Module<M>>,
-    functions: Vec<Ast<M>>,
-    coroutines: Vec<Ast<M>>,
-    structs: Vec<Ast<M>>,
+    functions: Vec<Item<M>>,
+    coroutines: Vec<Item<M>>,
+    structs: Vec<Item<M>>,
 }
 
 impl<M> Module<M> {
@@ -26,20 +62,20 @@ impl<M> Module<M> {
         self.modules.push(m);
     }
 
-    pub fn add_function(&mut self, f: Ast<M>) -> Result<(), String> {
-        let fname = f.get_name().expect("Function must have a name");
+    pub fn add_function(&mut self, f: RoutineDef<M>) -> Result<(), String> {
+        let fname = f.get_name();
         if self.get_item(fname).is_none() {
-            self.functions.push(f);
+            self.functions.push(Item::Routine(f));
             Ok(())
         } else {
             Err(format!("{} already exists in module", fname))
         }
     }
 
-    pub fn add_coroutine(&mut self, c: Ast<M>) -> Result<(), String> {
-        let cname = c.get_name().expect("Coroutine must have a name");
+    pub fn add_coroutine(&mut self, c: RoutineDef<M>) -> Result<(), String> {
+        let cname = c.get_name();
         if self.get_item(cname).is_none() {
-            self.coroutines.push(c);
+            self.coroutines.push(Item::Routine(c));
             Ok(())
         } else {
             Err(format!("{} already exists in module", cname))
@@ -49,10 +85,21 @@ impl<M> Module<M> {
     pub fn add_struct(&mut self, s: Ast<M>) -> Result<(), String> {
         let name = s.get_name().expect("Struct must have a name");
         if self.get_item(name).is_none() {
-            self.structs.push(s);
+            self.structs.push(Item::Struct(s));
             Ok(())
         } else {
             Err(format!("{} already exists in module", name))
+        }
+    }
+
+    pub fn add_item(&mut self, i: Item<M>) -> Result<(), String>{
+        match i {
+            Item::Routine(r) => if *r.get_def() == RoutineDefType::Function {
+                self.add_function(r)
+            } else {
+                self.add_coroutine(r)
+            },
+            Item::Struct(s) => self.add_struct(s)
         }
     }
 
@@ -76,27 +123,27 @@ impl<M> Module<M> {
         &mut self.modules
     }
 
-    pub fn get_functions(&self) -> &Vec<Ast<M>> {
+    pub fn get_functions(&self) -> &Vec<Item<M>> {
         &self.functions
     }
 
-    pub fn get_functions_mut(&mut self) -> &mut Vec<Ast<M>> {
+    pub fn get_functions_mut(&mut self) -> &mut Vec<Item<M>> {
         &mut self.functions
     }
 
-    pub fn get_coroutines(&self) -> &Vec<Ast<M>> {
+    pub fn get_coroutines(&self) -> &Vec<Item<M>> {
         &self.coroutines
     }
 
-    pub fn get_coroutines_mut(&mut self) -> &mut Vec<Ast<M>> {
+    pub fn get_coroutines_mut(&mut self) -> &mut Vec<Item<M>> {
         &mut self.coroutines
     }
 
-    pub fn get_structs(&self) -> &Vec<Ast<M>> {
+    pub fn get_structs(&self) -> &Vec<Item<M>> {
         &self.structs
     }
 
-    pub fn get_structs_mut(&mut self) -> &mut Vec<Ast<M>> {
+    pub fn get_structs_mut(&mut self) -> &mut Vec<Item<M>> {
         &mut self.structs
     }
 
@@ -104,21 +151,21 @@ impl<M> Module<M> {
         self.modules.iter().find(|m| m.name == name)
     }
 
-    pub fn get_item(&self, name: &str) -> Option<&Ast<M>> {
+    pub fn get_item(&self, name: &str) -> Option<&Item<M>> {
         self.functions
             .iter()
-            .find(|f| f.get_name().map_or(false, |n| n == name))
+            .find(|f| f.get_name() == name)
             .or(self
                 .coroutines
                 .iter()
-                .find(|c| c.get_name().map_or(false, |n| n == name))
+                .find(|c| c.get_name() == name)
                 .or(self
                     .structs
                     .iter()
-                    .find(|c| c.get_name().map_or(false, |n| n == name))))
+                    .find(|c| c.get_name() == name)))
     }
 
-    pub fn go_to(&self, path: &Path) -> Option<&Ast<M>> {
+    pub fn go_to(&self, path: &Path) -> Option<&Item<M>> {
         // If the path is empty, then return None as it is not possible for
         // anything to match
         if path.len() == 0 {
@@ -173,7 +220,7 @@ impl<M> Module<M> {
 
 #[cfg(test)]
 mod test {
-    use crate::syntax::ast::RoutineDef;
+    use crate::syntax::routinedef::{RoutineDef, RoutineDefType};
     use crate::syntax::ty::Type;
 
     use super::*;
@@ -188,10 +235,10 @@ mod test {
     #[test]
     pub fn test_get_nonexistant_item() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -204,26 +251,26 @@ mod test {
     #[test]
     pub fn test_add_function() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
         let f = module.get_item("func");
-        assert_eq!(f, Some(&fdef));
+        assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 
     #[test]
     pub fn test_add_function_that_already_exists() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -236,26 +283,26 @@ mod test {
     #[test]
     pub fn test_add_coroutine() {
         let mut module = Module::new("test", 1);
-        let cdef = Ast::RoutineDef {
+        let cdef = RoutineDef {
             meta: 1,
             name: "cor".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
         module.add_coroutine(cdef.clone()).unwrap();
         let c = module.get_item("cor").unwrap();
-        assert_eq!(c, &cdef);
+        assert_eq!(c, &Item::Routine(cdef));
     }
 
     #[test]
     pub fn test_add_coroutine_that_already_exists() {
         let mut module = Module::new("test", 1);
-        let cdef = Ast::RoutineDef {
+        let cdef = RoutineDef {
             meta: 1,
             name: "cor".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -268,20 +315,20 @@ mod test {
     #[test]
     pub fn test_add_coroutine_with_same_name_as_function() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
 
-        let cdef = Ast::RoutineDef {
+        let cdef = RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -293,20 +340,20 @@ mod test {
     #[test]
     pub fn test_add_function_with_same_name_as_coroutine() {
         let mut module = Module::new("test", 1);
-        let cdef = Ast::RoutineDef {
+        let cdef = RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
         module.add_coroutine(cdef.clone()).unwrap();
 
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "dupe".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -318,10 +365,10 @@ mod test {
     #[test]
     pub fn test_go_to_item_does_not_exist() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -334,10 +381,10 @@ mod test {
     #[test]
     pub fn test_go_to_root_does_not_match() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -350,42 +397,42 @@ mod test {
     #[test]
     pub fn test_go_to_function() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "func".into(),
-            def: RoutineDef::Function,
+            def: RoutineDefType::Function,
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
         let f = module.go_to(&vec!["test", "func"].into());
-        assert_eq!(f, Some(&fdef));
+        assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 
     #[test]
     pub fn test_go_to_coroutine() {
         let mut module = Module::new("test", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "co".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
         module.add_coroutine(fdef.clone()).unwrap();
         let f = module.go_to(&vec!["test", "co"].into());
-        assert_eq!(f, Some(&fdef));
+        assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 
     #[test]
     pub fn test_go_to_nested() {
         let mut module = Module::new("inner", 1);
-        let fdef = Ast::RoutineDef {
+        let fdef = RoutineDef {
             meta: 1,
             name: "co".into(),
-            def: RoutineDef::Coroutine,
+            def: RoutineDefType::Coroutine,
             params: vec![],
             ty: Type::I32,
             body: vec![],
@@ -394,6 +441,6 @@ mod test {
         let mut outer = Module::new("outer", 2);
         outer.add_module(module.clone());
         let f = outer.go_to(&vec!["outer", "inner", "co"].into());
-        assert_eq!(f, Some(&fdef));
+        assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 }

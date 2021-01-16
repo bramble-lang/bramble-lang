@@ -1,4 +1,4 @@
-use super::{path::Path, ty::Type, module::Module};
+use super::{module::{Item, Module}, path::Path, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -52,21 +52,6 @@ impl std::fmt::Display for UnaryOperator {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum RoutineDef {
-    Function,
-    Coroutine,
-}
-
-impl std::fmt::Display for RoutineDef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        use RoutineDef::*;
-        match self {
-            Coroutine => f.write_str("coroutine def"),
-            Function => f.write_str("function def"),
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RoutineCall {
@@ -113,14 +98,6 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    RoutineDef {
-        meta: I,
-        def: RoutineDef,
-        name: String,
-        params: Vec<(String, Type)>,
-        ty: Type,
-        body: Vec<Ast<I>>,
-    },
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     Module(Module<I>),
     StructDef(I, String, Vec<(String, Type)>),
@@ -157,7 +134,6 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            RoutineDef { def, name, .. } => format!("{} for {}", def, name),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
             Module(m) => format!("module {}", m.get_name()),
@@ -191,7 +167,6 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineDef { meta: m, .. }
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
@@ -224,7 +199,6 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineDef { meta: m, .. }
             | RoutineCall(m, ..)
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
@@ -236,7 +210,6 @@ impl<I> Ast<I> {
     /// the node is not a function or coroutine, this will return None.
     pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
         match self {
-            Ast::RoutineDef { params, .. } => Some(params),
             _ => None,
         }
     }
@@ -245,7 +218,6 @@ impl<I> Ast<I> {
     /// otherwise return None.
     pub fn get_return_type(&self) -> Option<&Type> {
         match self {
-            Ast::RoutineDef { ty, .. } => Some(ty),
             _ => None,
         }
     }
@@ -253,14 +225,14 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::RoutineDef { name, .. } | Ast::Identifier(_, name) | Ast::StructDef(_, name, ..)=> {
+            Ast::Identifier(_, name) | Ast::StructDef(_, name, ..)=> {
                 Some(name)
             }
             _ => None,
         }
     }
 
-    pub fn go_to(&self, path: &Path) -> Option<&Self> {
+    pub fn go_to(&self, path: &Path) -> Option<&Item<I>> {
         if path.len() == 0 {
             return None;
         }
@@ -281,25 +253,6 @@ impl<I> Ast<I> {
             m.go_to_module(path)
         } else {
             return None;
-        }
-    }
-
-    /// If a Node contains an Item (function, coroutine, module, or struct)
-    /// Then return it
-    pub fn get_item(&self, name: &str) -> Option<&Self> {
-        match self {
-            Ast::Module (m) => m.get_item(name),
-            _ => None,
-        }
-    }
-
-    /// Returns an error if the current node is not a routine node.
-    /// Useful in the Translation layer or the Semantic layer for validating
-    /// That paths and identifiers are associated with valid routines.
-    pub fn is_routine_def(&self) -> Result<&Ast<I>, String> {
-        match self {
-            Ast::RoutineDef { .. } => Ok(self),
-            _ => Err(format!("Expected routine, but was {}", self.root_str())),
         }
     }
 }

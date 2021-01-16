@@ -1,4 +1,4 @@
-use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::module};
+use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::{module::{self, Item}, routinedef}};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
 use crate::syntax::ty::Type;
@@ -734,49 +734,6 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = ty;
                 Ok(ExpressionBlock(meta.clone(), resolved_body))
             }
-            RoutineDef {
-                meta,
-                def,
-                name,
-                params,
-                ty: p,
-                body,
-            } => {
-                let mut meta = meta.clone();
-                let canonical_params = self.params_to_canonical(sym, &params)?;
-                for (pname, pty) in canonical_params.iter() {
-                    meta.sym.add(pname, pty.clone(), false)?;
-                }
-                let tmp_sym = sym.clone();
-                self.stack.push(tmp_sym);
-                let mut resolved_body = vec![];
-                for stmt in body.iter() {
-                    let exp = self.traverse(stmt, &Some(name.clone()), &mut meta.sym)?;
-                    resolved_body.push(exp);
-                }
-                self.stack.pop();
-                meta.ty = self.type_to_canonical(sym, p)?;
-
-                let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
-
-                let canon_path = self
-                    .stack
-                    .to_path(sym)
-                    .map(|mut p| {
-                        p.push(name);
-                        p
-                    })
-                    .expect("Failed to create canonical path for function");
-                meta.set_canonical_path(canon_path);
-                Ok(RoutineDef {
-                    meta: meta.clone(),
-                    def: def.clone(),
-                    name: name.clone(),
-                    params: canonical_params,
-                    ty: canonical_ret_ty,
-                    body: resolved_body,
-                })
-            }
             Module(m) => {
                 let nmodule = self.analyze_module(m, sym)?;
                 Ok(Module(nmodule))
@@ -865,16 +822,16 @@ impl<'a> SemanticAnalyzer<'a> {
             .collect::<Result<Vec<module::Module<SemanticMetadata>>, String>>()?;
         *nmodule.get_functions_mut() = m.get_functions()
             .iter()
-            .map(|f| self.traverse(f, &None, &mut meta.sym))
-            .collect::<Result<Vec<SemanticNode>, String>>()?;
+            .map(|f| self.analyze_item(f, &mut meta.sym))
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
         *nmodule.get_coroutines_mut() = m.get_coroutines()
             .iter()
-            .map(|c| self.traverse(c, &None, &mut meta.sym))
-            .collect::<Result<Vec<SemanticNode>, String>>()?;
+            .map(|c| self.analyze_item(c, &mut meta.sym))
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
         *nmodule.get_structs_mut() = m.get_structs()
             .iter()
-            .map(|s| self.traverse(s, &None, &mut meta.sym))
-            .collect::<Result<Vec<SemanticNode>, String>>()?;
+            .map(|s| self.analyze_item(s, &mut meta.sym))
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
 
         self.stack.pop();
 
@@ -882,12 +839,65 @@ impl<'a> SemanticAnalyzer<'a> {
         *nmodule.get_metadata_mut() = meta;
         Ok(nmodule)
     }
+
+    fn analyze_item(&mut self, i: &module::Item<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Item<SemanticMetadata>, String> {
+        match i {
+            Item::Struct(s) => self.analyize_node(s, &None, sym).map(|n| Item::Struct(n)),
+            Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
+        }
+    }
+
+    fn analyze_routine(&mut self, routine: &routinedef::RoutineDef<SemanticMetadata>, sym: &mut SymbolTable) -> Result<routinedef::RoutineDef<SemanticMetadata>, String> {
+        let routinedef::RoutineDef{
+            meta,
+            name,
+            def,
+            params,
+            body,
+            ty: p,
+            ..
+        } = routine;
+        let mut meta = meta.clone();
+        let canonical_params = self.params_to_canonical(sym, &params)?;
+        for (pname, pty) in canonical_params.iter() {
+            meta.sym.add(pname, pty.clone(), false)?;
+        }
+        let tmp_sym = sym.clone();
+        self.stack.push(tmp_sym);
+        let mut resolved_body = vec![];
+        for stmt in body.iter() {
+            let exp = self.traverse(stmt, &Some(name.clone()), &mut meta.sym)?;
+            resolved_body.push(exp);
+        }
+        self.stack.pop();
+        meta.ty = self.type_to_canonical(sym, p)?;
+
+        let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
+
+        let canon_path = self
+            .stack
+            .to_path(sym)
+            .map(|mut p| {
+                p.push(name);
+                p
+            })
+            .expect("Failed to create canonical path for function");
+        meta.set_canonical_path(canon_path);
+        Ok(routinedef::RoutineDef {
+            meta: meta.clone(),
+            def: def.clone(),
+            name: name.clone(),
+            params: canonical_params,
+            ty: canonical_ret_ty,
+            body: resolved_body,
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast;
+    use crate::{ast, syntax::{module::Item, routinedef}};
     use crate::ast::Ast;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
@@ -1187,7 +1197,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Module(m) = result {
-                if let RoutineDef { body, .. } = &m.get_functions()[0] {
+                if let Item::Routine(routinedef::RoutineDef { body, .. }) = &m.get_functions()[0] {
                     if let Bind(.., exp) = &body[0] {
                         if let box StructExpression(_, struct_name, ..) = exp {
                             let expected: Path = vec!["root", "test"].into();
@@ -1227,7 +1237,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Module(m) = result {
-                if let RoutineDef { params, .. } = &m.get_functions()[0] {
+                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &m.get_functions()[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1263,7 +1273,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Module(m) = result {
-                if let RoutineDef { params, .. } = &m.get_coroutines()[0] {
+                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &m.get_coroutines()[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1297,7 +1307,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Module(m) = result {
-                if let Ast::StructDef(_, _, fields) = &m.get_structs()[1] {
+                if let Item::Struct(Ast::StructDef(_, _, fields)) = &m.get_structs()[1] {
                     if let (_, Custom(ty_path)) = &fields[0] {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1940,31 +1950,42 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_func", vec![], I32, vec![]);
 
-        let node = Ast::RoutineDef {
+        let node = routinedef::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Function,
+            def: routinedef::RoutineDefType::Function,
             name: "my_func".into(),
             params: vec![],
             ty: I32,
             body: vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
         };
 
-        let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
+        let mut module = module::Module::new("root", 1);
+        module.add_function(node).unwrap();
 
-        let node = Ast::RoutineDef {
+        let mut sa = SemanticAst::new();
+        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
+            .unwrap() {
+                let typed_func = module.get_item("my_func").unwrap().to_routine().unwrap();
+                let ty = &typed_func.get_metadata().ty;
+                assert_eq!(ty, I32);
+        } else {
+            panic!("Failed to deconstruct module")
+        }
+
+        let node = routinedef::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Function,
+            def: routinedef::RoutineDefType::Function,
             name: "my_func".into(),
             params: vec![],
             ty: I32,
             body: vec![Ast::Return(1, None)],
         };
 
+        let mut module = module::Module::new("root", 1);
+        module.add_function(node).unwrap();
+
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
+        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope);
         assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
     }
 
@@ -1973,31 +1994,40 @@ mod tests {
         let mut scope = Scope::new();
         scope.add("my_co", vec![], I32, vec![]);
 
-        let node = Ast::RoutineDef {
+        let node = routinedef::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Coroutine,
+            def: routinedef::RoutineDefType::Coroutine,
             name: "my_co".into(),
             params: vec![],
             ty: I32,
             body: vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
         };
+        let mut module = module::Module::new("root", 1);
+        module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
+        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
+            .unwrap() {
+                let typed_func = module.get_item("my_co").unwrap().to_routine().unwrap();
+                let ty = &typed_func.get_metadata().ty;
+                assert_eq!(ty, I32);
+        } else {
+            panic!("Failed to deconstruct module")
+        }
 
-        let node = Ast::RoutineDef {
+        let node = routinedef::RoutineDef {
             meta: 1,
-            def: ast::RoutineDef::Coroutine,
+            def: routinedef::RoutineDefType::Coroutine,
             name: "my_co".into(),
             params: vec![],
             ty: I32,
             body: vec![Ast::Return(1, None)],
         };
+        let mut module = module::Module::new("root", 1);
+        module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
+        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope);
         assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
     }
 

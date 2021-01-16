@@ -1,10 +1,8 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{assembly2, syntax::module::Module};
 use crate::ast::Ast;
 use crate::ast::RoutineCall;
-use crate::ast::RoutineDef;
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
@@ -16,9 +14,17 @@ use crate::operand;
 use crate::reg32;
 use crate::register;
 use crate::semantics::semanticnode::SemanticNode;
+use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
 use crate::unit_op;
 use crate::{assembly, syntax::path::Path};
+use crate::{
+    assembly2,
+    syntax::{
+        module::{Item, Module},
+        routinedef::RoutineDef,
+    },
+};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ty::Type,
@@ -352,7 +358,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn push_scope(&mut self, ast: &'a CompilerNode) {
-        self.scope.push(ast)
+        self.scope.push(ast.get_metadata())
     }
 
     fn pop(&mut self) {
@@ -489,9 +495,8 @@ impl<'a> Compiler<'a> {
                 let id_offset = self
                     .scope
                     .find(id)
-                    .ok_or(format!("Could not find variable {}", id))?
+                    .expect(&format!("Could not find variable {}\n{}", id, self.scope))
                     .offset;
-                println!("{} {} {}", id, current_func, self.scope);
                 assembly! {(code) {
                     ; {format!("Binding {}", id)}
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
@@ -515,33 +520,13 @@ impl<'a> Compiler<'a> {
                     {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
-            Ast::RoutineDef {
-                meta,
-                def: RoutineDef::Coroutine,
-                name: ref fn_name,
-                body: stmts,
-                ..
-            } => {
-                assembly! {(code) {
-                    @{meta.canon_path().to_label()}:
-                    ; {{format!("Define {}", meta.canon_path())}}
-                }};
-
-                // Prepare stack frame for this function
-                for s in stmts.iter() {
-                    self.traverse(s, fn_name, code)?;
-                }
-                assembly! {(code) {
-                    mov %ebx, ^terminus;
-                    jmp @runtime_yield_return;
-                }};
-            }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
                 let co_def = self
                     .root
                     .go_to(co_path)
                     .expect("Could not find coroutine")
-                    .is_routine_def()?;
+                    .to_routine()
+                    .expect("Expected a routine");
                 let total_offset = co_def
                     .get_metadata()
                     .local_allocation()
@@ -569,41 +554,6 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::RoutineDef {
-                meta: scope,
-                def: RoutineDef::Function,
-                name: ref fn_name,
-                body: stmts,
-                ..
-            } => {
-                let total_offset = match scope.level() {
-                    Routine { allocation, .. } => allocation,
-                    _ => panic!("Invalid scope for function definition"),
-                };
-
-                assembly! {(code) {
-                @{scope.canon_path().to_label()}:
-                    ; {{format!("Define {}", scope.canon_path())}}
-                    ;"Prepare stack frame for this function"
-                    push %ebp;
-                    mov %ebp, %esp;
-                    sub %esp, {*total_offset};
-                    ; "Move function parameters from registers into the stack frame"
-                    {{self.move_params_into_stackframe(ast, &fn_param_registers)?}}
-                    ; "Done moving function parameters from registers into the stack frame"
-                }};
-
-                for s in stmts.iter() {
-                    self.traverse(s, fn_name, code)?;
-                }
-
-                assembly! {(code) {
-                    ; "Clean up frame before leaving function"
-                    mov %esp, %ebp;
-                    pop %ebp;
-                    ret;
-                }};
-            }
             Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
@@ -611,7 +561,8 @@ impl<'a> Compiler<'a> {
                     .root
                     .go_to(fn_path)
                     .ok_or(format!("Could not find: {}", fn_path))?
-                    .is_routine_def()?;
+                    .to_routine()
+                    .expect("Expected a routine");
                 fn_def.validate_parameters(params)?;
 
                 let return_type = meta.ty();
@@ -671,16 +622,119 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
+        self.scope.push(module.get_metadata());
         for f in module.get_functions().iter() {
-            self.traverse(f, current_func, code)?;
+            self.traverse_item(f, current_func, code)?;
         }
         for co in module.get_coroutines().iter() {
-            self.traverse(co, current_func, code)?;
+            self.traverse_item(co, current_func, code)?;
         }
         for m in module.get_modules().iter() {
             self.traverse_module(m, current_func, code)?;
         }
+        self.pop();
 
+        Ok(())
+    }
+
+    fn traverse_item(
+        &mut self,
+        item: &'a Item<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.scope.push(item.get_metadata());
+        let result = match item {
+            Item::Struct(s) => self.traverse(s, current_func, code),
+            Item::Routine(r) => self.traverse_routine_def(r, code),
+        };
+        self.pop();
+        result
+    }
+
+    fn traverse_routine_def(
+        &mut self,
+        routine: &'a RoutineDef<Scope>,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        match routine.get_def() {
+            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, code),
+            RoutineDefType::Function => self.traverse_function_def(routine, code),
+        }
+    }
+
+    fn traverse_function_def(
+        &mut self,
+        routine: &'a RoutineDef<Scope>,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        let fn_param_registers = vec![
+            Reg::R32(Reg32::Eax),
+            Reg::R32(Reg32::Ebx),
+            Reg::R32(Reg32::Ecx),
+            Reg::R32(Reg32::Edx),
+        ];
+
+        if let RoutineDef {
+            meta: scope,
+            def: RoutineDefType::Function,
+            name: ref fn_name,
+            body: stmts,
+            ..
+        } = routine
+        {
+            let total_offset = match scope.level() {
+                Routine { allocation, .. } => allocation,
+                _ => panic!("Invalid scope for function definition"),
+            };
+
+            assembly! {(code) {
+            @{scope.canon_path().to_label()}:
+                ; {{format!("Define {}", scope.canon_path())}}
+                ;"Prepare stack frame for this function"
+                push %ebp;
+                mov %ebp, %esp;
+                sub %esp, {*total_offset};
+                ; "Move function parameters from registers into the stack frame"
+                {{self.move_params_into_stackframe(routine, &fn_param_registers)?}}
+                ; "Done moving function parameters from registers into the stack frame"
+            }};
+
+            for s in stmts.iter() {
+                self.traverse(s, fn_name, code)?;
+            }
+
+            assembly! {(code) {
+                ; "Clean up frame before leaving function"
+                mov %esp, %ebp;
+                pop %ebp;
+                ret;
+            }};
+        } else {
+            panic!("")
+        }
+        Ok(())
+    }
+
+    fn traverse_coroutine_def(
+        &mut self,
+        routine: &'a RoutineDef<Scope>,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        assembly! {(code) {
+            @{routine.get_metadata().canon_path().to_label()}:
+            ; {{format!("Define {}", routine.get_metadata().canon_path())}}
+        }};
+
+        // Prepare stack frame for this function
+        let name = routine.get_name().into();
+        for s in routine.get_body().iter() {
+            self.traverse(s, &name, code)?;
+        }
+        assembly! {(code) {
+            mov %ebx, ^terminus;
+            jmp @runtime_yield_return;
+        }};
         Ok(())
     }
 
@@ -705,7 +759,7 @@ impl<'a> Compiler<'a> {
                 let field_info = struct_def
                     .get_fields()
                     .iter()
-                    .find(|FieldInfo{name, ..}| name == member)
+                    .find(|FieldInfo { name, .. }| name == member)
                     .ok_or(format!("Member {} not found on {}", member, struct_name))?;
                 let field_offset = struct_def.get_offset_of(member).ok_or(format!(
                     "No field offset found for {}.{}",
@@ -754,7 +808,7 @@ impl<'a> Compiler<'a> {
         let field_info = struct_def
             .get_fields()
             .iter()
-            .map(|FieldInfo{name, offset, ..}| (name.clone(), offset.unwrap()))
+            .map(|FieldInfo { name, offset, .. }| (name.clone(), offset.unwrap()))
             .collect::<Vec<(String, i32)>>();
 
         if field_values.len() != field_info.len() {
@@ -963,7 +1017,7 @@ impl<'a> Compiler<'a> {
                             0,
                         )?;
 
-                        let is_coroutine = self.scope.find_coroutine(current_func).is_some();
+                        let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
                             assembly! {(code){
                                 mov %esi, [%ebp-8];
@@ -991,7 +1045,12 @@ impl<'a> Compiler<'a> {
             .struct_table
             .get(struct_name)
             .ok_or(format!("Could not find definition for {}", struct_name))?;
-        for FieldInfo{name: field_name, ty: field_ty, ..} in ty_def.get_fields().iter().rev() {
+        for FieldInfo {
+            name: field_name,
+            ty: field_ty,
+            ..
+        } in ty_def.get_fields().iter().rev()
+        {
             let rel_field_offset = ty_def.get_offset_of(field_name).expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",
                 struct_name, field_name,
@@ -1031,7 +1090,12 @@ impl<'a> Compiler<'a> {
         let struct_sz = ty_def
             .size
             .expect(&format!("Struct {} has an unknown size", struct_name));
-        for FieldInfo{name: field_name, ty: field_ty, offset: field_offset} in ty_def.get_fields().iter().rev() {
+        for FieldInfo {
+            name: field_name,
+            ty: field_ty,
+            offset: field_offset,
+        } in ty_def.get_fields().iter().rev()
+        {
             let rel_field_offset = field_offset.expect(&format!(
                 "CRITICAL: struct {} has member, {}, with no relative offset",
                 struct_name, field_name
@@ -1058,16 +1122,11 @@ impl<'a> Compiler<'a> {
 
     fn move_params_into_stackframe(
         &self,
-        routine: &CompilerNode,
+        routine: &RoutineDef<Scope>,
         param_registers: &Vec<Reg>,
     ) -> Result<Vec<Inst>, String> {
-        let routine_name = routine
-            .get_name()
-            .ok_or("Critical: treating a node without a name as a routine node")?;
-        let params = routine.get_params().ok_or(format!(
-            "Critical: node for {} does not have a params field",
-            routine_name
-        ))?;
+        let routine_name = routine.get_name();
+        let params = routine.get_params();
         if params.len() > param_registers.len() {
             return Err(format!(
                 "Compiler: too many parameters in function definition"

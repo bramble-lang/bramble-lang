@@ -1,8 +1,4 @@
-use crate::{
-    semantics::semanticnode::SemanticMetadata,
-    syntax::path::Path,
-    syntax::ty::Type,
-};
+use crate::{semantics::semanticnode::SemanticMetadata, syntax::path::Path, syntax::{routinedef::RoutineDefType, ty::Type}};
 
 use super::{
     struct_table::ResolvedStructTable,
@@ -42,15 +38,16 @@ impl Scope {
         }
     }
 
-    pub fn new_routine(id: u32, canon_path: &Path, ty: &Type) -> Scope {
+    pub fn new_routine(id: u32, canon_path: &Path, routine_type: RoutineDefType, ret_ty: &Type) -> Scope {
         Scope::new(
             id,
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
+                routine_type,
             },
             canon_path.clone(),
-            ty.clone(),
+            ret_ty.clone(),
         )
     }
 
@@ -120,10 +117,11 @@ impl Scope {
 
     pub(super) fn routine_from(
         m: &SemanticMetadata,
+        routine_type: &RoutineDefType,
         struct_table: &ResolvedStructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
-        let mut scope = Scope::new_routine(m.id, m.get_canonical_path(), &m.ty);
+        let mut scope = Scope::new_routine(m.id, m.get_canonical_path(), *routine_type, &m.ty);
         scope.line = m.ln;
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
@@ -178,7 +176,7 @@ impl std::fmt::Display for Scope {
 #[derive(Debug, PartialEq)]
 pub enum Level {
     Local,
-    Routine { next_label: i32, allocation: i32 },
+    Routine { next_label: i32, allocation: i32, routine_type: RoutineDefType },
     Module { name: String },
 }
 
@@ -198,9 +196,10 @@ impl std::fmt::Display for Level {
             Level::Routine {
                 next_label,
                 allocation,
+                routine_type,
             } => f.write_fmt(format_args!(
-                "Routine: [Next Label: {}, Allocation: {}]",
-                next_label, allocation
+                "Routine: [Type: {}, Next Label: {}, Allocation: {}]",
+                routine_type, next_label, allocation
             )),
             Level::Module { name } => f.write_fmt(format_args!("Module: {}", name)),
         }
