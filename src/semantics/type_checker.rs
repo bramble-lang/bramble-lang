@@ -7,7 +7,7 @@ use crate::{
     diagnostics::config::{Tracing, TracingConfig},
 };
 use crate::{
-    ast::{Ast, Ast::*, BinaryOperator, UnaryOperator},
+    ast::{Ast, BinaryOperator, UnaryOperator},
     syntax::{
         module::{self, Item},
         pnode::ParserInfo,
@@ -28,7 +28,7 @@ pub fn type_check(
     SymbolTable::from_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
-    let module_ast = Module(sm_ast);
+    let module_ast = Ast::Module(sm_ast);
     let mut semantic = SemanticAnalyzer::new(&module_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
@@ -202,7 +202,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         sym: &mut SymbolTable,
     ) -> Result<module::Module<SemanticMetadata>, String> {
-        if let Module(m) = self.root {
+        if let Ast::Module(m) = self.root {
             self.analyze_module(m, sym)
         } else {
             panic!("root is not a Ast::Module")
@@ -420,45 +420,45 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode, String> {
         match &ast {
-            &Integer(meta, v) => {
+            &Ast::Integer(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = I32;
-                Ok(Integer(meta, *v))
+                Ok(Ast::Integer(meta, *v))
             }
-            Boolean(meta, v) => {
+            Ast::Boolean(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Bool;
-                Ok(Boolean(meta.clone(), *v))
+                Ok(Ast::Boolean(meta.clone(), *v))
             }
             Ast::StringLiteral(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::StringLiteral;
                 Ok(Ast::StringLiteral(meta.clone(), v.clone()))
             }
-            CustomType(meta, name) => {
+            Ast::CustomType(meta, name) => {
                 let mut meta = meta.clone();
                 meta.ty = Custom(name.clone());
-                Ok(CustomType(meta.clone(), name.clone()))
+                Ok(Ast::CustomType(meta.clone(), name.clone()))
             }
-            IdentifierDeclare(meta, name, p) => {
+            Ast::IdentifierDeclare(meta, name, p) => {
                 let mut meta = meta.clone();
                 meta.ty = p.clone();
-                Ok(IdentifierDeclare(meta.clone(), name.clone(), p.clone()))
+                Ok(Ast::IdentifierDeclare(meta.clone(), name.clone(), p.clone()))
             }
-            Identifier(meta, id) => match current_func {
+            Ast::Identifier(meta, id) => match current_func {
                 None => Err(format!("Variable {} appears outside of function", id)),
                 Some(_) => {
                     let mut meta = meta.clone();
                     match self.lookup(sym, &id)? {
                         Symbol { ty: p, .. } => meta.ty = self.type_to_canonical(sym, p)?,
                     };
-                    Ok(Identifier(meta.clone(), id.clone()))
+                    Ok(Ast::Identifier(meta.clone(), id.clone()))
                 }
             },
-            Path(..) => {
+            Ast::Path(..) => {
                 todo!("Check to make sure that each identifier in the path is a valid module or a item in that module");
             }
-            MemberAccess(meta, src, member) => {
+            Ast::MemberAccess(meta, src, member) => {
                 let mut meta = meta.clone();
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
@@ -476,24 +476,24 @@ impl<'a> SemanticAnalyzer<'a> {
                         meta.ty =
                             Self::type_to_canonical_with_path(&canonical_path.parent(), member_ty)?;
                         meta.set_canonical_path(canonical_path);
-                        Ok(MemberAccess(meta, Box::new(src), member.clone()))
+                        Ok(Ast::MemberAccess(meta, Box::new(src), member.clone()))
                     }
                     _ => Err(format!("Type {} does not have members", src.get_type())),
                 }
             }
-            BinaryOp(meta, op, l, r) => {
+            Ast::BinaryOp(meta, op, l, r) => {
                 let mut meta = meta.clone();
                 let (ty, l, r) = self.binary_op(*op, &l, &r, current_func, sym)?;
                 meta.ty = ty;
-                Ok(BinaryOp(meta.clone(), *op, Box::new(l), Box::new(r)))
+                Ok(Ast::BinaryOp(meta.clone(), *op, Box::new(l), Box::new(r)))
             }
-            UnaryOp(meta, op, operand) => {
+            Ast::UnaryOp(meta, op, operand) => {
                 let mut meta = meta.clone();
                 let (ty, operand) = self.unary_op(*op, &operand, current_func, sym)?;
                 meta.ty = ty;
-                Ok(UnaryOp(meta.clone(), *op, Box::new(operand)))
+                Ok(Ast::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
-            If(meta, cond, true_arm, false_arm) => {
+            Ast::If(meta, cond, true_arm, false_arm) => {
                 let mut meta = meta.clone();
                 let cond = self.traverse(&cond, current_func, sym)?;
                 if cond.get_type() == Bool {
@@ -501,7 +501,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let false_arm = self.traverse(&false_arm, current_func, sym)?;
                     if true_arm.get_type() == false_arm.get_type() {
                         meta.ty = true_arm.get_type().clone();
-                        Ok(If(
+                        Ok(Ast::If(
                             meta.clone(),
                             Box::new(cond),
                             Box::new(true_arm),
@@ -521,7 +521,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 }
             }
-            Mutate(meta, id, rhs) => match current_func {
+            Ast::Mutate(meta, id, rhs) => match current_func {
                 Some(_) => {
                     let mut meta = meta.clone();
                     let rhs = self.traverse(&rhs, current_func, sym)?;
@@ -530,7 +530,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             if symbol.mutable {
                                 if symbol.ty == rhs.get_type() {
                                     meta.ty = rhs.get_type().clone();
-                                    Ok(Mutate(meta.clone(), id.clone(), Box::new(rhs)))
+                                    Ok(Ast::Mutate(meta.clone(), id.clone(), Box::new(rhs)))
                                 } else {
                                     Err(format!(
                                         "{} is of type {} but is assigned {}",
@@ -550,14 +550,14 @@ impl<'a> SemanticAnalyzer<'a> {
                     id
                 )),
             },
-            Bind(meta, name, mutable, p, rhs) => match current_func {
+            Ast::Bind(meta, name, mutable, p, rhs) => match current_func {
                 Some(_) => {
                     let mut meta = meta.clone();
                     meta.ty = self.type_to_canonical(sym, p)?;
                     let rhs = self.traverse(&rhs, current_func, sym)?;
                     if meta.ty == rhs.get_type() {
                         sym.add(&name, meta.ty.clone(), *mutable)?;
-                        Ok(Bind(meta, name.clone(), *mutable, p.clone(), Box::new(rhs)))
+                        Ok(Ast::Bind(meta, name.clone(), *mutable, p.clone(), Box::new(rhs)))
                     } else {
                         Err(format!(
                             "Bind expected {} but got {}",
@@ -571,20 +571,20 @@ impl<'a> SemanticAnalyzer<'a> {
                     name
                 )),
             },
-            Return(meta, None) => match current_func {
+            Ast::Return(meta, None) => match current_func {
                 None => Err(format!("Return called outside of a function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
                     let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
                     if *fty == Unit {
                         meta.ty = Unit;
-                        Ok(Return(meta.clone(), None))
+                        Ok(Ast::Return(meta.clone(), None))
                     } else {
                         Err(format!("Return expected {} but got unit", fty))
                     }
                 }
             },
-            Return(meta, Some(exp)) => match current_func {
+            Ast::Return(meta, Some(exp)) => match current_func {
                 None => Err(format!("Return appears outside of a function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
@@ -593,7 +593,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let fty = self.type_to_canonical(sym, fty)?;
                     if fty == exp.get_type() {
                         meta.ty = fty;
-                        Ok(Return(meta.clone(), Some(Box::new(exp))))
+                        Ok(Ast::Return(meta.clone(), Some(Box::new(exp))))
                     } else {
                         Err(format!(
                             "Return expected {} but got {}",
@@ -603,7 +603,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             },
-            Yield(meta, exp) => match current_func {
+            Ast::Yield(meta, exp) => match current_func {
                 None => Err(format!("Yield appears outside of function")),
                 Some(_) => {
                     let mut meta = meta.clone();
@@ -612,23 +612,23 @@ impl<'a> SemanticAnalyzer<'a> {
                         Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
                         _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                     };
-                    Ok(Yield(meta, Box::new(exp)))
+                    Ok(Ast::Yield(meta, Box::new(exp)))
                 }
             },
-            YieldReturn(meta, None) => match current_func {
+            Ast::YieldReturn(meta, None) => match current_func {
                 None => Err(format!("YRet appears outside of function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
                     let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
                     if *ret_ty == Unit {
                         meta.ty = Unit;
-                        Ok(YieldReturn(meta, None))
+                        Ok(Ast::YieldReturn(meta, None))
                     } else {
                         Err(format!("Yield return expected {} but got unit", ret_ty))
                     }
                 }
             },
-            YieldReturn(meta, Some(exp)) => match current_func {
+            Ast::YieldReturn(meta, Some(exp)) => match current_func {
                 None => Err(format!("YRet appears outside of function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
@@ -637,7 +637,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let ret_ty = self.type_to_canonical(sym, ret_ty)?;
                     if ret_ty == exp.get_type() {
                         meta.ty = ret_ty;
-                        Ok(YieldReturn(meta, Some(Box::new(exp))))
+                        Ok(Ast::YieldReturn(meta, Some(Box::new(exp))))
                     } else {
                         Err(format!(
                             "Yield return expected {} but got {}",
@@ -647,13 +647,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             },
-            Statement(meta, stmt) => {
+            Ast::Statement(meta, stmt) => {
                 let mut meta = meta.clone();
                 let stmt = self.traverse(&stmt, current_func, sym)?;
                 meta.ty = Unit;
-                Ok(Statement(meta, Box::new(stmt)))
+                Ok(Ast::Statement(meta, Box::new(stmt)))
             }
-            RoutineCall(meta, call, routine_path, params) => {
+            Ast::RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -691,7 +691,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         Err(msg) => Err(msg),
                         Ok(()) => {
                             meta.ty = self.type_to_canonical(sym, &ret_ty)?;
-                            Ok(RoutineCall(
+                            Ok(Ast::RoutineCall(
                                 meta.clone(),
                                 *call,
                                 routine_canon_path,
@@ -701,32 +701,32 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             }
-            Printi(meta, exp) => {
+            Ast::Printi(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == I32 {
                     meta.ty = Unit;
-                    Ok(Printi(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Printi(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!("Expected i32 for printi got {}", exp.get_type()))
                 }
             }
-            Printiln(meta, exp) => {
+            Ast::Printiln(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == I32 {
                     meta.ty = Unit;
-                    Ok(Printiln(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Printiln(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!("Expected i32 for printiln got {}", exp.get_type()))
                 }
             }
-            Prints(meta, exp) => {
+            Ast::Prints(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == Type::StringLiteral {
                     meta.ty = Unit;
-                    Ok(Prints(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Prints(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!(
                         "Expected string for printiln got {}",
@@ -734,18 +734,18 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 }
             }
-            Printbln(meta, exp) => {
+            Ast::Printbln(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == Bool {
                     meta.ty = Unit;
-                    Ok(Printbln(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Printbln(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!("Expected i32 for printbln got {}", exp.get_type()))
                 }
             }
 
-            ExpressionBlock(meta, body) => {
+            Ast::ExpressionBlock(meta, body) => {
                 let mut meta = meta.clone();
                 let mut resolved_body = vec![];
                 let mut ty = Unit;
@@ -758,11 +758,11 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = ty;
-                Ok(ExpressionBlock(meta.clone(), resolved_body))
+                Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
             }
-            Module(m) => {
+            Ast::Module(m) => {
                 let nmodule = self.analyze_module(m, sym)?;
-                Ok(Module(nmodule))
+                Ok(Ast::Module(nmodule))
             }
             Ast::StructDef(meta, struct_name, fields) => {
                 let mut meta = meta.clone();
@@ -783,7 +783,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     canonical_fields,
                 ))
             }
-            StructExpression(meta, struct_name, params) => {
+            Ast::StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
@@ -826,7 +826,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
                 meta.ty = Custom(canonical_path.clone());
                 sym.add(&anonymouse_name, meta.ty.clone(), false)?;
-                Ok(StructExpression(
+                Ok(Ast::StructExpression(
                     meta.clone(),
                     canonical_path,
                     resolved_params,
@@ -1220,8 +1220,8 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Routine(routinedef::RoutineDef { body, .. }) = &result.get_functions()[0] {
-                if let Bind(.., exp) = &body[0] {
-                    if let box StructExpression(_, struct_name, ..) = exp {
+                if let Ast::Bind(.., exp) = &body[0] {
+                    if let box Ast::StructExpression(_, struct_name, ..) = exp {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(struct_name, &expected)
                     } else {
