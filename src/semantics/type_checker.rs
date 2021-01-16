@@ -1004,12 +1004,34 @@ mod tests {
     #[test]
     pub fn test_integer() {
         let node = Ast::Integer(1, 5);
-        let scope = Scope::new();
-
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-            .map(|n| n.get_type().clone());
+        let ast = sa.from_parser_ast(&node).unwrap();
+        let mut semantic = SemanticAnalyzer::new(&ast);
+        let mut sym = SymbolTable::new_module("root");
+        let ty = semantic.traverse(&ast, &None, &mut sym).map(|n| n.get_type().clone());
         assert_eq!(ty, Ok(Type::I32));
+    }
+
+    #[test]
+    pub fn test_bool() {
+        let node = Ast::Boolean(1, true);
+        let mut sa = SemanticAst::new();
+        let ast = sa.from_parser_ast(&node).unwrap();
+        let mut semantic = SemanticAnalyzer::new(&ast);
+        let mut sym = SymbolTable::new_module("root");
+        let ty = semantic.traverse(&ast, &None, &mut sym).map(|n| n.get_type().clone());
+        assert_eq!(ty, Ok(Type::Bool));
+    }
+
+    #[test]
+    pub fn test_string_literal() {
+        let node = Ast::StringLiteral(1, "blah".into());
+        let mut sa = SemanticAst::new();
+        let ast = sa.from_parser_ast(&node).unwrap();
+        let mut semantic = SemanticAnalyzer::new(&ast);
+        let mut sym = SymbolTable::new_module("root");
+        let ty = semantic.traverse(&ast, &None, &mut sym).map(|n| n.get_type().clone());
+        assert_eq!(ty, Ok(Type::StringLiteral));
     }
 
     #[test]
