@@ -12,10 +12,16 @@ use crate::{
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::{module::Module, path::Path, pnode::PNode, routinedef::{RoutineDef, RoutineDefType}, ty::Type};
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};
+use super::{
+    module::Module,
+    path::Path,
+    pnode::PNode,
+    routinedef::{RoutineDef, RoutineDefType},
+    ty::Type,
+};
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 static TRACE_START: AtomicUsize = AtomicUsize::new(0);
@@ -128,7 +134,7 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> PResult {
+pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>, String> {
     let mut stream = TokenStream::new(&tokens);
     let start_index = stream.index();
     let mut item = None;
@@ -140,7 +146,7 @@ pub fn parse(tokens: Vec<Token>) -> PResult {
         }
     }
 
-    Ok(item.map(|i| Ast::Module(i)))
+    Ok(item)
 }
 
 fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>, String> {
@@ -1306,8 +1312,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        if let Some(Ast::Module(m)) = parse(tokens).unwrap()
-        {
+        if let Some(m) = parse(tokens).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
             assert_eq!(m.get_name(), "root");
 
@@ -1359,8 +1364,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap()
-        {
+        if let Some(m) = module(&mut iter).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
             assert_eq!(m.get_name(), "test_co_mod");
 
@@ -1404,8 +1408,7 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap()
-        {
+        if let Some(m) = module(&mut iter).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
             assert_eq!(m.get_name(), "test_struct_mod");
 
@@ -1550,8 +1553,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        if let Some(Ast::Module(m)) = parse(tokens).unwrap()
-        {
+        if let Some(m) = parse(tokens).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
@@ -1944,9 +1946,9 @@ pub mod tests {
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let ast = parse(tokens).unwrap().unwrap();
-            match ast {
-                Ast::Module(m) => match &m.get_functions()[0] {
+            let module = parse(tokens).unwrap();
+            match module {
+                Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
                         Ast::Return(.., Some(rv)) => {
                             assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))
@@ -1955,7 +1957,7 @@ pub mod tests {
                     },
                     _ => assert!(false, "Not a return statement"),
                 },
-                _ => assert!(false, "Not a routine, got {:?}", ast),
+                _ => assert!(false, "Not a routine, got {:?}", module),
             }
         }
     }

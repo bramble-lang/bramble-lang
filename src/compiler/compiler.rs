@@ -1,7 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::ast::Ast;
 use crate::ast::RoutineCall;
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
@@ -13,7 +12,6 @@ use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::reg32;
 use crate::register;
-use crate::semantics::semanticnode::SemanticNode;
 use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
 use crate::unit_op;
@@ -25,6 +23,7 @@ use crate::{
         routinedef::RoutineDef,
     },
 };
+use crate::{ast::Ast, semantics::semanticnode::SemanticMetadata};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ty::Type,
@@ -37,7 +36,7 @@ pub struct Compiler<'a> {
     scope: ScopeStack<'a>,
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
-    root: &'a CompilerNode,
+    root: &'a Module<Scope>,
 }
 
 impl<'a> Compiler<'a> {
@@ -48,12 +47,12 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticMetadata>) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, struct_table) = CompilerNode::from(ast).unwrap();
+        let (compiler_ast, struct_table) = CompilerNode::from(&module).unwrap();
 
         let mut string_pool = StringPool::new();
-        string_pool.extract_from(&compiler_ast);
+        string_pool.extract_from_module(&compiler_ast);
 
         let mut code = vec![];
         Compiler::create_base(&mut code, &string_pool);
@@ -72,7 +71,7 @@ impl<'a> Compiler<'a> {
 
         let global_func = "".into();
         compiler
-            .traverse(&compiler_ast, &global_func, &mut code)
+            .traverse_module(&compiler_ast, &global_func, &mut code)
             .unwrap();
         code
     }

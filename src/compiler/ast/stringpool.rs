@@ -2,7 +2,13 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef}};
+use crate::{
+    compiler::ast::ast::CompilerNode,
+    syntax::{
+        module::{self, Item},
+        routinedef::RoutineDef,
+    },
+};
 
 use super::scope::Scope;
 
@@ -152,10 +158,10 @@ impl StringPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::syntax::parser;
     use crate::{diagnostics::config::TracingConfig, type_check};
+    use crate::lexer::lexer::Lexer;
 
     #[test]
     fn insert_string() {
@@ -201,10 +207,10 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let (compiler_ast, ..) = CompilerNode::from(&result).unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let (compiler_ast, ..) = CompilerNode::from(&module).unwrap();
             let mut sp = StringPool::new();
-            sp.extract_from(&compiler_ast);
+            sp.extract_from_module(&compiler_ast);
 
             assert!(cmp(&sp, &expected));
         }

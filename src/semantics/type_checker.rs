@@ -1,27 +1,34 @@
-use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::{module::{self, Item}, routinedef}};
-use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
+use crate::{semantics::semanticnode::{SemanticAst, SemanticNode}, syntax::module::Module};
 use crate::semantics::symbol_table::*;
-use crate::syntax::ty::Type;
-use Type::*;
-use crate::syntax::pnode::PNode;
 use crate::syntax::path::Path;
+use crate::syntax::ty::Type;
 use crate::{
     ast,
     diagnostics::config::{Tracing, TracingConfig},
 };
+use crate::{
+    ast::{Ast, BinaryOperator, UnaryOperator},
+    syntax::{
+        module::{self, Item},
+        pnode::ParserInfo,
+        routinedef,
+    },
+};
+use Type::*;
 
 use super::semanticnode::SemanticMetadata;
 
 pub fn type_check(
-    ast: &PNode,
+    ast: &module::Module<ParserInfo>,
     trace: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<SemanticNode, String> {
+) -> Result<module::Module<SemanticMetadata>, String> {
     let mut sa = SemanticAst::new();
-    let mut sm_ast = sa.from_parser_ast(&ast)?;
-    SymbolTable::from_ast(&mut sm_ast)?;
+    let mut sm_ast = sa.from_module(&ast)?;
+    SymbolTable::from_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
+    //let module_ast = Ast::Module(sm_ast);
     let mut semantic = SemanticAnalyzer::new(&sm_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
@@ -32,7 +39,7 @@ pub fn type_check(
 }
 
 pub struct SemanticAnalyzer<'a> {
-    root: &'a SemanticNode,
+    root: &'a Module<SemanticMetadata>,
     stack: ScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
@@ -45,7 +52,7 @@ impl<'a> Tracing for SemanticAnalyzer<'a> {
 }
 
 impl<'a> SemanticAnalyzer<'a> {
-    pub fn new(root: &'a SemanticNode) -> SemanticAnalyzer {
+    pub fn new(root: &'a Module<SemanticMetadata>) -> SemanticAnalyzer {
         SemanticAnalyzer {
             root,
             stack: ScopeStack::new(),
@@ -180,8 +187,9 @@ impl<'a> SemanticAnalyzer<'a> {
                     Ok((Bool, l, r))
                 } else {
                     Err(format!(
-                        "{} expected {} but found {}",
+                        "{} expected {} but found {} and {}",
                         op,
+                        l.get_type(),
                         l.get_type(),
                         r.get_type()
                     ))
@@ -190,8 +198,11 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<SemanticNode, String> {
-        self.traverse(self.root, &None, sym)
+    fn resolve_types(
+        &mut self,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Module<SemanticMetadata>, String> {
+        self.analyze_module(self.root, sym)
     }
 
     fn traverse(
@@ -352,7 +363,16 @@ impl<'a> SemanticAnalyzer<'a> {
                     rty,
                 )?)),
             ),
-            _ => return Err(format!("{} found but was not a function", routine_path)),
+            _ => {
+                let expected = match call {
+                    ast::RoutineCall::Function => "function",
+                    ast::RoutineCall::CoroutineInit => "coroutine",
+                };
+                return Err(format!(
+                    "Expected {0} but {1} is a {2}",
+                    expected, routine_path, symbol.ty
+                ));
+            }
         };
 
         Ok((expected_param_tys, ret_ty))
@@ -376,7 +396,7 @@ impl<'a> SemanticAnalyzer<'a> {
             let errors: Vec<String> = mismatches
                 .iter()
                 .map(|(idx, got, expected)| {
-                    format!("parameter {} expected {} got {}", idx, expected, got)
+                    format!("parameter {} expected {} but got {}", idx, expected, got)
                 })
                 .collect();
             Err(format!(
@@ -396,45 +416,45 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode, String> {
         match &ast {
-            &Integer(meta, v) => {
+            &Ast::Integer(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = I32;
-                Ok(Integer(meta, *v))
+                Ok(Ast::Integer(meta, *v))
             }
-            Boolean(meta, v) => {
+            Ast::Boolean(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Bool;
-                Ok(Boolean(meta.clone(), *v))
+                Ok(Ast::Boolean(meta.clone(), *v))
             }
             Ast::StringLiteral(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::StringLiteral;
                 Ok(Ast::StringLiteral(meta.clone(), v.clone()))
             }
-            CustomType(meta, name) => {
+            Ast::CustomType(meta, name) => {
                 let mut meta = meta.clone();
                 meta.ty = Custom(name.clone());
-                Ok(CustomType(meta.clone(), name.clone()))
+                Ok(Ast::CustomType(meta.clone(), name.clone()))
             }
-            IdentifierDeclare(meta, name, p) => {
+            Ast::IdentifierDeclare(meta, name, p) => {
                 let mut meta = meta.clone();
                 meta.ty = p.clone();
-                Ok(IdentifierDeclare(meta.clone(), name.clone(), p.clone()))
+                Ok(Ast::IdentifierDeclare(meta.clone(), name.clone(), p.clone()))
             }
-            Identifier(meta, id) => match current_func {
+            Ast::Identifier(meta, id) => match current_func {
                 None => Err(format!("Variable {} appears outside of function", id)),
                 Some(_) => {
                     let mut meta = meta.clone();
                     match self.lookup(sym, &id)? {
                         Symbol { ty: p, .. } => meta.ty = self.type_to_canonical(sym, p)?,
                     };
-                    Ok(Identifier(meta.clone(), id.clone()))
+                    Ok(Ast::Identifier(meta.clone(), id.clone()))
                 }
             },
-            Path(..) => {
+            Ast::Path(..) => {
                 todo!("Check to make sure that each identifier in the path is a valid module or a item in that module");
             }
-            MemberAccess(meta, src, member) => {
+            Ast::MemberAccess(meta, src, member) => {
                 let mut meta = meta.clone();
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
@@ -452,24 +472,24 @@ impl<'a> SemanticAnalyzer<'a> {
                         meta.ty =
                             Self::type_to_canonical_with_path(&canonical_path.parent(), member_ty)?;
                         meta.set_canonical_path(canonical_path);
-                        Ok(MemberAccess(meta, Box::new(src), member.clone()))
+                        Ok(Ast::MemberAccess(meta, Box::new(src), member.clone()))
                     }
                     _ => Err(format!("Type {} does not have members", src.get_type())),
                 }
             }
-            BinaryOp(meta, op, l, r) => {
+            Ast::BinaryOp(meta, op, l, r) => {
                 let mut meta = meta.clone();
                 let (ty, l, r) = self.binary_op(*op, &l, &r, current_func, sym)?;
                 meta.ty = ty;
-                Ok(BinaryOp(meta.clone(), *op, Box::new(l), Box::new(r)))
+                Ok(Ast::BinaryOp(meta.clone(), *op, Box::new(l), Box::new(r)))
             }
-            UnaryOp(meta, op, operand) => {
+            Ast::UnaryOp(meta, op, operand) => {
                 let mut meta = meta.clone();
                 let (ty, operand) = self.unary_op(*op, &operand, current_func, sym)?;
                 meta.ty = ty;
-                Ok(UnaryOp(meta.clone(), *op, Box::new(operand)))
+                Ok(Ast::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
-            If(meta, cond, true_arm, false_arm) => {
+            Ast::If(meta, cond, true_arm, false_arm) => {
                 let mut meta = meta.clone();
                 let cond = self.traverse(&cond, current_func, sym)?;
                 if cond.get_type() == Bool {
@@ -477,7 +497,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let false_arm = self.traverse(&false_arm, current_func, sym)?;
                     if true_arm.get_type() == false_arm.get_type() {
                         meta.ty = true_arm.get_type().clone();
-                        Ok(If(
+                        Ok(Ast::If(
                             meta.clone(),
                             Box::new(cond),
                             Box::new(true_arm),
@@ -497,7 +517,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 }
             }
-            Mutate(meta, id, rhs) => match current_func {
+            Ast::Mutate(meta, id, rhs) => match current_func {
                 Some(_) => {
                     let mut meta = meta.clone();
                     let rhs = self.traverse(&rhs, current_func, sym)?;
@@ -506,7 +526,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             if symbol.mutable {
                                 if symbol.ty == rhs.get_type() {
                                     meta.ty = rhs.get_type().clone();
-                                    Ok(Mutate(meta.clone(), id.clone(), Box::new(rhs)))
+                                    Ok(Ast::Mutate(meta.clone(), id.clone(), Box::new(rhs)))
                                 } else {
                                     Err(format!(
                                         "{} is of type {} but is assigned {}",
@@ -526,14 +546,14 @@ impl<'a> SemanticAnalyzer<'a> {
                     id
                 )),
             },
-            Bind(meta, name, mutable, p, rhs) => match current_func {
+            Ast::Bind(meta, name, mutable, p, rhs) => match current_func {
                 Some(_) => {
                     let mut meta = meta.clone();
                     meta.ty = self.type_to_canonical(sym, p)?;
                     let rhs = self.traverse(&rhs, current_func, sym)?;
                     if meta.ty == rhs.get_type() {
                         sym.add(&name, meta.ty.clone(), *mutable)?;
-                        Ok(Bind(meta, name.clone(), *mutable, p.clone(), Box::new(rhs)))
+                        Ok(Ast::Bind(meta, name.clone(), *mutable, p.clone(), Box::new(rhs)))
                     } else {
                         Err(format!(
                             "Bind expected {} but got {}",
@@ -547,20 +567,20 @@ impl<'a> SemanticAnalyzer<'a> {
                     name
                 )),
             },
-            Return(meta, None) => match current_func {
+            Ast::Return(meta, None) => match current_func {
                 None => Err(format!("Return called outside of a function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
                     let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
                     if *fty == Unit {
                         meta.ty = Unit;
-                        Ok(Return(meta.clone(), None))
+                        Ok(Ast::Return(meta.clone(), None))
                     } else {
-                        Err(format!("Return expected {} type and got unit", fty))
+                        Err(format!("Return expected {} but got unit", fty))
                     }
                 }
             },
-            Return(meta, Some(exp)) => match current_func {
+            Ast::Return(meta, Some(exp)) => match current_func {
                 None => Err(format!("Return appears outside of a function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
@@ -569,7 +589,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let fty = self.type_to_canonical(sym, fty)?;
                     if fty == exp.get_type() {
                         meta.ty = fty;
-                        Ok(Return(meta.clone(), Some(Box::new(exp))))
+                        Ok(Ast::Return(meta.clone(), Some(Box::new(exp))))
                     } else {
                         Err(format!(
                             "Return expected {} but got {}",
@@ -579,32 +599,32 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             },
-            Yield(meta, exp) => match current_func {
+            Ast::Yield(meta, exp) => match current_func {
                 None => Err(format!("Yield appears outside of function")),
                 Some(_) => {
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     meta.ty = match exp.get_type() {
                         Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
-                        _ => return Err(format!("yield expects co<_> but got {}", exp.get_type())),
+                        _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                     };
-                    Ok(Yield(meta, Box::new(exp)))
+                    Ok(Ast::Yield(meta, Box::new(exp)))
                 }
             },
-            YieldReturn(meta, None) => match current_func {
+            Ast::YieldReturn(meta, None) => match current_func {
                 None => Err(format!("YRet appears outside of function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
                     let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
                     if *ret_ty == Unit {
                         meta.ty = Unit;
-                        Ok(YieldReturn(meta, None))
+                        Ok(Ast::YieldReturn(meta, None))
                     } else {
                         Err(format!("Yield return expected {} but got unit", ret_ty))
                     }
                 }
             },
-            YieldReturn(meta, Some(exp)) => match current_func {
+            Ast::YieldReturn(meta, Some(exp)) => match current_func {
                 None => Err(format!("YRet appears outside of function")),
                 Some(cf) => {
                     let mut meta = meta.clone();
@@ -613,7 +633,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let ret_ty = self.type_to_canonical(sym, ret_ty)?;
                     if ret_ty == exp.get_type() {
                         meta.ty = ret_ty;
-                        Ok(YieldReturn(meta, Some(Box::new(exp))))
+                        Ok(Ast::YieldReturn(meta, Some(Box::new(exp))))
                     } else {
                         Err(format!(
                             "Yield return expected {} but got {}",
@@ -623,13 +643,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             },
-            Statement(meta, stmt) => {
+            Ast::Statement(meta, stmt) => {
                 let mut meta = meta.clone();
                 let stmt = self.traverse(&stmt, current_func, sym)?;
                 meta.ty = Unit;
-                Ok(Statement(meta, Box::new(stmt)))
+                Ok(Ast::Statement(meta, Box::new(stmt)))
             }
-            RoutineCall(meta, call, routine_path, params) => {
+            Ast::RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -653,8 +673,10 @@ impl<'a> SemanticAnalyzer<'a> {
 
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
-                        "Incorrect number of parameters passed to routine: {}",
-                        routine_path
+                        "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
+                        routine_path,
+                        expected_param_tys.len(),
+                        resolved_params.len(),
                     ))
                 } else {
                     match Self::check_for_invalid_routine_parameters(
@@ -665,7 +687,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         Err(msg) => Err(msg),
                         Ok(()) => {
                             meta.ty = self.type_to_canonical(sym, &ret_ty)?;
-                            Ok(RoutineCall(
+                            Ok(Ast::RoutineCall(
                                 meta.clone(),
                                 *call,
                                 routine_canon_path,
@@ -675,32 +697,32 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             }
-            Printi(meta, exp) => {
+            Ast::Printi(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == I32 {
                     meta.ty = Unit;
-                    Ok(Printi(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Printi(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!("Expected i32 for printi got {}", exp.get_type()))
                 }
             }
-            Printiln(meta, exp) => {
+            Ast::Printiln(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == I32 {
                     meta.ty = Unit;
-                    Ok(Printiln(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Printiln(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!("Expected i32 for printiln got {}", exp.get_type()))
                 }
             }
-            Prints(meta, exp) => {
+            Ast::Prints(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == Type::StringLiteral {
                     meta.ty = Unit;
-                    Ok(Prints(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Prints(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!(
                         "Expected string for printiln got {}",
@@ -708,18 +730,18 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 }
             }
-            Printbln(meta, exp) => {
+            Ast::Printbln(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func, sym)?;
                 if exp.get_type() == Bool {
                     meta.ty = Unit;
-                    Ok(Printbln(meta.clone(), Box::new(exp)))
+                    Ok(Ast::Printbln(meta.clone(), Box::new(exp)))
                 } else {
                     Err(format!("Expected i32 for printbln got {}", exp.get_type()))
                 }
             }
 
-            ExpressionBlock(meta, body) => {
+            Ast::ExpressionBlock(meta, body) => {
                 let mut meta = meta.clone();
                 let mut resolved_body = vec![];
                 let mut ty = Unit;
@@ -732,11 +754,11 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
                 self.stack.pop();
                 meta.ty = ty;
-                Ok(ExpressionBlock(meta.clone(), resolved_body))
+                Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
             }
-            Module(m) => {
+            Ast::Module(m) => {
                 let nmodule = self.analyze_module(m, sym)?;
-                Ok(Module(nmodule))
+                Ok(Ast::Module(nmodule))
             }
             Ast::StructDef(meta, struct_name, fields) => {
                 let mut meta = meta.clone();
@@ -757,7 +779,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     canonical_fields,
                 ))
             }
-            StructExpression(meta, struct_name, params) => {
+            Ast::StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
@@ -800,7 +822,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
                 meta.ty = Custom(canonical_path.clone());
                 sym.add(&anonymouse_name, meta.ty.clone(), false)?;
-                Ok(StructExpression(
+                Ok(Ast::StructExpression(
                     meta.clone(),
                     canonical_path,
                     resolved_params,
@@ -809,26 +831,34 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn analyze_module(&mut self, m: &module::Module<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>, String> {
+    fn analyze_module(
+        &mut self,
+        m: &module::Module<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Module<SemanticMetadata>, String> {
         let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
         let mut meta = nmodule.get_metadata_mut().clone();
 
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
 
-        *nmodule.get_modules_mut() = m.get_modules()
+        *nmodule.get_modules_mut() = m
+            .get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
             .collect::<Result<Vec<module::Module<SemanticMetadata>>, String>>()?;
-        *nmodule.get_functions_mut() = m.get_functions()
+        *nmodule.get_functions_mut() = m
+            .get_functions()
             .iter()
             .map(|f| self.analyze_item(f, &mut meta.sym))
             .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
-        *nmodule.get_coroutines_mut() = m.get_coroutines()
+        *nmodule.get_coroutines_mut() = m
+            .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c, &mut meta.sym))
             .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
-        *nmodule.get_structs_mut() = m.get_structs()
+        *nmodule.get_structs_mut() = m
+            .get_structs()
             .iter()
             .map(|s| self.analyze_item(s, &mut meta.sym))
             .collect::<Result<Vec<module::Item<SemanticMetadata>>, String>>()?;
@@ -840,15 +870,23 @@ impl<'a> SemanticAnalyzer<'a> {
         Ok(nmodule)
     }
 
-    fn analyze_item(&mut self, i: &module::Item<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Item<SemanticMetadata>, String> {
+    fn analyze_item(
+        &mut self,
+        i: &module::Item<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Item<SemanticMetadata>, String> {
         match i {
             Item::Struct(s) => self.analyize_node(s, &None, sym).map(|n| Item::Struct(n)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
         }
     }
 
-    fn analyze_routine(&mut self, routine: &routinedef::RoutineDef<SemanticMetadata>, sym: &mut SymbolTable) -> Result<routinedef::RoutineDef<SemanticMetadata>, String> {
-        let routinedef::RoutineDef{
+    fn analyze_routine(
+        &mut self,
+        routine: &routinedef::RoutineDef<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<routinedef::RoutineDef<SemanticMetadata>, String> {
+        let routinedef::RoutineDef {
             meta,
             name,
             def,
@@ -897,133 +935,75 @@ impl<'a> SemanticAnalyzer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ast, syntax::{module::Item, routinedef}};
     use crate::ast::Ast;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
-    use std::collections::HashMap;
+    use crate::syntax::{module::Item, routinedef};
 
-    /*
-     * map: function name -> (params, ret, vars)
-     */
-    struct FunInfo {
-        params: Vec<(&'static str, Type)>,
-        ret: Type,
-        vars: Vec<(&'static str, bool, Type)>,
-    }
-
-    impl FunInfo {
-        pub fn new(
-            params: Vec<(&'static str, Type)>,
-            ret: Type,
-            vars: Vec<(&'static str, bool, Type)>,
-        ) -> FunInfo {
-            FunInfo {
-                params: params,
-                ret: ret,
-                vars: vars,
-            }
-        }
-    }
-
-    struct Scope {
-        func: HashMap<String, FunInfo>,
-    }
-
-    impl Scope {
-        pub fn new() -> Scope {
-            Scope {
-                func: HashMap::new(),
-            }
-        }
-
-        pub fn add(
-            &mut self,
-            name: &'static str,
-            params: Vec<(&'static str, Type)>,
-            ret: Type,
-            vars: Vec<(&'static str, bool, Type)>,
-        ) {
-            self.func
-                .insert(name.into(), FunInfo::new(params, ret, vars));
-        }
-    }
-
-    fn start(
-        ast: &mut SemanticNode,
-        current_func: &Option<String>,
-        scope: &Scope,
-    ) -> Result<SemanticNode, String> {
-        let mut sym = SymbolTable::new_module("root");
-        match current_func {
-            Some(cf) => {
-                for (vname, mutable, vty) in scope
-                    .func
-                    .get(cf)
-                    .ok_or(format!("could not find: {}", cf))?
-                    .vars
-                    .iter()
-                {
-                    sym.add(&vname, vty.clone(), *mutable)?;
+    #[test]
+    pub fn test_identifiers() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := false;
+                    return k;
+                }",
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> string {
+                    let k: string := \"hello\";
+                    return k;
+                }",
+                Ok(Type::StringLiteral),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := false;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i32 but got bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Err("Semantic: L3: Return expected bool but got i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
                 }
             }
-            None => {}
-        };
-
-        // add functions to the symbol table: this is just a test
-        for (f, fi) in scope.func.iter() {
-            let params = fi
-                .params
-                .iter()
-                .map(|(_, pty)| pty.clone())
-                .collect::<Vec<Type>>();
-
-            if f.starts_with("my_co") {
-                sym.add(
-                    f,
-                    Type::CoroutineDef(params, Box::new(fi.ret.clone())),
-                    false,
-                )?;
-            } else {
-                sym.add(
-                    f,
-                    Type::FunctionDef(params, Box::new(fi.ret.clone())),
-                    false,
-                )?;
-            }
         }
-
-        let mut semantic = SemanticAnalyzer::new(ast);
-        semantic.traverse(ast, current_func, &mut sym)
-    }
-
-    #[test]
-    pub fn test_integer() {
-        let node = Ast::Integer(1, 5);
-        let scope = Scope::new();
-
-        let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Type::I32));
-    }
-
-    #[test]
-    pub fn test_identifier() {
-        let mut scope = Scope::new();
-        scope.add("my_main", vec![], Unit, vec![("x", false, Bool)]);
-
-        let node = Ast::Identifier(1, "x".into());
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_main".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone())
-        .unwrap();
-        assert_eq!(ty, Type::Bool);
     }
 
     #[test]
@@ -1196,23 +1176,19 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Routine(routinedef::RoutineDef { body, .. }) = &m.get_functions()[0] {
-                    if let Bind(.., exp) = &body[0] {
-                        if let box StructExpression(_, struct_name, ..) = exp {
-                            let expected: Path = vec!["root", "test"].into();
-                            assert_eq!(struct_name, &expected)
-                        } else {
-                            panic!("Not a struct expression")
-                        }
+            if let Item::Routine(routinedef::RoutineDef { body, .. }) = &result.get_functions()[0] {
+                if let Ast::Bind(.., exp) = &body[0] {
+                    if let box Ast::StructExpression(_, struct_name, ..) = exp {
+                        let expected: Path = vec!["root", "test"].into();
+                        assert_eq!(struct_name, &expected)
                     } else {
-                        panic!("Not a bind")
+                        panic!("Not a struct expression")
                     }
                 } else {
-                    panic!("Not a function")
+                    panic!("Not a bind")
                 }
             } else {
-                panic!("Not a module")
+                panic!("Not a function")
             }
         }
     }
@@ -1236,19 +1212,16 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &m.get_functions()[0] {
-                    if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: Path = vec!["root", "test"].into();
-                        assert_eq!(ty_path, &expected)
-                    } else {
-                        panic!("Not a custom type")
-                    }
+            if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0]
+            {
+                if let (_, Custom(ty_path)) = &params[0] {
+                    let expected: Path = vec!["root", "test"].into();
+                    assert_eq!(ty_path, &expected)
                 } else {
-                    panic!("Not a function")
+                    panic!("Not a custom type")
                 }
             } else {
-                panic!("Not a module")
+                panic!("Not a function")
             }
         }
     }
@@ -1272,19 +1245,17 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &m.get_coroutines()[0] {
-                    if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: Path = vec!["root", "test"].into();
-                        assert_eq!(ty_path, &expected)
-                    } else {
-                        panic!("Not a custom type")
-                    }
+            if let Item::Routine(routinedef::RoutineDef { params, .. }) =
+                &result.get_coroutines()[0]
+            {
+                if let (_, Custom(ty_path)) = &params[0] {
+                    let expected: Path = vec!["root", "test"].into();
+                    assert_eq!(ty_path, &expected)
                 } else {
-                    panic!("Not a coroutine")
+                    panic!("Not a custom type")
                 }
             } else {
-                panic!("Not a module")
+                panic!("Not a coroutine")
             }
         }
     }
@@ -1306,778 +1277,1220 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Struct(Ast::StructDef(_, _, fields)) = &m.get_structs()[1] {
-                    if let (_, Custom(ty_path)) = &fields[0] {
-                        let expected: Path = vec!["root", "test"].into();
-                        assert_eq!(ty_path, &expected)
-                    } else {
-                        panic!("Not a custom type")
-                    }
+            if let Item::Struct(Ast::StructDef(_, _, fields)) = &result.get_structs()[1] {
+                if let (_, Custom(ty_path)) = &fields[0] {
+                    let expected: Path = vec!["root", "test"].into();
+                    assert_eq!(ty_path, &expected)
                 } else {
-                    panic!("Not a structure")
+                    panic!("Not a custom type")
                 }
             } else {
-                panic!("Not a module")
+                panic!("Not a structure")
             }
         }
     }
 
     #[test]
     pub fn test_unary_ops() {
-        let mut scope = Scope::new();
-        scope.add(
-            "my_func",
-            vec![],
-            Unit,
-            vec![("x", false, I32), ("b", false, Bool)],
-        );
-        // operand is i32
-        {
-            let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Integer(1, 5)));
-
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone())
-                .unwrap();
-            assert_eq!(ty, Type::I32);
-        }
-        // operand is not i32
-        {
-            let node = Ast::UnaryOp(1, UnaryOperator::Minus, Box::new(Ast::Boolean(1, true)));
-
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope);
-            assert_eq!(ty, Err("L1: - expected i32 but found bool".into()));
-        }
-    }
-
-    #[test]
-    pub fn test_add() {
-        let mut scope = Scope::new();
-        scope.add(
-            "my_func",
-            vec![],
-            Unit,
-            vec![("x", false, I32), ("b", false, Bool)],
-        );
-        // both operands are i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Add,
-                Box::new(Ast::Integer(1, 5)),
-                Box::new(Ast::Integer(1, 10)),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone())
-                .unwrap();
-            assert_eq!(ty, Type::I32);
-        }
-
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Add,
-                Box::new(Ast::Identifier(1, "b".into())),
-                Box::new(Ast::Integer(1, 10)),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: + expected i32 but found bool and i32".into()));
-        }
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Add,
-                Box::new(Ast::Integer(1, 10)),
-                Box::new(Ast::Identifier(1, "b".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: + expected i32 but found i32 and bool".into()));
-        }
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Add,
-                Box::new(Ast::Identifier(1, "b".into())),
-                Box::new(Ast::Identifier(1, "b".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: + expected i32 but found bool and bool".into()));
-        }
-    }
-
-    #[test]
-    pub fn test_mul() {
-        let mut scope = Scope::new();
-        scope.add(
-            "my_func",
-            vec![],
-            Unit,
-            vec![("x", false, I32), ("b", false, Bool)],
-        );
-        // both operands are i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Integer(1, 5)),
-                Box::new(Ast::Integer(1, 10)),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone())
-                .unwrap();
-            assert_eq!(ty, Type::I32);
-        }
-
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Identifier(1, "b".into())),
-                Box::new(Ast::Integer(1, 10)),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: * expected i32 but found bool and i32".into()));
-        }
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Integer(1, 10)),
-                Box::new(Ast::Identifier(1, "b".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: * expected i32 but found i32 and bool".into()));
-        }
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Identifier(1, "b".into())),
-                Box::new(Ast::Identifier(1, "b".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: * expected i32 but found bool and bool".into()));
-        }
-    }
-
-    #[test]
-    pub fn test_boolean_ops() {
-        let scope = Scope::new();
-
-        let tests: Vec<(PNode, Result<Type, String>)> = vec![(
-            Ast::BinaryOp(
-                1,
-                BinaryOperator::BAnd,
-                Box::new(Ast::Boolean(1, true)),
-                Box::new(Ast::Integer(1, 5)),
-            ),
-            Err("L1: && expected bool but found bool and i32".into()),
-        )];
-
-        let mut sa = SemanticAst::new();
-        for (test, expected) in tests.iter() {
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone());
-            assert_eq!(ty, *expected);
-        }
-    }
-
-    #[test]
-    pub fn test_comparison_ops() {
-        let scope = Scope::new();
-        let tests: Vec<(PNode, Result<Type, String>)> = vec![
+        use crate::syntax::parser;
+        for (text, expected) in vec![
             (
-                Ast::BinaryOp(
-                    1,
-                    BinaryOperator::Eq,
-                    Box::new(Ast::Integer(1, 3)),
-                    Box::new(Ast::Integer(1, 5)),
-                ),
-                Ok(Type::Bool),
-            ),
-            (
-                Ast::BinaryOp(
-                    1,
-                    BinaryOperator::Eq,
-                    Box::new(Ast::Boolean(1, true)),
-                    Box::new(Ast::Boolean(1, false)),
-                ),
-                Ok(Type::Bool),
-            ),
-            (
-                Ast::BinaryOp(
-                    1,
-                    BinaryOperator::Eq,
-                    Box::new(Ast::Integer(1, 3)),
-                    Box::new(Ast::Boolean(1, true)),
-                ),
-                Err("L1: == expected i32 but found bool".into()),
-            ),
-        ];
-
-        for (test, expected) in tests.iter() {
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone());
-            assert_eq!(ty, *expected);
-        }
-    }
-
-    #[test]
-    pub fn test_bind() {
-        // RHS type matches the LHS type
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
-
-            let node = Ast::Bind(
-                1,
-                "x".into(),
-                false,
-                Type::I32,
-                Box::new(Ast::Integer(1, 5)),
-            );
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            )
-            .map(|n| n.get_type().clone());
-            assert_eq!(ty, Ok(Type::I32));
-        }
-
-        // RHS type does not match LHS type
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
-
-            let node = Ast::Bind(
-                1,
-                "x".into(),
-                false,
-                Type::Bool,
-                Box::new(Ast::Integer(1, 5)),
-            );
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: Bind expected bool but got i32".into()));
-        }
-
-        // recursive definition
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
-
-            let node = Ast::Bind(
-                1,
-                "x".into(),
-                false,
-                Type::I32,
-                Box::new(Ast::Identifier(1, "x".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is not defined".into()));
-        }
-
-        // use an unbound variable
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
-
-            let node = Ast::Identifier(1, "x".into());
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is not defined".into()));
-        }
-    }
-
-    #[test]
-    pub fn test_mutate() {
-        // RHS type matches the LHS type
-        {
-            let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("x".into(), true, Type::I32)],
-            );
-
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            )
-            .map(|n| n.get_type().clone());
-            assert_eq!(ty, Ok(Type::I32));
-        }
-        // Variable is immutable
-        {
-            let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("x".into(), false, Type::I32)],
-            );
-
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: Variable x is not mutable".into()));
-        }
-        // RHS type mismatch
-        {
-            let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("x".into(), true, Type::Bool)],
-            );
-
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is of type bool but is assigned i32".into()));
-        }
-        // Variable does not exist
-        {
-            let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("y".into(), false, Type::I32)],
-            );
-
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is not defined".into()));
-        }
-    }
-
-    #[test]
-    pub fn test_return_unit() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], Unit, vec![]);
-
-        let node = Ast::Return(1, None);
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Unit));
-    }
-
-    #[test]
-    pub fn test_return_i32() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], I32, vec![]);
-
-        let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-    }
-
-    #[test]
-    pub fn test_fn_call() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], I32, vec![]);
-
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::Function,
-            vec!["my_func"].into(),
-            vec![],
-        );
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-
-        scope.add("my_func2", vec![("x", I32)], I32, vec![]);
-        // test correct parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::Function,
-            vec!["my_func2"].into(),
-            vec![Ast::Integer(1, 5)],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-
-        // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::Function,
-            vec!["my_func2"].into(),
-            vec![],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(
-            ty,
-            Err("L1: Incorrect number of parameters passed to routine: my_func2".into())
-        );
-    }
-
-    #[test]
-    pub fn test_co_init() {
-        let mut scope = Scope::new();
-        scope.add("my_co", vec![], I32, vec![]);
-        scope.add("my_co2", vec![("x", I32)], I32, vec![]);
-
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::CoroutineInit,
-            vec!["my_co"].into(),
-            vec![],
-        );
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
-
-        // test correct parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::CoroutineInit,
-            vec!["my_co2"].into(),
-            vec![Ast::Integer(1, 5)],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
-
-        // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::CoroutineInit,
-            vec!["my_co2"].into(),
-            vec![],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        );
-        assert_eq!(
-            ty,
-            Err("L1: Incorrect number of parameters passed to routine: my_co2".into())
-        );
-    }
-
-    #[test]
-    pub fn test_yield_return() {
-        let mut scope = Scope::new();
-        scope.add("my_co", vec![], Unit, vec![]);
-        scope.add("my_co2", vec![], I32, vec![]);
-
-        let node = Ast::YieldReturn(1, None);
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Unit));
-
-        // test correct type for yield return
-        let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-
-        // test incorrect type for yield return
-        let node = Ast::YieldReturn(1, None);
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        );
-        assert_eq!(ty, Err("L1: Yield return expected i32 but got unit".into()));
-    }
-
-    #[test]
-    fn test_yield() {
-        let mut scope = Scope::new();
-        scope.add(
-            "my_main",
-            vec![],
-            Unit,
-            vec![("c", false, Coroutine(Box::new(I32)))],
-        );
-        scope.add("my_co2", vec![], I32, vec![]);
-
-        let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_main".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-    }
-
-    #[test]
-    fn test_func_def() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], I32, vec![]);
-
-        let node = routinedef::RoutineDef {
-            meta: 1,
-            def: routinedef::RoutineDefType::Function,
-            name: "my_func".into(),
-            params: vec![],
-            ty: I32,
-            body: vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
-        };
-
-        let mut module = module::Module::new("root", 1);
-        module.add_function(node).unwrap();
-
-        let mut sa = SemanticAst::new();
-        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
-            .unwrap() {
-                let typed_func = module.get_item("my_func").unwrap().to_routine().unwrap();
-                let ty = &typed_func.get_metadata().ty;
-                assert_eq!(ty, I32);
-        } else {
-            panic!("Failed to deconstruct module")
-        }
-
-        let node = routinedef::RoutineDef {
-            meta: 1,
-            def: routinedef::RoutineDefType::Function,
-            name: "my_func".into(),
-            params: vec![],
-            ty: I32,
-            body: vec![Ast::Return(1, None)],
-        };
-
-        let mut module = module::Module::new("root", 1);
-        module.add_function(node).unwrap();
-
-        let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope);
-        assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
-    }
-
-    #[test]
-    fn test_coroutine_def() {
-        let mut scope = Scope::new();
-        scope.add("my_co", vec![], I32, vec![]);
-
-        let node = routinedef::RoutineDef {
-            meta: 1,
-            def: routinedef::RoutineDefType::Coroutine,
-            name: "my_co".into(),
-            params: vec![],
-            ty: I32,
-            body: vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
-        };
-        let mut module = module::Module::new("root", 1);
-        module.add_function(node).unwrap();
-
-        let mut sa = SemanticAst::new();
-        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
-            .unwrap() {
-                let typed_func = module.get_item("my_co").unwrap().to_routine().unwrap();
-                let ty = &typed_func.get_metadata().ty;
-                assert_eq!(ty, I32);
-        } else {
-            panic!("Failed to deconstruct module")
-        }
-
-        let node = routinedef::RoutineDef {
-            meta: 1,
-            def: routinedef::RoutineDefType::Coroutine,
-            name: "my_co".into(),
-            params: vec![],
-            ty: I32,
-            body: vec![Ast::Return(1, None)],
-        };
-        let mut module = module::Module::new("root", 1);
-        module.add_function(node).unwrap();
-
-        let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope);
-        assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
-    }
-
-    #[test]
-    fn test_if_expression() {
-        let mut scope = Scope::new();
-        scope.add("my_main", vec![], I32, vec![("c", false, I32)]);
-
-        for (c, t, f, ex) in vec![
-            (
-                Ast::Boolean(1, true),
-                Ast::Integer(1, 5),
-                Ast::Integer(1, 7),
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return -k;
+                }",
                 Ok(I32),
             ),
             (
-                Ast::Boolean(1, true),
-                Ast::Boolean(1, true),
-                Ast::Boolean(1, true),
+                "fn main() -> bool {
+                    let k: bool := false;
+                    return -k;
+                }",
+                Err("Semantic: L3: - expected i32 but found bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := false;
+                    return !k;
+                }",
                 Ok(Bool),
             ),
             (
-                Ast::Integer(1, 13),
-                Ast::Integer(1, 5),
-                Ast::Integer(1, 7),
-                Err("L1: Expected boolean expression in if conditional, got: i32".into()),
-            ),
-            (
-                Ast::Boolean(1, true),
-                Ast::Integer(1, 5),
-                Ast::Boolean(1, true),
-                Err("L1: If expression has mismatching arms: expected i32 got bool".into()),
-            ),
-            (
-                Ast::Boolean(1, true),
-                Ast::Boolean(1, true),
-                Ast::Integer(1, 5),
-                Err("L1: If expression has mismatching arms: expected bool got i32".into()),
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return !k;
+                }",
+                Err("Semantic: L3: ! expected bool but found i32"),
             ),
         ] {
-            let node = Ast::If(1, Box::new(c), Box::new(t), Box::new(f));
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
 
-            let mut sa = SemanticAst::new();
-            let result = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_main".into()),
-                &scope,
-            )
-            .map(|n| n.get_type().clone());
-            assert_eq!(result, ex);
+    #[test]
+    pub fn test_add_op() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 1 + 5;
+                    return k + 3;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 1 + false;
+                    return k + 3;
+                }",
+                Err("Semantic: L2: + expected i32 but found i32 and bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := \"hello\" + 5;
+                    return k + 3;
+                }",
+                Err("Semantic: L2: + expected i32 but found string and i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := true;
+                    return k + 3;
+                }",
+                Err("Semantic: L3: + expected i32 but found bool and i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_mul_op() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 1 * 5;
+                    return k * 3;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 1 * false;
+                    return k * 3;
+                }",
+                Err("Semantic: L2: * expected i32 but found i32 and bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := \"hello\" * 5;
+                    return k * 3;
+                }",
+                Err("Semantic: L2: * expected i32 but found string and i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := true;
+                    return k * 3;
+                }",
+                Err("Semantic: L3: * expected i32 but found bool and i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_boolean_and_op() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> bool {
+                    let k: bool := true && false;
+                    return k && true;
+                }",
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := true && 1;
+                    return k && true;
+                }",
+                Err("Semantic: L2: && expected bool but found bool and i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := \"hello\" && false;
+                    return k && true;
+                }",
+                Err("Semantic: L2: && expected bool but found string and bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k && true;
+                }",
+                Err("Semantic: L3: && expected bool but found i32 and bool"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_boolean_or_op() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> bool {
+                    let k: bool := true || false;
+                    return k || true;
+                }",
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := true || 1;
+                    return k || true;
+                }",
+                Err("Semantic: L2: || expected bool but found bool and i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := \"hello\" || false;
+                    return k || true;
+                }",
+                Err("Semantic: L2: || expected bool but found string and bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k || true;
+                }",
+                Err("Semantic: L3: || expected bool but found i32 and bool"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_comparison_op() {
+        use crate::syntax::parser;
+        for op in vec!["<", ">", "<=", ">=", "==", "!="] {
+            for (text, expected) in vec![
+                (
+                    String::from(&format!(
+                        "fn main() -> bool {{
+                            let k: bool := 1 {} 5;
+                            return k;
+                        }}",
+                        op
+                    )),
+                    Ok(Bool),
+                ),
+                (
+                    String::from(&format!(
+                        "fn main() -> bool {{
+                            let k: bool := 1 {} true;
+                            return k;
+                        }}",
+                        op
+                    )),
+                    Err(format!(
+                        "Semantic: L2: {} expected i32 but found i32 and bool",
+                        op
+                    )),
+                ),
+                (
+                    String::from(&format!(
+                        "fn main() -> bool {{
+                            let k: bool := false {} 5;
+                            return k;
+                        }}",
+                        op
+                    )),
+                    Err(format!(
+                        "Semantic: L2: {} expected bool but found bool and i32",
+                        op
+                    )),
+                ),
+            ] {
+                let tokens: Vec<Token> = Lexer::new(&text)
+                    .tokenize()
+                    .into_iter()
+                    .collect::<Result<_, _>>()
+                    .unwrap();
+                let ast = parser::parse(tokens).unwrap().unwrap();
+                let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+                match expected {
+                    Ok(expected_ty) => {
+                        let module = module.unwrap();
+                        let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                        // validate that the RHS of the bind is the correct type
+                        let bind_stm = &fn_main.get_body()[0];
+                        assert_eq!(bind_stm.get_type(), expected_ty);
+                        if let Ast::Bind(.., lhs) = bind_stm {
+                            assert_eq!(lhs.get_type(), expected_ty);
+                        } else {
+                            panic!("Expected a bind statement");
+                        }
+
+                        // Validate that the return statement is the correct type
+                        let ret_stm = &fn_main.get_body()[1];
+                        assert_eq!(ret_stm.get_type(), expected_ty);
+                        if let Ast::Return(_, Some(value)) = ret_stm {
+                            assert_eq!(value.get_type(), expected_ty);
+                        } else {
+                            panic!("Expected a return statement")
+                        }
+                    }
+                    Err(msg) => {
+                        assert_eq!(module.unwrap_err(), msg);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_bind_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: bool := 5;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected bool but got i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Err("Semantic: L3: Return expected bool but got i32"),
+            ),
+            (
+                // Test recursive definition
+                "fn main() -> bool {
+                    let k: bool := k;
+                    return k;
+                }",
+                Err("Semantic: L2: k is not defined"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := x;
+                    return k;
+                }",
+                Err("Semantic: L2: x is not defined"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // validate the return statement is typed correctly
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_mutate_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let mut k: i32 := 5;
+                    mut k := 3;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    let mut k: i32 := 5;
+                    mut k := false;
+                    return k;
+                }",
+                Err("Semantic: L3: k is of type i32 but is assigned bool"),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    mut k := 3;
+                    return k;
+                }",
+                Err("Semantic: L3: Variable k is not mutable"),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    mut k := false;
+                    return k;
+                }",
+                Err("Semantic: L3: Variable k is not mutable"),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    mut x := false;
+                    return k;
+                }",
+                Err("Semantic: L3: x is not defined"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // validate the mutate statement is typed correctly
+                    let mut_stm = &fn_main.get_body()[1];
+                    assert_eq!(mut_stm.get_type(), expected_ty);
+                    if let Ast::Mutate(_, _, rhs) = mut_stm {
+                        assert_eq!(rhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_return_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    return 5;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    return false;
+                }",
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> string {
+                    return \"hello\";
+                }",
+                Ok(Type::StringLiteral),
+            ),
+            (
+                "fn main() {
+                    return;
+                }",
+                Ok(Type::Unit),
+            ),
+            (
+                "fn main() -> bool {
+                    return 5;
+                }",
+                Err("Semantic: L2: Return expected bool but got i32"),
+            ),
+            (
+                "fn main() {
+                    return 5;
+                }",
+                Err("Semantic: L2: Return expected unit but got i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, value) = ret_stm {
+                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_function_calls() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Ok(I32),
+            ),
+            (
+                // test recursion
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return number();}
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    return number();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L2: Return expected bool but got i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    return bad_fun();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L2: function bad_fun not declared"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, 2);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(false, 2);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got bool"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, true);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i32 but got bool"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, 2, 3);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 3"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(false);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, value) = ret_stm {
+                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_coroutine_init() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {return 5;}
+                ",
+                Ok(Coroutine(Box::new(I32))),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(3);
+                    return;
+                }
+                co number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 0 but got 1"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Ok(Coroutine(Box::new(I32))),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 0"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5, 3);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 2"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5);
+                    return;
+                }
+                fn number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: Expected coroutine but number is a fn (i32) -> i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_yield_return_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {
+                    yret false;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L6: Yield return expected i32 but got bool"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {
+                    yret;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L6: Yield return expected i32 but got unit"),
+            ),
+            /*
+                Need to add a symbol for the unit type
+            (
+                "fn main() {
+                    let c: co := init number();
+                    return;
+                }
+                co number() {
+                    yret 5;
+                    return;
+                }
+                ",
+                Err("Semantic: L6: Yield return expected unit but got i32"),
+            ),*/
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let co_number = module.get_coroutines()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &co_number.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::YieldReturn(.., Some(lhs)) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_yield_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    let i: i32 := yield c;
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() {
+                    let c: bool := false;
+                    let i: i32 := yield c;
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L3: Yield expects co<_> but got bool"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    let i: bool := yield c;
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L3: Bind expected bool but got i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let co_number = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &co_number.get_body()[1];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., rhs) = bind_stm {
+                        assert_eq!(rhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_function_definition() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main(i: i32) -> i32 {
+                    return i;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main(b: bool) -> i32 {
+                    return b;
+                }
+                ",
+                Err("Semantic: L2: Return expected i32 but got bool"),
+            ),
+            (
+                "fn main(b: bool) -> i32 {
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Return expected i32 but got unit"),
+            ),
+            (
+                "fn main(b: bool) {
+                    return b;
+                }
+                ",
+                Err("Semantic: L2: Return expected unit but got bool"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, value) = ret_stm {
+                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_coroutine_definition() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "co main(i: i32) -> i32 {
+                    return i;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "co main(b: bool) -> i32 {
+                    return b;
+                }
+                ",
+                Err("Semantic: L2: Return expected i32 but got bool"),
+            ),
+            (
+                "co main(b: bool) -> i32 {
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Return expected i32 but got unit"),
+            ),
+            (
+                "co main(b: bool) {
+                    return b;
+                }
+                ",
+                Err("Semantic: L2: Return expected unit but got bool"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let co_main = module.get_coroutines()[0].to_routine().unwrap();
+
+                    // Check the return value
+                    let ret_stm = &co_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, value) = ret_stm {
+                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_if_expressions() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    let x: i32 := if (true) {1} else {2};
+                    return;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() {
+                    let x: i32 := if (4) {1} else {2};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Expected boolean expression in if conditional, got: i32"),
+            ),
+            (
+                "fn main() {
+                    let x: i32 := if (false) {true} else {2};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: If expression has mismatching arms: expected bool got i32"),
+            ),
+            (
+                "fn main() {
+                    let x: i32 := if (false) {5} else {\"hello\"};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: If expression has mismatching arms: expected i32 got string"),
+            ),
+            (
+                "fn main() {
+                    let x: i32 := if (false) {\"true\"} else {\"false\"};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Bind expected i32 but got string"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., rhs) = ret_stm {
+                        let rhs_ty = rhs.get_type();
+                        assert_eq!(rhs_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
     }
 
@@ -2235,7 +2648,7 @@ mod tests {
                     let y: i32 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 got root::MyStruct"),
+                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 but got root::MyStruct"),
             ),
             (
                 line!(),

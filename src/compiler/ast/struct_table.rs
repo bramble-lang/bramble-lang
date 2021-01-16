@@ -1,6 +1,13 @@
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{semantics::semanticnode::{SemanticMetadata, SemanticNode}, syntax::path::Path, syntax::{module::{Item, Module}, ty::Type}};
+use crate::{
+    semantics::semanticnode::{SemanticMetadata, SemanticNode},
+    syntax::path::Path,
+    syntax::{
+        module::{Item, Module},
+        ty::Type,
+    },
+};
 
 use super::struct_definition::{FieldInfo, StructDefinition};
 
@@ -18,13 +25,8 @@ impl<S> std::fmt::Display for StructTable<S> {
                 canon_path, st.name, st.size
             ))?;
 
-            for FieldInfo{name, ty, offset} in st.fields.iter() {
-                f.write_fmt(format_args!(
-                    "[{}, {}, {:?}], ",
-                    name,
-                    ty,
-                    offset
-                ))?;
+            for FieldInfo { name, ty, offset } in st.fields.iter() {
+                f.write_fmt(format_args!("[{}, {}, {:?}], ", name, ty, offset))?;
             }
 
             f.write_str("\n")?;
@@ -57,19 +59,30 @@ impl UnresolvedStructTable {
         Ok(table)
     }
 
+    pub fn from_module(root: &Module<SemanticMetadata>) -> Result<UnresolvedStructTable, String> {
+        let mut table = UnresolvedStructTable {
+            table: HashMap::new(),
+            state: PhantomData,
+        };
+
+        Self::traverse_module(root, &mut table.table)?;
+        Ok(table)
+    }
+
     fn traverse(
         node: &SemanticNode,
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<(), String> {
         match node {
-            SemanticNode::Module(m) => {
-                Self::traverse_module(m, table)
-            }
-            _ => Ok(())
+            SemanticNode::Module(m) => Self::traverse_module(m, table),
+            _ => Ok(()),
         }
     }
 
-    fn traverse_module(module: &Module<SemanticMetadata>, table: &mut HashMap<String, StructDefinition>) -> Result<(), String> {
+    fn traverse_module(
+        module: &Module<SemanticMetadata>,
+        table: &mut HashMap<String, StructDefinition>,
+    ) -> Result<(), String> {
         for s in module.get_structs().iter() {
             if let Item::Struct(SemanticNode::StructDef(meta, name, fields)) = s {
                 let struct_def = StructDefinition::new(name, fields.clone());
@@ -161,7 +174,7 @@ impl UnresolvedStructTable {
         // Loop through each struct in the table and attempt to resolve its size
         st.fields
             .iter()
-            .map(|FieldInfo{ty, ..}| get_resolved_size(ty, resolved_structs))
+            .map(|FieldInfo { ty, .. }| get_resolved_size(ty, resolved_structs))
             .collect::<Option<Vec<i32>>>()
     }
 
@@ -223,6 +236,7 @@ mod test {
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         semantics::type_checker::type_check,
+        syntax::ast::Ast,
     };
 
     #[test]
@@ -240,7 +254,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -275,7 +290,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -313,7 +329,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -368,7 +385,11 @@ mod test {
                 StructDefinition {
                     name: "test".into(),
                     size: Some(4),
-                    fields: vec![FieldInfo{name: "i".into(), ty: Type::I32, offset: Some(4)}],
+                    fields: vec![FieldInfo {
+                        name: "i".into(),
+                        ty: Type::I32,
+                        offset: Some(4),
+                    }],
                 },
             ),
             (
@@ -377,7 +398,11 @@ mod test {
                 StructDefinition {
                     name: "test".into(),
                     size: Some(4),
-                    fields: vec![FieldInfo{name: "y".into(), ty: Type::Bool, offset: Some(4)}],
+                    fields: vec![FieldInfo {
+                        name: "y".into(),
+                        ty: Type::Bool,
+                        offset: Some(4),
+                    }],
                 },
             ),
             (
@@ -387,8 +412,16 @@ mod test {
                     name: "test".into(),
                     size: Some(8),
                     fields: vec![
-                        FieldInfo{name: "i".into(), ty: Type::I32, offset: Some(4)},
-                        FieldInfo{name: "y".into(), ty: Type::Bool, offset: Some(8)},
+                        FieldInfo {
+                            name: "i".into(),
+                            ty: Type::I32,
+                            offset: Some(4),
+                        },
+                        FieldInfo {
+                            name: "y".into(),
+                            ty: Type::Bool,
+                            offset: Some(8),
+                        },
                     ],
                 },
             ),
@@ -398,7 +431,11 @@ mod test {
                 StructDefinition {
                     name: "test".into(),
                     size: Some(4),
-                    fields: vec![FieldInfo{name: "s".into(), ty: Type::StringLiteral, offset: Some(4)}],
+                    fields: vec![FieldInfo {
+                        name: "s".into(),
+                        ty: Type::StringLiteral,
+                        offset: Some(4),
+                    }],
                 },
             ),
             (
@@ -408,8 +445,16 @@ mod test {
                     name: "inner_test".into(),
                     size: Some(8),
                     fields: vec![
-                        FieldInfo{name: "i".into(), ty: Type::I32, offset: Some(4)},
-                        FieldInfo{name: "y".into(), ty: Type::Bool, offset: Some(8)},
+                        FieldInfo {
+                            name: "i".into(),
+                            ty: Type::I32,
+                            offset: Some(4),
+                        },
+                        FieldInfo {
+                            name: "y".into(),
+                            ty: Type::Bool,
+                            offset: Some(8),
+                        },
                     ],
                 },
             ),
@@ -420,7 +465,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -441,7 +487,7 @@ mod test {
                 StructDefinition {
                     name: "test2".into(),
                     size: Some(4),
-                    fields: vec![FieldInfo{
+                    fields: vec![FieldInfo {
                         name: "t".into(),
                         ty: Type::Custom(vec!["root", "test"].into()),
                         offset: Some(4),
@@ -458,13 +504,21 @@ mod test {
                     name: "test2".into(),
                     size: Some(12),
                     fields: vec![
-                        FieldInfo{name: "x".into(), ty: Type::I32, offset: Some(4)},
-                        FieldInfo{
+                        FieldInfo {
+                            name: "x".into(),
+                            ty: Type::I32,
+                            offset: Some(4),
+                        },
+                        FieldInfo {
                             name: "t".into(),
                             ty: Type::Custom(vec!["root", "test"].into()),
                             offset: Some(8),
                         },
-                        FieldInfo{name: "b".into(), ty: Type::Bool, offset: Some(12)},
+                        FieldInfo {
+                            name: "b".into(),
+                            ty: Type::Bool,
+                            offset: Some(12),
+                        },
                     ],
                 },
             ),
@@ -478,9 +532,17 @@ mod test {
                     name: "test2".into(),
                     size: Some(16),
                     fields: vec![
-                        FieldInfo{name: "x".into(), ty: Type::I32, offset: Some(4)},
-                        FieldInfo{name: "b".into(), ty: Type::Bool, offset: Some(8)},
-                        FieldInfo{
+                        FieldInfo {
+                            name: "x".into(),
+                            ty: Type::I32,
+                            offset: Some(4),
+                        },
+                        FieldInfo {
+                            name: "b".into(),
+                            ty: Type::Bool,
+                            offset: Some(8),
+                        },
+                        FieldInfo {
                             name: "t".into(),
                             ty: Type::Custom(vec!["root", "test"].into()),
                             offset: Some(16),
@@ -498,8 +560,8 @@ mod test {
                 StructDefinition {
                     name: "test3".into(),
                     size: Some(4),
-                    fields: vec![FieldInfo{
-                        name: "t2".into(), 
+                    fields: vec![FieldInfo {
+                        name: "t2".into(),
                         ty: Type::Custom(vec!["root", "test2"].into()),
                         offset: Some(4),
                     }],
@@ -512,7 +574,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -546,7 +609,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved = unrealized_st.resolve();
 

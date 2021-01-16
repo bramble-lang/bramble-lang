@@ -1,9 +1,13 @@
-use super::{ast::Ast, path::Path, routinedef::{RoutineDef, RoutineDefType}};
+use super::{
+    ast::Ast,
+    path::Path,
+    routinedef::{RoutineDef, RoutineDefType},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item<M> {
     Routine(RoutineDef<M>),
-    Struct(Ast<M>)
+    Struct(Ast<M>),
 }
 
 impl<M> Item<M> {
@@ -92,14 +96,16 @@ impl<M> Module<M> {
         }
     }
 
-    pub fn add_item(&mut self, i: Item<M>) -> Result<(), String>{
+    pub fn add_item(&mut self, i: Item<M>) -> Result<(), String> {
         match i {
-            Item::Routine(r) => if *r.get_def() == RoutineDefType::Function {
-                self.add_function(r)
-            } else {
-                self.add_coroutine(r)
-            },
-            Item::Struct(s) => self.add_struct(s)
+            Item::Routine(r) => {
+                if *r.get_def() == RoutineDefType::Function {
+                    self.add_function(r)
+                } else {
+                    self.add_coroutine(r)
+                }
+            }
+            Item::Struct(s) => self.add_struct(s),
         }
     }
 
@@ -152,17 +158,11 @@ impl<M> Module<M> {
     }
 
     pub fn get_item(&self, name: &str) -> Option<&Item<M>> {
-        self.functions
+        self.functions.iter().find(|f| f.get_name() == name).or(self
+            .coroutines
             .iter()
-            .find(|f| f.get_name() == name)
-            .or(self
-                .coroutines
-                .iter()
-                .find(|c| c.get_name() == name)
-                .or(self
-                    .structs
-                    .iter()
-                    .find(|c| c.get_name() == name)))
+            .find(|c| c.get_name() == name)
+            .or(self.structs.iter().find(|c| c.get_name() == name)))
     }
 
     pub fn go_to(&self, path: &Path) -> Option<&Item<M>> {
@@ -190,7 +190,7 @@ impl<M> Module<M> {
                     let item = path.item().expect("Path with >1 length has no item");
                     parent.get_item(item)
                 }
-                None => None
+                None => None,
             }
         }
     }

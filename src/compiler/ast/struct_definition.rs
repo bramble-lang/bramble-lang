@@ -8,9 +8,15 @@ pub struct FieldInfo {
 }
 
 impl FieldInfo {
-    pub fn name(&self) -> &str {&self.name}
-    pub fn ty(&self) -> &Type {&self.ty}
-    pub fn offset(&self) -> Option<i32> {self.offset}
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
+    pub fn offset(&self) -> Option<i32> {
+        self.offset
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -24,9 +30,11 @@ impl StructDefinition {
     pub fn new(name: &str, fields: Vec<(String, Type)>) -> StructDefinition {
         let mut nfields = vec![];
         for (fname, fty) in fields.iter() {
-            nfields.push(FieldInfo{
-                name: fname.clone(), ty: fty.clone(), offset: None}
-           );
+            nfields.push(FieldInfo {
+                name: fname.clone(),
+                ty: fty.clone(),
+                offset: None,
+            });
         }
 
         StructDefinition {
@@ -42,7 +50,7 @@ impl StructDefinition {
             Some(sz) => self
                 .fields
                 .iter()
-                .find(|FieldInfo{name, ..}| name == field)
+                .find(|FieldInfo { name, .. }| name == field)
                 .map_or(None, |f| f.offset)
                 .map_or(None, |x| Some(sz - x)),
         }

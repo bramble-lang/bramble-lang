@@ -34,7 +34,7 @@ impl<M> RoutineDef<M> {
         ty: Type,
         body: Vec<Ast<M>>,
     ) -> RoutineDef<M> {
-        RoutineDef{
+        RoutineDef {
             meta: metadata,
             def: RoutineDefType::Function,
             name: name.into(),
@@ -51,7 +51,7 @@ impl<M> RoutineDef<M> {
         ty: Type,
         body: Vec<Ast<M>>,
     ) -> RoutineDef<M> {
-        RoutineDef{
+        RoutineDef {
             meta: metadata,
             def: RoutineDefType::Coroutine,
             name: name.into(),

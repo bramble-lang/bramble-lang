@@ -1,6 +1,9 @@
-use crate::syntax::{module::{Item, Module}, routinedef::{RoutineDef, RoutineDefType}, ty::Type};
 use crate::semantics::semanticnode::SemanticMetadata;
-use crate::semantics::semanticnode::SemanticNode;
+use crate::syntax::{
+    module::{Item, Module},
+    routinedef::{RoutineDef, RoutineDefType},
+    ty::Type,
+};
 use crate::{ast, syntax::path::Path};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -87,16 +90,13 @@ impl SymbolTable {
         }
     }
 
-    pub fn from_ast(ast: &mut SemanticNode) -> Result<(), String> {
-        match ast {
-            SemanticNode::Module(m) => Self::generate(m),
-            _ => Err(format!("Expected a module, but got {}", ast.root_str()))
-        }
+    pub fn from_module(module: &mut Module<SemanticMetadata>) -> Result<(), String> {
+        Self::generate(module)
     }
 
     pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<(), String> {
         let mut metadata = m.get_metadata().clone();
-        
+
         let fm = m.get_functions_mut();
         for f in fm.iter_mut() {
             SymbolTable::traverse(f, &mut metadata)?;
@@ -119,7 +119,10 @@ impl SymbolTable {
         Ok(())
     }
 
-    fn traverse(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<(), String> {
+    fn traverse(
+        item: &mut Item<SemanticMetadata>,
+        sym: &mut SemanticMetadata,
+    ) -> Result<(), String> {
         use ast::Ast;
         match item {
             Item::Routine(RoutineDef {
