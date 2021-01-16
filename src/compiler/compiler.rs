@@ -1074,7 +1074,7 @@ impl<'a> Compiler<'a> {
                             0,
                         )?;
 
-                        let is_coroutine = self.scope.find_coroutine(current_func).is_some();
+                        let is_coroutine = self.scope.find_coroutine(current_func);
                         if is_coroutine {
                             assembly! {(code){
                                 mov %esi, [%ebp-8];

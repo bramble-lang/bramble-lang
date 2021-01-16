@@ -1,8 +1,8 @@
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::Item, routinedef::RoutineDef}};
+use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level;
 use crate::{syntax::routinedef::RoutineDefType, syntax::path::Path};
 
-use super::{scope::Scope, symbol_table::Symbol};
+use super::symbol_table::Symbol;
 
 #[derive(Debug)]
 pub struct ScopeStack<'a> {
@@ -43,37 +43,16 @@ impl<'a> ScopeStack<'a> {
         None
     }
 
-    /// Searched from the top of the stack to the bottom for a Node whose symbol table
-    /// contains the given name.  If found it will return a reference to that node.
-    /// Unlike `find` this function will not stop at Function boundaries. This allows
-    /// it to be used for searching for functions defined in parent scopes all the way up
-    /// to the module containing the current node.
-    fn find_global(&self, name: &str) -> Option<&'a CompilerNode> {
+    pub fn find_coroutine(&self, name: &str) -> bool {
         for node in self.stack.iter().rev() {
             let scope = node.get_metadata();
-            if scope.get(name).is_some() {
-                return Some(node);
+            match scope.level {
+                Level::Routine{routine_type, ..} => return routine_type == RoutineDefType::Coroutine,
+                _ => (),
             }
         }
 
-        None
-    }
-
-    pub fn find_coroutine(&self, name: &str) -> Option<&Item<Scope>> {
-        match self.find_global(name) {
-            Some(ref node) => match node {
-                CompilerNode::Module(m) => m.get_coroutines().iter().find(|v| match v {
-                    Item::Routine(RoutineDef {
-                        def: RoutineDefType::Coroutine,
-                        name: n,
-                        ..
-                    }) => n == name,
-                    _ => false,
-                }),
-                _ => None,
-            },
-            None => None,
-        }
+        false
     }
 
     /// Starting from the bottom of the stack this builds a path
@@ -112,7 +91,7 @@ impl std::fmt::Display for ScopeStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{compiler::ast::scope::Scope, syntax::module};
+    use crate::{compiler::ast::scope::Scope, syntax::{module, routinedef::RoutineDef}};
     use crate::syntax::ty::Type;
 
     #[test]
@@ -333,23 +312,7 @@ mod tests {
         let tmp = CompilerNode::RoutineDef(fun2_node);
         stack.push(&tmp);
 
-        let node = stack.find_coroutine("cor").unwrap();
-        match node {
-            Item::Routine(RoutineDef {
-                meta,
-                def: RoutineDefType::Coroutine,
-                name,
-                params,
-                ..
-            }) => {
-                assert_eq!(name, "cor");
-                assert_eq!(params.len(), 1);
-                let y_param = meta.get("y").unwrap();
-                assert_eq!(y_param.offset, 24);
-                assert_eq!(y_param.size, 4);
-            }
-            _ => assert!(false),
-        }
+        assert!(stack.find_coroutine("cor"));
     }
 
     #[test]
