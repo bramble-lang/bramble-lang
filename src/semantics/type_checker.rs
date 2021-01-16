@@ -2004,9 +2004,14 @@ mod tests {
         module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
+        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
+            .unwrap() {
+                let typed_func = module.get_item("my_func").unwrap().to_routine().unwrap();
+                let ty = &typed_func.get_metadata().ty;
+                assert_eq!(ty, I32);
+        } else {
+            panic!("Failed to deconstruct module")
+        }
 
         let node = routinedef::RoutineDef {
             meta: 1,
@@ -2042,9 +2047,14 @@ mod tests {
         module.add_function(node).unwrap();
 
         let mut sa = SemanticAst::new();
-        let ty = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
+        if let Ast::Module(module) = start(&mut sa.from_parser_ast(&Ast::Module(module)).unwrap(), &None, &scope)
+            .unwrap() {
+                let typed_func = module.get_item("my_co").unwrap().to_routine().unwrap();
+                let ty = &typed_func.get_metadata().ty;
+                assert_eq!(ty, I32);
+        } else {
+            panic!("Failed to deconstruct module")
+        }
 
         let node = routinedef::RoutineDef {
             meta: 1,
