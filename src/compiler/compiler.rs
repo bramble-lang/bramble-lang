@@ -705,26 +705,24 @@ impl<'a> Compiler<'a> {
     ) -> Result<(), String> {
         match item {
             Item::Struct(s) => self.traverse(s, current_func, code),
-            Item::Routine(r) => self.traverse_routine_def(r, current_func, code),
+            Item::Routine(r) => self.traverse_routine_def(r, code),
         }
     }
 
     fn traverse_routine_def(
         &mut self,
         routine: &'a RoutineDef<Scope>,
-        current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         match routine.get_def() {
-            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, current_func, code),
-            RoutineDefType::Function => self.traverse_function_def(routine, current_func, code),
+            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, code),
+            RoutineDefType::Function => self.traverse_function_def(routine, code),
         }
     }
 
     fn traverse_function_def(
         &mut self,
         routine: &'a RoutineDef<Scope>,
-        current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         let fn_param_registers = vec![
@@ -778,7 +776,6 @@ impl<'a> Compiler<'a> {
     fn traverse_coroutine_def(
         &mut self,
         routine: &'a RoutineDef<Scope>,
-        current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
