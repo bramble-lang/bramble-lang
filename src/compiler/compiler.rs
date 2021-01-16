@@ -13,7 +13,6 @@ use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::reg32;
 use crate::register;
-use crate::semantics::semanticnode::SemanticNode;
 use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
 use crate::unit_op;

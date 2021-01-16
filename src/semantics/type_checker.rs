@@ -3,7 +3,6 @@ use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
 use crate::syntax::ty::Type;
 use Type::*;
-use crate::syntax::pnode::PNode;
 use crate::syntax::path::Path;
 use crate::{
     ast,
@@ -902,7 +901,7 @@ impl<'a> SemanticAnalyzer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ast, syntax::{module::Item, routinedef}};
+    use crate::{ast, syntax::{module::Item, pnode::PNode, routinedef}};
     use crate::ast::Ast;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;

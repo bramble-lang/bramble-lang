@@ -1,6 +1,5 @@
 use crate::syntax::{module::{Item, Module}, routinedef::{RoutineDef, RoutineDefType}, ty::Type};
 use crate::semantics::semanticnode::SemanticMetadata;
-use crate::semantics::semanticnode::SemanticNode;
 use crate::{ast, syntax::path::Path};
 
 #[derive(Clone, Debug, PartialEq)]
