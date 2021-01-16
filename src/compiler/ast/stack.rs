@@ -210,8 +210,7 @@ mod tests {
         module_scope.insert("func", 0, 0);
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_function(fun_node).unwrap();
-        let tmp = CompilerNode::Module(module_node);
-        stack.push(&tmp.get_metadata());
+        stack.push(&module_node.get_metadata());
 
         let fun2_scope = Scope::new(
             0,
@@ -266,8 +265,7 @@ mod tests {
 
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_coroutine(cor_node).unwrap();
-        let tmp = CompilerNode::Module(module_node);
-        stack.push(&tmp.get_metadata());
+        stack.push(&module_node.get_metadata());
 
         let fun2_scope = Scope::new(
             0,

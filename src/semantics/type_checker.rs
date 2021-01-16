@@ -759,10 +759,10 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = ty;
                 Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
             }
-            Ast::Module(m) => {
+            /*Ast::Module(m) => {
                 let nmodule = self.analyze_module(m, sym)?;
                 Ok(Ast::Module(nmodule))
-            }
+            }*/
             Ast::StructDef(meta, struct_name, fields) => {
                 let mut meta = meta.clone();
                 // Check the type of each member

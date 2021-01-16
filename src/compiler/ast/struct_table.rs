@@ -72,7 +72,7 @@ impl UnresolvedStructTable {
 
     fn traverse(node: &SemanticNode, table: &mut HashMap<String, StructDefinition>) -> Result<()> {
         match node {
-            SemanticNode::Module(m) => Self::traverse_module(m, table),
+            //SemanticNode::Module(m) => Self::traverse_module(m, table),
             _ => Ok(()),
         }
     }
@@ -253,8 +253,8 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let semantic_ast = Ast::Module(semantic_module);
-            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            //let semantic_ast = Ast::Module(semantic_module);
+            let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
                 unrealized_st.table["root::test"],
@@ -289,8 +289,8 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let semantic_ast = Ast::Module(semantic_module);
-            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            //let semantic_ast = Ast::Module(semantic_module);
+            let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
                 unrealized_st.table["root::my_mod::test"],
@@ -328,8 +328,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let semantic_ast = Ast::Module(semantic_module);
-            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
                 unrealized_st.table["root::my_mod::test"],
@@ -464,8 +463,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let semantic_ast = Ast::Module(semantic_module);
-            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
             assert_eq!(resolved_st.table[canonical_name], expected);
@@ -573,8 +571,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let semantic_ast = Ast::Module(semantic_module);
-            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
             assert_eq!(resolved_st.table[canonical_name], expected);
@@ -608,8 +605,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let semantic_ast = Ast::Module(semantic_module);
-            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved = unrealized_st.resolve();
 
             assert_eq!(
