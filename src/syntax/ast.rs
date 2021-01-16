@@ -98,7 +98,6 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    //RoutineDef(RoutineDef<I>),
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     Module(Module<I>),
     StructDef(I, String, Vec<(String, Type)>),
