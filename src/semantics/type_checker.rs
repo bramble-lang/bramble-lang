@@ -1511,80 +1511,72 @@ mod tests {
     }
 
     #[test]
-    pub fn test_mul() {
-        let mut scope = Scope::new();
-        scope.add(
-            "my_func",
-            vec![],
-            Unit,
-            vec![("x", false, I32), ("b", false, Bool)],
-        );
-        // both operands are i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Integer(1, 5)),
-                Box::new(Ast::Integer(1, 10)),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(&mut sa.from_parser_ast(&node).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone())
+    pub fn test_mul_op() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 1 * 5;
+                    return k * 3;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 1 * false;
+                    return k * 3;
+                }",
+                Err("Semantic: L2: * expected i32 but found i32 and bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := \"hello\" * 5;
+                    return k * 3;
+                }",
+                Err("Semantic: L2: * expected i32 but found string and i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := true;
+                    return k * 3;
+                }",
+                Err("Semantic: L3: * expected i32 but found bool and i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
                 .unwrap();
-            assert_eq!(ty, Type::I32);
-        }
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Identifier(1, "b".into())),
-                Box::new(Ast::Integer(1, 10)),
-            );
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
 
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: * expected i32 but found bool and i32".into()));
-        }
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Integer(1, 10)),
-                Box::new(Ast::Identifier(1, "b".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: * expected i32 but found i32 and bool".into()));
-        }
-        // operands are not i32
-        {
-            let node = Ast::BinaryOp(
-                1,
-                BinaryOperator::Mul,
-                Box::new(Ast::Identifier(1, "b".into())),
-                Box::new(Ast::Identifier(1, "b".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: * expected i32 but found bool and bool".into()));
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
     }
 
