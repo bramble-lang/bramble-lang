@@ -933,7 +933,7 @@ mod tests {
     use crate::lexer::tokens::Token;
     use crate::{
         ast,
-        syntax::{module::Item, pnode::PNode, routinedef},
+        syntax::{module::Item, routinedef},
     };
     use std::collections::HashMap;
 
@@ -1828,85 +1828,80 @@ mod tests {
     }
 
     #[test]
-    pub fn test_bind() {
-        // RHS type matches the LHS type
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
+    pub fn test_bind_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: bool := 5;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected bool but got i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Err("Semantic: L3: Return expected bool but got i32"),
+            ),
+            (
+                // Test recursive definition
+                "fn main() -> bool {
+                    let k: bool := k;
+                    return k;
+                }",
+                Err("Semantic: L2: k is not defined"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := x;
+                    return k;
+                }",
+                Err("Semantic: L2: x is not defined"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-            let node = Ast::Bind(
-                1,
-                "x".into(),
-                false,
-                Type::I32,
-                Box::new(Ast::Integer(1, 5)),
-            );
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            )
-            .map(|n| n.get_type().clone());
-            assert_eq!(ty, Ok(Type::I32));
-        }
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
 
-        // RHS type does not match LHS type
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
-
-            let node = Ast::Bind(
-                1,
-                "x".into(),
-                false,
-                Type::Bool,
-                Box::new(Ast::Integer(1, 5)),
-            );
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: Bind expected bool but got i32".into()));
-        }
-
-        // recursive definition
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
-
-            let node = Ast::Bind(
-                1,
-                "x".into(),
-                false,
-                Type::I32,
-                Box::new(Ast::Identifier(1, "x".into())),
-            );
-
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is not defined".into()));
-        }
-
-        // use an unbound variable
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![]);
-
-            let node = Ast::Identifier(1, "x".into());
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is not defined".into()));
+                    // validate the return statement is typed correctly
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
     }
 
