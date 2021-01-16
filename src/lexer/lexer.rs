@@ -1,3 +1,4 @@
+use braid_lang::result::Result;
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
 use stdext::function_name;
@@ -157,7 +158,7 @@ impl Lexer {
         }
     }
 
-    pub fn tokenize(&mut self) -> Vec<Result<Token, String>> {
+    pub fn tokenize(&mut self) -> Vec<Result<Token>> {
         let mut tokens = vec![];
 
         while self.index < self.chars.len() {
@@ -185,7 +186,7 @@ impl Lexer {
         tokens
     }
 
-    fn next_token(&mut self) -> Result<Option<Token>, String> {
+    fn next_token(&mut self) -> Result<Option<Token>> {
         self.consume_line_comment();
         self.consume_block_comment();
 
@@ -204,7 +205,7 @@ impl Lexer {
         }
     }
 
-    fn consume_literal(&mut self) -> Result<Option<Token>, String> {
+    fn consume_literal(&mut self) -> Result<Option<Token>> {
         trace!(self);
         match self.consume_integer()? {
             Some(i) => Ok(Some(i)),
@@ -225,7 +226,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_identifier(&mut self) -> Result<Option<Token>, String> {
+    pub fn consume_identifier(&mut self) -> Result<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch
@@ -251,7 +252,7 @@ impl Lexer {
         }
     }
 
-    fn consume_string_literal(&mut self) -> Result<Option<Token>, String> {
+    fn consume_string_literal(&mut self) -> Result<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -271,7 +272,7 @@ impl Lexer {
         }
     }
 
-    pub fn consume_integer(&mut self) -> Result<Option<Token>, String> {
+    pub fn consume_integer(&mut self) -> Result<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -300,7 +301,7 @@ impl Lexer {
         )))
     }
 
-    pub fn consume_operator(&mut self) -> Result<Option<Token>, String> {
+    pub fn consume_operator(&mut self) -> Result<Option<Token>> {
         trace!(self);
         let line = self.line;
         let mut branch = LexerBranch::from(self);
