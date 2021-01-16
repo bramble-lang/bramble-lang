@@ -124,3 +124,9 @@ having the `UnresolvedStructTable` and `ResolvedStructTable` types
 
 The `Path` and `CanonicalPath` idea mentioned above is another instance of this philosophy: using types to enforce
 a specific order of steps and to help guarantee that those steps have been executed.
+
+Part of this design philosophy is that only the initial value in each state machine can be created by the user.
+All other "states" must come as output from the transformation function: e.g. the AST can only be created by
+passing a token stream to the Parser, and a CanonicalPath can ony be created by calling `to_canonical` on
+a Path value and providing all the data necessary to convert from a relative path to an absolute path.
+
