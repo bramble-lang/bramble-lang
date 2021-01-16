@@ -84,7 +84,6 @@ fn main() {
         .collect();
 
     let trace_parser = TracingConfig::parse(matches.value_of("trace-parser"));
-    //let trace_parser = if matches.is_present("trace-parser") {TracingConfig::All} else {TracingConfig::Off};
     parser::set_tracing(trace_parser);
     let ast = match parser::parse(tokens) {
         Ok(Some(ast)) => ast,
@@ -103,7 +102,6 @@ fn main() {
     let trace_path = TracingConfig::parse(matches.value_of("trace-path"));
     let semantic_ast = match type_check(&ast, trace_semantic_analysis, trace_path) {
         Ok(ast) => {
-            //func_table = FunctionTable::from_semantic_ast(&ast);
             ast
         }
         Err(msg) => {
