@@ -280,7 +280,7 @@ impl CompilerNode {
             RoutineDefType::Coroutine => 20,
         };
         let (mut meta, offset) =
-            Scope::routine_from(meta, struct_table, initial_frame_size);
+            Scope::routine_from(meta, def, struct_table, initial_frame_size);
         let mut nbody = vec![];
         let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {

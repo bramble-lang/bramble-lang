@@ -117,10 +117,11 @@ impl Scope {
 
     pub(super) fn routine_from(
         m: &SemanticMetadata,
+        routine_type: &RoutineDefType,
         struct_table: &ResolvedStructTable,
         current_offset: i32,
     ) -> (Scope, i32) {
-        let mut scope = Scope::new_routine(m.id, m.get_canonical_path(), RoutineDefType::Function, &m.ty);
+        let mut scope = Scope::new_routine(m.id, m.get_canonical_path(), *routine_type, &m.ty);
         scope.line = m.ln;
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
