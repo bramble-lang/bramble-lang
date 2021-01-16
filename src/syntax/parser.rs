@@ -12,7 +12,7 @@ use crate::{
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::{path::Path, pnode::PNode, ty::Type};
+use super::{path::Path, pnode::PNode, ty::Type, module::Module};
 use super::pnode::PResult;
 use super::tokenstream::TokenStream;
 use super::{ast::*, pnode::ParserCombinator};
@@ -140,10 +140,10 @@ pub fn parse(tokens: Vec<Token>) -> PResult {
         }
     }
 
-    Ok(item)
+    Ok(item.map(|i| Ast::Module(i)))
 }
 
-fn module(stream: &mut TokenStream) -> PResult {
+fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>, String> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
             Some((_, module_name)) => {
@@ -162,28 +162,24 @@ fn module(stream: &mut TokenStream) -> PResult {
     Ok(mod_def)
 }
 
-fn parse_items(name: &str, stream: &mut TokenStream) -> PResult {
-    let mut functions = vec![];
-    let mut coroutines = vec![];
-    let mut structs = vec![];
-    let mut modules = vec![];
-
+fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32>>, String> {
     let module_line = stream.peek().map_or(1, |t| t.l);
+    let mut parent_module = Module::new(name, module_line);
     while stream.peek().is_some() {
         let start_index = stream.index();
         if let Some(m) = module(stream)? {
-            modules.push(m);
+            parent_module.add_module(m);
         }
 
         if let Some(f) = function_def(stream)? {
-            functions.push(f);
+            parent_module.add_function(f)?;
         }
         if let Some(c) = coroutine_def(stream)? {
-            coroutines.push(c);
+            parent_module.add_coroutine(c)?;
         }
 
         if let Some(s) = struct_def(stream)? {
-            structs.push(s);
+            parent_module.add_struct(s)?;
         }
 
         if stream.index() == start_index {
@@ -192,14 +188,7 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> PResult {
         }
     }
 
-    Ok(Some(Ast::Module {
-        meta: module_line,
-        name: name.into(),
-        modules,
-        functions,
-        coroutines,
-        structs,
-    }))
+    Ok(Some(parent_module))
 }
 
 fn struct_def(stream: &mut TokenStream) -> PResult {
@@ -1300,9 +1289,9 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module { meta, name, .. }) = module(&mut iter).unwrap() {
-            assert_eq!(meta, 1);
-            assert_eq!(name, "test_mod");
+        if let Some(m) = module(&mut iter).unwrap() {
+            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(m.get_name(), "test_mod");
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1317,60 +1306,44 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        if let Some(Ast::Module {
-            meta,
-            name,
-            modules,
-            functions,
-            coroutines,
-            structs,
-        }) = parse(tokens).unwrap()
+        if let Some(Ast::Module(m)) = parse(tokens).unwrap()
         {
-            assert_eq!(meta, 1);
-            assert_eq!(name, "root");
+            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(m.get_name(), "root");
 
-            assert_eq!(modules.len(), 1);
-            assert_eq!(functions.len(), 0);
-            assert_eq!(coroutines.len(), 0);
-            assert_eq!(structs.len(), 0);
+            assert_eq!(m.get_modules().len(), 1);
+            assert_eq!(m.get_functions().len(), 0);
+            assert_eq!(m.get_coroutines().len(), 0);
+            assert_eq!(m.get_structs().len(), 0);
 
-            if let Ast::Module {
+            let m = &m.get_modules()[0];
+            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(m.get_name(), "test_fn_mod");
+
+            assert_eq!(m.get_modules().len(), 0);
+            assert_eq!(m.get_functions().len(), 1);
+            assert_eq!(m.get_coroutines().len(), 0);
+            assert_eq!(m.get_structs().len(), 0);
+            if let Ast::RoutineDef {
                 meta,
+                def: RoutineDef::Function,
                 name,
-                modules,
-                functions,
-                coroutines,
-                structs,
-            } = &modules[0]
+                params,
+                ty,
+                body,
+            } = &m.get_functions()[0]
             {
                 assert_eq!(*meta, 1);
-                assert_eq!(name, "test_fn_mod");
-
-                assert_eq!(modules.len(), 0);
-                assert_eq!(functions.len(), 1);
-                assert_eq!(coroutines.len(), 0);
-                assert_eq!(structs.len(), 0);
-                if let Ast::RoutineDef {
-                    meta,
-                    def: RoutineDef::Function,
-                    name,
-                    params,
-                    ty,
-                    body,
-                } = &functions[0]
-                {
-                    assert_eq!(*meta, 1);
-                    assert_eq!(name, "test");
-                    assert_eq!(params, &vec![("x".into(), Type::I32)]);
-                    assert_eq!(ty, &Type::Unit);
-                    assert_eq!(body.len(), 1);
-                    match &body[0] {
-                        Ast::Return(_, None) => {}
-                        _ => panic!("Wrong body, expected unit return"),
-                    }
-                } else {
-                    panic!("Expected function definition")
+                assert_eq!(name, "test");
+                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(ty, &Type::Unit);
+                assert_eq!(body.len(), 1);
+                match &body[0] {
+                    Ast::Return(_, None) => {}
+                    _ => panic!("Wrong body, expected unit return"),
                 }
+            } else {
+                panic!("Expected function definition")
             }
         } else {
             panic!("No nodes returned by parser")
@@ -1386,30 +1359,24 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module {
-            meta,
-            name,
-            modules,
-            functions,
-            coroutines,
-            structs,
-        }) = module(&mut iter).unwrap()
+        if let Some(m) = module(&mut iter).unwrap()
         {
-            assert_eq!(meta, 1);
-            assert_eq!(name, "test_co_mod");
-            assert_eq!(modules.len(), 0);
-            assert_eq!(functions.len(), 0);
-            assert_eq!(coroutines.len(), 1);
-            assert_eq!(structs.len(), 0);
+            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(m.get_name(), "test_co_mod");
 
-            if let Ast::RoutineDef {
+            assert_eq!(m.get_modules().len(), 0);
+            assert_eq!(m.get_functions().len(), 0);
+            assert_eq!(m.get_coroutines().len(), 1);
+            assert_eq!(m.get_structs().len(), 0);
+
+            if let Some(Ast::RoutineDef {
                 meta,
                 def: RoutineDef::Coroutine,
                 name,
                 params,
                 ty,
                 body,
-            } = &coroutines[0]
+            }) = m.get_item("test")
             {
                 assert_eq!(*meta, 1);
                 assert_eq!(name, "test");
@@ -1437,23 +1404,17 @@ pub mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::Module {
-            meta,
-            name,
-            modules,
-            functions,
-            coroutines,
-            structs,
-        }) = module(&mut iter).unwrap()
+        if let Some(m) = module(&mut iter).unwrap()
         {
-            assert_eq!(meta, 1);
-            assert_eq!(name, "test_struct_mod");
-            assert_eq!(modules.len(), 0);
-            assert_eq!(functions.len(), 0);
-            assert_eq!(coroutines.len(), 0);
-            assert_eq!(structs.len(), 1);
+            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(m.get_name(), "test_struct_mod");
 
-            if let Ast::StructDef(l, name, fields) = &structs[0] {
+            assert_eq!(m.get_modules().len(), 0);
+            assert_eq!(m.get_functions().len(), 0);
+            assert_eq!(m.get_coroutines().len(), 0);
+            assert_eq!(m.get_structs().len(), 1);
+
+            if let Some(Ast::StructDef(l, name, fields)) = m.get_item("my_struct") {
                 assert_eq!(*l, 1);
                 assert_eq!(name, "my_struct");
                 assert_eq!(fields, &vec![("x".into(), Type::I32)]);
@@ -1589,19 +1550,17 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
-        if let Some(Ast::Module {
-            meta, coroutines, ..
-        }) = parse(tokens).unwrap()
+        if let Some(Ast::Module(m)) = parse(tokens).unwrap()
         {
-            assert_eq!(meta, 1);
-            if let Ast::RoutineDef {
+            assert_eq!(*m.get_metadata(), 1);
+            if let Some(Ast::RoutineDef {
                 def: RoutineDef::Coroutine,
                 name,
                 params,
                 ty,
                 body,
                 ..
-            } = &coroutines[0]
+            }) = m.get_item("test")
             {
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
@@ -1912,8 +1871,8 @@ pub mod tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            if let Some(Ast::Module { structs, .. }) = module(&mut stream).unwrap() {
-                assert_eq!(structs[0], expected, "{:?}", text);
+            if let Some(m) = module(&mut stream).unwrap() {
+                assert_eq!(m.get_structs()[0], expected, "{:?}", text);
             }
         }
     }
@@ -1987,7 +1946,7 @@ pub mod tests {
                 .unwrap();
             let ast = parse(tokens).unwrap().unwrap();
             match ast {
-                Ast::Module { functions, .. } => match &functions[0] {
+                Ast::Module(m) => match &m.get_functions()[0] {
                     Ast::RoutineDef { body, .. } => match &body[0] {
                         Ast::Return(.., Some(rv)) => {
                             assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))

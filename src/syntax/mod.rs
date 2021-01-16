@@ -4,3 +4,4 @@ pub mod pnode;
 mod tokenstream;
 pub mod path;
 pub mod ty;
+pub mod module;

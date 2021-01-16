@@ -62,7 +62,7 @@ impl<'a> ScopeStack<'a> {
     pub fn find_func(&self, name: &str) -> Option<&CompilerNode> {
         match self.find_global(name) {
             Some(ref node) => match node {
-                CompilerNode::Module { functions, .. } => functions.iter().find(|v| match v {
+                CompilerNode::Module(m)=> m.get_functions().iter().find(|v| match v {
                     CompilerNode::RoutineDef {
                         def: RoutineDef::Function,
                         name: n,
@@ -79,7 +79,7 @@ impl<'a> ScopeStack<'a> {
     pub fn find_coroutine(&self, name: &str) -> Option<&CompilerNode> {
         match self.find_global(name) {
             Some(ref node) => match node {
-                CompilerNode::Module { coroutines, .. } => coroutines.iter().find(|v| match v {
+                CompilerNode::Module(m) => m.get_coroutines().iter().find(|v| match v {
                     CompilerNode::RoutineDef {
                         def: RoutineDef::Coroutine,
                         name: n,
@@ -113,8 +113,8 @@ impl<'a> ScopeStack<'a> {
 
         for node in self.stack.iter() {
             match node {
-                CompilerNode::Module { name, .. } => {
-                    steps.push(name.clone());
+                CompilerNode::Module(m) => {
+                    steps.push(m.get_name().clone());
                 }
                 _ => (),
             }
@@ -141,7 +141,7 @@ impl std::fmt::Display for ScopeStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compiler::ast::scope::Scope;
+    use crate::{compiler::ast::scope::Scope, syntax::module};
     use crate::syntax::ty::Type;
 
     #[test]
@@ -276,15 +276,10 @@ mod tests {
 
         let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("func", 0, 0);
-        let module_node = CompilerNode::Module {
-            meta: module_scope,
-            name: "test".into(),
-            modules: vec![],
-            functions: vec![fun_node],
-            coroutines: vec![],
-            structs: vec![],
-        };
-        stack.push(&module_node);
+        let mut module_node = module::Module::new("test", module_scope);
+        module_node.add_function(fun_node).unwrap();
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let fun2_scope = Scope::new(
             0,
@@ -352,15 +347,11 @@ mod tests {
 
         let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("cor", 0, 0);
-        let module_node = CompilerNode::Module {
-            meta: module_scope,
-            name: "test".into(),
-            modules: vec![],
-            functions: vec![],
-            coroutines: vec![cor_node],
-            structs: vec![],
-        };
-        stack.push(&module_node);
+
+        let mut module_node = module::Module::new("test", module_scope);
+        module_node.add_coroutine(cor_node).unwrap();
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let fun2_scope = Scope::new(
             0,
@@ -412,15 +403,10 @@ mod tests {
             Type::Unit,
         );
         module_scope.insert("cor", 0, 0);
-        let module_node = CompilerNode::Module {
-            meta: module_scope,
-            name: "root".into(),
-            modules: vec![],
-            functions: vec![],
-            coroutines: vec![],
-            structs: vec![],
-        };
-        stack.push(&module_node);
+
+        let module_node = module::Module::new("root", module_scope);
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let path = stack.to_path().unwrap();
         let expected: Path = vec!["root"].into();
@@ -439,15 +425,10 @@ mod tests {
             Type::Unit,
         );
         module_scope.insert("cor", 0, 0);
-        let module_node = CompilerNode::Module {
-            meta: module_scope,
-            name: "root".into(),
-            modules: vec![],
-            functions: vec![],
-            coroutines: vec![],
-            structs: vec![],
-        };
-        stack.push(&module_node);
+        
+        let module_node = module::Module::new("root", module_scope);
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let fun2_scope = Scope::new(
             0,
@@ -484,15 +465,10 @@ mod tests {
             vec!["root"].into(),
             Type::Unit,
         );
-        let module_node = CompilerNode::Module {
-            meta: module_scope,
-            name: "root".into(),
-            modules: vec![],
-            functions: vec![],
-            coroutines: vec![],
-            structs: vec![],
-        };
-        stack.push(&module_node);
+        
+        let module_node = module::Module::new("root", module_scope);
+        let tmp = CompilerNode::Module(module_node);
+        stack.push(&tmp);
 
         let module2_scope = Scope::new(
             0,
@@ -502,15 +478,10 @@ mod tests {
             vec!["root"].into(),
             Type::Unit,
         );
-        let module2_node = CompilerNode::Module {
-            meta: module2_scope,
-            name: "inner".into(),
-            modules: vec![],
-            functions: vec![],
-            coroutines: vec![],
-            structs: vec![],
-        };
-        stack.push(&module2_node);
+        
+        let module2_node = module::Module::new("inner", module2_scope);
+        let tmp2 = CompilerNode::Module(module2_node);
+        stack.push(&tmp2);
 
         let fun2_scope = Scope::new(
             0,

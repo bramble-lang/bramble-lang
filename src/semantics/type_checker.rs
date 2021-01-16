@@ -1,4 +1,4 @@
-use crate::ast::{Ast, Ast::*, BinaryOperator, UnaryOperator};
+use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::module};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
 use crate::syntax::ty::Type;
@@ -10,6 +10,8 @@ use crate::{
     diagnostics::config::{Tracing, TracingConfig},
 };
 
+use super::semanticnode::SemanticMetadata;
+
 pub fn type_check(
     ast: &PNode,
     trace: TracingConfig,
@@ -17,7 +19,7 @@ pub fn type_check(
 ) -> Result<SemanticNode, String> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_parser_ast(&ast)?;
-    SymbolTable::generate(&mut sm_ast)?;
+    SymbolTable::from_ast(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
     let mut semantic = SemanticAnalyzer::new(&sm_ast);
@@ -266,7 +268,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 .expect("Expected a canonical path with at least one step in it");
             let node = self
                 .root
-                .go_to(&canon_path.parent())
+                .go_to_module(&canon_path.parent())
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
             Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
         } else if path.len() == 1 {
@@ -775,43 +777,9 @@ impl<'a> SemanticAnalyzer<'a> {
                     body: resolved_body,
                 })
             }
-            Module {
-                meta,
-                name,
-                modules,
-                functions,
-                coroutines,
-                structs,
-            } => {
-                let mut meta = meta.clone();
-                let tmp_sym = sym.clone();
-                self.stack.push(tmp_sym);
-                let modules = modules
-                    .iter()
-                    .map(|m| self.traverse(m, &None, &mut meta.sym))
-                    .collect::<Result<Vec<SemanticNode>, String>>()?;
-                let functions = functions
-                    .iter()
-                    .map(|f| self.traverse(f, &None, &mut meta.sym))
-                    .collect::<Result<Vec<SemanticNode>, String>>()?;
-                let coroutines = coroutines
-                    .iter()
-                    .map(|c| self.traverse(c, &None, &mut meta.sym))
-                    .collect::<Result<Vec<SemanticNode>, String>>()?;
-                let structs = structs
-                    .iter()
-                    .map(|s| self.traverse(s, &None, &mut meta.sym))
-                    .collect::<Result<Vec<SemanticNode>, String>>()?;
-                self.stack.pop();
-                meta.ty = Unit;
-                Ok(Module {
-                    meta: meta.clone(),
-                    name: name.clone(),
-                    modules,
-                    functions,
-                    coroutines,
-                    structs,
-                })
+            Module(m) => {
+                let nmodule = self.analyze_module(m, sym)?;
+                Ok(Module(nmodule))
             }
             Ast::StructDef(meta, struct_name, fields) => {
                 let mut meta = meta.clone();
@@ -882,6 +850,37 @@ impl<'a> SemanticAnalyzer<'a> {
                 ))
             }
         }
+    }
+
+    fn analyze_module(&mut self, m: &module::Module<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>, String> {
+        let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
+        let mut meta = nmodule.get_metadata_mut().clone();
+
+        let tmp_sym = sym.clone();
+        self.stack.push(tmp_sym);
+
+        *nmodule.get_modules_mut() = m.get_modules()
+            .iter()
+            .map(|m| self.analyze_module(m, &mut meta.sym))
+            .collect::<Result<Vec<module::Module<SemanticMetadata>>, String>>()?;
+        *nmodule.get_functions_mut() = m.get_functions()
+            .iter()
+            .map(|f| self.traverse(f, &None, &mut meta.sym))
+            .collect::<Result<Vec<SemanticNode>, String>>()?;
+        *nmodule.get_coroutines_mut() = m.get_coroutines()
+            .iter()
+            .map(|c| self.traverse(c, &None, &mut meta.sym))
+            .collect::<Result<Vec<SemanticNode>, String>>()?;
+        *nmodule.get_structs_mut() = m.get_structs()
+            .iter()
+            .map(|s| self.traverse(s, &None, &mut meta.sym))
+            .collect::<Result<Vec<SemanticNode>, String>>()?;
+
+        self.stack.pop();
+
+        meta.ty = Unit;
+        *nmodule.get_metadata_mut() = meta;
+        Ok(nmodule)
     }
 }
 
@@ -1023,7 +1022,9 @@ mod tests {
         for (text, expected) in vec![
             (
                 "mod my_mod{ 
-                    fn test() -> i32{ return 0;} 
+                    fn test() -> i32{ 
+                        return 0;
+                    } 
                     fn main() {
                         let k: i32 := test();
                         let i: i32 := self::test(); 
@@ -1185,8 +1186,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module { functions, .. } = result {
-                if let RoutineDef { body, .. } = &functions[0] {
+            if let Module(m) = result {
+                if let RoutineDef { body, .. } = &m.get_functions()[0] {
                     if let Bind(.., exp) = &body[0] {
                         if let box StructExpression(_, struct_name, ..) = exp {
                             let expected: Path = vec!["root", "test"].into();
@@ -1225,8 +1226,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module { functions, .. } = result {
-                if let RoutineDef { params, .. } = &functions[0] {
+            if let Module(m) = result {
+                if let RoutineDef { params, .. } = &m.get_functions()[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1261,8 +1262,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module { coroutines, .. } = result {
-                if let RoutineDef { params, .. } = &coroutines[0] {
+            if let Module(m) = result {
+                if let RoutineDef { params, .. } = &m.get_coroutines()[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1295,8 +1296,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module { structs, .. } = result {
-                if let Ast::StructDef(_, _, fields) = &structs[1] {
+            if let Module(m) = result {
+                if let Ast::StructDef(_, _, fields) = &m.get_structs()[1] {
                     if let (_, Custom(ty_path)) = &fields[0] {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -2256,7 +2257,9 @@ mod tests {
     pub fn test_member_access() {
         use crate::syntax::parser;
         for (text, expected) in vec![
-                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.x;}",
+                ("struct MyStruct{x:i32}
+                fn test(ms:MyStruct) -> i32 {
+                    return ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),

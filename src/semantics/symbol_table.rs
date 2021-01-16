@@ -1,4 +1,4 @@
-use crate::syntax::ty::Type;
+use crate::syntax::{module::Module, ty::Type};
 use crate::semantics::semanticnode::SemanticMetadata;
 use crate::semantics::semanticnode::SemanticNode;
 use crate::{ast, syntax::path::Path};
@@ -87,32 +87,34 @@ impl SymbolTable {
         }
     }
 
-    pub fn generate(ast: &mut SemanticNode) -> Result<(), String> {
-        use ast::Ast;
+    pub fn from_ast(ast: &mut SemanticNode) -> Result<(), String> {
         match ast {
-            Ast::Module {
-                meta,
-                modules,
-                functions,
-                coroutines,
-                structs,
-                ..
-            } => {
-                for f in functions.iter_mut() {
-                    SymbolTable::traverse(f, meta)?;
-                }
-                for co in coroutines.iter_mut() {
-                    SymbolTable::traverse(co, meta)?;
-                }
-                for st in structs.iter_mut() {
-                    SymbolTable::traverse(st, meta)?;
-                }
-                for m in modules.iter_mut() {
-                    SymbolTable::generate(m)?;
-                }
-            }
-            _ => panic!("Type analysis: expected Module at root level of the AST"),
+            SemanticNode::Module(m) => Self::generate(m),
+            _ => Err(format!("Expected a module, but got {}", ast.root_str()))
         }
+    }
+
+    pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<(), String> {
+        let mut metadata = m.get_metadata().clone();
+        
+        let fm = m.get_functions_mut();
+        for f in fm.iter_mut() {
+            SymbolTable::traverse(f, &mut metadata)?;
+        }
+
+        let cm = m.get_coroutines_mut();
+        for co in cm.iter_mut() {
+            SymbolTable::traverse(co, &mut metadata)?;
+        }
+        for st in m.get_structs_mut().iter_mut() {
+            SymbolTable::traverse(st, &mut metadata)?;
+        }
+
+        for m in m.get_modules_mut().iter_mut() {
+            SymbolTable::generate(m)?;
+        }
+
+        *m.get_metadata_mut() = metadata;
 
         Ok(())
     }

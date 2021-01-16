@@ -1,10 +1,6 @@
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{
-    semantics::semanticnode::SemanticNode,
-    syntax::ty::Type,
-    syntax::path::Path,
-};
+use crate::{semantics::semanticnode::{SemanticMetadata, SemanticNode}, syntax::path::Path, syntax::{module::Module, ty::Type}};
 
 use super::struct_definition::{FieldInfo, StructDefinition};
 
@@ -66,26 +62,28 @@ impl UnresolvedStructTable {
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<(), String> {
         match node {
-            SemanticNode::Module {
-                structs, modules, ..
-            } => {
-                for s in structs.iter() {
-                    if let SemanticNode::StructDef(meta, name, fields) = s {
-                        let struct_def = StructDefinition::new(name, fields.clone());
-                        Self::insert_struct(table, meta.get_canonical_path(), struct_def)?;
-                    } else {
-                        return Err(format!(
-                            "Found {} in the structs section of a module",
-                            s.root_str()
-                        ));
-                    }
-                }
-
-                for m in modules.iter() {
-                    Self::traverse(m, table)?;
-                }
+            SemanticNode::Module(m) => {
+                Self::traverse_module(m, table)
             }
-            _ => {}
+            _ => Ok(())
+        }
+    }
+
+    fn traverse_module(module: &Module<SemanticMetadata>, table: &mut HashMap<String, StructDefinition>) -> Result<(), String> {
+        for s in module.get_structs().iter() {
+            if let SemanticNode::StructDef(meta, name, fields) = s {
+                let struct_def = StructDefinition::new(name, fields.clone());
+                Self::insert_struct(table, meta.get_canonical_path(), struct_def)?;
+            } else {
+                return Err(format!(
+                    "Found {} in the structs section of a module",
+                    s.root_str()
+                ));
+            }
+        }
+
+        for m in module.get_modules().iter() {
+            Self::traverse_module(m, table)?;
         }
         Ok(())
     }

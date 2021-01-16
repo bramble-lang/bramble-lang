@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::compiler::ast::ast::CompilerNode;
+use module::Module;
+
+use crate::{compiler::ast::ast::CompilerNode, syntax::module};
+
+use super::scope::Scope;
 
 #[derive(Debug, PartialEq)]
 pub struct StringPool {
@@ -111,21 +115,8 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
-            Module {
-                modules,
-                functions,
-                coroutines,
-                ..
-            } => {
-                for m in modules.iter() {
-                    self.extract_from(m);
-                }
-                for f in functions.iter() {
-                    self.extract_from(f);
-                }
-                for c in coroutines.iter() {
-                    self.extract_from(c);
-                }
+            Module(m) => {
+                self.extract_from_module(m);
             }
             StructDef(..) => {}
             StructExpression(_, _, fields) => {
@@ -133,6 +124,19 @@ impl StringPool {
                     self.extract_from(f);
                 }
             }
+        }
+    }
+
+    pub fn extract_from_module(&mut self, module: &Module<Scope>) {
+        for m in module.get_modules().iter() {
+            self.extract_from_module(m);
+        }
+
+        for f in module.get_functions().iter() {
+            self.extract_from(f);
+        }
+        for c in module.get_coroutines().iter() {
+            self.extract_from(c);
         }
     }
 }

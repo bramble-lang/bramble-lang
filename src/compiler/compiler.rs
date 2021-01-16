@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::assembly2;
+use crate::{assembly2, syntax::module::Module};
 use crate::ast::Ast;
 use crate::ast::RoutineCall;
 use crate::ast::RoutineDef;
@@ -496,21 +496,8 @@ impl<'a> Compiler<'a> {
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
                 }}
             }
-            Ast::Module {
-                modules,
-                functions,
-                coroutines,
-                ..
-            } => {
-                for f in functions.iter() {
-                    self.traverse(f, current_func, code)?;
-                }
-                for co in coroutines.iter() {
-                    self.traverse(co, current_func, code)?;
-                }
-                for m in modules.iter() {
-                    self.traverse(m, current_func, code)?;
-                }
+            Ast::Module(m) => {
+                self.traverse_module(m, current_func, code)?;
             }
             Ast::Return(_, ref exp) => {
                 assembly! {(code) {
@@ -673,6 +660,25 @@ impl<'a> Compiler<'a> {
         };
 
         self.pop();
+
+        Ok(())
+    }
+
+    fn traverse_module(
+        &mut self,
+        module: &'a Module<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        for f in module.get_functions().iter() {
+            self.traverse(f, current_func, code)?;
+        }
+        for co in module.get_coroutines().iter() {
+            self.traverse(co, current_func, code)?;
+        }
+        for m in module.get_modules().iter() {
+            self.traverse_module(m, current_func, code)?;
+        }
 
         Ok(())
     }
