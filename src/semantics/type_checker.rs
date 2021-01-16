@@ -1,4 +1,4 @@
-use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
+use crate::{semantics::semanticnode::{SemanticAst, SemanticNode}, syntax::module::Module};
 use crate::semantics::symbol_table::*;
 use crate::syntax::path::Path;
 use crate::syntax::ty::Type;
@@ -28,8 +28,8 @@ pub fn type_check(
     SymbolTable::from_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
-    let module_ast = Ast::Module(sm_ast);
-    let mut semantic = SemanticAnalyzer::new(&module_ast);
+    //let module_ast = Ast::Module(sm_ast);
+    let mut semantic = SemanticAnalyzer::new(&sm_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
     let ast_typed = semantic
@@ -39,7 +39,7 @@ pub fn type_check(
 }
 
 pub struct SemanticAnalyzer<'a> {
-    root: &'a SemanticNode,
+    root: &'a Module<SemanticMetadata>,
     stack: ScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
@@ -52,7 +52,7 @@ impl<'a> Tracing for SemanticAnalyzer<'a> {
 }
 
 impl<'a> SemanticAnalyzer<'a> {
-    pub fn new(root: &'a SemanticNode) -> SemanticAnalyzer {
+    pub fn new(root: &'a Module<SemanticMetadata>) -> SemanticAnalyzer {
         SemanticAnalyzer {
             root,
             stack: ScopeStack::new(),
@@ -202,11 +202,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         sym: &mut SymbolTable,
     ) -> Result<module::Module<SemanticMetadata>, String> {
-        if let Ast::Module(m) = self.root {
-            self.analyze_module(m, sym)
-        } else {
-            panic!("root is not a Ast::Module")
-        }
+        self.analyze_module(self.root, sym)
     }
 
     fn traverse(
@@ -943,45 +939,6 @@ mod tests {
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::syntax::{module::Item, routinedef};
-
-    #[test]
-    pub fn test_integer() {
-        let node = Ast::Integer(1, 5);
-        let mut sa = SemanticAst::new();
-        let ast = sa.from_parser_ast(&node).unwrap();
-        let mut semantic = SemanticAnalyzer::new(&ast);
-        let mut sym = SymbolTable::new_module("root");
-        let ty = semantic
-            .traverse(&ast, &None, &mut sym)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Type::I32));
-    }
-
-    #[test]
-    pub fn test_bool() {
-        let node = Ast::Boolean(1, true);
-        let mut sa = SemanticAst::new();
-        let ast = sa.from_parser_ast(&node).unwrap();
-        let mut semantic = SemanticAnalyzer::new(&ast);
-        let mut sym = SymbolTable::new_module("root");
-        let ty = semantic
-            .traverse(&ast, &None, &mut sym)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Type::Bool));
-    }
-
-    #[test]
-    pub fn test_string_literal() {
-        let node = Ast::StringLiteral(1, "blah".into());
-        let mut sa = SemanticAst::new();
-        let ast = sa.from_parser_ast(&node).unwrap();
-        let mut semantic = SemanticAnalyzer::new(&ast);
-        let mut sym = SymbolTable::new_module("root");
-        let ty = semantic
-            .traverse(&ast, &None, &mut sym)
-            .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Type::StringLiteral));
-    }
 
     #[test]
     pub fn test_identifiers() {
