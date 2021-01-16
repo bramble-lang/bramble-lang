@@ -10,13 +10,14 @@ use crate::{
     },
 };
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
+use braid_lang::result::Result;
 
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
     pub fn from(
         ast: &Module<SemanticMetadata>,
-    ) -> Result<(Module<Scope>, ResolvedStructTable), String> {
+    ) -> Result<(Module<Scope>, ResolvedStructTable)> {
         let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
         let struct_table = unresolved_struct_table.resolve()?;
         let (compiler_ast, _) =
@@ -298,7 +299,7 @@ impl CompilerNode {
 }
 
 impl<Scope> RoutineDef<Scope> {
-    pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<(), String> {
+    pub fn validate_parameters(&self, params: &Vec<CompilerNode>) -> Result<()> {
         let expected_params = self.get_params();
         if params.len() == expected_params.len() {
             Ok(())
@@ -738,7 +739,7 @@ mod ast_tests {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();

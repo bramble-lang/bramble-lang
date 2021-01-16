@@ -1,4 +1,5 @@
 use crate::syntax::ty::Type;
+use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FieldInfo {
@@ -60,7 +61,7 @@ impl StructDefinition {
         &self.fields
     }
 
-    pub fn set_field_sizes(&self, sizes: &Vec<i32>) -> Result<StructDefinition, String> {
+    pub fn set_field_sizes(&self, sizes: &Vec<i32>) -> Result<StructDefinition> {
         if self.fields.len() != sizes.len() {
             return Err(format!(
                 "Cannot set field sizes: expected {} sizes but got {}",

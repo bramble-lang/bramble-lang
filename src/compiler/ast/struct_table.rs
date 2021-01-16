@@ -1,4 +1,5 @@
 use std::{collections::HashMap, marker::PhantomData};
+use braid_lang::result::Result;
 
 use crate::{
     semantics::semanticnode::{SemanticMetadata, SemanticNode},
@@ -49,7 +50,7 @@ impl UnresolvedStructTable {
         }
     }
 
-    pub fn from(root: &SemanticNode) -> Result<UnresolvedStructTable, String> {
+    pub fn from(root: &SemanticNode) -> Result<UnresolvedStructTable> {
         let mut table = UnresolvedStructTable {
             table: HashMap::new(),
             state: PhantomData,
@@ -59,7 +60,7 @@ impl UnresolvedStructTable {
         Ok(table)
     }
 
-    pub fn from_module(root: &Module<SemanticMetadata>) -> Result<UnresolvedStructTable, String> {
+    pub fn from_module(root: &Module<SemanticMetadata>) -> Result<UnresolvedStructTable> {
         let mut table = UnresolvedStructTable {
             table: HashMap::new(),
             state: PhantomData,
@@ -72,7 +73,7 @@ impl UnresolvedStructTable {
     fn traverse(
         node: &SemanticNode,
         table: &mut HashMap<String, StructDefinition>,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         match node {
             SemanticNode::Module(m) => Self::traverse_module(m, table),
             _ => Ok(()),
@@ -82,7 +83,7 @@ impl UnresolvedStructTable {
     fn traverse_module(
         module: &Module<SemanticMetadata>,
         table: &mut HashMap<String, StructDefinition>,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         for s in module.get_structs().iter() {
             if let Item::Struct(SemanticNode::StructDef(meta, name, fields)) = s {
                 let struct_def = StructDefinition::new(name, fields.clone());
@@ -101,7 +102,7 @@ impl UnresolvedStructTable {
         Ok(())
     }
 
-    pub fn resolve(&self) -> Result<ResolvedStructTable, String> {
+    pub fn resolve(&self) -> Result<ResolvedStructTable> {
         let mut resolved = ResolvedStructTable {
             table: HashMap::new(),
             state: PhantomData,
@@ -135,7 +136,7 @@ impl UnresolvedStructTable {
             .map(|()| resolved)
     }
 
-    fn validate_resolution_attempt(&self, resolved: &ResolvedStructTable) -> Result<(), String> {
+    fn validate_resolution_attempt(&self, resolved: &ResolvedStructTable) -> Result<()> {
         let mut unresolved_structs = self.get_unresolved_structs(resolved);
         if unresolved_structs.len() == 0 {
             Ok(())
@@ -193,7 +194,7 @@ impl UnresolvedStructTable {
         table: &mut HashMap<String, StructDefinition>,
         canon_path: &Path,
         def: StructDefinition,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         if canon_path.len() == 0 {
             return Err("Cannot insert empty path into StructTable".into());
         }
@@ -251,7 +252,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -287,7 +288,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -326,7 +327,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -462,7 +463,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -571,7 +572,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
@@ -606,7 +607,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_, _>>()
+                .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
