@@ -604,7 +604,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     let exp = self.traverse(&exp, current_func, sym)?;
                     meta.ty = match exp.get_type() {
                         Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
-                        _ => return Err(format!("yield expects co<_> but got {}", exp.get_type())),
+                        _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                     };
                     Ok(Yield(meta, Box::new(exp)))
                 }
@@ -2348,25 +2348,75 @@ mod tests {
     }
 
     #[test]
-    fn test_yield() {
-        let mut scope = Scope::new();
-        scope.add(
-            "my_main",
-            vec![],
-            Unit,
-            vec![("c", false, Coroutine(Box::new(I32)))],
-        );
-        scope.add("my_co2", vec![], I32, vec![]);
+    pub fn test_yield_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    let i: i32 := yield c;
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() {
+                    let c: bool := false;
+                    let i: i32 := yield c;
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L3: Yield expects co<_> but got bool"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    let i: bool := yield c;
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L3: Bind expected bool but got i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let co_number = module.get_functions()[0].to_routine().unwrap();
 
-        let node = Ast::Yield(1, Box::new(Ast::Identifier(1, "c".into())));
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_main".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &co_number.get_body()[1];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., rhs) = bind_stm {
+                        assert_eq!(rhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
     }
 
     #[test]
