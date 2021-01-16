@@ -50,16 +50,6 @@ impl UnresolvedStructTable {
         }
     }
 
-    pub fn from(root: &SemanticNode) -> Result<UnresolvedStructTable> {
-        let mut table = UnresolvedStructTable {
-            table: HashMap::new(),
-            state: PhantomData,
-        };
-
-        Self::traverse(root, &mut table.table)?;
-        Ok(table)
-    }
-
     pub fn from_module(root: &Module<SemanticMetadata>) -> Result<UnresolvedStructTable> {
         let mut table = UnresolvedStructTable {
             table: HashMap::new(),
@@ -68,13 +58,6 @@ impl UnresolvedStructTable {
 
         Self::traverse_module(root, &mut table.table)?;
         Ok(table)
-    }
-
-    fn traverse(node: &SemanticNode, table: &mut HashMap<String, StructDefinition>) -> Result<()> {
-        match node {
-            //SemanticNode::Module(m) => Self::traverse_module(m, table),
-            _ => Ok(()),
-        }
     }
 
     fn traverse_module(
@@ -234,7 +217,6 @@ mod test {
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         semantics::type_checker::type_check,
-        syntax::ast::Ast,
     };
 
     #[test]

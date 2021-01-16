@@ -557,38 +557,35 @@ mod ast_tests {
             &empty_struct_table,
         );
         assert_eq!(cn.1.offset, 0);
-        if let module = cn.0 {
-            match module.get_item("func") {
-                Some(Item::Routine(RoutineDef {
-                    meta,
-                    def: RoutineDefType::Function,
-                    name,
-                    ..
-                })) => {
-                    assert_eq!(name, "func");
-                    assert_eq!(meta.symbols.table.len(), 2);
-                    assert_eq!(meta.symbols.table["x"].size, 4);
-                    assert_eq!(meta.symbols.table["x"].offset, 4);
-                    assert_eq!(meta.symbols.table["y"].size, 4);
-                    assert_eq!(meta.symbols.table["y"].offset, 8);
+        let module = cn.0;
+        match module.get_item("func") {
+            Some(Item::Routine(RoutineDef {
+                meta,
+                def: RoutineDefType::Function,
+                name,
+                ..
+            })) => {
+                assert_eq!(name, "func");
+                assert_eq!(meta.symbols.table.len(), 2);
+                assert_eq!(meta.symbols.table["x"].size, 4);
+                assert_eq!(meta.symbols.table["x"].offset, 4);
+                assert_eq!(meta.symbols.table["y"].size, 4);
+                assert_eq!(meta.symbols.table["y"].offset, 8);
 
-                    match meta.level {
-                        scope::Level::Routine {
-                            next_label,
-                            allocation,
-                            routine_type,
-                        } => {
-                            assert_eq!(next_label, 0);
-                            assert_eq!(allocation, 8);
-                            assert_eq!(routine_type, RoutineDefType::Function);
-                        }
-                        _ => assert!(false),
+                match meta.level {
+                    scope::Level::Routine {
+                        next_label,
+                        allocation,
+                        routine_type,
+                    } => {
+                        assert_eq!(next_label, 0);
+                        assert_eq!(allocation, 8);
+                        assert_eq!(routine_type, RoutineDefType::Function);
                     }
+                    _ => assert!(false),
                 }
-                _ => assert!(false),
             }
-        } else {
-            panic!("Module not returned")
+            _ => assert!(false),
         }
     }
 

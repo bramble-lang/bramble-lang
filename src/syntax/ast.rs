@@ -1,5 +1,4 @@
 use super::{
-    module::{Item, Module},
     path::Path,
     ty::Type,
 };
@@ -230,21 +229,5 @@ impl<I> Ast<I> {
             Ast::Identifier(_, name) | Ast::StructDef(_, name, ..) => Some(name),
             _ => None,
         }
-    }
-
-    pub fn go_to(&self, path: &Path) -> Option<&Item<I>> {
-        if path.len() == 0 {
-            return None;
-        }
-
-        None
-    }
-
-    pub fn go_to_module(&self, path: &Path) -> Option<&Module<I>> {
-        if path.len() == 0 {
-            return None;
-        }
-
-        None
     }
 }
