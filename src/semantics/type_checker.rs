@@ -367,7 +367,10 @@ impl<'a> SemanticAnalyzer<'a> {
                     rty,
                 )?)),
             ),
-            _ => return Err(format!("{} found but was not a function", routine_path)),
+            _ => {
+                let expected = match call {ast::RoutineCall::Function => "function", ast::RoutineCall::CoroutineInit => "coroutine"};
+                return Err(format!("Expected {0} but {1} is a {2}", expected, routine_path, symbol.ty))
+            }
         };
 
         Ok((expected_param_tys, ret_ty))
@@ -2175,61 +2178,90 @@ mod tests {
     }
 
     #[test]
-    pub fn test_co_init() {
-        let mut scope = Scope::new();
-        scope.add("my_co", vec![], I32, vec![]);
-        scope.add("my_co2", vec![("x", I32)], I32, vec![]);
+    pub fn test_coroutine_init() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {return 5;}
+                ",
+                Ok(Coroutine(Box::new(I32))),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(3);
+                    return;
+                }
+                co number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 0 but got 1"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Ok(Coroutine(Box::new(I32))),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 0"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5, 3);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 2"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5);
+                    return;
+                }
+                fn number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: Expected coroutine but number is a fn (i32) -> i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::CoroutineInit,
-            vec!["my_co"].into(),
-            vec![],
-        );
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
-
-        // test correct parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::CoroutineInit,
-            vec!["my_co2"].into(),
-            vec![Ast::Integer(1, 5)],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Coroutine(Box::new(I32))));
-
-        // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::CoroutineInit,
-            vec!["my_co2"].into(),
-            vec![],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        );
-        assert_eq!(
-            ty,
-            Err("L1: Incorrect number of parameters passed to routine: my_co2. Expected 1 but got 0".into())
-        );
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
     }
 
     #[test]
