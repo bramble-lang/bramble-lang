@@ -1,7 +1,7 @@
-use super::struct_table;
+use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item}, routinedef::{self, RoutineDef}}};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item}, routinedef::{self, RoutineDef, RoutineDefType}}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 
 pub type CompilerNode = Ast<Scope>;
@@ -32,11 +32,10 @@ impl CompilerNode {
                 }
                 (ExpressionBlock(meta, nbody), nlayout)
             }
-            RoutineDef(routinedef::RoutineDef {
-..
-            }) => {
-                panic!("Should not be here!");
-                /*
+            RoutineDef(rd) => {
+                let (i, l) = Self::compute_layouts_for_routine(rd, layout, struct_table);
+                (RoutineDef(i), l)
+                /*k
                 let initial_frame_size = match def {
                     syntax::routinedef::RoutineDefType::Function => 0,
                     syntax::routinedef::RoutineDefType::Coroutine => 20,
@@ -251,7 +250,8 @@ impl CompilerNode {
                    (Item::Struct(c), l)
                 }
                 Item::Routine(rd) => {
-                    todo!("Compute Offsets for Item::Routine")
+                    let (rd2, ld) = Self::compute_layouts_for_routine(&rd, layout, struct_table);
+                    (Item::Routine(rd2), ld)
                 }
             };
             layout = no;
@@ -259,6 +259,50 @@ impl CompilerNode {
         }
 
         (compiler_ast_items, layout)
+    }
+
+    fn compute_layouts_for_routine(
+        rd: &RoutineDef<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (RoutineDef<Scope>, LayoutData) {
+        let RoutineDef{
+            meta,
+            def,
+            name,
+            body,
+            params,
+            ty,
+            ..
+        } = rd;
+        let initial_frame_size = match def {
+            RoutineDefType::Function => 0,
+            RoutineDefType::Coroutine => 20,
+        };
+        let (mut meta, offset) =
+            Scope::routine_from(meta, struct_table, initial_frame_size);
+        let mut nbody = vec![];
+        let mut nlayout = LayoutData::new(offset);
+        for e in body.iter() {
+            let (e, layout) = CompilerNode::compute_offsets(e, nlayout, struct_table);
+            nlayout = layout;
+            nbody.push(e);
+        }
+        meta.level = Level::Routine {
+            next_label: 0,
+            allocation: nlayout.offset,
+        };
+        (
+            RoutineDef {
+                meta,
+                def: *def,
+                name: name.clone(),
+                params: params.clone(),
+                ty: ty.clone(),
+                body: nbody,
+            },
+            layout,
+        )
     }
 
     fn compute_layouts_for(
@@ -528,32 +572,36 @@ mod ast_tests {
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&Ast::Module(module), LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
-        match cn.0 {
-            CompilerNode::RoutineDef(RoutineDef {
-                meta,
-                def: RoutineDefType::Function,
-                name,
-                ..
-            }) => {
-                assert_eq!(name, "func");
-                assert_eq!(meta.symbols.table.len(), 2);
-                assert_eq!(meta.symbols.table["x"].size, 4);
-                assert_eq!(meta.symbols.table["x"].offset, 4);
-                assert_eq!(meta.symbols.table["y"].size, 4);
-                assert_eq!(meta.symbols.table["y"].offset, 8);
+        if let CompilerNode::Module(module) = cn.0 {
+            match module.get_item("func") {
+                Some(Item::Routine(RoutineDef {
+                    meta,
+                    def: RoutineDefType::Function,
+                    name,
+                    ..
+                })) => {
+                    assert_eq!(name, "func");
+                    assert_eq!(meta.symbols.table.len(), 2);
+                    assert_eq!(meta.symbols.table["x"].size, 4);
+                    assert_eq!(meta.symbols.table["x"].offset, 4);
+                    assert_eq!(meta.symbols.table["y"].size, 4);
+                    assert_eq!(meta.symbols.table["y"].offset, 8);
 
-                match meta.level {
-                    scope::Level::Routine {
-                        next_label,
-                        allocation,
-                    } => {
-                        assert_eq!(next_label, 0);
-                        assert_eq!(allocation, 8);
+                    match meta.level {
+                        scope::Level::Routine {
+                            next_label,
+                            allocation,
+                        } => {
+                            assert_eq!(next_label, 0);
+                            assert_eq!(allocation, 8);
+                        }
+                        _ => assert!(false),
                     }
-                    _ => assert!(false),
                 }
+                _ => assert!(false),
             }
-            _ => assert!(false),
+        } else {
+            panic!("Module not returned")
         }
     }
 
