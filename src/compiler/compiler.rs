@@ -495,7 +495,7 @@ impl<'a> Compiler<'a> {
                 let id_offset = self
                     .scope
                     .find(id)
-                    .ok_or(format!("Could not find variable {}", id))?
+                    .expect(&format!("Could not find variable {}", id))
                     .offset;
                 assembly! {(code) {
                     ; {format!("Binding {}", id)}
