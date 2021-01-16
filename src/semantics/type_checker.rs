@@ -1,4 +1,4 @@
-use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::{module::{self, Item}, routinedef}};
+use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::{module::{self, Item}, pnode::ParserInfo, routinedef}};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
 use crate::syntax::ty::Type;
@@ -13,16 +13,17 @@ use crate::{
 use super::semanticnode::SemanticMetadata;
 
 pub fn type_check(
-    ast: &PNode,
+    ast: &module::Module<ParserInfo>,
     trace: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<SemanticNode, String> {
+) -> Result<module::Module<SemanticMetadata>, String> {
     let mut sa = SemanticAst::new();
-    let mut sm_ast = sa.from_parser_ast(&ast)?;
-    SymbolTable::from_ast(&mut sm_ast)?;
+    let mut sm_ast = sa.from_module(&ast)?;
+    SymbolTable::from_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
-    let mut semantic = SemanticAnalyzer::new(&sm_ast);
+    let module_ast = Module(sm_ast);
+    let mut semantic = SemanticAnalyzer::new(&module_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
     let ast_typed = semantic
@@ -190,8 +191,12 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<SemanticNode, String> {
-        self.traverse(self.root, &None, sym)
+    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>, String> {
+        if let Module(m) = self.root {
+            self.analyze_module(m, sym)
+        } else {
+            panic!("root is not a Ast::Module")
+        }
     }
 
     fn traverse(
@@ -1196,23 +1201,19 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Routine(routinedef::RoutineDef { body, .. }) = &m.get_functions()[0] {
-                    if let Bind(.., exp) = &body[0] {
-                        if let box StructExpression(_, struct_name, ..) = exp {
-                            let expected: Path = vec!["root", "test"].into();
-                            assert_eq!(struct_name, &expected)
-                        } else {
-                            panic!("Not a struct expression")
-                        }
+            if let Item::Routine(routinedef::RoutineDef { body, .. }) = &result.get_functions()[0] {
+                if let Bind(.., exp) = &body[0] {
+                    if let box StructExpression(_, struct_name, ..) = exp {
+                        let expected: Path = vec!["root", "test"].into();
+                        assert_eq!(struct_name, &expected)
                     } else {
-                        panic!("Not a bind")
+                        panic!("Not a struct expression")
                     }
                 } else {
-                    panic!("Not a function")
+                    panic!("Not a bind")
                 }
             } else {
-                panic!("Not a module")
+                panic!("Not a function")
             }
         }
     }
@@ -1236,8 +1237,7 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &m.get_functions()[0] {
+                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0] {
                     if let (_, Custom(ty_path)) = &params[0] {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(ty_path, &expected)
@@ -1247,9 +1247,6 @@ mod tests {
                 } else {
                     panic!("Not a function")
                 }
-            } else {
-                panic!("Not a module")
-            }
         }
     }
 
@@ -1272,19 +1269,15 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Routine(routinedef::RoutineDef { params, .. }) = &m.get_coroutines()[0] {
-                    if let (_, Custom(ty_path)) = &params[0] {
-                        let expected: Path = vec!["root", "test"].into();
-                        assert_eq!(ty_path, &expected)
-                    } else {
-                        panic!("Not a custom type")
-                    }
+            if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_coroutines()[0] {
+                if let (_, Custom(ty_path)) = &params[0] {
+                    let expected: Path = vec!["root", "test"].into();
+                    assert_eq!(ty_path, &expected)
                 } else {
-                    panic!("Not a coroutine")
+                    panic!("Not a custom type")
                 }
             } else {
-                panic!("Not a module")
+                panic!("Not a coroutine")
             }
         }
     }
@@ -1306,19 +1299,15 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Module(m) = result {
-                if let Item::Struct(Ast::StructDef(_, _, fields)) = &m.get_structs()[1] {
-                    if let (_, Custom(ty_path)) = &fields[0] {
-                        let expected: Path = vec!["root", "test"].into();
-                        assert_eq!(ty_path, &expected)
-                    } else {
-                        panic!("Not a custom type")
-                    }
+            if let Item::Struct(Ast::StructDef(_, _, fields)) = &result.get_structs()[1] {
+                if let (_, Custom(ty_path)) = &fields[0] {
+                    let expected: Path = vec!["root", "test"].into();
+                    assert_eq!(ty_path, &expected)
                 } else {
-                    panic!("Not a structure")
+                    panic!("Not a custom type")
                 }
             } else {
-                panic!("Not a module")
+                panic!("Not a structure")
             }
         }
     }

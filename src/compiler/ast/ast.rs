@@ -721,7 +721,8 @@ mod ast_tests {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved = unrealized_st.resolve();
 

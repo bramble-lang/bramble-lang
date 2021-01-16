@@ -205,7 +205,7 @@ impl SemanticAst {
         node
     }
 
-    fn from_module(&mut self, m: &module::Module<u32>) -> Result<module::Module<SemanticMetadata>, String> {
+    pub fn from_module(&mut self, m: &module::Module<u32>) -> Result<module::Module<SemanticMetadata>, String> {
         let meta = self.module_semantic_metadata_from(*m.get_metadata(), m.get_name());
 
         let mut nmodule = module::Module::new(m.get_name(), meta);

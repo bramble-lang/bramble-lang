@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::ast::Ast;
+use crate::{ast::Ast, semantics::semanticnode::SemanticMetadata};
 use crate::ast::RoutineCall;
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
@@ -48,9 +48,10 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn compile(ast: &SemanticNode) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticMetadata>) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, struct_table) = CompilerNode::from(ast).unwrap();
+        let module_ast = Ast::Module(module);
+        let (compiler_ast, struct_table) = CompilerNode::from(&module_ast).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from(&compiler_ast);

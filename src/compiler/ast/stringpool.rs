@@ -152,7 +152,7 @@ impl StringPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::lexer::lexer::Lexer;
+    use crate::{lexer::lexer::Lexer, syntax::ast::Ast};
     use crate::lexer::tokens::Token;
     use crate::syntax::parser;
     use crate::{diagnostics::config::TracingConfig, type_check};
@@ -202,7 +202,8 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let (compiler_ast, ..) = CompilerNode::from(&result).unwrap();
+            let ast = Ast::Module(result);
+            let (compiler_ast, ..) = CompilerNode::from(&ast).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from(&compiler_ast);
 

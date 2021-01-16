@@ -219,11 +219,7 @@ impl ResolvedStructTable {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        diagnostics::config::TracingConfig,
-        lexer::{lexer::Lexer, tokens::Token},
-        semantics::type_checker::type_check,
-    };
+    use crate::{diagnostics::config::TracingConfig, lexer::{lexer::Lexer, tokens::Token}, semantics::type_checker::type_check, syntax::ast::Ast};
 
     #[test]
     pub fn test_adding_a_struct_that_references_a_struct() {
@@ -240,7 +236,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -275,7 +272,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -313,7 +311,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -420,7 +419,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -512,7 +512,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -546,7 +547,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
             let resolved = unrealized_st.resolve();
 
