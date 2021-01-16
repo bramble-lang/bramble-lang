@@ -1053,6 +1053,47 @@ mod tests {
     }
 
     #[test]
+    pub fn test_identifiers() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                I32,
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := false;
+                    return k;
+                }",
+                Bool,
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let fn_main = module.get_functions()[0].to_routine().unwrap();
+            let ret_stm = &fn_main.get_body()[1];
+            assert_eq!(ret_stm.get_type(), expected);
+            if let Ast::Return(_, Some(value)) = ret_stm {
+                assert_eq!(value.get_type(), expected);
+            } else {
+                panic!("Expected a return statement")
+            }
+            /*match expected {
+                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+            }*/
+        }
+    }
+
+    #[test]
     pub fn test_path_to_function() {
         use crate::syntax::parser;
         for (text, expected) in vec![
