@@ -1988,36 +1988,73 @@ mod tests {
     }
 
     #[test]
-    pub fn test_return_unit() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], Unit, vec![]);
+    pub fn test_return_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    return 5;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    return false;
+                }",
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> string {
+                    return \"hello\";
+                }",
+                Ok(Type::StringLiteral),
+            ),
+            (
+                "fn main() {
+                    return;
+                }",
+                Ok(Type::Unit),
+            ),
+            (
+                "fn main() -> bool {
+                    return 5;
+                }",
+                Err("Semantic: L2: Return expected bool but got i32"),
+            ),
+            (
+                "fn main() {
+                    return 5;
+                }",
+                Err("Semantic: L2: Return expected unit but got i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-        let node = Ast::Return(1, None);
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Unit));
-    }
-
-    #[test]
-    pub fn test_return_i32() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], I32, vec![]);
-
-        let node = Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))));
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, value) = ret_stm {
+                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
     }
 
     #[test]
