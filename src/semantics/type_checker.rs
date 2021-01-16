@@ -574,7 +574,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         meta.ty = Unit;
                         Ok(Return(meta.clone(), None))
                     } else {
-                        Err(format!("Return expected {} type and got unit", fty))
+                        Err(format!("Return expected {} but got unit", fty))
                     }
                 }
             },
@@ -2420,56 +2420,65 @@ mod tests {
     }
 
     #[test]
-    fn test_func_def() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], I32, vec![]);
+    pub fn test_function_definition() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main(i: i32) -> i32 {
+                    return i;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main(b: bool) -> i32 {
+                    return b;
+                }
+                ",
+                Err("Semantic: L2: Return expected i32 but got bool"),
+            ),
+            (
+                "fn main(b: bool) -> i32 {
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Return expected i32 but got unit"),
+            ),
+            (
+                "fn main(b: bool) {
+                    return b;
+                }
+                ",
+                Err("Semantic: L2: Return expected unit but got bool"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-        let node = routinedef::RoutineDef {
-            meta: 1,
-            def: routinedef::RoutineDefType::Function,
-            name: "my_func".into(),
-            params: vec![],
-            ty: I32,
-            body: vec![Ast::Return(1, Some(Box::new(Ast::Integer(1, 5))))],
-        };
-
-        let mut module = module::Module::new("root", 1);
-        module.add_function(node).unwrap();
-
-        let mut sa = SemanticAst::new();
-        if let Ast::Module(module) = start(
-            &mut sa.from_parser_ast(&Ast::Module(module)).unwrap(),
-            &None,
-            &scope,
-        )
-        .unwrap()
-        {
-            let typed_func = module.get_item("my_func").unwrap().to_routine().unwrap();
-            let ty = &typed_func.get_metadata().ty;
-            assert_eq!(ty, I32);
-        } else {
-            panic!("Failed to deconstruct module")
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, value) = ret_stm {
+                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
-
-        let node = routinedef::RoutineDef {
-            meta: 1,
-            def: routinedef::RoutineDefType::Function,
-            name: "my_func".into(),
-            params: vec![],
-            ty: I32,
-            body: vec![Ast::Return(1, None)],
-        };
-
-        let mut module = module::Module::new("root", 1);
-        module.add_function(node).unwrap();
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&Ast::Module(module)).unwrap(),
-            &None,
-            &scope,
-        );
-        assert_eq!(ty, Err("L1: Return expected i32 type and got unit".into()));
     }
 
     #[test]
