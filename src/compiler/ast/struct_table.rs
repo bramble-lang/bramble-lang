@@ -59,6 +59,16 @@ impl UnresolvedStructTable {
         Ok(table)
     }
 
+    pub fn from_module(root: &Module<SemanticMetadata>) -> Result<UnresolvedStructTable, String> {
+        let mut table = UnresolvedStructTable {
+            table: HashMap::new(),
+            state: PhantomData,
+        };
+
+        Self::traverse_module(root, &mut table.table)?;
+        Ok(table)
+    }
+
     fn traverse(
         node: &SemanticNode,
         table: &mut HashMap<String, StructDefinition>,

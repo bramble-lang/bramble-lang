@@ -36,7 +36,7 @@ pub struct Compiler<'a> {
     scope: ScopeStack<'a>,
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
-    root: &'a CompilerNode,
+    root: &'a Module<Scope>,
 }
 
 impl<'a> Compiler<'a> {
@@ -49,11 +49,10 @@ impl<'a> Compiler<'a> {
 
     pub fn compile(module: Module<SemanticMetadata>) -> Vec<Inst> {
         // Put user code here
-        let module_ast = Ast::Module(module);
-        let (compiler_ast, struct_table) = CompilerNode::from(&module_ast).unwrap();
+        let (compiler_ast, struct_table) = CompilerNode::from(&module).unwrap();
 
         let mut string_pool = StringPool::new();
-        string_pool.extract_from(&compiler_ast);
+        string_pool.extract_from_module(&compiler_ast);
 
         let mut code = vec![];
         Compiler::create_base(&mut code, &string_pool);
@@ -72,7 +71,7 @@ impl<'a> Compiler<'a> {
 
         let global_func = "".into();
         compiler
-            .traverse(&compiler_ast, &global_func, &mut code)
+            .traverse_module(&compiler_ast, &global_func, &mut code)
             .unwrap();
         code
     }

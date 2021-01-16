@@ -1,24 +1,17 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{
-    compiler::ast::scope::{LayoutData, Scope},
-    semantics::semanticnode::SemanticMetadata,
-    syntax::{
-        module::{self, Item},
-        routinedef::{RoutineDef, RoutineDefType},
-    },
-};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
-    pub fn from(ast: &SemanticNode) -> Result<(CompilerNode, ResolvedStructTable), String> {
-        let unresolved_struct_table = struct_table::UnresolvedStructTable::from(ast)?;
+    pub fn from(ast: &Module<SemanticMetadata>) -> Result<(Module<Scope>, ResolvedStructTable), String> {
+        let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
         let struct_table = unresolved_struct_table.resolve()?;
         let (compiler_ast, _) =
-            CompilerNode::compute_offsets(ast, LayoutData::new(0), &struct_table);
+            CompilerNode::compute_layouts_for_module(ast, LayoutData::new(0), &struct_table);
         Ok((compiler_ast, struct_table))
     }
 
