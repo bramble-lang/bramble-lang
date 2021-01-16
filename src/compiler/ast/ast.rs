@@ -340,13 +340,13 @@ impl<Scope> RoutineDef<Scope> {
 mod ast_tests {
     use module::Module;
 
-    use crate::{compiler::ast::scope::Level, syntax::{ast::BinaryOperator, routinedef::RoutineDef}};
+    use crate::{compiler::ast::scope::Level, diagnostics::config::TracingConfig, lexer::{lexer::Lexer, tokens::Token}, syntax::{ast::BinaryOperator, routinedef::RoutineDef}};
     use crate::syntax::routinedef::RoutineDefType;
     use crate::syntax::ty::Type;
     use crate::{compiler::ast::scope, syntax::path::Path};
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
-
+    use crate::semantics::type_checker::type_check;
     use super::*;
 
     #[test]
@@ -723,6 +723,43 @@ mod ast_tests {
                 }
             }
             _ => assert!(false),
+        }
+    }
+
+    #[test]
+    pub fn test_bug() {
+        use crate::syntax::parser;
+        for text in vec![
+            "
+            fn my_main() {
+                let x:i32 := 5;
+                printiln x;
+
+                let b:bool := my_bool();
+                printbln b;
+                return;
+            }
+
+            fn my_bool() -> bool {
+                let b:bool := false;
+                return b;
+            }
+                ",
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let semantic_ast = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let resolved = unrealized_st.resolve();
+
+            assert_eq!(
+                resolved.err(),
+                None
+            );
         }
     }
 }
