@@ -391,7 +391,7 @@ impl<'a> SemanticAnalyzer<'a> {
             let errors: Vec<String> = mismatches
                 .iter()
                 .map(|(idx, got, expected)| {
-                    format!("parameter {} expected {} got {}", idx, expected, got)
+                    format!("parameter {} expected {} but got {}", idx, expected, got)
                 })
                 .collect();
             Err(format!(
@@ -668,8 +668,10 @@ impl<'a> SemanticAnalyzer<'a> {
 
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
-                        "Incorrect number of parameters passed to routine: {}",
-                        routine_path
+                        "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
+                        routine_path,
+                        expected_param_tys.len(),
+                        resolved_params.len(),
                     ))
                 } else {
                     match Self::check_for_invalid_routine_parameters(
@@ -2058,62 +2060,109 @@ mod tests {
     }
 
     #[test]
-    pub fn test_fn_call() {
-        let mut scope = Scope::new();
-        scope.add("my_func", vec![], I32, vec![]);
+    pub fn test_function_calls() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> bool {
+                    return number();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L2: Return expected bool but got i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    return bad_fun();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L2: function bad_fun not declared"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, 2);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(false, 2);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got bool"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, true);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i32 but got bool"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, 2, 3);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 3"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(false);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::Function,
-            vec!["my_func"].into(),
-            vec![],
-        );
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-
-        scope.add("my_func2", vec![("x", I32)], I32, vec![]);
-        // test correct parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::Function,
-            vec!["my_func2"].into(),
-            vec![Ast::Integer(1, 5)],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-
-        // test incorrect parameters passed in call
-        let node = Ast::RoutineCall(
-            1,
-            ast::RoutineCall::Function,
-            vec!["my_func2"].into(),
-            vec![],
-        );
-
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_func2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(
-            ty,
-            Err("L1: Incorrect number of parameters passed to routine: my_func2".into())
-        );
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, value) = ret_stm {
+                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
     }
 
     #[test]
@@ -2170,7 +2219,7 @@ mod tests {
         );
         assert_eq!(
             ty,
-            Err("L1: Incorrect number of parameters passed to routine: my_co2".into())
+            Err("L1: Incorrect number of parameters passed to routine: my_co2. Expected 1 but got 0".into())
         );
     }
 
@@ -2542,7 +2591,7 @@ mod tests {
                     let y: i32 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 got root::MyStruct"),
+                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 but got root::MyStruct"),
             ),
             (
                 line!(),
