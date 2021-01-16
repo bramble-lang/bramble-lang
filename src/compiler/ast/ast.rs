@@ -164,11 +164,6 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            /*Module(m) => {
-                let (m, layout) = Self::compute_layouts_for_module(m, layout, struct_table);
-
-                (Module(m), layout)
-            }*/
             StructDef(..) => panic!("StructDef Unimplemented"),
             StructExpression(meta, struct_name, fields) => {
                 let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
