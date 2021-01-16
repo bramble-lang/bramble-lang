@@ -1,4 +1,4 @@
-use crate::{ast::*, syntax::path::Path, syntax::{module::{self, Item}, routinedef::{self, RoutineDef}, ty::Type}};
+use crate::{ast::*, syntax::path::Path, syntax::{module::{self, Item}, routinedef::RoutineDef, ty::Type}};
 use crate::semantics::symbol_table::*;
 use crate::syntax::pnode::PNode;
 use crate::diagnostics::config::TracingConfig;

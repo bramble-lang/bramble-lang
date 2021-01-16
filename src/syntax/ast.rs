@@ -1,4 +1,4 @@
-use super::{module::{Item, Module}, path::Path, routinedef::*, ty::Type};
+use super::{module::{Item, Module}, path::Path, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
