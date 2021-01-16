@@ -1,4 +1,3 @@
-use crate::{semantics::semanticnode::{SemanticAst, SemanticNode}, syntax::module::Module};
 use crate::semantics::symbol_table::*;
 use crate::syntax::path::Path;
 use crate::syntax::ty::Type;
@@ -13,6 +12,10 @@ use crate::{
         pnode::ParserInfo,
         routinedef,
     },
+};
+use crate::{
+    semantics::semanticnode::{SemanticAst, SemanticNode},
+    syntax::module::Module,
 };
 use Type::*;
 
@@ -439,7 +442,11 @@ impl<'a> SemanticAnalyzer<'a> {
             Ast::IdentifierDeclare(meta, name, p) => {
                 let mut meta = meta.clone();
                 meta.ty = p.clone();
-                Ok(Ast::IdentifierDeclare(meta.clone(), name.clone(), p.clone()))
+                Ok(Ast::IdentifierDeclare(
+                    meta.clone(),
+                    name.clone(),
+                    p.clone(),
+                ))
             }
             Ast::Identifier(meta, id) => match current_func {
                 None => Err(format!("Variable {} appears outside of function", id)),
@@ -553,7 +560,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     let rhs = self.traverse(&rhs, current_func, sym)?;
                     if meta.ty == rhs.get_type() {
                         sym.add(&name, meta.ty.clone(), *mutable)?;
-                        Ok(Ast::Bind(meta, name.clone(), *mutable, p.clone(), Box::new(rhs)))
+                        Ok(Ast::Bind(
+                            meta,
+                            name.clone(),
+                            *mutable,
+                            p.clone(),
+                            Box::new(rhs),
+                        ))
                     } else {
                         Err(format!(
                             "Bind expected {} but got {}",

@@ -101,9 +101,7 @@ fn main() {
     let trace_semantic_analysis = TracingConfig::parse(matches.value_of("trace-symbol-table"));
     let trace_path = TracingConfig::parse(matches.value_of("trace-path"));
     let semantic_ast = match type_check(&ast, trace_semantic_analysis, trace_path) {
-        Ok(ast) => {
-            ast
-        }
+        Ok(ast) => ast,
         Err(msg) => {
             println!("Error: {}", msg);
             std::process::exit(ERR_TYPE_CHECK);
