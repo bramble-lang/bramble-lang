@@ -1,4 +1,4 @@
-use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::{module, routinedef}};
+use crate::{ast::{Ast, Ast::*, BinaryOperator, UnaryOperator}, syntax::{module::{self, Item}, routinedef}};
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::semantics::symbol_table::*;
 use crate::syntax::ty::Type;
@@ -882,7 +882,56 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 
     fn analyze_item(&mut self, i: &module::Item<SemanticMetadata>, sym: &mut SymbolTable) -> Result<module::Item<SemanticMetadata>, String> {
-        Err("".into())
+        match i {
+            Item::Struct(s) => self.analyize_node(s, &None, sym).map(|n| Item::Struct(n)),
+            Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
+        }
+    }
+
+    fn analyze_routine(&mut self, routine: &routinedef::RoutineDef<SemanticMetadata>, sym: &mut SymbolTable) -> Result<routinedef::RoutineDef<SemanticMetadata>, String> {
+        let routinedef::RoutineDef{
+            meta,
+            name,
+            def,
+            params,
+            body,
+            ty: p,
+            ..
+        } = routine;
+        let mut meta = meta.clone();
+        let canonical_params = self.params_to_canonical(sym, &params)?;
+        for (pname, pty) in canonical_params.iter() {
+            meta.sym.add(pname, pty.clone(), false)?;
+        }
+        let tmp_sym = sym.clone();
+        self.stack.push(tmp_sym);
+        let mut resolved_body = vec![];
+        for stmt in body.iter() {
+            let exp = self.traverse(stmt, &Some(name.clone()), &mut meta.sym)?;
+            resolved_body.push(exp);
+        }
+        self.stack.pop();
+        meta.ty = self.type_to_canonical(sym, p)?;
+
+        let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
+
+        let canon_path = self
+            .stack
+            .to_path(sym)
+            .map(|mut p| {
+                p.push(name);
+                p
+            })
+            .expect("Failed to create canonical path for function");
+        meta.set_canonical_path(canon_path);
+        Ok(routinedef::RoutineDef {
+            meta: meta.clone(),
+            def: def.clone(),
+            name: name.clone(),
+            params: canonical_params,
+            ty: canonical_ret_ty,
+            body: resolved_body,
+        })
     }
 }
 
