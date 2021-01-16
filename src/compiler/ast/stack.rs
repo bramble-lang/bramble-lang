@@ -1,4 +1,4 @@
-use crate::compiler::ast::ast::CompilerNode;
+use crate::{compiler::ast::ast::CompilerNode, syntax::{module::Item, routinedef::RoutineDef}};
 use crate::compiler::ast::scope::Level;
 use crate::{syntax::routinedef::RoutineDefType, syntax::path::Path};
 

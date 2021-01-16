@@ -799,6 +799,104 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    fn traverse_item(
+        &mut self,
+        item: &'a Item<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        match item {
+            Item::Struct(s) => self.traverse(s, current_func, code),
+            Item::Routine(r) => self.traverse_routine_def(r, code),
+        }
+    }
+
+    fn traverse_routine_def(
+        &mut self,
+        routine: &'a RoutineDef<Scope>,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        match routine.get_def() {
+            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, code),
+            RoutineDefType::Function => self.traverse_function_def(routine, code),
+        }
+    }
+
+    fn traverse_function_def(
+        &mut self,
+        routine: &'a RoutineDef<Scope>,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        let fn_param_registers = vec![
+            Reg::R32(Reg32::Eax),
+            Reg::R32(Reg32::Ebx),
+            Reg::R32(Reg32::Ecx),
+            Reg::R32(Reg32::Edx),
+        ];
+
+        if let RoutineDef {
+            meta: scope,
+            def: RoutineDefType::Function,
+            name: ref fn_name,
+            body: stmts,
+            ..
+        } = routine
+        {
+            let total_offset = match scope.level() {
+                Routine { allocation, .. } => allocation,
+                _ => panic!("Invalid scope for function definition"),
+            };
+
+            assembly! {(code) {
+            @{scope.canon_path().to_label()}:
+                ; {{format!("Define {}", scope.canon_path())}}
+                ;"Prepare stack frame for this function"
+                push %ebp;
+                mov %ebp, %esp;
+                sub %esp, {*total_offset};
+                ; "Move function parameters from registers into the stack frame"
+                {{self.move_params_into_stackframe(routine, &fn_param_registers)?}}
+                ; "Done moving function parameters from registers into the stack frame"
+            }};
+
+            for s in stmts.iter() {
+                self.traverse(s, fn_name, code)?;
+            }
+
+            assembly! {(code) {
+                ; "Clean up frame before leaving function"
+                mov %esp, %ebp;
+                pop %ebp;
+                ret;
+            }};
+        } else {
+            panic!("")
+        }
+        Ok(())
+    }
+
+    fn traverse_coroutine_def(
+        &mut self,
+        routine: &'a RoutineDef<Scope>,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        assembly! {(code) {
+            @{routine.get_metadata().canon_path().to_label()}:
+            ; {{format!("Define {}", routine.get_metadata().canon_path())}}
+        }};
+
+        // Prepare stack frame for this function
+        let name = routine.get_name().into();
+        for s in routine.get_body().iter() {
+            self.traverse(s, &name, code)?;
+        }
+        assembly! {(code) {
+            mov %ebx, ^terminus;
+            jmp @runtime_yield_return;
+        }};
+        Ok(())
+    }
+
     fn member_access(
         &mut self,
         current_func: &String,
