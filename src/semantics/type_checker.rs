@@ -1906,78 +1906,84 @@ mod tests {
     }
 
     #[test]
-    pub fn test_mutate() {
-        // RHS type matches the LHS type
-        {
-            let mut scope = Scope::new();
-            scope.add("my_func", vec![], Unit, vec![("x".into(), true, Type::I32)]);
+    pub fn test_mutate_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> i32 {
+                    let mut k: i32 := 5;
+                    mut k := 3;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    let mut k: i32 := 5;
+                    mut k := false;
+                    return k;
+                }",
+                Err("Semantic: L3: k is of type i32 but is assigned bool"),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    mut k := 3;
+                    return k;
+                }",
+                Err("Semantic: L3: Variable k is not mutable"),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    mut k := false;
+                    return k;
+                }",
+                Err("Semantic: L3: Variable k is not mutable"),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    mut x := false;
+                    return k;
+                }",
+                Err("Semantic: L3: x is not defined"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            )
-            .map(|n| n.get_type().clone());
-            assert_eq!(ty, Ok(Type::I32));
-        }
-        // Variable is immutable
-        {
-            let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("x".into(), false, Type::I32)],
-            );
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
 
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: Variable x is not mutable".into()));
-        }
-        // RHS type mismatch
-        {
-            let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("x".into(), true, Type::Bool)],
-            );
-
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is of type bool but is assigned i32".into()));
-        }
-        // Variable does not exist
-        {
-            let mut scope = Scope::new();
-            scope.add(
-                "my_func",
-                vec![],
-                Unit,
-                vec![("y".into(), false, Type::I32)],
-            );
-
-            let node = Ast::Mutate(1, "x".into(), Box::new(Ast::Integer(1, 5)));
-            let mut sa = SemanticAst::new();
-            let ty = start(
-                &mut sa.from_parser_ast(&node).unwrap(),
-                &Some("my_func".into()),
-                &scope,
-            );
-            assert_eq!(ty, Err("L1: x is not defined".into()));
+                    // validate the mutate statement is typed correctly
+                    let mut_stm = &fn_main.get_body()[1];
+                    assert_eq!(mut_stm.get_type(), expected_ty);
+                    if let Ast::Mutate(_, _, rhs) = mut_stm {
+                        assert_eq!(rhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
     }
 
