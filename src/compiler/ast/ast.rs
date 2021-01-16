@@ -295,7 +295,7 @@ impl<Scope> RoutineDef<Scope> {
             Ok(())
         } else {
             Err(format!(
-                "Critical: expected {} but go {} parameters for {}",
+                "Critical: expected {} but got {} parameters for {}",
                 expected_params.len(),
                 params.len(),
                 self.root_str()
