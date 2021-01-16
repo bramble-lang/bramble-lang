@@ -195,6 +195,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
+                routine_type: RoutineDefType::Function,
             },
             vec!["root"].into(),
             Type::Unit,
@@ -231,6 +232,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
+                routine_type: RoutineDefType::Function,
             },
             vec!["root"].into(),
             Type::Unit,
@@ -258,6 +260,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
+                routine_type: RoutineDefType::Function,
             },
             vec!["root"].into(),
             Type::Unit,
@@ -285,6 +288,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 8,
+                routine_type: RoutineDefType::Coroutine,
             },
             vec!["root"].into(),
             Type::Unit,
@@ -313,6 +317,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
+                routine_type: RoutineDefType::Coroutine,
             },
             vec!["root"].into(),
             Type::Unit,
@@ -391,6 +396,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
+                routine_type: RoutineDefType::Coroutine,
             },
             vec!["root"].into(),
             Type::Unit,
@@ -445,6 +451,7 @@ mod tests {
             Level::Routine {
                 next_label: 0,
                 allocation: 0,
+                routine_type: RoutineDefType::Coroutine,
             },
             vec!["root"].into(),
             Type::Unit,
