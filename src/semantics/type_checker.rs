@@ -2265,41 +2265,86 @@ mod tests {
     }
 
     #[test]
-    pub fn test_yield_return() {
-        let mut scope = Scope::new();
-        scope.add("my_co", vec![], Unit, vec![]);
-        scope.add("my_co2", vec![], I32, vec![]);
+    pub fn test_yield_return_statement() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {
+                    yret 1;
+                    return 5;
+                }
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {
+                    yret false;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L6: Yield return expected i32 but got bool"),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number();
+                    return;
+                }
+                co number() -> i32 {
+                    yret;
+                    return 5;
+                }
+                ",
+                Err("Semantic: L6: Yield return expected i32 but got unit"),
+            ),
+            /*
+                Need to add a symbol for the unit type
+            (
+                "fn main() {
+                    let c: co := init number();
+                    return;
+                }
+                co number() {
+                    yret 5;
+                    return;
+                }
+                ",
+                Err("Semantic: L6: Yield return expected unit but got i32"),
+            ),*/
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let co_number = module.get_coroutines()[0].to_routine().unwrap();
 
-        let node = Ast::YieldReturn(1, None);
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(Unit));
-
-        // test correct type for yield return
-        let node = Ast::YieldReturn(1, Some(Box::new(Ast::Integer(1, 5))));
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        )
-        .map(|n| n.get_type().clone());
-        assert_eq!(ty, Ok(I32));
-
-        // test incorrect type for yield return
-        let node = Ast::YieldReturn(1, None);
-        let mut sa = SemanticAst::new();
-        let ty = start(
-            &mut sa.from_parser_ast(&node).unwrap(),
-            &Some("my_co2".into()),
-            &scope,
-        );
-        assert_eq!(ty, Err("L1: Yield return expected i32 but got unit".into()));
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &co_number.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::YieldReturn(.., Some(lhs)) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
     }
 
     #[test]
