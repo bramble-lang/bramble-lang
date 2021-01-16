@@ -1,6 +1,6 @@
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level;
-use crate::{ast::RoutineDef, syntax::path::Path};
+use crate::ast::RoutineDef;
 
 use super::symbol_table::Symbol;
 
@@ -73,28 +73,6 @@ impl<'a> ScopeStack<'a> {
                 _ => None,
             },
             None => None,
-        }
-    }
-
-    /// Starting from the bottom of the stack this builds a path
-    /// of all the modules that we are current in, in effect
-    /// the current path within the AST.
-    pub fn to_path(&self) -> Option<Path> {
-        let mut steps = vec![];
-
-        for node in self.stack.iter() {
-            match node {
-                CompilerNode::Module(m) => {
-                    steps.push(m.get_name().clone());
-                }
-                _ => (),
-            }
-        }
-
-        if steps.len() > 0 {
-            Some(steps.into())
-        } else {
-            None
         }
     }
 }
@@ -342,121 +320,5 @@ mod tests {
             }
             _ => assert!(false),
         }
-    }
-
-    #[test]
-    fn test_single_level_to_path() {
-        let mut stack = ScopeStack::new();
-        let mut module_scope = Scope::new(
-            0,
-            Level::Module {
-                name: "root".into(),
-            },
-            vec!["root"].into(),
-            Type::Unit,
-        );
-        module_scope.insert("cor", 0, 0);
-
-        let module_node = module::Module::new("root", module_scope);
-        let tmp = CompilerNode::Module(module_node);
-        stack.push(&tmp);
-
-        let path = stack.to_path().unwrap();
-        let expected: Path = vec!["root"].into();
-        assert_eq!(path, expected);
-    }
-
-    #[test]
-    fn test_func_in_module_to_path() {
-        let mut stack = ScopeStack::new();
-        let mut module_scope = Scope::new(
-            0,
-            Level::Module {
-                name: "root".into(),
-            },
-            vec!["root"].into(),
-            Type::Unit,
-        );
-        module_scope.insert("cor", 0, 0);
-        
-        let module_node = module::Module::new("root", module_scope);
-        let tmp = CompilerNode::Module(module_node);
-        stack.push(&tmp);
-
-        let fun2_scope = Scope::new(
-            0,
-            Level::Routine {
-                next_label: 0,
-                allocation: 0,
-            },
-            vec!["root"].into(),
-            Type::Unit,
-        );
-        let fun2_node = CompilerNode::RoutineDef {
-            meta: fun2_scope,
-            def: RoutineDef::Coroutine,
-            name: "func2".into(),
-            params: vec![],
-            ty: Type::I32,
-            body: vec![],
-        };
-        stack.push(&fun2_node);
-
-        let path = stack.to_path().unwrap();
-        let expected: Path = vec!["root"].into();
-        assert_eq!(path, expected);
-    }
-
-    #[test]
-    fn test_nested_module_to_path() {
-        let mut stack = ScopeStack::new();
-        let module_scope = Scope::new(
-            0,
-            Level::Module {
-                name: "root".into(),
-            },
-            vec!["root"].into(),
-            Type::Unit,
-        );
-        
-        let module_node = module::Module::new("root", module_scope);
-        let tmp = CompilerNode::Module(module_node);
-        stack.push(&tmp);
-
-        let module2_scope = Scope::new(
-            0,
-            Level::Module {
-                name: "inner".into(),
-            },
-            vec!["root"].into(),
-            Type::Unit,
-        );
-        
-        let module2_node = module::Module::new("inner", module2_scope);
-        let tmp2 = CompilerNode::Module(module2_node);
-        stack.push(&tmp2);
-
-        let fun2_scope = Scope::new(
-            0,
-            Level::Routine {
-                next_label: 0,
-                allocation: 0,
-            },
-            vec!["root"].into(),
-            Type::Unit,
-        );
-        let fun2_node = CompilerNode::RoutineDef {
-            meta: fun2_scope,
-            def: RoutineDef::Coroutine,
-            name: "func2".into(),
-            params: vec![],
-            ty: Type::I32,
-            body: vec![],
-        };
-        stack.push(&fun2_node);
-
-        let path = stack.to_path().unwrap();
-        let expected: Path = vec!["root", "inner"].into();
-        assert_eq!(path, expected);
     }
 }
