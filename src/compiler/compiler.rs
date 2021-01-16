@@ -491,6 +491,7 @@ impl<'a> Compiler<'a> {
                     .find(id)
                     .ok_or(format!("Could not find variable {}", id))?
                     .offset;
+                println!("{} {} {}", id, current_func, self.scope);
                 assembly! {(code) {
                     ; {format!("Binding {}", id)}
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
