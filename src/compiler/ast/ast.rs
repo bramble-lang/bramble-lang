@@ -32,40 +32,6 @@ impl CompilerNode {
                 }
                 (ExpressionBlock(meta, nbody), nlayout)
             }
-            RoutineDef(rd) => {
-                let (i, l) = Self::compute_layouts_for_routine(rd, layout, struct_table);
-                (RoutineDef(i), l)
-                /*k
-                let initial_frame_size = match def {
-                    syntax::routinedef::RoutineDefType::Function => 0,
-                    syntax::routinedef::RoutineDefType::Coroutine => 20,
-                };
-                let (mut meta, offset) =
-                    Scope::routine_from(meta, struct_table, initial_frame_size);
-                let mut nbody = vec![];
-                let mut nlayout = LayoutData::new(offset);
-                for e in body.iter() {
-                    let (e, layout) = CompilerNode::compute_offsets(e, nlayout, struct_table);
-                    nlayout = layout;
-                    nbody.push(e);
-                }
-                meta.level = Level::Routine {
-                    next_label: 0,
-                    allocation: nlayout.offset,
-                };
-                (
-                    RoutineDef {
-                        meta,
-                        def: *def,
-                        name: name.clone(),
-                        params: params.clone(),
-                        ty: ty.clone(),
-                        body: nbody,
-                    },
-                    layout,
-                )
-                */
-            }
             Ast::Integer(m, i) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 (Ast::Integer(meta, *i), layout)
@@ -704,15 +670,15 @@ mod ast_tests {
             body: vec![],
         };
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_offsets(&SemanticNode::RoutineDef(sn), LayoutData::new(0), &empty_struct_table);
+        let cn = CompilerNode::compute_layouts_for_routine(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef(RoutineDef {
+            RoutineDef {
                 meta,
                 def: RoutineDefType::Coroutine,
                 name,
                 ..
-            }) => {
+            } => {
                 assert_eq!(name, "coroutine");
                 assert_eq!(meta.symbols.table.len(), 2);
                 assert_eq!(meta.symbols.table["x"].size, 4);

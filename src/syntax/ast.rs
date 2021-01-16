@@ -98,7 +98,7 @@ pub enum Ast<I> {
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
 
-    RoutineDef(RoutineDef<I>),
+    //RoutineDef(RoutineDef<I>),
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     Module(Module<I>),
     StructDef(I, String, Vec<(String, Type)>),
@@ -135,7 +135,6 @@ impl<I> Ast<I> {
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
 
-            RoutineDef(rd) => format!("{} for {}", rd.get_def(), rd.get_name()),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
             Module(m) => format!("module {}", m.get_name()),
@@ -173,7 +172,6 @@ impl<I> Ast<I> {
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
             | Module(m) => m.get_metadata(),
-            | RoutineDef(rd) => rd.get_metadata(),
         }
     }
 
@@ -206,7 +204,6 @@ impl<I> Ast<I> {
             | StructDef(m, ..) => m,
             StructExpression(m, ..) => m,
             Module(m) => m.get_metadata_mut(),
-            RoutineDef(rd) => rd.get_metadata_mut(),
         }
     }
 
@@ -257,16 +254,6 @@ impl<I> Ast<I> {
             m.go_to_module(path)
         } else {
             return None;
-        }
-    }
-
-    /// Returns an error if the current node is not a routine node.
-    /// Useful in the Translation layer or the Semantic layer for validating
-    /// That paths and identifiers are associated with valid routines.
-    pub fn is_routine_def(&self) -> Result<&Ast<I>, String> {
-        match self {
-            Ast::RoutineDef { .. } => Ok(self),
-            _ => Err(format!("Expected routine, but was {}", self.root_str())),
         }
     }
 }

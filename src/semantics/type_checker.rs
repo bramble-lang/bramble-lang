@@ -734,47 +734,6 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = ty;
                 Ok(ExpressionBlock(meta.clone(), resolved_body))
             }
-            RoutineDef(routinedef::RoutineDef{
-                ..
-            }) => {
-                panic!("Should not be here");
-                /*
-                let mut meta = meta.clone();
-                let canonical_params = self.params_to_canonical(sym, &params)?;
-                for (pname, pty) in canonical_params.iter() {
-                    meta.sym.add(pname, pty.clone(), false)?;
-                }
-                let tmp_sym = sym.clone();
-                self.stack.push(tmp_sym);
-                let mut resolved_body = vec![];
-                for stmt in body.iter() {
-                    let exp = self.traverse(stmt, &Some(name.clone()), &mut meta.sym)?;
-                    resolved_body.push(exp);
-                }
-                self.stack.pop();
-                meta.ty = self.type_to_canonical(sym, p)?;
-
-                let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
-
-                let canon_path = self
-                    .stack
-                    .to_path(sym)
-                    .map(|mut p| {
-                        p.push(name);
-                        p
-                    })
-                    .expect("Failed to create canonical path for function");
-                meta.set_canonical_path(canon_path);
-                Ok(RoutineDef {
-                    meta: meta.clone(),
-                    def: def.clone(),
-                    name: name.clone(),
-                    params: canonical_params,
-                    ty: canonical_ret_ty,
-                    body: resolved_body,
-                })
-                */
-            }
             Module(m) => {
                 let nmodule = self.analyze_module(m, sym)?;
                 Ok(Module(nmodule))

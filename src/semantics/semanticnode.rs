@@ -148,25 +148,6 @@ impl SemanticAst {
                 )))
             }
             Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
-            RoutineDef(routinedef::RoutineDef{
-                ..
-            }) => {
-                // TODO: this will need to be deleted!
-                panic!("This should not be called!");
-                /*let mut nbody = vec![];
-                for stmt in body.iter() {
-                    let r = self.from_parser_ast(stmt)?;
-                    nbody.push(*r);
-                }
-                Ok(Box::new(RoutineDef(routinedef::RoutineDef {
-                    meta: self.semantic_metadata_from(*ln),
-                    def: *def,
-                    name: fname.clone(),
-                    params: params.clone(),
-                    ty: ty.clone(),
-                    body: nbody,
-                })))*/
-            }
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types

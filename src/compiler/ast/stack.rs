@@ -164,8 +164,7 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        let tmp = CompilerNode::RoutineDef(outer_node);
-        stack.push(&tmp.get_metadata());
+        stack.push(&outer_node.get_metadata());
 
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
@@ -227,8 +226,7 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        let tmp = CompilerNode::RoutineDef(fun2_node);
-        stack.push(&tmp.get_metadata());
+        stack.push(&fun2_node.get_metadata());
 
         assert_eq!(stack.find("func").is_none(), true);
     }
@@ -284,8 +282,7 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        let tmp = CompilerNode::RoutineDef(fun2_node);
-        stack.push(&tmp.get_metadata());
+        stack.push(&fun2_node.get_metadata());
 
         assert!(stack.in_coroutine());
     }

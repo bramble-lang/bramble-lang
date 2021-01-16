@@ -49,12 +49,6 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
-            RoutineDef(..) => {
-                panic!("Should not come here");
-                /*jfor e in body.iter() {
-                    self.extract_from(e);
-                }*/
-            }
             Integer(..) => {}
             Boolean(..) => {}
             StringLiteral(_, s) => {

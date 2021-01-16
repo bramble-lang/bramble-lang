@@ -554,9 +554,6 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::RoutineDef(_) => {
-                    panic!("this is being deprecated and should never be reaced")
-            }
             Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
