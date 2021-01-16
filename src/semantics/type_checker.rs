@@ -32,7 +32,6 @@ pub fn type_check(
     SymbolTable::from_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
-    //let module_ast = Ast::Module(sm_ast);
     let mut semantic = SemanticAnalyzer::new(&sm_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
@@ -758,10 +757,6 @@ impl<'a> SemanticAnalyzer<'a> {
                 self.stack.pop();
                 meta.ty = ty;
                 Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
-            }
-            Ast::Module(m) => {
-                let nmodule = self.analyze_module(m, sym)?;
-                Ok(Ast::Module(nmodule))
             }
             Ast::StructDef(meta, struct_name, fields) => {
                 let mut meta = meta.clone();

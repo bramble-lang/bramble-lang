@@ -164,11 +164,6 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            Module(m) => {
-                let (m, layout) = Self::compute_layouts_for_module(m, layout, struct_table);
-
-                (Module(m), layout)
-            }
             StructDef(..) => panic!("StructDef Unimplemented"),
             StructExpression(meta, struct_name, fields) => {
                 let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
@@ -551,44 +546,41 @@ mod ast_tests {
         let mut module = Module::new("root", SemanticMetadata::new(1, 1, Type::Unit));
         module.add_function(sn).unwrap();
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_offsets(
-            &Ast::Module(module),
+        let cn = CompilerNode::compute_layouts_for_module(
+            &module,
             LayoutData::new(0),
             &empty_struct_table,
         );
         assert_eq!(cn.1.offset, 0);
-        if let CompilerNode::Module(module) = cn.0 {
-            match module.get_item("func") {
-                Some(Item::Routine(RoutineDef {
-                    meta,
-                    def: RoutineDefType::Function,
-                    name,
-                    ..
-                })) => {
-                    assert_eq!(name, "func");
-                    assert_eq!(meta.symbols.table.len(), 2);
-                    assert_eq!(meta.symbols.table["x"].size, 4);
-                    assert_eq!(meta.symbols.table["x"].offset, 4);
-                    assert_eq!(meta.symbols.table["y"].size, 4);
-                    assert_eq!(meta.symbols.table["y"].offset, 8);
+        let module = cn.0;
+        match module.get_item("func") {
+            Some(Item::Routine(RoutineDef {
+                meta,
+                def: RoutineDefType::Function,
+                name,
+                ..
+            })) => {
+                assert_eq!(name, "func");
+                assert_eq!(meta.symbols.table.len(), 2);
+                assert_eq!(meta.symbols.table["x"].size, 4);
+                assert_eq!(meta.symbols.table["x"].offset, 4);
+                assert_eq!(meta.symbols.table["y"].size, 4);
+                assert_eq!(meta.symbols.table["y"].offset, 8);
 
-                    match meta.level {
-                        scope::Level::Routine {
-                            next_label,
-                            allocation,
-                            routine_type,
-                        } => {
-                            assert_eq!(next_label, 0);
-                            assert_eq!(allocation, 8);
-                            assert_eq!(routine_type, RoutineDefType::Function);
-                        }
-                        _ => assert!(false),
+                match meta.level {
+                    scope::Level::Routine {
+                        next_label,
+                        allocation,
+                        routine_type,
+                    } => {
+                        assert_eq!(next_label, 0);
+                        assert_eq!(allocation, 8);
+                        assert_eq!(routine_type, RoutineDefType::Function);
                     }
+                    _ => assert!(false),
                 }
-                _ => assert!(false),
             }
-        } else {
-            panic!("Module not returned")
+            _ => assert!(false),
         }
     }
 
@@ -741,8 +733,7 @@ mod ast_tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let semantic_ast = Ast::Module(semantic_module);
-            let unrealized_st = UnresolvedStructTable::from(&semantic_ast).unwrap();
+            let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved = unrealized_st.resolve();
 
             assert_eq!(resolved.err(), None);

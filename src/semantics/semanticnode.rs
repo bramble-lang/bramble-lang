@@ -188,10 +188,6 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            Module(m) => {
-                let nmodule = self.from_module(m)?;
-                Ok(Box::new(Module(nmodule)))
-            }
             StructDef(l, name, fields) => Ok(Box::new(StructDef(
                 self.semantic_metadata_from(*l),
                 name.clone(),
