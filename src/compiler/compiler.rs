@@ -358,7 +358,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn push_scope(&mut self, ast: &'a CompilerNode) {
-        self.scope.push(ast)
+        self.scope.push(ast.get_metadata())
     }
 
     fn pop(&mut self) {
@@ -497,7 +497,6 @@ impl<'a> Compiler<'a> {
                     .find(id)
                     .expect(&format!("Could not find variable {}\n{}", id, self.scope))
                     .offset;
-                println!("{} {} {}", id, current_func, self.scope);
                 assembly! {(code) {
                     ; {format!("Binding {}", id)}
                     {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
@@ -684,6 +683,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
+        self.scope.push(module.get_metadata());
         for f in module.get_functions().iter() {
             self.traverse_item(f, current_func, code)?;
         }
@@ -693,6 +693,7 @@ impl<'a> Compiler<'a> {
         for m in module.get_modules().iter() {
             self.traverse_module(m, current_func, code)?;
         }
+        self.pop();
 
         Ok(())
     }
@@ -703,10 +704,13 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        match item {
+        self.scope.push(item.get_metadata());
+        let result = match item {
             Item::Struct(s) => self.traverse(s, current_func, code),
             Item::Routine(r) => self.traverse_routine_def(r, code),
-        }
+        };
+        self.pop();
+        result
     }
 
     fn traverse_routine_def(
