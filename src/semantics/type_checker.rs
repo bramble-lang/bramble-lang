@@ -202,10 +202,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn resolve_types(
-        &mut self,
-        sym: &mut SymbolTable,
-    ) -> Result<module::Module<SemanticMetadata>> {
+    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
         self.analyze_module(self.root, sym)
     }
 
@@ -303,11 +300,7 @@ impl<'a> SemanticAnalyzer<'a> {
             .ok_or(format!("{} is not defined", id))
     }
 
-    fn lookup_func_or_cor(
-        &'a self,
-        sym: &'a SymbolTable,
-        id: &str,
-    ) -> Result<(&Vec<Type>, &Type)> {
+    fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -321,11 +314,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn lookup_coroutine(
-        &'a self,
-        sym: &'a SymbolTable,
-        id: &str,
-    ) -> Result<(&Vec<Type>, &Type)> {
+    fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup(sym, id)? {
             Symbol {
                 ty: Type::CoroutineDef(params, p),

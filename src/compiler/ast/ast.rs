@@ -15,9 +15,7 @@ use braid_lang::result::Result;
 pub type CompilerNode = Ast<Scope>;
 
 impl CompilerNode {
-    pub fn from(
-        ast: &Module<SemanticMetadata>,
-    ) -> Result<(Module<Scope>, ResolvedStructTable)> {
+    pub fn from(ast: &Module<SemanticMetadata>) -> Result<(Module<Scope>, ResolvedStructTable)> {
         let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
         let struct_table = unresolved_struct_table.resolve()?;
         let (compiler_ast, _) =

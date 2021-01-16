@@ -1,5 +1,5 @@
-use std::{collections::HashMap, marker::PhantomData};
 use braid_lang::result::Result;
+use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
     semantics::semanticnode::{SemanticMetadata, SemanticNode},
@@ -70,10 +70,7 @@ impl UnresolvedStructTable {
         Ok(table)
     }
 
-    fn traverse(
-        node: &SemanticNode,
-        table: &mut HashMap<String, StructDefinition>,
-    ) -> Result<()> {
+    fn traverse(node: &SemanticNode, table: &mut HashMap<String, StructDefinition>) -> Result<()> {
         match node {
             SemanticNode::Module(m) => Self::traverse_module(m, table),
             _ => Ok(()),

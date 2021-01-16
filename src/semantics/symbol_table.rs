@@ -120,10 +120,7 @@ impl SymbolTable {
         Ok(())
     }
 
-    fn traverse(
-        item: &mut Item<SemanticMetadata>,
-        sym: &mut SemanticMetadata,
-    ) -> Result<()> {
+    fn traverse(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
         use ast::Ast;
         match item {
             Item::Routine(RoutineDef {
