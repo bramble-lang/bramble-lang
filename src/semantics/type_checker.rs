@@ -1382,7 +1382,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_unary() {
+    pub fn test_unary_ops() {
         use crate::syntax::parser;
         for (text, expected) in vec![
             (
