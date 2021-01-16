@@ -1581,24 +1581,142 @@ mod tests {
     }
 
     #[test]
-    pub fn test_boolean_ops() {
-        let scope = Scope::new();
-
-        let tests: Vec<(PNode, Result<Type, String>)> = vec![(
-            Ast::BinaryOp(
-                1,
-                BinaryOperator::BAnd,
-                Box::new(Ast::Boolean(1, true)),
-                Box::new(Ast::Integer(1, 5)),
+    pub fn test_boolean_and_op() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> bool {
+                    let k: bool := true && false;
+                    return k && true;
+                }",
+                Ok(Bool),
             ),
-            Err("L1: && expected bool but found bool and i32".into()),
-        )];
+            (
+                "fn main() -> bool {
+                    let k: bool := true && 1;
+                    return k && true;
+                }",
+                Err("Semantic: L2: && expected bool but found bool and i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := \"hello\" && false;
+                    return k && true;
+                }",
+                Err("Semantic: L2: && expected bool but found string and bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k && true;
+                }",
+                Err("Semantic: L3: && expected bool but found i32 and bool"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-        let mut sa = SemanticAst::new();
-        for (test, expected) in tests.iter() {
-            let ty = start(&mut sa.from_parser_ast(&test).unwrap(), &None, &scope)
-                .map(|n| n.get_type().clone());
-            assert_eq!(ty, *expected);
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_boolean_or_op() {
+        use crate::syntax::parser;
+        for (text, expected) in vec![
+            (
+                "fn main() -> bool {
+                    let k: bool := true || false;
+                    return k || true;
+                }",
+                Ok(Bool),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := true || 1;
+                    return k || true;
+                }",
+                Err("Semantic: L2: || expected bool but found bool and i32"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := \"hello\" || false;
+                    return k || true;
+                }",
+                Err("Semantic: L2: || expected bool but found string and bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5;
+                    return k || true;
+                }",
+                Err("Semantic: L3: || expected bool but found i32 and bool"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    if let Ast::Bind(.., lhs) = bind_stm {
+                        assert_eq!(lhs.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Ast::Return(_, Some(value)) = ret_stm {
+                        assert_eq!(value.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
         }
     }
 
