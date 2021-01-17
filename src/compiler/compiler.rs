@@ -620,10 +620,10 @@ impl<'a> Compiler<'a> {
     ) -> Result<(), String> {
         self.scope.push(module.get_metadata());
         for f in module.get_functions().iter() {
-            self.traverse_item(f, current_func, code)?;
+            self.traverse_item(f, code)?;
         }
         for co in module.get_coroutines().iter() {
-            self.traverse_item(co, current_func, code)?;
+            self.traverse_item(co, code)?;
         }
         for m in module.get_modules().iter() {
             self.traverse_module(m, current_func, code)?;
@@ -633,15 +633,12 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn traverse_item(
-        &mut self,
-        item: &'a Item<Scope>,
-        current_func: &String,
-        code: &mut Vec<Inst>,
-    ) -> Result<(), String> {
+    fn traverse_item(&mut self, item: &'a Item<Scope>, code: &mut Vec<Inst>) -> Result<(), String> {
         self.scope.push(item.get_metadata());
         let result = match item {
-            Item::Struct(s) => self.traverse(s, current_func, code),
+            Item::Struct(_) => {
+                panic!("StructDefs should have been pruned from the AST before the compiler layer")
+            }
             Item::Routine(r) => self.traverse_routine_def(r, code),
         };
         self.pop();

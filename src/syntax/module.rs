@@ -1,21 +1,21 @@
 use super::{
-    ast::Ast,
     path::Path,
     routinedef::{RoutineDef, RoutineDefType},
+    structdef::StructDef,
 };
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item<M> {
     Routine(RoutineDef<M>),
-    Struct(Ast<M>),
+    Struct(StructDef<M>),
 }
 
 impl<M> Item<M> {
     pub fn get_name(&self) -> &str {
         match self {
             Item::Routine(r) => r.get_name(),
-            Item::Struct(s) => s.get_name().unwrap(),
+            Item::Struct(s) => s.get_name(),
         }
     }
 
@@ -87,8 +87,8 @@ impl<M> Module<M> {
         }
     }
 
-    pub fn add_struct(&mut self, s: Ast<M>) -> Result<()> {
-        let name = s.get_name().expect("Struct must have a name");
+    pub fn add_struct(&mut self, s: StructDef<M>) -> Result<()> {
+        let name = s.get_name();
         if self.get_item(name).is_none() {
             self.structs.push(Item::Struct(s));
             Ok(())

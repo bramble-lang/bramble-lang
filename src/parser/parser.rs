@@ -3,7 +3,18 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, ty::Type}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+    syntax::{
+        ast::{Ast, RoutineCall},
+        module::Module,
+        path::Path,
+        routinedef::{RoutineDef, RoutineDefType},
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -186,14 +197,14 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32
     Ok(Some(parent_module))
 }
 
-fn struct_def(stream: &mut TokenStream) -> PResult {
+fn struct_def(stream: &mut TokenStream) -> Result<Option<StructDef<u32>>> {
     match stream.next_if(&Lex::Struct) {
         Some(token) => match stream.next_if_id() {
             Some((line, id)) => {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = id_declaration_list(stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
-                Ok(Some(Ast::StructDef(line, id.clone(), fields)))
+                Ok(Some(StructDef::new(&id, line, fields)))
             }
             None => Err(format!("L{}: expected identifer after struct", token.l)),
         },
@@ -882,7 +893,13 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{lexer::lexer::Lexer, syntax::{ast::{BinaryOperator, UnaryOperator}, module::Item}};
+    use crate::{
+        lexer::lexer::Lexer,
+        syntax::{
+            ast::{BinaryOperator, UnaryOperator},
+            module::Item,
+        },
+    };
 
     #[test]
     fn parse_unary_operators() {
@@ -1406,10 +1423,10 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 1);
 
-            if let Some(Item::Struct(Ast::StructDef(l, name, fields))) = m.get_item("my_struct") {
-                assert_eq!(*l, 1);
-                assert_eq!(name, "my_struct");
-                assert_eq!(fields, &vec![("x".into(), Type::I32)]);
+            if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
+                assert_eq!(*sd.get_metadata(), 1);
+                assert_eq!(sd.get_name(), "my_struct");
+                assert_eq!(sd.get_fields(), &vec![("x".into(), Type::I32)]);
             }
         } else {
             panic!("No nodes returned by parser")
@@ -1839,19 +1856,16 @@ pub mod tests {
     #[test]
     fn parse_struct_def() {
         for (text, expected) in vec![
-            (
-                "struct MyStruct {}",
-                Ast::StructDef(1, "MyStruct".into(), vec![]),
-            ),
+            ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
             (
                 "struct MyStruct {x: i32}",
-                Ast::StructDef(1, "MyStruct".into(), vec![("x".into(), Type::I32)]),
+                StructDef::new("MyStruct", 1, vec![("x".into(), Type::I32)]),
             ),
             (
                 "struct MyStruct {x: i32, y: bool}",
-                Ast::StructDef(
+                StructDef::new(
+                    "MyStruct",
                     1,
-                    "MyStruct".into(),
                     vec![("x".into(), Type::I32), ("y".into(), Type::Bool)],
                 ),
             ),

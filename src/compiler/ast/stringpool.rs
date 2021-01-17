@@ -116,7 +116,6 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
-            StructDef(..) => {}
             StructExpression(_, _, fields) => {
                 for (_, f) in fields.iter() {
                     self.extract_from(f);
@@ -141,7 +140,7 @@ impl StringPool {
     pub fn extract_from_item(&mut self, item: &Item<Scope>) {
         match item {
             Item::Routine(r) => self.extract_from_routine(r),
-            Item::Struct(s) => self.extract_from(s),
+            Item::Struct(_) => (),
         }
     }
 

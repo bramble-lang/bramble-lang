@@ -1,6 +1,5 @@
-use crate::diagnostics::config::TracingConfig;
-use crate::semantics::symbol_table::*;
 use crate::parser::pnode::PNode;
+use crate::semantics::symbol_table::*;
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -9,6 +8,9 @@ use crate::{
         routinedef::RoutineDef,
         ty::Type,
     },
+};
+use crate::{
+    diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
 };
 use braid_lang::result::Result;
 
@@ -188,11 +190,6 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            StructDef(l, name, fields) => Ok(Box::new(StructDef(
-                self.semantic_metadata_from(*l),
-                name.clone(),
-                fields.clone(),
-            ))),
             StructExpression(l, name, fields) => {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
@@ -234,7 +231,7 @@ impl SemanticAst {
 
     fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>> {
         match m {
-            Item::Struct(s) => self.from_parser_ast(s).map(|s| Item::Struct(*s)),
+            Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(s)),
             Item::Routine(RoutineDef {
                 meta: ln,
                 def,
@@ -258,6 +255,29 @@ impl SemanticAst {
                 }))
             }
         }
+    }
+
+    fn from_structdef(
+        &mut self,
+        sd: &StructDef<ParserInfo>,
+    ) -> Result<StructDef<SemanticMetadata>> {
+        if sd.get_name().len() == 0 {
+            return Err(format!(
+                "Invalid name for StructDef: must not be an empty string"
+            ));
+        }
+
+        if *sd.get_metadata() == 0 {
+            return Err("Source code line must be greater than 0".into());
+        }
+
+        let semantic = StructDef::new(
+            sd.get_name().clone(),
+            self.semantic_metadata_from(*sd.get_metadata()),
+            sd.get_fields().clone(),
+        );
+
+        Ok(semantic)
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {

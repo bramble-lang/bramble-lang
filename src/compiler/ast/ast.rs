@@ -164,7 +164,6 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            StructDef(..) => panic!("StructDef Unimplemented"),
             StructExpression(meta, struct_name, fields) => {
                 let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
                 let mut nfields = vec![];
@@ -214,9 +213,8 @@ impl CompilerNode {
         let mut layout = layout;
         for item in items.iter() {
             let (c_ast_item, no) = match item {
-                Item::Struct(s) => {
-                    let (c, l) = CompilerNode::compute_offsets(s, layout, struct_table);
-                    (Item::Struct(c), l)
+                Item::Struct(..) => {
+                    panic!("StructDefs should all be removed before the Compiler stage")
                 }
                 Item::Routine(rd) => {
                     let (rd2, ld) = Self::compute_layouts_for_routine(&rd, layout, struct_table);

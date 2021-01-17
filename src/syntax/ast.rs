@@ -1,7 +1,4 @@
-use super::{
-    path::Path,
-    ty::Type,
-};
+use super::{path::Path, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -100,7 +97,6 @@ pub enum Ast<I> {
     YieldReturn(I, Option<Box<Ast<I>>>),
 
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
-    StructDef(I, String, Vec<(String, Type)>),
     StructExpression(I, Path, Vec<(String, Ast<I>)>),
 }
 
@@ -136,7 +132,6 @@ impl<I> Ast<I> {
 
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
 
-            StructDef(_, name, ..) => format!("definition of struct {}", name),
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
         }
     }
@@ -166,8 +161,7 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineCall(m, ..)
-            | StructDef(m, ..) => m,
+            | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
         }
     }
@@ -197,8 +191,7 @@ impl<I> Ast<I> {
             | Return(m, ..)
             | Yield(m, ..)
             | YieldReturn(m, ..)
-            | RoutineCall(m, ..)
-            | StructDef(m, ..) => m,
+            | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
         }
     }
@@ -222,7 +215,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::Identifier(_, name) | Ast::StructDef(_, name, ..) => Some(name),
+            Ast::Identifier(_, name) => Some(name),
             _ => None,
         }
     }
