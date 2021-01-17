@@ -512,35 +512,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 }
             }
-            Ast::Mutate(meta, id, rhs) => match current_func {
-                Some(_) => {
-                    let mut meta = meta.clone();
-                    let rhs = self.traverse(&rhs, current_func, sym)?;
-                    match self.lookup(sym, &id)? {
-                        symbol => {
-                            if symbol.mutable {
-                                if symbol.ty == rhs.get_type() {
-                                    meta.ty = rhs.get_type().clone();
-                                    Ok(Ast::Mutate(meta.clone(), id.clone(), Box::new(rhs)))
-                                } else {
-                                    Err(format!(
-                                        "{} is of type {} but is assigned {}",
-                                        id,
-                                        symbol.ty,
-                                        rhs.get_type()
-                                    ))
-                                }
-                            } else {
-                                Err(format!("Variable {} is not mutable", id))
-                            }
-                        }
-                    }
-                }
-                None => Err(format!(
-                    "Attempting to mutate a variable {} outside of function",
-                    id
-                )),
-            },
+            Ast::Mutate(..) => self.analyze_mutate(ast, current_func, sym),
             Ast::Bind(..) => self.analyze_bind(ast, current_func, sym),
             Ast::Return(meta, None) => match current_func {
                 None => Err(format!("Return called outside of a function")),
@@ -956,6 +928,47 @@ impl<'a> SemanticAnalyzer<'a> {
             }
         } else {
             panic!("Expected a bind, but got {}", bind.root_str())
+        }
+    }
+
+    fn analyze_mutate(
+        &mut self,
+        mutate: &SemanticNode,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<SemanticNode> {
+        if let Ast::Mutate(meta, id, rhs) = mutate {
+            match current_func {
+                Some(_) => {
+                    let mut meta = meta.clone();
+                    let rhs = self.traverse(&rhs, current_func, sym)?;
+                    match self.lookup(sym, &id)? {
+                        symbol => {
+                            if symbol.mutable {
+                                if symbol.ty == rhs.get_type() {
+                                    meta.ty = rhs.get_type().clone();
+                                    Ok(Ast::Mutate(meta.clone(), id.clone(), Box::new(rhs)))
+                                } else {
+                                    Err(format!(
+                                        "{} is of type {} but is assigned {}",
+                                        id,
+                                        symbol.ty,
+                                        rhs.get_type()
+                                    ))
+                                }
+                            } else {
+                                Err(format!("Variable {} is not mutable", id))
+                            }
+                        }
+                    }
+                }
+                None => Err(format!(
+                    "Attempting to mutate a variable {} outside of function",
+                    id
+                )),
+            }
+        } else {
+            panic!("Expected Mutate statement but got {}", mutate.root_str())
         }
     }
 }

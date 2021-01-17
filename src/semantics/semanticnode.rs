@@ -119,11 +119,7 @@ impl SemanticAst {
                 self.from_parser_ast(true_arm)?,
                 self.from_parser_ast(false_arm)?,
             ))),
-            Mutate(ln, name, ref exp) => Ok(Box::new(Mutate(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                self.from_parser_ast(exp)?,
-            ))),
+            Mutate(..) => self.from_mutate(ast),
             Bind(..) => self.from_bind(ast),
             Return(l, None) => Ok(Box::new(Return(self.semantic_metadata_from(*l), None))),
             Return(l, Some(exp)) => Ok(Box::new(Return(
@@ -288,6 +284,21 @@ impl SemanticAst {
             )))
         } else {
             panic!("Expected a Bind statement but got {}", bind.root_str())
+        }
+    }
+
+    fn from_mutate(
+        &mut self,
+        mutate: &Ast<ParserInfo>,
+    ) -> Result<Box<Ast<SemanticMetadata>>> {
+        if let Ast::Mutate(ln, name, rhs) = mutate {
+            Ok(Box::new(Ast::Mutate(
+                self.semantic_metadata_from(*ln),
+                name.clone(),
+                self.from_parser_ast(rhs)?,
+            )))
+        } else {
+            panic!("Expected a Mutate statement but got {}", mutate.root_str())
         }
     }
 
