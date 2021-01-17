@@ -490,17 +490,8 @@ impl<'a> Compiler<'a> {
             Ast::Statement(_, stm) => {
                 self.traverse(stm, current_func, code)?;
             }
-            Ast::Bind(_, id, .., ref exp) | Ast::Mutate(_, id, ref exp) => {
-                let id_offset = self
-                    .scope
-                    .find(id)
-                    .expect(&format!("Could not find variable {}\n{}", id, self.scope))
-                    .offset;
-                assembly! {(code) {
-                    ; {format!("Binding {}", id)}
-                    {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
-                }}
-            }
+            Ast::Bind(..) => self.traverse_bind(ast, current_func, code)?,
+            Ast::Mutate(..) => self.traverse_mutate(ast, current_func, code)?,
             Ast::Return(_, ref exp) => {
                 assembly! {(code) {
                     {{self.return_exp(exp, current_func)?}}
@@ -729,6 +720,50 @@ impl<'a> Compiler<'a> {
             jmp @runtime_yield_return;
         }};
         Ok(())
+    }
+
+    fn traverse_bind(
+        &mut self,
+        bind: &'a Ast<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        if let Ast::Bind(_, id, .., exp) = bind {
+            let id_offset = self
+                .scope
+                .find(id)
+                .expect(&format!("Could not find variable {}\n{}", id, self.scope))
+                .offset;
+            assembly! {(code) {
+                ; {format!("Binding {}", id)}
+                {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
+            }}
+            Ok(())
+        } else {
+            panic!("Expected a bind statement, but got {}", bind.root_str())
+        }
+    }
+
+    fn traverse_mutate(
+        &mut self,
+        mutate: &'a Ast<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        if let Ast::Mutate(_, id, .., exp) = mutate {
+            let id_offset = self
+                .scope
+                .find(id)
+                .expect(&format!("Could not find variable {}\n{}", id, self.scope))
+                .offset;
+            assembly! {(code) {
+                ; {format!("Binding {}", id)}
+                {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
+            }}
+            Ok(())
+        } else {
+            panic!("Expected a mutate statement, but got {}", mutate.root_str())
+        }
     }
 
     fn member_access(

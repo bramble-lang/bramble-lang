@@ -94,9 +94,7 @@ impl StringPool {
             Mutate(.., e) => {
                 self.extract_from(e);
             }
-            Bind(.., e) => {
-                self.extract_from(e);
-            }
+            Bind(..) => self.extract_from_bind(ast),
             Yield(_, e) => {
                 self.extract_from(e);
             }
@@ -147,6 +145,14 @@ impl StringPool {
     pub fn extract_from_routine(&mut self, routine: &RoutineDef<Scope>) {
         for s in routine.get_body().iter() {
             self.extract_from(s);
+        }
+    }
+
+    pub fn extract_from_bind(&mut self, bind: &CompilerNode) {
+        if let CompilerNode::Bind(.., e) = bind {
+            self.extract_from(e)
+        } else {
+            panic!("Expected a bind statement, but got {}", bind.root_str())
         }
     }
 }

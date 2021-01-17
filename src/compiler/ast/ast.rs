@@ -118,14 +118,7 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Mutate(meta, id.clone(), Box::new(e)), layout)
             }
-            Bind(m, id, mutable, p, e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (
-                    Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)),
-                    layout,
-                )
-            }
+            Bind(..) => Self::compute_layouts_for_bind(ast, layout, struct_table),
             Yield(m, e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
@@ -288,6 +281,23 @@ impl CompilerNode {
             },
             layout,
         )
+    }
+
+    fn compute_layouts_for_bind(
+        bind: &Ast<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Ast<Scope>, LayoutData) {
+        if let Ast::Bind(m, id, mutable, p, e) = bind {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
+            (
+                Ast::Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)),
+                layout,
+            )
+        } else {
+            panic!("Expected a bind statement, but got {}", bind.root_str())
+        }
     }
 
     fn compute_layouts_for(
