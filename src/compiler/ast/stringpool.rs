@@ -157,7 +157,7 @@ mod test {
     use super::*;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
-    use crate::syntax::parser;
+    use crate::parser::parser;
     use crate::{diagnostics::config::TracingConfig, type_check};
 
     #[test]
