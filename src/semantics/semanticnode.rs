@@ -188,11 +188,7 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            StructDef(l, name, fields) => Ok(Box::new(StructDef(
-                self.semantic_metadata_from(*l),
-                name.clone(),
-                fields.clone(),
-            ))),
+            StructDef(..) => panic!("Should never be reached"),
             StructExpression(l, name, fields) => {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
@@ -234,7 +230,7 @@ impl SemanticAst {
 
     fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>> {
         match m {
-            Item::Struct(s) => self.from_parser_ast(s).map(|s| Item::Struct(*s)),
+            Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(*s)),
             Item::Routine(RoutineDef {
                 meta: ln,
                 def,
@@ -257,6 +253,18 @@ impl SemanticAst {
                     body: nbody,
                 }))
             }
+        }
+    }
+
+    fn from_structdef(&mut self, sd: &PNode) -> Result<Box<SemanticNode>> {
+        if let Ast::StructDef(l, name, fields) = sd {
+            Ok(Box::new(Ast::StructDef(
+                self.semantic_metadata_from(*l),
+                name.clone(),
+                fields.clone(),
+            ))) 
+        } else {
+            Err(format!("Expected a structdef but got {}", sd.root_str()))
         }
     }
 
