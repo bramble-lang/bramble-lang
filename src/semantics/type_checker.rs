@@ -757,24 +757,8 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = ty;
                 Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
             }
-            Ast::StructDef(meta, struct_name, fields) => {
-                let mut meta = meta.clone();
-                // Check the type of each member
-                for (field_name, field_type) in fields.iter() {
-                    if let Custom(ty_name) = field_type {
-                        self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
-                            format!("member {}.{} invalid: {}", struct_name, field_name, e)
-                        })?;
-                    }
-                }
-                let canonical_fields = self.params_to_canonical(sym, &fields)?;
-                meta.ty = Unit;
-                meta.set_canonical_path(self.to_canonical(sym, &vec![struct_name.clone()].into())?);
-                Ok(Ast::StructDef(
-                    meta.clone(),
-                    struct_name.clone(),
-                    canonical_fields,
-                ))
+            Ast::StructDef(..) => {
+                self.analyze_structdef(ast, sym)
             }
             Ast::StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();
@@ -926,6 +910,38 @@ impl<'a> SemanticAnalyzer<'a> {
             ty: canonical_ret_ty,
             body: resolved_body,
         })
+    }
+
+    fn analyze_structdef(
+        &mut self,
+        struct_def: &SemanticNode,
+        sym: &mut SymbolTable,
+    ) -> Result<SemanticNode> {
+        if let Ast::StructDef(
+            meta,
+            name,
+            fields,
+         ) = struct_def{
+            let mut meta = meta.clone();
+            // Check the type of each member
+            for (field_name, field_type) in fields.iter() {
+                if let Custom(ty_name) = field_type {
+                    self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
+                        format!("member {}.{} invalid: {}", name, field_name, e)
+                    })?;
+                }
+            }
+            let canonical_fields = self.params_to_canonical(sym, &fields)?;
+            meta.ty = Unit;
+            meta.set_canonical_path(self.to_canonical(sym, &vec![name.clone()].into())?);
+            Ok(Ast::StructDef(
+                meta.clone(),
+                name.clone(),
+                canonical_fields,
+            ))
+        } else {
+            Err(format!("Expected a StructDef but got {}", struct_def.root_str()))
+        }
     }
 }
 

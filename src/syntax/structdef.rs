@@ -41,4 +41,8 @@ impl <M> StructDef<M> {
             Err(format!("Field {} already exists in structure {}", field, self.name))
         }
     }
+
+    pub fn root_str(&self) -> String {
+        format!("struct {}", self.name)
+    }
 }
