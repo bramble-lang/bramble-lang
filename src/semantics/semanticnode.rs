@@ -148,7 +148,8 @@ impl SemanticAst {
                     nbody,
                 )))
             }
-            Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
+            //Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
+            Statement(..) => self.from_statement(ast),
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -268,6 +269,20 @@ impl SemanticAst {
         );
 
         Ok(semantic)
+    }
+
+    fn from_statement(
+        &mut self,
+        statement: &Ast<ParserInfo>,
+    ) -> Result<Box<Ast<SemanticMetadata>>> {
+        if let Ast::Statement(ln, stm) = statement {
+            Ok(Box::new(Ast::Statement(
+                self.semantic_metadata_from(*ln),
+                self.from_parser_ast(stm)?,
+            )))
+        } else {
+            panic!("Expected a Statement but got {}", statement.root_str())
+        }
     }
     
     fn from_bind(
