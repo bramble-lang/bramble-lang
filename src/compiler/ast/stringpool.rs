@@ -91,12 +91,8 @@ impl StringPool {
                 self.extract_from(tb);
                 self.extract_from(fb);
             }
-            Mutate(.., e) => {
-                self.extract_from(e);
-            }
-            Bind(.., e) => {
-                self.extract_from(e);
-            }
+            Mutate(..) => self.extract_from_mutate(ast),
+            Bind(..) => self.extract_from_bind(ast),
             Yield(_, e) => {
                 self.extract_from(e);
             }
@@ -108,9 +104,7 @@ impl StringPool {
             YieldReturn(_, Some(e)) => {
                 self.extract_from(e);
             }
-            Statement(_, e) => {
-                self.extract_from(e);
-            }
+            Statement(..) => self.extract_from_statement(ast),
             RoutineCall(.., params) => {
                 for e in params.iter() {
                     self.extract_from(e);
@@ -147,6 +141,30 @@ impl StringPool {
     pub fn extract_from_routine(&mut self, routine: &RoutineDef<Scope>) {
         for s in routine.get_body().iter() {
             self.extract_from(s);
+        }
+    }
+
+    pub fn extract_from_statement(&mut self, statement: &CompilerNode) {
+        if let CompilerNode::Statement(.., e) = statement {
+            self.extract_from(e)
+        } else {
+            panic!("Expected a statement, but got {}", statement.root_str())
+        }
+    }
+
+    pub fn extract_from_bind(&mut self, bind: &CompilerNode) {
+        if let CompilerNode::Bind(.., e) = bind {
+            self.extract_from(e)
+        } else {
+            panic!("Expected a bind statement, but got {}", bind.root_str())
+        }
+    }
+
+    pub fn extract_from_mutate(&mut self, mutate: &CompilerNode) {
+        if let CompilerNode::Mutate(.., rhs) = mutate {
+            self.extract_from(rhs)
+        } else {
+            panic!("Expected a mutate statement, but got {}", mutate.root_str())
         }
     }
 }
@@ -195,6 +213,14 @@ mod test {
             (
                 "mod my_mod{ mod inner{fn test() -> string {let s: string := \"hello\"; return \"test2\";}}}",
                 vec!["hello", "test2"],
+            ),
+            (
+                "fn test() -> string {
+                    let mut s: string := \"hello\"; 
+                    mut s := \"world\";
+                    return \"test2\";
+                }",
+                vec!["hello", "world", "test2"],
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)

@@ -113,19 +113,8 @@ impl CompilerNode {
                 let (fb, layout) = CompilerNode::compute_offsets(fb, layout, struct_table);
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
-            Mutate(m, id, e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Mutate(meta, id.clone(), Box::new(e)), layout)
-            }
-            Bind(m, id, mutable, p, e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (
-                    Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)),
-                    layout,
-                )
-            }
+            Mutate(..) => Self::compute_layouts_for_mutate(ast, layout, struct_table),
+            Bind(..) => Self::compute_layouts_for_bind(ast, layout, struct_table),
             Yield(m, e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
@@ -149,11 +138,7 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (YieldReturn(meta, Some(Box::new(e))), layout)
             }
-            Statement(m, e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Statement(meta, Box::new(e)), layout)
-            }
+            Statement(..) => Self::compute_layouts_for_statement(ast, layout, struct_table),
             RoutineCall(m, call, name, params) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let mut nlayout = layout;
@@ -288,6 +273,51 @@ impl CompilerNode {
             },
             layout,
         )
+    }
+
+    fn compute_layouts_for_statement(
+        statement: &Ast<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Ast<Scope>, LayoutData) {
+        if let Ast::Statement(m, e) = statement {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
+            (Ast::Statement(meta, Box::new(e)), layout)
+        } else {
+            panic!("Expected a statement but got {}", statement.root_str())
+        }
+    }
+
+    fn compute_layouts_for_bind(
+        bind: &Ast<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Ast<Scope>, LayoutData) {
+        if let Ast::Bind(m, id, mutable, p, e) = bind {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
+            (
+                Ast::Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)),
+                layout,
+            )
+        } else {
+            panic!("Expected a bind statement, but got {}", bind.root_str())
+        }
+    }
+
+    fn compute_layouts_for_mutate(
+        mutate: &Ast<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Ast<Scope>, LayoutData) {
+        if let Ast::Mutate(m, id, rhs) = mutate {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (rhs, layout) = CompilerNode::compute_offsets(rhs, layout, struct_table);
+            (Ast::Mutate(meta, id.clone(), Box::new(rhs)), layout)
+        } else {
+            panic!("Expected a Mutate statement, but got {}", mutate.root_str())
+        }
     }
 
     fn compute_layouts_for(

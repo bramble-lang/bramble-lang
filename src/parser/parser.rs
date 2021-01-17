@@ -604,10 +604,11 @@ fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
-            match exp {
-                Some(exp) => Some(Ast::YieldReturn(token.l, Some(Box::new(exp)))),
-                None => Some(Ast::YieldReturn(token.l, None)),
-            }
+            let yret = match exp {
+                Some(exp) => Ast::YieldReturn(token.l, Some(Box::new(exp))),
+                None => Ast::YieldReturn(token.l, None),
+            };
+            Some(Ast::Statement(token.l, Box::new(yret)))
         }
         _ => None,
     })

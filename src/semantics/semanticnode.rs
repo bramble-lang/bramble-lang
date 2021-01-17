@@ -119,18 +119,8 @@ impl SemanticAst {
                 self.from_parser_ast(true_arm)?,
                 self.from_parser_ast(false_arm)?,
             ))),
-            Mutate(ln, name, ref exp) => Ok(Box::new(Mutate(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                self.from_parser_ast(exp)?,
-            ))),
-            Bind(ln, name, mutable, p, ref exp) => Ok(Box::new(Bind(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                *mutable,
-                p.clone(),
-                self.from_parser_ast(exp)?,
-            ))),
+            Mutate(..) => self.from_mutate(ast),
+            Bind(..) => self.from_bind(ast),
             Return(l, None) => Ok(Box::new(Return(self.semantic_metadata_from(*l), None))),
             Return(l, Some(exp)) => Ok(Box::new(Return(
                 self.semantic_metadata_from(*l),
@@ -158,7 +148,7 @@ impl SemanticAst {
                     nbody,
                 )))
             }
-            Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
+            Statement(..) => self.from_statement(ast),
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -278,6 +268,46 @@ impl SemanticAst {
         );
 
         Ok(semantic)
+    }
+
+    fn from_statement(
+        &mut self,
+        statement: &Ast<ParserInfo>,
+    ) -> Result<Box<Ast<SemanticMetadata>>> {
+        if let Ast::Statement(ln, stm) = statement {
+            Ok(Box::new(Ast::Statement(
+                self.semantic_metadata_from(*ln),
+                self.from_parser_ast(stm)?,
+            )))
+        } else {
+            panic!("Expected a Statement but got {}", statement.root_str())
+        }
+    }
+
+    fn from_bind(&mut self, bind: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
+        if let Ast::Bind(ln, name, mutable, p, ref exp) = bind {
+            Ok(Box::new(Ast::Bind(
+                self.semantic_metadata_from(*ln),
+                name.clone(),
+                *mutable,
+                p.clone(),
+                self.from_parser_ast(exp)?,
+            )))
+        } else {
+            panic!("Expected a Bind statement but got {}", bind.root_str())
+        }
+    }
+
+    fn from_mutate(&mut self, mutate: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
+        if let Ast::Mutate(ln, name, rhs) = mutate {
+            Ok(Box::new(Ast::Mutate(
+                self.semantic_metadata_from(*ln),
+                name.clone(),
+                self.from_parser_ast(rhs)?,
+            )))
+        } else {
+            panic!("Expected a Mutate statement but got {}", mutate.root_str())
+        }
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {
