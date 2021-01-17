@@ -123,40 +123,31 @@ impl SymbolTable {
         use ast::Ast;
         match item {
             Item::Routine(RoutineDef {
-                def: RoutineDefType::Function,
+                def,
                 name,
                 params,
                 ty,
                 ..
             }) => {
-                sym.sym.add(
-                    name,
-                    Type::FunctionDef(
+                let def = match def {
+                    RoutineDefType::Function => Type::FunctionDef(
                         params
                             .iter()
                             .map(|(_, ty)| ty.clone())
                             .collect::<Vec<Type>>(),
                         Box::new(ty.clone()),
                     ),
-                    false,
-                )?;
-            }
-            Item::Routine(RoutineDef {
-                def: RoutineDefType::Coroutine,
-                name,
-                params,
-                ty,
-                ..
-            }) => {
-                sym.sym.add(
-                    name,
-                    Type::CoroutineDef(
+                    RoutineDefType::Coroutine => Type::CoroutineDef(
                         params
                             .iter()
                             .map(|(_, ty)| ty.clone())
                             .collect::<Vec<Type>>(),
                         Box::new(ty.clone()),
                     ),
+                };
+                sym.sym.add(
+                    name,
+                    def,
                     false,
                 )?;
             }
