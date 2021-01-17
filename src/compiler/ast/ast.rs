@@ -708,7 +708,7 @@ mod ast_tests {
 
     #[test]
     pub fn test_bug() {
-        use crate::syntax::parser;
+        use crate::parser::parser;
         for text in vec![
             "
             fn my_main() {

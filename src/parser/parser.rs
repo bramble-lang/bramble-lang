@@ -3,26 +3,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{
-    diagnostics::config::TracingConfig,
-    lexer::tokens::{Lex, Primitive, Token},
-};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::PResult;
+use super::pnode::{PNode, PResult, ParserCombinator};
 use super::tokenstream::TokenStream;
-use super::{ast::*, pnode::ParserCombinator};
-use super::{
-    module::Module,
-    path::Path,
-    pnode::PNode,
-    routinedef::{RoutineDef, RoutineDefType},
-    ty::Type,
-};
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 static TRACE_START: AtomicUsize = AtomicUsize::new(0);
@@ -190,7 +179,6 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32
         }
 
         if stream.index() == start_index {
-            //return Err(format!("Parser cannot advance past {:?}", stream.peek()));
             break;
         }
     }
@@ -894,7 +882,7 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{lexer::lexer::Lexer, syntax::module::Item};
+    use crate::{lexer::lexer::Lexer, syntax::{ast::{BinaryOperator, UnaryOperator}, module::Item}};
 
     #[test]
     fn parse_unary_operators() {

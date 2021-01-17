@@ -1,4 +1,4 @@
-use crate::semantics::symbol_table::*;
+use crate::{parser::pnode::ParserInfo, semantics::symbol_table::*};
 use crate::syntax::path::Path;
 use crate::syntax::ty::Type;
 use crate::{
@@ -9,7 +9,6 @@ use crate::{
     ast::{Ast, BinaryOperator, UnaryOperator},
     syntax::{
         module::{self, Item},
-        pnode::ParserInfo,
         routinedef,
     },
 };
@@ -937,10 +936,10 @@ mod tests {
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::syntax::{module::Item, routinedef};
+    use crate::parser::parser;
 
     #[test]
     pub fn test_identifiers() {
-        use crate::syntax::parser;
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1006,7 +1005,6 @@ mod tests {
 
     #[test]
     pub fn test_path_to_function() {
-        use crate::syntax::parser;
         for (text, expected) in vec![
             (
                 "mod my_mod{ 
@@ -1049,7 +1047,6 @@ mod tests {
 
     #[test]
     pub fn test_path_to_function_in_different_module() {
-        use crate::syntax::parser;
         for (text,) in vec![
             ("mod my_mod{ 
                     fn test() -> i32{ return 0;} 
@@ -1098,7 +1095,7 @@ mod tests {
 
     #[test]
     pub fn test_path_to_struct() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "mod my_mod{ 
@@ -1140,7 +1137,7 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_struct_expression_renamed_with_canonical_path() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1193,7 +1190,7 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_function_params_renamed_with_canonical_path() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1226,7 +1223,7 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_coroutine_params_renamed_with_canonical_path() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1260,7 +1257,7 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_struct_def_fields_are_converted_to_canonical_paths() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1290,7 +1287,7 @@ mod tests {
 
     #[test]
     pub fn test_unary_ops() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1349,7 +1346,7 @@ mod tests {
 
     #[test]
     pub fn test_add_op() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1419,7 +1416,7 @@ mod tests {
 
     #[test]
     pub fn test_mul_op() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1489,7 +1486,7 @@ mod tests {
 
     #[test]
     pub fn test_boolean_and_op() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> bool {
@@ -1559,7 +1556,7 @@ mod tests {
 
     #[test]
     pub fn test_boolean_or_op() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> bool {
@@ -1629,7 +1626,7 @@ mod tests {
 
     #[test]
     pub fn test_comparison_op() {
-        use crate::syntax::parser;
+        
         for op in vec!["<", ">", "<=", ">=", "==", "!="] {
             for (text, expected) in vec![
                 (
@@ -1709,7 +1706,7 @@ mod tests {
 
     #[test]
     pub fn test_bind_statement() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1787,7 +1784,7 @@ mod tests {
 
     #[test]
     pub fn test_mutate_statement() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1869,7 +1866,7 @@ mod tests {
 
     #[test]
     pub fn test_return_statement() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1939,7 +1936,7 @@ mod tests {
 
     #[test]
     pub fn test_function_calls() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -2054,7 +2051,7 @@ mod tests {
 
     #[test]
     pub fn test_coroutine_init() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2141,7 +2138,7 @@ mod tests {
 
     #[test]
     pub fn test_yield_return_statement() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2224,7 +2221,7 @@ mod tests {
 
     #[test]
     pub fn test_yield_statement() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2296,7 +2293,7 @@ mod tests {
 
     #[test]
     pub fn test_function_definition() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main(i: i32) -> i32 {
@@ -2358,7 +2355,7 @@ mod tests {
 
     #[test]
     pub fn test_coroutine_definition() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "co main(i: i32) -> i32 {
@@ -2420,7 +2417,7 @@ mod tests {
 
     #[test]
     pub fn test_if_expressions() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2494,7 +2491,7 @@ mod tests {
 
     #[test]
     pub fn test_struct_expression() {
-        use crate::syntax::parser;
+        
         for (line, text, expected) in vec![
             (
                 line!(),
@@ -2696,7 +2693,7 @@ mod tests {
 
     #[test]
     pub fn test_member_access() {
-        use crate::syntax::parser;
+        
         for (text, expected) in vec![
                 ("struct MyStruct{x:i32}
                 fn test(ms:MyStruct) -> i32 {

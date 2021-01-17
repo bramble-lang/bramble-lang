@@ -217,11 +217,12 @@ mod test {
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         semantics::type_checker::type_check,
+        parser::parser,
     };
 
     #[test]
     pub fn test_adding_a_struct_that_references_a_struct() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
                 struct test{i: i32}
@@ -254,7 +255,7 @@ mod test {
 
     #[test]
     pub fn test_nested_in_module() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
             mod my_mod {
@@ -293,7 +294,7 @@ mod test {
 
     #[test]
     pub fn test_same_names_different_modules() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
             mod my_mod {
@@ -356,7 +357,7 @@ mod test {
 
     #[test]
     pub fn test_resolving_a_flat_struct() {
-        use crate::syntax::parser;
+        
         for (text, canonical_name, expected) in vec![
             (
                 "struct test{i: i32}",
@@ -454,7 +455,7 @@ mod test {
 
     #[test]
     pub fn test_nested_struct() {
-        use crate::syntax::parser;
+        
         for (text, canonical_name, expected) in vec![
             (
                 "
@@ -562,7 +563,7 @@ mod test {
 
     #[test]
     pub fn test_cyclical_fails() {
-        use crate::syntax::parser;
+        
         for text in vec![
             "
                 struct test{t2: test2}

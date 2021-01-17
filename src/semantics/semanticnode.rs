@@ -1,6 +1,6 @@
 use crate::diagnostics::config::TracingConfig;
 use crate::semantics::symbol_table::*;
-use crate::syntax::pnode::PNode;
+use crate::parser::pnode::PNode;
 use crate::{
     ast::*,
     syntax::path::Path,
