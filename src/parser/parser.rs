@@ -10,7 +10,7 @@ use braid_lang::result::Result;
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::{PNode, PResult, ParserCombinator};
+use super::pnode::{PNode, PResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
@@ -110,6 +110,31 @@ macro_rules! trace {
     compile - takes an AST and converts it to assembly
 */
 
+trait Parsable {
+    fn parse(stream: &mut TokenStream) -> Result<Option<Self>> where Self: Sized;
+}
+
+impl Parsable for Module<ParserInfo> {
+    fn parse(stream: &mut TokenStream) -> Result<Option<Self>> where Self: Sized {
+        let mod_def = match stream.next_if(&Lex::ModuleDef) {
+            Some(token) => match stream.next_if_id() {
+                Some((_, module_name)) => {
+                    stream.next_must_be(&Lex::LBrace)?;
+                    let module = parse_items(&module_name, stream)?;
+                    stream.next_must_be(&Lex::RBrace)?;
+                    module
+                }
+                _ => {
+                    return Err(format!("L{}: expected name after mod keyword", token.l));
+                }
+            },
+            None => None,
+        };
+
+        Ok(mod_def)
+    }
+}
+
 pub struct Parser {
     current_line: usize,
     tracing: bool,
@@ -139,31 +164,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>> {
     Ok(item)
 }
 
-fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
-    let mod_def = match stream.next_if(&Lex::ModuleDef) {
-        Some(token) => match stream.next_if_id() {
-            Some((_, module_name)) => {
-                stream.next_must_be(&Lex::LBrace)?;
-                let module = parse_items(&module_name, stream)?;
-                stream.next_must_be(&Lex::RBrace)?;
-                module
-            }
-            _ => {
-                return Err(format!("L{}: expected name after mod keyword", token.l));
-            }
-        },
-        None => None,
-    };
-
-    Ok(mod_def)
-}
-
 fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
     let module_line = stream.peek().map_or(1, |t| t.l);
     let mut parent_module = Module::new(name, module_line);
     while stream.peek().is_some() {
         let start_index = stream.index();
-        if let Some(m) = module(stream)? {
+        if let Some(m) = Module::parse(stream)? {
             parent_module.add_module(m);
         }
 
@@ -1284,7 +1290,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap() {
+        if let Some(m) = Module::parse(&mut iter).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
             assert_eq!(m.get_name(), "test_mod");
         } else {
@@ -1353,7 +1359,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap() {
+        if let Some(m) = Module::parse(&mut iter).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
             assert_eq!(m.get_name(), "test_co_mod");
 
@@ -1397,7 +1403,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap() {
+        if let Some(m) = Module::parse(&mut iter).unwrap() {
             assert_eq!(*m.get_metadata(), 1);
             assert_eq!(m.get_name(), "test_struct_mod");
 
@@ -1862,7 +1868,7 @@ pub mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            if let Some(m) = module(&mut stream).unwrap() {
+            if let Some(m) = Module::parse(&mut stream).unwrap() {
                 assert_eq!(m.get_structs()[0], Item::Struct(expected), "{:?}", text);
             }
         }
