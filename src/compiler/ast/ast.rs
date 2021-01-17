@@ -1,7 +1,15 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef}};
+use crate::{
+    compiler::ast::scope::{LayoutData, Scope},
+    semantics::semanticnode::SemanticMetadata,
+    syntax::{
+        module::{self, Item, Module},
+        routinedef::{RoutineDef, RoutineDefType},
+        structdef::StructDef,
+    },
+};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -232,7 +240,10 @@ impl CompilerNode {
         sd: &StructDef<SemanticMetadata>,
     ) -> (StructDef<Scope>, LayoutData) {
         let (scope, layout) = Scope::structdef_from(sd.get_metadata());
-        (StructDef::new(sd.get_name(), scope, sd.get_fields().clone()), layout)
+        (
+            StructDef::new(sd.get_name(), scope, sd.get_fields().clone()),
+            layout,
+        )
     }
 
     fn compute_layouts_for_routine(

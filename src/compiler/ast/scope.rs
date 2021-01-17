@@ -169,7 +169,12 @@ impl Scope {
     }
 
     pub(super) fn structdef_from(m: &SemanticMetadata) -> (Scope, LayoutData) {
-        let mut scope = Scope::new(m.id, Level::Local, m.get_canonical_path().clone(), m.ty.clone());
+        let mut scope = Scope::new(
+            m.id,
+            Level::Local,
+            m.get_canonical_path().clone(),
+            m.ty.clone(),
+        );
         scope.line = m.ln;
         let layout = LayoutData::new(0);
         (scope, layout)
