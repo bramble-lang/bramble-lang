@@ -5,17 +5,17 @@ pub struct Bind<M> {
     id: String,
     ty: Type,
     mutable: bool,
-    lhs: Ast<M>,
+    rhs: Ast<M>,
 }
 
 impl<M> Bind<M> {
-    pub fn new(metadata: M, id: &str, ty: Type, mutable: bool, lhs: Ast<M>) -> Bind<M> {
+    pub fn new(metadata: M, id: &str, ty: Type, mutable: bool, rhs: Ast<M>) -> Bind<M> {
         Bind{
             metadata,
             id: id.into(),
             ty,
             mutable,
-            lhs,
+            rhs,
         }
     }
 
@@ -27,8 +27,8 @@ impl<M> Bind<M> {
         self.mutable
     }
 
-    pub fn get_lhs(&self) -> &Ast<M> {
-        &self.lhs
+    pub fn get_rhs(&self) -> &Ast<M> {
+        &self.rhs
     }
 
     pub fn get_type(&self) -> &Type {

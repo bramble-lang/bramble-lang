@@ -541,33 +541,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     id
                 )),
             },
-            Ast::Bind(meta, name, mutable, p, rhs) => match current_func {
-                Some(_) => {
-                    let mut meta = meta.clone();
-                    meta.ty = self.type_to_canonical(sym, p)?;
-                    let rhs = self.traverse(&rhs, current_func, sym)?;
-                    if meta.ty == rhs.get_type() {
-                        sym.add(&name, meta.ty.clone(), *mutable)?;
-                        Ok(Ast::Bind(
-                            meta,
-                            name.clone(),
-                            *mutable,
-                            p.clone(),
-                            Box::new(rhs),
-                        ))
-                    } else {
-                        Err(format!(
-                            "Bind expected {} but got {}",
-                            meta.ty,
-                            rhs.get_type()
-                        ))
-                    }
-                }
-                None => Err(format!(
-                    "Attempting to bind variable {} outside of function",
-                    name
-                )),
-            },
+            Ast::Bind(..) => self.analyze_bind(ast, current_func, sym),
             Ast::Return(meta, None) => match current_func {
                 None => Err(format!("Return called outside of a function")),
                 Some(cf) => {
@@ -944,6 +918,45 @@ impl<'a> SemanticAnalyzer<'a> {
             meta.clone(),
             canonical_fields,
         ))
+    }
+
+    fn analyze_bind(
+        &mut self,
+        bind: &SemanticNode,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<SemanticNode> {
+        if let Ast::Bind(meta, name, mutable, p, rhs) = bind{
+                match current_func {
+                Some(_) => {
+                    let mut meta = meta.clone();
+                    meta.ty = self.type_to_canonical(sym, p)?;
+                    let rhs = self.traverse(&rhs, current_func, sym)?;
+                    if meta.ty == rhs.get_type() {
+                        sym.add(&name, meta.ty.clone(), *mutable)?;
+                        Ok(Ast::Bind(
+                            meta,
+                            name.clone(),
+                            *mutable,
+                            p.clone(),
+                            Box::new(rhs),
+                        ))
+                    } else {
+                        Err(format!(
+                            "Bind expected {} but got {}",
+                            meta.ty,
+                            rhs.get_type()
+                        ))
+                    }
+                }
+                None => Err(format!(
+                    "Attempting to bind variable {} outside of function",
+                    name
+                )),
+            }
+        } else {
+            panic!("Expected a bind, but got {}", bind.root_str())
+        }
     }
 }
 
