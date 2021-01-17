@@ -758,7 +758,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
             }
             Ast::StructDef(..) => {
-                self.analyze_structdef(ast, sym)
+                panic!("Should never reach here, structdef should only be parsed through analyze_module")
             }
             Ast::StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();
@@ -857,7 +857,7 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &mut SymbolTable,
     ) -> Result<module::Item<SemanticMetadata>> {
         match i {
-            Item::Struct(s) => self.analyize_node(s, &None, sym).map(|n| Item::Struct(n)),
+            Item::Struct(s) => self.analyze_structdef(s, sym).map(|n| Item::Struct(n)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
         }
     }
