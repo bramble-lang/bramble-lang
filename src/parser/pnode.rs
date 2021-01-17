@@ -1,5 +1,8 @@
 use super::tokenstream::TokenStream;
-use crate::{lexer::tokens::{Lex, Token}, syntax::ast::{Ast, BinaryOperator, UnaryOperator}};
+use crate::{
+    lexer::tokens::{Lex, Token},
+    syntax::ast::{Ast, BinaryOperator, UnaryOperator},
+};
 use braid_lang::result::Result;
 
 pub type ParserInfo = u32;

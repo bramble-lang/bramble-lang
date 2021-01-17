@@ -1,4 +1,8 @@
-use super::{path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
+use super::{
+    path::Path,
+    routinedef::{RoutineDef, RoutineDefType},
+    structdef::StructDef,
+};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]

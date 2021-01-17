@@ -3,7 +3,18 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef, ty::Type}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+    syntax::{
+        ast::{Ast, RoutineCall},
+        module::Module,
+        path::Path,
+        routinedef::{RoutineDef, RoutineDefType},
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -882,7 +893,13 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{lexer::lexer::Lexer, syntax::{ast::{BinaryOperator, UnaryOperator}, module::Item}};
+    use crate::{
+        lexer::lexer::Lexer,
+        syntax::{
+            ast::{BinaryOperator, UnaryOperator},
+            module::Item,
+        },
+    };
 
     #[test]
     fn parse_unary_operators() {
@@ -1839,10 +1856,7 @@ pub mod tests {
     #[test]
     fn parse_struct_def() {
         for (text, expected) in vec![
-            (
-                "struct MyStruct {}",
-                StructDef::new("MyStruct", 1, vec![]),
-            ),
+            ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
             (
                 "struct MyStruct {x: i32}",
                 StructDef::new("MyStruct", 1, vec![("x".into(), Type::I32)]),

@@ -1,10 +1,10 @@
 use crate::semantics::semanticnode::SemanticMetadata;
+use crate::syntax::path::Path;
 use crate::syntax::{
     module::{Item, Module},
     routinedef::{RoutineDef, RoutineDefType},
     ty::Type,
 };
-use crate::syntax::path::Path;
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -144,14 +144,14 @@ impl SymbolTable {
                         Box::new(ty.clone()),
                     ),
                 };
-                sym.sym.add(
-                    name,
-                    def,
-                    false,
-                )?;
+                sym.sym.add(name, def, false)?;
             }
             Item::Struct(sd) => {
-                sym.sym.add(sd.get_name(), Type::StructDef(sd.get_fields().clone()), false)?;
+                sym.sym.add(
+                    sd.get_name(),
+                    Type::StructDef(sd.get_fields().clone()),
+                    false,
+                )?;
             }
         }
 

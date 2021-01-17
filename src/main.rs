@@ -4,9 +4,9 @@
 mod compiler;
 mod diagnostics;
 mod lexer;
+mod parser;
 mod semantics;
 mod syntax;
-mod parser;
 
 use clap::{App, Arg};
 use compiler::compiler::*;

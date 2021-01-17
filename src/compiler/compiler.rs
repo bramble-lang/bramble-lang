@@ -633,14 +633,12 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn traverse_item(
-        &mut self,
-        item: &'a Item<Scope>,
-        code: &mut Vec<Inst>,
-    ) -> Result<(), String> {
+    fn traverse_item(&mut self, item: &'a Item<Scope>, code: &mut Vec<Inst>) -> Result<(), String> {
         self.scope.push(item.get_metadata());
         let result = match item {
-            Item::Struct(_) => panic!("StructDefs should have been pruned from the AST before the compiler layer"),
+            Item::Struct(_) => {
+                panic!("StructDefs should have been pruned from the AST before the compiler layer")
+            }
             Item::Routine(r) => self.traverse_routine_def(r, code),
         };
         self.pop();

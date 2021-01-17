@@ -1,7 +1,15 @@
 use braid_lang::result::Result;
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{semantics::semanticnode::SemanticMetadata, syntax::path::Path, syntax::{module::{Item, Module}, structdef::StructDef, ty::Type}};
+use crate::{
+    semantics::semanticnode::SemanticMetadata,
+    syntax::path::Path,
+    syntax::{
+        module::{Item, Module},
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 
 use super::struct_definition::{FieldInfo, StructDefinition};
 

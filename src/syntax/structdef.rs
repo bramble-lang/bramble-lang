@@ -8,7 +8,7 @@ pub struct StructDef<M> {
     fields: Vec<(String, Type)>,
 }
 
-impl <M> StructDef<M> {
+impl<M> StructDef<M> {
     pub fn new(name: &str, metadata: M, fields: Vec<(String, Type)>) -> StructDef<M> {
         StructDef {
             metadata,
@@ -38,7 +38,10 @@ impl <M> StructDef<M> {
             self.fields.push((field.into(), ty));
             Ok(())
         } else {
-            Err(format!("Field {} already exists in structure {}", field, self.name))
+            Err(format!(
+                "Field {} already exists in structure {}",
+                field, self.name
+            ))
         }
     }
 

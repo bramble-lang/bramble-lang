@@ -1,4 +1,3 @@
-use crate::{parser::pnode::ParserInfo, semantics::symbol_table::*, syntax::structdef};
 use crate::syntax::path::Path;
 use crate::syntax::ty::Type;
 use crate::{
@@ -12,6 +11,7 @@ use crate::{
         routinedef,
     },
 };
+use crate::{parser::pnode::ParserInfo, semantics::symbol_table::*, syntax::structdef};
 use crate::{
     semantics::semanticnode::{SemanticAst, SemanticNode},
     syntax::module::Module,
@@ -919,7 +919,12 @@ impl<'a> SemanticAnalyzer<'a> {
         for (field_name, field_type) in fields.iter() {
             if let Custom(ty_name) = field_type {
                 self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
-                    format!("member {}.{} invalid: {}", struct_def.get_name(), field_name, e)
+                    format!(
+                        "member {}.{} invalid: {}",
+                        struct_def.get_name(),
+                        field_name,
+                        e
+                    )
                 })?;
             }
         }
@@ -930,7 +935,9 @@ impl<'a> SemanticAnalyzer<'a> {
         // Update the metadata with canonical path information and set the type to Unit
         let mut meta = struct_def.get_metadata().clone();
         meta.ty = Unit;
-        meta.set_canonical_path(self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?);
+        meta.set_canonical_path(
+            self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
+        );
 
         Ok(structdef::StructDef::new(
             struct_def.get_name().clone(),
@@ -946,8 +953,8 @@ mod tests {
     use crate::ast::Ast;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
-    use crate::syntax::{module::Item, routinedef};
     use crate::parser::parser;
+    use crate::syntax::{module::Item, routinedef};
 
     #[test]
     pub fn test_identifiers() {
@@ -1106,7 +1113,6 @@ mod tests {
 
     #[test]
     pub fn test_path_to_struct() {
-        
         for (text, expected) in vec![
             (
                 "mod my_mod{ 
@@ -1148,7 +1154,6 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_struct_expression_renamed_with_canonical_path() {
-        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1201,7 +1206,6 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_function_params_renamed_with_canonical_path() {
-        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1234,7 +1238,6 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_coroutine_params_renamed_with_canonical_path() {
-        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1268,7 +1271,6 @@ mod tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_struct_def_fields_are_converted_to_canonical_paths() {
-        
         for text in vec![
             "
                 struct test{i: i32}
@@ -1299,7 +1301,6 @@ mod tests {
 
     #[test]
     pub fn test_unary_ops() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1358,7 +1359,6 @@ mod tests {
 
     #[test]
     pub fn test_add_op() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1428,7 +1428,6 @@ mod tests {
 
     #[test]
     pub fn test_mul_op() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1498,7 +1497,6 @@ mod tests {
 
     #[test]
     pub fn test_boolean_and_op() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> bool {
@@ -1568,7 +1566,6 @@ mod tests {
 
     #[test]
     pub fn test_boolean_or_op() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> bool {
@@ -1638,7 +1635,6 @@ mod tests {
 
     #[test]
     pub fn test_comparison_op() {
-        
         for op in vec!["<", ">", "<=", ">=", "==", "!="] {
             for (text, expected) in vec![
                 (
@@ -1718,7 +1714,6 @@ mod tests {
 
     #[test]
     pub fn test_bind_statement() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1796,7 +1791,6 @@ mod tests {
 
     #[test]
     pub fn test_mutate_statement() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1878,7 +1872,6 @@ mod tests {
 
     #[test]
     pub fn test_return_statement() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -1948,7 +1941,6 @@ mod tests {
 
     #[test]
     pub fn test_function_calls() {
-        
         for (text, expected) in vec![
             (
                 "fn main() -> i32 {
@@ -2063,7 +2055,6 @@ mod tests {
 
     #[test]
     pub fn test_coroutine_init() {
-        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2150,7 +2141,6 @@ mod tests {
 
     #[test]
     pub fn test_yield_return_statement() {
-        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2233,7 +2223,6 @@ mod tests {
 
     #[test]
     pub fn test_yield_statement() {
-        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2305,7 +2294,6 @@ mod tests {
 
     #[test]
     pub fn test_function_definition() {
-        
         for (text, expected) in vec![
             (
                 "fn main(i: i32) -> i32 {
@@ -2367,7 +2355,6 @@ mod tests {
 
     #[test]
     pub fn test_coroutine_definition() {
-        
         for (text, expected) in vec![
             (
                 "co main(i: i32) -> i32 {
@@ -2429,7 +2416,6 @@ mod tests {
 
     #[test]
     pub fn test_if_expressions() {
-        
         for (text, expected) in vec![
             (
                 "fn main() {
@@ -2503,7 +2489,6 @@ mod tests {
 
     #[test]
     pub fn test_struct_expression() {
-        
         for (line, text, expected) in vec![
             (
                 line!(),
@@ -2705,7 +2690,6 @@ mod tests {
 
     #[test]
     pub fn test_member_access() {
-        
         for (text, expected) in vec![
                 ("struct MyStruct{x:i32}
                 fn test(ms:MyStruct) -> i32 {

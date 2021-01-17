@@ -1,6 +1,5 @@
-use crate::{diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef};
-use crate::semantics::symbol_table::*;
 use crate::parser::pnode::PNode;
+use crate::semantics::symbol_table::*;
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -9,6 +8,9 @@ use crate::{
         routinedef::RoutineDef,
         ty::Type,
     },
+};
+use crate::{
+    diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
 };
 use braid_lang::result::Result;
 
@@ -255,7 +257,10 @@ impl SemanticAst {
         }
     }
 
-    fn from_structdef(&mut self, sd: &StructDef<ParserInfo>) -> Result<StructDef<SemanticMetadata>> {
+    fn from_structdef(
+        &mut self,
+        sd: &StructDef<ParserInfo>,
+    ) -> Result<StructDef<SemanticMetadata>> {
         let semantic = StructDef::new(
             sd.get_name().clone(),
             self.semantic_metadata_from(*sd.get_metadata()),

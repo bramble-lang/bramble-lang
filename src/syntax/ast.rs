@@ -1,7 +1,4 @@
-use super::{
-    path::Path,
-    ty::Type,
-};
+use super::{path::Path, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
