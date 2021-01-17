@@ -164,7 +164,6 @@ impl CompilerNode {
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            StructDef(..) => panic!("StructDef Unimplemented"),
             StructExpression(meta, struct_name, fields) => {
                 let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
                 let mut nfields = vec![];

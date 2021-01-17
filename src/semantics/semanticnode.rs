@@ -188,7 +188,6 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            StructDef(..) => panic!("Should never be reached"),
             StructExpression(l, name, fields) => {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {

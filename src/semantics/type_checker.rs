@@ -757,9 +757,6 @@ impl<'a> SemanticAnalyzer<'a> {
                 meta.ty = ty;
                 Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
             }
-            Ast::StructDef(..) => {
-                panic!("Should never reach here, structdef should only be parsed through analyze_module")
-            }
             Ast::StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
