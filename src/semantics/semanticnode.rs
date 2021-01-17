@@ -283,11 +283,8 @@ impl SemanticAst {
             panic!("Expected a Statement but got {}", statement.root_str())
         }
     }
-    
-    fn from_bind(
-        &mut self,
-        bind: &Ast<ParserInfo>,
-    ) -> Result<Box<Ast<SemanticMetadata>>> {
+
+    fn from_bind(&mut self, bind: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
         if let Ast::Bind(ln, name, mutable, p, ref exp) = bind {
             Ok(Box::new(Ast::Bind(
                 self.semantic_metadata_from(*ln),
@@ -301,10 +298,7 @@ impl SemanticAst {
         }
     }
 
-    fn from_mutate(
-        &mut self,
-        mutate: &Ast<ParserInfo>,
-    ) -> Result<Box<Ast<SemanticMetadata>>> {
+    fn from_mutate(&mut self, mutate: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
         if let Ast::Mutate(ln, name, rhs) = mutate {
             Ok(Box::new(Ast::Mutate(
                 self.semantic_metadata_from(*ln),

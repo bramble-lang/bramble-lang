@@ -274,7 +274,7 @@ impl CompilerNode {
             layout,
         )
     }
-    
+
     fn compute_layouts_for_statement(
         statement: &Ast<SemanticMetadata>,
         layout: LayoutData,

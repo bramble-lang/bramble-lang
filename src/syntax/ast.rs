@@ -85,7 +85,7 @@ pub enum Ast<I> {
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
-    
+
     Printi(I, Box<Ast<I>>),
     Prints(I, Box<Ast<I>>),
     Printiln(I, Box<Ast<I>>),

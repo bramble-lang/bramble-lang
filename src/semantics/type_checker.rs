@@ -909,8 +909,8 @@ impl<'a> SemanticAnalyzer<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
-        if let Ast::Bind(meta, name, mutable, p, rhs) = bind{
-                match current_func {
+        if let Ast::Bind(meta, name, mutable, p, rhs) = bind {
+            match current_func {
                 Some(_) => {
                     let mut meta = meta.clone();
                     meta.ty = self.type_to_canonical(sym, p)?;
@@ -1509,7 +1509,7 @@ mod tests {
 
                     let bind_stm = &fn_main.get_body()[0];
                     assert_eq!(bind_stm.get_type(), Unit);
-                    
+
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(.., box Ast::Bind(.., rhs)) = bind_stm {
                         assert_eq!(rhs.get_type(), expected_ty);
@@ -1579,7 +1579,7 @@ mod tests {
 
                     let bind_stm = &fn_main.get_body()[0];
                     assert_eq!(bind_stm.get_type(), Unit);
-                    
+
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(.., box Ast::Bind(.., lhs)) = bind_stm {
                         assert_eq!(lhs.get_type(), expected_ty);
@@ -1649,7 +1649,7 @@ mod tests {
 
                     let bind_stm = &fn_main.get_body()[0];
                     assert_eq!(bind_stm.get_type(), Unit);
-                    
+
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(.., box Ast::Bind(.., lhs)) = bind_stm {
                         assert_eq!(lhs.get_type(), expected_ty);
@@ -1728,7 +1728,7 @@ mod tests {
 
                         let bind_stm = &fn_main.get_body()[0];
                         assert_eq!(bind_stm.get_type(), Unit);
-                        
+
                         // validate that the RHS of the bind is the correct type
                         if let Ast::Statement(.., box Ast::Bind(.., lhs)) = bind_stm {
                             assert_eq!(lhs.get_type(), expected_ty);
@@ -1888,7 +1888,7 @@ mod tests {
 
                     let bind_stm = &fn_main.get_body()[0];
                     assert_eq!(bind_stm.get_type(), Unit);
-                    
+
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(.., box Ast::Bind(.., lhs)) = bind_stm {
                         assert_eq!(lhs.get_type(), expected_ty);
@@ -2167,7 +2167,7 @@ mod tests {
 
                     let bind_stm = &fn_main.get_body()[0];
                     assert_eq!(bind_stm.get_type(), Unit);
-                    
+
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(.., box Ast::Bind(.., lhs)) = bind_stm {
                         assert_eq!(lhs.get_type(), expected_ty);
@@ -2250,7 +2250,7 @@ mod tests {
 
                     let yret_stm = &co_number.get_body()[0];
                     assert_eq!(yret_stm.get_type(), Unit);
-                    
+
                     // validate that the RHS of the yield return is the correct type
                     if let Ast::Statement(.., box Ast::YieldReturn(.., Some(rhs))) = yret_stm {
                         assert_eq!(rhs.get_type(), expected_ty);
@@ -2322,7 +2322,7 @@ mod tests {
 
                     let bind_stm = &co_number.get_body()[1];
                     assert_eq!(bind_stm.get_type(), Unit);
-                    
+
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(.., box Ast::Bind(.., rhs)) = bind_stm {
                         assert_eq!(rhs.get_type(), expected_ty);
