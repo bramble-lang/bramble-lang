@@ -78,26 +78,24 @@ pub enum Ast<I> {
     Path(I, Path),
     MemberAccess(I, Box<Ast<I>>, String),
     IdentifierDeclare(I, String, Type),
+    RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
+    StructExpression(I, Path, Vec<(String, Ast<I>)>),
+    If(I, Box<Ast<I>>, Box<Ast<I>>, Box<Ast<I>>),
+    ExpressionBlock(I, Vec<Ast<I>>),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
+    
     Printi(I, Box<Ast<I>>),
     Prints(I, Box<Ast<I>>),
     Printiln(I, Box<Ast<I>>),
     Printbln(I, Box<Ast<I>>),
-
-    If(I, Box<Ast<I>>, Box<Ast<I>>, Box<Ast<I>>),
-    ExpressionBlock(I, Vec<Ast<I>>),
-
     Statement(I, Box<Ast<I>>),
     Bind(I, String, bool, Type, Box<Ast<I>>),
     Mutate(I, String, Box<Ast<I>>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
     YieldReturn(I, Option<Box<Ast<I>>>),
-
-    RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
-    StructExpression(I, Path, Vec<(String, Ast<I>)>),
 }
 
 impl<I> Ast<I> {
