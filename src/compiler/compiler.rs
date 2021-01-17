@@ -487,9 +487,7 @@ impl<'a> Compiler<'a> {
                     self.traverse(s, current_func, code)?;
                 }
             }
-            Ast::Statement(_, stm) => {
-                self.traverse(stm, current_func, code)?;
-            }
+            Ast::Statement(..) => self.traverse_statement(ast, current_func, code)?,
             Ast::Bind(..) => self.traverse_bind(ast, current_func, code)?,
             Ast::Mutate(..) => self.traverse_mutate(ast, current_func, code)?,
             Ast::Return(_, ref exp) => {
@@ -720,6 +718,19 @@ impl<'a> Compiler<'a> {
             jmp @runtime_yield_return;
         }};
         Ok(())
+    }
+
+    fn traverse_statement(
+        &mut self,
+        statement: &'a Ast<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        if let Ast::Statement(.., stmt) = statement {
+            self.traverse(stmt, current_func, code)
+        } else {
+            panic!("Expected a statement but got {}", statement.root_str())
+        }
     }
 
     fn traverse_bind(

@@ -148,7 +148,6 @@ impl SemanticAst {
                     nbody,
                 )))
             }
-            //Statement(_, stmt) => Ok(self.from_parser_ast(stmt)?),
             Statement(..) => self.from_statement(ast),
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions

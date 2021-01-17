@@ -138,11 +138,7 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (YieldReturn(meta, Some(Box::new(e))), layout)
             }
-            Statement(m, e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Statement(meta, Box::new(e)), layout)
-            }
+            Statement(..) => Self::compute_layouts_for_statement(ast, layout, struct_table),
             RoutineCall(m, call, name, params) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let mut nlayout = layout;
@@ -277,6 +273,20 @@ impl CompilerNode {
             },
             layout,
         )
+    }
+    
+    fn compute_layouts_for_statement(
+        statement: &Ast<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Ast<Scope>, LayoutData) {
+        if let Ast::Statement(m, e) = statement {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
+            (Ast::Statement(meta, Box::new(e)), layout)
+        } else {
+            panic!("Expected a statement but got {}", statement.root_str())
+        }
     }
 
     fn compute_layouts_for_bind(

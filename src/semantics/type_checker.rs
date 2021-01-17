@@ -590,12 +590,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             },
-            Ast::Statement(meta, stmt) => {
-                let mut meta = meta.clone();
-                let stmt = self.traverse(&stmt, current_func, sym)?;
-                meta.ty = Unit;
-                Ok(Ast::Statement(meta, Box::new(stmt)))
-            }
+            Ast::Statement(..) => self.analyze_statement(ast, current_func, sym),
             Ast::RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
                 // test that the expressions passed to the function match the functions
@@ -890,6 +885,22 @@ impl<'a> SemanticAnalyzer<'a> {
             meta.clone(),
             canonical_fields,
         ))
+    }
+
+    fn analyze_statement(
+        &mut self,
+        statement: &SemanticNode,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<SemanticNode> {
+        if let Ast::Statement(meta, statement) = statement {
+            let mut meta = meta.clone();
+            let stmt = self.traverse(&statement, current_func, sym)?;
+            meta.ty = Unit;
+            Ok(Ast::Statement(meta, Box::new(stmt)))
+        } else {
+            panic!("Expected a statement, but got {}", statement.root_str())
+        }
     }
 
     fn analyze_bind(

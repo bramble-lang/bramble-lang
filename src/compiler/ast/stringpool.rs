@@ -104,9 +104,7 @@ impl StringPool {
             YieldReturn(_, Some(e)) => {
                 self.extract_from(e);
             }
-            Statement(_, e) => {
-                self.extract_from(e);
-            }
+            Statement(..) => self.extract_from_statement(ast),
             RoutineCall(.., params) => {
                 for e in params.iter() {
                     self.extract_from(e);
@@ -143,6 +141,14 @@ impl StringPool {
     pub fn extract_from_routine(&mut self, routine: &RoutineDef<Scope>) {
         for s in routine.get_body().iter() {
             self.extract_from(s);
+        }
+    }
+
+    pub fn extract_from_statement(&mut self, statement: &CompilerNode) {
+        if let CompilerNode::Statement(.., e) = statement {
+            self.extract_from(e)
+        } else {
+            panic!("Expected a statement, but got {}", statement.root_str())
         }
     }
 
