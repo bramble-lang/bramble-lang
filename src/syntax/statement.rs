@@ -14,6 +14,16 @@ pub enum Statement<M> {
 }
 
 impl<M> Statement<M> {
+    pub fn get_metadata(&self) -> &M {
+        use Statement::*;
+
+        match self {
+            Mutate(x) | Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
+            | Printbln(x) | Prints(x) => x.get_metadata(),
+            Bind(b) => b.get_metadata(),
+        }
+    }
+
     pub fn root_str(&self) -> String {
         use Statement::*;
 
@@ -47,6 +57,10 @@ impl<M> Bind<M> {
 
     pub fn get_id(&self) -> &str {
         &self.id
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
     }
 
     pub fn is_mutable(&self) -> bool {
