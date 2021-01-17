@@ -1,14 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{
-    compiler::ast::scope::{LayoutData, Scope},
-    semantics::semanticnode::SemanticMetadata,
-    syntax::{
-        module::{self, Item, Module},
-        routinedef::{RoutineDef, RoutineDefType},
-    },
-};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -198,9 +191,15 @@ impl CompilerNode {
         let (functions, layout) =
             Self::compute_layouts_for_items(m.get_functions(), layout, struct_table);
         *nmodule.get_functions_mut() = functions;
+
         let (coroutines, layout) =
             Self::compute_layouts_for_items(m.get_coroutines(), layout, struct_table);
         *nmodule.get_coroutines_mut() = coroutines;
+
+        let (structs, layout) =
+            Self::compute_layouts_for_items(m.get_structs(), layout, struct_table);
+        *nmodule.get_structs_mut() = structs;
+
         (nmodule, layout)
     }
 
@@ -213,8 +212,9 @@ impl CompilerNode {
         let mut layout = layout;
         for item in items.iter() {
             let (c_ast_item, no) = match item {
-                Item::Struct(..) => {
-                    panic!("StructDefs should all be removed before the Compiler stage")
+                Item::Struct(sd) => {
+                    let (sd2, ld) = Self::compute_layout_for_structdef(sd);
+                    (Item::Struct(sd2), ld)
                 }
                 Item::Routine(rd) => {
                     let (rd2, ld) = Self::compute_layouts_for_routine(&rd, layout, struct_table);
@@ -226,6 +226,13 @@ impl CompilerNode {
         }
 
         (compiler_ast_items, layout)
+    }
+
+    fn compute_layout_for_structdef(
+        sd: &StructDef<SemanticMetadata>,
+    ) -> (StructDef<Scope>, LayoutData) {
+        let (scope, layout) = Scope::structdef_from(sd.get_metadata());
+        (StructDef::new(sd.get_name(), scope, sd.get_fields().clone()), layout)
     }
 
     fn compute_layouts_for_routine(
