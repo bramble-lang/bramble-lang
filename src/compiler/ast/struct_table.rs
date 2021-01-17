@@ -65,9 +65,8 @@ impl UnresolvedStructTable {
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<()> {
         for s in module.get_structs().iter() {
-            if let Item::Struct(SemanticNode::StructDef(meta, name, fields)) = s {
-                let struct_def = StructDefinition::new(name, fields.clone());
-                Self::insert_struct(table, meta.get_canonical_path(), struct_def)?;
+            if let Item::Struct(structdef) = s {
+                Self::from_structdef(structdef, table)?;
             } else {
                 return Err(format!(
                     "Found {} in the structs section of a module",
@@ -80,6 +79,22 @@ impl UnresolvedStructTable {
             Self::traverse_module(m, table)?;
         }
         Ok(())
+    }
+
+    pub fn from_structdef(
+        structdef: &SemanticNode,
+        table: &mut HashMap<String, StructDefinition>,
+    ) -> Result<()> {
+        if let SemanticNode::StructDef(meta, name, fields) = structdef {
+            let def = StructDefinition::new(name, fields.clone());
+            Self::insert_struct(table, meta.get_canonical_path(), def)?;
+            Ok(())
+        } else {
+            Err(format!(
+                "Expected StructDef but got {}",
+                structdef.root_str()
+            ))
+        }
     }
 
     pub fn resolve(&self) -> Result<ResolvedStructTable> {
@@ -216,13 +231,12 @@ mod test {
     use crate::{
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
-        semantics::type_checker::type_check,
         parser::parser,
+        semantics::type_checker::type_check,
     };
 
     #[test]
     pub fn test_adding_a_struct_that_references_a_struct() {
-        
         for text in vec![
             "
                 struct test{i: i32}
@@ -255,7 +269,6 @@ mod test {
 
     #[test]
     pub fn test_nested_in_module() {
-        
         for text in vec![
             "
             mod my_mod {
@@ -294,7 +307,6 @@ mod test {
 
     #[test]
     pub fn test_same_names_different_modules() {
-        
         for text in vec![
             "
             mod my_mod {
@@ -357,7 +369,6 @@ mod test {
 
     #[test]
     pub fn test_resolving_a_flat_struct() {
-        
         for (text, canonical_name, expected) in vec![
             (
                 "struct test{i: i32}",
@@ -455,7 +466,6 @@ mod test {
 
     #[test]
     pub fn test_nested_struct() {
-        
         for (text, canonical_name, expected) in vec![
             (
                 "
@@ -563,7 +573,6 @@ mod test {
 
     #[test]
     pub fn test_cyclical_fails() {
-        
         for text in vec![
             "
                 struct test{t2: test2}
