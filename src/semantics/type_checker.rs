@@ -914,7 +914,6 @@ impl<'a> SemanticAnalyzer<'a> {
         struct_def: &structdef::StructDef<SemanticMetadata>,
         sym: &mut SymbolTable,
     ) -> Result<structdef::StructDef<SemanticMetadata>> {
-        let mut meta = struct_def.get_metadata().clone();
         // Check the type of each member
         let fields = struct_def.get_fields();
         for (field_name, field_type) in fields.iter() {
@@ -924,9 +923,15 @@ impl<'a> SemanticAnalyzer<'a> {
                 })?;
             }
         }
+
+        // Update all fields so that their types use the full canonical path of the type
         let canonical_fields = self.params_to_canonical(sym, &fields)?;
+
+        // Update the metadata with canonical path information and set the type to Unit
+        let mut meta = struct_def.get_metadata().clone();
         meta.ty = Unit;
         meta.set_canonical_path(self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?);
+
         Ok(structdef::StructDef::new(
             struct_def.get_name().clone(),
             meta.clone(),
