@@ -4,7 +4,7 @@ use crate::syntax::{
     routinedef::{RoutineDef, RoutineDefType},
     ty::Type,
 };
-use crate::{ast, syntax::path::Path};
+use crate::syntax::path::Path;
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -120,7 +120,6 @@ impl SymbolTable {
     }
 
     fn traverse(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
-        use ast::Ast;
         match item {
             Item::Routine(RoutineDef {
                 def,
@@ -151,13 +150,9 @@ impl SymbolTable {
                     false,
                 )?;
             }
-            Item::Struct(Ast::StructDef(_, name, members)) => {
-                sym.sym.add(name, Type::StructDef(members.clone()), false)?;
+            Item::Struct(sd) => {
+                sym.sym.add(sd.get_name(), Type::StructDef(sd.get_fields().clone()), false)?;
             }
-            _ => panic!(
-                "Type analysis: expected function or coroutine in module, found {}",
-                item.root_str()
-            ),
         }
 
         Ok(())

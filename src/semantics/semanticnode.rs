@@ -1,4 +1,4 @@
-use crate::diagnostics::config::TracingConfig;
+use crate::{diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef};
 use crate::semantics::symbol_table::*;
 use crate::parser::pnode::PNode;
 use crate::{
@@ -230,7 +230,7 @@ impl SemanticAst {
 
     fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>> {
         match m {
-            Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(*s)),
+            Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(s)),
             Item::Routine(RoutineDef {
                 meta: ln,
                 def,
@@ -256,16 +256,14 @@ impl SemanticAst {
         }
     }
 
-    fn from_structdef(&mut self, sd: &PNode) -> Result<Box<SemanticNode>> {
-        if let Ast::StructDef(l, name, fields) = sd {
-            Ok(Box::new(Ast::StructDef(
-                self.semantic_metadata_from(*l),
-                name.clone(),
-                fields.clone(),
-            ))) 
-        } else {
-            Err(format!("Expected a structdef but got {}", sd.root_str()))
-        }
+    fn from_structdef(&mut self, sd: &StructDef<ParserInfo>) -> Result<StructDef<SemanticMetadata>> {
+        let semantic = StructDef::new(
+            sd.get_name().clone(),
+            self.semantic_metadata_from(*sd.get_metadata()),
+            sd.get_fields().clone(),
+        );
+
+        Ok(semantic)
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {

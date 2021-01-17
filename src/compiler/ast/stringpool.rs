@@ -141,7 +141,7 @@ impl StringPool {
     pub fn extract_from_item(&mut self, item: &Item<Scope>) {
         match item {
             Item::Routine(r) => self.extract_from_routine(r),
-            Item::Struct(s) => self.extract_from(s),
+            Item::Struct(_) => (),
         }
     }
 

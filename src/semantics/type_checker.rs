@@ -1,4 +1,4 @@
-use crate::{parser::pnode::ParserInfo, semantics::symbol_table::*};
+use crate::{parser::pnode::ParserInfo, semantics::symbol_table::*, syntax::structdef};
 use crate::syntax::path::Path;
 use crate::syntax::ty::Type;
 use crate::{
@@ -914,34 +914,27 @@ impl<'a> SemanticAnalyzer<'a> {
 
     fn analyze_structdef(
         &mut self,
-        struct_def: &SemanticNode,
+        struct_def: &structdef::StructDef<SemanticMetadata>,
         sym: &mut SymbolTable,
-    ) -> Result<SemanticNode> {
-        if let Ast::StructDef(
-            meta,
-            name,
-            fields,
-         ) = struct_def{
-            let mut meta = meta.clone();
-            // Check the type of each member
-            for (field_name, field_type) in fields.iter() {
-                if let Custom(ty_name) = field_type {
-                    self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
-                        format!("member {}.{} invalid: {}", name, field_name, e)
-                    })?;
-                }
+    ) -> Result<structdef::StructDef<SemanticMetadata>> {
+        let mut meta = struct_def.get_metadata().clone();
+        // Check the type of each member
+        let fields = struct_def.get_fields();
+        for (field_name, field_type) in fields.iter() {
+            if let Custom(ty_name) = field_type {
+                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
+                    format!("member {}.{} invalid: {}", struct_def.get_name(), field_name, e)
+                })?;
             }
-            let canonical_fields = self.params_to_canonical(sym, &fields)?;
-            meta.ty = Unit;
-            meta.set_canonical_path(self.to_canonical(sym, &vec![name.clone()].into())?);
-            Ok(Ast::StructDef(
-                meta.clone(),
-                name.clone(),
-                canonical_fields,
-            ))
-        } else {
-            Err(format!("Expected a StructDef but got {}", struct_def.root_str()))
         }
+        let canonical_fields = self.params_to_canonical(sym, &fields)?;
+        meta.ty = Unit;
+        meta.set_canonical_path(self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?);
+        Ok(structdef::StructDef::new(
+            struct_def.get_name().clone(),
+            meta.clone(),
+            canonical_fields,
+        ))
     }
 }
 
@@ -1288,7 +1281,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Item::Struct(Ast::StructDef(_, _, fields)) = &result.get_structs()[1] {
+            if let Item::Struct(s) = &result.get_structs()[1] {
+                let fields = s.get_fields();
                 if let (_, Custom(ty_path)) = &fields[0] {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)

@@ -1,14 +1,7 @@
 use braid_lang::result::Result;
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{
-    semantics::semanticnode::{SemanticMetadata, SemanticNode},
-    syntax::path::Path,
-    syntax::{
-        module::{Item, Module},
-        ty::Type,
-    },
-};
+use crate::{semantics::semanticnode::SemanticMetadata, syntax::path::Path, syntax::{module::{Item, Module}, structdef::StructDef, ty::Type}};
 
 use super::struct_definition::{FieldInfo, StructDefinition};
 
@@ -82,19 +75,12 @@ impl UnresolvedStructTable {
     }
 
     pub fn from_structdef(
-        structdef: &SemanticNode,
+        struct_def: &StructDef<SemanticMetadata>,
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<()> {
-        if let SemanticNode::StructDef(meta, name, fields) = structdef {
-            let def = StructDefinition::new(name, fields.clone());
-            Self::insert_struct(table, meta.get_canonical_path(), def)?;
-            Ok(())
-        } else {
-            Err(format!(
-                "Expected StructDef but got {}",
-                structdef.root_str()
-            ))
-        }
+        let def = StructDefinition::new(struct_def.get_name(), struct_def.get_fields().clone());
+        Self::insert_struct(table, struct_def.get_metadata().get_canonical_path(), def)?;
+        Ok(())
     }
 
     pub fn resolve(&self) -> Result<ResolvedStructTable> {
