@@ -114,25 +114,21 @@ impl<I> Ast<I> {
             Path(_, path) => format!("{}", path),
             BinaryOp(_, op, _, _) => format!("{}", op),
             UnaryOp(_, op, _) => format!("{}", op),
+            StructExpression(_, name, ..) => format!("intialization for struct {}", name),
+            RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
+            If(_, _, _, _) => "if".into(),
+            ExpressionBlock(_, _) => "expression block".into(),
 
             Printi(_, _) => "printi".into(),
             Prints(_, _) => "prints".into(),
             Printiln(_, _) => "printiln".into(),
             Printbln(_, _) => "printbln".into(),
-
-            If(_, _, _, _) => "if".into(),
-            ExpressionBlock(_, _) => "expression block".into(),
-
             Statement(_, _) => "statement".into(),
             Bind(..) => "bind".into(),
             Mutate(..) => "assign".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
             YieldReturn(_, _) => "yret".into(),
-
-            RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
-
-            StructExpression(_, name, ..) => format!("intialization for struct {}", name),
         }
     }
 
