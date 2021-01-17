@@ -854,7 +854,7 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &mut SymbolTable,
     ) -> Result<module::Item<SemanticMetadata>> {
         match i {
-            Item::Struct(s) => self.analyze_structdef(s, sym).map(|n| Item::Struct(n)),
+            Item::Struct(s) => self.analyze_structdef(s, sym).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
         }
     }
