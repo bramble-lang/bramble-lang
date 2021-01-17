@@ -3,25 +3,14 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{
-    diagnostics::config::TracingConfig,
-    lexer::tokens::{Lex, Primitive, Token},
-    syntax::{
-        ast::{Ast, RoutineCall},
-        module::Module,
-        path::Path,
-        routinedef::{RoutineDef, RoutineDefType},
-        structdef::StructDef,
-        ty::Type,
-    },
-};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::{PNode, PResult, ParserCombinator};
+use super::pnode::{PNode, PResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
@@ -598,7 +587,7 @@ fn return_stmt(stream: &mut TokenStream) -> PResult {
     })
 }
 
-fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
+fn yield_return_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::YieldReturn) {
         Some(token) => {
@@ -608,7 +597,7 @@ fn yield_return_stmt(stream: &mut TokenStream) -> PResult {
                 Some(exp) => Ast::YieldReturn(token.l, Some(Box::new(exp))),
                 None => Ast::YieldReturn(token.l, None),
             };
-            Some(Ast::Statement(token.l, Box::new(yret)))
+            Some(Statement::YieldReturn(Box::new(yret)))
         }
         _ => None,
     })

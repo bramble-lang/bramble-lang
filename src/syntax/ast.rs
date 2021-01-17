@@ -1,4 +1,4 @@
-use super::{path::Path, ty::Type};
+use super::{path::Path, statement, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -90,7 +90,7 @@ pub enum Ast<I> {
     Prints(I, Box<Ast<I>>),
     Printiln(I, Box<Ast<I>>),
     Printbln(I, Box<Ast<I>>),
-    Statement(I, Box<Ast<I>>),
+    Statement(statement::Statement<I>),
     Bind(I, String, bool, Type, Box<Ast<I>>),
     Mutate(I, String, Box<Ast<I>>),
     Return(I, Option<Box<Ast<I>>>),
@@ -121,7 +121,7 @@ impl<I> Ast<I> {
             Prints(_, _) => "prints".into(),
             Printiln(_, _) => "printiln".into(),
             Printbln(_, _) => "printbln".into(),
-            Statement(_, _) => "statement".into(),
+            Statement(..) => "statement".into(),
             Bind(..) => "bind".into(),
             Mutate(..) => "assign".into(),
             Return(_, _) => "return".into(),
@@ -149,7 +149,6 @@ impl<I> Ast<I> {
             | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Statement(m, ..)
             | Bind(m, ..)
             | Mutate(m, ..)
             | Return(m, ..)
@@ -157,6 +156,7 @@ impl<I> Ast<I> {
             | YieldReturn(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
+            Statement(stm) => stm.get_metadata(),
         }
     }
 
@@ -179,7 +179,6 @@ impl<I> Ast<I> {
             | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Statement(m, ..)
             | Bind(m, ..)
             | Mutate(m, ..)
             | Return(m, ..)
@@ -187,6 +186,7 @@ impl<I> Ast<I> {
             | YieldReturn(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
+            Statement(stm) => stm.get_metadata_mut(),
         }
     }
 

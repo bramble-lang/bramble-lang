@@ -2,15 +2,15 @@ use super::{ast::Ast, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
-    Bind(Bind<M>),
-    Mutate(Ast<M>),
-    Return(Ast<M>),
-    Yield(Ast<M>),
-    YieldReturn(Ast<M>),
-    Printi(Ast<M>),
-    Printiln(Ast<M>),
-    Printbln(Ast<M>),
-    Prints(Ast<M>),
+    Bind(Box<Ast<M>>),
+    Mutate(Box<Ast<M>>),
+    Return(Box<Ast<M>>),
+    Yield(Box<Ast<M>>),
+    YieldReturn(Box<Ast<M>>),
+    Printi(Box<Ast<M>>),
+    Printiln(Box<Ast<M>>),
+    Printbln(Box<Ast<M>>),
+    Prints(Box<Ast<M>>),
 }
 
 impl<M> Statement<M> {
@@ -21,6 +21,16 @@ impl<M> Statement<M> {
             Mutate(x) | Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
             | Printbln(x) | Prints(x) => x.get_metadata(),
             Bind(b) => b.get_metadata(),
+        }
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        use Statement::*;
+
+        match self {
+            Mutate(x) | Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
+            | Printbln(x) | Prints(x) => x.get_metadata_mut(),
+            Bind(b) => b.get_metadata_mut(),
         }
     }
 
@@ -61,6 +71,10 @@ impl<M> Bind<M> {
 
     pub fn get_metadata(&self) -> &M {
         &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
     }
 
     pub fn is_mutable(&self) -> bool {

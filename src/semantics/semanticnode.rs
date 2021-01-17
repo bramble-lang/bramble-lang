@@ -1,4 +1,4 @@
-use crate::parser::pnode::PNode;
+use crate::{parser::pnode::PNode, syntax::statement::Statement};
 use crate::semantics::symbol_table::*;
 use crate::{
     ast::*,
@@ -274,13 +274,24 @@ impl SemanticAst {
         &mut self,
         statement: &Ast<ParserInfo>,
     ) -> Result<Box<Ast<SemanticMetadata>>> {
-        if let Ast::Statement(ln, stm) = statement {
-            Ok(Box::new(Ast::Statement(
-                self.semantic_metadata_from(*ln),
-                self.from_parser_ast(stm)?,
-            )))
+        use Statement::*;
+
+        if let Ast::Statement(statement) = statement {
+            let inner = match statement {
+                | Bind(b) => Bind(self.from_bind(b)?),
+                | Mutate(x)  => Mutate(self.from_parser_ast(x)?),
+                | Return(x)  => Return(self.from_parser_ast(x)?),
+                | Yield(x)  => Yield(self.from_parser_ast(x)?),
+                | YieldReturn(x)  => YieldReturn(self.from_parser_ast(x)?),
+                | Printi(x)  => Printi(self.from_parser_ast(x)?),
+                | Printiln(x) => Printiln(self.from_parser_ast(x)?),
+                | Printbln(x)  => Printbln(self.from_parser_ast(x)?),
+                | Prints(x) => Prints(self.from_parser_ast(x)?),
+            };
+
+            Ok(Box::new(Ast::Statement(inner)))
         } else {
-            panic!("Expected a Statement but got {}", statement.root_str())
+            panic!("Expected a statement, but got {}", statement.root_str())
         }
     }
 
