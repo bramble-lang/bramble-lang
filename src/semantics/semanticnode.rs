@@ -262,11 +262,13 @@ impl SemanticAst {
         sd: &StructDef<ParserInfo>,
     ) -> Result<StructDef<SemanticMetadata>> {
         if sd.get_name().len() == 0 {
-            return Err(format!("Invalid name for StructDef: must not be an empty string"))
+            return Err(format!(
+                "Invalid name for StructDef: must not be an empty string"
+            ));
         }
 
         if *sd.get_metadata() == 0 {
-            return Err("Source code line must be greater than 0".into())
+            return Err("Source code line must be greater than 0".into());
         }
 
         let semantic = StructDef::new(
