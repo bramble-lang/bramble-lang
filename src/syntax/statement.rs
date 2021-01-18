@@ -4,13 +4,16 @@ use super::{ast::Ast, ty::Type};
 pub enum Statement<M> {
     Bind(Box<Bind<M>>),
     Mutate(Box<Mutate<M>>),
-    Yield(Box<Ast<M>>),
-    YieldReturn(Box<Ast<M>>),
+
     Printi(Box<Ast<M>>),
     Printiln(Box<Ast<M>>),
     Printbln(Box<Ast<M>>),
     Prints(Box<Ast<M>>),
+
+    Yield(Box<Ast<M>>),
+    YieldReturn(Box<Ast<M>>),
     Expression(Box<Ast<M>>),
+
     Return(Box<Ast<M>>),
 }
 
