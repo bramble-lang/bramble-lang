@@ -1264,8 +1264,8 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Printiln(box Ast::Printiln(_, exp)) => {
-                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
+                Statement::Printiln(box p) => {
+                    assert_eq!(*p.get_value(), PNode::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1285,8 +1285,8 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Printbln(box Ast::Printbln(_, exp)) => {
-                    assert_eq!(exp, Box::new(PNode::Boolean(1, true)));
+                Statement::Printbln(box p) => {
+                    assert_eq!(*p.get_value(), PNode::Boolean(1, true));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1306,8 +1306,8 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Prints(box Ast::Prints(_, exp)) => {
-                    assert_eq!(exp, Box::new(PNode::StringLiteral(1, "hello".into())));
+                Statement::Prints(box p) => {
+                    assert_eq!(*p.get_value(), PNode::StringLiteral(1, "hello".into()));
                 }
                 _ => panic!("Not a binding statement"),
             },

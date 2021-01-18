@@ -1,4 +1,4 @@
-use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printi}};
+use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints}};
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -282,9 +282,9 @@ impl SemanticAst {
                 Yield(x) => Yield(self.from_parser_ast(x)?),
                 YieldReturn(x) => YieldReturn(self.from_parser_ast(x)?),
                 Printi(x) => Printi(Box::new(self.from_printi(x)?)),
-                Printiln(x) => Printiln(self.from_parser_ast(x)?),
-                Printbln(x) => Printbln(self.from_parser_ast(x)?),
-                Prints(x) => Prints(self.from_parser_ast(x)?),
+                Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
+                Printbln(x) => Printbln(Box::new(self.from_printbln(x)?)),
+                Prints(x) => Prints(Box::new(self.from_prints(x)?)),
                 Expression(e) => Expression(self.from_parser_ast(e)?),
             };
 
@@ -314,6 +314,27 @@ impl SemanticAst {
 
     fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticMetadata>> {
             Ok(Printi::new(
+                self.semantic_metadata_from(*p.get_metadata()),
+                *self.from_parser_ast(p.get_value())?,
+            ))
+    }
+
+    fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticMetadata>> {
+            Ok(Printiln::new(
+                self.semantic_metadata_from(*p.get_metadata()),
+                *self.from_parser_ast(p.get_value())?,
+            ))
+    }
+
+    fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticMetadata>> {
+            Ok(Printbln::new(
+                self.semantic_metadata_from(*p.get_metadata()),
+                *self.from_parser_ast(p.get_value())?,
+            ))
+    }
+
+    fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticMetadata>> {
+            Ok(Prints::new(
                 self.semantic_metadata_from(*p.get_metadata()),
                 *self.from_parser_ast(p.get_value())?,
             ))

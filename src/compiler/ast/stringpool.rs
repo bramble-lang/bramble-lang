@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Mutate, Printi, Statement}}};
+use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Statement}}};
 
 use super::scope::Scope;
 
@@ -144,9 +144,9 @@ impl StringPool {
             Statement::Yield(y) => self.extract_from(y),
             Statement::YieldReturn(ast) => self.extract_from(ast),
             Statement::Printi(pi) => self.extract_from_printi(pi),
-            Statement::Printiln(ast) => self.extract_from(ast),
-            Statement::Printbln(ast) => self.extract_from(ast),
-            Statement::Prints(ast) => self.extract_from(ast),
+            Statement::Printiln(ast) => self.extract_from_printiln(ast),
+            Statement::Printbln(ast) => self.extract_from_printbln(ast),
+            Statement::Prints(ast) => self.extract_from_prints(ast),
             Statement::Expression(ast) => self.extract_from(ast),
         }
         /*if let CompilerNode::Statement(.., e) = statement {
@@ -165,6 +165,18 @@ impl StringPool {
     }
 
     pub fn extract_from_printi(&mut self, p: &Printi<Scope>) {
+        self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_printiln(&mut self, p: &Printiln<Scope>) {
+        self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_printbln(&mut self, p: &Printbln<Scope>) {
+        self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_prints(&mut self, p: &Prints<Scope>) {
         self.extract_from(p.get_value())
     }
 }

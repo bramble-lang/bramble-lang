@@ -1,4 +1,4 @@
-use crate::syntax::{path::Path, statement::{Bind, Mutate, Printi}};
+use crate::syntax::{path::Path, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints}};
 use crate::syntax::ty::Type;
 use crate::{
     ast,
@@ -903,9 +903,9 @@ impl<'a> SemanticAnalyzer<'a> {
                     YieldReturn(Box::new(self.analyize_node(x, current_func, sym)?))
                 }
                 Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
-                Printiln(box x) => Printiln(Box::new(self.analyize_node(x, current_func, sym)?)),
-                Printbln(box x) => Printbln(Box::new(self.analyize_node(x, current_func, sym)?)),
-                Prints(box x) => Prints(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Printiln(box x) => Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?)),
+                Printbln(box x) => Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?)),
+                Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
                 Expression(box e) => {
                     Expression(Box::new(self.analyize_node(e, current_func, sym)?))
                 }
@@ -1002,6 +1002,54 @@ impl<'a> SemanticAnalyzer<'a> {
         if value.get_type() == I32 {
             meta.ty = Unit;
             Ok(Printi::new(meta.clone(), value))
+        } else {
+            Err(format!("Expected i32 for printi got {}", value.get_type()))
+        }
+    }
+
+    fn analyze_printiln(
+        &mut self,
+        p: &Printiln<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Printiln<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == I32 {
+            meta.ty = Unit;
+            Ok(Printiln::new(meta.clone(), value))
+        } else {
+            Err(format!("Expected i32 for printi got {}", value.get_type()))
+        }
+    }
+
+    fn analyze_printbln(
+        &mut self,
+        p: &Printbln<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Printbln<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == I32 {
+            meta.ty = Unit;
+            Ok(Printbln::new(meta.clone(), value))
+        } else {
+            Err(format!("Expected i32 for printi got {}", value.get_type()))
+        }
+    }
+
+    fn analyze_prints(
+        &mut self,
+        p: &Prints<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Prints<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == I32 {
+            meta.ty = Unit;
+            Ok(Prints::new(meta.clone(), value))
         } else {
             Err(format!("Expected i32 for printi got {}", value.get_type()))
         }

@@ -1,7 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printi, Statement}, structdef::StructDef}};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Statement}, structdef::StructDef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -299,15 +299,15 @@ impl CompilerNode {
                 (Statement::Printi(Box::new(e)), l)
             }
             Statement::Printiln(pi) => {
-                let (e, l) = Self::compute_offsets(pi, layout, struct_table);
+                let (e, l) = Self::compute_layouts_for_printiln(pi, layout, struct_table);
                 (Statement::Printiln(Box::new(e)), l)
             }
             Statement::Printbln(pb) => {
-                let (e, l) = Self::compute_offsets(pb, layout, struct_table);
+                let (e, l) = Self::compute_layouts_for_printbln(pb, layout, struct_table);
                 (Statement::Printbln(Box::new(e)), l)
             }
             Statement::Prints(ps) => {
-                let (e, l) = Self::compute_offsets(ps, layout, struct_table);
+                let (e, l) = Self::compute_layouts_for_prints(ps, layout, struct_table);
                 (Statement::Prints(Box::new(e)), l)
             }
             Statement::Expression(e) => {
@@ -356,6 +356,36 @@ impl CompilerNode {
         let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
         let (value, layout) = CompilerNode::compute_offsets(p.get_value(), layout, struct_table);
         (Printi::new(meta, value), layout)
+    }
+
+    fn compute_layouts_for_printiln(
+        p: &Printiln<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Printiln<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
+        let (value, layout) = CompilerNode::compute_offsets(p.get_value(), layout, struct_table);
+        (Printiln::new(meta, value), layout)
+    }
+
+    fn compute_layouts_for_printbln(
+        p: &Printbln<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Printbln<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
+        let (value, layout) = CompilerNode::compute_offsets(p.get_value(), layout, struct_table);
+        (Printbln::new(meta, value), layout)
+    }
+
+    fn compute_layouts_for_prints(
+        p: &Prints<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Prints<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
+        let (value, layout) = CompilerNode::compute_offsets(p.get_value(), layout, struct_table);
+        (Prints::new(meta, value), layout)
     }
 
     fn compute_layouts_for(

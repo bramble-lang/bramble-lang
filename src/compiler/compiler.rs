@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{binary_op, syntax::statement::{Bind, Mutate, Printi}};
+use crate::{binary_op, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints}};
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -731,9 +731,9 @@ impl<'a> Compiler<'a> {
             Statement::Yield(n) => self.traverse(n, current_func, code),
             Statement::YieldReturn(n) => self.traverse(n, current_func, code),
             Statement::Printi(n) => self.traverse_printi(n, current_func, code),
-            Statement::Printiln(n) => self.traverse(n, current_func, code),
-            Statement::Printbln(n) => self.traverse(n, current_func, code),
-            Statement::Prints(n) => self.traverse(n, current_func, code),
+            Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),
+            Statement::Printbln(n) => self.traverse_printbln(n, current_func, code),
+            Statement::Prints(n) => self.traverse_prints(n, current_func, code),
             Statement::Expression(n) => self.traverse(n, current_func, code),
         }
     }
@@ -787,6 +787,52 @@ impl<'a> Compiler<'a> {
             push @_i32_fmt;
             push %eax;
             {{Compiler::make_c_extern_call("printf", 2)}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_printiln(
+        &mut self,
+        p: &'a Printiln<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            push @_i32_fmt;
+            push %eax;
+            {{Compiler::make_c_extern_call("printf", 2)}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_printbln(
+        &mut self,
+        p: &'a Printbln<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            call @print_bool;
+        }}
+        Ok(())
+    }
+
+    fn traverse_prints(
+        &mut self,
+        p: &'a Prints<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            push %eax;
+            push [rel @stdout];
+            {{Compiler::make_c_extern_call("fputs", 2)}}
         }}
         Ok(())
     }

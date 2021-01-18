@@ -6,9 +6,9 @@ pub enum Statement<M> {
     Mutate(Box<Mutate<M>>),
 
     Printi(Box<Printi<M>>),
-    Printiln(Box<Ast<M>>),
-    Printbln(Box<Ast<M>>),
-    Prints(Box<Ast<M>>),
+    Printiln(Box<Printiln<M>>),
+    Printbln(Box<Printbln<M>>),
+    Prints(Box<Prints<M>>),
 
     Yield(Box<Ast<M>>),
     YieldReturn(Box<Ast<M>>),
@@ -22,21 +22,23 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            | Return(x) | Yield(x) | YieldReturn(x) | Printiln(x)
-            | Printbln(x) | Prints(x) => x.get_metadata(),
+            | Return(x) | Yield(x) | YieldReturn(x) => x.get_metadata(),
             Expression(e) => e.get_metadata(),
             Bind(b) => b.get_metadata(),
             Mutate(m) => m.get_metadata(),
             Printi(m) => m.get_metadata(),
+            Printiln(m) => m.get_metadata(),
+            Printbln(m) => m.get_metadata(),
+            Prints(m) => m.get_metadata(),
         }
     }
 
     pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
         match ast {
             Ast::Printi(_, _) => panic!("Should not be here"), //Some(Statement::Printi(Box::new(ast))),
-            Ast::Prints(_, _) => Some(Statement::Prints(Box::new(ast))),
-            Ast::Printiln(_, _) => Some(Statement::Printiln(Box::new(ast))),
-            Ast::Printbln(_, _) => Some(Statement::Printbln(Box::new(ast))),
+            Ast::Prints(_, _) =>  panic!("Should not be here"), //Some(Statement::Prints(Box::new(ast))),
+            Ast::Printiln(_, _) => panic!("Should not be here"), //Some(Statement::Printiln(Box::new(ast))),
+            Ast::Printbln(_, _) =>  panic!("Should not be here"), //Some(Statement::Printbln(Box::new(ast))),
             Ast::Statement(s) => Some(s),
             Ast::Yield(_, _) => Some(Statement::Yield(Box::new(ast))),
             Ast::YieldReturn(_, _) => Some(Statement::YieldReturn(Box::new(ast))),
@@ -49,12 +51,14 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) | Yield(x) | YieldReturn(x) | Printiln(x)
-            | Printbln(x) | Prints(x) => x.get_metadata_mut(),
+            Return(x) | Yield(x) | YieldReturn(x) => x.get_metadata_mut(),
             Expression(e) => e.get_metadata_mut(),
             Bind(b) => b.get_metadata_mut(),
             Mutate(m) => m.get_metadata_mut(),
             Printi(m) => m.get_metadata_mut(),
+            Printiln(m) => m.get_metadata_mut(),
+            Printbln(m) => m.get_metadata_mut(),
+            Prints(m) => m.get_metadata_mut(),
         }
     }
 
@@ -62,12 +66,14 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) | Yield(x) | YieldReturn(x) | Printiln(x)
-            | Printbln(x) | Prints(x) => x.root_str(),
+            Return(x) | Yield(x) | YieldReturn(x) => x.root_str(),
             Expression(e) => e.root_str(),
             Bind(b) => b.root_str(),
             Mutate(m) => m.root_str(),
             Printi(m) => m.root_str(),
+            Printiln(m) => m.root_str(),
+            Printbln(m) => m.root_str(),
+            Prints(m) => m.root_str(),
         }
     }
 }
@@ -166,6 +172,102 @@ pub struct Printi<M> {
 }
 
 impl<M> Printi<M> {
+    pub fn new(metadata: M, value: Ast<M>) -> Self {
+        Self {
+            metadata,
+            value,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
+    }
+
+    pub fn get_value(&self) -> &Ast<M> {
+        &self.value
+    }
+
+    pub fn root_str(&self) -> String {
+        format!("printiln")
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Printiln<M> {
+    metadata: M,
+    value: Ast<M>,
+}
+
+impl<M> Printiln<M> {
+    pub fn new(metadata: M, value: Ast<M>) -> Self {
+        Self {
+            metadata,
+            value,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
+    }
+
+    pub fn get_value(&self) -> &Ast<M> {
+        &self.value
+    }
+
+    pub fn root_str(&self) -> String {
+        format!("printiln")
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Printbln<M> {
+    metadata: M,
+    value: Ast<M>,
+}
+
+impl<M> Printbln<M> {
+    pub fn new(metadata: M, value: Ast<M>) -> Self {
+        Self {
+            metadata,
+            value,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
+    }
+
+    pub fn get_value(&self) -> &Ast<M> {
+        &self.value
+    }
+
+    pub fn root_str(&self) -> String {
+        format!("printiln")
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Prints<M> {
+    metadata: M,
+    value: Ast<M>,
+}
+
+impl<M> Prints<M> {
     pub fn new(metadata: M, value: Ast<M>) -> Self {
         Self {
             metadata,
