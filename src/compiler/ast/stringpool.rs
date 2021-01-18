@@ -140,11 +140,6 @@ impl StringPool {
             Statement::Prints(ast) => self.extract_from_prints(ast),
             Statement::Expression(ast) => self.extract_from(ast),
         }
-        /*if let CompilerNode::Statement(.., e) = statement {
-            self.extract_from(e)
-        } else {
-            panic!("Expected a statement, but got {}", statement.root_str())
-        }*/
     }
 
     pub fn extract_from_bind(&mut self, bind: &Bind<Scope>) {

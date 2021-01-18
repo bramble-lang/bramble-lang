@@ -289,13 +289,6 @@ impl CompilerNode {
             }
         };
         (e, l)
-        /*if let Ast::Statement(m, e) = statement {
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
-            let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-            (Ast::Statement(meta, Box::new(e)), layout)
-        } else {
-            panic!("Expected a statement but got {}", statement.root_str())
-        }*/
     }
 
     fn compute_layouts_for_bind(
