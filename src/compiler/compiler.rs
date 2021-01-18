@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{binary_op, syntax::statement::{Bind, Mutate}};
+use crate::{binary_op, syntax::statement::{Bind, Mutate, Printi}};
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -730,7 +730,7 @@ impl<'a> Compiler<'a> {
             Statement::Return(n) => self.traverse(n, current_func, code),
             Statement::Yield(n) => self.traverse(n, current_func, code),
             Statement::YieldReturn(n) => self.traverse(n, current_func, code),
-            Statement::Printi(n) => self.traverse(n, current_func, code),
+            Statement::Printi(n) => self.traverse_printi(n, current_func, code),
             Statement::Printiln(n) => self.traverse(n, current_func, code),
             Statement::Printbln(n) => self.traverse(n, current_func, code),
             Statement::Prints(n) => self.traverse(n, current_func, code),
@@ -771,6 +771,22 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             ; {format!("Binding {}", id)}
             {{self.bind(mutate.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_printi(
+        &mut self,
+        p: &'a Printi<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            push @_i32_fmt;
+            push %eax;
+            {{Compiler::make_c_extern_call("printf", 2)}}
         }}
         Ok(())
     }

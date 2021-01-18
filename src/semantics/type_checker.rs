@@ -1,4 +1,4 @@
-use crate::syntax::{path::Path, statement::{Bind, Mutate}};
+use crate::syntax::{path::Path, statement::{Bind, Mutate, Printi}};
 use crate::syntax::ty::Type;
 use crate::{
     ast,
@@ -902,7 +902,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 YieldReturn(box x) => {
                     YieldReturn(Box::new(self.analyize_node(x, current_func, sym)?))
                 }
-                Printi(box x) => Printi(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
                 Printiln(box x) => Printiln(Box::new(self.analyize_node(x, current_func, sym)?)),
                 Printbln(box x) => Printbln(Box::new(self.analyize_node(x, current_func, sym)?)),
                 Prints(box x) => Prints(Box::new(self.analyize_node(x, current_func, sym)?)),
@@ -988,6 +988,22 @@ impl<'a> SemanticAnalyzer<'a> {
                 "Attempting to mutate a variable {} outside of function",
                 mutate.get_id()
             )),
+        }
+    }
+
+    fn analyze_printi(
+        &mut self,
+        p: &Printi<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Printi<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == I32 {
+            meta.ty = Unit;
+            Ok(Printi::new(meta.clone(), value))
+        } else {
+            Err(format!("Expected i32 for printi got {}", value.get_type()))
         }
     }
 }

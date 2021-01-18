@@ -1,4 +1,4 @@
-use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate}};
+use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printi}};
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -281,7 +281,7 @@ impl SemanticAst {
                 Return(x) => Return(self.from_parser_ast(x)?),
                 Yield(x) => Yield(self.from_parser_ast(x)?),
                 YieldReturn(x) => YieldReturn(self.from_parser_ast(x)?),
-                Printi(x) => Printi(self.from_parser_ast(x)?),
+                Printi(x) => Printi(Box::new(self.from_printi(x)?)),
                 Printiln(x) => Printiln(self.from_parser_ast(x)?),
                 Printbln(x) => Printbln(self.from_parser_ast(x)?),
                 Prints(x) => Prints(self.from_parser_ast(x)?),
@@ -309,6 +309,13 @@ impl SemanticAst {
                 self.semantic_metadata_from(*mutate.get_metadata()),
                 mutate.get_id(),
                 *self.from_parser_ast(mutate.get_rhs())?,
+            ))
+    }
+
+    fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticMetadata>> {
+            Ok(Printi::new(
+                self.semantic_metadata_from(*p.get_metadata()),
+                *self.from_parser_ast(p.get_value())?,
             ))
     }
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Mutate, Statement}}};
+use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Mutate, Printi, Statement}}};
 
 use super::scope::Scope;
 
@@ -143,7 +143,7 @@ impl StringPool {
             Statement::Return(r) => self.extract_from(r),
             Statement::Yield(y) => self.extract_from(y),
             Statement::YieldReturn(ast) => self.extract_from(ast),
-            Statement::Printi(ast) => self.extract_from(ast),
+            Statement::Printi(pi) => self.extract_from_printi(pi),
             Statement::Printiln(ast) => self.extract_from(ast),
             Statement::Printbln(ast) => self.extract_from(ast),
             Statement::Prints(ast) => self.extract_from(ast),
@@ -162,6 +162,10 @@ impl StringPool {
 
     pub fn extract_from_mutate(&mut self, mutate: &Mutate<Scope>) {
         self.extract_from(mutate.get_rhs())
+    }
+
+    pub fn extract_from_printi(&mut self, p: &Printi<Scope>) {
+        self.extract_from(p.get_value())
     }
 }
 
