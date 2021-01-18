@@ -1453,8 +1453,8 @@ mod tests {
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., lhs))) = bind_stm {
+                        assert_eq!(bind_stm.get_type(), I32);
                         assert_eq!(lhs.get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1521,7 +1521,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), I32);
 
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., rhs))) = bind_stm {
@@ -1591,7 +1591,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., lhs))) = bind_stm {
@@ -1661,7 +1661,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., lhs))) = bind_stm {
@@ -1740,7 +1740,7 @@ mod tests {
                         let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                         let bind_stm = &fn_main.get_body()[0];
-                        assert_eq!(bind_stm.get_type(), Unit);
+                        assert_eq!(bind_stm.get_type(), Bool);
 
                         // validate that the RHS of the bind is the correct type
                         if let Ast::Statement(Statement::Bind(box Ast::Bind(.., lhs))) = bind_stm {
@@ -1820,7 +1820,7 @@ mod tests {
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), I32);
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., lhs))) = bind_stm {
                         assert_eq!(lhs.get_type(), expected_ty);
                     } else {
@@ -1900,7 +1900,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), I32);
 
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., lhs))) = bind_stm {
@@ -1911,8 +1911,8 @@ mod tests {
 
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
-                    assert_eq!(mut_stm.get_type(), Unit);
-                    if let Ast::Statement(Statement::Bind( box Ast::Mutate(_, _, rhs))) = mut_stm {
+                    assert_eq!(mut_stm.get_type(), I32);
+                    if let Ast::Statement(Statement::Mutate( box Ast::Mutate(_, _, rhs))) = mut_stm {
                         assert_eq!(rhs.get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2179,13 +2179,13 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), Coroutine(Box::new(I32)));
 
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., lhs))) = bind_stm {
                         assert_eq!(lhs.get_type(), expected_ty);
                     } else {
-                        panic!("Expected a bind statement");
+                        panic!("Expected a bind statement, got {:?}", bind_stm);
                     }
                 }
                 Err(msg) => {
@@ -2262,10 +2262,10 @@ mod tests {
                     let co_number = module.get_coroutines()[0].to_routine().unwrap();
 
                     let yret_stm = &co_number.get_body()[0];
-                    assert_eq!(yret_stm.get_type(), Unit);
+                    assert_eq!(yret_stm.get_type(), I32);
 
                     // validate that the RHS of the yield return is the correct type
-                    if let Ast::Statement(Statement::Bind(box Ast::YieldReturn(.., Some(rhs)))) = yret_stm {
+                    if let Ast::Statement(Statement::YieldReturn(box Ast::YieldReturn(.., Some(rhs)))) = yret_stm {
                         assert_eq!(rhs.get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -2334,13 +2334,13 @@ mod tests {
                     let co_number = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &co_number.get_body()[1];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), I32);
 
                     // validate that the RHS of the bind is the correct type
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., rhs))) = bind_stm {
                         assert_eq!(rhs.get_type(), expected_ty);
                     } else {
-                        panic!("Expected a bind statement");
+                        panic!("Expected a bind statement, got {:?}", bind_stm);
                     }
                 }
                 Err(msg) => {
@@ -2529,7 +2529,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Unit);
+                    assert_eq!(bind_stm.get_type(), I32);
 
                     // Check the return value
                     if let Ast::Statement(Statement::Bind(box Ast::Bind(.., rhs))) = bind_stm {

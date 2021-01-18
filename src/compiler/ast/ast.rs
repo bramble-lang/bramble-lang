@@ -280,7 +280,42 @@ impl CompilerNode {
                 let (e, l) = Self::compute_layouts_for_bind(b, layout, struct_table);
                 (Statement::Bind(Box::new(e)), l)
             }
-            _ => todo!()
+            Statement::Mutate(m) => {
+                let (e, l) = Self::compute_layouts_for_mutate(m, layout, struct_table);
+                (Statement::Mutate(Box::new(e)), l)
+            }
+            Statement::Return(r) => {
+                let (e, l) = Self::compute_offsets(r, layout, struct_table);
+                (Statement::Return(Box::new(e)), l)
+            }
+            Statement::Yield(y) => {
+                let (e, l) = Self::compute_offsets(y, layout, struct_table);
+                (Statement::Yield(Box::new(e)), l)
+            }
+            Statement::YieldReturn(yr) => {
+                let (e, l) = Self::compute_offsets(yr, layout, struct_table);
+                (Statement::YieldReturn(Box::new(e)), l)
+            }
+            Statement::Printi(pi) => {
+                let (e, l) = Self::compute_offsets(pi, layout, struct_table);
+                (Statement::Printi(Box::new(e)), l)
+            }
+            Statement::Printiln(pi) => {
+                let (e, l) = Self::compute_offsets(pi, layout, struct_table);
+                (Statement::Printiln(Box::new(e)), l)
+            }
+            Statement::Printbln(pb) => {
+                let (e, l) = Self::compute_offsets(pb, layout, struct_table);
+                (Statement::Printbln(Box::new(e)), l)
+            }
+            Statement::Prints(ps) => {
+                let (e, l) = Self::compute_offsets(ps, layout, struct_table);
+                (Statement::Prints(Box::new(e)), l)
+            }
+            Statement::Expression(e) => {
+                let (e, l) = Self::compute_offsets(e, layout, struct_table);
+                (Statement::Expression(Box::new(e)), l)
+            }
         };
         (e,l)
         /*if let Ast::Statement(m, e) = statement {
