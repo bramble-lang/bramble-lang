@@ -855,7 +855,6 @@ impl<'a> SemanticAnalyzer<'a> {
                 Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
                 Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
                 Return(box x) => Return(Box::new(self.analyize_node(x, current_func, sym)?)),
-                Yield(box x) => Yield(Box::new(self.analyze_yield(x, current_func, sym)?)),
                 YieldReturn(box x) => {
                     YieldReturn(Box::new(self.analyize_node(x, current_func, sym)?))
                 }

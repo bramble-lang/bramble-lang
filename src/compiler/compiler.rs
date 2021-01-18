@@ -703,7 +703,6 @@ impl<'a> Compiler<'a> {
             Statement::Bind(b) => self.traverse_bind(b, current_func, code),
             Statement::Mutate(m) => self.traverse_mutate(m, current_func, code),
             Statement::Return(n) => self.traverse(n, current_func, code),
-            Statement::Yield(n) => self.traverse_yield(n, current_func, code),
             Statement::YieldReturn(n) => self.traverse(n, current_func, code),
             Statement::Printi(n) => self.traverse_printi(n, current_func, code),
             Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),

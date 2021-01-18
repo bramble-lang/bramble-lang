@@ -263,7 +263,6 @@ impl SemanticAst {
                 Bind(b) => Bind(Box::new(self.from_bind(b)?)),
                 Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
                 Return(x) => Return(self.from_parser_ast(x)?),
-                Yield(x) => Yield(Box::new(self.from_yield(x)?)),
                 YieldReturn(x) => YieldReturn(self.from_parser_ast(x)?),
                 Printi(x) => Printi(Box::new(self.from_printi(x)?)),
                 Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),

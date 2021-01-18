@@ -129,7 +129,6 @@ impl StringPool {
             Statement::Bind(b) => self.extract_from_bind(b),
             Statement::Mutate(m) => self.extract_from_mutate(m),
             Statement::Return(r) => self.extract_from(r),
-            Statement::Yield(y) => self.extract_from_yield(y),
             Statement::YieldReturn(ast) => self.extract_from(ast),
             Statement::Printi(pi) => self.extract_from_printi(pi),
             Statement::Printiln(ast) => self.extract_from_printiln(ast),
