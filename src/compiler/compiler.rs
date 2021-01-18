@@ -21,10 +21,10 @@ use crate::{
         routinedef::RoutineDef,
     },
 };
-use crate::{ast::Ast, semantics::semanticnode::SemanticMetadata};
-use crate::{ast::RoutineCall, syntax::statement::Statement};
+use crate::{expression::Ast, semantics::semanticnode::SemanticMetadata};
+use crate::{expression::RoutineCall, syntax::statement::Statement};
 use crate::{
-    ast::{BinaryOperator, UnaryOperator},
+    expression::{BinaryOperator, UnaryOperator},
     syntax::ty::Type,
 };
 use crate::{

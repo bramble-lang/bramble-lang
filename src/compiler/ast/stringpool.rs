@@ -50,7 +50,7 @@ impl StringPool {
     /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
     pub fn extract_from(&mut self, ast: &CompilerNode) {
-        use crate::ast::Ast::*;
+        use crate::expression::Ast::*;
 
         match ast {
             ExpressionBlock(_, body, final_exp) => {

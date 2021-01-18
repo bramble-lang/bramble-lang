@@ -1,4 +1,4 @@
-use super::{ast::Ast, ty::Type};
+use super::{expression::Ast, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {

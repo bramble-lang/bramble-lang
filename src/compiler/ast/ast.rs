@@ -13,7 +13,7 @@ use crate::{
         structdef::StructDef,
     },
 };
-use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
+use crate::{semantics::semanticnode::SemanticNode, syntax::expression::Ast};
 use braid_lang::result::Result;
 
 pub type CompilerNode = Ast<Scope>;
@@ -446,7 +446,7 @@ mod ast_tests {
         compiler::ast::scope::Level,
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
-        syntax::{ast::BinaryOperator, routinedef::RoutineDef},
+        syntax::{expression::BinaryOperator, routinedef::RoutineDef},
     };
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};

@@ -7,11 +7,11 @@ use crate::syntax::{
     ty::Type,
 };
 use crate::{
-    ast,
+    expression,
     diagnostics::config::{Tracing, TracingConfig},
 };
 use crate::{
-    ast::{Ast, BinaryOperator, UnaryOperator},
+    expression::{Ast, BinaryOperator, UnaryOperator},
     syntax::{
         module::{self, Item},
         routinedef,
@@ -339,7 +339,7 @@ impl<'a> SemanticAnalyzer<'a> {
 
     fn extract_routine_type_info<'b>(
         symbol: &'b Symbol,
-        call: &ast::RoutineCall,
+        call: &expression::RoutineCall,
         routine_path: &Path,
     ) -> Result<(&'b Vec<Type>, Type)> {
         let routine_path_parent = routine_path.parent();
@@ -347,14 +347,14 @@ impl<'a> SemanticAnalyzer<'a> {
             Symbol {
                 ty: Type::FunctionDef(pty, rty),
                 ..
-            } if *call == crate::syntax::ast::RoutineCall::Function => (
+            } if *call == crate::syntax::expression::RoutineCall::Function => (
                 pty,
                 Self::type_to_canonical_with_path(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..
-            } if *call == crate::syntax::ast::RoutineCall::CoroutineInit => (
+            } if *call == crate::syntax::expression::RoutineCall::CoroutineInit => (
                 pty,
                 Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
                     &routine_path_parent,
@@ -363,8 +363,8 @@ impl<'a> SemanticAnalyzer<'a> {
             ),
             _ => {
                 let expected = match call {
-                    ast::RoutineCall::Function => "function",
-                    ast::RoutineCall::CoroutineInit => "coroutine",
+                    expression::RoutineCall::Function => "function",
+                    expression::RoutineCall::CoroutineInit => "coroutine",
                 };
                 return Err(format!(
                     "Expected {0} but {1} is a {2}",
@@ -1073,7 +1073,7 @@ mod tests {
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
     use crate::syntax::{module::Item, routinedef};
-    use crate::{ast::Ast, syntax::statement::Statement};
+    use crate::{expression::Ast, syntax::statement::Statement};
 
     #[test]
     pub fn test_identifiers() {

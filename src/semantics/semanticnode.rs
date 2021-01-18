@@ -1,5 +1,5 @@
 use crate::{
-    ast::*,
+    expression::*,
     syntax::path::Path,
     syntax::{
         module::{self, Item},

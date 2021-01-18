@@ -7,7 +7,7 @@ use crate::{
     diagnostics::config::TracingConfig,
     lexer::tokens::{Lex, Primitive, Token},
     syntax::{
-        ast::{Ast, RoutineCall},
+        expression::{Ast, RoutineCall},
         module::Module,
         path::Path,
         routinedef::{RoutineDef, RoutineDefType},
@@ -926,7 +926,7 @@ pub mod tests {
     use crate::{
         lexer::lexer::Lexer,
         syntax::{
-            ast::{BinaryOperator, UnaryOperator},
+            expression::{BinaryOperator, UnaryOperator},
             module::Item,
         },
     };
