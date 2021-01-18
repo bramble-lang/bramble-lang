@@ -896,18 +896,21 @@ impl<'a> SemanticAnalyzer<'a> {
     ) -> Result<SemanticNode> {
         use statement::Statement::*;
         if let Ast::Statement(statement) = stmt {
-
             let inner = match statement {
-                | Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
-                | Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
-                | Return(box x)  => Return(Box::new(self.analyize_node(x, current_func, sym)?)),
-                | Yield(box x)  => Yield(Box::new(self.analyize_node(x, current_func, sym)?)),
-                | YieldReturn(box x)  => YieldReturn(Box::new(self.analyize_node(x, current_func, sym)?)),
-                | Printi(box x)  => Printi(Box::new(self.analyize_node(x, current_func, sym)?)),
-                | Printiln(box x)  => Printiln(Box::new(self.analyize_node(x, current_func, sym)?)),
-                | Printbln(box x)  => Printbln(Box::new(self.analyize_node(x, current_func, sym)?)),
-                | Prints(box x)  => Prints(Box::new(self.analyize_node(x, current_func, sym)?)),
-                | Expression(box e) => Expression(Box::new(self.analyize_node(e, current_func, sym)?)),
+                Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
+                Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
+                Return(box x) => Return(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Yield(box x) => Yield(Box::new(self.analyize_node(x, current_func, sym)?)),
+                YieldReturn(box x) => {
+                    YieldReturn(Box::new(self.analyize_node(x, current_func, sym)?))
+                }
+                Printi(box x) => Printi(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Printiln(box x) => Printiln(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Printbln(box x) => Printbln(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Prints(box x) => Prints(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Expression(box e) => {
+                    Expression(Box::new(self.analyize_node(e, current_func, sym)?))
+                }
             };
 
             Ok(Ast::Statement(inner))
@@ -1000,11 +1003,14 @@ impl<'a> SemanticAnalyzer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ast::Ast, syntax::statement::{Bind, Statement}};
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
     use crate::syntax::{module::Item, routinedef};
+    use crate::{
+        ast::Ast,
+        syntax::statement::{Bind, Statement},
+    };
 
     #[test]
     pub fn test_identifiers() {
@@ -1912,7 +1918,7 @@ mod tests {
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
                     assert_eq!(mut_stm.get_type(), I32);
-                    if let Ast::Statement(Statement::Mutate( box Ast::Mutate(_, _, rhs))) = mut_stm {
+                    if let Ast::Statement(Statement::Mutate(box Ast::Mutate(_, _, rhs))) = mut_stm {
                         assert_eq!(rhs.get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2265,7 +2271,11 @@ mod tests {
                     assert_eq!(yret_stm.get_type(), I32);
 
                     // validate that the RHS of the yield return is the correct type
-                    if let Ast::Statement(Statement::YieldReturn(box Ast::YieldReturn(.., Some(rhs)))) = yret_stm {
+                    if let Ast::Statement(Statement::YieldReturn(box Ast::YieldReturn(
+                        ..,
+                        Some(rhs),
+                    ))) = yret_stm
+                    {
                         assert_eq!(rhs.get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");

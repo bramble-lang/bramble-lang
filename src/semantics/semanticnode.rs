@@ -1,4 +1,3 @@
-use crate::{parser::pnode::PNode, syntax::statement::Statement};
 use crate::semantics::symbol_table::*;
 use crate::{
     ast::*,
@@ -12,6 +11,7 @@ use crate::{
 use crate::{
     diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
 };
+use crate::{parser::pnode::PNode, syntax::statement::Statement};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -278,16 +278,16 @@ impl SemanticAst {
 
         if let Ast::Statement(statement) = statement {
             let inner = match statement {
-                | Bind(b) => Bind(self.from_bind(b)?),
-                | Mutate(x)  => Mutate(self.from_parser_ast(x)?),
-                | Return(x)  => Return(self.from_parser_ast(x)?),
-                | Yield(x)  => Yield(self.from_parser_ast(x)?),
-                | YieldReturn(x)  => YieldReturn(self.from_parser_ast(x)?),
-                | Printi(x)  => Printi(self.from_parser_ast(x)?),
-                | Printiln(x) => Printiln(self.from_parser_ast(x)?),
-                | Printbln(x)  => Printbln(self.from_parser_ast(x)?),
-                | Prints(x) => Prints(self.from_parser_ast(x)?),
-                | Expression(e) => Expression(self.from_parser_ast(e)?),
+                Bind(b) => Bind(self.from_bind(b)?),
+                Mutate(x) => Mutate(self.from_parser_ast(x)?),
+                Return(x) => Return(self.from_parser_ast(x)?),
+                Yield(x) => Yield(self.from_parser_ast(x)?),
+                YieldReturn(x) => YieldReturn(self.from_parser_ast(x)?),
+                Printi(x) => Printi(self.from_parser_ast(x)?),
+                Printiln(x) => Printiln(self.from_parser_ast(x)?),
+                Printbln(x) => Printbln(self.from_parser_ast(x)?),
+                Prints(x) => Prints(self.from_parser_ast(x)?),
+                Expression(e) => Expression(self.from_parser_ast(e)?),
             };
 
             Ok(Box::new(Ast::Statement(inner)))

@@ -3,7 +3,19 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef, ty::Type}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+    syntax::{
+        ast::{Ast, RoutineCall},
+        module::Module,
+        path::Path,
+        routinedef::{RoutineDef, RoutineDefType},
+        statement::Statement,
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -315,7 +327,9 @@ fn statement(stream: &mut TokenStream) -> PResult {
     let stm = let_bind(stream)
         .por(mutate, stream)
         .por(println_stmt, stream)
-        .por(expression, stream)?.map(|s| Statement::from_ast(s)).flatten();
+        .por(expression, stream)?
+        .map(|s| Statement::from_ast(s))
+        .flatten();
 
     match stm {
         Some(stm) => match stream.next_if(&Lex::Semicolon) {
@@ -1834,9 +1848,12 @@ pub mod tests {
                 _ => panic!("No body: {:?}", &body[0]),
             }
             match &body[1] {
-                Ast::Statement(
-                    Statement::Expression(box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params)),
-                ) => {
+                Ast::Statement(Statement::Expression(box Ast::RoutineCall(
+                    _,
+                    RoutineCall::Function,
+                    fn_name,
+                    params,
+                ))) => {
                     assert_eq!(*fn_name, vec!["f"].into());
                     assert_eq!(params[0], Ast::Identifier(1, "x".into()));
                 }

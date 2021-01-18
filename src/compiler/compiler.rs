@@ -1,7 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{ast::RoutineCall, syntax::statement::Statement};
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
@@ -24,6 +23,7 @@ use crate::{
     },
 };
 use crate::{ast::Ast, semantics::semanticnode::SemanticMetadata};
+use crate::{ast::RoutineCall, syntax::statement::Statement};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ty::Type,

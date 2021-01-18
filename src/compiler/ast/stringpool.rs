@@ -2,7 +2,14 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::Statement}};
+use crate::{
+    compiler::ast::ast::CompilerNode,
+    syntax::{
+        module::{self, Item},
+        routinedef::RoutineDef,
+        statement::Statement,
+    },
+};
 
 use super::scope::Scope;
 
@@ -146,10 +153,10 @@ impl StringPool {
             Statement::Yield(y) => self.extract_from(y),
             Statement::YieldReturn(ast) => self.extract_from(ast),
             Statement::Printi(ast) => self.extract_from(ast),
-            Statement::Printiln(ast) =>  self.extract_from(ast),
-            Statement::Printbln(ast) =>  self.extract_from(ast),
-            Statement::Prints(ast) =>  self.extract_from(ast),
-            Statement::Expression(ast) =>  self.extract_from(ast),
+            Statement::Printiln(ast) => self.extract_from(ast),
+            Statement::Printbln(ast) => self.extract_from(ast),
+            Statement::Prints(ast) => self.extract_from(ast),
+            Statement::Expression(ast) => self.extract_from(ast),
         }
         /*if let CompilerNode::Statement(.., e) = statement {
             self.extract_from(e)

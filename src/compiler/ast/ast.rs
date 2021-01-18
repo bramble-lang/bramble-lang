@@ -1,7 +1,16 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef}};
+use crate::{
+    compiler::ast::scope::{LayoutData, Scope},
+    semantics::semanticnode::SemanticMetadata,
+    syntax::{
+        module::{self, Item, Module},
+        routinedef::{RoutineDef, RoutineDefType},
+        statement::Statement,
+        structdef::StructDef,
+    },
+};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -131,7 +140,7 @@ impl CompilerNode {
                 (YieldReturn(meta, Some(Box::new(e))), layout)
             }
             Statement(s) => {
-                let (s,l) = Self::compute_layouts_for_statement(s, layout, struct_table);
+                let (s, l) = Self::compute_layouts_for_statement(s, layout, struct_table);
                 (Statement(s), l)
             }
             RoutineCall(m, call, name, params) => {
@@ -275,7 +284,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Statement<Scope>, LayoutData) {
-        let (e,l) = match statement {
+        let (e, l) = match statement {
             Statement::Bind(b) => {
                 let (e, l) = Self::compute_layouts_for_bind(b, layout, struct_table);
                 (Statement::Bind(Box::new(e)), l)
@@ -317,7 +326,7 @@ impl CompilerNode {
                 (Statement::Expression(Box::new(e)), l)
             }
         };
-        (e,l)
+        (e, l)
         /*if let Ast::Statement(m, e) = statement {
             let (meta, layout) = Scope::local_from(m, struct_table, layout);
             let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
