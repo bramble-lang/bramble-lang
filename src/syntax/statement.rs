@@ -36,7 +36,6 @@ impl<M> Statement<M> {
     pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
         match ast {
             Ast::Statement(s) => Some(s),
-            Ast::YieldReturn(_, _) => panic!("Should not be here"),//Some(Statement::YieldReturn(Box::new(ast))),
             Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             _ => Some(Statement::Expression(Box::new(ast))),
         }
@@ -348,5 +347,35 @@ impl<M> YieldReturn<M> {
 
     pub fn root_str(&self) -> String {
         format!("yret")
+    }
+}
+
+pub struct Return<M> {
+    metadata: M,
+    value: Option<Ast<M>>,
+}
+
+impl<M> Return<M> {
+    pub fn new(metadata: M, value: Option<Ast<M>>) -> Self {
+        Self {
+            metadata,
+            value,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
+    }
+
+    pub fn get_value(&self) -> &Option<Ast<M>> {
+        &self.value
+    }
+
+    pub fn root_str(&self) -> String {
+        format!("return")
     }
 }
