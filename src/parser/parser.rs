@@ -1194,7 +1194,6 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x");
                     assert_eq!(b.get_type(), Type::I32);
@@ -1202,9 +1201,7 @@ pub mod tests {
                     assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
-        }
+            }
     }
 
     #[test]
@@ -1238,14 +1235,11 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
                 Statement::Mutate(box m) => {
                     assert_eq!(m.get_id(), "x");
                     assert_eq!(*m.get_rhs(), PNode::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1260,13 +1254,10 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
                 Statement::Printiln(box p) => {
                     assert_eq!(*p.get_value(), PNode::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1281,13 +1272,10 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
                 Statement::Printbln(box p) => {
                     assert_eq!(*p.get_value(), PNode::Boolean(1, true));
                 }
                 _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1302,13 +1290,10 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
                 Statement::Prints(box p) => {
                     assert_eq!(*p.get_value(), PNode::StringLiteral(1, "hello".into()));
                 }
                 _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1370,7 +1355,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Ast::Return(_, None) => {}
+                    Statement::Return(box r) => assert_eq!(*r.get_value(), None),
                     _ => panic!("Wrong body, expected unit return"),
                 }
             } else {
@@ -1414,7 +1399,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Ast::Return(_, None) => {}
+                    Statement::Return(box r) => assert_eq!(*r.get_value(), None),
                     _ => panic!("Wrong body, expected unit return"),
                 }
             } else {
@@ -1477,7 +1462,7 @@ pub mod tests {
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Ast::Return(_, None) => {}
+                Statement::Return(box r) => assert_eq!(*r.get_value(), None),
                 _ => panic!("Wrong body, expected unit return"),
             }
         } else {
@@ -1509,8 +1494,8 @@ pub mod tests {
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Ast::Return(_, Some(exp)) => {
-                    assert_eq!(*exp.as_ref(), Ast::Boolean(1, true));
+                Statement::Return(box r) => {
+                    assert_eq!(*r.get_value(), Some(Ast::Boolean(1, true)));
                 }
                 _ => panic!("No body"),
             }
@@ -1595,8 +1580,8 @@ pub mod tests {
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Ast::Return(_, Some(exp)) => {
-                        assert_eq!(*exp.as_ref(), Ast::Boolean(1, true));
+                    Statement::Return(box r) => {
+                        assert_eq!(*r.get_value(), Some(Ast::Boolean(1, true)));
                     }
                     _ => panic!("No body"),
                 }
@@ -1617,7 +1602,6 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x");
                     assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
@@ -1632,8 +1616,6 @@ pub mod tests {
                     );
                 }
                 _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1648,7 +1630,6 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x");
                     assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
@@ -1663,8 +1644,6 @@ pub mod tests {
                     );
                 }
                 _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
         }
     }
 
@@ -1692,10 +1671,10 @@ pub mod tests {
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Ast::Return(_, Some(exp)) => {
+                Statement::Return(box r) => {
                     assert_eq!(
-                        *exp.as_ref(),
-                        Ast::Yield(1, Box::new(Ast::Identifier(1, "cor".into())))
+                        *r.get_value(),
+                        Some(Ast::Yield(1, Box::new(Ast::Identifier(1, "cor".into()))))
                     );
                 }
                 _ => panic!("No body"),
@@ -1841,23 +1820,20 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 2);
             match &body[0] {
-                Ast::Statement(stm) => match stm {
                     Statement::Bind(box b) => {
                         assert_eq!(b.get_id(), "x");
                         assert_eq!(b.get_type(), Type::I32);
                         assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
                     }
                     _ => panic!("Not a binding statement"),
-                },
-                _ => panic!("No body: {:?}", &body[0]),
             }
             match &body[1] {
-                Ast::Statement(Statement::Expression(box Ast::RoutineCall(
+                Statement::Expression(box Ast::RoutineCall(
                     _,
                     RoutineCall::Function,
                     fn_name,
                     params,
-                ))) => {
+                )) => {
                     assert_eq!(*fn_name, vec!["f"].into());
                     assert_eq!(params[0], Ast::Identifier(1, "x".into()));
                 }
@@ -1975,8 +1951,8 @@ pub mod tests {
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
-                        Ast::Return(.., Some(rv)) => {
-                            assert_eq!(*rv, Box::new(Ast::StringLiteral(1, expected.into())))
+                        Statement::Return(box r) => {
+                            assert_eq!(*r.get_value(), Some(Ast::StringLiteral(1, expected.into())))
                         }
                         _ => assert!(false, "Not a return statement"),
                     },

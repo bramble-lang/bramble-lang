@@ -1157,7 +1157,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_metadata().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1493,7 +1493,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_metadata().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1562,7 +1562,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_metadata().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1632,7 +1632,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_metadata().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1702,7 +1702,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_metadata().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1772,7 +1772,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_metadata().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1851,7 +1851,7 @@ mod tests {
                         let ret_stm = &fn_main.get_body()[1];
                         assert_eq!(ret_stm.get_type(), expected_ty);
                         if let Statement::Return(box r) = ret_stm {
-                            assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                            assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                         } else {
                             panic!("Expected a return statement")
                         }
@@ -1929,7 +1929,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_type(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
