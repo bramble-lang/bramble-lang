@@ -1,4 +1,4 @@
-use super::{path::Path, statement::{self, Statement}, ty::Type};
+use super::{path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -86,7 +86,6 @@ pub enum Ast<I> {
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
 
-    Statement(statement::Statement<I>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
 }
@@ -110,7 +109,6 @@ impl<I> Ast<I> {
             If(_, _, _, _) => "if".into(),
             ExpressionBlock(..) => "expression block".into(),
 
-            Statement(..) => "statement".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
         }
@@ -135,7 +133,6 @@ impl<I> Ast<I> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
-            Statement(stm) => stm.get_metadata(),
         }
     }
 
@@ -158,7 +155,6 @@ impl<I> Ast<I> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
-            Statement(stm) => stm.get_metadata_mut(),
         }
     }
 
