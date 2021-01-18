@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Statement}, structdef::StructDef, ty::Type}};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Statement}, structdef::StructDef, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -314,12 +314,12 @@ fn statement(stream: &mut TokenStream) -> PResult {
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
     let stm = match let_bind(stream)? {
         Some(bind) => Some(Statement::Bind(Box::new(bind))),
-        None => {
-            mutate(stream)
-            .por(println_stmt, stream)
-            .por(expression, stream)?
-            .map(|s| Statement::from_ast(s))
-            .flatten()
+        None => match mutate(stream)? {
+            Some(mutate) => Some(Statement::Mutate(Box::new(mutate))),
+            None => println_stmt(stream)
+                .por(expression, stream)?
+                .map(|s| Statement::from_ast(s))
+                .flatten()
         }
     };
 
@@ -687,7 +687,7 @@ fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
     }
 }
 
-fn mutate(stream: &mut TokenStream) -> PResult {
+fn mutate(stream: &mut TokenStream) -> Result<Option<Mutate<ParserInfo>>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
         None => Ok(None),
@@ -700,7 +700,10 @@ fn mutate(stream: &mut TokenStream) -> PResult {
                 "L{}: expected expression on LHS of assignment",
                 tokens[2].l
             ))?;
-            PNode::new_mutate(tokens[0].l, &id, Box::new(exp))
+            //PNode::new_mutate(tokens[0].l, &id, Box::new(exp))
+            Ok(Some(
+                Mutate::new(tokens[0].l, &id, exp)
+            ))
         }
     }
 }
@@ -1239,9 +1242,9 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Mutate(box Ast::Mutate(_, id, exp)) => {
-                    assert_eq!(id, "x");
-                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
+                Statement::Mutate(box m) => {
+                    assert_eq!(m.get_id(), "x");
+                    assert_eq!(*m.get_rhs(), PNode::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
             },

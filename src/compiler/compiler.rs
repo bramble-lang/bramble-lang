@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{binary_op, syntax::statement::Bind};
+use crate::{binary_op, syntax::statement::{Bind, Mutate}};
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -488,7 +488,6 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,
-            Ast::Mutate(..) => self.traverse_mutate(ast, current_func, code)?,
             Ast::Return(_, ref exp) => {
                 assembly! {(code) {
                     {{self.return_exp(exp, current_func)?}}
@@ -759,24 +758,21 @@ impl<'a> Compiler<'a> {
 
     fn traverse_mutate(
         &mut self,
-        mutate: &'a Ast<Scope>,
+        mutate: &'a Mutate<Scope>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        if let Ast::Mutate(_, id, .., exp) = mutate {
-            let id_offset = self
-                .scope
-                .find(id)
-                .expect(&format!("Could not find variable {}\n{}", id, self.scope))
-                .offset;
-            assembly! {(code) {
-                ; {format!("Binding {}", id)}
-                {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
-            }}
-            Ok(())
-        } else {
-            panic!("Expected a mutate statement, but got {}", mutate.root_str())
-        }
+        let id = mutate.get_id();
+        let id_offset = self
+            .scope
+            .find(id)
+            .expect(&format!("Could not find variable {}\n{}", id, self.scope))
+            .offset;
+        assembly! {(code) {
+            ; {format!("Binding {}", id)}
+            {{self.bind(mutate.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+        }}
+        Ok(())
     }
 
     fn member_access(

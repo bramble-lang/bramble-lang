@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Statement}}};
+use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Mutate, Statement}}};
 
 use super::scope::Scope;
 
@@ -85,7 +85,6 @@ impl StringPool {
                 self.extract_from(tb);
                 self.extract_from(fb);
             }
-            Mutate(..) => self.extract_from_mutate(ast),
             Yield(_, e) => {
                 self.extract_from(e);
             }
@@ -161,12 +160,8 @@ impl StringPool {
         self.extract_from(bind.get_rhs())
     }
 
-    pub fn extract_from_mutate(&mut self, mutate: &CompilerNode) {
-        if let CompilerNode::Mutate(.., rhs) = mutate {
-            self.extract_from(rhs)
-        } else {
-            panic!("Expected a mutate statement, but got {}", mutate.root_str())
-        }
+    pub fn extract_from_mutate(&mut self, mutate: &Mutate<Scope>) {
+        self.extract_from(mutate.get_rhs())
     }
 }
 

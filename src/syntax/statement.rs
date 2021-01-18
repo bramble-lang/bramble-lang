@@ -2,8 +2,8 @@ use super::{ast::Ast, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
-    Bind(Box<self::Bind<M>>),
-    Mutate(Box<Ast<M>>),
+    Bind(Box<Bind<M>>),
+    Mutate(Box<Mutate<M>>),
     Return(Box<Ast<M>>),
     Yield(Box<Ast<M>>),
     YieldReturn(Box<Ast<M>>),
@@ -19,10 +19,11 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Mutate(x) | Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
+            | Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
             | Printbln(x) | Prints(x) => x.get_metadata(),
             Expression(e) => e.get_metadata(),
             Bind(b) => b.get_metadata(),
+            Mutate(m) => m.get_metadata(),
         }
     }
 
@@ -33,7 +34,6 @@ impl<M> Statement<M> {
             Ast::Printiln(_, _) => Some(Statement::Printiln(Box::new(ast))),
             Ast::Printbln(_, _) => Some(Statement::Printbln(Box::new(ast))),
             Ast::Statement(s) => Some(s),
-            Ast::Mutate(_, _, _) => Some(Statement::Mutate(Box::new(ast))),
             Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             Ast::Yield(_, _) => Some(Statement::Yield(Box::new(ast))),
             Ast::YieldReturn(_, _) => Some(Statement::YieldReturn(Box::new(ast))),
@@ -45,10 +45,11 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Mutate(x) | Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
+            Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
             | Printbln(x) | Prints(x) => x.get_metadata_mut(),
             Expression(e) => e.get_metadata_mut(),
             Bind(b) => b.get_metadata_mut(),
+            Mutate(m) => m.get_metadata_mut(),
         }
     }
 
@@ -56,10 +57,11 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Mutate(x) | Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
+            Return(x) | Yield(x) | YieldReturn(x) | Printi(x) | Printiln(x)
             | Printbln(x) | Prints(x) => x.root_str(),
             Expression(e) => e.root_str(),
             Bind(b) => b.root_str(),
+            Mutate(m) => m.root_str(),
         }
     }
 }

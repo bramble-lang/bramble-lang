@@ -1,4 +1,4 @@
-use crate::syntax::{path::Path, statement::Bind};
+use crate::syntax::{path::Path, statement::{Bind, Mutate}};
 use crate::syntax::ty::Type;
 use crate::{
     ast,
@@ -513,7 +513,6 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 }
             }
-            Ast::Mutate(..) => self.analyze_mutate(ast, current_func, sym),
             Ast::Return(meta, None) => match current_func {
                 None => Err(format!("Return called outside of a function")),
                 Some(cf) => {
@@ -957,42 +956,38 @@ impl<'a> SemanticAnalyzer<'a> {
 
     fn analyze_mutate(
         &mut self,
-        mutate: &SemanticNode,
+        mutate: &Mutate<SemanticMetadata>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<SemanticNode> {
-        if let Ast::Mutate(meta, id, rhs) = mutate {
-            match current_func {
-                Some(_) => {
-                    let mut meta = meta.clone();
-                    let rhs = self.traverse(&rhs, current_func, sym)?;
-                    match self.lookup(sym, &id)? {
-                        symbol => {
-                            if symbol.mutable {
-                                if symbol.ty == rhs.get_type() {
-                                    meta.ty = rhs.get_type().clone();
-                                    Ok(Ast::Mutate(meta.clone(), id.clone(), Box::new(rhs)))
-                                } else {
-                                    Err(format!(
-                                        "{} is of type {} but is assigned {}",
-                                        id,
-                                        symbol.ty,
-                                        rhs.get_type()
-                                    ))
-                                }
+    ) -> Result<Mutate<SemanticMetadata>> {
+        match current_func {
+            Some(_) => {
+                let mut meta = mutate.get_metadata().clone();
+                let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
+                match self.lookup(sym, mutate.get_id())? {
+                    symbol => {
+                        if symbol.mutable {
+                            if symbol.ty == rhs.get_type() {
+                                meta.ty = rhs.get_type().clone();
+                                Ok(Mutate::new(meta, mutate.get_id(), rhs))
                             } else {
-                                Err(format!("Variable {} is not mutable", id))
+                                Err(format!(
+                                    "{} is of type {} but is assigned {}",
+                                    mutate.get_id(),
+                                    symbol.ty,
+                                    rhs.get_type()
+                                ))
                             }
+                        } else {
+                            Err(format!("Variable {} is not mutable", mutate.get_id()))
                         }
                     }
                 }
-                None => Err(format!(
-                    "Attempting to mutate a variable {} outside of function",
-                    id
-                )),
             }
-        } else {
-            panic!("Expected Mutate statement but got {}", mutate.root_str())
+            None => Err(format!(
+                "Attempting to mutate a variable {} outside of function",
+                mutate.get_id()
+            )),
         }
     }
 }
@@ -1915,8 +1910,8 @@ mod tests {
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
                     assert_eq!(mut_stm.get_type(), I32);
-                    if let Ast::Statement(Statement::Mutate(box Ast::Mutate(_, _, rhs))) = mut_stm {
-                        assert_eq!(rhs.get_type(), expected_ty);
+                    if let Ast::Statement(Statement::Mutate(box m)) = mut_stm {
+                        assert_eq!(m.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }

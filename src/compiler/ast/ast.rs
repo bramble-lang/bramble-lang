@@ -1,7 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Statement}, structdef::StructDef}};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Statement}, structdef::StructDef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -105,7 +105,6 @@ impl CompilerNode {
                 let (fb, layout) = CompilerNode::compute_offsets(fb, layout, struct_table);
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
-            Mutate(..) => Self::compute_layouts_for_mutate(ast, layout, struct_table),
             Yield(m, e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
@@ -340,17 +339,13 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_mutate(
-        mutate: &Ast<SemanticMetadata>,
+        mutate: &Mutate<SemanticMetadata>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Ast<Scope>, LayoutData) {
-        if let Ast::Mutate(m, id, rhs) = mutate {
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
-            let (rhs, layout) = CompilerNode::compute_offsets(rhs, layout, struct_table);
-            (Ast::Mutate(meta, id.clone(), Box::new(rhs)), layout)
-        } else {
-            panic!("Expected a Mutate statement, but got {}", mutate.root_str())
-        }
+    ) -> (Mutate<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(mutate.get_metadata(), struct_table, layout);
+        let (rhs, layout) = CompilerNode::compute_offsets(mutate.get_rhs(), layout, struct_table);
+        (Mutate::new(meta, mutate.get_id(), rhs), layout)
     }
 
     fn compute_layouts_for(

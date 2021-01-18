@@ -1,4 +1,4 @@
-use crate::{semantics::symbol_table::*, syntax::statement::Bind};
+use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate}};
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -119,7 +119,6 @@ impl SemanticAst {
                 self.from_parser_ast(true_arm)?,
                 self.from_parser_ast(false_arm)?,
             ))),
-            Mutate(..) => self.from_mutate(ast),
             Return(l, None) => Ok(Box::new(Return(self.semantic_metadata_from(*l), None))),
             Return(l, Some(exp)) => Ok(Box::new(Return(
                 self.semantic_metadata_from(*l),
@@ -278,7 +277,7 @@ impl SemanticAst {
         if let Ast::Statement(statement) = statement {
             let inner = match statement {
                 Bind(b) => Bind(Box::new(self.from_bind(b)?)),
-                Mutate(x) => Mutate(self.from_parser_ast(x)?),
+                Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
                 Return(x) => Return(self.from_parser_ast(x)?),
                 Yield(x) => Yield(self.from_parser_ast(x)?),
                 YieldReturn(x) => YieldReturn(self.from_parser_ast(x)?),
@@ -305,16 +304,12 @@ impl SemanticAst {
         ))
     }
 
-    fn from_mutate(&mut self, mutate: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
-        if let Ast::Mutate(ln, name, rhs) = mutate {
-            Ok(Box::new(Ast::Mutate(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                self.from_parser_ast(rhs)?,
-            )))
-        } else {
-            panic!("Expected a Mutate statement but got {}", mutate.root_str())
-        }
+    fn from_mutate(&mut self, mutate: &Mutate<ParserInfo>) -> Result<Mutate<SemanticMetadata>> {
+            Ok(Mutate::new(
+                self.semantic_metadata_from(*mutate.get_metadata()),
+                mutate.get_id(),
+                *self.from_parser_ast(mutate.get_rhs())?,
+            ))
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {
