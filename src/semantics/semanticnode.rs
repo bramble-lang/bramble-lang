@@ -128,15 +128,20 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            ExpressionBlock(ln, body) => {
+            ExpressionBlock(ln, body, final_exp) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
                     let r = self.from_parser_ast(stmt)?;
                     nbody.push(*r);
                 }
+                let final_exp = match final_exp {
+                    None => None,
+                    Some(fe) => Some(self.from_parser_ast(fe)?),
+                };
                 Ok(Box::new(ExpressionBlock(
                     self.semantic_metadata_from(*ln),
                     nbody,
+                    final_exp,
                 )))
             }
             Statement(..) => self.from_statement(ast),

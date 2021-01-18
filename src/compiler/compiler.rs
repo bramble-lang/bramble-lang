@@ -457,9 +457,13 @@ impl<'a> Compiler<'a> {
                 ^end_lbl:
                 }};
             }
-            Ast::ExpressionBlock(_, body) => {
+            Ast::ExpressionBlock(_, body, final_exp) => {
                 for s in body.iter() {
                     self.traverse(s, current_func, code)?;
+                }
+                match final_exp {
+                    None => (),
+                    Some(fe) => self.traverse(fe, current_func, code)?,
                 }
             }
             Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,

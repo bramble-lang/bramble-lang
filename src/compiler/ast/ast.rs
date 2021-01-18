@@ -23,7 +23,7 @@ impl CompilerNode {
     ) -> (CompilerNode, LayoutData) {
         use Ast::*;
         match ast {
-            ExpressionBlock(m, body) => {
+            ExpressionBlock(m, body, final_exp) => {
                 let (meta, mut nlayout) = Scope::local_from(m, struct_table, layout);
                 let mut nbody = vec![];
                 for e in body.iter() {
@@ -31,7 +31,14 @@ impl CompilerNode {
                     nlayout = layout;
                     nbody.push(e);
                 }
-                (ExpressionBlock(meta, nbody), nlayout)
+                let (final_exp, nlayout) = match final_exp {
+                    None => (None, nlayout),
+                    Some(fe) => {
+                        let (fe, ld) = CompilerNode::compute_offsets(fe, nlayout, struct_table);
+                        (Some(Box::new(fe)), ld)
+                    }
+                };
+                (ExpressionBlock(meta, nbody, final_exp), nlayout)
             }
             Ast::Integer(m, i) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
@@ -579,12 +586,13 @@ mod ast_tests {
                 canonical_path: Path::new(),
             },
             vec![],
+            None,
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
-            CompilerNode::ExpressionBlock(m, _) => {
+            CompilerNode::ExpressionBlock(m, _, _) => {
                 assert_eq!(m.symbols.table.len(), 2);
                 assert_eq!(m.symbols.table["x"].size, 4);
                 assert_eq!(m.symbols.table["x"].offset, 4);
@@ -609,6 +617,7 @@ mod ast_tests {
                 canonical_path: Path::new(),
             },
             vec![],
+            None,
         );
 
         let mut semantic_table = symbol_table::SymbolTable::new();
@@ -622,20 +631,21 @@ mod ast_tests {
                 sym: semantic_table,
                 canonical_path: Path::new(),
             },
-            vec![sn],
+            vec![],
+            Some(Box::new(sn))
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 16);
         match cn.0 {
-            CompilerNode::ExpressionBlock(m, b) => {
+            CompilerNode::ExpressionBlock(m, b, fe) => {
                 assert_eq!(m.symbols.table.len(), 2);
                 assert_eq!(m.symbols.table["x"].size, 4);
                 assert_eq!(m.symbols.table["x"].offset, 4);
                 assert_eq!(m.symbols.table["y"].size, 4);
                 assert_eq!(m.symbols.table["y"].offset, 8);
                 match b.iter().nth(0) {
-                    Some(CompilerNode::ExpressionBlock(m, _)) => {
+                    Some(CompilerNode::ExpressionBlock(m, _, _)) => {
                         assert_eq!(m.symbols.table.len(), 2);
                         assert_eq!(m.symbols.table["x"].size, 4);
                         assert_eq!(m.symbols.table["x"].offset, 12);

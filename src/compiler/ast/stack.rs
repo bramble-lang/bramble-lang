@@ -78,7 +78,7 @@ mod tests {
     fn test_find_symbol_in_current_scope() {
         let mut scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         scope.insert("x", 4, 4);
-        let node = CompilerNode::ExpressionBlock(scope, vec![]);
+        let node = CompilerNode::ExpressionBlock(scope, vec![], None);
         let mut stack = ScopeStack::new();
         stack.push(&node.get_metadata());
 
@@ -94,10 +94,10 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
+        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_metadata());
         let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
+        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_metadata());
 
         let sym = stack.find("x").unwrap();
@@ -112,11 +112,11 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
+        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_metadata());
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 16);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
+        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_metadata());
 
         let sym = stack.find("x").unwrap();
@@ -131,10 +131,10 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
+        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_metadata());
         let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
+        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_metadata());
 
         assert_eq!(stack.find("y").is_none(), true);
@@ -146,7 +146,7 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("nope", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![]);
+        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_metadata());
 
         let mut fun_scope = Scope::new(
@@ -173,7 +173,7 @@ mod tests {
 
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![]);
+        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_metadata());
 
         assert_eq!(stack.find("x").is_some(), true);

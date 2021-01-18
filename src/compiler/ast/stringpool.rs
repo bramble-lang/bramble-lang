@@ -44,9 +44,13 @@ impl StringPool {
         use crate::ast::Ast::*;
 
         match ast {
-            ExpressionBlock(_, body) => {
+            ExpressionBlock(_, body, final_exp) => {
                 for e in body.iter() {
                     self.extract_from(e);
+                }
+                match final_exp {
+                    None => (),
+                    Some(fe) => self.extract_from(fe),
                 }
             }
             Integer(..) => {}

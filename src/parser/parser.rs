@@ -358,13 +358,10 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let mut stmts = block(stream)?;
 
-            match expression(stream)? {
-                Some(e) => stmts.push(e),
-                None => (),
-            }
+            let final_exp = expression(stream)?.map(|e| Box::new(e));
 
             stream.next_must_be(&Lex::RBrace)?;
-            Ok(Some(Ast::ExpressionBlock(token.l, stmts)))
+            Ok(Some(Ast::ExpressionBlock(token.l, stmts, final_exp)))
         }
         None => Ok(None),
     }
@@ -1724,13 +1721,13 @@ pub mod tests {
         if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
             assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(_l, body) = *if_arm {
+            if let Ast::ExpressionBlock(_l, body, final_exp) = *if_arm {
                 assert_eq!(body[0], Ast::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
-            if let Ast::ExpressionBlock(_l, body) = *else_arm {
+            if let Ast::ExpressionBlock(_l, body, final_exp) = *else_arm {
                 assert_eq!(body[0], Ast::Integer(1, 7));
             } else {
                 panic!("Expected Expression block");
@@ -1753,7 +1750,7 @@ pub mod tests {
         if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
             assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(_l, body) = *if_arm {
+            if let Ast::ExpressionBlock(_l, body, final_exp) = *if_arm {
                 assert_eq!(body[0], Ast::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
@@ -1769,13 +1766,13 @@ pub mod tests {
                         Box::new(Ast::Identifier(1, "z".into()))
                     )
                 );
-                if let Ast::ExpressionBlock(_l, body) = *if_arm {
+                if let Ast::ExpressionBlock(_l, body, final_exp) = *if_arm {
                     assert_eq!(body[0], Ast::Integer(1, 7));
                 } else {
                     panic!("Expected Expression block");
                 }
 
-                if let Ast::ExpressionBlock(_l, body) = *else_arm {
+                if let Ast::ExpressionBlock(_l, body, final_exp) = *else_arm {
                     assert_eq!(body[0], Ast::Integer(1, 8));
                 } else {
                     panic!("Expected Expression block");
@@ -1797,7 +1794,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut stream).unwrap() {
+        if let Some(Ast::ExpressionBlock(l, body, final_exp)) = expression_block(&mut stream).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 1);
             assert_eq!(body[0], Ast::Integer(1, 5));
@@ -1843,7 +1840,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body)) = expression_block(&mut stream).unwrap() {
+        if let Some(Ast::ExpressionBlock(l, body, final_exp)) = expression_block(&mut stream).unwrap() {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 3);
             match &body[0] {

@@ -609,7 +609,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             }
-            Ast::ExpressionBlock(meta, body) => {
+            Ast::ExpressionBlock(meta, body, final_exp) => {
                 let mut meta = meta.clone();
                 let mut resolved_body = vec![];
                 let mut ty = Unit;
@@ -620,9 +620,13 @@ impl<'a> SemanticAnalyzer<'a> {
                     ty = exp.get_type().clone();
                     resolved_body.push(exp);
                 }
+                let final_exp = match final_exp {
+                    None => None,
+                    Some(fe) => Some(Box::new(self.traverse(fe, current_func, &mut meta.sym)?))
+                };
                 self.stack.pop();
                 meta.ty = ty;
-                Ok(Ast::ExpressionBlock(meta.clone(), resolved_body))
+                Ok(Ast::ExpressionBlock(meta.clone(), resolved_body, final_exp))
             }
             Ast::StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();

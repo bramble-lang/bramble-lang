@@ -81,7 +81,7 @@ pub enum Ast<I> {
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     StructExpression(I, Path, Vec<(String, Ast<I>)>),
     If(I, Box<Ast<I>>, Box<Ast<I>>, Box<Ast<I>>),
-    ExpressionBlock(I, Vec<Ast<I>>),
+    ExpressionBlock(I, Vec<Ast<I>>, Option<Box<Ast<I>>>),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
@@ -108,7 +108,7 @@ impl<I> Ast<I> {
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
             If(_, _, _, _) => "if".into(),
-            ExpressionBlock(_, _) => "expression block".into(),
+            ExpressionBlock(..) => "expression block".into(),
 
             Statement(..) => "statement".into(),
             Return(_, _) => "return".into(),
