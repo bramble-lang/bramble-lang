@@ -46,7 +46,7 @@ impl StringPool {
         match ast {
             ExpressionBlock(_, body, final_exp) => {
                 for e in body.iter() {
-                    self.extract_from(e);
+                    self.extract_from_statement(e);
                 }
                 match final_exp {
                     None => (),
@@ -120,7 +120,7 @@ impl StringPool {
 
     pub fn extract_from_routine(&mut self, routine: &RoutineDef<Scope>) {
         for s in routine.get_body().iter() {
-            self.extract_from(s);
+            self.extract_from_statement(s);
         }
     }
 

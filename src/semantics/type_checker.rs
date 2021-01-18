@@ -1,4 +1,4 @@
-use crate::syntax::{statement::Return, ty::Type};
+use crate::syntax::{statement::{Return, Statement}, ty::Type};
 use crate::syntax::{
     path::Path,
     statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
@@ -560,7 +560,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     Ok(Ast::Yield(meta, Box::new(exp)))
                 }
             },
-            Ast::Statement(..) => self.analyze_statement(ast, current_func, sym),
+            Ast::Statement(s) => panic!("should not be here"), //self.analyze_statement(s, current_func, sym)?,
             Ast::RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
                 // test that the expressions passed to the function match the functions
@@ -615,7 +615,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 let tmp_sym = sym.clone();
                 self.stack.push(tmp_sym);
                 for stmt in body.iter() {
-                    let exp = self.traverse(stmt, current_func, &mut meta.sym)?;
+                    let exp = self.analyze_statement(stmt, current_func, &mut meta.sym)?;
                     resolved_body.push(exp);
                 }
 
@@ -756,7 +756,7 @@ impl<'a> SemanticAnalyzer<'a> {
         self.stack.push(tmp_sym);
         let mut resolved_body = vec![];
         for stmt in body.iter() {
-            let exp = self.traverse(stmt, &Some(name.clone()), &mut meta.sym)?;
+            let exp = self.analyze_statement(stmt, &Some(name.clone()), &mut meta.sym)?;
             resolved_body.push(exp);
         }
         self.stack.pop();
@@ -822,36 +822,32 @@ impl<'a> SemanticAnalyzer<'a> {
 
     fn analyze_statement(
         &mut self,
-        stmt: &SemanticNode,
+        stmt: &Statement<SemanticMetadata>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<SemanticNode> {
+    ) -> Result<Statement<SemanticMetadata>> {
         use statement::Statement::*;
-        if let Ast::Statement(statement) = stmt {
-            let inner = match statement {
-                Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
-                Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
-                Return(box x) => Return(Box::new(self.analyze_return(x, current_func, sym)?)),
-                YieldReturn(box x) => {
-                    YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
-                }
-                Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
-                Printiln(box x) => {
-                    Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?))
-                }
-                Printbln(box x) => {
-                    Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?))
-                }
-                Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
-                Expression(box e) => {
-                    Expression(Box::new(self.analyize_node(e, current_func, sym)?))
-                }
-            };
+        let inner = match stmt {
+            Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
+            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
+            Return(box x) => Return(Box::new(self.analyze_return(x, current_func, sym)?)),
+            YieldReturn(box x) => {
+                YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
+            }
+            Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
+            Printiln(box x) => {
+                Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?))
+            }
+            Printbln(box x) => {
+                Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?))
+            }
+            Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
+            Expression(box e) => {
+                Expression(Box::new(self.analyize_node(e, current_func, sym)?))
+            }
+        };
 
-            Ok(Ast::Statement(inner))
-        } else {
-            panic!("Expected a statement, but got {}", stmt.root_str())
-        }
+        Ok(inner)
     }
 
     fn analyze_bind(
@@ -1159,9 +1155,9 @@ mod tests {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, Some(value)) = ret_stm {
-                        assert_eq!(value.get_type(), expected_ty);
+                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1340,7 +1336,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Routine(routinedef::RoutineDef { body, .. }) = &result.get_functions()[0] {
-                if let Ast::Statement(Statement::Bind(box b)) = &body[0] {
+                if let Statement::Bind(box b) = &body[0] {
                     if let Ast::StructExpression(_, struct_name, ..) = b.get_rhs() {
                         let expected: Path = vec!["root", "test"].into();
                         assert_eq!(struct_name, &expected)
@@ -1495,9 +1491,9 @@ mod tests {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, Some(value)) = ret_stm {
-                        assert_eq!(value.get_type(), expected_ty);
+                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1555,8 +1551,8 @@ mod tests {
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
-                        assert_eq!(bind_stm.get_type(), I32);
+                    if let Statement::Bind(box b) = bind_stm {
+                        assert_eq!(bind_stm.get_metadata().ty, I32);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1564,9 +1560,9 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, Some(value)) = ret_stm {
-                        assert_eq!(value.get_type(), expected_ty);
+                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1623,10 +1619,10 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I32);
+                    assert_eq!(bind_stm.get_metadata().ty, I32);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1634,9 +1630,9 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, Some(value)) = ret_stm {
-                        assert_eq!(value.get_type(), expected_ty);
+                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1693,10 +1689,10 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Bool);
+                    assert_eq!(bind_stm.get_metadata().ty, Bool);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1704,9 +1700,9 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, Some(value)) = ret_stm {
-                        assert_eq!(value.get_type(), expected_ty);
+                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1763,10 +1759,10 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Bool);
+                    assert_eq!(bind_stm.get_metadata().ty, Bool);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1774,9 +1770,9 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, Some(value)) = ret_stm {
-                        assert_eq!(value.get_type(), expected_ty);
+                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -1845,7 +1841,7 @@ mod tests {
                         assert_eq!(bind_stm.get_type(), Bool);
 
                         // validate that the RHS of the bind is the correct type
-                        if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                        if let Statement::Bind(box b) = bind_stm {
                             assert_eq!(b.get_rhs().get_type(), expected_ty);
                         } else {
                             panic!("Expected a bind statement");
@@ -1854,8 +1850,8 @@ mod tests {
                         // Validate that the return statement is the correct type
                         let ret_stm = &fn_main.get_body()[1];
                         assert_eq!(ret_stm.get_type(), expected_ty);
-                        if let Ast::Return(_, Some(value)) = ret_stm {
-                            assert_eq!(value.get_type(), expected_ty);
+                        if let Statement::Return(box r) = ret_stm {
+                            assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                         } else {
                             panic!("Expected a return statement")
                         }
@@ -1923,7 +1919,7 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     assert_eq!(bind_stm.get_type(), I32);
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1932,8 +1928,8 @@ mod tests {
                     // validate the return statement is typed correctly
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, Some(value)) = ret_stm {
-                        assert_eq!(value.get_type(), expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
                     }
@@ -2005,7 +2001,7 @@ mod tests {
                     assert_eq!(bind_stm.get_type(), I32);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -2014,7 +2010,7 @@ mod tests {
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
                     assert_eq!(mut_stm.get_type(), I32);
-                    if let Ast::Statement(Statement::Mutate(box m)) = mut_stm {
+                    if let Statement::Mutate(box m) = mut_stm {
                         assert_eq!(m.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2082,8 +2078,8 @@ mod tests {
                     // Check the return value
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, value) = ret_stm {
-                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                    if let Statement::Return(box r) = ret_stm {
+                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2196,8 +2192,8 @@ mod tests {
                     // Check the return value
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, value) = ret_stm {
-                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                    if let Statement::Return(box r) = ret_stm {
+                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2284,7 +2280,7 @@ mod tests {
                     assert_eq!(bind_stm.get_type(), Coroutine(Box::new(I32)));
 
                     // validate that the RHS of the bind is the correct type
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement, got {:?}", bind_stm);
@@ -2367,7 +2363,7 @@ mod tests {
                     assert_eq!(yret_stm.get_type(), I32);
 
                     // validate that the RHS of the yield return is the correct type
-                    if let Ast::Statement(Statement::YieldReturn(box yr)) = yret_stm {
+                    if let Statement::YieldReturn(box yr) = yret_stm {
                         match yr.get_value() {
                             None => panic!("Expected a value"),
                             Some(v) => assert_eq!(v.get_type(), expected_ty),
@@ -2442,7 +2438,7 @@ mod tests {
                     assert_eq!(bind_stm.get_type(), I32);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement, got {:?}", bind_stm);
@@ -2502,8 +2498,8 @@ mod tests {
                     // Check the return value
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, value) = ret_stm {
-                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                    if let Statement::Return(box r) = ret_stm {
+                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2563,8 +2559,8 @@ mod tests {
                     // Check the return value
                     let ret_stm = &co_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Ast::Return(_, value) = ret_stm {
-                        let value_ty = value.clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                    if let Statement::Return(box r) = ret_stm {
+                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2637,7 +2633,7 @@ mod tests {
                     assert_eq!(bind_stm.get_type(), I32);
 
                     // Check the return value
-                    if let Ast::Statement(Statement::Bind(box b)) = bind_stm {
+                    if let Statement::Bind(box b) = bind_stm {
                         let rhs_ty = b.get_rhs().get_type();
                         assert_eq!(rhs_ty, expected_ty);
                     } else {

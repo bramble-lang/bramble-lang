@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printiln, Prints, Statement, YieldReturn}, structdef::StructDef, ty::Type}};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printiln, Prints, Return, Statement, YieldReturn}, structdef::StructDef, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -221,7 +221,7 @@ fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
     let mut stmts = block(stream)?;
 
     match return_stmt(stream)? {
-        Some(ret) => stmts.push(ret),
+        Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return Err(format!(
                 "L{}: Function must end with a return statement, got {:?}",
@@ -261,7 +261,7 @@ fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
     let mut stmts = co_block(stream)?;
 
     match return_stmt(stream)? {
-        Some(ret) => stmts.push(ret),
+        Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return Err(format!(
                 "L{}: Coroutine must end with a return statement",
@@ -281,7 +281,7 @@ fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
     }))
 }
 
-fn block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
+fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
         stmts.push(s);
@@ -289,7 +289,7 @@ fn block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
     Ok(stmts)
 }
 
-fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
+fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     let mut stmts = vec![];
     while let Some(s) = statement_or_yield_return(stream)? {
         stmts.push(s);
@@ -297,11 +297,11 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
     Ok(stmts)
 }
 
-fn statement_or_yield_return(stream: &mut TokenStream) -> PResult {
+fn statement_or_yield_return(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
     let stm = match statement(stream)? {
         Some(n) => Some(n),
         None => match yield_return_stmt(stream)? {
-            Some(yr) => Some(Ast::Statement(yr)),
+            Some(yr) => Some(yr),
             None => None,
         },
     };
@@ -309,7 +309,7 @@ fn statement_or_yield_return(stream: &mut TokenStream) -> PResult {
     Ok(stm)
 }
 
-fn statement(stream: &mut TokenStream) -> PResult {
+fn statement(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
     let start_index = stream.index();
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
     let stm = match let_bind(stream)? {
@@ -328,7 +328,7 @@ fn statement(stream: &mut TokenStream) -> PResult {
 
     match stm {
         Some(stm) => match stream.next_if(&Lex::Semicolon) {
-            Some(Token { s: _, .. }) => Ok(Some(Ast::Statement(stm))),
+            Some(Token { s: _, .. }) => Ok(Some(stm)),
             _ => {
                 if must_have_semicolon {
                     let line = *stm.get_metadata();
@@ -590,15 +590,15 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
     }
 }
 
-fn return_stmt(stream: &mut TokenStream) -> PResult {
+fn return_stmt(stream: &mut TokenStream) -> Result<Option<Return<ParserInfo>>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::Return) {
         Some(token) => {
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             match exp {
-                Some(exp) => Some(Ast::Return(token.l, Some(Box::new(exp)))),
-                None => Some(Ast::Return(token.l, None)),
+                Some(exp) => Some(Return::new(token.l, Some(exp))),
+                None => Some(Return::new(token.l, None)),
             }
         }
         _ => None,
@@ -1218,16 +1218,13 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(stm) => match stm {
-                Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), Type::I32);
-                    assert_eq!(b.is_mutable(), true);
-                    assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
-                }
-                _ => panic!("Not a binding statement"),
-            },
-            _ => panic!("No body: {:?}", stm),
+            Statement::Bind(box b) => {
+                assert_eq!(b.get_id(), "x");
+                assert_eq!(b.get_type(), Type::I32);
+                assert_eq!(b.is_mutable(), true);
+                assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
+            }
+            _ => panic!("Not a binding statement"),
         }
     }
     #[test]

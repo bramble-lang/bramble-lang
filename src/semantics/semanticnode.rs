@@ -32,6 +32,13 @@ impl SemanticNode {
     }
 }
 
+impl Statement<SemanticMetadata> {
+    pub fn get_type(&self) -> &Type {
+        let m = self.get_metadata();
+        &m.ty
+    }
+}
+
 impl SemanticMetadata {
     pub fn new(id: u32, ln: u32, ty: Type) -> SemanticMetadata {
         SemanticMetadata {
@@ -131,8 +138,8 @@ impl SemanticAst {
             ExpressionBlock(ln, body, final_exp) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
-                    let r = self.from_parser_ast(stmt)?;
-                    nbody.push(*r);
+                    let r = self.from_statement(stmt)?;
+                    nbody.push(r);
                 }
                 let final_exp = match final_exp {
                     None => None,
@@ -144,7 +151,7 @@ impl SemanticAst {
                     final_exp,
                 )))
             }
-            Statement(..) => self.from_statement(ast),
+            Statement(s) => panic!("Should not be here"), //self.from_statement(ast),
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -212,8 +219,8 @@ impl SemanticAst {
             }) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
-                    let r = self.from_parser_ast(stmt)?;
-                    nbody.push(*r);
+                    let r = self.from_statement(stmt)?;
+                    nbody.push(r);
                 }
                 Ok(Item::Routine(RoutineDef {
                     meta: self.semantic_metadata_from(*ln),
@@ -252,27 +259,23 @@ impl SemanticAst {
 
     fn from_statement(
         &mut self,
-        statement: &Ast<ParserInfo>,
-    ) -> Result<Box<Ast<SemanticMetadata>>> {
+        statement: &Statement<ParserInfo>,
+    ) -> Result<Statement<SemanticMetadata>> {
         use Statement::*;
 
-        if let Ast::Statement(statement) = statement {
-            let inner = match statement {
-                Bind(b) => Bind(Box::new(self.from_bind(b)?)),
-                Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
-                Return(x) => Return(Box::new(self.from_return(x)?)),
-                YieldReturn(x) => YieldReturn(Box::new(self.from_yieldreturn(x)?)),
-                Printi(x) => Printi(Box::new(self.from_printi(x)?)),
-                Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
-                Printbln(x) => Printbln(Box::new(self.from_printbln(x)?)),
-                Prints(x) => Prints(Box::new(self.from_prints(x)?)),
-                Expression(e) => Expression(self.from_parser_ast(e)?),
-            };
+        let inner = match statement {
+            Bind(b) => Bind(Box::new(self.from_bind(b)?)),
+            Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
+            Return(x) => Return(Box::new(self.from_return(x)?)),
+            YieldReturn(x) => YieldReturn(Box::new(self.from_yieldreturn(x)?)),
+            Printi(x) => Printi(Box::new(self.from_printi(x)?)),
+            Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
+            Printbln(x) => Printbln(Box::new(self.from_printbln(x)?)),
+            Prints(x) => Prints(Box::new(self.from_prints(x)?)),
+            Expression(e) => Expression(self.from_parser_ast(e)?),
+        };
 
-            Ok(Box::new(Ast::Statement(inner)))
-        } else {
-            panic!("Expected a statement, but got {}", statement.root_str())
-        }
+        Ok(inner)
     }
 
     fn from_bind(&mut self, bind: &Bind<ParserInfo>) -> Result<Bind<SemanticMetadata>> {

@@ -1,4 +1,4 @@
-use super::{path::Path, statement, ty::Type};
+use super::{path::Path, statement::{self, Statement}, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -81,7 +81,7 @@ pub enum Ast<I> {
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     StructExpression(I, Path, Vec<(String, Ast<I>)>),
     If(I, Box<Ast<I>>, Box<Ast<I>>, Box<Ast<I>>),
-    ExpressionBlock(I, Vec<Ast<I>>, Option<Box<Ast<I>>>),
+    ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Ast<I>>>),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),

@@ -459,7 +459,7 @@ impl<'a> Compiler<'a> {
             }
             Ast::ExpressionBlock(_, body, final_exp) => {
                 for s in body.iter() {
-                    self.traverse(s, current_func, code)?;
+                    self.traverse_statement(s, current_func, code)?;
                 }
                 match final_exp {
                     None => (),
@@ -655,7 +655,7 @@ impl<'a> Compiler<'a> {
             }};
 
             for s in stmts.iter() {
-                self.traverse(s, fn_name, code)?;
+                self.traverse_statement(s, fn_name, code)?;
             }
 
             assembly! {(code) {
@@ -683,7 +683,7 @@ impl<'a> Compiler<'a> {
         // Prepare stack frame for this function
         let name = routine.get_name().into();
         for s in routine.get_body().iter() {
-            self.traverse(s, &name, code)?;
+            self.traverse_statement(s, &name, code)?;
         }
         assembly! {(code) {
             mov %ebx, ^terminus;

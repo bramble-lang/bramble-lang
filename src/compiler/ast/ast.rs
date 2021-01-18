@@ -27,7 +27,7 @@ impl CompilerNode {
                 let (meta, mut nlayout) = Scope::local_from(m, struct_table, layout);
                 let mut nbody = vec![];
                 for e in body.iter() {
-                    let (e, layout) = CompilerNode::compute_offsets(e, nlayout, struct_table);
+                    let (e, layout) = CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
                     nlayout = layout;
                     nbody.push(e);
                 }
@@ -224,7 +224,7 @@ impl CompilerNode {
         let mut nbody = vec![];
         let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
-            let (e, layout) = CompilerNode::compute_offsets(e, nlayout, struct_table);
+            let (e, layout) = CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
             nlayout = layout;
             nbody.push(e);
         }
