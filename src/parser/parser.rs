@@ -25,6 +25,8 @@ use braid_lang::result::Result;
 use super::pnode::{PNode, PResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
 
+type ParserResult<T> = Result<Option<T>>;
+
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 static TRACE_START: AtomicUsize = AtomicUsize::new(0);
 static TRACE_END: AtomicUsize = AtomicUsize::new(0);
@@ -136,7 +138,7 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>> {
+pub fn parse(tokens: Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
     let start_index = stream.index();
     let mut item = None;
@@ -151,7 +153,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>> {
     Ok(item)
 }
 
-fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
+fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
             Some((_, module_name)) => {
@@ -170,7 +172,7 @@ fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
     Ok(mod_def)
 }
 
-fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
+fn parse_items(name: &str, stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     let module_line = stream.peek().map_or(1, |t| t.l);
     let mut parent_module = Module::new(name, module_line);
     while stream.peek().is_some() {
@@ -198,7 +200,7 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32
     Ok(Some(parent_module))
 }
 
-fn struct_def(stream: &mut TokenStream) -> Result<Option<StructDef<u32>>> {
+fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
     match stream.next_if(&Lex::Struct) {
         Some(token) => match stream.next_if_id() {
             Some((line, id)) => {
@@ -213,7 +215,7 @@ fn struct_def(stream: &mut TokenStream) -> Result<Option<StructDef<u32>>> {
     }
 }
 
-fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
+fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -254,7 +256,7 @@ fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
     }))
 }
 
-fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
+fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let co_line = match stream.next_if(&Lex::CoroutineDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -309,7 +311,7 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     Ok(stmts)
 }
 
-fn statement_or_yield_return(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn statement_or_yield_return(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     let stm = match statement(stream)? {
         Some(n) => Some(n),
         None => match yield_return_stmt(stream)? {
@@ -321,7 +323,7 @@ fn statement_or_yield_return(stream: &mut TokenStream) -> Result<Option<Statemen
     Ok(stm)
 }
 
-fn statement(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn statement(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     let start_index = stream.index();
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
     let stm = match let_bind(stream)? {
@@ -552,7 +554,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> 
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>> {
+fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<PNode>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -576,7 +578,7 @@ fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>> {
     }
 }
 
-fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>> {
+fn struct_init_params(stream: &mut TokenStream) -> ParserResult<Vec<(String, PNode)>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
@@ -601,7 +603,7 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
     }
 }
 
-fn return_stmt(stream: &mut TokenStream) -> Result<Option<Return<ParserInfo>>> {
+fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<ParserInfo>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::Return) {
         Some(token) => {
@@ -616,7 +618,7 @@ fn return_stmt(stream: &mut TokenStream) -> Result<Option<Return<ParserInfo>>> {
     })
 }
 
-fn yield_return_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::YieldReturn) {
         Some(token) => {
@@ -646,7 +648,7 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn println_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn println_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     trace!(stream);
     let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
         Some(print) => {
@@ -667,7 +669,7 @@ fn println_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>
     Ok(syntax)
 }
 
-fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
+fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserInfo>> {
     trace!(stream);
     match stream.next_if(&Lex::Let) {
         Some(token) => {
@@ -698,7 +700,7 @@ fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
     }
 }
 
-fn mutate(stream: &mut TokenStream) -> Result<Option<Mutate<ParserInfo>>> {
+fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserInfo>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
         None => Ok(None),
@@ -799,7 +801,7 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn path(stream: &mut TokenStream) -> Result<Option<(u32, Path)>> {
+fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     trace!(stream);
     let mut path = vec![];
 
@@ -833,7 +835,7 @@ fn identifier(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>> {
+fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
     let ty = match stream.peek() {
@@ -864,7 +866,7 @@ fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>> {
     Ok(ty)
 }
 
-fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>> {
+fn id_declaration(stream: &mut TokenStream) -> ParserResult<PNode> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
