@@ -3,7 +3,19 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printiln, Prints, Return, Statement, YieldReturn}, structdef::StructDef, ty::Type}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+    syntax::{
+        ast::{Ast, RoutineCall},
+        module::Module,
+        path::Path,
+        routinedef::{RoutineDef, RoutineDefType},
+        statement::{Bind, Mutate, Printbln, Printiln, Prints, Return, Statement, YieldReturn},
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -318,12 +330,11 @@ fn statement(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> 
             Some(mutate) => Some(Statement::Mutate(Box::new(mutate))),
             None => match println_stmt(stream)? {
                 Some(p) => Some(p),
-                None => 
-                    expression(stream)?
+                None => expression(stream)?
                     .map(|s| Statement::from_ast(s))
-                    .flatten()
-            }
-        }
+                    .flatten(),
+            },
+        },
     };
 
     match stm {
@@ -671,7 +682,7 @@ fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
                 None => expression(stream)?
                     .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
             };
-            
+
             match id_decl {
                 Ast::IdentifierDeclare(_, id, ty) => {
                     Ok(Some(Bind::new(token.l, &id, ty.clone(), is_mutable, exp)))
@@ -701,9 +712,7 @@ fn mutate(stream: &mut TokenStream) -> Result<Option<Mutate<ParserInfo>>> {
                 tokens[2].l
             ))?;
             //PNode::new_mutate(tokens[0].l, &id, Box::new(exp))
-            Ok(Some(
-                Mutate::new(tokens[0].l, &id, exp)
-            ))
+            Ok(Some(Mutate::new(tokens[0].l, &id, exp)))
         }
     }
 }
@@ -1194,14 +1203,14 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-                Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), Type::I32);
-                    assert_eq!(b.is_mutable(), false);
-                    assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
-                }
-                _ => panic!("Not a binding statement"),
+            Statement::Bind(box b) => {
+                assert_eq!(b.get_id(), "x");
+                assert_eq!(b.get_type(), Type::I32);
+                assert_eq!(b.is_mutable(), false);
+                assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
             }
+            _ => panic!("Not a binding statement"),
+        }
     }
 
     #[test]
@@ -1235,11 +1244,11 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-                Statement::Mutate(box m) => {
-                    assert_eq!(m.get_id(), "x");
-                    assert_eq!(*m.get_rhs(), PNode::Integer(1, 5));
-                }
-                _ => panic!("Not a binding statement"),
+            Statement::Mutate(box m) => {
+                assert_eq!(m.get_id(), "x");
+                assert_eq!(*m.get_rhs(), PNode::Integer(1, 5));
+            }
+            _ => panic!("Not a binding statement"),
         }
     }
 
@@ -1254,10 +1263,10 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-                Statement::Printiln(box p) => {
-                    assert_eq!(*p.get_value(), PNode::Integer(1, 5));
-                }
-                _ => panic!("Not a binding statement"),
+            Statement::Printiln(box p) => {
+                assert_eq!(*p.get_value(), PNode::Integer(1, 5));
+            }
+            _ => panic!("Not a binding statement"),
         }
     }
 
@@ -1272,10 +1281,10 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-                Statement::Printbln(box p) => {
-                    assert_eq!(*p.get_value(), PNode::Boolean(1, true));
-                }
-                _ => panic!("Not a binding statement"),
+            Statement::Printbln(box p) => {
+                assert_eq!(*p.get_value(), PNode::Boolean(1, true));
+            }
+            _ => panic!("Not a binding statement"),
         }
     }
 
@@ -1290,10 +1299,10 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-                Statement::Prints(box p) => {
-                    assert_eq!(*p.get_value(), PNode::StringLiteral(1, "hello".into()));
-                }
-                _ => panic!("Not a binding statement"),
+            Statement::Prints(box p) => {
+                assert_eq!(*p.get_value(), PNode::StringLiteral(1, "hello".into()));
+            }
+            _ => panic!("Not a binding statement"),
         }
     }
 
@@ -1602,20 +1611,20 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-                Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
-                    assert_eq!(
-                        *b.get_rhs(),
-                        Ast::RoutineCall(
-                            1,
-                            RoutineCall::CoroutineInit,
-                            vec!["c"].into(),
-                            vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
-                        )
-                    );
-                }
-                _ => panic!("Not a binding statement"),
+            Statement::Bind(box b) => {
+                assert_eq!(b.get_id(), "x");
+                assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
+                assert_eq!(
+                    *b.get_rhs(),
+                    Ast::RoutineCall(
+                        1,
+                        RoutineCall::CoroutineInit,
+                        vec!["c"].into(),
+                        vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                    )
+                );
+            }
+            _ => panic!("Not a binding statement"),
         }
     }
 
@@ -1630,20 +1639,20 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-                Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
-                    assert_eq!(
-                        *b.get_rhs(),
-                        Ast::RoutineCall(
-                            1,
-                            RoutineCall::CoroutineInit,
-                            vec!["a", "b", "c"].into(),
-                            vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
-                        )
-                    );
-                }
-                _ => panic!("Not a binding statement"),
+            Statement::Bind(box b) => {
+                assert_eq!(b.get_id(), "x");
+                assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
+                assert_eq!(
+                    *b.get_rhs(),
+                    Ast::RoutineCall(
+                        1,
+                        RoutineCall::CoroutineInit,
+                        vec!["a", "b", "c"].into(),
+                        vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                    )
+                );
+            }
+            _ => panic!("Not a binding statement"),
         }
     }
 
@@ -1770,7 +1779,9 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) = expression_block(&mut stream).unwrap() {
+        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) =
+            expression_block(&mut stream).unwrap()
+        {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 0);
             assert_eq!(*final_exp, Ast::Integer(1, 5));
@@ -1816,16 +1827,18 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) = expression_block(&mut stream).unwrap() {
+        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) =
+            expression_block(&mut stream).unwrap()
+        {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 2);
             match &body[0] {
-                    Statement::Bind(box b) => {
-                        assert_eq!(b.get_id(), "x");
-                        assert_eq!(b.get_type(), Type::I32);
-                        assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
-                    }
-                    _ => panic!("Not a binding statement"),
+                Statement::Bind(box b) => {
+                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_type(), Type::I32);
+                    assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
+                }
+                _ => panic!("Not a binding statement"),
             }
             match &body[1] {
                 Statement::Expression(box Ast::RoutineCall(

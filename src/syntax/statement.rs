@@ -43,7 +43,7 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x)  => x.get_metadata_mut(),
+            Return(x) => x.get_metadata_mut(),
             YieldReturn(x) => x.get_metadata_mut(),
             Expression(e) => e.get_metadata_mut(),
             Bind(b) => b.get_metadata_mut(),
@@ -59,7 +59,7 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x)  => x.root_str(),
+            Return(x) => x.root_str(),
             YieldReturn(x) => x.root_str(),
             Expression(e) => e.root_str(),
             Bind(b) => b.root_str(),
@@ -121,7 +121,6 @@ impl<M> Bind<M> {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Mutate<M> {
     metadata: M,
@@ -167,10 +166,7 @@ pub struct Printi<M> {
 
 impl<M> Printi<M> {
     pub fn new(metadata: M, value: Ast<M>) -> Self {
-        Self {
-            metadata,
-            value,
-        }
+        Self { metadata, value }
     }
 
     pub fn get_metadata(&self) -> &M {
@@ -190,7 +186,6 @@ impl<M> Printi<M> {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printiln<M> {
     metadata: M,
@@ -199,10 +194,7 @@ pub struct Printiln<M> {
 
 impl<M> Printiln<M> {
     pub fn new(metadata: M, value: Ast<M>) -> Self {
-        Self {
-            metadata,
-            value,
-        }
+        Self { metadata, value }
     }
 
     pub fn get_metadata(&self) -> &M {
@@ -222,7 +214,6 @@ impl<M> Printiln<M> {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printbln<M> {
     metadata: M,
@@ -231,10 +222,7 @@ pub struct Printbln<M> {
 
 impl<M> Printbln<M> {
     pub fn new(metadata: M, value: Ast<M>) -> Self {
-        Self {
-            metadata,
-            value,
-        }
+        Self { metadata, value }
     }
 
     pub fn get_metadata(&self) -> &M {
@@ -254,7 +242,6 @@ impl<M> Printbln<M> {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Prints<M> {
     metadata: M,
@@ -263,10 +250,7 @@ pub struct Prints<M> {
 
 impl<M> Prints<M> {
     pub fn new(metadata: M, value: Ast<M>) -> Self {
-        Self {
-            metadata,
-            value,
-        }
+        Self { metadata, value }
     }
 
     pub fn get_metadata(&self) -> &M {
@@ -294,10 +278,7 @@ pub struct Yield<M> {
 
 impl<M> Yield<M> {
     pub fn new(metadata: M, value: Ast<M>) -> Self {
-        Self {
-            metadata,
-            value,
-        }
+        Self { metadata, value }
     }
 
     pub fn get_metadata(&self) -> &M {
@@ -325,10 +306,7 @@ pub struct YieldReturn<M> {
 
 impl<M> YieldReturn<M> {
     pub fn new(metadata: M, value: Option<Ast<M>>) -> Self {
-        Self {
-            metadata,
-            value,
-        }
+        Self { metadata, value }
     }
 
     pub fn get_metadata(&self) -> &M {
@@ -356,10 +334,7 @@ pub struct Return<M> {
 
 impl<M> Return<M> {
     pub fn new(metadata: M, value: Option<Ast<M>>) -> Self {
-        Self {
-            metadata,
-            value,
-        }
+        Self { metadata, value }
     }
 
     pub fn get_metadata(&self) -> &M {

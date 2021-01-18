@@ -1,7 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{binary_op, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn}};
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -27,6 +26,12 @@ use crate::{ast::RoutineCall, syntax::statement::Statement};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ty::Type,
+};
+use crate::{
+    binary_op,
+    syntax::statement::{
+        Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
+    },
 };
 
 use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
@@ -714,7 +719,11 @@ impl<'a> Compiler<'a> {
         let id_offset = self
             .scope
             .find(bind.get_id())
-            .expect(&format!("Could not find variable {}\n{}", bind.get_id(), self.scope))
+            .expect(&format!(
+                "Could not find variable {}\n{}",
+                bind.get_id(),
+                self.scope
+            ))
             .offset;
         assembly! {(code) {
             ; {format!("Binding {}", bind.get_id())}

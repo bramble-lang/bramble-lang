@@ -1,7 +1,18 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn}, structdef::StructDef}};
+use crate::{
+    compiler::ast::scope::{LayoutData, Scope},
+    semantics::semanticnode::SemanticMetadata,
+    syntax::{
+        module::{self, Item, Module},
+        routinedef::{RoutineDef, RoutineDefType},
+        statement::{
+            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn,
+        },
+        structdef::StructDef,
+    },
+};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -27,7 +38,8 @@ impl CompilerNode {
                 let (meta, mut nlayout) = Scope::local_from(m, struct_table, layout);
                 let mut nbody = vec![];
                 for e in body.iter() {
-                    let (e, layout) = CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
+                    let (e, layout) =
+                        CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
                     nlayout = layout;
                     nbody.push(e);
                 }
@@ -294,7 +306,13 @@ impl CompilerNode {
         let (meta, layout) = Scope::local_from(bind.get_metadata(), struct_table, layout);
         let (rhs, layout) = CompilerNode::compute_offsets(bind.get_rhs(), layout, struct_table);
         (
-            Bind::new(meta, bind.get_id(), bind.get_type().clone(), bind.is_mutable(), rhs),
+            Bind::new(
+                meta,
+                bind.get_id(),
+                bind.get_type().clone(),
+                bind.is_mutable(),
+                rhs,
+            ),
             layout,
         )
     }
@@ -366,9 +384,7 @@ impl CompilerNode {
     ) -> (YieldReturn<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(yr.get_metadata(), struct_table, layout);
         match yr.get_value() {
-            None => {
-                (YieldReturn::new(meta, None), layout)
-            }
+            None => (YieldReturn::new(meta, None), layout),
             Some(val) => {
                 let (value, layout) = CompilerNode::compute_offsets(val, layout, struct_table);
                 (YieldReturn::new(meta, Some(value)), layout)
@@ -383,9 +399,7 @@ impl CompilerNode {
     ) -> (Return<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(r.get_metadata(), struct_table, layout);
         match r.get_value() {
-            None => {
-                (Return::new(meta, None), layout)
-            }
+            None => (Return::new(meta, None), layout),
             Some(val) => {
                 let (value, layout) = CompilerNode::compute_offsets(val, layout, struct_table);
                 (Return::new(meta, Some(value)), layout)
@@ -619,7 +633,7 @@ mod ast_tests {
                 canonical_path: Path::new(),
             },
             vec![],
-            Some(Box::new(sn))
+            Some(Box::new(sn)),
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);

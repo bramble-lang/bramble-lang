@@ -1,4 +1,3 @@
-use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn}};
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -12,6 +11,12 @@ use crate::{
     diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
 };
 use crate::{parser::pnode::PNode, syntax::statement::Statement};
+use crate::{
+    semantics::symbol_table::*,
+    syntax::statement::{
+        Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
+    },
+};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -283,75 +288,74 @@ impl SemanticAst {
     }
 
     fn from_mutate(&mut self, mutate: &Mutate<ParserInfo>) -> Result<Mutate<SemanticMetadata>> {
-            Ok(Mutate::new(
-                self.semantic_metadata_from(*mutate.get_metadata()),
-                mutate.get_id(),
-                *self.from_parser_ast(mutate.get_rhs())?,
-            ))
+        Ok(Mutate::new(
+            self.semantic_metadata_from(*mutate.get_metadata()),
+            mutate.get_id(),
+            *self.from_parser_ast(mutate.get_rhs())?,
+        ))
     }
 
     fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticMetadata>> {
-            Ok(Printi::new(
-                self.semantic_metadata_from(*p.get_metadata()),
-                *self.from_parser_ast(p.get_value())?,
-            ))
+        Ok(Printi::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
     }
 
     fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticMetadata>> {
-            Ok(Printiln::new(
-                self.semantic_metadata_from(*p.get_metadata()),
-                *self.from_parser_ast(p.get_value())?,
-            ))
+        Ok(Printiln::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
     }
 
     fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticMetadata>> {
-            Ok(Printbln::new(
-                self.semantic_metadata_from(*p.get_metadata()),
-                *self.from_parser_ast(p.get_value())?,
-            ))
+        Ok(Printbln::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
     }
 
     fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticMetadata>> {
-            Ok(Prints::new(
-                self.semantic_metadata_from(*p.get_metadata()),
-                *self.from_parser_ast(p.get_value())?,
-            ))
+        Ok(Prints::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
     }
 
     fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticMetadata>> {
-            Ok(Yield::new(
-                self.semantic_metadata_from(*y.get_metadata()),
-                *self.from_parser_ast(y.get_value())?,
-            ))
+        Ok(Yield::new(
+            self.semantic_metadata_from(*y.get_metadata()),
+            *self.from_parser_ast(y.get_value())?,
+        ))
     }
 
-    fn from_yieldreturn(&mut self, yr: &YieldReturn<ParserInfo>) -> Result<YieldReturn<SemanticMetadata>> {
+    fn from_yieldreturn(
+        &mut self,
+        yr: &YieldReturn<ParserInfo>,
+    ) -> Result<YieldReturn<SemanticMetadata>> {
         match yr.get_value() {
-            None => 
-                Ok(YieldReturn::new(
-                    self.semantic_metadata_from(*yr.get_metadata()),
-                    None,
-                )),
-            Some(val) => 
-                Ok(YieldReturn::new(
-                    self.semantic_metadata_from(*yr.get_metadata()),
-                    Some(*self.from_parser_ast(val)?),
-                ))
+            None => Ok(YieldReturn::new(
+                self.semantic_metadata_from(*yr.get_metadata()),
+                None,
+            )),
+            Some(val) => Ok(YieldReturn::new(
+                self.semantic_metadata_from(*yr.get_metadata()),
+                Some(*self.from_parser_ast(val)?),
+            )),
         }
     }
 
     fn from_return(&mut self, r: &Return<ParserInfo>) -> Result<Return<SemanticMetadata>> {
         match r.get_value() {
-            None => 
-                Ok(Return::new(
-                    self.semantic_metadata_from(*r.get_metadata()),
-                    None,
-                )),
-            Some(val) => 
-                Ok(Return::new(
-                    self.semantic_metadata_from(*r.get_metadata()),
-                    Some(*self.from_parser_ast(val)?),
-                ))
+            None => Ok(Return::new(
+                self.semantic_metadata_from(*r.get_metadata()),
+                None,
+            )),
+            Some(val) => Ok(Return::new(
+                self.semantic_metadata_from(*r.get_metadata()),
+                Some(*self.from_parser_ast(val)?),
+            )),
         }
     }
 

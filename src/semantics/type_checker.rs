@@ -1,7 +1,10 @@
-use crate::syntax::{statement::{Return, Statement}, ty::Type};
 use crate::syntax::{
     path::Path,
     statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
+};
+use crate::syntax::{
+    statement::{Return, Statement},
+    ty::Type,
 };
 use crate::{
     ast,
@@ -802,16 +805,10 @@ impl<'a> SemanticAnalyzer<'a> {
                 YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
             }
             Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
-            Printiln(box x) => {
-                Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?))
-            }
-            Printbln(box x) => {
-                Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?))
-            }
+            Printiln(box x) => Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?)),
+            Printbln(box x) => Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?)),
             Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
-            Expression(box e) => {
-                Expression(Box::new(self.analyize_node(e, current_func, sym)?))
-            }
+            Expression(box e) => Expression(Box::new(self.analyize_node(e, current_func, sym)?)),
         };
 
         Ok(inner)
@@ -839,7 +836,7 @@ impl<'a> SemanticAnalyzer<'a> {
                             bind.is_mutable(),
                             rhs,
                         )),
-                        Err(e) => Err(e)
+                        Err(e) => Err(e),
                     }
                 } else {
                     Err(format!(
@@ -884,7 +881,7 @@ impl<'a> SemanticAnalyzer<'a> {
                         } else {
                             Err(format!("Variable {} is not mutable", mutate.get_id()))
                         }
-                    },
+                    }
                     Err(e) => Err(e),
                 }
             }
@@ -2053,7 +2050,11 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        let value_ty = r
+                            .get_value()
+                            .clone()
+                            .map(|v| v.get_type().clone())
+                            .unwrap_or(Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2473,7 +2474,11 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        let value_ty = r
+                            .get_value()
+                            .clone()
+                            .map(|v| v.get_type().clone())
+                            .unwrap_or(Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2534,7 +2539,11 @@ mod tests {
                     let ret_stm = &co_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        let value_ty = r
+                            .get_value()
+                            .clone()
+                            .map(|v| v.get_type().clone())
+                            .unwrap_or(Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
