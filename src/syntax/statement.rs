@@ -22,7 +22,9 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            | Return(x) | Yield(x) | YieldReturn(x) => x.get_metadata(),
+            Return(x) 
+            | Yield(x) 
+            | YieldReturn(x) => x.get_metadata(),
             Expression(e) => e.get_metadata(),
             Bind(b) => b.get_metadata(),
             Mutate(m) => m.get_metadata(),
@@ -47,7 +49,9 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) | Yield(x) | YieldReturn(x) => x.get_metadata_mut(),
+            Return(x) 
+            | Yield(x) 
+            | YieldReturn(x) => x.get_metadata_mut(),
             Expression(e) => e.get_metadata_mut(),
             Bind(b) => b.get_metadata_mut(),
             Mutate(m) => m.get_metadata_mut(),
@@ -62,7 +66,9 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) | Yield(x) | YieldReturn(x) => x.root_str(),
+            Return(x) 
+            | Yield(x) 
+            | YieldReturn(x) => x.root_str(),
             Expression(e) => e.root_str(),
             Bind(b) => b.root_str(),
             Mutate(m) => m.root_str(),
