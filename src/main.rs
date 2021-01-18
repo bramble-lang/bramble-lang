@@ -13,7 +13,7 @@ use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
 use lexer::tokens::Token;
 use semantics::type_checker::*;
-use syntax::ast;
+use syntax::expression;
 
 fn main() {
     let matches = App::new("Braid Compiler")

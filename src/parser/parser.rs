@@ -7,7 +7,7 @@ use crate::{
     diagnostics::config::TracingConfig,
     lexer::tokens::{Lex, Primitive, Token},
     syntax::{
-        ast::{Ast, RoutineCall},
+        expression::{Expression, RoutineCall},
         module::Module,
         path::Path,
         routinedef::{RoutineDef, RoutineDefType},
@@ -24,6 +24,8 @@ use braid_lang::result::Result;
 // end of computing an expression its result is in EAX
 use super::pnode::{PNode, PResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
+
+type ParserResult<T> = Result<Option<T>>;
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 static TRACE_START: AtomicUsize = AtomicUsize::new(0);
@@ -136,7 +138,7 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>> {
+pub fn parse(tokens: Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
     let start_index = stream.index();
     let mut item = None;
@@ -151,7 +153,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Option<Module<u32>>> {
     Ok(item)
 }
 
-fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
+fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
             Some((_, module_name)) => {
@@ -170,7 +172,7 @@ fn module(stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
     Ok(mod_def)
 }
 
-fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32>>> {
+fn parse_items(name: &str, stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     let module_line = stream.peek().map_or(1, |t| t.l);
     let mut parent_module = Module::new(name, module_line);
     while stream.peek().is_some() {
@@ -198,7 +200,7 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> Result<Option<Module<u32
     Ok(Some(parent_module))
 }
 
-fn struct_def(stream: &mut TokenStream) -> Result<Option<StructDef<u32>>> {
+fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
     match stream.next_if(&Lex::Struct) {
         Some(token) => match stream.next_if_id() {
             Some((line, id)) => {
@@ -213,7 +215,7 @@ fn struct_def(stream: &mut TokenStream) -> Result<Option<StructDef<u32>>> {
     }
 }
 
-fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
+fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -254,7 +256,7 @@ fn function_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
     }))
 }
 
-fn coroutine_def(stream: &mut TokenStream) -> Result<Option<RoutineDef<u32>>> {
+fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let co_line = match stream.next_if(&Lex::CoroutineDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -309,7 +311,7 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     Ok(stmts)
 }
 
-fn statement_or_yield_return(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn statement_or_yield_return(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     let stm = match statement(stream)? {
         Some(n) => Some(n),
         None => match yield_return_stmt(stream)? {
@@ -321,7 +323,7 @@ fn statement_or_yield_return(stream: &mut TokenStream) -> Result<Option<Statemen
     Ok(stm)
 }
 
-fn statement(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn statement(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     let start_index = stream.index();
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
     let stm = match let_bind(stream)? {
@@ -372,7 +374,7 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
             let final_exp = expression(stream)?.map(|e| Box::new(e));
 
             stream.next_must_be(&Lex::RBrace)?;
-            Ok(Some(Ast::ExpressionBlock(token.l, stmts, final_exp)))
+            Ok(Some(Expression::ExpressionBlock(token.l, stmts, final_exp)))
         }
         None => Ok(None),
     }
@@ -454,7 +456,7 @@ fn member_access(stream: &mut TokenStream) -> PResult {
                     "L{}: expect field name after member access '.'",
                     line
                 ))?;
-                ma = Ast::MemberAccess(line, Box::new(ma), member);
+                ma = Expression::MemberAccess(line, Box::new(ma), member);
             }
             Ok(Some(ma))
         }
@@ -514,7 +516,7 @@ fn if_expression(stream: &mut TokenStream) -> PResult {
                     false_arm
                 }
             };
-            Some(Ast::If(
+            Some(Expression::If(
                 token.l,
                 Box::new(cond),
                 Box::new(true_arm),
@@ -540,7 +542,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> 
 
     while let Some(token) = id_declaration(stream)? {
         match token {
-            Ast::IdentifierDeclare(_line, id, ty) => {
+            Expression::IdentifierDeclare(_line, id, ty) => {
                 decls.push((id, ty));
                 stream.next_if(&Lex::Comma);
             }
@@ -552,7 +554,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> 
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>> {
+fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<PNode>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -576,7 +578,7 @@ fn routine_call_params(stream: &mut TokenStream) -> Result<Option<Vec<PNode>>> {
     }
 }
 
-fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PNode)>>> {
+fn struct_init_params(stream: &mut TokenStream) -> ParserResult<Vec<(String, PNode)>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
@@ -601,7 +603,7 @@ fn struct_init_params(stream: &mut TokenStream) -> Result<Option<Vec<(String, PN
     }
 }
 
-fn return_stmt(stream: &mut TokenStream) -> Result<Option<Return<ParserInfo>>> {
+fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<ParserInfo>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::Return) {
         Some(token) => {
@@ -616,7 +618,7 @@ fn return_stmt(stream: &mut TokenStream) -> Result<Option<Return<ParserInfo>>> {
     })
 }
 
-fn yield_return_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::YieldReturn) {
         Some(token) => {
@@ -646,7 +648,7 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn println_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
+fn println_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     trace!(stream);
     let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
         Some(print) => {
@@ -667,7 +669,7 @@ fn println_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>
     Ok(syntax)
 }
 
-fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
+fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserInfo>> {
     trace!(stream);
     match stream.next_if(&Lex::Let) {
         Some(token) => {
@@ -684,7 +686,7 @@ fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
             };
 
             match id_decl {
-                Ast::IdentifierDeclare(_, id, ty) => {
+                Expression::IdentifierDeclare(_, id, ty) => {
                     Ok(Some(Bind::new(token.l, &id, ty.clone(), is_mutable, exp)))
                 }
                 _ => Err(format!(
@@ -698,7 +700,7 @@ fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
     }
 }
 
-fn mutate(stream: &mut TokenStream) -> Result<Option<Mutate<ParserInfo>>> {
+fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserInfo>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
         None => Ok(None),
@@ -724,7 +726,7 @@ fn co_init(stream: &mut TokenStream) -> PResult {
             Some((l, path)) => {
                 let params = routine_call_params(stream)?
                     .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Ast::RoutineCall(
+                Ok(Some(Expression::RoutineCall(
                     l,
                     RoutineCall::CoroutineInit,
                     path,
@@ -739,21 +741,21 @@ fn co_init(stream: &mut TokenStream) -> PResult {
 
 fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
     trace!(stream);
-    let s: Option<Ast<u32>> = match path(stream)? {
+    let s: Option<Expression<u32>> = match path(stream)? {
         Some((line, path)) => match routine_call_params(stream)? {
-            Some(params) => Some(Ast::RoutineCall(
+            Some(params) => Some(Expression::RoutineCall(
                 line,
                 RoutineCall::Function,
                 path,
                 params.clone(),
             )),
             None => match struct_init_params(stream)? {
-                Some(params) => Some(Ast::StructExpression(line, path, params.clone())),
+                Some(params) => Some(Expression::StructExpression(line, path, params.clone())),
                 None => {
                     if path.len() > 1 {
-                        Some(Ast::Path(line, path))
+                        Some(Expression::Path(line, path))
                     } else {
-                        Some(Ast::Identifier(line, path.last().unwrap().clone()))
+                        Some(Expression::Identifier(line, path.last().unwrap().clone()))
                     }
                 }
             },
@@ -774,7 +776,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
             .expect("CRITICAL: failed to get identifier");
         let params = routine_call_params(stream)?
             .ok_or(format!("L{}: expected parameters in function call", line))?;
-        Ok(Some(Ast::RoutineCall(
+        Ok(Some(Expression::RoutineCall(
             line,
             RoutineCall::Function,
             vec![fn_name].into(),
@@ -793,13 +795,13 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
             "L{}: Expected valid field assignments in struct expression",
             line
         ))?;
-        Ok(Some(Ast::StructExpression(line, struct_name, fields)))
+        Ok(Some(Expression::StructExpression(line, struct_name, fields)))
     } else {
         Ok(None)
     }
 }
 
-fn path(stream: &mut TokenStream) -> Result<Option<(u32, Path)>> {
+fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     trace!(stream);
     let mut path = vec![];
 
@@ -828,12 +830,12 @@ fn path(stream: &mut TokenStream) -> Result<Option<(u32, Path)>> {
 fn identifier(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     match stream.next_if_id() {
-        Some((line, id)) => Ok(Some(Ast::Identifier(line, id))),
+        Some((line, id)) => Ok(Some(Expression::Identifier(line, id))),
         _ => Ok(None),
     }
 }
 
-fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>> {
+fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
     let ty = match stream.peek() {
@@ -864,7 +866,7 @@ fn consume_type(stream: &mut TokenStream) -> Result<Option<Type>> {
     Ok(ty)
 }
 
-fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>> {
+fn id_declaration(stream: &mut TokenStream) -> ParserResult<PNode> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
@@ -877,7 +879,7 @@ fn id_declaration(stream: &mut TokenStream) -> Result<Option<PNode>> {
                 "L{}: expected type after : in type declaration",
                 line_value
             ))?;
-            Ok(Some(Ast::IdentifierDeclare(line_id, id, ty)))
+            Ok(Some(Expression::IdentifierDeclare(line_id, id, ty)))
         }
         None => Ok(None),
     }
@@ -896,7 +898,7 @@ fn number(stream: &mut TokenStream) -> PResult {
         Some(Token {
             l,
             s: Lex::Integer(i),
-        }) => Ok(Some(Ast::Integer(l, i))),
+        }) => Ok(Some(Expression::Integer(l, i))),
         _ => Ok(None),
     }
 }
@@ -904,7 +906,7 @@ fn number(stream: &mut TokenStream) -> PResult {
 fn boolean(stream: &mut TokenStream) -> PResult {
     trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
-        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Ast::Boolean(l, b))),
+        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Expression::Boolean(l, b))),
         _ => Ok(None),
     }
 }
@@ -915,7 +917,7 @@ fn string_literal(stream: &mut TokenStream) -> PResult {
         Some(Token {
             l,
             s: Lex::StringLiteral(s),
-        }) => Ok(Some(Ast::StringLiteral(l, s))),
+        }) => Ok(Some(Expression::StringLiteral(l, s))),
         _ => Ok(None),
     }
 }
@@ -926,7 +928,7 @@ pub mod tests {
     use crate::{
         lexer::lexer::Lexer,
         syntax::{
-            ast::{BinaryOperator, UnaryOperator},
+            expression::{BinaryOperator, UnaryOperator},
             module::Item,
         },
     };
@@ -943,10 +945,10 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let exp = expression(&mut stream).unwrap();
-            if let Some(Ast::UnaryOp(l, op, operand)) = exp {
+            if let Some(Expression::UnaryOp(l, op, operand)) = exp {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
-                assert_eq!(*operand, Ast::Identifier(1, "a".into()));
+                assert_eq!(*operand, Expression::Identifier(1, "a".into()));
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
             }
@@ -965,13 +967,13 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let exp = expression(&mut stream).unwrap();
-            if let Some(Ast::UnaryOp(l, op, operand)) = exp {
+            if let Some(Expression::UnaryOp(l, op, operand)) = exp {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
-                if let Ast::UnaryOp(l, op, operand) = *operand {
+                if let Expression::UnaryOp(l, op, operand) = *operand {
                     assert_eq!(op, *expected);
                     assert_eq!(l, 1);
-                    assert_eq!(*operand, Ast::Identifier(1, "a".into()));
+                    assert_eq!(*operand, Expression::Identifier(1, "a".into()));
                 }
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
@@ -1001,11 +1003,11 @@ pub mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            if let Some(Ast::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
+            if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
-                assert_eq!(*left, Ast::Integer(1, 2));
-                assert_eq!(*right, Ast::Integer(1, 2));
+                assert_eq!(*left, Expression::Integer(1, 2));
+                assert_eq!(*right, Expression::Integer(1, 2));
             } else {
                 panic!("No nodes returned by parser for {}", text)
             }
@@ -1026,11 +1028,11 @@ pub mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            if let Some(Ast::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
+            if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
-                assert_eq!(*left, Ast::Boolean(1, true));
-                assert_eq!(*right, Ast::Boolean(1, false));
+                assert_eq!(*left, Expression::Boolean(1, true));
+                assert_eq!(*right, Expression::Boolean(1, false));
             } else {
                 panic!("No nodes returned by parser")
             }
@@ -1046,18 +1048,18 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::BinaryOp(l, BinaryOperator::Mul, left, right)) =
+        if let Some(Expression::BinaryOp(l, BinaryOperator::Mul, left, right)) =
             expression(&mut stream).unwrap()
         {
             assert_eq!(l, 1);
             match left.as_ref() {
-                Ast::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
-                    assert_eq!(**ll, Ast::Integer(1, 2));
-                    assert_eq!(**lr, Ast::Integer(1, 4));
+                Expression::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
+                    assert_eq!(**ll, Expression::Integer(1, 2));
+                    assert_eq!(**lr, Expression::Integer(1, 4));
                 }
                 _ => panic!("Expected Add syntax"),
             }
-            assert_eq!(*right, Ast::Integer(1, 3));
+            assert_eq!(*right, Expression::Integer(1, 3));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1072,12 +1074,12 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::BinaryOp(l, BinaryOperator::BOr, left, right)) =
+        if let Some(Expression::BinaryOp(l, BinaryOperator::BOr, left, right)) =
             expression(&mut stream).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(*left, Ast::Boolean(1, true));
-            assert_eq!(*right, Ast::Boolean(1, false));
+            assert_eq!(*left, Expression::Boolean(1, true));
+            assert_eq!(*right, Expression::Boolean(1, false));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1106,14 +1108,14 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
-                Ok(Some(Ast::Path(l, path))) => {
+                Ok(Some(Expression::Path(l, path))) => {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
                         Err(msg) => assert!(false, msg),
                     }
                 }
-                Ok(Some(Ast::Identifier(l, id))) => {
+                Ok(Some(Expression::Identifier(l, id))) => {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) => {
@@ -1143,9 +1145,9 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match member_access(&mut stream) {
-                Ok(Some(Ast::MemberAccess(l, left, right))) => {
+                Ok(Some(Expression::MemberAccess(l, left, right))) => {
                     assert_eq!(l, 1);
-                    assert_eq!(*left, Ast::Identifier(1, "thing".into()), "Input: {}", text,);
+                    assert_eq!(*left, Expression::Identifier(1, "thing".into()), "Input: {}", text,);
                     assert_eq!(right, "first");
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
@@ -1171,13 +1173,13 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
-                Ok(Some(Ast::MemberAccess(l, left, right))) => {
+                Ok(Some(Expression::MemberAccess(l, left, right))) => {
                     assert_eq!(l, 1);
                     assert_eq!(
                         *left,
-                        Ast::MemberAccess(
+                        Expression::MemberAccess(
                             1,
-                            Box::new(Ast::Identifier(1, "thing".into())),
+                            Box::new(Expression::Identifier(1, "thing".into())),
                             "first".into()
                         ),
                         "Input: {}",
@@ -1504,7 +1506,7 @@ pub mod tests {
             assert_eq!(body.len(), 1);
             match &body[0] {
                 Statement::Return(box r) => {
-                    assert_eq!(*r.get_value(), Some(Ast::Boolean(1, true)));
+                    assert_eq!(*r.get_value(), Some(Expression::Boolean(1, true)));
                 }
                 _ => panic!("No body"),
             }
@@ -1522,7 +1524,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineCall(l, RoutineCall::Function, name, params)) =
+        if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -1530,8 +1532,8 @@ pub mod tests {
             assert_eq!(
                 params,
                 vec![
-                    Ast::Identifier(1, "x".into()),
-                    Ast::Identifier(1, "y".into())
+                    Expression::Identifier(1, "x".into()),
+                    Expression::Identifier(1, "y".into())
                 ]
             );
         } else {
@@ -1548,7 +1550,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
-        if let Some(Ast::RoutineCall(l, RoutineCall::Function, name, params)) =
+        if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -1556,8 +1558,8 @@ pub mod tests {
             assert_eq!(
                 params,
                 vec![
-                    Ast::Identifier(1, "x".into()),
-                    Ast::Identifier(1, "y".into())
+                    Expression::Identifier(1, "x".into()),
+                    Expression::Identifier(1, "y".into())
                 ]
             );
         } else {
@@ -1590,7 +1592,7 @@ pub mod tests {
                 assert_eq!(body.len(), 1);
                 match &body[0] {
                     Statement::Return(box r) => {
-                        assert_eq!(*r.get_value(), Some(Ast::Boolean(1, true)));
+                        assert_eq!(*r.get_value(), Some(Expression::Boolean(1, true)));
                     }
                     _ => panic!("No body"),
                 }
@@ -1616,11 +1618,11 @@ pub mod tests {
                 assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
                 assert_eq!(
                     *b.get_rhs(),
-                    Ast::RoutineCall(
+                    Expression::RoutineCall(
                         1,
                         RoutineCall::CoroutineInit,
                         vec!["c"].into(),
-                        vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                        vec![Expression::Integer(1, 1), Expression::Integer(1, 2)]
                     )
                 );
             }
@@ -1644,11 +1646,11 @@ pub mod tests {
                 assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
                 assert_eq!(
                     *b.get_rhs(),
-                    Ast::RoutineCall(
+                    Expression::RoutineCall(
                         1,
                         RoutineCall::CoroutineInit,
                         vec!["a", "b", "c"].into(),
-                        vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
+                        vec![Expression::Integer(1, 1), Expression::Integer(1, 2)]
                     )
                 );
             }
@@ -1683,7 +1685,7 @@ pub mod tests {
                 Statement::Return(box r) => {
                     assert_eq!(
                         *r.get_value(),
-                        Some(Ast::Yield(1, Box::new(Ast::Identifier(1, "cor".into()))))
+                        Some(Expression::Yield(1, Box::new(Expression::Identifier(1, "cor".into()))))
                     );
                 }
                 _ => panic!("No body"),
@@ -1703,17 +1705,17 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
-        if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
+        if let Some(Expression::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
-            assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Ast::Integer(1, 5));
+            assert_eq!(*cond, Expression::Identifier(1, "x".into()));
+            if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                assert_eq!(*final_exp, Expression::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
-            if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
-                assert_eq!(*final_exp, Ast::Integer(1, 7));
+            if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+                assert_eq!(*final_exp, Expression::Integer(1, 7));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1732,33 +1734,33 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
-        if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
+        if let Some(Expression::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
-            assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Ast::Integer(1, 5));
+            assert_eq!(*cond, Expression::Identifier(1, "x".into()));
+            if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                assert_eq!(*final_exp, Expression::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
-            if let Ast::If(_l, cond, if_arm, else_arm) = *else_arm {
+            if let Expression::If(_l, cond, if_arm, else_arm) = *else_arm {
                 assert_eq!(
                     *cond,
-                    Ast::BinaryOp(
+                    Expression::BinaryOp(
                         1,
                         BinaryOperator::BAnd,
-                        Box::new(Ast::Identifier(1, "y".into())),
-                        Box::new(Ast::Identifier(1, "z".into()))
+                        Box::new(Expression::Identifier(1, "y".into())),
+                        Box::new(Expression::Identifier(1, "z".into()))
                     )
                 );
-                if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                    assert_eq!(*final_exp, Ast::Integer(1, 7));
+                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                    assert_eq!(*final_exp, Expression::Integer(1, 7));
                 } else {
                     panic!("Expected Expression block");
                 }
 
-                if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
-                    assert_eq!(*final_exp, Ast::Integer(1, 8));
+                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+                    assert_eq!(*final_exp, Expression::Integer(1, 8));
                 } else {
                     panic!("Expected Expression block");
                 }
@@ -1779,12 +1781,12 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) =
+        if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 0);
-            assert_eq!(*final_exp, Ast::Integer(1, 5));
+            assert_eq!(*final_exp, Expression::Integer(1, 5));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1827,7 +1829,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) =
+        if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {
             assert_eq!(l, 1);
@@ -1841,21 +1843,21 @@ pub mod tests {
                 _ => panic!("Not a binding statement"),
             }
             match &body[1] {
-                Statement::Expression(box Ast::RoutineCall(
+                Statement::Expression(box Expression::RoutineCall(
                     _,
                     RoutineCall::Function,
                     fn_name,
                     params,
                 )) => {
                     assert_eq!(*fn_name, vec!["f"].into());
-                    assert_eq!(params[0], Ast::Identifier(1, "x".into()));
+                    assert_eq!(params[0], Expression::Identifier(1, "x".into()));
                 }
                 _ => panic!("No body: {:?}", &body[1]),
             }
             match final_exp {
-                box Ast::BinaryOp(_, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(*l.as_ref(), Ast::Identifier(1, "x".into()));
-                    assert_eq!(*r.as_ref(), Ast::Identifier(1, "x".into()));
+                box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
+                    assert_eq!(*l.as_ref(), Expression::Identifier(1, "x".into()));
+                    assert_eq!(*r.as_ref(), Expression::Identifier(1, "x".into()));
                 }
                 _ => panic!("No body: {:?}", &body[2]),
             }
@@ -1898,40 +1900,40 @@ pub mod tests {
         for (text, expected) in vec![
             (
                 "MyStruct{}",
-                Ast::StructExpression(1, vec!["MyStruct"].into(), vec![]),
+                Expression::StructExpression(1, vec!["MyStruct"].into(), vec![]),
             ),
             (
                 "MyStruct{x: 5}",
-                Ast::StructExpression(
+                Expression::StructExpression(
                     1,
                     vec!["MyStruct"].into(),
-                    vec![("x".into(), Ast::Integer(1, 5))],
+                    vec![("x".into(), Expression::Integer(1, 5))],
                 ),
             ),
             (
                 "MyStruct{x: 5, y: false}",
-                Ast::StructExpression(
+                Expression::StructExpression(
                     1,
                     vec!["MyStruct"].into(),
                     vec![
-                        ("x".into(), Ast::Integer(1, 5)),
-                        ("y".into(), Ast::Boolean(1, false)),
+                        ("x".into(), Expression::Integer(1, 5)),
+                        ("y".into(), Expression::Boolean(1, false)),
                     ],
                 ),
             ),
             (
                 "MyStruct{x: 5, y: MyStruct2{z:3}}",
-                Ast::StructExpression(
+                Expression::StructExpression(
                     1,
                     vec!["MyStruct"].into(),
                     vec![
-                        ("x".into(), Ast::Integer(1, 5)),
+                        ("x".into(), Expression::Integer(1, 5)),
                         (
                             "y".into(),
-                            Ast::StructExpression(
+                            Expression::StructExpression(
                                 1,
                                 vec!["MyStruct2"].into(),
-                                vec![("z".into(), Ast::Integer(1, 3))],
+                                vec![("z".into(), Expression::Integer(1, 3))],
                             ),
                         ),
                     ],
@@ -1965,7 +1967,7 @@ pub mod tests {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
                         Statement::Return(box r) => {
-                            assert_eq!(*r.get_value(), Some(Ast::StringLiteral(1, expected.into())))
+                            assert_eq!(*r.get_value(), Some(Expression::StringLiteral(1, expected.into())))
                         }
                         _ => assert!(false, "Not a return statement"),
                     },

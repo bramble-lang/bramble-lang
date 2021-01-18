@@ -13,10 +13,10 @@ use crate::{
         structdef::StructDef,
     },
 };
-use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
+use crate::{semantics::semanticnode::SemanticNode, syntax::expression::Expression};
 use braid_lang::result::Result;
 
-pub type CompilerNode = Ast<Scope>;
+pub type CompilerNode = Expression<Scope>;
 
 impl CompilerNode {
     pub fn from(ast: &Module<SemanticMetadata>) -> Result<(Module<Scope>, ResolvedStructTable)> {
@@ -32,7 +32,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
-        use Ast::*;
+        use Expression::*;
         match ast {
             ExpressionBlock(m, body, final_exp) => {
                 let (meta, mut nlayout) = Scope::local_from(m, struct_table, layout);
@@ -52,33 +52,33 @@ impl CompilerNode {
                 };
                 (ExpressionBlock(meta, nbody, final_exp), nlayout)
             }
-            Ast::Integer(m, i) => {
+            Expression::Integer(m, i) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::Integer(meta, *i), layout)
+                (Expression::Integer(meta, *i), layout)
             }
-            Ast::Boolean(m, b) => {
+            Expression::Boolean(m, b) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::Boolean(meta, *b), layout)
+                (Expression::Boolean(meta, *b), layout)
             }
-            Ast::StringLiteral(m, s) => {
+            Expression::StringLiteral(m, s) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::StringLiteral(meta, s.clone()), layout)
+                (Expression::StringLiteral(meta, s.clone()), layout)
             }
-            Ast::CustomType(m, name) => {
+            Expression::CustomType(m, name) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::CustomType(meta, name.clone()), layout)
+                (Expression::CustomType(meta, name.clone()), layout)
             }
-            Ast::Identifier(m, id) => {
+            Expression::Identifier(m, id) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::Identifier(meta, id.clone()), layout)
+                (Expression::Identifier(meta, id.clone()), layout)
             }
             Path(m, path) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::Path(meta, path.clone()), layout)
+                (Expression::Path(meta, path.clone()), layout)
             }
-            Ast::IdentifierDeclare(m, id, p) => {
+            Expression::IdentifierDeclare(m, id, p) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::IdentifierDeclare(meta, id.clone(), p.clone()), layout)
+                (Expression::IdentifierDeclare(meta, id.clone(), p.clone()), layout)
             }
             MemberAccess(m, src, member) => {
                 let (src, layout) = CompilerNode::compute_offsets(src, layout, struct_table);
@@ -89,13 +89,13 @@ impl CompilerNode {
                 let (operand, layout) =
                     CompilerNode::compute_offsets(operand, layout, struct_table);
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::UnaryOp(meta, *op, Box::new(operand)), layout)
+                (Expression::UnaryOp(meta, *op, Box::new(operand)), layout)
             }
             BinaryOp(m, op, ref l, ref r) => {
                 let (l, layout) = CompilerNode::compute_offsets(l, layout, struct_table);
                 let (r, layout) = CompilerNode::compute_offsets(r, layout, struct_table);
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Ast::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
+                (Expression::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
             }
             If(m, ref cond, ref tb, ref fb) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
@@ -446,7 +446,7 @@ mod ast_tests {
         compiler::ast::scope::Level,
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
-        syntax::{ast::BinaryOperator, routinedef::RoutineDef},
+        syntax::{expression::BinaryOperator, routinedef::RoutineDef},
     };
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
     use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
