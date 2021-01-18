@@ -858,20 +858,22 @@ impl<'a> SemanticAnalyzer<'a> {
     ) -> Result<Bind<SemanticMetadata>> {
         let meta = bind.get_metadata();
         let rhs = bind.get_rhs();
-        match current_func {
+        let result = match current_func {
             Some(_) => {
                 let mut meta = meta.clone();
                 meta.ty = self.type_to_canonical(sym, bind.get_type())?;
                 let rhs = self.traverse(rhs, current_func, sym)?;
                 if meta.ty == rhs.get_type() {
-                    sym.add(bind.get_id(), meta.ty.clone(), bind.is_mutable())?;
-                    Ok(Bind::new(
-                        meta,
-                        bind.get_id(),
-                        bind.get_type().clone(),
-                        bind.is_mutable(),
-                        rhs,
-                    ))
+                    match sym.add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
+                        Ok(()) => Ok(Bind::new(
+                            meta,
+                            bind.get_id(),
+                            bind.get_type().clone(),
+                            bind.is_mutable(),
+                            rhs,
+                        )),
+                        Err(e) => Err(e)
+                    }
                 } else {
                     Err(format!(
                         "Bind expected {} but got {}",
@@ -884,7 +886,8 @@ impl<'a> SemanticAnalyzer<'a> {
                 "Attempting to bind variable {} outside of function",
                 bind.get_id()
             )),
-        }
+        };
+        result.map_err(|e| format!("L{}: {}", bind.get_metadata().ln, e))
     }
 
     fn analyze_mutate(
@@ -893,12 +896,12 @@ impl<'a> SemanticAnalyzer<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<Mutate<SemanticMetadata>> {
-        match current_func {
+        let result = match current_func {
             Some(_) => {
                 let mut meta = mutate.get_metadata().clone();
                 let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
-                match self.lookup(sym, mutate.get_id())? {
-                    symbol => {
+                match self.lookup(sym, mutate.get_id()) {
+                    Ok(symbol) => {
                         if symbol.mutable {
                             if symbol.ty == rhs.get_type() {
                                 meta.ty = rhs.get_type().clone();
@@ -914,14 +917,16 @@ impl<'a> SemanticAnalyzer<'a> {
                         } else {
                             Err(format!("Variable {} is not mutable", mutate.get_id()))
                         }
-                    }
+                    },
+                    Err(e) => Err(e),
                 }
             }
             None => Err(format!(
                 "Attempting to mutate a variable {} outside of function",
                 mutate.get_id()
             )),
-        }
+        };
+        result.map_err(|e| format!("L{}: {}", mutate.get_metadata().ln, e))
     }
 
     fn analyze_printi(
@@ -1020,7 +1025,7 @@ impl<'a> SemanticAnalyzer<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<YieldReturn<SemanticMetadata>> {
-        match current_func {
+        let result = match current_func {
             None => Err(format!("yret appears outside of function")),
             Some(cf) => {
                 let mut meta = yr.get_metadata().clone();
@@ -1051,7 +1056,8 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             }
-        }
+        };
+        result.map_err(|e| format!("L{}: {}", yr.get_metadata().ln, e))
     }
 
     fn analyze_return(
@@ -1060,7 +1066,7 @@ impl<'a> SemanticAnalyzer<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<Return<SemanticMetadata>> {
-        match current_func {
+        let result = match current_func {
             None => Err(format!("return appears outside of function")),
             Some(cf) => {
                 let mut meta = r.get_metadata().clone();
@@ -1091,7 +1097,8 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             }
-        }
+        };
+        result.map_err(|e| format!("L{}: {}", r.get_metadata().ln, e))
     }
 }
 
