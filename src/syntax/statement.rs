@@ -33,7 +33,6 @@ impl<M> Statement<M> {
             Ast::Printiln(_, _) => Some(Statement::Printiln(Box::new(ast))),
             Ast::Printbln(_, _) => Some(Statement::Printbln(Box::new(ast))),
             Ast::Statement(s) => Some(s),
-            Ast::Bind(_, _, _, _, _) => Some(Statement::Bind(Box::new(Bind::from_ast(ast)))),
             Ast::Mutate(_, _, _) => Some(Statement::Mutate(Box::new(ast))),
             Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             Ast::Yield(_, _) => Some(Statement::Yield(Box::new(ast))),
@@ -82,14 +81,6 @@ impl<M> Bind<M> {
             ty,
             mutable,
             rhs,
-        }
-    }
-
-    pub fn from_ast(ast: Ast<M>) -> Bind<M> {
-        if let Ast::Bind(metadata, id, mutable, ty, box rhs) = ast {
-            Bind::new(metadata, &id, ty, mutable, rhs)
-        } else {
-            panic!(format!("Expected Ast::Bind but got {}", ast.root_str()))
         }
     }
 

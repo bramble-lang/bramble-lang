@@ -86,7 +86,6 @@ impl StringPool {
                 self.extract_from(fb);
             }
             Mutate(..) => self.extract_from_mutate(ast),
-            Bind(..) => panic!("Should not be here"), //self.extract_from_bind(ast),
             Yield(_, e) => {
                 self.extract_from(e);
             }

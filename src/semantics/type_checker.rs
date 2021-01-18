@@ -514,7 +514,6 @@ impl<'a> SemanticAnalyzer<'a> {
                 }
             }
             Ast::Mutate(..) => self.analyze_mutate(ast, current_func, sym),
-            Ast::Bind(..) => panic!("Should not be here"), //self.analyze_bind(ast, current_func, sym),
             Ast::Return(meta, None) => match current_func {
                 None => Err(format!("Return called outside of a function")),
                 Some(cf) => {

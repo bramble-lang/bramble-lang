@@ -106,7 +106,6 @@ impl CompilerNode {
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
             Mutate(..) => Self::compute_layouts_for_mutate(ast, layout, struct_table),
-            Bind(..) => panic!("Should not be here"), //Self::compute_layouts_for_bind(ast, layout, struct_table),
             Yield(m, e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);

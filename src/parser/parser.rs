@@ -3,19 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{
-    diagnostics::config::TracingConfig,
-    lexer::tokens::{Lex, Primitive, Token},
-    syntax::{
-        ast::{Ast, RoutineCall},
-        module::Module,
-        path::Path,
-        routinedef::{RoutineDef, RoutineDefType},
-        statement::Statement,
-        structdef::StructDef,
-        ty::Type,
-    },
-};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Statement}, structdef::StructDef, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -324,12 +312,16 @@ fn statement_or_yield_return(stream: &mut TokenStream) -> PResult {
 fn statement(stream: &mut TokenStream) -> PResult {
     let start_index = stream.index();
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
-    let stm = let_bind(stream)
-        .por(mutate, stream)
-        .por(println_stmt, stream)
-        .por(expression, stream)?
-        .map(|s| Statement::from_ast(s))
-        .flatten();
+    let stm = match let_bind(stream)? {
+        Some(bind) => Some(Statement::Bind(Box::new(bind))),
+        None => {
+            mutate(stream)
+            .por(println_stmt, stream)
+            .por(expression, stream)?
+            .map(|s| Statement::from_ast(s))
+            .flatten()
+        }
+    };
 
     match stm {
         Some(stm) => match stream.next_if(&Lex::Semicolon) {
@@ -664,7 +656,7 @@ fn println_stmt(stream: &mut TokenStream) -> PResult {
     Ok(syntax)
 }
 
-fn let_bind(stream: &mut TokenStream) -> PResult {
+fn let_bind(stream: &mut TokenStream) -> Result<Option<Bind<ParserInfo>>> {
     trace!(stream);
     match stream.next_if(&Lex::Let) {
         Some(token) => {
@@ -679,7 +671,17 @@ fn let_bind(stream: &mut TokenStream) -> PResult {
                 None => expression(stream)?
                     .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
             };
-            PNode::new_bind(token.l, Box::new(id_decl), is_mutable, Box::new(exp))
+            
+            match id_decl {
+                Ast::IdentifierDeclare(_, id, ty) => {
+                    Ok(Some(Bind::new(token.l, &id, ty.clone(), is_mutable, exp)))
+                }
+                _ => Err(format!(
+                    "L{}: Expected type specification after {}",
+                    token.l,
+                    id_decl.root_str()
+                )),
+            }
         }
         None => Ok(None),
     }

@@ -120,7 +120,6 @@ impl SemanticAst {
                 self.from_parser_ast(false_arm)?,
             ))),
             Mutate(..) => self.from_mutate(ast),
-            Bind(..) => panic!("Should not call here"), //self.from_bind(ast),
             Return(l, None) => Ok(Box::new(Return(self.semantic_metadata_from(*l), None))),
             Return(l, Some(exp)) => Ok(Box::new(Return(
                 self.semantic_metadata_from(*l),

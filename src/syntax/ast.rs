@@ -91,7 +91,6 @@ pub enum Ast<I> {
     Printiln(I, Box<Ast<I>>),
     Printbln(I, Box<Ast<I>>),
     Statement(statement::Statement<I>),
-    Bind(I, String, bool, Type, Box<Ast<I>>),
     Mutate(I, String, Box<Ast<I>>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
@@ -122,7 +121,6 @@ impl<I> Ast<I> {
             Printiln(_, _) => "printiln".into(),
             Printbln(_, _) => "printbln".into(),
             Statement(..) => "statement".into(),
-            Bind(..) => "bind".into(),
             Mutate(..) => "assign".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
@@ -149,7 +147,6 @@ impl<I> Ast<I> {
             | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Bind(m, ..)
             | Mutate(m, ..)
             | Return(m, ..)
             | Yield(m, ..)
@@ -179,7 +176,6 @@ impl<I> Ast<I> {
             | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Bind(m, ..)
             | Mutate(m, ..)
             | Return(m, ..)
             | Yield(m, ..)

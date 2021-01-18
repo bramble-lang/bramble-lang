@@ -488,7 +488,6 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,
-            Ast::Bind(..) => panic!("Should not get here"), //self.traverse_bind(ast, current_func, code)?,
             Ast::Mutate(..) => self.traverse_mutate(ast, current_func, code)?,
             Ast::Return(_, ref exp) => {
                 assembly! {(code) {
