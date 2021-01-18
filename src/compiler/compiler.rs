@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::ast::RoutineCall;
+use crate::{ast::RoutineCall, syntax::statement::Statement};
 use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
@@ -487,7 +487,7 @@ impl<'a> Compiler<'a> {
                     self.traverse(s, current_func, code)?;
                 }
             }
-            Ast::Statement(..) => self.traverse_statement(ast, current_func, code)?,
+            Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,
             Ast::Bind(..) => self.traverse_bind(ast, current_func, code)?,
             Ast::Mutate(..) => self.traverse_mutate(ast, current_func, code)?,
             Ast::Return(_, ref exp) => {
@@ -722,14 +722,21 @@ impl<'a> Compiler<'a> {
 
     fn traverse_statement(
         &mut self,
-        statement: &'a Ast<Scope>,
+        statement: &'a Statement<Scope>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        if let Ast::Statement(.., stmt) = statement {
-            self.traverse(stmt, current_func, code)
-        } else {
-            panic!("Expected a statement but got {}", statement.root_str())
+        match statement {
+            Statement::Bind(b) => self.traverse_bind(b, current_func, code),
+            Statement::Mutate(m) => self.traverse_mutate(m, current_func, code),
+            Statement::Return(n) => self.traverse(n, current_func, code),
+            Statement::Yield(n) => self.traverse(n, current_func, code),
+            Statement::YieldReturn(n) => self.traverse(n, current_func, code),
+            Statement::Printi(n) => self.traverse(n, current_func, code),
+            Statement::Printiln(n) => self.traverse(n, current_func, code),
+            Statement::Printbln(n) => self.traverse(n, current_func, code),
+            Statement::Prints(n) => self.traverse(n, current_func, code),
+            Statement::Expression(n) => self.traverse(n, current_func, code),
         }
     }
 

@@ -291,10 +291,22 @@ fn block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
 
 fn co_block(stream: &mut TokenStream) -> Result<Vec<PNode>> {
     let mut stmts = vec![];
-    while let Some(s) = statement(stream).por(yield_return_stmt, stream)? {
+    while let Some(s) = statement_or_yield_return(stream)? {
         stmts.push(s);
     }
     Ok(stmts)
+}
+
+fn statement_or_yield_return(stream: &mut TokenStream) -> PResult {
+    let stm = match statement(stream)? {
+        Some(n) => Some(n),
+        None => match yield_return_stmt(stream)? {
+            Some(yr) => Some(Ast::Statement(yr)),
+            None => None,
+        },
+    };
+
+    Ok(stm)
 }
 
 fn statement(stream: &mut TokenStream) -> PResult {
@@ -303,11 +315,11 @@ fn statement(stream: &mut TokenStream) -> PResult {
     let stm = let_bind(stream)
         .por(mutate, stream)
         .por(println_stmt, stream)
-        .por(expression, stream)?;
+        .por(expression, stream)?.map(|s| Statement::from_ast(s)).flatten();
 
     match stm {
         Some(stm) => match stream.next_if(&Lex::Semicolon) {
-            Some(Token { l, s: _ }) => Ok(Some(Ast::Statement(l, Box::new(stm)))),
+            Some(Token { l, s: _ }) => Ok(Some(Ast::Statement(stm))),
             _ => {
                 if must_have_semicolon {
                     let line = *stm.get_metadata();
@@ -1163,11 +1175,11 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Bind(_, id, false, p, exp) => {
+            Ast::Statement(stm) => match stm {
+                Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Type::I32);
-                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                    assert_eq!(p, Type::I32);
+                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1186,11 +1198,11 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Bind(_, id, true, p, exp) => {
+            Ast::Statement(stm) => match stm {
+                Statement::Bind(box Ast::Bind(_, id, true, p, exp)) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Type::I32);
-                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                    assert_eq!(p, Type::I32);
+                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1208,10 +1220,10 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Mutate(_, id, exp) => {
+            Ast::Statement(stm) => match stm {
+                Statement::Mutate(box Ast::Mutate(_, id, exp)) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1230,9 +1242,9 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Printiln(_, exp) => {
-                    assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+            Ast::Statement(stm) => match stm {
+                Statement::Printiln(box Ast::Printiln(_, exp)) => {
+                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1251,9 +1263,9 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Printbln(_, exp) => {
-                    assert_eq!(*exp, Box::new(PNode::Boolean(1, true)));
+            Ast::Statement(stm) => match stm {
+                Statement::Printbln(box Ast::Printbln(_, exp)) => {
+                    assert_eq!(exp, Box::new(PNode::Boolean(1, true)));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1272,9 +1284,9 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Prints(_, exp) => {
-                    assert_eq!(*exp, Box::new(PNode::StringLiteral(1, "hello".into())));
+            Ast::Statement(stm) => match stm {
+                Statement::Prints(box Ast::Prints(_, exp)) => {
+                    assert_eq!(exp, Box::new(PNode::StringLiteral(1, "hello".into())));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1587,12 +1599,12 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Bind(_, id, false, p, exp) => {
+            Ast::Statement(stm) => match stm {
+                Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Type::Coroutine(Box::new(Type::I32)));
+                    assert_eq!(p, Type::Coroutine(Box::new(Type::I32)));
                     assert_eq!(
-                        *exp,
+                        exp,
                         Box::new(Ast::RoutineCall(
                             1,
                             RoutineCall::CoroutineInit,
@@ -1618,12 +1630,12 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Ast::Statement(_, stm) => match stm.as_ref() {
-                Ast::Bind(_, id, false, p, exp) => {
+            Ast::Statement(stm) => match stm {
+                Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
                     assert_eq!(id, "x");
-                    assert_eq!(*p, Type::Coroutine(Box::new(Type::I32)));
+                    assert_eq!(p, Type::Coroutine(Box::new(Type::I32)));
                     assert_eq!(
-                        *exp,
+                        exp,
                         Box::new(Ast::RoutineCall(
                             1,
                             RoutineCall::CoroutineInit,
@@ -1811,10 +1823,10 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 3);
             match &body[0] {
-                Ast::Statement(_, stm) => match stm.as_ref() {
-                    Ast::Bind(_, id, false, p, exp) => {
+                Ast::Statement(stm) => match stm {
+                    Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
                         assert_eq!(id, "x");
-                        assert_eq!(*p, Type::I32);
+                        assert_eq!(p, Type::I32);
                         assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
                     }
                     _ => panic!("Not a binding statement"),
@@ -1823,8 +1835,7 @@ pub mod tests {
             }
             match &body[1] {
                 Ast::Statement(
-                    _,
-                    box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params),
+                    Statement::Expression(box Ast::RoutineCall(_, RoutineCall::Function, fn_name, params)),
                 ) => {
                     assert_eq!(*fn_name, vec!["f"].into());
                     assert_eq!(params[0], Ast::Identifier(1, "x".into()));

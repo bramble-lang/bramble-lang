@@ -907,6 +907,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 | Printiln(box x)  => Printiln(Box::new(self.analyize_node(x, current_func, sym)?)),
                 | Printbln(box x)  => Printbln(Box::new(self.analyize_node(x, current_func, sym)?)),
                 | Prints(box x)  => Prints(Box::new(self.analyize_node(x, current_func, sym)?)),
+                | Expression(box e) => Expression(Box::new(self.analyize_node(e, current_func, sym)?)),
             };
 
             Ok(Ast::Statement(inner))

@@ -2,13 +2,7 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{
-    compiler::ast::ast::CompilerNode,
-    syntax::{
-        module::{self, Item},
-        routinedef::RoutineDef,
-    },
-};
+use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::Statement}};
 
 use super::scope::Scope;
 
@@ -104,7 +98,7 @@ impl StringPool {
             YieldReturn(_, Some(e)) => {
                 self.extract_from(e);
             }
-            Statement(..) => self.extract_from_statement(ast),
+            Statement(s) => self.extract_from_statement(s),
             RoutineCall(.., params) => {
                 for e in params.iter() {
                     self.extract_from(e);
@@ -144,12 +138,24 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_statement(&mut self, statement: &CompilerNode) {
-        if let CompilerNode::Statement(.., e) = statement {
+    pub fn extract_from_statement(&mut self, statement: &Statement<Scope>) {
+        match statement {
+            Statement::Bind(b) => self.extract_from_bind(b),
+            Statement::Mutate(m) => self.extract_from_mutate(m),
+            Statement::Return(r) => self.extract_from(r),
+            Statement::Yield(y) => self.extract_from(y),
+            Statement::YieldReturn(ast) => self.extract_from(ast),
+            Statement::Printi(ast) => self.extract_from(ast),
+            Statement::Printiln(ast) =>  self.extract_from(ast),
+            Statement::Printbln(ast) =>  self.extract_from(ast),
+            Statement::Prints(ast) =>  self.extract_from(ast),
+            Statement::Expression(ast) =>  self.extract_from(ast),
+        }
+        /*if let CompilerNode::Statement(.., e) = statement {
             self.extract_from(e)
         } else {
             panic!("Expected a statement, but got {}", statement.root_str())
-        }
+        }*/
     }
 
     pub fn extract_from_bind(&mut self, bind: &CompilerNode) {

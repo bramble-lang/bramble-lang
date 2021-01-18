@@ -1,15 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{
-    compiler::ast::scope::{LayoutData, Scope},
-    semantics::semanticnode::SemanticMetadata,
-    syntax::{
-        module::{self, Item, Module},
-        routinedef::{RoutineDef, RoutineDefType},
-        structdef::StructDef,
-    },
-};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -138,7 +130,10 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (YieldReturn(meta, Some(Box::new(e))), layout)
             }
-            Statement(..) => Self::compute_layouts_for_statement(ast, layout, struct_table),
+            Statement(s) => {
+                let (s,l) = Self::compute_layouts_for_statement(s, layout, struct_table);
+                (Statement(s), l)
+            }
             RoutineCall(m, call, name, params) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let mut nlayout = layout;
@@ -276,17 +271,25 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_statement(
-        statement: &Ast<SemanticMetadata>,
+        statement: &Statement<SemanticMetadata>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Ast<Scope>, LayoutData) {
-        if let Ast::Statement(m, e) = statement {
+    ) -> (Statement<Scope>, LayoutData) {
+        let (e,l) = match statement {
+            Statement::Bind(b) => {
+                let (e, l) = Self::compute_layouts_for_bind(b, layout, struct_table);
+                (Statement::Bind(Box::new(e)), l)
+            }
+            _ => todo!()
+        };
+        (e,l)
+        /*if let Ast::Statement(m, e) = statement {
             let (meta, layout) = Scope::local_from(m, struct_table, layout);
             let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
             (Ast::Statement(meta, Box::new(e)), layout)
         } else {
             panic!("Expected a statement but got {}", statement.root_str())
-        }
+        }*/
     }
 
     fn compute_layouts_for_bind(

@@ -287,6 +287,7 @@ impl SemanticAst {
                 | Printiln(x) => Printiln(self.from_parser_ast(x)?),
                 | Printbln(x)  => Printbln(self.from_parser_ast(x)?),
                 | Prints(x) => Prints(self.from_parser_ast(x)?),
+                | Expression(e) => Expression(self.from_parser_ast(e)?),
             };
 
             Ok(Box::new(Ast::Statement(inner)))
