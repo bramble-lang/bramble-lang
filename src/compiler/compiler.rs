@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{binary_op, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints}};
+use crate::{binary_op, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn}};
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -703,7 +703,7 @@ impl<'a> Compiler<'a> {
             Statement::Bind(b) => self.traverse_bind(b, current_func, code),
             Statement::Mutate(m) => self.traverse_mutate(m, current_func, code),
             Statement::Return(n) => self.traverse(n, current_func, code),
-            Statement::Yield(n) => self.traverse(n, current_func, code),
+            Statement::Yield(n) => self.traverse_yield(n, current_func, code),
             Statement::YieldReturn(n) => self.traverse(n, current_func, code),
             Statement::Printi(n) => self.traverse_printi(n, current_func, code),
             Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),
@@ -810,6 +810,32 @@ impl<'a> Compiler<'a> {
             {{Compiler::make_c_extern_call("fputs", 2)}}
         }}
         Ok(())
+    }
+
+    fn traverse_yield(
+        &mut self,
+        y: &'a Yield<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        assembly! {(code) {
+            {{self.yield_exp(y.get_metadata(), y.get_value(), current_func)?}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_yieldreturn(
+        &mut self,
+        yr: &'a YieldReturn<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        todo!()
+        /*assembly! {(code) {
+            {{self.yield_return(yr.get_metadata(), yr.get_value(), current_func)?}}
+        }}
+        Ok(())
+        */
     }
 
     fn member_access(

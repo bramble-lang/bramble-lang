@@ -10,7 +10,7 @@ pub enum Statement<M> {
     Printbln(Box<Printbln<M>>),
     Prints(Box<Prints<M>>),
 
-    Yield(Box<Ast<M>>),
+    Yield(Box<Yield<M>>),
     YieldReturn(Box<Ast<M>>),
     Expression(Box<Ast<M>>),
 
@@ -23,7 +23,6 @@ impl<M> Statement<M> {
 
         match self {
             Return(x) 
-            | Yield(x) 
             | YieldReturn(x) => x.get_metadata(),
             Expression(e) => e.get_metadata(),
             Bind(b) => b.get_metadata(),
@@ -32,13 +31,14 @@ impl<M> Statement<M> {
             Printiln(m) => m.get_metadata(),
             Printbln(m) => m.get_metadata(),
             Prints(m) => m.get_metadata(),
+            Yield(m) => m.get_metadata(),
         }
     }
 
     pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
         match ast {
             Ast::Statement(s) => Some(s),
-            Ast::Yield(_, _) => Some(Statement::Yield(Box::new(ast))),
+            Ast::Yield(_, _) => panic!("Should not be here"), //Some(Statement::Yield(Box::new(ast))),
             Ast::YieldReturn(_, _) => Some(Statement::YieldReturn(Box::new(ast))),
             Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             _ => Some(Statement::Expression(Box::new(ast))),
@@ -50,7 +50,6 @@ impl<M> Statement<M> {
 
         match self {
             Return(x) 
-            | Yield(x) 
             | YieldReturn(x) => x.get_metadata_mut(),
             Expression(e) => e.get_metadata_mut(),
             Bind(b) => b.get_metadata_mut(),
@@ -59,6 +58,7 @@ impl<M> Statement<M> {
             Printiln(m) => m.get_metadata_mut(),
             Printbln(m) => m.get_metadata_mut(),
             Prints(m) => m.get_metadata_mut(),
+            Yield(m) => m.get_metadata_mut(),
         }
     }
 
@@ -67,7 +67,6 @@ impl<M> Statement<M> {
 
         match self {
             Return(x) 
-            | Yield(x) 
             | YieldReturn(x) => x.root_str(),
             Expression(e) => e.root_str(),
             Bind(b) => b.root_str(),
@@ -76,6 +75,7 @@ impl<M> Statement<M> {
             Printiln(m) => m.root_str(),
             Printbln(m) => m.root_str(),
             Prints(m) => m.root_str(),
+            Yield(m) => m.root_str(),
         }
     }
 }
@@ -194,7 +194,7 @@ impl<M> Printi<M> {
     }
 
     pub fn root_str(&self) -> String {
-        format!("printiln")
+        format!("printi")
     }
 }
 
@@ -258,7 +258,7 @@ impl<M> Printbln<M> {
     }
 
     pub fn root_str(&self) -> String {
-        format!("printiln")
+        format!("printbln")
     }
 }
 
@@ -290,6 +290,68 @@ impl<M> Prints<M> {
     }
 
     pub fn root_str(&self) -> String {
-        format!("printiln")
+        format!("prints")
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Yield<M> {
+    metadata: M,
+    value: Ast<M>,
+}
+
+impl<M> Yield<M> {
+    pub fn new(metadata: M, value: Ast<M>) -> Self {
+        Self {
+            metadata,
+            value,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
+    }
+
+    pub fn get_value(&self) -> &Ast<M> {
+        &self.value
+    }
+
+    pub fn root_str(&self) -> String {
+        format!("yield")
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct YieldReturn<M> {
+    metadata: M,
+    value: Option<Ast<M>>,
+}
+
+impl<M> YieldReturn<M> {
+    pub fn new(metadata: M, value: Option<Ast<M>>) -> Self {
+        Self {
+            metadata,
+            value,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
+    }
+
+    pub fn get_value(&self) -> &Option<Ast<M>> {
+        &self.value
+    }
+
+    pub fn root_str(&self) -> String {
+        format!("yret")
     }
 }

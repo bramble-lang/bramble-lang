@@ -1,4 +1,4 @@
-use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints}};
+use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn}};
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -263,7 +263,7 @@ impl SemanticAst {
                 Bind(b) => Bind(Box::new(self.from_bind(b)?)),
                 Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
                 Return(x) => Return(self.from_parser_ast(x)?),
-                Yield(x) => Yield(self.from_parser_ast(x)?),
+                Yield(x) => Yield(Box::new(self.from_yield(x)?)),
                 YieldReturn(x) => YieldReturn(self.from_parser_ast(x)?),
                 Printi(x) => Printi(Box::new(self.from_printi(x)?)),
                 Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
@@ -322,6 +322,28 @@ impl SemanticAst {
                 self.semantic_metadata_from(*p.get_metadata()),
                 *self.from_parser_ast(p.get_value())?,
             ))
+    }
+
+    fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticMetadata>> {
+            Ok(Yield::new(
+                self.semantic_metadata_from(*y.get_metadata()),
+                *self.from_parser_ast(y.get_value())?,
+            ))
+    }
+
+    fn from_yieldreturn(&mut self, yr: &YieldReturn<ParserInfo>) -> Result<YieldReturn<SemanticMetadata>> {
+        match yr.get_value() {
+            None => 
+                Ok(YieldReturn::new(
+                    self.semantic_metadata_from(*yr.get_metadata()),
+                    None,
+                )),
+            Some(val) => 
+                Ok(YieldReturn::new(
+                    self.semantic_metadata_from(*yr.get_metadata()),
+                    Some(*self.from_parser_ast(val)?),
+                ))
+        }
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {

@@ -1,4 +1,4 @@
-use crate::syntax::{path::Path, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints}};
+use crate::syntax::{path::Path, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn}};
 use crate::syntax::ty::Type;
 use crate::{
     ast,
@@ -545,7 +545,8 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             },
-            Ast::Yield(meta, exp) => match current_func {
+            Ast::Yield(meta, exp) => 
+            match current_func {
                 None => Err(format!("Yield appears outside of function")),
                 Some(_) => {
                     let mut meta = meta.clone();
@@ -854,7 +855,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
                 Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
                 Return(box x) => Return(Box::new(self.analyize_node(x, current_func, sym)?)),
-                Yield(box x) => Yield(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Yield(box x) => Yield(Box::new(self.analyze_yield(x, current_func, sym)?)),
                 YieldReturn(box x) => {
                     YieldReturn(Box::new(self.analyize_node(x, current_func, sym)?))
                 }
@@ -1008,6 +1009,66 @@ impl<'a> SemanticAnalyzer<'a> {
             Ok(Prints::new(meta.clone(), value))
         } else {
             Err(format!("Expected string for prints got {}", value.get_type()))
+        }
+    }
+
+    fn analyze_yield(
+        &mut self,
+        y: &Yield<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Yield<SemanticMetadata>> {
+        match current_func {
+            None => Err(format!("yield appears outside of function")),
+            Some(_) => {
+                let mut meta = y.get_metadata().clone();
+                let exp = self.traverse(y.get_value(), current_func, sym)?;
+                meta.ty = match exp.get_type() {
+                    Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
+                    _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
+                };
+                Ok(Yield::new(meta, exp))
+            }
+        }
+    }
+
+    fn analyze_yieldreturn(
+        &mut self,
+        yr: &YieldReturn<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<YieldReturn<SemanticMetadata>> {
+        match current_func {
+            None => Err(format!("yret appears outside of function")),
+            Some(cf) => {
+                let mut meta = yr.get_metadata().clone();
+                match yr.get_value() {
+                    None => {
+                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        if *ret_ty == Unit {
+                            meta.ty = Unit;
+                            Ok(YieldReturn::new(meta, None))
+                        } else {
+                            Err(format!("Yield return expected {} but got unit", ret_ty))
+                        }
+                    }
+                    Some(val) => {
+                        let exp = self.traverse(val, current_func, sym)?;
+                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        let ret_ty = self.type_to_canonical(sym, ret_ty)?;
+                        if ret_ty == exp.get_type() {
+                            meta.ty = ret_ty;
+                            Ok(YieldReturn::new(meta, Some(exp)))
+                        } else {
+                            Err(format!(
+                                "Yield return expected {} but got {}",
+                                ret_ty,
+                                exp.get_type()
+                            ))
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Statement}, structdef::StructDef}};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Statement, Yield, YieldReturn}, structdef::StructDef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -267,7 +267,7 @@ impl CompilerNode {
                 (Statement::Return(Box::new(e)), l)
             }
             Statement::Yield(y) => {
-                let (e, l) = Self::compute_offsets(y, layout, struct_table);
+                let (e, l) = Self::compute_layouts_for_yield(y, layout, struct_table);
                 (Statement::Yield(Box::new(e)), l)
             }
             Statement::YieldReturn(yr) => {
@@ -366,6 +366,33 @@ impl CompilerNode {
         let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
         let (value, layout) = CompilerNode::compute_offsets(p.get_value(), layout, struct_table);
         (Prints::new(meta, value), layout)
+    }
+
+    fn compute_layouts_for_yield(
+        y: &Yield<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Yield<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(y.get_metadata(), struct_table, layout);
+        let (value, layout) = CompilerNode::compute_offsets(y.get_value(), layout, struct_table);
+        (Yield::new(meta, value), layout)
+    }
+
+    fn compute_layouts_for_yieldreturn(
+        yr: &YieldReturn<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (YieldReturn<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(yr.get_metadata(), struct_table, layout);
+        match yr.get_value() {
+            None => {
+                (YieldReturn::new(meta, None), layout)
+            }
+            Some(val) => {
+                let (value, layout) = CompilerNode::compute_offsets(val, layout, struct_table);
+                (YieldReturn::new(meta, Some(value)), layout)
+            }
+        }
     }
 
     fn compute_layouts_for(

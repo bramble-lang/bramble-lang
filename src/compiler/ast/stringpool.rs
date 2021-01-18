@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Statement}}};
+use crate::{compiler::ast::ast::CompilerNode, syntax::{module::{self, Item}, routinedef::RoutineDef, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Statement, Yield, YieldReturn}}};
 
 use super::scope::Scope;
 
@@ -129,7 +129,7 @@ impl StringPool {
             Statement::Bind(b) => self.extract_from_bind(b),
             Statement::Mutate(m) => self.extract_from_mutate(m),
             Statement::Return(r) => self.extract_from(r),
-            Statement::Yield(y) => self.extract_from(y),
+            Statement::Yield(y) => self.extract_from_yield(y),
             Statement::YieldReturn(ast) => self.extract_from(ast),
             Statement::Printi(pi) => self.extract_from_printi(pi),
             Statement::Printiln(ast) => self.extract_from_printiln(ast),
@@ -166,6 +166,17 @@ impl StringPool {
 
     pub fn extract_from_prints(&mut self, p: &Prints<Scope>) {
         self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_yield(&mut self, y: &Yield<Scope>) {
+        self.extract_from(y.get_value())
+    }
+
+    pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<Scope>) {
+        match yr.get_value() {
+            None => (),
+            Some(val) => self.extract_from(val)
+        }
     }
 }
 
