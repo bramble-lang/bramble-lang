@@ -4,7 +4,6 @@ use super::{ast::Ast, ty::Type};
 pub enum Statement<M> {
     Bind(Box<Bind<M>>),
     Mutate(Box<Mutate<M>>),
-    Return(Box<Ast<M>>),
     Yield(Box<Ast<M>>),
     YieldReturn(Box<Ast<M>>),
     Printi(Box<Ast<M>>),
@@ -12,6 +11,7 @@ pub enum Statement<M> {
     Printbln(Box<Ast<M>>),
     Prints(Box<Ast<M>>),
     Expression(Box<Ast<M>>),
+    Return(Box<Ast<M>>),
 }
 
 impl<M> Statement<M> {
@@ -34,9 +34,9 @@ impl<M> Statement<M> {
             Ast::Printiln(_, _) => Some(Statement::Printiln(Box::new(ast))),
             Ast::Printbln(_, _) => Some(Statement::Printbln(Box::new(ast))),
             Ast::Statement(s) => Some(s),
-            Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             Ast::Yield(_, _) => Some(Statement::Yield(Box::new(ast))),
             Ast::YieldReturn(_, _) => Some(Statement::YieldReturn(Box::new(ast))),
+            Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             _ => Some(Statement::Expression(Box::new(ast))),
         }
     }
