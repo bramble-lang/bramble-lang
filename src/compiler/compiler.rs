@@ -467,7 +467,7 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,
-            Ast::Return(s, v) => {
+            Ast::Return(_, v) => {
                 assembly! {(code) {
                     {{self.return_exp_temp(v, current_func)?}}
                 }}

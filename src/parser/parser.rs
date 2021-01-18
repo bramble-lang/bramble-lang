@@ -356,7 +356,7 @@ fn statement(stream: &mut TokenStream) -> PResult {
 fn expression_block(stream: &mut TokenStream) -> PResult {
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
-            let mut stmts = block(stream)?;
+            let stmts = block(stream)?;
 
             let final_exp = expression(stream)?.map(|e| Box::new(e));
 
