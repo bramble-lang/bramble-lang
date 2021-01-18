@@ -516,38 +516,6 @@ impl<'a> SemanticAnalyzer<'a> {
                     ))
                 }
             }
-            Ast::Return(meta, None) => match current_func {
-                None => Err(format!("Return called outside of a function")),
-                Some(cf) => {
-                    let mut meta = meta.clone();
-                    let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
-                    if *fty == Unit {
-                        meta.ty = Unit;
-                        Ok(Ast::Return(meta.clone(), None))
-                    } else {
-                        Err(format!("Return expected {} but got unit", fty))
-                    }
-                }
-            },
-            Ast::Return(meta, Some(exp)) => match current_func {
-                None => Err(format!("Return appears outside of a function")),
-                Some(cf) => {
-                    let mut meta = meta.clone();
-                    let exp = self.traverse(&exp, current_func, sym)?;
-                    let (_, fty) = self.lookup_func_or_cor(sym, cf)?;
-                    let fty = self.type_to_canonical(sym, fty)?;
-                    if fty == exp.get_type() {
-                        meta.ty = fty;
-                        Ok(Ast::Return(meta.clone(), Some(Box::new(exp))))
-                    } else {
-                        Err(format!(
-                            "Return expected {} but got {}",
-                            fty,
-                            exp.get_type()
-                        ))
-                    }
-                }
-            },
             Ast::Yield(meta, exp) => match current_func {
                 None => Err(format!("Yield appears outside of function")),
                 Some(_) => {

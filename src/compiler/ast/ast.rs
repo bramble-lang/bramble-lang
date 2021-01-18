@@ -97,15 +97,6 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Yield(meta, Box::new(e)), layout)
             }
-            Return(m, None) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Return(meta, None), layout)
-            }
-            Return(m, Some(e)) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Return(meta, Some(Box::new(e))), layout)
-            }
             RoutineCall(m, call, name, params) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let mut nlayout = layout;

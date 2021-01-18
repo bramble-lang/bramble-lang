@@ -466,11 +466,6 @@ impl<'a> Compiler<'a> {
                     Some(fe) => self.traverse(fe, current_func, code)?,
                 }
             }
-            Ast::Return(_, v) => {
-                assembly! {(code) {
-                    {{self.return_exp_temp(v, current_func)?}}
-                }}
-            }
             Ast::Yield(meta, ref id) => {
                 assembly! {(code) {
                     {{self.yield_exp(meta, id, current_func)?}}

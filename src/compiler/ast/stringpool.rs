@@ -80,10 +80,6 @@ impl StringPool {
             Yield(_, e) => {
                 self.extract_from(e);
             }
-            Return(_, None) => {}
-            Return(_, Some(e)) => {
-                self.extract_from(e);
-            }
             RoutineCall(.., params) => {
                 for e in params.iter() {
                     self.extract_from(e);

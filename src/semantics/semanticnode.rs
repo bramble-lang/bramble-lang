@@ -126,11 +126,6 @@ impl SemanticAst {
                 self.from_parser_ast(true_arm)?,
                 self.from_parser_ast(false_arm)?,
             ))),
-            Return(l, None) => Ok(Box::new(Return(self.semantic_metadata_from(*l), None))),
-            Return(l, Some(exp)) => Ok(Box::new(Return(
-                self.semantic_metadata_from(*l),
-                Some(self.from_parser_ast(exp)?),
-            ))),
             Yield(l, box exp) => Ok(Box::new(Yield(
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,

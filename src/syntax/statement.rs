@@ -35,7 +35,6 @@ impl<M> Statement<M> {
 
     pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
         match ast {
-            Ast::Return(_, _) => panic!("Should not be here"), //Some(Statement::Return(Box::new(ast))),
             _ => Some(Statement::Expression(Box::new(ast))),
         }
     }

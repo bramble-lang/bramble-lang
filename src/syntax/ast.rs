@@ -86,7 +86,6 @@ pub enum Ast<I> {
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
 
-    Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
 }
 
@@ -108,8 +107,6 @@ impl<I> Ast<I> {
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
             If(_, _, _, _) => "if".into(),
             ExpressionBlock(..) => "expression block".into(),
-
-            Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
         }
     }
@@ -129,7 +126,6 @@ impl<I> Ast<I> {
             | UnaryOp(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Return(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
@@ -151,7 +147,6 @@ impl<I> Ast<I> {
             | UnaryOp(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Return(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
