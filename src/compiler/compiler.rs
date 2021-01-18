@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::binary_op;
+use crate::{binary_op, syntax::statement::Bind};
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -488,7 +488,7 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,
-            Ast::Bind(..) => self.traverse_bind(ast, current_func, code)?,
+            Ast::Bind(..) => panic!("Should not get here"), //self.traverse_bind(ast, current_func, code)?,
             Ast::Mutate(..) => self.traverse_mutate(ast, current_func, code)?,
             Ast::Return(_, ref exp) => {
                 assembly! {(code) {
@@ -742,24 +742,20 @@ impl<'a> Compiler<'a> {
 
     fn traverse_bind(
         &mut self,
-        bind: &'a Ast<Scope>,
+        bind: &'a Bind<Scope>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        if let Ast::Bind(_, id, .., exp) = bind {
-            let id_offset = self
-                .scope
-                .find(id)
-                .expect(&format!("Could not find variable {}\n{}", id, self.scope))
-                .offset;
-            assembly! {(code) {
-                ; {format!("Binding {}", id)}
-                {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
-            }}
-            Ok(())
-        } else {
-            panic!("Expected a bind statement, but got {}", bind.root_str())
-        }
+        let id_offset = self
+            .scope
+            .find(bind.get_id())
+            .expect(&format!("Could not find variable {}\n{}", bind.get_id(), self.scope))
+            .offset;
+        assembly! {(code) {
+            ; {format!("Binding {}", bind.get_id())}
+            {{self.bind(bind.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+        }}
+        Ok(())
     }
 
     fn traverse_mutate(

@@ -2,7 +2,7 @@ use super::{ast::Ast, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
-    Bind(Box<Ast<M>>),
+    Bind(Box<self::Bind<M>>),
     Mutate(Box<Ast<M>>),
     Return(Box<Ast<M>>),
     Yield(Box<Ast<M>>),
@@ -33,7 +33,7 @@ impl<M> Statement<M> {
             Ast::Printiln(_, _) => Some(Statement::Printiln(Box::new(ast))),
             Ast::Printbln(_, _) => Some(Statement::Printbln(Box::new(ast))),
             Ast::Statement(s) => Some(s),
-            Ast::Bind(_, _, _, _, _) => Some(Statement::Bind(Box::new(ast))),
+            Ast::Bind(_, _, _, _, _) => Some(Statement::Bind(Box::new(Bind::from_ast(ast)))),
             Ast::Mutate(_, _, _) => Some(Statement::Mutate(Box::new(ast))),
             Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             Ast::Yield(_, _) => Some(Statement::Yield(Box::new(ast))),
@@ -85,6 +85,14 @@ impl<M> Bind<M> {
         }
     }
 
+    pub fn from_ast(ast: Ast<M>) -> Bind<M> {
+        if let Ast::Bind(metadata, id, mutable, ty, box rhs) = ast {
+            Bind::new(metadata, &id, ty, mutable, rhs)
+        } else {
+            panic!(format!("Expected Ast::Bind but got {}", ast.root_str()))
+        }
+    }
+
     pub fn get_id(&self) -> &str {
         &self.id
     }
@@ -111,5 +119,43 @@ impl<M> Bind<M> {
 
     pub fn root_str(&self) -> String {
         format!("bind {}", self.id)
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Mutate<M> {
+    metadata: M,
+    id: String,
+    rhs: Ast<M>,
+}
+
+impl<M> Mutate<M> {
+    pub fn new(metadata: M, id: &str, rhs: Ast<M>) -> Self {
+        Mutate {
+            metadata,
+            id: id.into(),
+            rhs,
+        }
+    }
+
+    pub fn get_id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        &self.metadata
+    }
+
+    pub fn get_metadata_mut(&mut self) -> &mut M {
+        &mut self.metadata
+    }
+
+    pub fn get_rhs(&self) -> &Ast<M> {
+        &self.rhs
+    }
+
+    pub fn root_str(&self) -> String {
+        format!("mut {}", self.id)
     }
 }

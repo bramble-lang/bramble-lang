@@ -1,16 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{
-    compiler::ast::scope::{LayoutData, Scope},
-    semantics::semanticnode::SemanticMetadata,
-    syntax::{
-        module::{self, Item, Module},
-        routinedef::{RoutineDef, RoutineDefType},
-        statement::Statement,
-        structdef::StructDef,
-    },
-};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Statement}, structdef::StructDef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -115,7 +106,7 @@ impl CompilerNode {
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
             Mutate(..) => Self::compute_layouts_for_mutate(ast, layout, struct_table),
-            Bind(..) => Self::compute_layouts_for_bind(ast, layout, struct_table),
+            Bind(..) => panic!("Should not be here"), //Self::compute_layouts_for_bind(ast, layout, struct_table),
             Yield(m, e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
@@ -337,20 +328,16 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_bind(
-        bind: &Ast<SemanticMetadata>,
+        bind: &Bind<SemanticMetadata>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Ast<Scope>, LayoutData) {
-        if let Ast::Bind(m, id, mutable, p, e) = bind {
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
-            let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-            (
-                Ast::Bind(meta, id.clone(), *mutable, p.clone(), Box::new(e)),
-                layout,
-            )
-        } else {
-            panic!("Expected a bind statement, but got {}", bind.root_str())
-        }
+    ) -> (Bind<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(bind.get_metadata(), struct_table, layout);
+        let (rhs, layout) = CompilerNode::compute_offsets(bind.get_rhs(), layout, struct_table);
+        (
+            Bind::new(meta, bind.get_id(), bind.get_type().clone(), bind.is_mutable(), rhs),
+            layout,
+        )
     }
 
     fn compute_layouts_for_mutate(

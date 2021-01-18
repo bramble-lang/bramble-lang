@@ -1,4 +1,4 @@
-use crate::semantics::symbol_table::*;
+use crate::{semantics::symbol_table::*, syntax::statement::Bind};
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -120,7 +120,7 @@ impl SemanticAst {
                 self.from_parser_ast(false_arm)?,
             ))),
             Mutate(..) => self.from_mutate(ast),
-            Bind(..) => self.from_bind(ast),
+            Bind(..) => panic!("Should not call here"), //self.from_bind(ast),
             Return(l, None) => Ok(Box::new(Return(self.semantic_metadata_from(*l), None))),
             Return(l, Some(exp)) => Ok(Box::new(Return(
                 self.semantic_metadata_from(*l),
@@ -278,7 +278,7 @@ impl SemanticAst {
 
         if let Ast::Statement(statement) = statement {
             let inner = match statement {
-                Bind(b) => Bind(self.from_bind(b)?),
+                Bind(b) => Bind(Box::new(self.from_bind(b)?)),
                 Mutate(x) => Mutate(self.from_parser_ast(x)?),
                 Return(x) => Return(self.from_parser_ast(x)?),
                 Yield(x) => Yield(self.from_parser_ast(x)?),
@@ -296,18 +296,14 @@ impl SemanticAst {
         }
     }
 
-    fn from_bind(&mut self, bind: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
-        if let Ast::Bind(ln, name, mutable, p, ref exp) = bind {
-            Ok(Box::new(Ast::Bind(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                *mutable,
-                p.clone(),
-                self.from_parser_ast(exp)?,
-            )))
-        } else {
-            panic!("Expected a Bind statement but got {}", bind.root_str())
-        }
+    fn from_bind(&mut self, bind: &Bind<ParserInfo>) -> Result<Bind<SemanticMetadata>> {
+        Ok(Bind::new(
+            self.semantic_metadata_from(*bind.get_metadata()),
+            bind.get_id(),
+            bind.get_type().clone(),
+            bind.is_mutable(),
+            *self.from_parser_ast(bind.get_rhs())?,
+        ))
     }
 
     fn from_mutate(&mut self, mutate: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {

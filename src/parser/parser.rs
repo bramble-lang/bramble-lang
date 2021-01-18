@@ -1190,10 +1190,11 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
-                    assert_eq!(id, "x");
-                    assert_eq!(p, Type::I32);
-                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
+                Statement::Bind(box b) => {
+                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_type(), Type::I32);
+                    assert_eq!(b.is_mutable(), false);
+                    assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1213,10 +1214,11 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Bind(box Ast::Bind(_, id, true, p, exp)) => {
-                    assert_eq!(id, "x");
-                    assert_eq!(p, Type::I32);
-                    assert_eq!(exp, Box::new(PNode::Integer(1, 5)));
+                Statement::Bind(box b) => {
+                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_type(), Type::I32);
+                    assert_eq!(b.is_mutable(), true);
+                    assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
             },
@@ -1614,17 +1616,17 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
-                    assert_eq!(id, "x");
-                    assert_eq!(p, Type::Coroutine(Box::new(Type::I32)));
+                Statement::Bind(box b) => {
+                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
                     assert_eq!(
-                        exp,
-                        Box::new(Ast::RoutineCall(
+                        *b.get_rhs(),
+                        Ast::RoutineCall(
                             1,
                             RoutineCall::CoroutineInit,
                             vec!["c"].into(),
                             vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
-                        ))
+                        )
                     );
                 }
                 _ => panic!("Not a binding statement"),
@@ -1645,17 +1647,17 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Ast::Statement(stm) => match stm {
-                Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
-                    assert_eq!(id, "x");
-                    assert_eq!(p, Type::Coroutine(Box::new(Type::I32)));
+                Statement::Bind(box b) => {
+                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
                     assert_eq!(
-                        exp,
-                        Box::new(Ast::RoutineCall(
+                        *b.get_rhs(),
+                        Ast::RoutineCall(
                             1,
                             RoutineCall::CoroutineInit,
                             vec!["a", "b", "c"].into(),
                             vec![Ast::Integer(1, 1), Ast::Integer(1, 2)]
-                        ))
+                        )
                     );
                 }
                 _ => panic!("Not a binding statement"),
@@ -1838,10 +1840,10 @@ pub mod tests {
             assert_eq!(body.len(), 3);
             match &body[0] {
                 Ast::Statement(stm) => match stm {
-                    Statement::Bind(box Ast::Bind(_, id, false, p, exp)) => {
-                        assert_eq!(id, "x");
-                        assert_eq!(p, Type::I32);
-                        assert_eq!(*exp, Box::new(PNode::Integer(1, 5)));
+                    Statement::Bind(box b) => {
+                        assert_eq!(b.get_id(), "x");
+                        assert_eq!(b.get_type(), Type::I32);
+                        assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
                     }
                     _ => panic!("Not a binding statement"),
                 },
