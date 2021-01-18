@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Statement}, structdef::StructDef, ty::Type}};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printiln, Prints, Statement}, structdef::StructDef, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -316,10 +316,13 @@ fn statement(stream: &mut TokenStream) -> PResult {
         Some(bind) => Some(Statement::Bind(Box::new(bind))),
         None => match mutate(stream)? {
             Some(mutate) => Some(Statement::Mutate(Box::new(mutate))),
-            None => println_stmt(stream)
-                .por(expression, stream)?
-                .map(|s| Statement::from_ast(s))
-                .flatten()
+            None => match println_stmt(stream)? {
+                Some(p) => Some(p),
+                None => 
+                    expression(stream)?
+                    .map(|s| Statement::from_ast(s))
+                    .flatten()
+            }
         }
     };
 
@@ -635,16 +638,16 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn println_stmt(stream: &mut TokenStream) -> PResult {
+fn println_stmt(stream: &mut TokenStream) -> Result<Option<Statement<ParserInfo>>> {
     trace!(stream);
     let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
         Some(print) => {
             let exp = expression(stream)?
                 .ok_or(format!("L{}: Expected expression after println", print.l))?;
             match print.s {
-                Lex::Printiln => Some(Ast::Printiln(print.l, Box::new(exp))),
-                Lex::Prints => Some(Ast::Prints(print.l, Box::new(exp))),
-                Lex::Printbln => Some(Ast::Printbln(print.l, Box::new(exp))),
+                Lex::Printiln => Some(Statement::Printiln(Box::new(Printiln::new(print.l, exp)))),
+                Lex::Prints => Some(Statement::Prints(Box::new(Prints::new(print.l, exp)))),
+                Lex::Printbln => Some(Statement::Printbln(Box::new(Printbln::new(print.l, exp)))),
                 _ => panic!(
                     "CRITICAL: already tested for a print token but found {}",
                     print.s

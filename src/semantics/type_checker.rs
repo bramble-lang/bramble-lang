@@ -1031,11 +1031,11 @@ impl<'a> SemanticAnalyzer<'a> {
     ) -> Result<Printbln<SemanticMetadata>> {
         let mut meta = p.get_metadata().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I32 {
+        if value.get_type() == Bool {
             meta.ty = Unit;
             Ok(Printbln::new(meta.clone(), value))
         } else {
-            Err(format!("Expected i32 for printi got {}", value.get_type()))
+            Err(format!("Expected bool for printbln got {}", value.get_type()))
         }
     }
 
@@ -1047,11 +1047,11 @@ impl<'a> SemanticAnalyzer<'a> {
     ) -> Result<Prints<SemanticMetadata>> {
         let mut meta = p.get_metadata().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I32 {
+        if value.get_type() == Type::StringLiteral {
             meta.ty = Unit;
             Ok(Prints::new(meta.clone(), value))
         } else {
-            Err(format!("Expected i32 for printi got {}", value.get_type()))
+            Err(format!("Expected string for prints got {}", value.get_type()))
         }
     }
 }
