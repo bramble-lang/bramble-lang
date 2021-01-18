@@ -28,7 +28,7 @@ pub struct SemanticMetadata {
     pub canonical_path: Path,
 }
 
-pub type SemanticNode = Ast<SemanticMetadata>;
+pub type SemanticNode = Expression<SemanticMetadata>;
 
 impl SemanticNode {
     pub fn get_type(&self) -> &Type {
@@ -84,7 +84,7 @@ impl SemanticAst {
     }
 
     pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>> {
-        use Ast::*;
+        use Expression::*;
         let node = match ast {
             Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
             Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_metadata_from(*ln), *val))),
@@ -386,16 +386,16 @@ mod tests {
     fn test_single_node() {
         for (node, expected) in [
             (
-                Ast::Integer(1, 3),
-                Ast::Integer(SemanticMetadata::new(0, 1, Type::Unknown), 3),
+                Expression::Integer(1, 3),
+                Expression::Integer(SemanticMetadata::new(0, 1, Type::Unknown), 3),
             ),
             (
-                Ast::Boolean(1, true),
-                Ast::Boolean(SemanticMetadata::new(0, 1, Type::Unknown), true),
+                Expression::Boolean(1, true),
+                Expression::Boolean(SemanticMetadata::new(0, 1, Type::Unknown), true),
             ),
             (
-                Ast::Identifier(1, "x".into()),
-                Ast::Identifier(SemanticMetadata::new(0, 1, Type::Unknown), "x".into()),
+                Expression::Identifier(1, "x".into()),
+                Expression::Identifier(SemanticMetadata::new(0, 1, Type::Unknown), "x".into()),
             ),
         ]
         .iter()
@@ -410,40 +410,40 @@ mod tests {
     fn test_multi_nodes() {
         for ((l, r), (el, er)) in [
             (
-                (Ast::Integer(1, 3), Ast::Integer(1, 3)),
+                (Expression::Integer(1, 3), Expression::Integer(1, 3)),
                 (
-                    Ast::Integer(SemanticMetadata::new(1, 1, Type::Unknown), 3),
-                    Ast::Integer(SemanticMetadata::new(2, 1, Type::Unknown), 3),
+                    Expression::Integer(SemanticMetadata::new(1, 1, Type::Unknown), 3),
+                    Expression::Integer(SemanticMetadata::new(2, 1, Type::Unknown), 3),
                 ),
             ),
             (
                 (
-                    Ast::Identifier(1, "x".into()),
-                    Ast::Identifier(1, "y".into()),
+                    Expression::Identifier(1, "x".into()),
+                    Expression::Identifier(1, "y".into()),
                 ),
                 (
-                    Ast::Identifier(SemanticMetadata::new(1, 1, Type::Unknown), "x".into()),
-                    Ast::Identifier(SemanticMetadata::new(2, 1, Type::Unknown), "y".into()),
+                    Expression::Identifier(SemanticMetadata::new(1, 1, Type::Unknown), "x".into()),
+                    Expression::Identifier(SemanticMetadata::new(2, 1, Type::Unknown), "y".into()),
                 ),
             ),
             (
-                (Ast::Boolean(1, true), Ast::Boolean(1, false)),
+                (Expression::Boolean(1, true), Expression::Boolean(1, false)),
                 (
-                    Ast::Boolean(SemanticMetadata::new(1, 1, Type::Unknown), true),
-                    Ast::Boolean(SemanticMetadata::new(2, 1, Type::Unknown), false),
+                    Expression::Boolean(SemanticMetadata::new(1, 1, Type::Unknown), true),
+                    Expression::Boolean(SemanticMetadata::new(2, 1, Type::Unknown), false),
                 ),
             ),
         ]
         .iter()
         {
             for (tree, expected) in [(
-                Ast::BinaryOp(
+                Expression::BinaryOp(
                     1,
                     BinaryOperator::Mul,
                     Box::new(l.clone()),
                     Box::new(r.clone()),
                 ),
-                Ast::BinaryOp(
+                Expression::BinaryOp(
                     SemanticMetadata::new(0, 1, Type::Unknown),
                     BinaryOperator::Mul,
                     Box::new(el.clone()),

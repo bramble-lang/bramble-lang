@@ -69,29 +69,29 @@ impl std::fmt::Display for RoutineCall {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Ast<I> {
+pub enum Expression<I> {
     Integer(I, i32),
     Boolean(I, bool),
     StringLiteral(I, String),
     CustomType(I, Path),
     Identifier(I, String),
     Path(I, Path),
-    MemberAccess(I, Box<Ast<I>>, String),
+    MemberAccess(I, Box<Expression<I>>, String),
     IdentifierDeclare(I, String, Type),
-    RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
-    StructExpression(I, Path, Vec<(String, Ast<I>)>),
-    If(I, Box<Ast<I>>, Box<Ast<I>>, Box<Ast<I>>),
-    ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Ast<I>>>),
+    RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
+    StructExpression(I, Path, Vec<(String, Expression<I>)>),
+    If(I, Box<Expression<I>>, Box<Expression<I>>, Box<Expression<I>>),
+    ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Expression<I>>>),
 
-    BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
-    UnaryOp(I, UnaryOperator, Box<Ast<I>>),
+    BinaryOp(I, BinaryOperator, Box<Expression<I>>, Box<Expression<I>>),
+    UnaryOp(I, UnaryOperator, Box<Expression<I>>),
 
-    Yield(I, Box<Ast<I>>),
+    Yield(I, Box<Expression<I>>),
 }
 
-impl<I> Ast<I> {
+impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
-        use Ast::*;
+        use Expression::*;
         match self {
             Integer(_, v) => format!("{}", v),
             Boolean(_, v) => format!("{}", v),
@@ -112,7 +112,7 @@ impl<I> Ast<I> {
     }
 
     pub fn get_metadata(&self) -> &I {
-        use Ast::*;
+        use Expression::*;
         match self {
             Integer(m, ..)
             | Boolean(m, ..)
@@ -133,7 +133,7 @@ impl<I> Ast<I> {
     }
 
     pub fn get_metadata_mut(&mut self) -> &mut I {
-        use Ast::*;
+        use Expression::*;
         match self {
             Integer(m, ..)
             | Boolean(m, ..)
@@ -172,7 +172,7 @@ impl<I> Ast<I> {
     /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
     pub fn get_name(&self) -> Option<&str> {
         match self {
-            Ast::Identifier(_, name) => Some(name),
+            Expression::Identifier(_, name) => Some(name),
             _ => None,
         }
     }

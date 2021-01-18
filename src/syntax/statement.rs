@@ -1,4 +1,4 @@
-use super::{expression::Ast, ty::Type};
+use super::{expression::Expression, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
@@ -11,7 +11,7 @@ pub enum Statement<M> {
     Prints(Box<Prints<M>>),
 
     YieldReturn(Box<YieldReturn<M>>),
-    Expression(Box<Ast<M>>),
+    Expression(Box<Expression<M>>),
 
     Return(Box<Return<M>>),
 }
@@ -33,7 +33,7 @@ impl<M> Statement<M> {
         }
     }
 
-    pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
+    pub fn from_ast(ast: Expression<M>) -> Option<Statement<M>> {
         match ast {
             _ => Some(Statement::Expression(Box::new(ast))),
         }
@@ -78,11 +78,11 @@ pub struct Bind<M> {
     id: String,
     ty: Type,
     mutable: bool,
-    rhs: Ast<M>,
+    rhs: Expression<M>,
 }
 
 impl<M> Bind<M> {
-    pub fn new(metadata: M, id: &str, ty: Type, mutable: bool, rhs: Ast<M>) -> Bind<M> {
+    pub fn new(metadata: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
         Bind {
             metadata,
             id: id.into(),
@@ -108,7 +108,7 @@ impl<M> Bind<M> {
         self.mutable
     }
 
-    pub fn get_rhs(&self) -> &Ast<M> {
+    pub fn get_rhs(&self) -> &Expression<M> {
         &self.rhs
     }
 
@@ -125,11 +125,11 @@ impl<M> Bind<M> {
 pub struct Mutate<M> {
     metadata: M,
     id: String,
-    rhs: Ast<M>,
+    rhs: Expression<M>,
 }
 
 impl<M> Mutate<M> {
-    pub fn new(metadata: M, id: &str, rhs: Ast<M>) -> Self {
+    pub fn new(metadata: M, id: &str, rhs: Expression<M>) -> Self {
         Mutate {
             metadata,
             id: id.into(),
@@ -149,7 +149,7 @@ impl<M> Mutate<M> {
         &mut self.metadata
     }
 
-    pub fn get_rhs(&self) -> &Ast<M> {
+    pub fn get_rhs(&self) -> &Expression<M> {
         &self.rhs
     }
 
@@ -161,11 +161,11 @@ impl<M> Mutate<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printi<M> {
     metadata: M,
-    value: Ast<M>,
+    value: Expression<M>,
 }
 
 impl<M> Printi<M> {
-    pub fn new(metadata: M, value: Ast<M>) -> Self {
+    pub fn new(metadata: M, value: Expression<M>) -> Self {
         Self { metadata, value }
     }
 
@@ -177,7 +177,7 @@ impl<M> Printi<M> {
         &mut self.metadata
     }
 
-    pub fn get_value(&self) -> &Ast<M> {
+    pub fn get_value(&self) -> &Expression<M> {
         &self.value
     }
 
@@ -189,11 +189,11 @@ impl<M> Printi<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printiln<M> {
     metadata: M,
-    value: Ast<M>,
+    value: Expression<M>,
 }
 
 impl<M> Printiln<M> {
-    pub fn new(metadata: M, value: Ast<M>) -> Self {
+    pub fn new(metadata: M, value: Expression<M>) -> Self {
         Self { metadata, value }
     }
 
@@ -205,7 +205,7 @@ impl<M> Printiln<M> {
         &mut self.metadata
     }
 
-    pub fn get_value(&self) -> &Ast<M> {
+    pub fn get_value(&self) -> &Expression<M> {
         &self.value
     }
 
@@ -217,11 +217,11 @@ impl<M> Printiln<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printbln<M> {
     metadata: M,
-    value: Ast<M>,
+    value: Expression<M>,
 }
 
 impl<M> Printbln<M> {
-    pub fn new(metadata: M, value: Ast<M>) -> Self {
+    pub fn new(metadata: M, value: Expression<M>) -> Self {
         Self { metadata, value }
     }
 
@@ -233,7 +233,7 @@ impl<M> Printbln<M> {
         &mut self.metadata
     }
 
-    pub fn get_value(&self) -> &Ast<M> {
+    pub fn get_value(&self) -> &Expression<M> {
         &self.value
     }
 
@@ -245,11 +245,11 @@ impl<M> Printbln<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Prints<M> {
     metadata: M,
-    value: Ast<M>,
+    value: Expression<M>,
 }
 
 impl<M> Prints<M> {
-    pub fn new(metadata: M, value: Ast<M>) -> Self {
+    pub fn new(metadata: M, value: Expression<M>) -> Self {
         Self { metadata, value }
     }
 
@@ -261,7 +261,7 @@ impl<M> Prints<M> {
         &mut self.metadata
     }
 
-    pub fn get_value(&self) -> &Ast<M> {
+    pub fn get_value(&self) -> &Expression<M> {
         &self.value
     }
 
@@ -273,11 +273,11 @@ impl<M> Prints<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Yield<M> {
     metadata: M,
-    value: Ast<M>,
+    value: Expression<M>,
 }
 
 impl<M> Yield<M> {
-    pub fn new(metadata: M, value: Ast<M>) -> Self {
+    pub fn new(metadata: M, value: Expression<M>) -> Self {
         Self { metadata, value }
     }
 
@@ -289,7 +289,7 @@ impl<M> Yield<M> {
         &mut self.metadata
     }
 
-    pub fn get_value(&self) -> &Ast<M> {
+    pub fn get_value(&self) -> &Expression<M> {
         &self.value
     }
 
@@ -301,11 +301,11 @@ impl<M> Yield<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct YieldReturn<M> {
     metadata: M,
-    value: Option<Ast<M>>,
+    value: Option<Expression<M>>,
 }
 
 impl<M> YieldReturn<M> {
-    pub fn new(metadata: M, value: Option<Ast<M>>) -> Self {
+    pub fn new(metadata: M, value: Option<Expression<M>>) -> Self {
         Self { metadata, value }
     }
 
@@ -317,7 +317,7 @@ impl<M> YieldReturn<M> {
         &mut self.metadata
     }
 
-    pub fn get_value(&self) -> &Option<Ast<M>> {
+    pub fn get_value(&self) -> &Option<Expression<M>> {
         &self.value
     }
 
@@ -329,11 +329,11 @@ impl<M> YieldReturn<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Return<M> {
     metadata: M,
-    value: Option<Ast<M>>,
+    value: Option<Expression<M>>,
 }
 
 impl<M> Return<M> {
-    pub fn new(metadata: M, value: Option<Ast<M>>) -> Self {
+    pub fn new(metadata: M, value: Option<Expression<M>>) -> Self {
         Self { metadata, value }
     }
 
@@ -345,7 +345,7 @@ impl<M> Return<M> {
         &mut self.metadata
     }
 
-    pub fn get_value(&self) -> &Option<Ast<M>> {
+    pub fn get_value(&self) -> &Option<Expression<M>> {
         &self.value
     }
 

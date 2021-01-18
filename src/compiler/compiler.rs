@@ -21,7 +21,7 @@ use crate::{
         routinedef::RoutineDef,
     },
 };
-use crate::{expression::Ast, semantics::semanticnode::SemanticMetadata};
+use crate::{expression::Expression, semantics::semanticnode::SemanticMetadata};
 use crate::{expression::RoutineCall, syntax::statement::Statement};
 use crate::{
     expression::{BinaryOperator, UnaryOperator},
@@ -392,13 +392,13 @@ impl<'a> Compiler<'a> {
         self.push_scope(ast);
 
         match ast {
-            Ast::Integer(_, i) => {
+            Expression::Integer(_, i) => {
                 assembly! {(code) {mov %eax, {*i};}}
             }
-            Ast::Boolean(_, b) => {
+            Expression::Boolean(_, b) => {
                 assembly! {(code) {mov %eax, {if *b {1} else {0}};}}
             }
-            Ast::StringLiteral(_, s) => {
+            Expression::StringLiteral(_, s) => {
                 let str_id = self
                     .string_pool
                     .get(s)
@@ -408,7 +408,7 @@ impl<'a> Compiler<'a> {
                     }
                 }
             }
-            Ast::Identifier(m, id) => {
+            Expression::Identifier(m, id) => {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
                     Type::Custom(_) => {
@@ -419,10 +419,10 @@ impl<'a> Compiler<'a> {
                     }
                 }
             }
-            Ast::MemberAccess(_, src, member) => {
+            Expression::MemberAccess(_, src, member) => {
                 self.member_access(current_func, code, src, member)?;
             }
-            Ast::UnaryOp(_, op, operand) => {
+            Expression::UnaryOp(_, op, operand) => {
                 self.traverse(operand, current_func, code)?;
                 match op {
                     UnaryOperator::Minus => {
@@ -438,12 +438,12 @@ impl<'a> Compiler<'a> {
                     }
                 }
             }
-            Ast::BinaryOp(_, op, l, r) => {
+            Expression::BinaryOp(_, op, l, r) => {
                 assembly! {(code) {
                     {{self.handle_binary_operands(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
-            Ast::If(meta, ref cond, ref true_arm, ref false_arm) => {
+            Expression::If(meta, ref cond, ref true_arm, ref false_arm) => {
                 let mut cond_code = vec![];
                 self.traverse(cond, current_func, &mut cond_code)?;
                 let mut true_code = vec![];
@@ -462,7 +462,7 @@ impl<'a> Compiler<'a> {
                 ^end_lbl:
                 }};
             }
-            Ast::ExpressionBlock(_, body, final_exp) => {
+            Expression::ExpressionBlock(_, body, final_exp) => {
                 for s in body.iter() {
                     self.traverse_statement(s, current_func, code)?;
                 }
@@ -471,12 +471,12 @@ impl<'a> Compiler<'a> {
                     Some(fe) => self.traverse(fe, current_func, code)?,
                 }
             }
-            Ast::Yield(meta, ref id) => {
+            Expression::Yield(meta, ref id) => {
                 assembly! {(code) {
                     {{self.yield_exp(meta, id, current_func)?}}
                 }}
             }
-            Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
+            Expression::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
                 let co_def = self
                     .root
                     .go_to(co_path)
@@ -510,7 +510,7 @@ impl<'a> Compiler<'a> {
                     pop %ebp;
                 }};
             }
-            Ast::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
+            Expression::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
                 // Check if function exists and if the right number of parameters are being
                 // passed
                 let fn_def = self
@@ -542,7 +542,7 @@ impl<'a> Compiler<'a> {
                     call @{fn_path.to_label()};
                 }};
             }
-            Ast::StructExpression(meta, struct_name, fields) => {
+            Expression::StructExpression(meta, struct_name, fields) => {
                 let anonymous_name = format!("!{}_{}", struct_name, meta.id());
 
                 let anonymous_offset = self
@@ -966,7 +966,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
 
         match fvalue {
-            Ast::StructExpression(_, substruct_name, substruct_values) => {
+            Expression::StructExpression(_, substruct_name, substruct_values) => {
                 let asm = self.struct_exression(
                     current_func,
                     substruct_name,
@@ -1017,7 +1017,7 @@ impl<'a> Compiler<'a> {
         match value.get_metadata().ty() {
             Type::Custom(name) => {
                 match value {
-                    Ast::Identifier(..) => {
+                    Expression::Identifier(..) => {
                         // If an identifier is being copied to another identifier, then just copy
                         // the data over rather than pop off of the stack
                         let asm =
