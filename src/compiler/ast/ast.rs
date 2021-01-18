@@ -99,15 +99,6 @@ impl CompilerNode {
                 let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
                 (Return(meta, Some(Box::new(e))), layout)
             }
-            YieldReturn(m, None) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (YieldReturn(meta, None), layout)
-            }
-            YieldReturn(m, Some(e)) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (YieldReturn(meta, Some(Box::new(e))), layout)
-            }
             Statement(s) => {
                 let (s, l) = Self::compute_layouts_for_statement(s, layout, struct_table);
                 (Statement(s), l)

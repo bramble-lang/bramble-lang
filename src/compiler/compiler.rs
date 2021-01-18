@@ -473,9 +473,6 @@ impl<'a> Compiler<'a> {
                     {{self.yield_exp(meta, id, current_func)?}}
                 }}
             }
-            Ast::YieldReturn(..) => {
-                panic!("Should not be here")
-            }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
                 let co_def = self
                     .root

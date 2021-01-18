@@ -89,7 +89,6 @@ pub enum Ast<I> {
     Statement(statement::Statement<I>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
-    YieldReturn(I, Option<Box<Ast<I>>>),
 }
 
 impl<I> Ast<I> {
@@ -114,7 +113,6 @@ impl<I> Ast<I> {
             Statement(..) => "statement".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
-            YieldReturn(_, _) => "yret".into(),
         }
     }
 
@@ -135,7 +133,6 @@ impl<I> Ast<I> {
             | ExpressionBlock(m, ..)
             | Return(m, ..)
             | Yield(m, ..)
-            | YieldReturn(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             Statement(stm) => stm.get_metadata(),
@@ -159,7 +156,6 @@ impl<I> Ast<I> {
             | ExpressionBlock(m, ..)
             | Return(m, ..)
             | Yield(m, ..)
-            | YieldReturn(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             Statement(stm) => stm.get_metadata_mut(),

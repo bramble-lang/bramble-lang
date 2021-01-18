@@ -560,38 +560,6 @@ impl<'a> SemanticAnalyzer<'a> {
                     Ok(Ast::Yield(meta, Box::new(exp)))
                 }
             },
-            Ast::YieldReturn(meta, None) => match current_func {
-                None => Err(format!("YRet appears outside of function")),
-                Some(cf) => {
-                    let mut meta = meta.clone();
-                    let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
-                    if *ret_ty == Unit {
-                        meta.ty = Unit;
-                        Ok(Ast::YieldReturn(meta, None))
-                    } else {
-                        Err(format!("Yield return expected {} but got unit", ret_ty))
-                    }
-                }
-            },
-            Ast::YieldReturn(meta, Some(exp)) => match current_func {
-                None => Err(format!("YRet appears outside of function")),
-                Some(cf) => {
-                    let mut meta = meta.clone();
-                    let exp = self.traverse(&exp, current_func, sym)?;
-                    let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
-                    let ret_ty = self.type_to_canonical(sym, ret_ty)?;
-                    if ret_ty == exp.get_type() {
-                        meta.ty = ret_ty;
-                        Ok(Ast::YieldReturn(meta, Some(Box::new(exp))))
-                    } else {
-                        Err(format!(
-                            "Yield return expected {} but got {}",
-                            ret_ty,
-                            exp.get_type()
-                        ))
-                    }
-                }
-            },
             Ast::Statement(..) => self.analyze_statement(ast, current_func, sym),
             Ast::RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();

@@ -128,13 +128,6 @@ impl SemanticAst {
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            YieldReturn(l, None) => {
-                Ok(Box::new(YieldReturn(self.semantic_metadata_from(*l), None)))
-            }
-            YieldReturn(l, Some(exp)) => Ok(Box::new(YieldReturn(
-                self.semantic_metadata_from(*l),
-                Some(self.from_parser_ast(exp)?),
-            ))),
             ExpressionBlock(ln, body) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
