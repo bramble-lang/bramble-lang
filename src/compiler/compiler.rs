@@ -1,8 +1,6 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::ast::RoutineCall;
-use crate::binary_op;
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -24,9 +22,16 @@ use crate::{
     },
 };
 use crate::{ast::Ast, semantics::semanticnode::SemanticMetadata};
+use crate::{ast::RoutineCall, syntax::statement::Statement};
 use crate::{
     ast::{BinaryOperator, UnaryOperator},
     syntax::ty::Type,
+};
+use crate::{
+    binary_op,
+    syntax::statement::{
+        Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
+    },
 };
 
 use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
@@ -438,31 +443,6 @@ impl<'a> Compiler<'a> {
                     {{self.handle_binary_operands(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
-            Ast::Printiln(_, ref exp) => {
-                self.traverse(exp, current_func, code)?;
-
-                assembly! {(code) {
-                    push @_i32_fmt;
-                    push %eax;
-                    {{Compiler::make_c_extern_call("printf", 2)}}
-                }}
-            }
-            Ast::Prints(_, ref exp) => {
-                self.traverse(exp, current_func, code)?;
-
-                assembly! {(code) {
-                    push %eax;
-                    push [rel @stdout];
-                    {{Compiler::make_c_extern_call("fputs", 2)}}
-                }}
-            }
-            Ast::Printbln(_, ref exp) => {
-                self.traverse(exp, current_func, code)?;
-
-                assembly! {(code) {
-                    call @print_bool;
-                }}
-            }
             Ast::If(meta, ref cond, ref true_arm, ref false_arm) => {
                 let mut cond_code = vec![];
                 self.traverse(cond, current_func, &mut cond_code)?;
@@ -482,27 +462,18 @@ impl<'a> Compiler<'a> {
                 ^end_lbl:
                 }};
             }
-            Ast::ExpressionBlock(_, body) => {
+            Ast::ExpressionBlock(_, body, final_exp) => {
                 for s in body.iter() {
-                    self.traverse(s, current_func, code)?;
+                    self.traverse_statement(s, current_func, code)?;
                 }
-            }
-            Ast::Statement(..) => self.traverse_statement(ast, current_func, code)?,
-            Ast::Bind(..) => self.traverse_bind(ast, current_func, code)?,
-            Ast::Mutate(..) => self.traverse_mutate(ast, current_func, code)?,
-            Ast::Return(_, ref exp) => {
-                assembly! {(code) {
-                    {{self.return_exp(exp, current_func)?}}
-                }}
+                match final_exp {
+                    None => (),
+                    Some(fe) => self.traverse(fe, current_func, code)?,
+                }
             }
             Ast::Yield(meta, ref id) => {
                 assembly! {(code) {
                     {{self.yield_exp(meta, id, current_func)?}}
-                }}
-            }
-            Ast::YieldReturn(meta, ref exp) => {
-                assembly! {(code) {
-                    {{self.yield_return(meta, exp, current_func)?}}
                 }}
             }
             Ast::RoutineCall(_, RoutineCall::CoroutineInit, ref co_path, params) => {
@@ -683,7 +654,7 @@ impl<'a> Compiler<'a> {
             }};
 
             for s in stmts.iter() {
-                self.traverse(s, fn_name, code)?;
+                self.traverse_statement(s, fn_name, code)?;
             }
 
             assembly! {(code) {
@@ -711,7 +682,7 @@ impl<'a> Compiler<'a> {
         // Prepare stack frame for this function
         let name = routine.get_name().into();
         for s in routine.get_body().iter() {
-            self.traverse(s, &name, code)?;
+            self.traverse_statement(s, &name, code)?;
         }
         assembly! {(code) {
             mov %ebx, ^terminus;
@@ -722,59 +693,160 @@ impl<'a> Compiler<'a> {
 
     fn traverse_statement(
         &mut self,
-        statement: &'a Ast<Scope>,
+        statement: &'a Statement<Scope>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        if let Ast::Statement(.., stmt) = statement {
-            self.traverse(stmt, current_func, code)
-        } else {
-            panic!("Expected a statement but got {}", statement.root_str())
+        match statement {
+            Statement::Bind(b) => self.traverse_bind(b, current_func, code),
+            Statement::Mutate(m) => self.traverse_mutate(m, current_func, code),
+            Statement::Return(n) => self.traverse_return(n, current_func, code),
+            Statement::YieldReturn(n) => self.traverse_yieldreturn(n, current_func, code),
+            Statement::Printi(n) => self.traverse_printi(n, current_func, code),
+            Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),
+            Statement::Printbln(n) => self.traverse_printbln(n, current_func, code),
+            Statement::Prints(n) => self.traverse_prints(n, current_func, code),
+            Statement::Expression(n) => self.traverse(n, current_func, code),
         }
     }
 
     fn traverse_bind(
         &mut self,
-        bind: &'a Ast<Scope>,
+        bind: &'a Bind<Scope>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        if let Ast::Bind(_, id, .., exp) = bind {
-            let id_offset = self
-                .scope
-                .find(id)
-                .expect(&format!("Could not find variable {}\n{}", id, self.scope))
-                .offset;
-            assembly! {(code) {
-                ; {format!("Binding {}", id)}
-                {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
-            }}
-            Ok(())
-        } else {
-            panic!("Expected a bind statement, but got {}", bind.root_str())
-        }
+        let id_offset = self
+            .scope
+            .find(bind.get_id())
+            .expect(&format!(
+                "Could not find variable {}\n{}",
+                bind.get_id(),
+                self.scope
+            ))
+            .offset;
+        assembly! {(code) {
+            ; {format!("Binding {}", bind.get_id())}
+            {{self.bind(bind.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+        }}
+        Ok(())
     }
 
     fn traverse_mutate(
         &mut self,
-        mutate: &'a Ast<Scope>,
+        mutate: &'a Mutate<Scope>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        if let Ast::Mutate(_, id, .., exp) = mutate {
-            let id_offset = self
-                .scope
-                .find(id)
-                .expect(&format!("Could not find variable {}\n{}", id, self.scope))
-                .offset;
-            assembly! {(code) {
-                ; {format!("Binding {}", id)}
-                {{self.bind(exp, current_func, Reg32::Ebp, id_offset)?}}
-            }}
-            Ok(())
-        } else {
-            panic!("Expected a mutate statement, but got {}", mutate.root_str())
-        }
+        let id = mutate.get_id();
+        let id_offset = self
+            .scope
+            .find(id)
+            .expect(&format!("Could not find variable {}\n{}", id, self.scope))
+            .offset;
+        assembly! {(code) {
+            ; {format!("Binding {}", id)}
+            {{self.bind(mutate.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_printi(
+        &mut self,
+        p: &'a Printi<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            push @_i32_fmt;
+            push %eax;
+            {{Compiler::make_c_extern_call("printf", 2)}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_printiln(
+        &mut self,
+        p: &'a Printiln<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            push @_i32_fmt;
+            push %eax;
+            {{Compiler::make_c_extern_call("printf", 2)}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_printbln(
+        &mut self,
+        p: &'a Printbln<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            call @print_bool;
+        }}
+        Ok(())
+    }
+
+    fn traverse_prints(
+        &mut self,
+        p: &'a Prints<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.traverse(p.get_value(), current_func, code)?;
+
+        assembly! {(code) {
+            push %eax;
+            push [rel @stdout];
+            {{Compiler::make_c_extern_call("fputs", 2)}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_yield(
+        &mut self,
+        y: &'a Yield<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        assembly! {(code) {
+            {{self.yield_exp(y.get_metadata(), y.get_value(), current_func)?}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_yieldreturn(
+        &mut self,
+        yr: &'a YieldReturn<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        assembly! {(code) {
+            {{self.yield_return(yr.get_metadata(), yr.get_value(), current_func)?}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_return(
+        &mut self,
+        r: &'a Return<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        assembly! {(code) {
+            {{self.return_exp(r.get_value(), current_func)?}}
+        }}
+        Ok(())
     }
 
     fn member_access(
@@ -1005,7 +1077,7 @@ impl<'a> Compiler<'a> {
     fn yield_return(
         &mut self,
         meta: &'a Scope,
-        exp: &'a Option<Box<CompilerNode>>,
+        exp: &'a Option<CompilerNode>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1034,6 +1106,51 @@ impl<'a> Compiler<'a> {
     }
 
     fn return_exp(
+        &mut self,
+        exp: &'a Option<CompilerNode>,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        code.push(Inst::Label(".terminus".into()));
+        match exp {
+            Some(e) => {
+                self.traverse(e, current_func, &mut code)?;
+                // If the expression is a custom type then copy the value into the stack frame
+                // of the caller (or the yielder in the case of coroutines)
+                match e.get_metadata().ty() {
+                    Type::Custom(struct_name) => {
+                        // Copy the structure into the stack frame of the calling function
+                        let asm = self.copy_struct_into(
+                            struct_name,
+                            Reg32::Esi,
+                            0,
+                            Reg::R32(Reg32::Eax),
+                            0,
+                        )?;
+
+                        let is_coroutine = self.scope.in_coroutine();
+                        if is_coroutine {
+                            assembly! {(code){
+                                mov %esi, [%ebp-8];
+                                {{asm}}
+                            }};
+                        } else {
+                            assembly! {(code){
+                                lea %esi, [%ebp+8];
+                                {{asm}}
+                            }};
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            None => (),
+        }
+
+        Ok(code)
+    }
+
+    fn return_exp_temp(
         &mut self,
         exp: &'a Option<Box<CompilerNode>>,
         current_func: &String,

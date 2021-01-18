@@ -1,5 +1,3 @@
-use crate::parser::pnode::PNode;
-use crate::semantics::symbol_table::*;
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -11,6 +9,13 @@ use crate::{
 };
 use crate::{
     diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
+};
+use crate::{parser::pnode::PNode, syntax::statement::Statement};
+use crate::{
+    semantics::symbol_table::*,
+    syntax::statement::{
+        Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
+    },
 };
 use braid_lang::result::Result;
 
@@ -29,6 +34,13 @@ impl SemanticNode {
     pub fn get_type(&self) -> &Type {
         let meta = self.get_metadata();
         &meta.ty
+    }
+}
+
+impl Statement<SemanticMetadata> {
+    pub fn get_type(&self) -> &Type {
+        let m = self.get_metadata();
+        &m.ty
     }
 }
 
@@ -119,36 +131,26 @@ impl SemanticAst {
                 self.from_parser_ast(true_arm)?,
                 self.from_parser_ast(false_arm)?,
             ))),
-            Mutate(..) => self.from_mutate(ast),
-            Bind(..) => self.from_bind(ast),
-            Return(l, None) => Ok(Box::new(Return(self.semantic_metadata_from(*l), None))),
-            Return(l, Some(exp)) => Ok(Box::new(Return(
-                self.semantic_metadata_from(*l),
-                Some(self.from_parser_ast(exp)?),
-            ))),
             Yield(l, box exp) => Ok(Box::new(Yield(
                 self.semantic_metadata_from(*l),
                 self.from_parser_ast(exp)?,
             ))),
-            YieldReturn(l, None) => {
-                Ok(Box::new(YieldReturn(self.semantic_metadata_from(*l), None)))
-            }
-            YieldReturn(l, Some(exp)) => Ok(Box::new(YieldReturn(
-                self.semantic_metadata_from(*l),
-                Some(self.from_parser_ast(exp)?),
-            ))),
-            ExpressionBlock(ln, body) => {
+            ExpressionBlock(ln, body, final_exp) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
-                    let r = self.from_parser_ast(stmt)?;
-                    nbody.push(*r);
+                    let r = self.from_statement(stmt)?;
+                    nbody.push(r);
                 }
+                let final_exp = match final_exp {
+                    None => None,
+                    Some(fe) => Some(self.from_parser_ast(fe)?),
+                };
                 Ok(Box::new(ExpressionBlock(
                     self.semantic_metadata_from(*ln),
                     nbody,
+                    final_exp,
                 )))
             }
-            Statement(..) => self.from_statement(ast),
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
@@ -164,22 +166,6 @@ impl SemanticAst {
                     nparams,
                 )))
             }
-            Printi(l, exp) => Ok(Box::new(Printi(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
-            Printiln(l, exp) => Ok(Box::new(Printiln(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
-            Prints(l, exp) => Ok(Box::new(Prints(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
-            Printbln(l, exp) => Ok(Box::new(Printbln(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
             StructExpression(l, name, fields) => {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
@@ -232,8 +218,8 @@ impl SemanticAst {
             }) => {
                 let mut nbody = vec![];
                 for stmt in body.iter() {
-                    let r = self.from_parser_ast(stmt)?;
-                    nbody.push(*r);
+                    let r = self.from_statement(stmt)?;
+                    nbody.push(r);
                 }
                 Ok(Item::Routine(RoutineDef {
                     meta: self.semantic_metadata_from(*ln),
@@ -272,41 +258,104 @@ impl SemanticAst {
 
     fn from_statement(
         &mut self,
-        statement: &Ast<ParserInfo>,
-    ) -> Result<Box<Ast<SemanticMetadata>>> {
-        if let Ast::Statement(ln, stm) = statement {
-            Ok(Box::new(Ast::Statement(
-                self.semantic_metadata_from(*ln),
-                self.from_parser_ast(stm)?,
-            )))
-        } else {
-            panic!("Expected a Statement but got {}", statement.root_str())
+        statement: &Statement<ParserInfo>,
+    ) -> Result<Statement<SemanticMetadata>> {
+        use Statement::*;
+
+        let inner = match statement {
+            Bind(b) => Bind(Box::new(self.from_bind(b)?)),
+            Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
+            Return(x) => Return(Box::new(self.from_return(x)?)),
+            YieldReturn(x) => YieldReturn(Box::new(self.from_yieldreturn(x)?)),
+            Printi(x) => Printi(Box::new(self.from_printi(x)?)),
+            Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
+            Printbln(x) => Printbln(Box::new(self.from_printbln(x)?)),
+            Prints(x) => Prints(Box::new(self.from_prints(x)?)),
+            Expression(e) => Expression(self.from_parser_ast(e)?),
+        };
+
+        Ok(inner)
+    }
+
+    fn from_bind(&mut self, bind: &Bind<ParserInfo>) -> Result<Bind<SemanticMetadata>> {
+        Ok(Bind::new(
+            self.semantic_metadata_from(*bind.get_metadata()),
+            bind.get_id(),
+            bind.get_type().clone(),
+            bind.is_mutable(),
+            *self.from_parser_ast(bind.get_rhs())?,
+        ))
+    }
+
+    fn from_mutate(&mut self, mutate: &Mutate<ParserInfo>) -> Result<Mutate<SemanticMetadata>> {
+        Ok(Mutate::new(
+            self.semantic_metadata_from(*mutate.get_metadata()),
+            mutate.get_id(),
+            *self.from_parser_ast(mutate.get_rhs())?,
+        ))
+    }
+
+    fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticMetadata>> {
+        Ok(Printi::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
+    }
+
+    fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticMetadata>> {
+        Ok(Printiln::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
+    }
+
+    fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticMetadata>> {
+        Ok(Printbln::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
+    }
+
+    fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticMetadata>> {
+        Ok(Prints::new(
+            self.semantic_metadata_from(*p.get_metadata()),
+            *self.from_parser_ast(p.get_value())?,
+        ))
+    }
+
+    fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticMetadata>> {
+        Ok(Yield::new(
+            self.semantic_metadata_from(*y.get_metadata()),
+            *self.from_parser_ast(y.get_value())?,
+        ))
+    }
+
+    fn from_yieldreturn(
+        &mut self,
+        yr: &YieldReturn<ParserInfo>,
+    ) -> Result<YieldReturn<SemanticMetadata>> {
+        match yr.get_value() {
+            None => Ok(YieldReturn::new(
+                self.semantic_metadata_from(*yr.get_metadata()),
+                None,
+            )),
+            Some(val) => Ok(YieldReturn::new(
+                self.semantic_metadata_from(*yr.get_metadata()),
+                Some(*self.from_parser_ast(val)?),
+            )),
         }
     }
 
-    fn from_bind(&mut self, bind: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
-        if let Ast::Bind(ln, name, mutable, p, ref exp) = bind {
-            Ok(Box::new(Ast::Bind(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                *mutable,
-                p.clone(),
-                self.from_parser_ast(exp)?,
-            )))
-        } else {
-            panic!("Expected a Bind statement but got {}", bind.root_str())
-        }
-    }
-
-    fn from_mutate(&mut self, mutate: &Ast<ParserInfo>) -> Result<Box<Ast<SemanticMetadata>>> {
-        if let Ast::Mutate(ln, name, rhs) = mutate {
-            Ok(Box::new(Ast::Mutate(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                self.from_parser_ast(rhs)?,
-            )))
-        } else {
-            panic!("Expected a Mutate statement but got {}", mutate.root_str())
+    fn from_return(&mut self, r: &Return<ParserInfo>) -> Result<Return<SemanticMetadata>> {
+        match r.get_value() {
+            None => Ok(Return::new(
+                self.semantic_metadata_from(*r.get_metadata()),
+                None,
+            )),
+            Some(val) => Ok(Return::new(
+                self.semantic_metadata_from(*r.get_metadata()),
+                Some(*self.from_parser_ast(val)?),
+            )),
         }
     }
 

@@ -52,24 +52,6 @@ impl PNode {
         Ok(Some(Ast::Yield(i, coroutine_value)))
     }
 
-    pub fn new_bind(line: u32, id: Box<Self>, mutable: bool, exp: Box<Self>) -> PResult {
-        let i = line;
-        match id.as_ref() {
-            Ast::IdentifierDeclare(_, id, prim) => {
-                Ok(Some(Ast::Bind(i, id.clone(), mutable, prim.clone(), exp)))
-            }
-            _ => Err(format!(
-                "L{}: Expected type specification after {}",
-                line,
-                id.root_str()
-            )),
-        }
-    }
-
-    pub fn new_mutate(line: u32, id: &str, exp: Box<Self>) -> PResult {
-        Ok(Some(Ast::Mutate(line, id.into(), exp)))
-    }
-
     pub fn unary_op(line: u32, op: &Lex, operand: Box<Self>) -> PResult {
         match op {
             Lex::Minus => Ok(Some(Ast::UnaryOp(line, UnaryOperator::Minus, operand))),

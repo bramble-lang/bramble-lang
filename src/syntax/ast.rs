@@ -1,4 +1,4 @@
-use super::{path::Path, ty::Type};
+use super::{path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -81,21 +81,12 @@ pub enum Ast<I> {
     RoutineCall(I, RoutineCall, Path, Vec<Ast<I>>),
     StructExpression(I, Path, Vec<(String, Ast<I>)>),
     If(I, Box<Ast<I>>, Box<Ast<I>>, Box<Ast<I>>),
-    ExpressionBlock(I, Vec<Ast<I>>),
+    ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Ast<I>>>),
 
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
 
-    Printi(I, Box<Ast<I>>),
-    Prints(I, Box<Ast<I>>),
-    Printiln(I, Box<Ast<I>>),
-    Printbln(I, Box<Ast<I>>),
-    Statement(I, Box<Ast<I>>),
-    Bind(I, String, bool, Type, Box<Ast<I>>),
-    Mutate(I, String, Box<Ast<I>>),
-    Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
-    YieldReturn(I, Option<Box<Ast<I>>>),
 }
 
 impl<I> Ast<I> {
@@ -115,18 +106,8 @@ impl<I> Ast<I> {
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
             If(_, _, _, _) => "if".into(),
-            ExpressionBlock(_, _) => "expression block".into(),
-
-            Printi(_, _) => "printi".into(),
-            Prints(_, _) => "prints".into(),
-            Printiln(_, _) => "printiln".into(),
-            Printbln(_, _) => "printbln".into(),
-            Statement(_, _) => "statement".into(),
-            Bind(..) => "bind".into(),
-            Mutate(..) => "assign".into(),
-            Return(_, _) => "return".into(),
+            ExpressionBlock(..) => "expression block".into(),
             Yield(_, _) => "yield".into(),
-            YieldReturn(_, _) => "yret".into(),
         }
     }
 
@@ -143,18 +124,9 @@ impl<I> Ast<I> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | Printi(m, ..)
-            | Printiln(m, ..)
-            | Prints(m, ..)
-            | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Statement(m, ..)
-            | Bind(m, ..)
-            | Mutate(m, ..)
-            | Return(m, ..)
             | Yield(m, ..)
-            | YieldReturn(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
         }
@@ -173,18 +145,9 @@ impl<I> Ast<I> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | Printi(m, ..)
-            | Printiln(m, ..)
-            | Prints(m, ..)
-            | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
-            | Statement(m, ..)
-            | Bind(m, ..)
-            | Mutate(m, ..)
-            | Return(m, ..)
             | Yield(m, ..)
-            | YieldReturn(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
         }

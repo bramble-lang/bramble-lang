@@ -7,6 +7,9 @@ use crate::{
     syntax::{
         module::{self, Item},
         routinedef::RoutineDef,
+        statement::{
+            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn,
+        },
     },
 };
 
@@ -50,9 +53,13 @@ impl StringPool {
         use crate::ast::Ast::*;
 
         match ast {
-            ExpressionBlock(_, body) => {
+            ExpressionBlock(_, body, final_exp) => {
                 for e in body.iter() {
-                    self.extract_from(e);
+                    self.extract_from_statement(e);
+                }
+                match final_exp {
+                    None => (),
+                    Some(fe) => self.extract_from(fe),
                 }
             }
             Integer(..) => {}
@@ -74,37 +81,14 @@ impl StringPool {
                 self.extract_from(l);
                 self.extract_from(r);
             }
-            Printi(_, ref e) => {
-                self.extract_from(e);
-            }
-            Printiln(_, ref e) => {
-                self.extract_from(e);
-            }
-            Prints(_, ref e) => {
-                self.extract_from(e);
-            }
-            Printbln(_, ref e) => {
-                self.extract_from(e);
-            }
             If(_, ref cond, ref tb, ref fb) => {
                 self.extract_from(cond);
                 self.extract_from(tb);
                 self.extract_from(fb);
             }
-            Mutate(..) => self.extract_from_mutate(ast),
-            Bind(..) => self.extract_from_bind(ast),
             Yield(_, e) => {
                 self.extract_from(e);
             }
-            Return(_, None) => {}
-            Return(_, Some(e)) => {
-                self.extract_from(e);
-            }
-            YieldReturn(_, None) => {}
-            YieldReturn(_, Some(e)) => {
-                self.extract_from(e);
-            }
-            Statement(..) => self.extract_from_statement(ast),
             RoutineCall(.., params) => {
                 for e in params.iter() {
                     self.extract_from(e);
@@ -140,31 +124,63 @@ impl StringPool {
 
     pub fn extract_from_routine(&mut self, routine: &RoutineDef<Scope>) {
         for s in routine.get_body().iter() {
-            self.extract_from(s);
+            self.extract_from_statement(s);
         }
     }
 
-    pub fn extract_from_statement(&mut self, statement: &CompilerNode) {
-        if let CompilerNode::Statement(.., e) = statement {
-            self.extract_from(e)
-        } else {
-            panic!("Expected a statement, but got {}", statement.root_str())
+    pub fn extract_from_statement(&mut self, statement: &Statement<Scope>) {
+        match statement {
+            Statement::Bind(b) => self.extract_from_bind(b),
+            Statement::Mutate(m) => self.extract_from_mutate(m),
+            Statement::Return(r) => self.extract_from_return(r),
+            Statement::YieldReturn(ast) => self.extract_from_yieldreturn(ast),
+            Statement::Printi(pi) => self.extract_from_printi(pi),
+            Statement::Printiln(ast) => self.extract_from_printiln(ast),
+            Statement::Printbln(ast) => self.extract_from_printbln(ast),
+            Statement::Prints(ast) => self.extract_from_prints(ast),
+            Statement::Expression(ast) => self.extract_from(ast),
         }
     }
 
-    pub fn extract_from_bind(&mut self, bind: &CompilerNode) {
-        if let CompilerNode::Bind(.., e) = bind {
-            self.extract_from(e)
-        } else {
-            panic!("Expected a bind statement, but got {}", bind.root_str())
+    pub fn extract_from_bind(&mut self, bind: &Bind<Scope>) {
+        self.extract_from(bind.get_rhs())
+    }
+
+    pub fn extract_from_mutate(&mut self, mutate: &Mutate<Scope>) {
+        self.extract_from(mutate.get_rhs())
+    }
+
+    pub fn extract_from_printi(&mut self, p: &Printi<Scope>) {
+        self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_printiln(&mut self, p: &Printiln<Scope>) {
+        self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_printbln(&mut self, p: &Printbln<Scope>) {
+        self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_prints(&mut self, p: &Prints<Scope>) {
+        self.extract_from(p.get_value())
+    }
+
+    pub fn extract_from_yield(&mut self, y: &Yield<Scope>) {
+        self.extract_from(y.get_value())
+    }
+
+    pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<Scope>) {
+        match yr.get_value() {
+            None => (),
+            Some(val) => self.extract_from(val),
         }
     }
 
-    pub fn extract_from_mutate(&mut self, mutate: &CompilerNode) {
-        if let CompilerNode::Mutate(.., rhs) = mutate {
-            self.extract_from(rhs)
-        } else {
-            panic!("Expected a mutate statement, but got {}", mutate.root_str())
+    pub fn extract_from_return(&mut self, r: &Return<Scope>) {
+        match r.get_value() {
+            None => (),
+            Some(val) => self.extract_from(val),
         }
     }
 }

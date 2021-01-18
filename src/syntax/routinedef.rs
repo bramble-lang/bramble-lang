@@ -1,4 +1,4 @@
-use super::{ast::Ast, ty::Type};
+use super::{statement::Statement, ty::Type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RoutineDefType {
@@ -23,7 +23,7 @@ pub struct RoutineDef<M> {
     pub name: String,
     pub params: Vec<(String, Type)>,
     pub ty: Type,
-    pub body: Vec<Ast<M>>,
+    pub body: Vec<Statement<M>>,
 }
 
 impl<M> RoutineDef<M> {
@@ -32,7 +32,7 @@ impl<M> RoutineDef<M> {
         metadata: M,
         params: Vec<(String, Type)>,
         ty: Type,
-        body: Vec<Ast<M>>,
+        body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
         RoutineDef {
             meta: metadata,
@@ -49,7 +49,7 @@ impl<M> RoutineDef<M> {
         metadata: M,
         params: Vec<(String, Type)>,
         ty: Type,
-        body: Vec<Ast<M>>,
+        body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
         RoutineDef {
             meta: metadata,
@@ -85,7 +85,7 @@ impl<M> RoutineDef<M> {
         &self.ty
     }
 
-    pub fn get_body(&self) -> &Vec<Ast<M>> {
+    pub fn get_body(&self) -> &Vec<Statement<M>> {
         &self.body
     }
 
