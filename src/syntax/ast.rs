@@ -86,10 +86,6 @@ pub enum Ast<I> {
     BinaryOp(I, BinaryOperator, Box<Ast<I>>, Box<Ast<I>>),
     UnaryOp(I, UnaryOperator, Box<Ast<I>>),
 
-    Printi(I, Box<Ast<I>>),
-    Prints(I, Box<Ast<I>>),
-    Printiln(I, Box<Ast<I>>),
-    Printbln(I, Box<Ast<I>>),
     Statement(statement::Statement<I>),
     Return(I, Option<Box<Ast<I>>>),
     Yield(I, Box<Ast<I>>),
@@ -115,10 +111,6 @@ impl<I> Ast<I> {
             If(_, _, _, _) => "if".into(),
             ExpressionBlock(_, _) => "expression block".into(),
 
-            Printi(_, _) => "printi".into(),
-            Prints(_, _) => "prints".into(),
-            Printiln(_, _) => "printiln".into(),
-            Printbln(_, _) => "printbln".into(),
             Statement(..) => "statement".into(),
             Return(_, _) => "return".into(),
             Yield(_, _) => "yield".into(),
@@ -139,10 +131,6 @@ impl<I> Ast<I> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | Printi(m, ..)
-            | Printiln(m, ..)
-            | Prints(m, ..)
-            | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
             | Return(m, ..)
@@ -167,10 +155,6 @@ impl<I> Ast<I> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | Printi(m, ..)
-            | Printiln(m, ..)
-            | Prints(m, ..)
-            | Printbln(m, ..)
             | If(m, ..)
             | ExpressionBlock(m, ..)
             | Return(m, ..)

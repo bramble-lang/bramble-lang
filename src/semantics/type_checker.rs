@@ -638,50 +638,6 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             }
-            Ast::Printi(meta, exp) => {
-                let mut meta = meta.clone();
-                let exp = self.traverse(&exp, current_func, sym)?;
-                if exp.get_type() == I32 {
-                    meta.ty = Unit;
-                    Ok(Ast::Printi(meta.clone(), Box::new(exp)))
-                } else {
-                    Err(format!("Expected i32 for printi got {}", exp.get_type()))
-                }
-            }
-            Ast::Printiln(meta, exp) => {
-                let mut meta = meta.clone();
-                let exp = self.traverse(&exp, current_func, sym)?;
-                if exp.get_type() == I32 {
-                    meta.ty = Unit;
-                    Ok(Ast::Printiln(meta.clone(), Box::new(exp)))
-                } else {
-                    Err(format!("Expected i32 for printiln got {}", exp.get_type()))
-                }
-            }
-            Ast::Prints(meta, exp) => {
-                let mut meta = meta.clone();
-                let exp = self.traverse(&exp, current_func, sym)?;
-                if exp.get_type() == Type::StringLiteral {
-                    meta.ty = Unit;
-                    Ok(Ast::Prints(meta.clone(), Box::new(exp)))
-                } else {
-                    Err(format!(
-                        "Expected string for printiln got {}",
-                        exp.get_type()
-                    ))
-                }
-            }
-            Ast::Printbln(meta, exp) => {
-                let mut meta = meta.clone();
-                let exp = self.traverse(&exp, current_func, sym)?;
-                if exp.get_type() == Bool {
-                    meta.ty = Unit;
-                    Ok(Ast::Printbln(meta.clone(), Box::new(exp)))
-                } else {
-                    Err(format!("Expected i32 for printbln got {}", exp.get_type()))
-                }
-            }
-
             Ast::ExpressionBlock(meta, body) => {
                 let mut meta = meta.clone();
                 let mut resolved_body = vec![];

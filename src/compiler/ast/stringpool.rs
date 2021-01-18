@@ -68,18 +68,6 @@ impl StringPool {
                 self.extract_from(l);
                 self.extract_from(r);
             }
-            Printi(_, ref e) => {
-                self.extract_from(e);
-            }
-            Printiln(_, ref e) => {
-                self.extract_from(e);
-            }
-            Prints(_, ref e) => {
-                self.extract_from(e);
-            }
-            Printbln(_, ref e) => {
-                self.extract_from(e);
-            }
             If(_, ref cond, ref tb, ref fb) => {
                 self.extract_from(cond);
                 self.extract_from(tb);

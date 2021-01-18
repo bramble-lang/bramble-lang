@@ -162,22 +162,6 @@ impl SemanticAst {
                     nparams,
                 )))
             }
-            Printi(l, exp) => Ok(Box::new(Printi(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
-            Printiln(l, exp) => Ok(Box::new(Printiln(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
-            Prints(l, exp) => Ok(Box::new(Prints(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
-            Printbln(l, exp) => Ok(Box::new(Printbln(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
             StructExpression(l, name, fields) => {
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {

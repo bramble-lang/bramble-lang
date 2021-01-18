@@ -35,10 +35,6 @@ impl<M> Statement<M> {
 
     pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
         match ast {
-            Ast::Printi(_, _) => panic!("Should not be here"), //Some(Statement::Printi(Box::new(ast))),
-            Ast::Prints(_, _) =>  panic!("Should not be here"), //Some(Statement::Prints(Box::new(ast))),
-            Ast::Printiln(_, _) => panic!("Should not be here"), //Some(Statement::Printiln(Box::new(ast))),
-            Ast::Printbln(_, _) =>  panic!("Should not be here"), //Some(Statement::Printbln(Box::new(ast))),
             Ast::Statement(s) => Some(s),
             Ast::Yield(_, _) => Some(Statement::Yield(Box::new(ast))),
             Ast::YieldReturn(_, _) => Some(Statement::YieldReturn(Box::new(ast))),

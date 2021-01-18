@@ -78,26 +78,6 @@ impl CompilerNode {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 (Ast::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
             }
-            Printi(m, ref e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Printi(meta, Box::new(e)), layout)
-            }
-            Printiln(m, ref e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Printiln(meta, Box::new(e)), layout)
-            }
-            Prints(m, ref e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Prints(meta, Box::new(e)), layout)
-            }
-            Printbln(m, ref e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_offsets(e, layout, struct_table);
-                (Printbln(meta, Box::new(e)), layout)
-            }
             If(m, ref cond, ref tb, ref fb) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (cond, layout) = CompilerNode::compute_offsets(cond, layout, struct_table);

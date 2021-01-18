@@ -438,31 +438,6 @@ impl<'a> Compiler<'a> {
                     {{self.handle_binary_operands(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
-            Ast::Printiln(_, ref exp) => {
-                self.traverse(exp, current_func, code)?;
-
-                assembly! {(code) {
-                    push @_i32_fmt;
-                    push %eax;
-                    {{Compiler::make_c_extern_call("printf", 2)}}
-                }}
-            }
-            Ast::Prints(_, ref exp) => {
-                self.traverse(exp, current_func, code)?;
-
-                assembly! {(code) {
-                    push %eax;
-                    push [rel @stdout];
-                    {{Compiler::make_c_extern_call("fputs", 2)}}
-                }}
-            }
-            Ast::Printbln(_, ref exp) => {
-                self.traverse(exp, current_func, code)?;
-
-                assembly! {(code) {
-                    call @print_bool;
-                }}
-            }
             Ast::If(meta, ref cond, ref true_arm, ref false_arm) => {
                 let mut cond_code = vec![];
                 self.traverse(cond, current_func, &mut cond_code)?;
