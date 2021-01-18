@@ -560,7 +560,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     Ok(Ast::Yield(meta, Box::new(exp)))
                 }
             },
-            Ast::Statement(s) => panic!("should not be here"), //self.analyze_statement(s, current_func, sym)?,
+            Ast::Statement(_) => panic!("should not be here"), //self.analyze_statement(s, current_func, sym)?,
             Ast::RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
                 // test that the expressions passed to the function match the functions

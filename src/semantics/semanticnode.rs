@@ -151,7 +151,7 @@ impl SemanticAst {
                     final_exp,
                 )))
             }
-            Statement(s) => panic!("Should not be here"), //self.from_statement(ast),
+            Statement(_) => panic!("Should not be here"), //self.from_statement(ast),
             RoutineCall(l, call, name, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
