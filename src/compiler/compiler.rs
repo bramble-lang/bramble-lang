@@ -467,8 +467,10 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,
-            Ast::Return(..) => {
-                panic!("Should not be here")
+            Ast::Return(s, v) => {
+                assembly! {(code) {
+                    {{self.return_exp_temp(v, current_func)?}}
+                }}
             }
             Ast::Yield(meta, ref id) => {
                 assembly! {(code) {
@@ -1103,6 +1105,51 @@ impl<'a> Compiler<'a> {
     fn return_exp(
         &mut self,
         exp: &'a Option<CompilerNode>,
+        current_func: &String,
+    ) -> Result<Vec<Inst>, String> {
+        let mut code = vec![];
+        code.push(Inst::Label(".terminus".into()));
+        match exp {
+            Some(e) => {
+                self.traverse(e, current_func, &mut code)?;
+                // If the expression is a custom type then copy the value into the stack frame
+                // of the caller (or the yielder in the case of coroutines)
+                match e.get_metadata().ty() {
+                    Type::Custom(struct_name) => {
+                        // Copy the structure into the stack frame of the calling function
+                        let asm = self.copy_struct_into(
+                            struct_name,
+                            Reg32::Esi,
+                            0,
+                            Reg::R32(Reg32::Eax),
+                            0,
+                        )?;
+
+                        let is_coroutine = self.scope.in_coroutine();
+                        if is_coroutine {
+                            assembly! {(code){
+                                mov %esi, [%ebp-8];
+                                {{asm}}
+                            }};
+                        } else {
+                            assembly! {(code){
+                                lea %esi, [%ebp+8];
+                                {{asm}}
+                            }};
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            None => (),
+        }
+
+        Ok(code)
+    }
+
+    fn return_exp_temp(
+        &mut self,
+        exp: &'a Option<Box<CompilerNode>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];

@@ -1721,14 +1721,14 @@ pub mod tests {
         if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
             assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(_l, body, final_exp) = *if_arm {
-                assert_eq!(body[0], Ast::Integer(1, 5));
+            if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                assert_eq!(*final_exp, Ast::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
-            if let Ast::ExpressionBlock(_l, body, final_exp) = *else_arm {
-                assert_eq!(body[0], Ast::Integer(1, 7));
+            if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+                assert_eq!(*final_exp, Ast::Integer(1, 7));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1750,8 +1750,8 @@ pub mod tests {
         if let Some(Ast::If(l, cond, if_arm, else_arm)) = exp {
             assert_eq!(l, 1);
             assert_eq!(*cond, Ast::Identifier(1, "x".into()));
-            if let Ast::ExpressionBlock(_l, body, final_exp) = *if_arm {
-                assert_eq!(body[0], Ast::Integer(1, 5));
+            if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                assert_eq!(*final_exp, Ast::Integer(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1766,14 +1766,14 @@ pub mod tests {
                         Box::new(Ast::Identifier(1, "z".into()))
                     )
                 );
-                if let Ast::ExpressionBlock(_l, body, final_exp) = *if_arm {
-                    assert_eq!(body[0], Ast::Integer(1, 7));
+                if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                    assert_eq!(*final_exp, Ast::Integer(1, 7));
                 } else {
                     panic!("Expected Expression block");
                 }
 
-                if let Ast::ExpressionBlock(_l, body, final_exp) = *else_arm {
-                    assert_eq!(body[0], Ast::Integer(1, 8));
+                if let Ast::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+                    assert_eq!(*final_exp, Ast::Integer(1, 8));
                 } else {
                     panic!("Expected Expression block");
                 }
@@ -1794,10 +1794,10 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body, final_exp)) = expression_block(&mut stream).unwrap() {
+        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) = expression_block(&mut stream).unwrap() {
             assert_eq!(l, 1);
-            assert_eq!(body.len(), 1);
-            assert_eq!(body[0], Ast::Integer(1, 5));
+            assert_eq!(body.len(), 0);
+            assert_eq!(*final_exp, Ast::Integer(1, 5));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -1840,9 +1840,9 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Ast::ExpressionBlock(l, body, final_exp)) = expression_block(&mut stream).unwrap() {
+        if let Some(Ast::ExpressionBlock(l, body, Some(final_exp))) = expression_block(&mut stream).unwrap() {
             assert_eq!(l, 1);
-            assert_eq!(body.len(), 3);
+            assert_eq!(body.len(), 2);
             match &body[0] {
                 Ast::Statement(stm) => match stm {
                     Statement::Bind(box b) => {
@@ -1866,8 +1866,8 @@ pub mod tests {
                 }
                 _ => panic!("No body: {:?}", &body[1]),
             }
-            match &body[2] {
-                Ast::BinaryOp(_, BinaryOperator::Mul, l, r) => {
+            match final_exp {
+                box Ast::BinaryOp(_, BinaryOperator::Mul, l, r) => {
                     assert_eq!(*l.as_ref(), Ast::Identifier(1, "x".into()));
                     assert_eq!(*r.as_ref(), Ast::Identifier(1, "x".into()));
                 }

@@ -612,20 +612,23 @@ impl<'a> SemanticAnalyzer<'a> {
             Ast::ExpressionBlock(meta, body, final_exp) => {
                 let mut meta = meta.clone();
                 let mut resolved_body = vec![];
-                let mut ty = Unit;
                 let tmp_sym = sym.clone();
                 self.stack.push(tmp_sym);
                 for stmt in body.iter() {
                     let exp = self.traverse(stmt, current_func, &mut meta.sym)?;
-                    ty = exp.get_type().clone();
                     resolved_body.push(exp);
                 }
-                let final_exp = match final_exp {
-                    None => None,
-                    Some(fe) => Some(Box::new(self.traverse(fe, current_func, &mut meta.sym)?))
+
+                let (final_exp, block_ty) = match final_exp {
+                    None => (None, Unit),
+                    Some(fe) => {
+                        let fe = self.traverse(fe, current_func, &mut meta.sym)?;
+                        let ty = fe.get_type().clone();
+                        (Some(Box::new(fe)), ty)
+                    }
                 };
                 self.stack.pop();
-                meta.ty = ty;
+                meta.ty = block_ty;
                 Ok(Ast::ExpressionBlock(meta.clone(), resolved_body, final_exp))
             }
             Ast::StructExpression(meta, struct_name, params) => {

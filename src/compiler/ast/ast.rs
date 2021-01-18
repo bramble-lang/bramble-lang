@@ -638,14 +638,14 @@ mod ast_tests {
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 16);
         match cn.0 {
-            CompilerNode::ExpressionBlock(m, b, fe) => {
+            CompilerNode::ExpressionBlock(m, _b, fe) => {
                 assert_eq!(m.symbols.table.len(), 2);
                 assert_eq!(m.symbols.table["x"].size, 4);
                 assert_eq!(m.symbols.table["x"].offset, 4);
                 assert_eq!(m.symbols.table["y"].size, 4);
                 assert_eq!(m.symbols.table["y"].offset, 8);
-                match b.iter().nth(0) {
-                    Some(CompilerNode::ExpressionBlock(m, _, _)) => {
+                match fe {
+                    Some(box CompilerNode::ExpressionBlock(m, _, _)) => {
                         assert_eq!(m.symbols.table.len(), 2);
                         assert_eq!(m.symbols.table["x"].size, 4);
                         assert_eq!(m.symbols.table["x"].offset, 12);
