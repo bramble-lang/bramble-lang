@@ -319,7 +319,7 @@ fn statement(stream: &mut TokenStream) -> PResult {
 
     match stm {
         Some(stm) => match stream.next_if(&Lex::Semicolon) {
-            Some(Token { l, s: _ }) => Ok(Some(Ast::Statement(stm))),
+            Some(Token { s: _, .. }) => Ok(Some(Ast::Statement(stm))),
             _ => {
                 if must_have_semicolon {
                     let line = *stm.get_metadata();
