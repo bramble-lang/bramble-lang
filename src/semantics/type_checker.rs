@@ -1009,7 +1009,7 @@ mod tests {
     use crate::syntax::{module::Item, routinedef};
     use crate::{
         ast::Ast,
-        syntax::statement::{Bind, Statement},
+        syntax::statement::Statement,
     };
 
     #[test]
