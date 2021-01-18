@@ -13,7 +13,7 @@ pub enum Statement<M> {
     YieldReturn(Box<YieldReturn<M>>),
     Expression(Box<Ast<M>>),
 
-    Return(Box<Ast<M>>),
+    Return(Box<Return<M>>),
 }
 
 impl<M> Statement<M> {
@@ -36,7 +36,7 @@ impl<M> Statement<M> {
     pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
         match ast {
             Ast::Statement(s) => Some(s),
-            Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
+            Ast::Return(_, _) => panic!("Should not be here"), //Some(Statement::Return(Box::new(ast))),
             _ => Some(Statement::Expression(Box::new(ast))),
         }
     }
@@ -350,6 +350,7 @@ impl<M> YieldReturn<M> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Return<M> {
     metadata: M,
     value: Option<Ast<M>>,

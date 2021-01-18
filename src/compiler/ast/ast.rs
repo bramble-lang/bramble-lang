@@ -1,7 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Statement, Yield, YieldReturn}, structdef::StructDef}};
+use crate::{compiler::ast::scope::{LayoutData, Scope}, semantics::semanticnode::SemanticMetadata, syntax::{module::{self, Item, Module}, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn}, structdef::StructDef}};
 use crate::{semantics::semanticnode::SemanticNode, syntax::ast::Ast};
 use braid_lang::result::Result;
 
@@ -254,7 +254,7 @@ impl CompilerNode {
                 (Statement::Mutate(Box::new(e)), l)
             }
             Statement::Return(r) => {
-                let (e, l) = Self::compute_offsets(r, layout, struct_table);
+                let (e, l) = Self::compute_layouts_for_return(r, layout, struct_table);
                 (Statement::Return(Box::new(e)), l)
             }
             Statement::YieldReturn(yr) => {
@@ -378,6 +378,23 @@ impl CompilerNode {
             Some(val) => {
                 let (value, layout) = CompilerNode::compute_offsets(val, layout, struct_table);
                 (YieldReturn::new(meta, Some(value)), layout)
+            }
+        }
+    }
+
+    fn compute_layouts_for_return(
+        r: &Return<SemanticMetadata>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Return<Scope>, LayoutData) {
+        let (meta, layout) = Scope::local_from(r.get_metadata(), struct_table, layout);
+        match r.get_value() {
+            None => {
+                (Return::new(meta, None), layout)
+            }
+            Some(val) => {
+                let (value, layout) = CompilerNode::compute_offsets(val, layout, struct_table);
+                (Return::new(meta, Some(value)), layout)
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn}};
+use crate::{semantics::symbol_table::*, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn}};
 use crate::{
     ast::*,
     syntax::path::Path,
@@ -255,7 +255,7 @@ impl SemanticAst {
             let inner = match statement {
                 Bind(b) => Bind(Box::new(self.from_bind(b)?)),
                 Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
-                Return(x) => Return(self.from_parser_ast(x)?),
+                Return(x) => Return(Box::new(self.from_return(x)?)),
                 YieldReturn(x) => YieldReturn(Box::new(self.from_yieldreturn(x)?)),
                 Printi(x) => Printi(Box::new(self.from_printi(x)?)),
                 Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
@@ -333,6 +333,21 @@ impl SemanticAst {
             Some(val) => 
                 Ok(YieldReturn::new(
                     self.semantic_metadata_from(*yr.get_metadata()),
+                    Some(*self.from_parser_ast(val)?),
+                ))
+        }
+    }
+
+    fn from_return(&mut self, r: &Return<ParserInfo>) -> Result<Return<SemanticMetadata>> {
+        match r.get_value() {
+            None => 
+                Ok(Return::new(
+                    self.semantic_metadata_from(*r.get_metadata()),
+                    None,
+                )),
+            Some(val) => 
+                Ok(Return::new(
+                    self.semantic_metadata_from(*r.get_metadata()),
                     Some(*self.from_parser_ast(val)?),
                 ))
         }

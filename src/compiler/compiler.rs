@@ -1,7 +1,7 @@
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::{binary_op, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn}};
+use crate::{binary_op, syntax::statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn}};
 use crate::compiler::ast::ast::CompilerNode;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
@@ -463,10 +463,8 @@ impl<'a> Compiler<'a> {
                 }
             }
             Ast::Statement(s) => self.traverse_statement(s, current_func, code)?,
-            Ast::Return(_, ref exp) => {
-                assembly! {(code) {
-                    {{self.return_exp(exp, current_func)?}}
-                }}
+            Ast::Return(..) => {
+                panic!("Should not be here")
             }
             Ast::Yield(meta, ref id) => {
                 assembly! {(code) {
@@ -697,7 +695,7 @@ impl<'a> Compiler<'a> {
         match statement {
             Statement::Bind(b) => self.traverse_bind(b, current_func, code),
             Statement::Mutate(m) => self.traverse_mutate(m, current_func, code),
-            Statement::Return(n) => self.traverse(n, current_func, code),
+            Statement::Return(n) => self.traverse_return(n, current_func, code),
             Statement::YieldReturn(n) => self.traverse_yieldreturn(n, current_func, code),
             Statement::Printi(n) => self.traverse_printi(n, current_func, code),
             Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),
@@ -826,6 +824,18 @@ impl<'a> Compiler<'a> {
     ) -> Result<(), String> {
         assembly! {(code) {
             {{self.yield_return(yr.get_metadata(), yr.get_value(), current_func)?}}
+        }}
+        Ok(())
+    }
+
+    fn traverse_return(
+        &mut self,
+        r: &'a Return<Scope>,
+        current_func: &String,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        assembly! {(code) {
+            {{self.return_exp(r.get_value(), current_func)?}}
         }}
         Ok(())
     }
@@ -1088,7 +1098,7 @@ impl<'a> Compiler<'a> {
 
     fn return_exp(
         &mut self,
-        exp: &'a Option<Box<CompilerNode>>,
+        exp: &'a Option<CompilerNode>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];

@@ -1,4 +1,4 @@
-use crate::syntax::ty::Type;
+use crate::syntax::{statement::Return, ty::Type};
 use crate::syntax::{
     path::Path,
     statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
@@ -824,7 +824,7 @@ impl<'a> SemanticAnalyzer<'a> {
             let inner = match statement {
                 Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
                 Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
-                Return(box x) => Return(Box::new(self.analyize_node(x, current_func, sym)?)),
+                Return(box x) => Return(Box::new(self.analyze_return(x, current_func, sym)?)),
                 YieldReturn(box x) => {
                     YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
                 }
@@ -1041,6 +1041,46 @@ impl<'a> SemanticAnalyzer<'a> {
                         } else {
                             Err(format!(
                                 "Yield return expected {} but got {}",
+                                ret_ty,
+                                exp.get_type()
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn analyze_return(
+        &mut self,
+        r: &Return<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Return<SemanticMetadata>> {
+        match current_func {
+            None => Err(format!("return appears outside of function")),
+            Some(cf) => {
+                let mut meta = r.get_metadata().clone();
+                match r.get_value() {
+                    None => {
+                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
+                        if *ret_ty == Unit {
+                            meta.ty = Unit;
+                            Ok(Return::new(meta, None))
+                        } else {
+                            Err(format!("Return expected {} but got unit", ret_ty))
+                        }
+                    }
+                    Some(val) => {
+                        let exp = self.traverse(val, current_func, sym)?;
+                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
+                        let ret_ty = self.type_to_canonical(sym, ret_ty)?;
+                        if ret_ty == exp.get_type() {
+                            meta.ty = ret_ty;
+                            Ok(Return::new(meta, Some(exp)))
+                        } else {
+                            Err(format!(
+                                "Return expected {} but got {}",
                                 ret_ty,
                                 exp.get_type()
                             ))
