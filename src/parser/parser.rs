@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printiln, Prints, Statement}, structdef::StructDef, ty::Type}};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{ast::{Ast, RoutineCall}, module::Module, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::{Bind, Mutate, Printbln, Printiln, Prints, Statement, YieldReturn}, structdef::StructDef, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -615,8 +615,8 @@ fn yield_return_stmt(stream: &mut TokenStream) -> Result<Option<Statement<Parser
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             let yret = match exp {
-                Some(exp) => Ast::YieldReturn(token.l, Some(Box::new(exp))),
-                None => Ast::YieldReturn(token.l, None),
+                Some(exp) => YieldReturn::new(token.l, Some(exp)),
+                None => YieldReturn::new(token.l, None),
             };
             Some(Statement::YieldReturn(Box::new(yret)))
         }

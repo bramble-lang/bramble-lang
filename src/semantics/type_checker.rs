@@ -1,5 +1,8 @@
-use crate::syntax::{path::Path, statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn}};
 use crate::syntax::ty::Type;
+use crate::syntax::{
+    path::Path,
+    statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
+};
 use crate::{
     ast,
     diagnostics::config::{Tracing, TracingConfig},
@@ -545,8 +548,7 @@ impl<'a> SemanticAnalyzer<'a> {
                     }
                 }
             },
-            Ast::Yield(meta, exp) => 
-            match current_func {
+            Ast::Yield(meta, exp) => match current_func {
                 None => Err(format!("Yield appears outside of function")),
                 Some(_) => {
                     let mut meta = meta.clone();
@@ -856,11 +858,15 @@ impl<'a> SemanticAnalyzer<'a> {
                 Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
                 Return(box x) => Return(Box::new(self.analyize_node(x, current_func, sym)?)),
                 YieldReturn(box x) => {
-                    YieldReturn(Box::new(self.analyize_node(x, current_func, sym)?))
+                    YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
                 }
                 Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
-                Printiln(box x) => Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?)),
-                Printbln(box x) => Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?)),
+                Printiln(box x) => {
+                    Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?))
+                }
+                Printbln(box x) => {
+                    Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?))
+                }
                 Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
                 Expression(box e) => {
                     Expression(Box::new(self.analyize_node(e, current_func, sym)?))
@@ -991,7 +997,10 @@ impl<'a> SemanticAnalyzer<'a> {
             meta.ty = Unit;
             Ok(Printbln::new(meta.clone(), value))
         } else {
-            Err(format!("Expected bool for printbln got {}", value.get_type()))
+            Err(format!(
+                "Expected bool for printbln got {}",
+                value.get_type()
+            ))
         }
     }
 
@@ -1007,7 +1016,10 @@ impl<'a> SemanticAnalyzer<'a> {
             meta.ty = Unit;
             Ok(Prints::new(meta.clone(), value))
         } else {
-            Err(format!("Expected string for prints got {}", value.get_type()))
+            Err(format!(
+                "Expected string for prints got {}",
+                value.get_type()
+            ))
         }
     }
 
@@ -1079,10 +1091,7 @@ mod tests {
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
     use crate::syntax::{module::Item, routinedef};
-    use crate::{
-        ast::Ast,
-        syntax::statement::Statement,
-    };
+    use crate::{ast::Ast, syntax::statement::Statement};
 
     #[test]
     pub fn test_identifiers() {
@@ -2343,12 +2352,11 @@ mod tests {
                     assert_eq!(yret_stm.get_type(), I32);
 
                     // validate that the RHS of the yield return is the correct type
-                    if let Ast::Statement(Statement::YieldReturn(box Ast::YieldReturn(
-                        ..,
-                        Some(rhs),
-                    ))) = yret_stm
-                    {
-                        assert_eq!(rhs.get_type(), expected_ty);
+                    if let Ast::Statement(Statement::YieldReturn(box yr)) = yret_stm {
+                        match yr.get_value() {
+                            None => panic!("Expected a value"),
+                            Some(v) => assert_eq!(v.get_type(), expected_ty),
+                        }
                     } else {
                         panic!("Expected a bind statement");
                     }

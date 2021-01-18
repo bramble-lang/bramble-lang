@@ -10,7 +10,7 @@ pub enum Statement<M> {
     Printbln(Box<Printbln<M>>),
     Prints(Box<Prints<M>>),
 
-    YieldReturn(Box<Ast<M>>),
+    YieldReturn(Box<YieldReturn<M>>),
     Expression(Box<Ast<M>>),
 
     Return(Box<Ast<M>>),
@@ -21,8 +21,8 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) 
-            | YieldReturn(x) => x.get_metadata(),
+            Return(x) => x.get_metadata(),
+            YieldReturn(x) => x.get_metadata(),
             Expression(e) => e.get_metadata(),
             Bind(b) => b.get_metadata(),
             Mutate(m) => m.get_metadata(),
@@ -36,7 +36,7 @@ impl<M> Statement<M> {
     pub fn from_ast(ast: Ast<M>) -> Option<Statement<M>> {
         match ast {
             Ast::Statement(s) => Some(s),
-            Ast::YieldReturn(_, _) => Some(Statement::YieldReturn(Box::new(ast))),
+            Ast::YieldReturn(_, _) => panic!("Should not be here"),//Some(Statement::YieldReturn(Box::new(ast))),
             Ast::Return(_, _) => Some(Statement::Return(Box::new(ast))),
             _ => Some(Statement::Expression(Box::new(ast))),
         }
@@ -46,8 +46,8 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) 
-            | YieldReturn(x) => x.get_metadata_mut(),
+            Return(x)  => x.get_metadata_mut(),
+            YieldReturn(x) => x.get_metadata_mut(),
             Expression(e) => e.get_metadata_mut(),
             Bind(b) => b.get_metadata_mut(),
             Mutate(m) => m.get_metadata_mut(),
@@ -62,8 +62,8 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) 
-            | YieldReturn(x) => x.root_str(),
+            Return(x)  => x.root_str(),
+            YieldReturn(x) => x.root_str(),
             Expression(e) => e.root_str(),
             Bind(b) => b.root_str(),
             Mutate(m) => m.root_str(),

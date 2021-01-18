@@ -267,7 +267,7 @@ impl CompilerNode {
                 (Statement::Return(Box::new(e)), l)
             }
             Statement::YieldReturn(yr) => {
-                let (e, l) = Self::compute_offsets(yr, layout, struct_table);
+                let (e, l) = Self::compute_layouts_for_yieldreturn(yr, layout, struct_table);
                 (Statement::YieldReturn(Box::new(e)), l)
             }
             Statement::Printi(pi) => {
