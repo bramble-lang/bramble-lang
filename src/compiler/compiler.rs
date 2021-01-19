@@ -8,7 +8,6 @@ use crate::compiler::ast::stack::ScopeStack;
 use crate::compiler::ast::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
-use crate::reg32;
 use crate::register;
 use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
@@ -35,6 +34,21 @@ use crate::{
 };
 
 use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
+
+// Coroutine entry/return metadata: offsets relative to the coroutine's RBP
+// These live within the stack frame of the coroutine
+const COROUTINE_RIP_STORE:i32 = -8;
+const COROUTINE_CALLER_RSP_STORE:i32 = -16;
+const COROUTINE_CALLER_RBP_STORE:i32 = -24;
+const COROUTINE_CALLER_RIP_STORE:i32 = -32;
+const COROUTINE_RSP_STORE:i32 = -40;
+
+// How much space to allocate for each coroutine's stack
+const COROUTINE_STACK_SIZE:i64 = 8 * 1024;
+
+// Function entry/return metadata: offsets relative to RBP
+// These live above the function's stack frame (hence they are positive)
+const FUNCTION_CALLER_RSP:i32 = 16;
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,
@@ -91,16 +105,16 @@ impl<'a> Compiler<'a> {
                 section ".text";
                 global main;
                 @main:
-                    push %ebp;
-                    mov %ebp, %esp;
-                    mov %eax, %esp;
-                    sub %eax, [@stack_size];
-                    mov [@next_stack_addr], %eax;
+                    push %rbp;
+                    mov %rbp, %rsp;
+                    mov %rax, %rsp;
+                    sub %rax, [@stack_size];
+                    mov [@next_stack_addr], %rax;
 
                     call @root_my_main;
 
-                    mov %esp, %ebp;
-                    pop %ebp;
+                    mov %rsp, %rbp;
+                    pop %rbp;
                     ret;
             }
         };
@@ -119,8 +133,8 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 section ".data";
-                data next_stack_addr: dd 0;
-                data stack_size: dd 8*1024;
+                data next_stack_addr: dq 0;
+                data stack_size: dq {COROUTINE_STACK_SIZE};
                 {{Compiler::write_string_pool(&string_pool)}}
             }
         };
@@ -130,9 +144,11 @@ impl<'a> Compiler<'a> {
 
     fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
         let mut code = vec![];
-        code.push(Inst::DataString("_i32_fmt".into(), "%d\\n".into()));
+
+        code.push(Inst::DataString("_i32_fmt".into(), "%ld\\n".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
+
         for (s, id) in string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
             code.push(Inst::DataString(lbl, s.clone()));
@@ -144,37 +160,60 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 @print_bool:
-                    push %ebp;
-                    mov %ebp, %esp;
-                    cmp %eax, 0;
+                    push %rbp;
+                    mov %rbp, %rsp;
+                    cmp %rax, 0;
                     jz ^false;
                     push @_true;
                     jmp ^done;
                     ^false:
                     push @_false;
                     ^done:
-                    {{Compiler::make_c_extern_call("printf", 1)}}
-                    mov %esp, %ebp;
-                    pop %ebp;
+                    {{Compiler::make_c64_extern_call("printf", 1)}}
+                    mov %rsp, %rbp;
+                    pop %rbp;
                     ret;
             }
         }
     }
 
-    fn make_c_extern_call(c_func: &str, nparams: i32) -> Vec<Inst> {
+    fn make_c32_extern_call(c_func: &str, nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
         assembly! {(code){
-            {{Compiler::reverse_params_on_stack(nparams)}}
+            {{Compiler::reverse_c32_params_on_stack(nparams)}}
             call @{c_func};
-            add %esp, {4*nparams as i32};
+            add %rsp, {4*nparams as i32};
         }}
+        code
+    }
+
+    fn make_c64_extern_call(c_func: &str, nparams: usize) -> Vec<Inst> {
+        let mut code = vec![];
+        assembly! {(code){
+            {{Compiler::pop_params_to_c64_registers(nparams)}}
+            mov %rax, 0;
+            call @{c_func};
+            mov %rax, 0;
+        }}
+        code
+    }
+
+    fn pop_params_to_c64_registers(nparams: usize) -> Vec<Inst> {
+        let mut code = vec![];
+        let c64_param_registers = vec![Reg64::Rdi, Reg64::Rsi, Reg64::Rdx];
+        let used_registers:Vec<&Reg64> = c64_param_registers[0..nparams].into_iter().rev().collect(); 
+        for pl in 0..nparams {
+            assembly! {(code){
+                pop %{Reg::R64(*used_registers[pl])};
+            }}
+        }
         code
     }
 
     /// The GCC32 uses a different order for parameters from the order that
     /// Braid pushes parameters onto the stack as they are evaluated.  This
     /// function reverses the order of the parameters.
-    fn reverse_params_on_stack(nparams: i32) -> Vec<Inst> {
+    fn reverse_c32_params_on_stack(nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
         for pl in 0..nparams {
             let pr = nparams - pl - 1;
@@ -182,10 +221,10 @@ impl<'a> Compiler<'a> {
                 break;
             }
             assembly! {(code){
-                mov %esi, [%esp+{4*pl as i32}];
-                mov %edi, [%esp+{4*pr as i32}];
-                mov [%esp+{4*pl as i32}], %edi;
-                mov [%esp+{4*pr as i32}], %esi;
+                mov %rsi, [%rsp+{4*pl as i32}];
+                mov %rdi, [%rsp+{4*pr as i32}];
+                mov [%rsp+{4*pl as i32}], %rdi;
+                mov [%rsp+{4*pr as i32}], %rsi;
             }}
         }
 
@@ -228,26 +267,26 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 @runtime_init_coroutine:
-                    push %ebp;
-                    mov %ebp, %esp;
-                    mov %esp, [@{next_stack_variable}];
-                    ; "[-4]: The RIP for the coroutine"
-                    ; "[-8]: The ESP for the caller"
-                    ; "[-12]: The EBP for the caller"
-                    ; "[-16]: The caller return address (for yield return)"
-                    ; "[-20]: The coroutine ESP"
-                    mov [%esp-4], %eax;
-                    mov [%esp-8], 0;
-                    mov [%esp-12], 0;
-                    mov [%esp-16], 0;
-                    mov %eax, %esp;
-                    sub %eax, %edi;
-                    mov [%esp-20], %eax;
-                    mov %eax, %esp;
-                    sub %esp, [@{stack_increment_variable}];
-                    mov [@{next_stack_variable}], %esp;
-                    mov %esp, %ebp;
-                    pop %ebp;
+                    push %rbp;
+                    mov %rbp, %rsp;
+                    mov %rsp, [@{next_stack_variable}];
+                    ; "[-8]: The RIP for the coroutine"
+                    ; "[-16]: The ESP for the caller"
+                    ; "[-24]: The EBP for the caller"
+                    ; "[-32]: The caller return address (for yield return)"
+                    ; "[-40]: The coroutine ESP"
+                    mov [%rsp+{COROUTINE_RIP_STORE}], %rax;
+                    mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0;
+                    mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0;
+                    mov [%rsp+{COROUTINE_CALLER_RIP_STORE}], 0;
+                    mov %rax, %rsp;
+                    sub %rax, %rdi;
+                    mov [%rsp+{COROUTINE_RSP_STORE}], %rax;
+                    mov %rax, %rsp;
+                    sub %rsp, [@{stack_increment_variable}];
+                    mov [@{next_stack_variable}], %rsp;
+                    mov %rsp, %rbp;
+                    pop %rbp;
                     ret;
             }
         }
@@ -262,12 +301,12 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code2) {
                 @runtime_yield_into_coroutine:
-                    mov [%eax-8], %esp;
-                    mov [%eax-12], %ebp;
-                    mov [%eax-16], %ebx;
-                    mov %ebp, %eax;
-                    mov %esp, [%ebp-20];
-                    jmp [%ebp-4];
+                    mov [%rax+{COROUTINE_CALLER_RSP_STORE}], %rsp;
+                    mov [%rax+{COROUTINE_CALLER_RBP_STORE}], %rbp;
+                    mov [%rax+{COROUTINE_CALLER_RIP_STORE}], %rbx;
+                    mov %rbp, %rax;
+                    mov %rsp, [%rbp+{COROUTINE_RSP_STORE}];
+                    jmp [%rbp+{COROUTINE_RIP_STORE}];
             }
         }
     }
@@ -282,12 +321,12 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 @runtime_yield_return:
-                    mov [%ebp-20], %esp;
-                    mov [%ebp-4], %ebx;
-                    mov %esp, [%ebp-8];
-                    mov %ebx, [%ebp-16];
-                    mov %ebp, [%ebp-12];
-                    jmp %ebx;
+                    mov [%rbp+{COROUTINE_RSP_STORE}], %rsp;
+                    mov [%rbp+{COROUTINE_RIP_STORE}], %rbx;
+                    mov %rsp, [%rbp+{COROUTINE_CALLER_RSP_STORE}];
+                    mov %rbx, [%rbp+{COROUTINE_CALLER_RIP_STORE}];
+                    mov %rbp, [%rbp+{COROUTINE_CALLER_RBP_STORE}];
+                    jmp %rbx;
             }
         }
     }
@@ -309,25 +348,25 @@ impl<'a> Compiler<'a> {
         let mut op_asm = vec![];
         match op {
             BinaryOperator::Add => {
-                assembly! {(op_asm) {add %eax, %ebx;}}
+                assembly! {(op_asm) {add %rax, %rbx;}}
             }
             BinaryOperator::Sub => {
-                assembly! {(op_asm) {sub %eax, %ebx;}}
+                assembly! {(op_asm) {sub %rax, %rbx;}}
             }
             BinaryOperator::Mul => {
-                assembly! {(op_asm) {imul %eax, %ebx;}}
+                assembly! {(op_asm) {imul %rax, %rbx;}}
             }
             BinaryOperator::Div => {
                 assembly! {(op_asm) {
                     cdq;
-                    idiv %ebx;
+                    idiv %rbx;
                 }}
             }
             BinaryOperator::BAnd => {
-                assembly! {(op_asm) {and %eax, %ebx;}}
+                assembly! {(op_asm) {and %rax, %rbx;}}
             }
             BinaryOperator::BOr => {
-                assembly! {(op_asm) {or %eax, %ebx;}}
+                assembly! {(op_asm) {or %rax, %rbx;}}
             }
             cond => {
                 let set = match cond {
@@ -340,7 +379,7 @@ impl<'a> Compiler<'a> {
                     _ => panic!("Invalid conditional operator: {}", cond),
                 };
                 assembly! {(op_asm){
-                    cmp %eax, %ebx;
+                    cmp %rax, %rbx;
                     {{[set]}}
                     and %al, 1;
                 }}
@@ -350,11 +389,11 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         assembly! {(code){
             {{left_code}}
-            push %eax;
+            push %rax;
             {{right_code}}
-            push %eax;
-            pop %ebx;
-            pop %eax;
+            push %rax;
+            pop %rbx;
+            pop %rax;
             {{op_asm}}
         }}
 
@@ -378,25 +417,25 @@ impl<'a> Compiler<'a> {
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
         let fn_param_registers = vec![
-            Reg::R32(Reg32::Eax),
-            Reg::R32(Reg32::Ebx),
-            Reg::R32(Reg32::Ecx),
-            Reg::R32(Reg32::Edx),
+            Reg64::Rax,
+            Reg64::Rbx,
+            Reg64::Rcx,
+            Reg64::Rdx,
         ];
         let co_param_registers = vec![
-            Reg::R32(Reg32::Ebx),
-            Reg::R32(Reg32::Ecx),
-            Reg::R32(Reg32::Edx),
+            Reg64::Rbx,
+            Reg64::Rcx,
+            Reg64::Rdx,
         ];
 
         self.push_scope(ast);
 
         match ast {
             Expression::Integer(_, i) => {
-                assembly! {(code) {mov %eax, {*i};}}
+                assembly! {(code) {mov %rax, {*i};}}
             }
             Expression::Boolean(_, b) => {
-                assembly! {(code) {mov %eax, {if *b {1} else {0}};}}
+                assembly! {(code) {mov %rax, {if *b {1} else {0}};}}
             }
             Expression::StringLiteral(_, s) => {
                 let str_id = self
@@ -404,7 +443,7 @@ impl<'a> Compiler<'a> {
                     .get(s)
                     .ok_or(format!("Could not find string {} in string pool", s))?;
                 assembly! {(code) {
-                        lea %eax, @{format!("str_{}", str_id)};
+                        lea %rax, @{format!("str_{}", str_id)};
                     }
                 }
             }
@@ -412,10 +451,10 @@ impl<'a> Compiler<'a> {
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
                     Type::Custom(_) => {
-                        assembly! {(code) {lea %eax, [%ebp-{id_offset}];}}
+                        assembly! {(code) {lea %rax, [%rbp-{id_offset}];}}
                     }
                     _ => {
-                        assembly! {(code) {mov %eax, [%ebp-{id_offset}];}}
+                        assembly! {(code) {mov %rax, [%rbp-{id_offset}];}}
                     }
                 }
             }
@@ -427,13 +466,13 @@ impl<'a> Compiler<'a> {
                 match op {
                     UnaryOperator::Minus => {
                         assembly! {(code){
-                            neg %eax;
+                            neg %rax;
                         }}
                     }
                     UnaryOperator::Not => {
                         assembly! {(code){
-                            xor %eax, 1;
-                            movzx %eax, %al;
+                            xor %rax, 1;
+                            movzx %rax, %al;
                         }}
                     }
                 }
@@ -453,7 +492,7 @@ impl<'a> Compiler<'a> {
 
                 assembly2! {(code, meta) {
                     {{cond_code}}
-                    cmp %eax, 0;
+                    cmp %rax, 0;
                     jz ^else_lbl;
                     {{true_code}}
                     jmp ^end_lbl;
@@ -495,19 +534,19 @@ impl<'a> Compiler<'a> {
                     {{self.evaluate_routine_params(params, current_func)?}}
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
-                    lea %eax, [@{co_path.to_label()}];
-                    mov %edi, {total_offset};
+                    lea %rax, [@{co_path.to_label()}];
+                    mov %rdi, {total_offset};
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
-                    push %ebp;
-                    mov %ebp, %eax;
+                    push %rbp;
+                    mov %rbp, %rax;
 
                     ; "move parameters into the stack frame of the coroutine"
                     {{{
                         self.move_params_into_stackframe(co_def, &co_param_registers)?
                     }}}
                     ; "leave coroutine's stack frame"
-                    pop %ebp;
+                    pop %rbp;
                 }};
             }
             Expression::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
@@ -529,7 +568,7 @@ impl<'a> Compiler<'a> {
                         .ok_or(format!("no size for {} found", return_type))?;
 
                     assembly! {(code){
-                        sub %esp, {st_sz};
+                        sub %rsp, {st_sz};
                     }}
                 }
 
@@ -622,10 +661,10 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         let fn_param_registers = vec![
-            Reg::R32(Reg32::Eax),
-            Reg::R32(Reg32::Ebx),
-            Reg::R32(Reg32::Ecx),
-            Reg::R32(Reg32::Edx),
+            Reg64::Rax,
+            Reg64::Rbx,
+            Reg64::Rcx,
+            Reg64::Rdx,
         ];
 
         if let RoutineDef {
@@ -645,9 +684,9 @@ impl<'a> Compiler<'a> {
             @{scope.canon_path().to_label()}:
                 ; {{format!("Define {}", scope.canon_path())}}
                 ;"Prepare stack frame for this function"
-                push %ebp;
-                mov %ebp, %esp;
-                sub %esp, {*total_offset};
+                push %rbp;
+                mov %rbp, %rsp;
+                sub %rsp, {*total_offset};
                 ; "Move function parameters from registers into the stack frame"
                 {{self.move_params_into_stackframe(routine, &fn_param_registers)?}}
                 ; "Done moving function parameters from registers into the stack frame"
@@ -659,8 +698,8 @@ impl<'a> Compiler<'a> {
 
             assembly! {(code) {
                 ; "Clean up frame before leaving function"
-                mov %esp, %ebp;
-                pop %ebp;
+                mov %rsp, %rbp;
+                pop %rbp;
                 ret;
             }};
         } else {
@@ -685,7 +724,7 @@ impl<'a> Compiler<'a> {
             self.traverse_statement(s, &name, code)?;
         }
         assembly! {(code) {
-            mov %ebx, ^terminus;
+            mov %rbx, ^terminus;
             jmp @runtime_yield_return;
         }};
         Ok(())
@@ -727,7 +766,7 @@ impl<'a> Compiler<'a> {
             .offset;
         assembly! {(code) {
             ; {format!("Binding {}", bind.get_id())}
-            {{self.bind(bind.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+            {{self.bind(bind.get_rhs(), current_func, Reg64::Rbp, id_offset)?}}
         }}
         Ok(())
     }
@@ -746,7 +785,7 @@ impl<'a> Compiler<'a> {
             .offset;
         assembly! {(code) {
             ; {format!("Binding {}", id)}
-            {{self.bind(mutate.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+            {{self.bind(mutate.get_rhs(), current_func, Reg64::Rbp, id_offset)?}}
         }}
         Ok(())
     }
@@ -761,8 +800,8 @@ impl<'a> Compiler<'a> {
 
         assembly! {(code) {
             push @_i32_fmt;
-            push %eax;
-            {{Compiler::make_c_extern_call("printf", 2)}}
+            push %rax;
+            {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -777,8 +816,8 @@ impl<'a> Compiler<'a> {
 
         assembly! {(code) {
             push @_i32_fmt;
-            push %eax;
-            {{Compiler::make_c_extern_call("printf", 2)}}
+            push %rax;
+            {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -806,9 +845,9 @@ impl<'a> Compiler<'a> {
         self.traverse(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
-            push %eax;
+            push %rax;
             push [rel @stdout];
-            {{Compiler::make_c_extern_call("fputs", 2)}}
+            {{Compiler::make_c64_extern_call("fputs", 2)}}
         }}
         Ok(())
     }
@@ -880,12 +919,12 @@ impl<'a> Compiler<'a> {
                 match &field_info.ty() {
                     Type::Custom(_substruct_name) => {
                         assembly! {(code) {
-                            lea %eax, [%eax+{field_offset}];
+                            lea %rax, [%rax+{field_offset}];
                         }}
                     }
                     _ => {
                         assembly! {(code) {
-                            mov %eax, [%eax+{field_offset}];
+                            mov %rax, [%rax+{field_offset}];
                         }}
                     }
                 }
@@ -938,20 +977,20 @@ impl<'a> Compiler<'a> {
         )));
         if allocate {
             assembly! {(code){
-                sub %esp, {struct_sz};
+                sub %rsp, {struct_sz};
             }};
         }
         for (fname, fvalue) in field_values.iter() {
             let field_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
             let relative_offset = offset - (struct_sz - field_offset);
             assembly! {(code) {
-                {{self.bind_member(fvalue, current_func, Reg32::Ebp, relative_offset)?}}
+                {{self.bind_member(fvalue, current_func, Reg64::Rbp, relative_offset)?}}
             }}
         }
 
         assembly! {(code) {
             ; {format!("Done instantiating struct of type {}", struct_name)}
-            lea %eax, [%ebp - {offset}];
+            lea %rax, [%rbp - {offset}];
         }};
         Ok(code)
     }
@@ -960,7 +999,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         fvalue: &'a CompilerNode,
         current_func: &String,
-        dst: Reg32,
+        dst: Reg64,
         dst_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -986,7 +1025,7 @@ impl<'a> Compiler<'a> {
                             struct_name,
                             dst,
                             dst_offset,
-                            Reg::R32(Reg32::Eax),
+                            Reg64::Rax,
                             0,
                         )?;
                         assembly! {(code){
@@ -995,7 +1034,7 @@ impl<'a> Compiler<'a> {
                     }
                     _ => {
                         assembly! {(code) {
-                            mov [%{Reg::R32(dst)}-{dst_offset}], %eax;
+                            mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
                         }};
                     }
                 }
@@ -1008,7 +1047,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         value: &'a CompilerNode,
         current_func: &String,
-        dst: Reg32,
+        dst: Reg64,
         dst_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1021,7 +1060,7 @@ impl<'a> Compiler<'a> {
                         // If an identifier is being copied to another identifier, then just copy
                         // the data over rather than pop off of the stack
                         let asm =
-                            self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?;
+                            self.copy_struct_into(name, dst, dst_offset, Reg64::Rax, 0)?;
                         assembly! {(code){
                             {{asm}}
                         }}
@@ -1029,14 +1068,14 @@ impl<'a> Compiler<'a> {
                     _ => {
                         assembly! {(code){
                             // TODO: Double check the 0 here:
-                            {{self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?}}
+                            {{self.copy_struct_into(name, dst, dst_offset, Reg64::Rax, 0)?}}
                         }}
                     }
                 }
             }
             _ => {
                 assembly! {(code) {
-                    mov [%{Reg::R32(dst)}-{dst_offset}], %eax;
+                    mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
                 }};
             }
         }
@@ -1061,13 +1100,13 @@ impl<'a> Compiler<'a> {
                     .size
                     .ok_or(format!("struct {} has no resolved size", struct_name))?;
                 assembly! {(code){
-                    sub %esp, {st_sz};
+                    sub %rsp, {st_sz};
                 }}
             }
             _ => (),
         }
         assembly2! {(code, meta) {
-            mov %ebx, ^ret_lbl;
+            mov %rbx, ^ret_lbl;
             jmp @runtime_yield_into_coroutine;
             ^ret_lbl:
         }};
@@ -1087,9 +1126,9 @@ impl<'a> Compiler<'a> {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
                     let asm =
-                        self.copy_struct_into(struct_name, Reg32::Esi, 0, Reg::R32(Reg32::Eax), 0)?;
+                        self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
                     assembly! {(code){
-                        mov %esi, [%ebp-8];
+                        mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];  // Load the caller function's ESP pointer
                         {{asm}}
                     }};
                 }
@@ -1098,7 +1137,7 @@ impl<'a> Compiler<'a> {
         }
 
         assembly2! {(code, meta) {
-            mov %ebx, ^ret_lbl;
+            mov %rbx, ^ret_lbl;
             jmp @runtime_yield_return;
             ^ret_lbl:
         }};
@@ -1122,21 +1161,21 @@ impl<'a> Compiler<'a> {
                         // Copy the structure into the stack frame of the calling function
                         let asm = self.copy_struct_into(
                             struct_name,
-                            Reg32::Esi,
+                            Reg64::Rsi,
                             0,
-                            Reg::R32(Reg32::Eax),
+                            Reg64::Rax,
                             0,
                         )?;
 
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
                             assembly! {(code){
-                                mov %esi, [%ebp-8];
+                                mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];  // load the caller function's ESP pointer
                                 {{asm}}
                             }};
                         } else {
                             assembly! {(code){
-                                lea %esi, [%ebp+8];
+                                lea %rsi, [%rbp+{FUNCTION_CALLER_RSP}]; // load the caller function's ESP pointer
                                 {{asm}}
                             }};
                         }
@@ -1167,21 +1206,21 @@ impl<'a> Compiler<'a> {
                         // Copy the structure into the stack frame of the calling function
                         let asm = self.copy_struct_into(
                             struct_name,
-                            Reg32::Esi,
+                            Reg64::Rsi,
                             0,
-                            Reg::R32(Reg32::Eax),
+                            Reg64::Rax,
                             0,
                         )?;
 
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
                             assembly! {(code){
-                                mov %esi, [%ebp-8];
+                                mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];   // Load the Caller functions ESP pointer
                                 {{asm}}
                             }};
                         } else {
                             assembly! {(code){
-                                lea %esi, [%ebp+8];
+                                lea %rsi, [%rbp+{FUNCTION_CALLER_RSP}];  // Load the caller function's ESP pointer
                                 {{asm}}
                             }};
                         }
@@ -1220,8 +1259,8 @@ impl<'a> Compiler<'a> {
                 }
                 _ => {
                     assembly! {(code) {
-                        pop %eax;
-                        mov [%ebp-{field_offset as i32}], %eax;
+                        pop %rax;
+                        mov [%rbp-{field_offset as i32}], %rax;
                     }};
                 }
             }
@@ -1233,9 +1272,9 @@ impl<'a> Compiler<'a> {
     fn copy_struct_into(
         &self,
         struct_name: &Path,
-        dst_reg: Reg32,
+        dst_reg: Reg64,
         dst_offset: i32,
-        src_reg: Reg,
+        src_reg: Reg64,
         src_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1266,8 +1305,8 @@ impl<'a> Compiler<'a> {
                 _ => {
                     assembly! {(code) {
                         ; {format!("copy {}.{}", struct_name, field_name)}
-                        mov %edi, [%{src_reg}-{src_offset - (struct_sz - rel_field_offset)}];
-                        mov [%{Reg::R32(dst_reg)}-{dst_field_offset}], %edi;
+                        mov %rdi, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
+                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %rdi;
                     }};
                 }
             }
@@ -1279,7 +1318,7 @@ impl<'a> Compiler<'a> {
     fn move_params_into_stackframe(
         &self,
         routine: &RoutineDef<Scope>,
-        param_registers: &Vec<Reg>,
+        param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         let routine_name = routine.get_name();
         let params = routine.get_params();
@@ -1303,7 +1342,7 @@ impl<'a> Compiler<'a> {
                 Type::Custom(struct_name) => {
                     let asm = self.copy_struct_into(
                         struct_name,
-                        Reg32::Ebp,
+                        Reg64::Rbp,
                         param_offset,
                         param_registers[idx],
                         0,
@@ -1314,7 +1353,7 @@ impl<'a> Compiler<'a> {
                 }
                 _ => {
                     assembly! {(code){
-                        mov [%ebp-{param_offset}], %{param_registers[idx]};
+                        mov [%rbp-{param_offset}], %{Reg::R64(param_registers[idx])};
                     }};
                 }
             }
@@ -1331,7 +1370,7 @@ impl<'a> Compiler<'a> {
         for param in params.iter() {
             self.traverse(param, current_func, &mut code)?;
             assembly! {(code){
-                push %eax;
+                push %rax;
             }};
         }
         Ok(code)
@@ -1340,7 +1379,7 @@ impl<'a> Compiler<'a> {
     fn move_routine_params_into_registers(
         &mut self,
         params: &'a Vec<CompilerNode>,
-        param_registers: &Vec<Reg>,
+        param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
@@ -1354,7 +1393,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         for reg in param_registers.iter().take(params.len()).rev() {
             assembly! {(code){
-                pop %{*reg};
+                pop %{Reg::R64(*reg)};
             }};
         }
         Ok(code)

@@ -148,12 +148,12 @@ impl UnresolvedStructTable {
             resolved_structs: &HashMap<String, StructDefinition>,
         ) -> Option<i32> {
             match ty {
-                Type::I32 => Some(4),
-                Type::Bool => Some(4),
+                Type::I32 => Some(8),
+                Type::Bool => Some(8),
                 Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
-                Type::Coroutine(_) => Some(4),
-                Type::StringLiteral => Some(4),
-                Type::Unit => None,
+                Type::Coroutine(_) => Some(8),
+                Type::StringLiteral => Some(8),
+                Type::Unit => Some(0),
                 Type::StructDef(_) => None,
                 Type::FunctionDef(_, _) => None,
                 Type::CoroutineDef(_, _) => None,
@@ -205,10 +205,10 @@ impl ResolvedStructTable {
 
     pub fn size_of(&self, ty: &Type) -> Option<i32> {
         match ty {
-            Type::I32 => Some(4),
-            Type::Bool => Some(4),
-            Type::StringLiteral => Some(4),
-            Type::Coroutine(_) => Some(4),
+            Type::I32 => Some(8),
+            Type::Bool => Some(8),
+            Type::StringLiteral => Some(8),
+            Type::Coroutine(_) => Some(8),
             Type::Custom(canon_path) => self.get(canon_path).map(|st| st.size).flatten(),
             Type::FunctionDef(..) => Some(0),
             Type::CoroutineDef(..) => Some(0),
@@ -369,11 +369,11 @@ mod test {
                 "root::test",
                 StructDefinition {
                     name: "test".into(),
-                    size: Some(4),
+                    size: Some(8),
                     fields: vec![FieldInfo {
                         name: "i".into(),
                         ty: Type::I32,
-                        offset: Some(4),
+                        offset: Some(8),
                     }],
                 },
             ),
@@ -382,11 +382,11 @@ mod test {
                 "root::test",
                 StructDefinition {
                     name: "test".into(),
-                    size: Some(4),
+                    size: Some(8),
                     fields: vec![FieldInfo {
                         name: "y".into(),
                         ty: Type::Bool,
-                        offset: Some(4),
+                        offset: Some(8),
                     }],
                 },
             ),
@@ -395,17 +395,17 @@ mod test {
                 "root::test",
                 StructDefinition {
                     name: "test".into(),
-                    size: Some(8),
+                    size: Some(16),
                     fields: vec![
                         FieldInfo {
                             name: "i".into(),
                             ty: Type::I32,
-                            offset: Some(4),
+                            offset: Some(8),
                         },
                         FieldInfo {
                             name: "y".into(),
                             ty: Type::Bool,
-                            offset: Some(8),
+                            offset: Some(16),
                         },
                     ],
                 },
@@ -415,11 +415,11 @@ mod test {
                 "root::test",
                 StructDefinition {
                     name: "test".into(),
-                    size: Some(4),
+                    size: Some(8),
                     fields: vec![FieldInfo {
                         name: "s".into(),
                         ty: Type::StringLiteral,
-                        offset: Some(4),
+                        offset: Some(8),
                     }],
                 },
             ),
@@ -428,17 +428,17 @@ mod test {
                 "root::my_mod::inner_test",
                 StructDefinition {
                     name: "inner_test".into(),
-                    size: Some(8),
+                    size: Some(16),
                     fields: vec![
                         FieldInfo {
                             name: "i".into(),
                             ty: Type::I32,
-                            offset: Some(4),
+                            offset: Some(8),
                         },
                         FieldInfo {
                             name: "y".into(),
                             ty: Type::Bool,
-                            offset: Some(8),
+                            offset: Some(16),
                         },
                     ],
                 },
@@ -469,11 +469,11 @@ mod test {
                 "root::test2",
                 StructDefinition {
                     name: "test2".into(),
-                    size: Some(4),
+                    size: Some(8),
                     fields: vec![FieldInfo {
                         name: "t".into(),
                         ty: Type::Custom(vec!["root", "test"].into()),
-                        offset: Some(4),
+                        offset: Some(8),
                     }],
                 },
             ),
@@ -485,22 +485,22 @@ mod test {
                 "root::test2",
                 StructDefinition {
                     name: "test2".into(),
-                    size: Some(12),
+                    size: Some(24),
                     fields: vec![
                         FieldInfo {
                             name: "x".into(),
                             ty: Type::I32,
-                            offset: Some(4),
+                            offset: Some(8),
                         },
                         FieldInfo {
                             name: "t".into(),
                             ty: Type::Custom(vec!["root", "test"].into()),
-                            offset: Some(8),
+                            offset: Some(16),
                         },
                         FieldInfo {
                             name: "b".into(),
                             ty: Type::Bool,
-                            offset: Some(12),
+                            offset: Some(24),
                         },
                     ],
                 },
@@ -513,22 +513,22 @@ mod test {
                 "root::test2",
                 StructDefinition {
                     name: "test2".into(),
-                    size: Some(16),
+                    size: Some(32),
                     fields: vec![
                         FieldInfo {
                             name: "x".into(),
                             ty: Type::I32,
-                            offset: Some(4),
+                            offset: Some(8),
                         },
                         FieldInfo {
                             name: "b".into(),
                             ty: Type::Bool,
-                            offset: Some(8),
+                            offset: Some(16),
                         },
                         FieldInfo {
                             name: "t".into(),
                             ty: Type::Custom(vec!["root", "test"].into()),
-                            offset: Some(16),
+                            offset: Some(32),
                         },
                     ],
                 },
@@ -542,11 +542,11 @@ mod test {
                 "root::test3",
                 StructDefinition {
                     name: "test3".into(),
-                    size: Some(4),
+                    size: Some(8),
                     fields: vec![FieldInfo {
                         name: "t2".into(),
                         ty: Type::Custom(vec!["root", "test2"].into()),
-                        offset: Some(4),
+                        offset: Some(8),
                     }],
                 },
             ),

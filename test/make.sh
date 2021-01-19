@@ -11,8 +11,8 @@ function run() {
     built=0
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-        gcc -w ./target/output.obj -g -o ./target/output -m32 2>&1 > gcc.log
+        nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
+        gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
         built=1
     fi
 

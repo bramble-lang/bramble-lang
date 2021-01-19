@@ -57,7 +57,7 @@ _
 
 */
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Reg8 {
     Al,
 }
@@ -71,7 +71,7 @@ impl Display for Reg8 {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Reg32 {
     Eax,
     Ecx,
@@ -99,10 +99,39 @@ impl Display for Reg32 {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Reg64 {
+    Rax,
+    Rcx,
+    Rdx,
+    Rbx,
+    Rsp,
+    Rbp,
+    Rdi,
+    Rsi,
+}
+
+impl Display for Reg64 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        use Reg64::*;
+        match self {
+            Rax => f.write_str("rax"),
+            Rcx => f.write_str("rcx"),
+            Rdx => f.write_str("rdx"),
+            Rbx => f.write_str("rbx"),
+            Rsp => f.write_str("rsp"),
+            Rbp => f.write_str("rbp"),
+            Rdi => f.write_str("rdi"),
+            Rsi => f.write_str("rsi"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Reg {
     R8(Reg8),
     R32(Reg32),
+    R64(Reg64),
 }
 
 impl Display for Reg {
@@ -111,11 +140,12 @@ impl Display for Reg {
         match self {
             R8(r8) => f.write_fmt(format_args!("{}", r8)),
             R32(r32) => f.write_fmt(format_args!("{}", r32)),
+            R64(r64) => f.write_fmt(format_args!("{}", r64)),
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DirectOperand {
     Integer(i32),
     Register(Reg),
@@ -143,7 +173,7 @@ impl Display for DirectOperand {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Operand {
     Direct(DirectOperand),
     Memory(DirectOperand),
@@ -156,22 +186,22 @@ impl Display for Operand {
         use Operand::*;
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
-            Memory(mem) => f.write_fmt(format_args!("[{}]", mem)),
-            IPRelativeMemory(mem) => f.write_fmt(format_args!("DWORD [rel {}]", mem)),
+            Memory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
+            IPRelativeMemory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
             MemoryAddr(mem, d) => {
                 if *d < 0 {
-                    f.write_fmt(format_args!("[{}-{}]", mem, -d))
+                    f.write_fmt(format_args!("QWORD [rel {}-{}]", mem, -d))
                 } else if *d > 0 {
-                    f.write_fmt(format_args!("[{}+{}]", mem, d))
+                    f.write_fmt(format_args!("QWORD [rel {}+{}]", mem, d))
                 } else {
-                    f.write_fmt(format_args!("[{}]", mem))
+                    f.write_fmt(format_args!("QWORD [rel {}]", mem))
                 }
             }
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Inst {
     Comment(String),
     Include(String),
@@ -179,6 +209,7 @@ pub enum Inst {
     Section(String),
     Global(String),
     Data(String, i32),
+    Data64(String, i64),
     DataString(String, String),
     Label(String),
 
@@ -197,8 +228,8 @@ pub enum Inst {
     Add(Operand, Operand),
     Sub(Operand, Operand),
     IMul(Operand, Operand),
-    IDiv(Reg32),
-    Neg(Reg32),
+    IDiv(Reg),
+    Neg(Reg),
 
     Cmp(Operand, Operand),
 
@@ -241,6 +272,7 @@ impl Display for Inst {
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
             Global(global) => f.write_fmt(format_args!("global {}", global)),
             Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),
+            Data64(lbl, value) => f.write_fmt(format_args!("{}: dq {}", lbl, value)),
             DataString(lbl, value) => f.write_fmt(format_args!("{}: db `{}`,0", lbl, value)),
 
             Jmp(a) => f.write_fmt(format_args!("jmp {}", a)),
@@ -257,7 +289,7 @@ impl Display for Inst {
                 match b {
                     Operand::Direct(DirectOperand::Integer(_))
                     | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("DWORD {}", b),
+                    | Operand::MemoryAddr(_, _) => format!("{}", b),
                     _ => format!("{}", b),
                 }
             )),
@@ -267,7 +299,7 @@ impl Display for Inst {
                 match b {
                     Operand::Direct(DirectOperand::Integer(_))
                     | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("DWORD {}", b),
+                    | Operand::MemoryAddr(_, _) => format!("{}", b),
                     _ => format!("{}", b),
                 }
             )),
@@ -398,11 +430,36 @@ macro_rules! reg32 {
 
 #[macro_export]
 macro_rules! register {
+    (rax) => {
+        Reg::R64(Reg64::Rax)
+    };
+    (rcx) => {
+        Reg::R64(Reg64::Rcx)
+    };
+    (rdx) => {
+        Reg::R64(Reg64::Rdx)
+    };
+    (rbx) => {
+        Reg::R64(Reg64::Rbx)
+    };
+    (rsp) => {
+        Reg::R64(Reg64::Rsp)
+    };
+    (rbp) => {
+        Reg::R64(Reg64::Rbp)
+    };
+    (rdi) => {
+        Reg::R64(Reg64::Rdi)
+    };
+    (rsi) => {
+        Reg::R64(Reg64::Rsi)
+    };
+
     (eax) => {
         Reg::R32(Reg32::Eax)
     };
     (ecx) => {
-        Reg::R32(Reg32::Ecx)
+        Reg::R64(Reg32::Ecx)
     };
     (edx) => {
         Reg::R32(Reg32::Edx)
@@ -575,13 +632,17 @@ macro_rules! assembly {
         $buf.push(Inst::Data(stringify!($lbl).into(), $val));
         assembly!(($buf) {$($tail)*})
     };
+    (($buf:expr) {data $lbl:tt: dq $val:expr; $($tail:tt)*}) => {
+        $buf.push(Inst::Data64(stringify!($lbl).into(), $val));
+        assembly!(($buf) {$($tail)*})
+    };
 
     (($buf:expr) {neg % $a:tt; $($tail:tt)*}) => {
-        $buf.push(Inst::Neg(reg32!($a)));
+        $buf.push(Inst::Neg(register!($a)));
         assembly!(($buf) {$($tail)*})
     };
     (($buf:expr) {idiv % $a:tt; $($tail:tt)*}) => {
-        $buf.push(Inst::IDiv(reg32!($a)));
+        $buf.push(Inst::IDiv(register!($a)));
         assembly!(($buf) {$($tail)*})
     };
 
@@ -764,6 +825,10 @@ macro_rules! assembly2 {
         $buf.push(Inst::Data(stringify!($lbl).into(), $val));
         assembly2!(($buf, $info) {$($tail)*})
     };
+    (($buf:expr, $info:expr) {data $lbl:tt: dq $val:expr; $($tail:tt)*}) => {
+        $buf.push(Inst::Data64(stringify!($lbl).into(), $val));
+        assembly2!(($buf, $info) {$($tail)*})
+    };
 
     (($buf:expr, $info:expr) {sete % $a:tt; $($tail:tt)*}) => {
         $buf.push(Inst::Sete(reg8!($a)));
@@ -859,4 +924,57 @@ macro_rules! assembly2 {
         $buf.push(binary_op!($inst)(operand!([$($a)+]), operand!(^ $b)));
         assembly2!(($buf, $info) {$($tail)*})
     };
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn x64() {
+        let mut code = vec![];
+        assembly!{(code) {
+            mov %rax, 0;
+            push %rsp;
+            pop %rbp;
+        }}
+
+        assert_eq!(code.len(), 3);
+        let expected = Inst::Mov(Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rax))), Operand::Direct(DirectOperand::Integer(0)));
+        assert_eq!(code[0], expected);
+        let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rsp))));
+        assert_eq!(code[1], expected);
+        let expected = Inst::Pop(Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rbp))));
+        assert_eq!(code[2], expected);
+    }
+
+    #[test]
+    fn x64_data() {
+        let mut code = vec![];
+        assembly!{(code) {
+            data some_value_64: dq 0;
+        }}
+
+        assert_eq!(code.len(), 1);
+        let expected = Inst::Data64("some_value_64".into(), 0);
+        assert_eq!(code[0], expected);
+    }
+
+    #[test]
+    fn x86() {
+        let mut code = vec![];
+        assembly!{(code) {
+            mov %eax, 0;
+            push %esp;
+            pop %ebp;
+        }}
+
+        assert_eq!(code.len(), 3);
+        let expected = Inst::Mov(Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Eax))), Operand::Direct(DirectOperand::Integer(0)));
+        assert_eq!(code[0], expected);
+        let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Esp))));
+        assert_eq!(code[1], expected);
+        let expected = Inst::Pop(Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Ebp))));
+        assert_eq!(code[2], expected);
+    }
 }
