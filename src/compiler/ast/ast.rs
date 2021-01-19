@@ -584,14 +584,14 @@ mod ast_tests {
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
-        assert_eq!(cn.1.offset, 8);
+        assert_eq!(cn.1.offset, 16);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, _, _) => {
                 assert_eq!(m.symbols.table.len(), 2);
-                assert_eq!(m.symbols.table["x"].size, 4);
-                assert_eq!(m.symbols.table["x"].offset, 4);
-                assert_eq!(m.symbols.table["y"].size, 4);
-                assert_eq!(m.symbols.table["y"].offset, 8);
+                assert_eq!(m.symbols.table["x"].size, 8);
+                assert_eq!(m.symbols.table["x"].offset, 8);
+                assert_eq!(m.symbols.table["y"].size, 8);
+                assert_eq!(m.symbols.table["y"].offset, 16);
             }
             _ => assert!(false),
         }
@@ -630,21 +630,21 @@ mod ast_tests {
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
-        assert_eq!(cn.1.offset, 16);
+        assert_eq!(cn.1.offset, 32);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, _b, fe) => {
                 assert_eq!(m.symbols.table.len(), 2);
-                assert_eq!(m.symbols.table["x"].size, 4);
-                assert_eq!(m.symbols.table["x"].offset, 4);
-                assert_eq!(m.symbols.table["y"].size, 4);
-                assert_eq!(m.symbols.table["y"].offset, 8);
+                assert_eq!(m.symbols.table["x"].size, 8);
+                assert_eq!(m.symbols.table["x"].offset, 8);
+                assert_eq!(m.symbols.table["y"].size, 8);
+                assert_eq!(m.symbols.table["y"].offset, 16);
                 match fe {
                     Some(box CompilerNode::ExpressionBlock(m, _, _)) => {
                         assert_eq!(m.symbols.table.len(), 2);
-                        assert_eq!(m.symbols.table["x"].size, 4);
-                        assert_eq!(m.symbols.table["x"].offset, 12);
-                        assert_eq!(m.symbols.table["y"].size, 4);
-                        assert_eq!(m.symbols.table["y"].offset, 16);
+                        assert_eq!(m.symbols.table["x"].size, 8);
+                        assert_eq!(m.symbols.table["x"].offset, 24);
+                        assert_eq!(m.symbols.table["y"].size, 8);
+                        assert_eq!(m.symbols.table["y"].offset, 32);
                     }
                     _ => assert!(false),
                 }
@@ -691,10 +691,10 @@ mod ast_tests {
             })) => {
                 assert_eq!(name, "func");
                 assert_eq!(meta.symbols.table.len(), 2);
-                assert_eq!(meta.symbols.table["x"].size, 4);
-                assert_eq!(meta.symbols.table["x"].offset, 4);
-                assert_eq!(meta.symbols.table["y"].size, 4);
-                assert_eq!(meta.symbols.table["y"].offset, 8);
+                assert_eq!(meta.symbols.table["x"].size, 8);
+                assert_eq!(meta.symbols.table["x"].offset, 8);
+                assert_eq!(meta.symbols.table["y"].size, 8);
+                assert_eq!(meta.symbols.table["y"].offset, 16);
 
                 match meta.level {
                     scope::Level::Routine {
@@ -703,7 +703,7 @@ mod ast_tests {
                         routine_type,
                     } => {
                         assert_eq!(next_label, 0);
-                        assert_eq!(allocation, 8);
+                        assert_eq!(allocation, 16);
                         assert_eq!(routine_type, RoutineDefType::Function);
                     }
                     _ => assert!(false),
@@ -821,13 +821,13 @@ mod ast_tests {
             } => {
                 assert_eq!(name, "coroutine");
                 assert_eq!(meta.symbols.table.len(), 2);
-                assert_eq!(meta.symbols.table["x"].size, 4);
-                assert_eq!(meta.symbols.table["x"].offset, 24);
-                assert_eq!(meta.symbols.table["y"].size, 4);
-                assert_eq!(meta.symbols.table["y"].offset, 28);
+                assert_eq!(meta.symbols.table["x"].size, 8);
+                assert_eq!(meta.symbols.table["x"].offset, 48);
+                assert_eq!(meta.symbols.table["y"].size, 8);
+                assert_eq!(meta.symbols.table["y"].offset, 56);
 
                 match meta.level {
-                    scope::Level::Routine { allocation, .. } => assert_eq!(allocation, 28),
+                    scope::Level::Routine { allocation, .. } => assert_eq!(allocation, 56),
                     _ => assert!(false),
                 }
             }
