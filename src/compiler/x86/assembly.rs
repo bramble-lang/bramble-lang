@@ -186,15 +186,15 @@ impl Display for Operand {
         use Operand::*;
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
-            Memory(mem) => f.write_fmt(format_args!("[{}]", mem)),
+            Memory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
             IPRelativeMemory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
             MemoryAddr(mem, d) => {
                 if *d < 0 {
-                    f.write_fmt(format_args!("QWORD [{}-{}]", mem, -d))
+                    f.write_fmt(format_args!("QWORD [rel {}-{}]", mem, -d))
                 } else if *d > 0 {
-                    f.write_fmt(format_args!("QWORD [{}+{}]", mem, d))
+                    f.write_fmt(format_args!("QWORD [rel {}+{}]", mem, d))
                 } else {
-                    f.write_fmt(format_args!("QWORD [{}]", mem))
+                    f.write_fmt(format_args!("QWORD [rel {}]", mem))
                 }
             }
         }
@@ -289,7 +289,7 @@ impl Display for Inst {
                 match b {
                     Operand::Direct(DirectOperand::Integer(_))
                     | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("QWORD {}", b),                      // TODO: Make this QWORD
+                    | Operand::MemoryAddr(_, _) => format!("{}", b),                      // TODO: Make this QWORD
                     _ => format!("{}", b),
                 }
             )),
@@ -299,7 +299,7 @@ impl Display for Inst {
                 match b {
                     Operand::Direct(DirectOperand::Integer(_))
                     | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("QWORD {}", b),
+                    | Operand::MemoryAddr(_, _) => format!("{}", b),
                     _ => format!("{}", b),
                 }
             )),
