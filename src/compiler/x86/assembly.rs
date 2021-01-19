@@ -209,6 +209,7 @@ pub enum Inst {
     Section(String),
     Global(String),
     Data(String, i32),
+    Data64(String, i64),
     DataString(String, String),
     Label(String),
 
@@ -271,6 +272,7 @@ impl Display for Inst {
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
             Global(global) => f.write_fmt(format_args!("global {}", global)),
             Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),             // TODO: make this dq (for 64bit)
+            Data64(lbl, value) => f.write_fmt(format_args!("{}: dq {}", lbl, value)),             // TODO: make this dq (for 64bit)
             DataString(lbl, value) => f.write_fmt(format_args!("{}: db `{}`,0", lbl, value)),
 
             Jmp(a) => f.write_fmt(format_args!("jmp {}", a)),
@@ -630,6 +632,10 @@ macro_rules! assembly {
         $buf.push(Inst::Data(stringify!($lbl).into(), $val));
         assembly!(($buf) {$($tail)*})
     };
+    (($buf:expr) {data $lbl:tt: dq $val:expr; $($tail:tt)*}) => {
+        $buf.push(Inst::Data64(stringify!($lbl).into(), $val));
+        assembly!(($buf) {$($tail)*})
+    };
 
     (($buf:expr) {neg % $a:tt; $($tail:tt)*}) => {
         $buf.push(Inst::Neg(reg32!($a)));
@@ -819,6 +825,10 @@ macro_rules! assembly2 {
         $buf.push(Inst::Data(stringify!($lbl).into(), $val));
         assembly2!(($buf, $info) {$($tail)*})
     };
+    (($buf:expr, $info:expr) {data $lbl:tt: dq $val:expr; $($tail:tt)*}) => {
+        $buf.push(Inst::Data64(stringify!($lbl).into(), $val));
+        assembly2!(($buf, $info) {$($tail)*})
+    };
 
     (($buf:expr, $info:expr) {sete % $a:tt; $($tail:tt)*}) => {
         $buf.push(Inst::Sete(reg8!($a)));
@@ -936,6 +946,18 @@ mod test {
         assert_eq!(code[1], expected);
         let expected = Inst::Pop(Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rbp))));
         assert_eq!(code[2], expected);
+    }
+
+    #[test]
+    fn x64_data() {
+        let mut code = vec![];
+        assembly!{(code) {
+            data some_value_64: dq 0;
+        }}
+
+        assert_eq!(code.len(), 1);
+        let expected = Inst::Data64("some_value_64".into(), 0);
+        assert_eq!(code[0], expected);
     }
 
     #[test]

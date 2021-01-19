@@ -119,8 +119,8 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 section ".data";
-                data next_stack_addr: dd 0;
-                data stack_size: dd 8*1024;
+                data next_stack_addr: dq 0;
+                data stack_size: dq 8*1024;
                 {{Compiler::write_string_pool(&string_pool)}}
             }
         };
