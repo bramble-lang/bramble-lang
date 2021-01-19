@@ -271,8 +271,8 @@ impl Display for Inst {
             Extern(ext) => f.write_fmt(format_args!("extern {}", ext)),
             Section(section) => f.write_fmt(format_args!("\nsection {}", section)),
             Global(global) => f.write_fmt(format_args!("global {}", global)),
-            Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),             // TODO: make this dq (for 64bit)
-            Data64(lbl, value) => f.write_fmt(format_args!("{}: dq {}", lbl, value)),             // TODO: make this dq (for 64bit)
+            Data(lbl, value) => f.write_fmt(format_args!("{}: dd {}", lbl, value)),
+            Data64(lbl, value) => f.write_fmt(format_args!("{}: dq {}", lbl, value)),
             DataString(lbl, value) => f.write_fmt(format_args!("{}: db `{}`,0", lbl, value)),
 
             Jmp(a) => f.write_fmt(format_args!("jmp {}", a)),
@@ -289,7 +289,7 @@ impl Display for Inst {
                 match b {
                     Operand::Direct(DirectOperand::Integer(_))
                     | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("{}", b),                      // TODO: Make this QWORD
+                    | Operand::MemoryAddr(_, _) => format!("{}", b),
                     _ => format!("{}", b),
                 }
             )),
