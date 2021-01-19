@@ -93,6 +93,50 @@ One thing that's clear to me is that I need to write out the BNF for my language
 the syntacts clearly defined to make this easier.  My language has grown a bit and is
 at risk of becoming hairy.
 
+Next things to tackle:
+1. Do x64 compilation and get it to compile on my Mac and on my Linux box
+2. Design the memory/hw model abstraction to make it easier to write logic like the coroutines, or structs, which need to interact with specific locations
+in memory.
+3. Take coroutines to the next level and support doing yields in a function that was called by a coroutine.
+4. Multithreading support!
+5. C Interop ABI: take a look at how Rust does this and some other languages, but I think I can start with a super basic design even if it is finicky.
+## 2021-01-16
+The design philosophy of the interface between different compiler stages.  The interface is the data structure that
+is specified as the input for a layer.  Usually this the AST, but in the case of the parser it is a stream of
+tokens, and for the lexer it is the raw text of the source code. Each stage expects specific information to have been
+added to the AST in order for successful completion (for example, the compiler stage expects to know the types
+of all expressions and variables and would love to know that types are consistent). To enforce the correct flow
+of data and analysis, the AST is given a generic parameter that specifies a metadata type, this type stores the
+analysis results of its origin stage, and every layer specifies what metadata type they require.
+
+The Parser layer generates and AST<ParserInfo>, the semantic analysis layer generates AST<SementicMetadata> (containing
+the resolved type of every node in the AST), and, there's an internal stage in the compiler that generates AST<Scope>
+(containing memory layout, offset, size information, and other hardware level details).  The compiler layer, requires
+AST<SemanticMetadata> as its input, thereby ensuring that the AST has already been validated for semantic soundness
+and that the compiler can safely assuming things like: any variable referenced has been declared and has a type, etc.
+
+This overall pattern of enforcing the different states that data structures pass through provides a way to enforce
+that certain tasks have been done and to allow us to make more and more assumptions about the AST as we move further
+into the compiler process.
+
+Another example of this is the `StructTable` type in `compiler`, this type stores a global table of every single
+struct defined in the program, along with its size in bytes, and the relative position in memory of every field in
+the struct. It has 3 states. The first is the initial state when all structs along with their definitions have
+been added but the sizes and offsets have not been computed. The second state is when all the size and offset
+information has been successfully computed and now it can be used by the compiler to compute addresses for fields
+for reading and writing. The third state is an Error state, which is used when certain invariants are violated:
+struct names are duplicated, a struct references another struct which does not exist, a struct is recursive; these
+errors all mean that the struct cannot have its size properly resolved. The Braid compiler makes this explicit
+having the `UnresolvedStructTable` and `ResolvedStructTable` types
+
+The `Path` and `CanonicalPath` idea mentioned above is another instance of this philosophy: using types to enforce
+a specific order of steps and to help guarantee that those steps have been executed.
+
+Part of this design philosophy is that only the initial value in each state machine can be created by the user.
+All other "states" must come as output from the transformation function: e.g. the AST can only be created by
+passing a token stream to the Parser, and a CanonicalPath can ony be created by calling `to_canonical` on
+a Path value and providing all the data necessary to convert from a relative path to an absolute path.
+
 # 2021-01-18
 I went with Idea 2 from above and believe it has worked pretty well.
 
@@ -114,11 +158,3 @@ which serves as the transition machine to go from Parser to Semantic states.
 like how many of each node type were visited in each stage (to validate that data is not lost and that the AST is not being changed topologically), etc.
 5. A new error type that captures the metadata from the node, then I can format the error message with the line number in a single place and not have to
 write every single error message with the Line number format.
-
-Next things to tackle:
-1. Do x64 compilation and get it to compile on my Mac and on my Linux box
-2. Design the memory/hw model abstraction to make it easier to write logic like the coroutines, or structs, which need to interact with specific locations
-in memory.
-3. Take coroutines to the next level and support doing yields in a function that was called by a coroutine.
-4. Multithreading support!
-5. C Interop ABI: take a look at how Rust does this and some other languages, but I think I can start with a super basic design even if it is finicky.
