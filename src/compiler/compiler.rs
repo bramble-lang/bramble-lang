@@ -1198,12 +1198,12 @@ impl<'a> Compiler<'a> {
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
                             assembly! {(code){
-                                mov %rsi, [%rbp-8];
+                                mov %rsi, [%rbp-16];
                                 {{asm}}
                             }};
                         } else {
                             assembly! {(code){
-                                lea %rsi, [%rbp+8];
+                                lea %rsi, [%rbp+16];
                                 {{asm}}
                             }};
                         }
