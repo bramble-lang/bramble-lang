@@ -206,3 +206,20 @@ According to Wikipedia Rust supports Linear or Affine, maybe I should look into 
  
 ## Unrelated I think but maybe worth looking into a bit
 Effect Systems: https://en.wikipedia.org/wiki/Effect_system What are they?
+
+# 2021-01-19
+Today I will convert my compiler to output in x64 rather than x86.  Once I have it working on Linux I will make the changes needed to support MacOS.
+
+For supporting Mac, the two things that I know I must do so far:
+1. Addresses need to be relative rather than absolute: [rel my_label] instead of [my_label].  I have tested this out on Linux and it also works there
+so I will just use relative addresses by default.
+2. The name of key functions begins with an `_`.  So my main function is `_main` and I need to use `_printf` rather than `printf`.  I will set this up
+as a compiler flag, if you target `macho64` (I am using `macho64` because that's the same flag nasm uses for MacOS, it looks like it comes from this:
+https://en.wikipedia.org/wiki/Mach-O)
+
+I had two thoughts about how to implement this: one is a converter that takes the stream of x86 instructions and converts them to x64 instructions.
+The other is to just wholesale convert the compiler to use x64.
+
+The biggest drawback of the first option is that I have to change the ABI for C interop in 64 bit (it uses registers instead of the stack) and doing
+that in a converter would be a pain in the ass.  The other question is why support 32bit right now?  All my dev work and everyone I know would be using
+64bit machines and to support multiple platforms I would rather hop over to LLVM and to implement an IL layer.
