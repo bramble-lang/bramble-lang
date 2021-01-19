@@ -158,3 +158,51 @@ which serves as the transition machine to go from Parser to Semantic states.
 like how many of each node type were visited in each stage (to validate that data is not lost and that the AST is not being changed topologically), etc.
 5. A new error type that captures the metadata from the node, then I can format the error message with the line number in a single place and not have to
 write every single error message with the Line number format.
+
+## Thoughts on scoped mutablility
+One of the ideas I've had for a few years in the ability to restrict where a variable is mutable to a scope that is smaller than the scope it is defined
+in.  Or to limit it to only be mutable in a single location, but readable anywhere.
+
+For example:
+```
+// This would be legal
+example1() {
+    var x = 5;
+    while predicate() {
+        if something(x) < 10 {
+            x += 1;
+        }
+        print(x);
+    }
+    post(x);
+}
+
+// But this would be illegal
+example2() {
+    var x = 5;
+    while predicate() {
+        if something(x) < 10 {
+            x += 1;
+        }
+        print(x);
+        x += 2;  // mutated in two places would violate the single mutation rule
+    }
+    post(x);
+}
+```
+
+what problem does this solve? It increases the ability to intuit what is happening in code by telling me exactly how often a variable can be changed,
+if it can only be changed in a single place, then when I read that line of code I know everything about what that variable represents.  And every time
+I read the variable I can rely on knowing that it was never changed anywhere else in the code.  I think there is a relationship between this is what
+we think about with inconsistency in data bases.
+
+In a way, this is letting me create custom semantic rules for the compiler to follow.  Like what phantom types do.  And it makes me wonder if there is
+a more general concept here that I can expand this to cover?
+
+Something that could be related to this concept:
+https://en.wikipedia.org/wiki/Substructural_type_system#:~:text=Different%20substructural%20type%20systems%20%20%20Ordered%20,Allowed%20%20%20Allowed%20%20%20Arbitrarily%20
+
+According to Wikipedia Rust supports Linear or Affine, maybe I should look into this and it would help me better understand Rust's type system and semantic rules
+ 
+## Unrelated I think but maybe worth looking into a bit
+Effect Systems: https://en.wikipedia.org/wiki/Effect_system What are they?
