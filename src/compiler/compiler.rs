@@ -8,7 +8,6 @@ use crate::compiler::ast::stack::ScopeStack;
 use crate::compiler::ast::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
-use crate::reg32;
 use crate::register;
 use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
@@ -153,7 +152,7 @@ impl<'a> Compiler<'a> {
                     ^false:
                     push @_false;
                     ^done:
-                    {{Compiler::make_c_extern_call("printf", 1)}}
+                    {{Compiler::make_c64_extern_call("printf", 1)}}
                     mov %rsp, %rbp;
                     pop %rbp;
                     ret;
@@ -161,20 +160,44 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn make_c_extern_call(c_func: &str, nparams: i32) -> Vec<Inst> {
+    fn make_c32_extern_call(c_func: &str, nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
         assembly! {(code){
-            {{Compiler::reverse_params_on_stack(nparams)}}
+            {{Compiler::reverse_c32_params_on_stack(nparams)}}
             call @{c_func};
             add %rsp, {4*nparams as i32};
         }}
         code
     }
 
+    fn make_c64_extern_call(c_func: &str, nparams: usize) -> Vec<Inst> {
+        let mut code = vec![];
+        assembly! {(code){
+            {{Compiler::pop_params_to_c64_registers(nparams)}}
+            call @{c_func};
+            mov %rax, 0;
+        }}
+        code
+    }
+
+    fn pop_params_to_c64_registers(nparams: usize) -> Vec<Inst> {
+        let mut code = vec![];
+        assembly! {(code){
+            {{Compiler::reverse_c64_params_on_stack(nparams)}}
+        }}
+        let registers = vec![Reg64::Rdi, Reg64::Rsi, Reg64::Rdx];
+        for pl in 0..nparams {
+            assembly! {(code){
+                pop %{Reg::R64(registers[pl])};
+            }}
+        }
+        code
+    }
+
     /// The GCC32 uses a different order for parameters from the order that
     /// Braid pushes parameters onto the stack as they are evaluated.  This
     /// function reverses the order of the parameters.
-    fn reverse_params_on_stack(nparams: i32) -> Vec<Inst> {
+    fn reverse_c32_params_on_stack(nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
         for pl in 0..nparams {
             let pr = nparams - pl - 1;
@@ -186,6 +209,24 @@ impl<'a> Compiler<'a> {
                 mov %rdi, [%rsp+{4*pr as i32}];
                 mov [%rsp+{4*pl as i32}], %rdi;
                 mov [%rsp+{4*pr as i32}], %rsi;
+            }}
+        }
+
+        code
+    }
+
+    fn reverse_c64_params_on_stack(nparams: usize) -> Vec<Inst> {
+        let mut code = vec![];
+        for pl in 0..nparams {
+            let pr = nparams - pl - 1;
+            if pr <= pl {
+                break;
+            }
+            assembly! {(code){
+                mov %rsi, [%rsp+{8*pl as i32}];
+                mov %rdi, [%rsp+{8*pr as i32}];
+                mov [%rsp+{8*pl as i32}], %rdi;
+                mov [%rsp+{8*pr as i32}], %rsi;
             }}
         }
 
@@ -762,7 +803,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             push @_i32_fmt;
             push %rax;
-            {{Compiler::make_c_extern_call("printf", 2)}}
+            {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -778,7 +819,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             push @_i32_fmt;
             push %rax;
-            {{Compiler::make_c_extern_call("printf", 2)}}
+            {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -808,7 +849,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             push %rax;
             push [rel @stdout];
-            {{Compiler::make_c_extern_call("fputs", 2)}}
+            {{Compiler::make_c64_extern_call("fputs", 2)}}
         }}
         Ok(())
     }

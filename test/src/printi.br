@@ -1,0 +1,4 @@
+fn my_main() {
+    printiln 5;
+    return;
+}
