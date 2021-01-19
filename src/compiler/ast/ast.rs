@@ -217,7 +217,7 @@ impl CompilerNode {
         } = rd;
         let initial_frame_size = match def {
             RoutineDefType::Function => 0,
-            RoutineDefType::Coroutine => 20,
+            RoutineDefType::Coroutine => 40,
         };
         let (mut meta, offset) = Scope::routine_from(meta, def, struct_table, initial_frame_size);
         let mut nbody = vec![];

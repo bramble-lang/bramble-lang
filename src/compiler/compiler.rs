@@ -129,7 +129,7 @@ impl<'a> Compiler<'a> {
 
     fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
         let mut code = vec![];
-        code.push(Inst::DataString("_i32_fmt".into(), "%d\\n".into()));
+        code.push(Inst::DataString("_i32_fmt".into(), "%ld\\n".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
         for (s, id) in string_pool.pool.iter() {
@@ -174,6 +174,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         assembly! {(code){
             {{Compiler::pop_params_to_c64_registers(nparams)}}
+            mov %rax, 0;
             call @{c_func};
             mov %rax, 0;
         }}
@@ -252,18 +253,18 @@ impl<'a> Compiler<'a> {
                     push %rbp;
                     mov %rbp, %rsp;
                     mov %rsp, [@{next_stack_variable}];
-                    ; "[-4]: The RIP for the coroutine"
-                    ; "[-8]: The ESP for the caller"
-                    ; "[-12]: The EBP for the caller"
-                    ; "[-16]: The caller return address (for yield return)"
-                    ; "[-20]: The coroutine ESP"
-                    mov [%rsp-4], %rax;
-                    mov [%rsp-8], 0;
-                    mov [%rsp-12], 0;
+                    ; "[-8]: The RIP for the coroutine"
+                    ; "[-16]: The ESP for the caller"
+                    ; "[-24]: The EBP for the caller"
+                    ; "[-32]: The caller return address (for yield return)"
+                    ; "[-40]: The coroutine ESP"
+                    mov [%rsp-8], %rax;
                     mov [%rsp-16], 0;
+                    mov [%rsp-24], 0;
+                    mov [%rsp-32], 0;
                     mov %rax, %rsp;
                     sub %rax, %rdi;
-                    mov [%rsp-20], %rax;
+                    mov [%rsp-40], %rax;
                     mov %rax, %rsp;
                     sub %rsp, [@{stack_increment_variable}];
                     mov [@{next_stack_variable}], %rsp;
@@ -283,12 +284,12 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code2) {
                 @runtime_yield_into_coroutine:
-                    mov [%rax-8], %rsp;
-                    mov [%rax-12], %rbp;
-                    mov [%rax-16], %rbx;
+                    mov [%rax-16], %rsp;
+                    mov [%rax-24], %rbp;
+                    mov [%rax-32], %rbx;
                     mov %rbp, %rax;
-                    mov %rsp, [%rbp-20];
-                    jmp [%rbp-4];
+                    mov %rsp, [%rbp-40];
+                    jmp [%rbp-8];
             }
         }
     }
@@ -303,11 +304,11 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 @runtime_yield_return:
-                    mov [%rbp-20], %rsp;
-                    mov [%rbp-4], %rbx;
-                    mov %rsp, [%rbp-8];
-                    mov %rbx, [%rbp-16];
-                    mov %rbp, [%rbp-12];
+                    mov [%rbp-40], %rsp;
+                    mov [%rbp-8], %rbx;
+                    mov %rsp, [%rbp-16];
+                    mov %rbx, [%rbp-32];
+                    mov %rbp, [%rbp-24];
                     jmp %rbx;
             }
         }
