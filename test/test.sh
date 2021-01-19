@@ -8,10 +8,23 @@ function run_test() {
     ../target/debug/braid-lang -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [ $? -eq 0 ]
     then
-        nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj 2>&1 > ./target/assembler.log
-        gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > ./target/gcc.log
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
+            gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            built=1
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            nasm -g -f macho64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
+            gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            built=1
+        else
+            echo "Unknown OS: ${OSTYPE}"
+        fi
 
-        ./target/output >> ./target/stdout
+        if [[ $built -eq 1 ]]; then
+            ./target/output >> ./target/stdout
+        else 
+            echo "Build failed"
+        fi
     fi
 
     result=$(diff ./target/stdout ./src/${test}.out)
