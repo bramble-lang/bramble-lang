@@ -103,8 +103,8 @@ impl<'a> Compiler<'a> {
                 {{Compiler::write_data_section(&string_pool)}}
 
                 section ".text";
-                global main;
-                @main:
+                global _main;
+                @_main:
                     push %rbp;
                     mov %rbp, %rsp;
                     mov %rax, %rsp;
@@ -122,9 +122,9 @@ impl<'a> Compiler<'a> {
 
     fn write_includes() -> Vec<Inst> {
         let mut code = vec![];
-        code.push(Inst::Extern("printf".into()));
-        code.push(Inst::Extern("stdout".into()));
-        code.push(Inst::Extern("fputs".into()));
+        code.push(Inst::Extern("_printf".into()));
+        code.push(Inst::Extern("_stdout".into()));
+        code.push(Inst::Extern("_fputs".into()));
         code
     }
 
@@ -169,7 +169,7 @@ impl<'a> Compiler<'a> {
                     ^false:
                     push [@_false];
                     ^done:
-                    {{Compiler::make_c64_extern_call("printf", 1)}}
+                    {{Compiler::make_c64_extern_call("_printf", 1)}}
                     mov %rsp, %rbp;
                     pop %rbp;
                     ret;
@@ -788,7 +788,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             push [@_i32_fmt];
             push %rax;
-            {{Compiler::make_c64_extern_call("printf", 2)}}
+            {{Compiler::make_c64_extern_call("_printf", 2)}}
         }}
         Ok(())
     }
@@ -804,7 +804,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             push [@_i32_fmt];
             push %rax;
-            {{Compiler::make_c64_extern_call("printf", 2)}}
+            {{Compiler::make_c64_extern_call("_printf", 2)}}
         }}
         Ok(())
     }
@@ -833,8 +833,8 @@ impl<'a> Compiler<'a> {
 
         assembly! {(code) {
             push %rax;
-            push [rel @stdout];
-            {{Compiler::make_c64_extern_call("fputs", 2)}}
+            push [rel @_stdout];
+            {{Compiler::make_c64_extern_call("_fputs", 2)}}
         }}
         Ok(())
     }
