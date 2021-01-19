@@ -8,8 +8,8 @@ function run_test() {
     ../target/debug/braid-lang -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [ $? -eq 0 ]
     then
-        nasm -g -f elf32 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > ./target/assembler.log
-        gcc -w ./target/output.obj -g -o ./target/output -m32 2>&1 > ./target/gcc.log
+        nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj 2>&1 > ./target/assembler.log
+        gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > ./target/gcc.log
 
         ./target/output >> ./target/stdout
     fi
