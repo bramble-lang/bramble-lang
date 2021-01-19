@@ -228,8 +228,8 @@ pub enum Inst {
     Add(Operand, Operand),
     Sub(Operand, Operand),
     IMul(Operand, Operand),
-    IDiv(Reg32),
-    Neg(Reg32),
+    IDiv(Reg),
+    Neg(Reg),
 
     Cmp(Operand, Operand),
 
@@ -638,11 +638,11 @@ macro_rules! assembly {
     };
 
     (($buf:expr) {neg % $a:tt; $($tail:tt)*}) => {
-        $buf.push(Inst::Neg(reg32!($a)));
+        $buf.push(Inst::Neg(register!($a)));
         assembly!(($buf) {$($tail)*})
     };
     (($buf:expr) {idiv % $a:tt; $($tail:tt)*}) => {
-        $buf.push(Inst::IDiv(reg32!($a)));
+        $buf.push(Inst::IDiv(register!($a)));
         assembly!(($buf) {$($tail)*})
     };
 
