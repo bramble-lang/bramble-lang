@@ -182,13 +182,11 @@ impl<'a> Compiler<'a> {
 
     fn pop_params_to_c64_registers(nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
-        assembly! {(code){
-            {{Compiler::reverse_c64_params_on_stack(nparams)}}
-        }}
-        let registers = vec![Reg64::Rdi, Reg64::Rsi, Reg64::Rdx];
+        let c64_param_registers = vec![Reg64::Rdi, Reg64::Rsi, Reg64::Rdx];
+        let used_registers:Vec<&Reg64> = c64_param_registers[0..nparams].into_iter().rev().collect(); 
         for pl in 0..nparams {
             assembly! {(code){
-                pop %{Reg::R64(registers[pl])};
+                pop %{Reg::R64(*used_registers[pl])};
             }}
         }
         code
@@ -209,24 +207,6 @@ impl<'a> Compiler<'a> {
                 mov %rdi, [%rsp+{4*pr as i32}];
                 mov [%rsp+{4*pl as i32}], %rdi;
                 mov [%rsp+{4*pr as i32}], %rsi;
-            }}
-        }
-
-        code
-    }
-
-    fn reverse_c64_params_on_stack(nparams: usize) -> Vec<Inst> {
-        let mut code = vec![];
-        for pl in 0..nparams {
-            let pr = nparams - pl - 1;
-            if pr <= pl {
-                break;
-            }
-            assembly! {(code){
-                mov %rsi, [%rsp+{8*pl as i32}];
-                mov %rdi, [%rsp+{8*pr as i32}];
-                mov [%rsp+{8*pl as i32}], %rdi;
-                mov [%rsp+{8*pr as i32}], %rsi;
             }}
         }
 
