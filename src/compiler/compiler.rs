@@ -20,35 +20,35 @@ use crate::{
         routinedef::RoutineDef,
     },
 };
-use crate::{expression::Expression, semantics::semanticnode::SemanticMetadata};
-use crate::{expression::RoutineCall, syntax::statement::Statement};
-use crate::{
-    expression::{BinaryOperator, UnaryOperator},
-    syntax::ty::Type,
-};
 use crate::{
     binary_op,
     syntax::statement::{
         Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
     },
 };
+use crate::{expression::Expression, semantics::semanticnode::SemanticMetadata};
+use crate::{expression::RoutineCall, syntax::statement::Statement};
+use crate::{
+    expression::{BinaryOperator, UnaryOperator},
+    syntax::ty::Type,
+};
 
 use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
 // Coroutine entry/return metadata: offsets relative to the coroutine's RBP
 // These live within the stack frame of the coroutine
-const COROUTINE_RIP_STORE:i32 = -8;
-const COROUTINE_CALLER_RSP_STORE:i32 = -16;
-const COROUTINE_CALLER_RBP_STORE:i32 = -24;
-const COROUTINE_CALLER_RIP_STORE:i32 = -32;
-const COROUTINE_RSP_STORE:i32 = -40;
+const COROUTINE_RIP_STORE: i32 = -8;
+const COROUTINE_CALLER_RSP_STORE: i32 = -16;
+const COROUTINE_CALLER_RBP_STORE: i32 = -24;
+const COROUTINE_CALLER_RIP_STORE: i32 = -32;
+const COROUTINE_RSP_STORE: i32 = -40;
 
 // How much space to allocate for each coroutine's stack
-const COROUTINE_STACK_SIZE:i64 = 8 * 1024;
+const COROUTINE_STACK_SIZE: i64 = 8 * 1024;
 
 // Function entry/return metadata: offsets relative to RBP
 // These live above the function's stack frame (hence they are positive)
-const FUNCTION_CALLER_RSP:i32 = 16;
+const FUNCTION_CALLER_RSP: i32 = 16;
 
 pub struct Compiler<'a> {
     code: Vec<Inst>,
@@ -164,10 +164,10 @@ impl<'a> Compiler<'a> {
                     mov %rbp, %rsp;
                     cmp %rax, 0;
                     jz ^false;
-                    push @_true;
+                    push [@_true];
                     jmp ^done;
                     ^false:
-                    push @_false;
+                    push [@_false];
                     ^done:
                     {{Compiler::make_c64_extern_call("printf", 1)}}
                     mov %rsp, %rbp;
@@ -201,7 +201,8 @@ impl<'a> Compiler<'a> {
     fn pop_params_to_c64_registers(nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
         let c64_param_registers = vec![Reg64::Rdi, Reg64::Rsi, Reg64::Rdx];
-        let used_registers:Vec<&Reg64> = c64_param_registers[0..nparams].into_iter().rev().collect(); 
+        let used_registers: Vec<&Reg64> =
+            c64_param_registers[0..nparams].into_iter().rev().collect();
         for pl in 0..nparams {
             assembly! {(code){
                 pop %{Reg::R64(*used_registers[pl])};
@@ -416,17 +417,8 @@ impl<'a> Compiler<'a> {
     ) -> Result<(), String> {
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
-        let fn_param_registers = vec![
-            Reg64::Rax,
-            Reg64::Rbx,
-            Reg64::Rcx,
-            Reg64::Rdx,
-        ];
-        let co_param_registers = vec![
-            Reg64::Rbx,
-            Reg64::Rcx,
-            Reg64::Rdx,
-        ];
+        let fn_param_registers = vec![Reg64::Rax, Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
+        let co_param_registers = vec![Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
 
         self.push_scope(ast);
 
@@ -660,12 +652,7 @@ impl<'a> Compiler<'a> {
         routine: &'a RoutineDef<Scope>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        let fn_param_registers = vec![
-            Reg64::Rax,
-            Reg64::Rbx,
-            Reg64::Rcx,
-            Reg64::Rdx,
-        ];
+        let fn_param_registers = vec![Reg64::Rax, Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
 
         if let RoutineDef {
             meta: scope,
@@ -799,7 +786,7 @@ impl<'a> Compiler<'a> {
         self.traverse(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
-            push @_i32_fmt;
+            push [@_i32_fmt];
             push %rax;
             {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
@@ -815,7 +802,7 @@ impl<'a> Compiler<'a> {
         self.traverse(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
-            push @_i32_fmt;
+            push [@_i32_fmt];
             push %rax;
             {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
@@ -1021,13 +1008,8 @@ impl<'a> Compiler<'a> {
                 self.traverse(fvalue, current_func, &mut code)?;
                 match fvalue.get_metadata().ty() {
                     Type::Custom(struct_name) => {
-                        let asm = self.copy_struct_into(
-                            struct_name,
-                            dst,
-                            dst_offset,
-                            Reg64::Rax,
-                            0,
-                        )?;
+                        let asm =
+                            self.copy_struct_into(struct_name, dst, dst_offset, Reg64::Rax, 0)?;
                         assembly! {(code){
                             {{asm}}
                         }};
@@ -1059,8 +1041,7 @@ impl<'a> Compiler<'a> {
                     Expression::Identifier(..) => {
                         // If an identifier is being copied to another identifier, then just copy
                         // the data over rather than pop off of the stack
-                        let asm =
-                            self.copy_struct_into(name, dst, dst_offset, Reg64::Rax, 0)?;
+                        let asm = self.copy_struct_into(name, dst, dst_offset, Reg64::Rax, 0)?;
                         assembly! {(code){
                             {{asm}}
                         }}
@@ -1125,8 +1106,7 @@ impl<'a> Compiler<'a> {
             match exp.get_metadata().ty() {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
-                    let asm =
-                        self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
+                    let asm = self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
                     assembly! {(code){
                         mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];  // Load the caller function's ESP pointer
                         {{asm}}
@@ -1159,13 +1139,8 @@ impl<'a> Compiler<'a> {
                 match e.get_metadata().ty() {
                     Type::Custom(struct_name) => {
                         // Copy the structure into the stack frame of the calling function
-                        let asm = self.copy_struct_into(
-                            struct_name,
-                            Reg64::Rsi,
-                            0,
-                            Reg64::Rax,
-                            0,
-                        )?;
+                        let asm =
+                            self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
 
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
@@ -1204,13 +1179,8 @@ impl<'a> Compiler<'a> {
                 match e.get_metadata().ty() {
                     Type::Custom(struct_name) => {
                         // Copy the structure into the stack frame of the calling function
-                        let asm = self.copy_struct_into(
-                            struct_name,
-                            Reg64::Rsi,
-                            0,
-                            Reg64::Rax,
-                            0,
-                        )?;
+                        let asm =
+                            self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
 
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
