@@ -863,8 +863,10 @@ impl<'a> Compiler<'a> {
 
         assembly! {(code) {
             push %rax;
-            push [@stdout];
-            {{Compiler::make_c64_extern_call("fputs", 2)}}
+            lea %rax, [rel @_stdout];
+            push %rax;
+
+            {{Compiler::make_c64_extern_call("_fputs", 2)}}
         }}
         Ok(())
     }
