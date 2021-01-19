@@ -301,7 +301,7 @@ impl<'a> Compiler<'a> {
                     mov [%rax+{COROUTINE_CALLER_RIP_STORE}], %rbx;
                     mov %rbp, %rax;
                     mov %rsp, [%rbp+{COROUTINE_RSP_STORE}];
-                    jmp [%rbp-8];
+                    jmp [%rbp+{COROUTINE_RIP_STORE}];
             }
         }
     }
