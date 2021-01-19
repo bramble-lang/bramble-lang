@@ -469,7 +469,7 @@ impl<'a> Compiler<'a> {
                     .get(s)
                     .ok_or(format!("Could not find string {} in string pool", s))?;
                 assembly! {(code) {
-                        lea %rax, @{format!("str_{}", str_id)};
+                        lea %rax, [@{format!("str_{}", str_id)}];
                     }
                 }
             }
