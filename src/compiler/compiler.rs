@@ -43,6 +43,9 @@ const COROUTINE_CALLER_RBP_STORE:i32 = -24;
 const COROUTINE_CALLER_RIP_STORE:i32 = -32;
 const COROUTINE_RSP_STORE:i32 = -40;
 
+// How much space to allocate for each coroutine's stack
+const COROUTINE_STACK_SIZE:i64 = 8 * 1024;
+
 // Function entry/return metadata: offsets relative to RBP
 // These live above the function's stack frame (hence they are positive)
 const FUNCTION_CALLER_RSP:i32 = 16;
@@ -131,7 +134,7 @@ impl<'a> Compiler<'a> {
             (code) {
                 section ".data";
                 data next_stack_addr: dq 0;
-                data stack_size: dq 8*1024;
+                data stack_size: dq {COROUTINE_STACK_SIZE};
                 {{Compiler::write_string_pool(&string_pool)}}
             }
         };
@@ -141,9 +144,11 @@ impl<'a> Compiler<'a> {
 
     fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
         let mut code = vec![];
+
         code.push(Inst::DataString("_i32_fmt".into(), "%ld\\n".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
+
         for (s, id) in string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
             code.push(Inst::DataString(lbl, s.clone()));
