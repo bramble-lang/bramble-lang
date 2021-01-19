@@ -85,10 +85,40 @@ must have `CanonicalPath`
 #### Idea 2
 1. Module{items, modules}
 2. Items: Struct|Function|Coroutine
-3. Statement: Print|Return|Bind|Yield|Mutate|YieldReturn + Expression + ;
+3. Statement: Print|Return|Bind|Mutate|YieldReturn + Expression + ;
 4. Expression: ExpressionBlock|_expression_
 5. ExpressionBlock: {[statements]* + [expression]}
 
 One thing that's clear to me is that I need to write out the BNF for my language and get
 the syntacts clearly defined to make this easier.  My language has grown a bit and is
 at risk of becoming hairy.
+
+# 2021-01-18
+I went with Idea 2 from above and believe it has worked pretty well.
+
+The AST redesign and refactor is now in a good place.  There is still room for improvement, but I believe that can wait while I focus on some other tasks.
+However, one thing I will make sure I do is take an hour or two to clean up and rearrange the code.  After the massive work done to support paths and
+the major refactoring, and the fact that the code had gotten messy, the code base could benefit greatly from just moving functions around, grouping things
+into files, and doing some renaming to improve clarity.
+
+A couple things I want to do in the future:
+1. Make a Parsable trait that types implement if they are parsable syntactic elements. This will couple with a ParserResult type that will allow me to
+implement a nice parser Combinator setup.  I tried to do this today, but ran into issues trying to figure out how to write the ParserResult HOFs which
+might return different types (e.g. Statement would be Print or Bind or Mutate or Return. I thought I had a  prototype of this working a few days ago
+but could not get it working today)
+2. Follow the above pattern for type checking: have a TypeCheck trait that syntactic elements implement with their specific type validation logic and
+which serves as the transition machine to go from Parser to Semantic states.
+3. Create a trait for metadata, maybe create a `derive` macro for metadata, if I'm ambitious
+4. Add in logging that I can turn on which will provide details on what the compiler is doing, this would largely be independent of the source code
+(unlike the tracing options).  I could use it to tell the compiler is moving from lexing to parsing, how much time was spent on specific stages, stats
+like how many of each node type were visited in each stage (to validate that data is not lost and that the AST is not being changed topologically), etc.
+5. A new error type that captures the metadata from the node, then I can format the error message with the line number in a single place and not have to
+write every single error message with the Line number format.
+
+Next things to tackle:
+1. Do x64 compilation and get it to compile on my Mac and on my Linux box
+2. Design the memory/hw model abstraction to make it easier to write logic like the coroutines, or structs, which need to interact with specific locations
+in memory.
+3. Take coroutines to the next level and support doing yields in a function that was called by a coroutine.
+4. Multithreading support!
+5. C Interop ABI: take a look at how Rust does this and some other languages, but I think I can start with a super basic design even if it is finicky.
