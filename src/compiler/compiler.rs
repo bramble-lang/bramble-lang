@@ -35,6 +35,18 @@ use crate::{
 
 use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
+// Coroutine entry/return metadata: offsets relative to the coroutine's RBP
+// These live within the stack frame of the coroutine
+const COROUTINE_RIP_STORE:i32 = -8;
+const COROUTINE_CALLER_RSP_STORE:i32 = -16;
+const COROUTINE_CALLER_RBP_STORE:i32 = -24;
+const COROUTINE_CALLER_RIP_STORE:i32 = -32;
+const COROUTINE_RSP_STORE:i32 = -40;
+
+// Function entry/return metadata: offsets relative to RBP
+// These live above the function's stack frame (hence they are positive)
+const FUNCTION_CALLER_RSP:i32 = 16;
+
 pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
@@ -258,13 +270,13 @@ impl<'a> Compiler<'a> {
                     ; "[-24]: The EBP for the caller"
                     ; "[-32]: The caller return address (for yield return)"
                     ; "[-40]: The coroutine ESP"
-                    mov [%rsp-8], %rax;
-                    mov [%rsp-16], 0;
-                    mov [%rsp-24], 0;
-                    mov [%rsp-32], 0;
+                    mov [%rsp+{COROUTINE_RIP_STORE}], %rax;
+                    mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0;
+                    mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0;
+                    mov [%rsp+{COROUTINE_CALLER_RIP_STORE}], 0;
                     mov %rax, %rsp;
                     sub %rax, %rdi;
-                    mov [%rsp-40], %rax;
+                    mov [%rsp+{COROUTINE_RSP_STORE}], %rax;
                     mov %rax, %rsp;
                     sub %rsp, [@{stack_increment_variable}];
                     mov [@{next_stack_variable}], %rsp;
@@ -284,11 +296,11 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code2) {
                 @runtime_yield_into_coroutine:
-                    mov [%rax-16], %rsp;
-                    mov [%rax-24], %rbp;
-                    mov [%rax-32], %rbx;
+                    mov [%rax+{COROUTINE_CALLER_RSP_STORE}], %rsp;
+                    mov [%rax+{COROUTINE_CALLER_RBP_STORE}], %rbp;
+                    mov [%rax+{COROUTINE_CALLER_RIP_STORE}], %rbx;
                     mov %rbp, %rax;
-                    mov %rsp, [%rbp-40];
+                    mov %rsp, [%rbp+{COROUTINE_RSP_STORE}];
                     jmp [%rbp-8];
             }
         }
@@ -304,11 +316,11 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 @runtime_yield_return:
-                    mov [%rbp-40], %rsp;
-                    mov [%rbp-8], %rbx;
-                    mov %rsp, [%rbp-16];
-                    mov %rbx, [%rbp-32];
-                    mov %rbp, [%rbp-24];
+                    mov [%rbp+{COROUTINE_RSP_STORE}], %rsp;
+                    mov [%rbp+{COROUTINE_RIP_STORE}], %rbx;
+                    mov %rsp, [%rbp+{COROUTINE_CALLER_RSP_STORE}];
+                    mov %rbx, [%rbp+{COROUTINE_CALLER_RIP_STORE}];
+                    mov %rbp, [%rbp+{COROUTINE_CALLER_RBP_STORE}];
                     jmp %rbx;
             }
         }
@@ -1111,7 +1123,7 @@ impl<'a> Compiler<'a> {
                     let asm =
                         self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
                     assembly! {(code){
-                        mov %rsi, [%rbp-16];
+                        mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];  // Load the caller function's ESP pointer
                         {{asm}}
                     }};
                 }
@@ -1153,12 +1165,12 @@ impl<'a> Compiler<'a> {
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
                             assembly! {(code){
-                                mov %rsi, [%rbp-16];
+                                mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];  // load the caller function's ESP pointer
                                 {{asm}}
                             }};
                         } else {
                             assembly! {(code){
-                                lea %rsi, [%rbp+16];
+                                lea %rsi, [%rbp+{FUNCTION_CALLER_RSP}]; // load the caller function's ESP pointer
                                 {{asm}}
                             }};
                         }
@@ -1198,12 +1210,12 @@ impl<'a> Compiler<'a> {
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
                             assembly! {(code){
-                                mov %rsi, [%rbp-16];
+                                mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];   // Load the Caller functions ESP pointer
                                 {{asm}}
                             }};
                         } else {
                             assembly! {(code){
-                                lea %rsi, [%rbp+16];
+                                lea %rsi, [%rbp+{FUNCTION_CALLER_RSP}];  // Load the caller function's ESP pointer
                                 {{asm}}
                             }};
                         }
