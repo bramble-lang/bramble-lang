@@ -148,12 +148,12 @@ impl UnresolvedStructTable {
             resolved_structs: &HashMap<String, StructDefinition>,
         ) -> Option<i32> {
             match ty {
-                Type::I32 => Some(4),
-                Type::Bool => Some(4),
+                Type::I32 => Some(8),
+                Type::Bool => Some(8),
                 Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
-                Type::Coroutine(_) => Some(4),
-                Type::StringLiteral => Some(4),
-                Type::Unit => None,
+                Type::Coroutine(_) => Some(8),
+                Type::StringLiteral => Some(8),
+                Type::Unit => Some(0),
                 Type::StructDef(_) => None,
                 Type::FunctionDef(_, _) => None,
                 Type::CoroutineDef(_, _) => None,
@@ -205,10 +205,10 @@ impl ResolvedStructTable {
 
     pub fn size_of(&self, ty: &Type) -> Option<i32> {
         match ty {
-            Type::I32 => Some(4),
-            Type::Bool => Some(4),
-            Type::StringLiteral => Some(4),
-            Type::Coroutine(_) => Some(4),
+            Type::I32 => Some(8),
+            Type::Bool => Some(8),
+            Type::StringLiteral => Some(8),
+            Type::Coroutine(_) => Some(8),
             Type::Custom(canon_path) => self.get(canon_path).map(|st| st.size).flatten(),
             Type::FunctionDef(..) => Some(0),
             Type::CoroutineDef(..) => Some(0),

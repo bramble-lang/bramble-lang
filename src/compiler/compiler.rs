@@ -378,15 +378,15 @@ impl<'a> Compiler<'a> {
         // The registers used for passing function parameters, in the order that parameters are
         // assigned to registers
         let fn_param_registers = vec![
-            Reg::R32(Reg32::Eax),
-            Reg::R32(Reg32::Ebx),
-            Reg::R32(Reg32::Ecx),
-            Reg::R32(Reg32::Edx),
+            Reg64::Rax,
+            Reg64::Rbx,
+            Reg64::Rcx,
+            Reg64::Rdx,
         ];
         let co_param_registers = vec![
-            Reg::R32(Reg32::Ebx),
-            Reg::R32(Reg32::Ecx),
-            Reg::R32(Reg32::Edx),
+            Reg64::Rbx,
+            Reg64::Rcx,
+            Reg64::Rdx,
         ];
 
         self.push_scope(ast);
@@ -622,10 +622,10 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         let fn_param_registers = vec![
-            Reg::R32(Reg32::Eax),
-            Reg::R32(Reg32::Ebx),
-            Reg::R32(Reg32::Ecx),
-            Reg::R32(Reg32::Edx),
+            Reg64::Rax,
+            Reg64::Rbx,
+            Reg64::Rcx,
+            Reg64::Rdx,
         ];
 
         if let RoutineDef {
@@ -727,7 +727,7 @@ impl<'a> Compiler<'a> {
             .offset;
         assembly! {(code) {
             ; {format!("Binding {}", bind.get_id())}
-            {{self.bind(bind.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+            {{self.bind(bind.get_rhs(), current_func, Reg64::Rbp, id_offset)?}}
         }}
         Ok(())
     }
@@ -746,7 +746,7 @@ impl<'a> Compiler<'a> {
             .offset;
         assembly! {(code) {
             ; {format!("Binding {}", id)}
-            {{self.bind(mutate.get_rhs(), current_func, Reg32::Ebp, id_offset)?}}
+            {{self.bind(mutate.get_rhs(), current_func, Reg64::Rbp, id_offset)?}}
         }}
         Ok(())
     }
@@ -945,7 +945,7 @@ impl<'a> Compiler<'a> {
             let field_offset = field_info.iter().find(|(n, _)| n == fname).unwrap().1;
             let relative_offset = offset - (struct_sz - field_offset);
             assembly! {(code) {
-                {{self.bind_member(fvalue, current_func, Reg32::Ebp, relative_offset)?}}
+                {{self.bind_member(fvalue, current_func, Reg64::Rbp, relative_offset)?}}
             }}
         }
 
@@ -960,7 +960,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         fvalue: &'a CompilerNode,
         current_func: &String,
-        dst: Reg32,
+        dst: Reg64,
         dst_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -986,7 +986,7 @@ impl<'a> Compiler<'a> {
                             struct_name,
                             dst,
                             dst_offset,
-                            Reg::R32(Reg32::Eax),
+                            Reg64::Rax,
                             0,
                         )?;
                         assembly! {(code){
@@ -995,7 +995,7 @@ impl<'a> Compiler<'a> {
                     }
                     _ => {
                         assembly! {(code) {
-                            mov [%{Reg::R32(dst)}-{dst_offset}], %rax;
+                            mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
                         }};
                     }
                 }
@@ -1008,7 +1008,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         value: &'a CompilerNode,
         current_func: &String,
-        dst: Reg32,
+        dst: Reg64,
         dst_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1021,7 +1021,7 @@ impl<'a> Compiler<'a> {
                         // If an identifier is being copied to another identifier, then just copy
                         // the data over rather than pop off of the stack
                         let asm =
-                            self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?;
+                            self.copy_struct_into(name, dst, dst_offset, Reg64::Rax, 0)?;
                         assembly! {(code){
                             {{asm}}
                         }}
@@ -1029,14 +1029,14 @@ impl<'a> Compiler<'a> {
                     _ => {
                         assembly! {(code){
                             // TODO: Double check the 0 here:
-                            {{self.copy_struct_into(name, dst, dst_offset, Reg::R32(Reg32::Eax), 0)?}}
+                            {{self.copy_struct_into(name, dst, dst_offset, Reg64::Rax, 0)?}}
                         }}
                     }
                 }
             }
             _ => {
                 assembly! {(code) {
-                    mov [%{Reg::R32(dst)}-{dst_offset}], %rax;
+                    mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
                 }};
             }
         }
@@ -1087,7 +1087,7 @@ impl<'a> Compiler<'a> {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
                     let asm =
-                        self.copy_struct_into(struct_name, Reg32::Esi, 0, Reg::R32(Reg32::Eax), 0)?;
+                        self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
                     assembly! {(code){
                         mov %rsi, [%rbp-8];
                         {{asm}}
@@ -1122,9 +1122,9 @@ impl<'a> Compiler<'a> {
                         // Copy the structure into the stack frame of the calling function
                         let asm = self.copy_struct_into(
                             struct_name,
-                            Reg32::Esi,
+                            Reg64::Rsi,
                             0,
-                            Reg::R32(Reg32::Eax),
+                            Reg64::Rax,
                             0,
                         )?;
 
@@ -1167,9 +1167,9 @@ impl<'a> Compiler<'a> {
                         // Copy the structure into the stack frame of the calling function
                         let asm = self.copy_struct_into(
                             struct_name,
-                            Reg32::Esi,
+                            Reg64::Rsi,
                             0,
-                            Reg::R32(Reg32::Eax),
+                            Reg64::Rax,
                             0,
                         )?;
 
@@ -1233,9 +1233,9 @@ impl<'a> Compiler<'a> {
     fn copy_struct_into(
         &self,
         struct_name: &Path,
-        dst_reg: Reg32,
+        dst_reg: Reg64,
         dst_offset: i32,
-        src_reg: Reg,
+        src_reg: Reg64,
         src_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1266,8 +1266,8 @@ impl<'a> Compiler<'a> {
                 _ => {
                     assembly! {(code) {
                         ; {format!("copy {}.{}", struct_name, field_name)}
-                        mov %rdi, [%{src_reg}-{src_offset - (struct_sz - rel_field_offset)}];
-                        mov [%{Reg::R32(dst_reg)}-{dst_field_offset}], %rdi;
+                        mov %rdi, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
+                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %rdi;
                     }};
                 }
             }
@@ -1279,7 +1279,7 @@ impl<'a> Compiler<'a> {
     fn move_params_into_stackframe(
         &self,
         routine: &RoutineDef<Scope>,
-        param_registers: &Vec<Reg>,
+        param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         let routine_name = routine.get_name();
         let params = routine.get_params();
@@ -1303,7 +1303,7 @@ impl<'a> Compiler<'a> {
                 Type::Custom(struct_name) => {
                     let asm = self.copy_struct_into(
                         struct_name,
-                        Reg32::Ebp,
+                        Reg64::Rbp,
                         param_offset,
                         param_registers[idx],
                         0,
@@ -1314,7 +1314,7 @@ impl<'a> Compiler<'a> {
                 }
                 _ => {
                     assembly! {(code){
-                        mov [%rbp-{param_offset}], %{param_registers[idx]};
+                        mov [%rbp-{param_offset}], %{Reg::R64(param_registers[idx])};
                     }};
                 }
             }
@@ -1340,7 +1340,7 @@ impl<'a> Compiler<'a> {
     fn move_routine_params_into_registers(
         &mut self,
         params: &'a Vec<CompilerNode>,
-        param_registers: &Vec<Reg>,
+        param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
         // calling the function
@@ -1354,7 +1354,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         for reg in param_registers.iter().take(params.len()).rev() {
             assembly! {(code){
-                pop %{*reg};
+                pop %{Reg::R64(*reg)};
             }};
         }
         Ok(code)

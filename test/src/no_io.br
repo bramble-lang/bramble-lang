@@ -1,0 +1,4 @@
+fn my_main() {
+    let i: i32 := 2 + 4;
+    return;
+}
