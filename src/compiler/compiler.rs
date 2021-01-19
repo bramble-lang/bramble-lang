@@ -1111,7 +1111,7 @@ impl<'a> Compiler<'a> {
                     let asm =
                         self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
                     assembly! {(code){
-                        mov %rsi, [%rbp-8];
+                        mov %rsi, [%rbp-16];
                         {{asm}}
                     }};
                 }
@@ -1153,12 +1153,12 @@ impl<'a> Compiler<'a> {
                         let is_coroutine = self.scope.in_coroutine();
                         if is_coroutine {
                             assembly! {(code){
-                                mov %rsi, [%rbp-8];
+                                mov %rsi, [%rbp-16];
                                 {{asm}}
                             }};
                         } else {
                             assembly! {(code){
-                                lea %rsi, [%rbp+8];
+                                lea %rsi, [%rbp+16];
                                 {{asm}}
                             }};
                         }
