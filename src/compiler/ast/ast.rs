@@ -188,7 +188,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Bind<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(bind.get_metadata(), struct_table, layout);
-        let (rhs, layout) = CompilerNode::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
+        let (rhs, layout) =
+            CompilerNode::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
         (
             Bind::new(
                 meta,
@@ -207,7 +208,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Mutate<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(mutate.get_metadata(), struct_table, layout);
-        let (rhs, layout) = CompilerNode::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
+        let (rhs, layout) =
+            CompilerNode::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(meta, mutate.get_id(), rhs), layout)
     }
 
@@ -217,7 +219,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Printi<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
-        let (value, layout) = CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+        let (value, layout) =
+            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printi::new(meta, value), layout)
     }
 
@@ -227,7 +230,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Printiln<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
-        let (value, layout) = CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+        let (value, layout) =
+            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printiln::new(meta, value), layout)
     }
 
@@ -237,7 +241,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Printbln<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
-        let (value, layout) = CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+        let (value, layout) =
+            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printbln::new(meta, value), layout)
     }
 
@@ -247,7 +252,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Prints<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
-        let (value, layout) = CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+        let (value, layout) =
+            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Prints::new(meta, value), layout)
     }
 
@@ -260,7 +266,8 @@ impl CompilerNode {
         match yr.get_value() {
             None => (YieldReturn::new(meta, None), layout),
             Some(val) => {
-                let (value, layout) = CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
+                let (value, layout) =
+                    CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
                 (YieldReturn::new(meta, Some(value)), layout)
             }
         }
@@ -275,7 +282,8 @@ impl CompilerNode {
         match r.get_value() {
             None => (Return::new(meta, None), layout),
             Some(val) => {
-                let (value, layout) = CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
+                let (value, layout) =
+                    CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
                 (Return::new(meta, Some(value)), layout)
             }
         }
@@ -288,23 +296,8 @@ impl CompilerNode {
     ) -> (CompilerNode, LayoutData) {
         use Expression::*;
         match ast {
-            ExpressionBlock(m, body, final_exp) => {
-                let (meta, mut nlayout) = Scope::local_from(m, struct_table, layout);
-                let mut nbody = vec![];
-                for e in body.iter() {
-                    let (e, layout) =
-                        CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
-                    nlayout = layout;
-                    nbody.push(e);
-                }
-                let (final_exp, nlayout) = match final_exp {
-                    None => (None, nlayout),
-                    Some(fe) => {
-                        let (fe, ld) = CompilerNode::compute_layouts_for_expression(fe, nlayout, struct_table);
-                        (Some(Box::new(fe)), ld)
-                    }
-                };
-                (ExpressionBlock(meta, nbody, final_exp), nlayout)
+            ExpressionBlock(..) => {
+                Self::compute_layouts_for_expression_block(ast, layout, struct_table)
             }
             Expression::Integer(m, i) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
@@ -338,7 +331,8 @@ impl CompilerNode {
                 )
             }
             MemberAccess(m, src, member) => {
-                let (src, layout) = CompilerNode::compute_layouts_for_expression(src, layout, struct_table);
+                let (src, layout) =
+                    CompilerNode::compute_layouts_for_expression(src, layout, struct_table);
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 (MemberAccess(meta, Box::new(src), member.clone()), layout)
             }
@@ -349,8 +343,10 @@ impl CompilerNode {
                 (Expression::UnaryOp(meta, *op, Box::new(operand)), layout)
             }
             BinaryOp(m, op, ref l, ref r) => {
-                let (l, layout) = CompilerNode::compute_layouts_for_expression(l, layout, struct_table);
-                let (r, layout) = CompilerNode::compute_layouts_for_expression(r, layout, struct_table);
+                let (l, layout) =
+                    CompilerNode::compute_layouts_for_expression(l, layout, struct_table);
+                let (r, layout) =
+                    CompilerNode::compute_layouts_for_expression(r, layout, struct_table);
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 (
                     Expression::BinaryOp(meta, *op, Box::new(l), Box::new(r)),
@@ -359,14 +355,18 @@ impl CompilerNode {
             }
             If(m, ref cond, ref tb, ref fb) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (cond, layout) = CompilerNode::compute_layouts_for_expression(cond, layout, struct_table);
-                let (tb, layout) = CompilerNode::compute_layouts_for_expression(tb, layout, struct_table);
-                let (fb, layout) = CompilerNode::compute_layouts_for_expression(fb, layout, struct_table);
+                let (cond, layout) =
+                    CompilerNode::compute_layouts_for_expression(cond, layout, struct_table);
+                let (tb, layout) =
+                    CompilerNode::compute_layouts_for_expression(tb, layout, struct_table);
+                let (fb, layout) =
+                    CompilerNode::compute_layouts_for_expression(fb, layout, struct_table);
                 (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
             }
             Yield(m, e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) = CompilerNode::compute_layouts_for_expression(e, layout, struct_table);
+                let (e, layout) =
+                    CompilerNode::compute_layouts_for_expression(e, layout, struct_table);
                 (Yield(meta, Box::new(e)), layout)
             }
             RoutineCall(m, call, name, params) => {
@@ -374,25 +374,70 @@ impl CompilerNode {
                 let mut nlayout = layout;
                 let mut nparams = vec![];
                 for p in params.iter() {
-                    let (np, playout) = CompilerNode::compute_layouts_for_expression(p, nlayout, struct_table);
+                    let (np, playout) =
+                        CompilerNode::compute_layouts_for_expression(p, nlayout, struct_table);
                     nlayout = playout;
                     nparams.push(np);
                 }
                 (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
             }
-            StructExpression(meta, struct_name, fields) => {
+            StructExpression(..) => {
+                Self::compute_layouts_for_struct_expression(ast, layout, struct_table)
+            }
+        }
+    }
+
+    fn compute_layouts_for_expression_block(
+        block: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+        if let SemanticNode::ExpressionBlock(m, body, final_exp) = block {
+            let (meta, mut nlayout) = Scope::local_from(m, struct_table, layout);
+            let mut nbody = vec![];
+            for e in body.iter() {
+                let (e, layout) =
+                    CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
+                nlayout = layout;
+                nbody.push(e);
+            }
+            let (final_exp, nlayout) = match final_exp {
+                None => (None, nlayout),
+                Some(fe) => {
+                    let (fe, ld) =
+                        CompilerNode::compute_layouts_for_expression(fe, nlayout, struct_table);
+                    (Some(Box::new(fe)), ld)
+                }
+            };
+            (
+                CompilerNode::ExpressionBlock(meta, nbody, final_exp),
+                nlayout,
+            )
+        } else {
+            panic!("Expected ExpressionBlock, but got {:?}", block)
+        }
+    }
+
+    fn compute_layouts_for_struct_expression(
+        se: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+        if let SemanticNode::StructExpression(meta, struct_name, fields) = se {
                 let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
                 let mut nfields = vec![];
                 for (fname, fvalue) in fields.iter() {
-                    let (nfv, no) = CompilerNode::compute_layouts_for_expression(fvalue, nlayout, struct_table);
+                    let (nfv, no) =
+                        CompilerNode::compute_layouts_for_expression(fvalue, nlayout, struct_table);
                     nlayout = no;
                     nfields.push((fname.clone(), nfv));
                 }
                 (
-                    StructExpression(meta, struct_name.clone(), nfields),
+                    CompilerNode::StructExpression(meta, struct_name.clone(), nfields),
                     nlayout,
                 )
-            }
+        } else {
+            panic!("Expected StructExpression, but got {:?}", se)
         }
     }
 
@@ -402,7 +447,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Yield<Scope>, LayoutData) {
         let (meta, layout) = Scope::local_from(y.get_metadata(), struct_table, layout);
-        let (value, layout) = CompilerNode::compute_layouts_for_expression(y.get_value(), layout, struct_table);
+        let (value, layout) =
+            CompilerNode::compute_layouts_for_expression(y.get_value(), layout, struct_table);
         (Yield::new(meta, value), layout)
     }
 
@@ -414,7 +460,8 @@ impl CompilerNode {
         let mut compiler_ast_items = vec![];
         let mut layout = layout;
         for item in items.iter() {
-            let (c_ast_item, no) = CompilerNode::compute_layouts_for_expression(item, layout, struct_table);
+            let (c_ast_item, no) =
+                CompilerNode::compute_layouts_for_expression(item, layout, struct_table);
             layout = no;
             compiler_ast_items.push(c_ast_item);
         }
@@ -470,7 +517,11 @@ mod ast_tests {
             0,
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(&sn, LayoutData::new(8), &empty_struct_table);
+        let cn = CompilerNode::compute_layouts_for_expression(
+            &sn,
+            LayoutData::new(8),
+            &empty_struct_table,
+        );
         match cn.0 {
             CompilerNode::Integer(m, _) => {
                 assert_eq!(
@@ -495,7 +546,11 @@ mod ast_tests {
             0,
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(&sn, LayoutData::new(8), &empty_struct_table);
+        let cn = CompilerNode::compute_layouts_for_expression(
+            &sn,
+            LayoutData::new(8),
+            &empty_struct_table,
+        );
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::Integer(m, v) => {
@@ -544,7 +599,11 @@ mod ast_tests {
             Box::new(sn2),
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(&snmul, LayoutData::new(8), &empty_struct_table);
+        let cn = CompilerNode::compute_layouts_for_expression(
+            &snmul,
+            LayoutData::new(8),
+            &empty_struct_table,
+        );
         assert_eq!(cn.1.offset, 8);
         match cn.0 {
             CompilerNode::BinaryOp(m, BinaryOperator::Mul, l, r) => {
@@ -589,7 +648,11 @@ mod ast_tests {
             None,
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(&sn, LayoutData::new(0), &empty_struct_table);
+        let cn = CompilerNode::compute_layouts_for_expression(
+            &sn,
+            LayoutData::new(0),
+            &empty_struct_table,
+        );
         assert_eq!(cn.1.offset, 16);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, _, _) => {
@@ -635,7 +698,11 @@ mod ast_tests {
             Some(Box::new(sn)),
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(&sn, LayoutData::new(0), &empty_struct_table);
+        let cn = CompilerNode::compute_layouts_for_expression(
+            &sn,
+            LayoutData::new(0),
+            &empty_struct_table,
+        );
         assert_eq!(cn.1.offset, 32);
         match cn.0 {
             CompilerNode::ExpressionBlock(m, _b, fe) => {
