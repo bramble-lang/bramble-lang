@@ -78,32 +78,6 @@ pub struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    pub fn print(code: &Vec<Inst>, output: &mut dyn std::io::Write) -> std::io::Result<()> {
-        for inst in code.iter() {
-            writeln!(output, "{}", inst)?;
-        }
-        Ok(())
-    }
-
-    pub fn configure_extern_functionss(target_os: TargetOS) -> HashMap<String,String> {
-        let mut extern_functions = HashMap::new();
-        match target_os {
-            TargetOS::Linux => {
-                extern_functions.insert("main".into(), "main".into());
-                extern_functions.insert("printf".into(), "printf".into());
-                extern_functions.insert("fputs".into(), "fputs".into());
-                extern_functions.insert("stdout".into(), "stdout".into());
-            }
-            TargetOS::MacOS => {
-                extern_functions.insert("main".into(), "_main".into());
-                extern_functions.insert("printf".into(), "_printf".into());
-                extern_functions.insert("fputs".into(), "_fputs".into());
-            }
-        }
-
-        extern_functions
-    }
-
     pub fn compile(module: Module<SemanticMetadata>, target_os: TargetOS) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = CompilerNode::from(&module).unwrap();
@@ -1420,4 +1394,31 @@ impl<'a> Compiler<'a> {
         }
         Ok(code)
     }
+
+    pub fn print(code: &Vec<Inst>, output: &mut dyn std::io::Write) -> std::io::Result<()> {
+        for inst in code.iter() {
+            writeln!(output, "{}", inst)?;
+        }
+        Ok(())
+    }
+
+    pub fn configure_extern_functionss(target_os: TargetOS) -> HashMap<String,String> {
+        let mut extern_functions = HashMap::new();
+        match target_os {
+            TargetOS::Linux => {
+                extern_functions.insert("main".into(), "main".into());
+                extern_functions.insert("printf".into(), "printf".into());
+                extern_functions.insert("fputs".into(), "fputs".into());
+                extern_functions.insert("stdout".into(), "stdout".into());
+            }
+            TargetOS::MacOS => {
+                extern_functions.insert("main".into(), "_main".into());
+                extern_functions.insert("printf".into(), "_printf".into());
+                extern_functions.insert("fputs".into(), "_fputs".into());
+            }
+        }
+
+        extern_functions
+    }
+
 }
