@@ -22,10 +22,9 @@ use braid_lang::result::Result;
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::{PResult, ParserCombinator, ParserInfo};
+use super::pnode::{ParserResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
 
-type ParserResult<T> = Result<Option<T>>;
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 static TRACE_START: AtomicUsize = AtomicUsize::new(0);
@@ -366,7 +365,7 @@ fn statement(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
     }
 }
 
-fn expression_block(stream: &mut TokenStream) -> PResult {
+fn expression_block(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
             let stmts = block(stream)?;
@@ -380,22 +379,22 @@ fn expression_block(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn expression(stream: &mut TokenStream) -> PResult {
+fn expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     logical_or(stream)
 }
 
-fn logical_or(stream: &mut TokenStream) -> PResult {
+fn logical_or(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::BOr], logical_and)
 }
 
-fn logical_and(stream: &mut TokenStream) -> PResult {
+fn logical_and(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::BAnd], comparison)
 }
 
-fn comparison(stream: &mut TokenStream) -> PResult {
+fn comparison(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     binary_op(
         stream,
@@ -404,12 +403,12 @@ fn comparison(stream: &mut TokenStream) -> PResult {
     )
 }
 
-fn sum(stream: &mut TokenStream) -> PResult {
+fn sum(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::Add, Lex::Minus], term)
 }
 
-fn term(stream: &mut TokenStream) -> PResult {
+fn term(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::Mul, Lex::Div], negate)
 }
@@ -417,8 +416,8 @@ fn term(stream: &mut TokenStream) -> PResult {
 fn binary_op(
     stream: &mut TokenStream,
     test: &Vec<Lex>,
-    left_pattern: fn(&mut TokenStream) -> PResult,
-) -> PResult {
+    left_pattern: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>,
+) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match left_pattern(stream)? {
         Some(left) => match stream.next_if_one_of(test.clone()) {
@@ -433,7 +432,7 @@ fn binary_op(
     }
 }
 
-fn negate(stream: &mut TokenStream) -> PResult {
+fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
@@ -445,7 +444,7 @@ fn negate(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn member_access(stream: &mut TokenStream) -> PResult {
+fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match factor(stream)? {
         Some(f) => {
@@ -464,7 +463,7 @@ fn member_access(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn factor(stream: &mut TokenStream) -> PResult {
+fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.peek() {
         Some(Token {
@@ -484,7 +483,7 @@ fn factor(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn if_expression(stream: &mut TokenStream) -> PResult {
+fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::If) {
         Some(token) => {
@@ -634,7 +633,7 @@ fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserI
     })
 }
 
-fn co_yield(stream: &mut TokenStream) -> PResult {
+fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if(&Lex::Yield) {
         Some(token) => {
@@ -719,7 +718,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserInfo>> {
     }
 }
 
-fn co_init(stream: &mut TokenStream) -> PResult {
+fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if(&Lex::Init) {
         Some(token) => match path(stream)? {
@@ -739,7 +738,7 @@ fn co_init(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
+fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     let s: Option<Expression<u32>> = match path(stream)? {
         Some((line, path)) => match routine_call_params(stream)? {
@@ -768,7 +767,7 @@ fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
 
 // TODO: I think what I want ot do is pull the ID/Path parsing up in to `function_call_or_variable` and then
 // determine if it's a function, struct expressoin, or variable by if there is a LParen or LBrace after the path.
-fn function_call(stream: &mut TokenStream) -> PResult {
+fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
         let (line, fn_name) = stream
@@ -787,7 +786,7 @@ fn function_call(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn struct_expression(stream: &mut TokenStream) -> PResult {
+fn struct_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LBrace]) {
         let (line, struct_name) = path(stream)?.ok_or("CRITICAL: failed to get identifier")?;
@@ -831,7 +830,7 @@ fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     }
 }
 
-fn identifier(stream: &mut TokenStream) -> PResult {
+fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if_id() {
         Some((line, id)) => Ok(Some(Expression::Identifier(line, id))),
@@ -889,14 +888,14 @@ fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserInf
     }
 }
 
-fn constant(stream: &mut TokenStream) -> PResult {
+fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     number(stream)
         .por(boolean, stream)
         .por(string_literal, stream)
 }
 
-fn number(stream: &mut TokenStream) -> PResult {
+fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if(&Lex::Integer(0)) {
         Some(Token {
@@ -907,7 +906,7 @@ fn number(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn boolean(stream: &mut TokenStream) -> PResult {
+fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
         Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Expression::Boolean(l, b))),
@@ -915,7 +914,7 @@ fn boolean(stream: &mut TokenStream) -> PResult {
     }
 }
 
-fn string_literal(stream: &mut TokenStream) -> PResult {
+fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if(&Lex::StringLiteral("".into())) {
         Some(Token {

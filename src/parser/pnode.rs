@@ -6,10 +6,10 @@ use crate::{
 use braid_lang::result::Result;
 
 pub type ParserInfo = u32;
-pub type PResult = Result<Option<Expression<ParserInfo>>>;
+pub(super) type ParserResult<T> = Result<Option<T>>;
 
-impl ParserCombinator<PResult> for PResult {
-    fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult {
+impl ParserCombinator<ParserResult<Expression<ParserInfo>>> for ParserResult<Expression<ParserInfo>> {
+    fn por(&self, f: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>, ts: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
         match self {
             Ok(Some(s)) => Ok(Some(s.clone())),
             Ok(None) => f(ts),
@@ -20,9 +20,9 @@ impl ParserCombinator<PResult> for PResult {
     fn pif_then(
         &self,
         cond: Vec<Lex>,
-        then: fn(Expression<ParserInfo>, Token, &mut TokenStream) -> PResult,
+        then: fn(Expression<ParserInfo>, Token, &mut TokenStream) -> ParserResult<Expression<ParserInfo>>,
         ts: &mut TokenStream,
-    ) -> PResult {
+    ) -> ParserResult<Expression<ParserInfo>> {
         match self {
             Ok(Some(s)) => match ts.next_if_one_of(cond) {
                 Some(result) => then(s.clone(), result, ts),
@@ -45,12 +45,12 @@ pub trait ParserCombinator<R> {
 }
 
 impl Expression<ParserInfo> {
-    pub fn new_yield(line: u32, coroutine_value: Box<Self>) -> PResult {
+    pub fn new_yield(line: u32, coroutine_value: Box<Self>) -> ParserResult<Expression<ParserInfo>> {
         let i = line; //ParserInfo{l: line};
         Ok(Some(Expression::Yield(i, coroutine_value)))
     }
 
-    pub fn unary_op(line: u32, op: &Lex, operand: Box<Self>) -> PResult {
+    pub fn unary_op(line: u32, op: &Lex, operand: Box<Self>) -> ParserResult<Expression<ParserInfo>> {
         match op {
             Lex::Minus => Ok(Some(Expression::UnaryOp(
                 line,
@@ -62,7 +62,7 @@ impl Expression<ParserInfo> {
         }
     }
 
-    pub fn binary_op(line: u32, op: &Lex, left: Box<Self>, right: Box<Self>) -> PResult {
+    pub fn binary_op(line: u32, op: &Lex, left: Box<Self>, right: Box<Self>) -> ParserResult<Expression<ParserInfo>> {
         let i = line; //ParserInfo{l: line};
         match op {
             Lex::Eq => Ok(Some(Expression::BinaryOp(
