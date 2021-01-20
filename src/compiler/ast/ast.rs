@@ -330,57 +330,23 @@ impl CompilerNode {
                     layout,
                 )
             }
-            MemberAccess(m, src, member) => {
-                let (src, layout) =
-                    CompilerNode::compute_layouts_for_expression(src, layout, struct_table);
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (MemberAccess(meta, Box::new(src), member.clone()), layout)
+            MemberAccess(..) => {
+                Self::compute_layouts_for_member_access(ast, layout, struct_table)
             }
-            UnaryOp(m, op, ref operand) => {
-                let (operand, layout) =
-                    CompilerNode::compute_layouts_for_expression(operand, layout, struct_table);
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::UnaryOp(meta, *op, Box::new(operand)), layout)
+            UnaryOp(..) => {
+                Self::compute_layouts_for_unary_op(ast, layout, struct_table)
             }
-            BinaryOp(m, op, ref l, ref r) => {
-                let (l, layout) =
-                    CompilerNode::compute_layouts_for_expression(l, layout, struct_table);
-                let (r, layout) =
-                    CompilerNode::compute_layouts_for_expression(r, layout, struct_table);
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (
-                    Expression::BinaryOp(meta, *op, Box::new(l), Box::new(r)),
-                    layout,
-                )
+            BinaryOp(..) => {
+                Self::compute_layouts_for_binary_op(ast, layout, struct_table)
             }
-            If(m, ref cond, ref tb, ref fb) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (cond, layout) =
-                    CompilerNode::compute_layouts_for_expression(cond, layout, struct_table);
-                let (tb, layout) =
-                    CompilerNode::compute_layouts_for_expression(tb, layout, struct_table);
-                let (fb, layout) =
-                    CompilerNode::compute_layouts_for_expression(fb, layout, struct_table);
-                (If(meta, Box::new(cond), Box::new(tb), Box::new(fb)), layout)
-            }
+            If(..) => Self::compute_layouts_for_if(ast, layout, struct_table),
             Yield(m, e) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
                 let (e, layout) =
                     CompilerNode::compute_layouts_for_expression(e, layout, struct_table);
                 (Yield(meta, Box::new(e)), layout)
             }
-            RoutineCall(m, call, name, params) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let mut nlayout = layout;
-                let mut nparams = vec![];
-                for p in params.iter() {
-                    let (np, playout) =
-                        CompilerNode::compute_layouts_for_expression(p, nlayout, struct_table);
-                    nlayout = playout;
-                    nparams.push(np);
-                }
-                (RoutineCall(meta, *call, name.clone(), nparams), nlayout)
-            }
+            RoutineCall(..) => Self::compute_layouts_for_routine_call(ast, layout, struct_table),
             StructExpression(..) => {
                 Self::compute_layouts_for_struct_expression(ast, layout, struct_table)
             }
@@ -418,24 +384,116 @@ impl CompilerNode {
         }
     }
 
+    fn compute_layouts_for_member_access(
+        access: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+            if let Expression::MemberAccess(m, src, member) = access {
+                let (src, layout) =
+                    Self::compute_layouts_for_expression(src, layout, struct_table);
+                let (meta, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::MemberAccess(meta, Box::new(src), member.clone()), layout)
+            } else {
+                panic!("Expected MemberAccess, but got {:?}", access)
+            }
+    }
+
+    fn compute_layouts_for_unary_op(
+        un_op: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+            if let Expression::UnaryOp(m, op, operand) = un_op {
+                let (operand, layout) =
+                    Self::compute_layouts_for_expression(operand, layout, struct_table);
+                let (meta, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::UnaryOp(meta, *op, Box::new(operand)), layout)
+            } else {
+                panic!("Expected UnaryOp, but got {:?}", un_op)
+            }
+    }
+
+    fn compute_layouts_for_binary_op(
+        bin_op: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+        if let Expression::BinaryOp(m, op, l, r) = bin_op {
+            let (l, layout) = CompilerNode::compute_layouts_for_expression(l, layout, struct_table);
+            let (r, layout) = CompilerNode::compute_layouts_for_expression(r, layout, struct_table);
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            (
+                Expression::BinaryOp(meta, *op, Box::new(l), Box::new(r)),
+                layout,
+            )
+        } else {
+            panic!("Expected BinaryOp, but got {:?}", bin_op)
+        }
+    }
+
+    fn compute_layouts_for_if(
+        if_exp: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+        if let SemanticNode::If(m, cond, tb, fb) = if_exp {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (cond, layout) =
+                CompilerNode::compute_layouts_for_expression(cond, layout, struct_table);
+            let (tb, layout) =
+                CompilerNode::compute_layouts_for_expression(tb, layout, struct_table);
+            let (fb, layout) =
+                CompilerNode::compute_layouts_for_expression(fb, layout, struct_table);
+            (
+                Self::If(meta, Box::new(cond), Box::new(tb), Box::new(fb)),
+                layout,
+            )
+        } else {
+            panic!("Expected IfExpression, but got {:?}", if_exp)
+        }
+    }
+
+    fn compute_layouts_for_routine_call(
+        rc: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+        if let SemanticNode::RoutineCall(m, call, name, params) = rc {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let mut nlayout = layout;
+            let mut nparams = vec![];
+            for p in params.iter() {
+                let (np, playout) = Self::compute_layouts_for_expression(p, nlayout, struct_table);
+                nlayout = playout;
+                nparams.push(np);
+            }
+            (
+                Self::RoutineCall(meta, *call, name.clone(), nparams),
+                nlayout,
+            )
+        } else {
+            panic!("Expected RoutineCall, but got {:?}", rc)
+        }
+    }
+
     fn compute_layouts_for_struct_expression(
         se: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         if let SemanticNode::StructExpression(meta, struct_name, fields) = se {
-                let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
-                let mut nfields = vec![];
-                for (fname, fvalue) in fields.iter() {
-                    let (nfv, no) =
-                        CompilerNode::compute_layouts_for_expression(fvalue, nlayout, struct_table);
-                    nlayout = no;
-                    nfields.push((fname.clone(), nfv));
-                }
-                (
-                    CompilerNode::StructExpression(meta, struct_name.clone(), nfields),
-                    nlayout,
-                )
+            let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
+            let mut nfields = vec![];
+            for (fname, fvalue) in fields.iter() {
+                let (nfv, no) = Self::compute_layouts_for_expression(fvalue, nlayout, struct_table);
+                nlayout = no;
+                nfields.push((fname.clone(), nfv));
+            }
+            (
+                Self::StructExpression(meta, struct_name.clone(), nfields),
+                nlayout,
+            )
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
         }
