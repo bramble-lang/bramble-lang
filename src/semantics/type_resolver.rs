@@ -17,7 +17,7 @@ use crate::{
         routinedef,
     },
 };
-use crate::{parser::pnode::ParserInfo, semantics::symbol_table::*, syntax::structdef};
+use crate::{parser::parser::ParserInfo, semantics::symbol_table::*, syntax::structdef};
 use crate::{
     semantics::semanticnode::{SemanticAst, SemanticNode},
     syntax::module::Module,
@@ -26,7 +26,7 @@ use crate::{
 use braid_lang::result::Result;
 use Type::*;
 
-use super::semanticnode::SemanticMetadata;
+use super::{semanticnode::SemanticMetadata, stack::SymbolTableScopeStack};
 
 pub fn type_check(
     ast: &module::Module<ParserInfo>,
@@ -35,180 +35,437 @@ pub fn type_check(
 ) -> Result<module::Module<SemanticMetadata>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(&ast)?;
-    SymbolTable::from_module(&mut sm_ast)?;
+    SymbolTable::for_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
-    let mut semantic = SemanticAnalyzer::new(&sm_ast);
+    let mut semantic = TypeResolver::new(&sm_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
     let ast_typed = semantic
-        .resolve_types(&mut root_table)
+        .resolve(&mut root_table)
         .map_err(|e| format!("Semantic: {}", e))?;
     Ok(ast_typed)
 }
 
-pub struct SemanticAnalyzer<'a> {
+pub struct TypeResolver<'a> {
     root: &'a Module<SemanticMetadata>,
-    stack: ScopeStack,
+    stack: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
 }
 
-impl<'a> Tracing for SemanticAnalyzer<'a> {
+impl<'a> Tracing for TypeResolver<'a> {
     fn set_tracing(&mut self, config: TracingConfig) {
         self.tracing = config;
     }
 }
 
-impl<'a> SemanticAnalyzer<'a> {
-    pub fn new(root: &'a Module<SemanticMetadata>) -> SemanticAnalyzer {
-        SemanticAnalyzer {
+impl<'a> TypeResolver<'a> {
+    pub fn new(root: &'a Module<SemanticMetadata>) -> TypeResolver {
+        TypeResolver {
             root,
-            stack: ScopeStack::new(),
+            stack: SymbolTableScopeStack::new(),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
         }
     }
 
-    fn trace(
-        &self,
-        node: &SemanticNode,
-        current_func: &Option<String>,
-        current_scope: &SymbolTable,
-    ) {
-        let md = node.get_metadata();
-        let line = md.ln as usize;
-        let print_trace = match self.tracing {
-            TracingConfig::All => true,
-            TracingConfig::After(start) if start <= line => true,
-            TracingConfig::Before(end) if line <= end => true,
-            TracingConfig::Between(start, end) if start <= line && line <= end => true,
-            TracingConfig::Only(only) if line == only => true,
-            _ => false,
-        };
-        let print_path = match self.path_tracing {
-            TracingConfig::All => true,
-            TracingConfig::After(start) if start <= line => true,
-            TracingConfig::Before(end) if line <= end => true,
-            TracingConfig::Between(start, end) if start <= line && line <= end => true,
-            TracingConfig::Only(only) if line == only => true,
-            _ => false,
-        };
-
-        if print_trace {
-            let func = match current_func {
-                Some(f) => format!("{}: ", f),
-                None => "".into(),
-            };
-            println!("L{}: {}{}\n{}", line, func, node, self.stack);
-        }
-
-        if print_path {
-            let func = match current_func {
-                Some(f) => format!("{}: ", f),
-                None => "".into(),
-            };
-            let path = self
-                .stack
-                .to_path(current_scope)
-                .map_or("[]".into(), |p| format!("{}", p));
-            println!("L{}: {}{} <- {}", line, func, node, path);
-        }
-    }
-
-    fn unary_op(
-        &mut self,
-        op: UnaryOperator,
-        operand: &SemanticNode,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<(Type, SemanticNode)> {
-        use UnaryOperator::*;
-
-        let operand = self.traverse(operand, current_func, sym)?;
-
-        match op {
-            Minus => {
-                if operand.get_type() == I32 {
-                    Ok((I32, operand))
-                } else {
-                    Err(format!(
-                        "{} expected i32 but found {}",
-                        op,
-                        operand.get_type()
-                    ))
-                }
-            }
-            Not => {
-                if operand.get_type() == Bool {
-                    Ok((Bool, operand))
-                } else {
-                    Err(format!(
-                        "{} expected bool but found {}",
-                        op,
-                        operand.get_type()
-                    ))
-                }
-            }
-        }
-    }
-
-    fn binary_op(
-        &mut self,
-        op: BinaryOperator,
-        l: &SemanticNode,
-        r: &SemanticNode,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<(Type, SemanticNode, SemanticNode)> {
-        use BinaryOperator::*;
-
-        let l = self.traverse(l, current_func, sym)?;
-        let r = self.traverse(r, current_func, sym)?;
-
-        match op {
-            Add | Sub | Mul | Div => {
-                if l.get_type() == I32 && r.get_type() == I32 {
-                    Ok((I32, l, r))
-                } else {
-                    Err(format!(
-                        "{} expected i32 but found {} and {}",
-                        op,
-                        l.get_type(),
-                        r.get_type()
-                    ))
-                }
-            }
-            BAnd | BOr => {
-                if l.get_type() == Bool && r.get_type() == Bool {
-                    Ok((Bool, l, r))
-                } else {
-                    Err(format!(
-                        "{} expected bool but found {} and {}",
-                        op,
-                        l.get_type(),
-                        r.get_type()
-                    ))
-                }
-            }
-            Eq | NEq | Ls | LsEq | Gr | GrEq => {
-                if l.get_type() == r.get_type() {
-                    Ok((Bool, l, r))
-                } else {
-                    Err(format!(
-                        "{} expected {} but found {} and {}",
-                        op,
-                        l.get_type(),
-                        l.get_type(),
-                        r.get_type()
-                    ))
-                }
-            }
-        }
-    }
-
-    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
+    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
         self.analyze_module(self.root, sym)
+    }
+
+    fn analyze_module(
+        &mut self,
+        m: &module::Module<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Module<SemanticMetadata>> {
+        let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
+        let mut meta = nmodule.get_metadata_mut().clone();
+
+        let tmp_sym = sym.clone();
+        self.stack.push(tmp_sym);
+
+        *nmodule.get_modules_mut() = m
+            .get_modules()
+            .iter()
+            .map(|m| self.analyze_module(m, &mut meta.sym))
+            .collect::<Result<Vec<module::Module<SemanticMetadata>>>>()?;
+        *nmodule.get_functions_mut() = m
+            .get_functions()
+            .iter()
+            .map(|f| self.analyze_item(f, &mut meta.sym))
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+        *nmodule.get_coroutines_mut() = m
+            .get_coroutines()
+            .iter()
+            .map(|c| self.analyze_item(c, &mut meta.sym))
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+        *nmodule.get_structs_mut() = m
+            .get_structs()
+            .iter()
+            .map(|s| self.analyze_item(s, &mut meta.sym))
+            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+
+        self.stack.pop();
+
+        meta.ty = Unit;
+        *nmodule.get_metadata_mut() = meta;
+        Ok(nmodule)
+    }
+
+    fn analyze_item(
+        &mut self,
+        i: &module::Item<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<module::Item<SemanticMetadata>> {
+        match i {
+            Item::Struct(s) => self.analyze_structdef(s, sym).map(|s2| Item::Struct(s2)),
+            Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
+        }
+    }
+
+    fn analyze_routine(
+        &mut self,
+        routine: &routinedef::RoutineDef<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<routinedef::RoutineDef<SemanticMetadata>> {
+        let routinedef::RoutineDef {
+            meta,
+            name,
+            def,
+            params,
+            body,
+            ty: p,
+            ..
+        } = routine;
+        let mut meta = meta.clone();
+        let canonical_params = self.params_to_canonical(sym, &params)?;
+        for (pname, pty) in canonical_params.iter() {
+            meta.sym.add(pname, pty.clone(), false)?;
+        }
+        let tmp_sym = sym.clone();
+        self.stack.push(tmp_sym);
+        let mut resolved_body = vec![];
+        for stmt in body.iter() {
+            let exp = self.analyze_statement(stmt, &Some(name.clone()), &mut meta.sym)?;
+            resolved_body.push(exp);
+        }
+        self.stack.pop();
+        meta.ty = self.type_to_canonical(sym, p)?;
+
+        let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
+
+        let canon_path = self
+            .stack
+            .to_path(sym)
+            .map(|mut p| {
+                p.push(name);
+                p
+            })
+            .expect("Failed to create canonical path for function");
+        meta.set_canonical_path(canon_path);
+        Ok(routinedef::RoutineDef {
+            meta: meta.clone(),
+            def: def.clone(),
+            name: name.clone(),
+            params: canonical_params,
+            ty: canonical_ret_ty,
+            body: resolved_body,
+        })
+    }
+
+    fn analyze_structdef(
+        &mut self,
+        struct_def: &structdef::StructDef<SemanticMetadata>,
+        sym: &mut SymbolTable,
+    ) -> Result<structdef::StructDef<SemanticMetadata>> {
+        // Check the type of each member
+        let fields = struct_def.get_fields();
+        for (field_name, field_type) in fields.iter() {
+            if let Custom(ty_name) = field_type {
+                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
+                    format!(
+                        "member {}.{} invalid: {}",
+                        struct_def.get_name(),
+                        field_name,
+                        e
+                    )
+                })?;
+            }
+        }
+
+        // Update all fields so that their types use the full canonical path of the type
+        let canonical_fields = self.params_to_canonical(sym, &fields)?;
+
+        // Update the metadata with canonical path information and set the type to Unit
+        let mut meta = struct_def.get_metadata().clone();
+        meta.ty = Unit;
+        meta.set_canonical_path(
+            self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
+        );
+
+        Ok(structdef::StructDef::new(
+            struct_def.get_name().clone(),
+            meta.clone(),
+            canonical_fields,
+        ))
+    }
+
+    fn analyze_statement(
+        &mut self,
+        stmt: &Statement<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Statement<SemanticMetadata>> {
+        use statement::Statement::*;
+        let inner = match stmt {
+            Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
+            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
+            Return(box x) => Return(Box::new(self.analyze_return(x, current_func, sym)?)),
+            YieldReturn(box x) => {
+                YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
+            }
+            Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
+            Printiln(box x) => Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?)),
+            Printbln(box x) => Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?)),
+            Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
+            Expression(box e) => {
+                Expression(Box::new(self.analyze_expression(e, current_func, sym)?))
+            }
+        };
+
+        Ok(inner)
+    }
+
+    fn analyze_bind(
+        &mut self,
+        bind: &Bind<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Bind<SemanticMetadata>> {
+        let meta = bind.get_metadata();
+        let rhs = bind.get_rhs();
+        let result = match current_func {
+            Some(_) => {
+                let mut meta = meta.clone();
+                meta.ty = self.type_to_canonical(sym, bind.get_type())?;
+                let rhs = self.traverse(rhs, current_func, sym)?;
+                if meta.ty == rhs.get_type() {
+                    match sym.add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
+                        Ok(()) => Ok(Bind::new(
+                            meta,
+                            bind.get_id(),
+                            bind.get_type().clone(),
+                            bind.is_mutable(),
+                            rhs,
+                        )),
+                        Err(e) => Err(e),
+                    }
+                } else {
+                    Err(format!(
+                        "Bind expected {} but got {}",
+                        meta.ty,
+                        rhs.get_type()
+                    ))
+                }
+            }
+            None => Err(format!(
+                "Attempting to bind variable {} outside of function",
+                bind.get_id()
+            )),
+        };
+        result.map_err(|e| format!("L{}: {}", bind.get_metadata().ln, e))
+    }
+
+    fn analyze_mutate(
+        &mut self,
+        mutate: &Mutate<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Mutate<SemanticMetadata>> {
+        let result = match current_func {
+            Some(_) => {
+                let mut meta = mutate.get_metadata().clone();
+                let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
+                match self.lookup(sym, mutate.get_id()) {
+                    Ok(symbol) => {
+                        if symbol.mutable {
+                            if symbol.ty == rhs.get_type() {
+                                meta.ty = rhs.get_type().clone();
+                                Ok(Mutate::new(meta, mutate.get_id(), rhs))
+                            } else {
+                                Err(format!(
+                                    "{} is of type {} but is assigned {}",
+                                    mutate.get_id(),
+                                    symbol.ty,
+                                    rhs.get_type()
+                                ))
+                            }
+                        } else {
+                            Err(format!("Variable {} is not mutable", mutate.get_id()))
+                        }
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            None => Err(format!(
+                "Attempting to mutate a variable {} outside of function",
+                mutate.get_id()
+            )),
+        };
+        result.map_err(|e| format!("L{}: {}", mutate.get_metadata().ln, e))
+    }
+
+    fn analyze_printi(
+        &mut self,
+        p: &Printi<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Printi<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == I32 {
+            meta.ty = Unit;
+            Ok(Printi::new(meta.clone(), value))
+        } else {
+            Err(format!("Expected i32 for printi got {}", value.get_type()))
+        }
+    }
+
+    fn analyze_printiln(
+        &mut self,
+        p: &Printiln<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Printiln<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == I32 {
+            meta.ty = Unit;
+            Ok(Printiln::new(meta.clone(), value))
+        } else {
+            Err(format!("Expected i32 for printi got {}", value.get_type()))
+        }
+    }
+
+    fn analyze_printbln(
+        &mut self,
+        p: &Printbln<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Printbln<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == Bool {
+            meta.ty = Unit;
+            Ok(Printbln::new(meta.clone(), value))
+        } else {
+            Err(format!(
+                "Expected bool for printbln got {}",
+                value.get_type()
+            ))
+        }
+    }
+
+    fn analyze_prints(
+        &mut self,
+        p: &Prints<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Prints<SemanticMetadata>> {
+        let mut meta = p.get_metadata().clone();
+        let value = self.traverse(p.get_value(), current_func, sym)?;
+        if value.get_type() == Type::StringLiteral {
+            meta.ty = Unit;
+            Ok(Prints::new(meta.clone(), value))
+        } else {
+            Err(format!(
+                "Expected string for prints got {}",
+                value.get_type()
+            ))
+        }
+    }
+
+    fn analyze_yieldreturn(
+        &mut self,
+        yr: &YieldReturn<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<YieldReturn<SemanticMetadata>> {
+        let result = match current_func {
+            None => Err(format!("yret appears outside of function")),
+            Some(cf) => {
+                let mut meta = yr.get_metadata().clone();
+                match yr.get_value() {
+                    None => {
+                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        if *ret_ty == Unit {
+                            meta.ty = Unit;
+                            Ok(YieldReturn::new(meta, None))
+                        } else {
+                            Err(format!("Yield return expected {} but got unit", ret_ty))
+                        }
+                    }
+                    Some(val) => {
+                        let exp = self.traverse(val, current_func, sym)?;
+                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        let ret_ty = self.type_to_canonical(sym, ret_ty)?;
+                        if ret_ty == exp.get_type() {
+                            meta.ty = ret_ty;
+                            Ok(YieldReturn::new(meta, Some(exp)))
+                        } else {
+                            Err(format!(
+                                "Yield return expected {} but got {}",
+                                ret_ty,
+                                exp.get_type()
+                            ))
+                        }
+                    }
+                }
+            }
+        };
+        result.map_err(|e| format!("L{}: {}", yr.get_metadata().ln, e))
+    }
+
+    fn analyze_return(
+        &mut self,
+        r: &Return<SemanticMetadata>,
+        current_func: &Option<String>,
+        sym: &mut SymbolTable,
+    ) -> Result<Return<SemanticMetadata>> {
+        let result = match current_func {
+            None => Err(format!("return appears outside of function")),
+            Some(cf) => {
+                let mut meta = r.get_metadata().clone();
+                match r.get_value() {
+                    None => {
+                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
+                        if *ret_ty == Unit {
+                            meta.ty = Unit;
+                            Ok(Return::new(meta, None))
+                        } else {
+                            Err(format!("Return expected {} but got unit", ret_ty))
+                        }
+                    }
+                    Some(val) => {
+                        let exp = self.traverse(val, current_func, sym)?;
+                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
+                        let ret_ty = self.type_to_canonical(sym, ret_ty)?;
+                        if ret_ty == exp.get_type() {
+                            meta.ty = ret_ty;
+                            Ok(Return::new(meta, Some(exp)))
+                        } else {
+                            Err(format!(
+                                "Return expected {} but got {}",
+                                ret_ty,
+                                exp.get_type()
+                            ))
+                        }
+                    }
+                }
+            }
+        };
+        result.map_err(|e| format!("L{}: {}", r.get_metadata().ln, e))
     }
 
     fn traverse(
@@ -218,196 +475,17 @@ impl<'a> SemanticAnalyzer<'a> {
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         self.trace(ast, current_func, sym);
-        self.analyize_node(ast, current_func, sym).map_err(|e| {
-            if !e.starts_with("L") {
-                format!("L{}: {}", ast.get_metadata().ln, e)
-            } else {
-                e
-            }
-        })
+        self.analyze_expression(ast, current_func, sym)
+            .map_err(|e| {
+                if !e.starts_with("L") {
+                    format!("L{}: {}", ast.get_metadata().ln, e)
+                } else {
+                    e
+                }
+            })
     }
 
-    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<Path> {
-        self.stack
-            .to_path(sym)
-            .ok_or("A valid path is expected".into())
-    }
-
-    /// Convert a path to its canonical form by merging with the ancestors in the AST.
-    fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path> {
-        let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
-        path.to_canonical(&current_path)
-    }
-
-    /// Convert any custom type to its canonical form by merging with the current AST ancestors
-    fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
-        match ty {
-            Custom(path) => Ok(Custom(path.to_canonical(&self.get_current_path(sym)?)?)),
-            Coroutine(ty) => Ok(Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
-            _ => Ok(ty.clone()),
-        }
-    }
-
-    /// Convert any custom type to its canonical form by merging with the current AST ancestors
-    fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type> {
-        match ty {
-            Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
-            Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(
-                parent_path,
-                &ty,
-            )?))),
-            _ => Ok(ty.clone()),
-        }
-    }
-
-    /// Convert any parameter that is a custom type, to its canonical form.
-    fn params_to_canonical(
-        &self,
-        sym: &'a SymbolTable,
-        params: &Vec<(String, Type)>,
-    ) -> Result<Vec<(String, Type)>> {
-        let mut canonical_params = vec![];
-        for (name, ty) in params.iter() {
-            canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
-        }
-        Ok(canonical_params)
-    }
-
-    fn lookup_symbol_by_path(
-        &'a self,
-        sym: &'a SymbolTable,
-        path: &Path,
-    ) -> Result<Option<(&'a Symbol, Path)>> {
-        let canon_path = self.to_canonical(sym, path)?;
-        if path.len() > 1 {
-            let item = canon_path
-                .item()
-                .expect("Expected a canonical path with at least one step in it");
-            let node = self
-                .root
-                .go_to_module(&canon_path.parent())
-                .ok_or(format!("Could not find item with the given path: {}", path))?;
-            Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
-        } else if path.len() == 1 {
-            let item = &path[0];
-            Ok(sym
-                .get(item)
-                .or(self.stack.get(item))
-                .map(|i| (i, canon_path)))
-        } else {
-            Err("empty path passed to lookup_path".into())
-        }
-    }
-
-    fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
-        sym.get(id)
-            .or(self.stack.get(id))
-            .ok_or(format!("{} is not defined", id))
-    }
-
-    fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup(sym, id)? {
-            Symbol {
-                ty: Type::CoroutineDef(params, p),
-                ..
-            }
-            | Symbol {
-                ty: Type::FunctionDef(params, p),
-                ..
-            } => Ok((params, p)),
-            _ => return Err(format!("{} is not a coroutine or function", id)),
-        }
-    }
-
-    fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup(sym, id)? {
-            Symbol {
-                ty: Type::CoroutineDef(params, p),
-                ..
-            } => Ok((params, p)),
-            _ => return Err(format!("{} is not a coroutine", id)),
-        }
-    }
-
-    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Type> {
-        let p = &self.lookup(sym, id)?.ty;
-        match p {
-            Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
-            _ => return Err(format!("{} is not a variable", id)),
-        }
-    }
-
-    fn extract_routine_type_info<'b>(
-        symbol: &'b Symbol,
-        call: &expression::RoutineCall,
-        routine_path: &Path,
-    ) -> Result<(&'b Vec<Type>, Type)> {
-        let routine_path_parent = routine_path.parent();
-        let (expected_param_tys, ret_ty) = match symbol {
-            Symbol {
-                ty: Type::FunctionDef(pty, rty),
-                ..
-            } if *call == crate::syntax::expression::RoutineCall::Function => (
-                pty,
-                Self::type_to_canonical_with_path(&routine_path_parent, rty)?,
-            ),
-            Symbol {
-                ty: Type::CoroutineDef(pty, rty),
-                ..
-            } if *call == crate::syntax::expression::RoutineCall::CoroutineInit => (
-                pty,
-                Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
-                    &routine_path_parent,
-                    rty,
-                )?)),
-            ),
-            _ => {
-                let expected = match call {
-                    expression::RoutineCall::Function => "function",
-                    expression::RoutineCall::CoroutineInit => "coroutine",
-                };
-                return Err(format!(
-                    "Expected {0} but {1} is a {2}",
-                    expected, routine_path, symbol.ty
-                ));
-            }
-        };
-
-        Ok((expected_param_tys, ret_ty))
-    }
-
-    fn check_for_invalid_routine_parameters<'b>(
-        routine_path: &Path,
-        given: &'b Vec<SemanticNode>,
-        expected_types: &'b Vec<Type>,
-    ) -> Result<()> {
-        let mut mismatches = vec![];
-        let mut idx = 0;
-        for (user, expected) in given.iter().zip(expected_types.iter()) {
-            idx += 1;
-            let user_ty = user.get_type();
-            if user_ty != expected {
-                mismatches.push((idx, user_ty, expected));
-            }
-        }
-        if mismatches.len() > 0 || given.len() != expected_types.len() {
-            let errors: Vec<String> = mismatches
-                .iter()
-                .map(|(idx, got, expected)| {
-                    format!("parameter {} expected {} but got {}", idx, expected, got)
-                })
-                .collect();
-            Err(format!(
-                "One or more parameters have mismatching types for function {}: {}",
-                routine_path,
-                errors.join(", ")
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn analyize_node(
+    fn analyze_expression(
         &mut self,
         ast: &SemanticNode,
         current_func: &Option<String>,
@@ -666,316 +744,6 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn analyze_module(
-        &mut self,
-        m: &module::Module<SemanticMetadata>,
-        sym: &mut SymbolTable,
-    ) -> Result<module::Module<SemanticMetadata>> {
-        let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
-        let mut meta = nmodule.get_metadata_mut().clone();
-
-        let tmp_sym = sym.clone();
-        self.stack.push(tmp_sym);
-
-        *nmodule.get_modules_mut() = m
-            .get_modules()
-            .iter()
-            .map(|m| self.analyze_module(m, &mut meta.sym))
-            .collect::<Result<Vec<module::Module<SemanticMetadata>>>>()?;
-        *nmodule.get_functions_mut() = m
-            .get_functions()
-            .iter()
-            .map(|f| self.analyze_item(f, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
-        *nmodule.get_coroutines_mut() = m
-            .get_coroutines()
-            .iter()
-            .map(|c| self.analyze_item(c, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
-        *nmodule.get_structs_mut() = m
-            .get_structs()
-            .iter()
-            .map(|s| self.analyze_item(s, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
-
-        self.stack.pop();
-
-        meta.ty = Unit;
-        *nmodule.get_metadata_mut() = meta;
-        Ok(nmodule)
-    }
-
-    fn analyze_item(
-        &mut self,
-        i: &module::Item<SemanticMetadata>,
-        sym: &mut SymbolTable,
-    ) -> Result<module::Item<SemanticMetadata>> {
-        match i {
-            Item::Struct(s) => self.analyze_structdef(s, sym).map(|s2| Item::Struct(s2)),
-            Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
-        }
-    }
-
-    fn analyze_routine(
-        &mut self,
-        routine: &routinedef::RoutineDef<SemanticMetadata>,
-        sym: &mut SymbolTable,
-    ) -> Result<routinedef::RoutineDef<SemanticMetadata>> {
-        let routinedef::RoutineDef {
-            meta,
-            name,
-            def,
-            params,
-            body,
-            ty: p,
-            ..
-        } = routine;
-        let mut meta = meta.clone();
-        let canonical_params = self.params_to_canonical(sym, &params)?;
-        for (pname, pty) in canonical_params.iter() {
-            meta.sym.add(pname, pty.clone(), false)?;
-        }
-        let tmp_sym = sym.clone();
-        self.stack.push(tmp_sym);
-        let mut resolved_body = vec![];
-        for stmt in body.iter() {
-            let exp = self.analyze_statement(stmt, &Some(name.clone()), &mut meta.sym)?;
-            resolved_body.push(exp);
-        }
-        self.stack.pop();
-        meta.ty = self.type_to_canonical(sym, p)?;
-
-        let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
-
-        let canon_path = self
-            .stack
-            .to_path(sym)
-            .map(|mut p| {
-                p.push(name);
-                p
-            })
-            .expect("Failed to create canonical path for function");
-        meta.set_canonical_path(canon_path);
-        Ok(routinedef::RoutineDef {
-            meta: meta.clone(),
-            def: def.clone(),
-            name: name.clone(),
-            params: canonical_params,
-            ty: canonical_ret_ty,
-            body: resolved_body,
-        })
-    }
-
-    fn analyze_structdef(
-        &mut self,
-        struct_def: &structdef::StructDef<SemanticMetadata>,
-        sym: &mut SymbolTable,
-    ) -> Result<structdef::StructDef<SemanticMetadata>> {
-        // Check the type of each member
-        let fields = struct_def.get_fields();
-        for (field_name, field_type) in fields.iter() {
-            if let Custom(ty_name) = field_type {
-                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
-                    format!(
-                        "member {}.{} invalid: {}",
-                        struct_def.get_name(),
-                        field_name,
-                        e
-                    )
-                })?;
-            }
-        }
-
-        // Update all fields so that their types use the full canonical path of the type
-        let canonical_fields = self.params_to_canonical(sym, &fields)?;
-
-        // Update the metadata with canonical path information and set the type to Unit
-        let mut meta = struct_def.get_metadata().clone();
-        meta.ty = Unit;
-        meta.set_canonical_path(
-            self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
-        );
-
-        Ok(structdef::StructDef::new(
-            struct_def.get_name().clone(),
-            meta.clone(),
-            canonical_fields,
-        ))
-    }
-
-    fn analyze_statement(
-        &mut self,
-        stmt: &Statement<SemanticMetadata>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Statement<SemanticMetadata>> {
-        use statement::Statement::*;
-        let inner = match stmt {
-            Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
-            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
-            Return(box x) => Return(Box::new(self.analyze_return(x, current_func, sym)?)),
-            YieldReturn(box x) => {
-                YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
-            }
-            Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
-            Printiln(box x) => Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?)),
-            Printbln(box x) => Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?)),
-            Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
-            Expression(box e) => Expression(Box::new(self.analyize_node(e, current_func, sym)?)),
-        };
-
-        Ok(inner)
-    }
-
-    fn analyze_bind(
-        &mut self,
-        bind: &Bind<SemanticMetadata>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Bind<SemanticMetadata>> {
-        let meta = bind.get_metadata();
-        let rhs = bind.get_rhs();
-        let result = match current_func {
-            Some(_) => {
-                let mut meta = meta.clone();
-                meta.ty = self.type_to_canonical(sym, bind.get_type())?;
-                let rhs = self.traverse(rhs, current_func, sym)?;
-                if meta.ty == rhs.get_type() {
-                    match sym.add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
-                        Ok(()) => Ok(Bind::new(
-                            meta,
-                            bind.get_id(),
-                            bind.get_type().clone(),
-                            bind.is_mutable(),
-                            rhs,
-                        )),
-                        Err(e) => Err(e),
-                    }
-                } else {
-                    Err(format!(
-                        "Bind expected {} but got {}",
-                        meta.ty,
-                        rhs.get_type()
-                    ))
-                }
-            }
-            None => Err(format!(
-                "Attempting to bind variable {} outside of function",
-                bind.get_id()
-            )),
-        };
-        result.map_err(|e| format!("L{}: {}", bind.get_metadata().ln, e))
-    }
-
-    fn analyze_mutate(
-        &mut self,
-        mutate: &Mutate<SemanticMetadata>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Mutate<SemanticMetadata>> {
-        let result = match current_func {
-            Some(_) => {
-                let mut meta = mutate.get_metadata().clone();
-                let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
-                match self.lookup(sym, mutate.get_id()) {
-                    Ok(symbol) => {
-                        if symbol.mutable {
-                            if symbol.ty == rhs.get_type() {
-                                meta.ty = rhs.get_type().clone();
-                                Ok(Mutate::new(meta, mutate.get_id(), rhs))
-                            } else {
-                                Err(format!(
-                                    "{} is of type {} but is assigned {}",
-                                    mutate.get_id(),
-                                    symbol.ty,
-                                    rhs.get_type()
-                                ))
-                            }
-                        } else {
-                            Err(format!("Variable {} is not mutable", mutate.get_id()))
-                        }
-                    }
-                    Err(e) => Err(e),
-                }
-            }
-            None => Err(format!(
-                "Attempting to mutate a variable {} outside of function",
-                mutate.get_id()
-            )),
-        };
-        result.map_err(|e| format!("L{}: {}", mutate.get_metadata().ln, e))
-    }
-
-    fn analyze_printi(
-        &mut self,
-        p: &Printi<SemanticMetadata>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Printi<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I32 {
-            meta.ty = Unit;
-            Ok(Printi::new(meta.clone(), value))
-        } else {
-            Err(format!("Expected i32 for printi got {}", value.get_type()))
-        }
-    }
-
-    fn analyze_printiln(
-        &mut self,
-        p: &Printiln<SemanticMetadata>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Printiln<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I32 {
-            meta.ty = Unit;
-            Ok(Printiln::new(meta.clone(), value))
-        } else {
-            Err(format!("Expected i32 for printi got {}", value.get_type()))
-        }
-    }
-
-    fn analyze_printbln(
-        &mut self,
-        p: &Printbln<SemanticMetadata>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Printbln<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == Bool {
-            meta.ty = Unit;
-            Ok(Printbln::new(meta.clone(), value))
-        } else {
-            Err(format!(
-                "Expected bool for printbln got {}",
-                value.get_type()
-            ))
-        }
-    }
-
-    fn analyze_prints(
-        &mut self,
-        p: &Prints<SemanticMetadata>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Prints<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == Type::StringLiteral {
-            meta.ty = Unit;
-            Ok(Prints::new(meta.clone(), value))
-        } else {
-            Err(format!(
-                "Expected string for prints got {}",
-                value.get_type()
-            ))
-        }
-    }
-
     fn analyze_yield(
         &mut self,
         y: &Yield<SemanticMetadata>,
@@ -996,86 +764,321 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn analyze_yieldreturn(
+    fn unary_op(
         &mut self,
-        yr: &YieldReturn<SemanticMetadata>,
+        op: UnaryOperator,
+        operand: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<YieldReturn<SemanticMetadata>> {
-        let result = match current_func {
-            None => Err(format!("yret appears outside of function")),
-            Some(cf) => {
-                let mut meta = yr.get_metadata().clone();
-                match yr.get_value() {
-                    None => {
-                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
-                        if *ret_ty == Unit {
-                            meta.ty = Unit;
-                            Ok(YieldReturn::new(meta, None))
-                        } else {
-                            Err(format!("Yield return expected {} but got unit", ret_ty))
-                        }
-                    }
-                    Some(val) => {
-                        let exp = self.traverse(val, current_func, sym)?;
-                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
-                        let ret_ty = self.type_to_canonical(sym, ret_ty)?;
-                        if ret_ty == exp.get_type() {
-                            meta.ty = ret_ty;
-                            Ok(YieldReturn::new(meta, Some(exp)))
-                        } else {
-                            Err(format!(
-                                "Yield return expected {} but got {}",
-                                ret_ty,
-                                exp.get_type()
-                            ))
-                        }
-                    }
+    ) -> Result<(Type, SemanticNode)> {
+        use UnaryOperator::*;
+
+        let operand = self.traverse(operand, current_func, sym)?;
+
+        match op {
+            Minus => {
+                if operand.get_type() == I32 {
+                    Ok((I32, operand))
+                } else {
+                    Err(format!(
+                        "{} expected i32 but found {}",
+                        op,
+                        operand.get_type()
+                    ))
                 }
             }
-        };
-        result.map_err(|e| format!("L{}: {}", yr.get_metadata().ln, e))
+            Not => {
+                if operand.get_type() == Bool {
+                    Ok((Bool, operand))
+                } else {
+                    Err(format!(
+                        "{} expected bool but found {}",
+                        op,
+                        operand.get_type()
+                    ))
+                }
+            }
+        }
     }
 
-    fn analyze_return(
+    fn binary_op(
         &mut self,
-        r: &Return<SemanticMetadata>,
+        op: BinaryOperator,
+        l: &SemanticNode,
+        r: &SemanticNode,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Return<SemanticMetadata>> {
-        let result = match current_func {
-            None => Err(format!("return appears outside of function")),
-            Some(cf) => {
-                let mut meta = r.get_metadata().clone();
-                match r.get_value() {
-                    None => {
-                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
-                        if *ret_ty == Unit {
-                            meta.ty = Unit;
-                            Ok(Return::new(meta, None))
-                        } else {
-                            Err(format!("Return expected {} but got unit", ret_ty))
-                        }
-                    }
-                    Some(val) => {
-                        let exp = self.traverse(val, current_func, sym)?;
-                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
-                        let ret_ty = self.type_to_canonical(sym, ret_ty)?;
-                        if ret_ty == exp.get_type() {
-                            meta.ty = ret_ty;
-                            Ok(Return::new(meta, Some(exp)))
-                        } else {
-                            Err(format!(
-                                "Return expected {} but got {}",
-                                ret_ty,
-                                exp.get_type()
-                            ))
-                        }
-                    }
+    ) -> Result<(Type, SemanticNode, SemanticNode)> {
+        use BinaryOperator::*;
+
+        let l = self.traverse(l, current_func, sym)?;
+        let r = self.traverse(r, current_func, sym)?;
+
+        match op {
+            Add | Sub | Mul | Div => {
+                if l.get_type() == I32 && r.get_type() == I32 {
+                    Ok((I32, l, r))
+                } else {
+                    Err(format!(
+                        "{} expected i32 but found {} and {}",
+                        op,
+                        l.get_type(),
+                        r.get_type()
+                    ))
                 }
             }
+            BAnd | BOr => {
+                if l.get_type() == Bool && r.get_type() == Bool {
+                    Ok((Bool, l, r))
+                } else {
+                    Err(format!(
+                        "{} expected bool but found {} and {}",
+                        op,
+                        l.get_type(),
+                        r.get_type()
+                    ))
+                }
+            }
+            Eq | NEq | Ls | LsEq | Gr | GrEq => {
+                if l.get_type() == r.get_type() {
+                    Ok((Bool, l, r))
+                } else {
+                    Err(format!(
+                        "{} expected {} but found {} and {}",
+                        op,
+                        l.get_type(),
+                        l.get_type(),
+                        r.get_type()
+                    ))
+                }
+            }
+        }
+    }
+
+    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<Path> {
+        self.stack
+            .to_path(sym)
+            .ok_or("A valid path is expected".into())
+    }
+
+    /// Convert a path to its canonical form by merging with the ancestors in the AST.
+    fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path> {
+        let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
+        path.to_canonical(&current_path)
+    }
+
+    /// Convert any custom type to its canonical form by merging with the current AST ancestors
+    fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
+        match ty {
+            Custom(path) => Ok(Custom(path.to_canonical(&self.get_current_path(sym)?)?)),
+            Coroutine(ty) => Ok(Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
+            _ => Ok(ty.clone()),
+        }
+    }
+
+    /// Convert any custom type to its canonical form by merging with the current AST ancestors
+    fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type> {
+        match ty {
+            Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
+            Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(
+                parent_path,
+                &ty,
+            )?))),
+            _ => Ok(ty.clone()),
+        }
+    }
+
+    /// Convert any parameter that is a custom type, to its canonical form.
+    fn params_to_canonical(
+        &self,
+        sym: &'a SymbolTable,
+        params: &Vec<(String, Type)>,
+    ) -> Result<Vec<(String, Type)>> {
+        let mut canonical_params = vec![];
+        for (name, ty) in params.iter() {
+            canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
+        }
+        Ok(canonical_params)
+    }
+
+    fn lookup_symbol_by_path(
+        &'a self,
+        sym: &'a SymbolTable,
+        path: &Path,
+    ) -> Result<Option<(&'a Symbol, Path)>> {
+        let canon_path = self.to_canonical(sym, path)?;
+        if path.len() > 1 {
+            let item = canon_path
+                .item()
+                .expect("Expected a canonical path with at least one step in it");
+            let node = self
+                .root
+                .go_to_module(&canon_path.parent())
+                .ok_or(format!("Could not find item with the given path: {}", path))?;
+            Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
+        } else if path.len() == 1 {
+            let item = &path[0];
+            Ok(sym
+                .get(item)
+                .or(self.stack.get(item))
+                .map(|i| (i, canon_path)))
+        } else {
+            Err("empty path passed to lookup_path".into())
+        }
+    }
+
+    fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
+        sym.get(id)
+            .or(self.stack.get(id))
+            .ok_or(format!("{} is not defined", id))
+    }
+
+    fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
+        match self.lookup(sym, id)? {
+            Symbol {
+                ty: Type::CoroutineDef(params, p),
+                ..
+            }
+            | Symbol {
+                ty: Type::FunctionDef(params, p),
+                ..
+            } => Ok((params, p)),
+            _ => return Err(format!("{} is not a coroutine or function", id)),
+        }
+    }
+
+    fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
+        match self.lookup(sym, id)? {
+            Symbol {
+                ty: Type::CoroutineDef(params, p),
+                ..
+            } => Ok((params, p)),
+            _ => return Err(format!("{} is not a coroutine", id)),
+        }
+    }
+
+    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Type> {
+        let p = &self.lookup(sym, id)?.ty;
+        match p {
+            Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
+            _ => return Err(format!("{} is not a variable", id)),
+        }
+    }
+
+    fn extract_routine_type_info<'b>(
+        symbol: &'b Symbol,
+        call: &expression::RoutineCall,
+        routine_path: &Path,
+    ) -> Result<(&'b Vec<Type>, Type)> {
+        let routine_path_parent = routine_path.parent();
+        let (expected_param_tys, ret_ty) = match symbol {
+            Symbol {
+                ty: Type::FunctionDef(pty, rty),
+                ..
+            } if *call == crate::syntax::expression::RoutineCall::Function => (
+                pty,
+                Self::type_to_canonical_with_path(&routine_path_parent, rty)?,
+            ),
+            Symbol {
+                ty: Type::CoroutineDef(pty, rty),
+                ..
+            } if *call == crate::syntax::expression::RoutineCall::CoroutineInit => (
+                pty,
+                Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
+                    &routine_path_parent,
+                    rty,
+                )?)),
+            ),
+            _ => {
+                let expected = match call {
+                    expression::RoutineCall::Function => "function",
+                    expression::RoutineCall::CoroutineInit => "coroutine",
+                };
+                return Err(format!(
+                    "Expected {0} but {1} is a {2}",
+                    expected, routine_path, symbol.ty
+                ));
+            }
         };
-        result.map_err(|e| format!("L{}: {}", r.get_metadata().ln, e))
+
+        Ok((expected_param_tys, ret_ty))
+    }
+
+    fn check_for_invalid_routine_parameters<'b>(
+        routine_path: &Path,
+        given: &'b Vec<SemanticNode>,
+        expected_types: &'b Vec<Type>,
+    ) -> Result<()> {
+        let mut mismatches = vec![];
+        let mut idx = 0;
+        for (user, expected) in given.iter().zip(expected_types.iter()) {
+            idx += 1;
+            let user_ty = user.get_type();
+            if user_ty != expected {
+                mismatches.push((idx, user_ty, expected));
+            }
+        }
+        if mismatches.len() > 0 || given.len() != expected_types.len() {
+            let errors: Vec<String> = mismatches
+                .iter()
+                .map(|(idx, got, expected)| {
+                    format!("parameter {} expected {} but got {}", idx, expected, got)
+                })
+                .collect();
+            Err(format!(
+                "One or more parameters have mismatching types for function {}: {}",
+                routine_path,
+                errors.join(", ")
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn trace(
+        &self,
+        node: &SemanticNode,
+        current_func: &Option<String>,
+        current_scope: &SymbolTable,
+    ) {
+        let md = node.get_metadata();
+        let line = md.ln as usize;
+        let print_trace = match self.tracing {
+            TracingConfig::All => true,
+            TracingConfig::After(start) if start <= line => true,
+            TracingConfig::Before(end) if line <= end => true,
+            TracingConfig::Between(start, end) if start <= line && line <= end => true,
+            TracingConfig::Only(only) if line == only => true,
+            _ => false,
+        };
+        let print_path = match self.path_tracing {
+            TracingConfig::All => true,
+            TracingConfig::After(start) if start <= line => true,
+            TracingConfig::Before(end) if line <= end => true,
+            TracingConfig::Between(start, end) if start <= line && line <= end => true,
+            TracingConfig::Only(only) if line == only => true,
+            _ => false,
+        };
+
+        if print_trace {
+            let func = match current_func {
+                Some(f) => format!("{}: ", f),
+                None => "".into(),
+            };
+            println!("L{}: {}{}\n{}", line, func, node, self.stack);
+        }
+
+        if print_path {
+            let func = match current_func {
+                Some(f) => format!("{}: ", f),
+                None => "".into(),
+            };
+            let path = self
+                .stack
+                .to_path(current_scope)
+                .map_or("[]".into(), |p| format!("{}", p));
+            println!("L{}: {}{} <- {}", line, func, node, path);
+        }
     }
 }
 

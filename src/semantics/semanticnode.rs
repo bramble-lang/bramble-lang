@@ -1,5 +1,6 @@
+use crate::syntax::statement::Statement;
 use crate::{
-    diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
+    diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };
 use crate::{
     expression::*,
@@ -10,7 +11,6 @@ use crate::{
         ty::Type,
     },
 };
-use crate::{parser::pnode::PNode, syntax::statement::Statement};
 use crate::{
     semantics::symbol_table::*,
     syntax::statement::{
@@ -83,106 +83,6 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>> {
-        use Expression::*;
-        let node = match ast {
-            Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
-            Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_metadata_from(*ln), *val))),
-            StringLiteral(ln, val) => Ok(Box::new(StringLiteral(
-                self.semantic_metadata_from(*ln),
-                val.clone(),
-            ))),
-            CustomType(ln, val) => Ok(Box::new(CustomType(
-                self.semantic_metadata_from(*ln),
-                val.clone(),
-            ))),
-            IdentifierDeclare(ln, name, p) => Ok(Box::new(IdentifierDeclare(
-                self.semantic_metadata_from(*ln),
-                name.clone(),
-                p.clone(),
-            ))),
-            Identifier(ln, id) => Ok(Box::new(Identifier(
-                self.semantic_metadata_from(*ln),
-                id.clone(),
-            ))),
-            Path(ln, path) => Ok(Box::new(Path(
-                self.semantic_metadata_from(*ln),
-                path.clone(),
-            ))),
-            MemberAccess(ln, src, member) => Ok(Box::new(MemberAccess(
-                self.semantic_metadata_from(*ln),
-                self.from_parser_ast(src)?,
-                member.clone(),
-            ))),
-            BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
-                self.semantic_metadata_from(*ln),
-                *op,
-                self.from_parser_ast(l)?,
-                self.from_parser_ast(r)?,
-            ))),
-            UnaryOp(ln, op, ref operand) => Ok(Box::new(UnaryOp(
-                self.semantic_metadata_from(*ln),
-                *op,
-                self.from_parser_ast(operand)?,
-            ))),
-            If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
-                self.semantic_metadata_from(*ln),
-                self.from_parser_ast(cond)?,
-                self.from_parser_ast(true_arm)?,
-                self.from_parser_ast(false_arm)?,
-            ))),
-            Yield(l, box exp) => Ok(Box::new(Yield(
-                self.semantic_metadata_from(*l),
-                self.from_parser_ast(exp)?,
-            ))),
-            ExpressionBlock(ln, body, final_exp) => {
-                let mut nbody = vec![];
-                for stmt in body.iter() {
-                    let r = self.from_statement(stmt)?;
-                    nbody.push(r);
-                }
-                let final_exp = match final_exp {
-                    None => None,
-                    Some(fe) => Some(self.from_parser_ast(fe)?),
-                };
-                Ok(Box::new(ExpressionBlock(
-                    self.semantic_metadata_from(*ln),
-                    nbody,
-                    final_exp,
-                )))
-            }
-            RoutineCall(l, call, name, params) => {
-                // test that the expressions passed to the function match the functions
-                // parameter types
-                let mut nparams = vec![];
-                for param in params.iter() {
-                    let np = self.from_parser_ast(param)?;
-                    nparams.push(*np);
-                }
-                Ok(Box::new(RoutineCall(
-                    self.semantic_metadata_from(*l),
-                    *call,
-                    name.clone(),
-                    nparams,
-                )))
-            }
-            StructExpression(l, name, fields) => {
-                let mut nfields = vec![];
-                for (fname, fvalue) in fields.iter() {
-                    let fvalue2 = self.from_parser_ast(fvalue)?;
-                    nfields.push((fname.clone(), *fvalue2));
-                }
-                Ok(Box::new(StructExpression(
-                    self.semantic_metadata_from(*l),
-                    name.clone(),
-                    nfields,
-                )))
-            }
-        };
-
-        node
-    }
-
     pub fn from_module(
         &mut self,
         m: &module::Module<u32>,
@@ -208,29 +108,36 @@ impl SemanticAst {
     fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>> {
         match m {
             Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(s)),
-            Item::Routine(RoutineDef {
-                meta: ln,
-                def,
-                name: fname,
-                params,
-                ty,
-                body,
-            }) => {
-                let mut nbody = vec![];
-                for stmt in body.iter() {
-                    let r = self.from_statement(stmt)?;
-                    nbody.push(r);
-                }
-                Ok(Item::Routine(RoutineDef {
-                    meta: self.semantic_metadata_from(*ln),
-                    def: *def,
-                    name: fname.clone(),
-                    params: params.clone(),
-                    ty: ty.clone(),
-                    body: nbody,
-                }))
-            }
+            Item::Routine(rd) => self.from_routinedef(rd).map(|r| Item::Routine(r)),
         }
+    }
+
+    fn from_routinedef(
+        &mut self,
+        rd: &RoutineDef<ParserInfo>,
+    ) -> Result<RoutineDef<SemanticMetadata>> {
+        let RoutineDef {
+            meta: ln,
+            def,
+            name: fname,
+            params,
+            ty,
+            body,
+        } = rd;
+
+        let mut nbody = vec![];
+        for stmt in body.iter() {
+            let r = self.from_statement(stmt)?;
+            nbody.push(r);
+        }
+        Ok(RoutineDef {
+            meta: self.semantic_metadata_from(*ln),
+            def: *def,
+            name: fname.clone(),
+            params: params.clone(),
+            ty: ty.clone(),
+            body: nbody,
+        })
     }
 
     fn from_structdef(
@@ -271,7 +178,7 @@ impl SemanticAst {
             Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
             Printbln(x) => Printbln(Box::new(self.from_printbln(x)?)),
             Prints(x) => Prints(Box::new(self.from_prints(x)?)),
-            Expression(e) => Expression(self.from_parser_ast(e)?),
+            Expression(e) => Expression(self.from_expression(e)?),
         };
 
         Ok(inner)
@@ -283,7 +190,7 @@ impl SemanticAst {
             bind.get_id(),
             bind.get_type().clone(),
             bind.is_mutable(),
-            *self.from_parser_ast(bind.get_rhs())?,
+            *self.from_expression(bind.get_rhs())?,
         ))
     }
 
@@ -291,42 +198,35 @@ impl SemanticAst {
         Ok(Mutate::new(
             self.semantic_metadata_from(*mutate.get_metadata()),
             mutate.get_id(),
-            *self.from_parser_ast(mutate.get_rhs())?,
+            *self.from_expression(mutate.get_rhs())?,
         ))
     }
 
     fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticMetadata>> {
         Ok(Printi::new(
             self.semantic_metadata_from(*p.get_metadata()),
-            *self.from_parser_ast(p.get_value())?,
+            *self.from_expression(p.get_value())?,
         ))
     }
 
     fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticMetadata>> {
         Ok(Printiln::new(
             self.semantic_metadata_from(*p.get_metadata()),
-            *self.from_parser_ast(p.get_value())?,
+            *self.from_expression(p.get_value())?,
         ))
     }
 
     fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticMetadata>> {
         Ok(Printbln::new(
             self.semantic_metadata_from(*p.get_metadata()),
-            *self.from_parser_ast(p.get_value())?,
+            *self.from_expression(p.get_value())?,
         ))
     }
 
     fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticMetadata>> {
         Ok(Prints::new(
             self.semantic_metadata_from(*p.get_metadata()),
-            *self.from_parser_ast(p.get_value())?,
-        ))
-    }
-
-    fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticMetadata>> {
-        Ok(Yield::new(
-            self.semantic_metadata_from(*y.get_metadata()),
-            *self.from_parser_ast(y.get_value())?,
+            *self.from_expression(p.get_value())?,
         ))
     }
 
@@ -341,7 +241,7 @@ impl SemanticAst {
             )),
             Some(val) => Ok(YieldReturn::new(
                 self.semantic_metadata_from(*yr.get_metadata()),
-                Some(*self.from_parser_ast(val)?),
+                Some(*self.from_expression(val)?),
             )),
         }
     }
@@ -354,9 +254,116 @@ impl SemanticAst {
             )),
             Some(val) => Ok(Return::new(
                 self.semantic_metadata_from(*r.get_metadata()),
-                Some(*self.from_parser_ast(val)?),
+                Some(*self.from_expression(val)?),
             )),
         }
+    }
+
+    fn from_expression(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
+        use Expression::*;
+        let node = match ast {
+            Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
+            Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_metadata_from(*ln), *val))),
+            StringLiteral(ln, val) => Ok(Box::new(StringLiteral(
+                self.semantic_metadata_from(*ln),
+                val.clone(),
+            ))),
+            CustomType(ln, val) => Ok(Box::new(CustomType(
+                self.semantic_metadata_from(*ln),
+                val.clone(),
+            ))),
+            IdentifierDeclare(ln, name, p) => Ok(Box::new(IdentifierDeclare(
+                self.semantic_metadata_from(*ln),
+                name.clone(),
+                p.clone(),
+            ))),
+            Identifier(ln, id) => Ok(Box::new(Identifier(
+                self.semantic_metadata_from(*ln),
+                id.clone(),
+            ))),
+            Path(ln, path) => Ok(Box::new(Path(
+                self.semantic_metadata_from(*ln),
+                path.clone(),
+            ))),
+            MemberAccess(ln, src, member) => Ok(Box::new(MemberAccess(
+                self.semantic_metadata_from(*ln),
+                self.from_expression(src)?,
+                member.clone(),
+            ))),
+            BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
+                self.semantic_metadata_from(*ln),
+                *op,
+                self.from_expression(l)?,
+                self.from_expression(r)?,
+            ))),
+            UnaryOp(ln, op, ref operand) => Ok(Box::new(UnaryOp(
+                self.semantic_metadata_from(*ln),
+                *op,
+                self.from_expression(operand)?,
+            ))),
+            If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
+                self.semantic_metadata_from(*ln),
+                self.from_expression(cond)?,
+                self.from_expression(true_arm)?,
+                self.from_expression(false_arm)?,
+            ))),
+            Yield(l, box exp) => Ok(Box::new(Yield(
+                self.semantic_metadata_from(*l),
+                self.from_expression(exp)?,
+            ))),
+            ExpressionBlock(ln, body, final_exp) => {
+                let mut nbody = vec![];
+                for stmt in body.iter() {
+                    let r = self.from_statement(stmt)?;
+                    nbody.push(r);
+                }
+                let final_exp = match final_exp {
+                    None => None,
+                    Some(fe) => Some(self.from_expression(fe)?),
+                };
+                Ok(Box::new(ExpressionBlock(
+                    self.semantic_metadata_from(*ln),
+                    nbody,
+                    final_exp,
+                )))
+            }
+            RoutineCall(l, call, name, params) => {
+                // test that the expressions passed to the function match the functions
+                // parameter types
+                let mut nparams = vec![];
+                for param in params.iter() {
+                    let np = self.from_expression(param)?;
+                    nparams.push(*np);
+                }
+                Ok(Box::new(RoutineCall(
+                    self.semantic_metadata_from(*l),
+                    *call,
+                    name.clone(),
+                    nparams,
+                )))
+            }
+            StructExpression(l, name, fields) => {
+                let mut nfields = vec![];
+                for (fname, fvalue) in fields.iter() {
+                    let fvalue2 = self.from_expression(fvalue)?;
+                    nfields.push((fname.clone(), *fvalue2));
+                }
+                Ok(Box::new(StructExpression(
+                    self.semantic_metadata_from(*l),
+                    name.clone(),
+                    nfields,
+                )))
+            }
+        };
+
+        node
+    }
+
+    fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticMetadata>> {
+        Ok(Yield::new(
+            self.semantic_metadata_from(*y.get_metadata()),
+            *self.from_expression(y.get_value())?,
+        ))
     }
 
     fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {
@@ -401,7 +408,7 @@ mod tests {
         .iter()
         {
             let mut sa = SemanticAst::new();
-            let snode = sa.from_parser_ast(&node).unwrap();
+            let snode = sa.from_expression(&node).unwrap();
             assert_eq!(*snode, *expected);
         }
     }
@@ -453,7 +460,7 @@ mod tests {
             .iter()
             {
                 let mut sa = SemanticAst::new();
-                let snode = sa.from_parser_ast(tree).unwrap();
+                let snode = sa.from_expression(tree).unwrap();
                 assert_eq!(*snode, *expected);
             }
         }

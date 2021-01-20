@@ -226,7 +226,7 @@ mod test {
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         parser::parser,
-        semantics::type_checker::type_check,
+        semantics::type_resolver::type_check,
     };
 
     #[test]

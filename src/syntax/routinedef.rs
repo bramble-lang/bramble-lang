@@ -1,21 +1,5 @@
 use super::{statement::Statement, ty::Type};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum RoutineDefType {
-    Function,
-    Coroutine,
-}
-
-impl std::fmt::Display for RoutineDefType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        use RoutineDefType::*;
-        match self {
-            Coroutine => f.write_str("coroutine def"),
-            Function => f.write_str("function def"),
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
     pub meta: M,
@@ -95,5 +79,21 @@ impl<M> RoutineDef<M> {
 
     pub fn root_str(&self) -> String {
         format!("{} {}", self.def, self.name)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RoutineDefType {
+    Function,
+    Coroutine,
+}
+
+impl std::fmt::Display for RoutineDefType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use RoutineDefType::*;
+        match self {
+            Coroutine => f.write_str("coroutine def"),
+            Function => f.write_str("function def"),
+        }
     }
 }

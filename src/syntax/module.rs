@@ -6,42 +6,6 @@ use super::{
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Item<M> {
-    Routine(RoutineDef<M>),
-    Struct(StructDef<M>),
-}
-
-impl<M> Item<M> {
-    pub fn get_name(&self) -> &str {
-        match self {
-            Item::Routine(r) => r.get_name(),
-            Item::Struct(s) => s.get_name(),
-        }
-    }
-
-    pub fn to_routine(&self) -> Option<&RoutineDef<M>> {
-        match self {
-            Item::Routine(r) => Some(r),
-            Item::Struct(_) => None,
-        }
-    }
-
-    pub fn get_metadata(&self) -> &M {
-        match self {
-            Item::Routine(r) => r.get_metadata(),
-            Item::Struct(s) => s.get_metadata(),
-        }
-    }
-
-    pub fn root_str(&self) -> String {
-        match self {
-            Item::Routine(r) => format!("{} {}", r.get_def(), r.get_name()),
-            Item::Struct(s) => s.root_str(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct Module<M> {
     meta: M,
     name: String,
@@ -443,5 +407,41 @@ mod test {
         outer.add_module(module.clone());
         let f = outer.go_to(&vec!["outer", "inner", "co"].into());
         assert_eq!(f, Some(&Item::Routine(fdef)));
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Item<M> {
+    Routine(RoutineDef<M>),
+    Struct(StructDef<M>),
+}
+
+impl<M> Item<M> {
+    pub fn get_name(&self) -> &str {
+        match self {
+            Item::Routine(r) => r.get_name(),
+            Item::Struct(s) => s.get_name(),
+        }
+    }
+
+    pub fn to_routine(&self) -> Option<&RoutineDef<M>> {
+        match self {
+            Item::Routine(r) => Some(r),
+            Item::Struct(_) => None,
+        }
+    }
+
+    pub fn get_metadata(&self) -> &M {
+        match self {
+            Item::Routine(r) => r.get_metadata(),
+            Item::Struct(s) => s.get_metadata(),
+        }
+    }
+
+    pub fn root_str(&self) -> String {
+        match self {
+            Item::Routine(r) => format!("{} {}", r.get_def(), r.get_name()),
+            Item::Struct(s) => s.root_str(),
+        }
     }
 }

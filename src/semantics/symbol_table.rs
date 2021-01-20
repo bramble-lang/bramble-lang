@@ -1,49 +1,16 @@
-use crate::semantics::semanticnode::SemanticMetadata;
 use crate::syntax::path::Path;
 use crate::syntax::{
     module::{Item, Module},
     routinedef::{RoutineDef, RoutineDefType},
     ty::Type,
 };
+use crate::{semantics::semanticnode::SemanticMetadata, syntax::structdef::StructDef};
 use braid_lang::result::Result;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Symbol {
-    pub name: String,
-    pub ty: Type,
-    pub mutable: bool,
-}
-
-impl std::fmt::Display for Symbol {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "{} | {} | {}",
-            self.name, self.ty, self.mutable
-        ))
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-enum ScopeType {
-    Local,
-    Routine,
-    Module { name: String },
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     ty: ScopeType,
     sym: Vec<Symbol>,
-}
-
-impl std::fmt::Display for SymbolTable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("\tName | Type | Mutable\n")?;
-        for symbol in self.sym.iter() {
-            f.write_fmt(format_args!("\t{}\n", symbol))?;
-        }
-        Ok(())
-    }
 }
 
 impl SymbolTable {
@@ -59,6 +26,10 @@ impl SymbolTable {
             ty: ScopeType::Module { name: name.into() },
             sym: vec![],
         }
+    }
+
+    pub(super) fn scope_type(&self) -> &ScopeType {
+        &self.ty
     }
 
     pub fn table(&self) -> &Vec<Symbol> {
@@ -90,204 +61,110 @@ impl SymbolTable {
         }
     }
 
-    pub fn from_module(module: &mut Module<SemanticMetadata>) -> Result<()> {
-        Self::generate(module)
-    }
+    pub fn for_module(module: &mut Module<SemanticMetadata>) -> Result<()> {
+        let mut metadata = module.get_metadata().clone();
 
-    pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<()> {
-        let mut metadata = m.get_metadata().clone();
-
-        let fm = m.get_functions_mut();
+        let fm = module.get_functions_mut();
         for f in fm.iter_mut() {
-            SymbolTable::traverse(f, &mut metadata)?;
+            SymbolTable::for_item(f, &mut metadata)?;
         }
 
-        let cm = m.get_coroutines_mut();
+        let cm = module.get_coroutines_mut();
         for co in cm.iter_mut() {
-            SymbolTable::traverse(co, &mut metadata)?;
+            SymbolTable::for_item(co, &mut metadata)?;
         }
-        for st in m.get_structs_mut().iter_mut() {
-            SymbolTable::traverse(st, &mut metadata)?;
-        }
-
-        for m in m.get_modules_mut().iter_mut() {
-            SymbolTable::generate(m)?;
+        for st in module.get_structs_mut().iter_mut() {
+            SymbolTable::for_item(st, &mut metadata)?;
         }
 
-        *m.get_metadata_mut() = metadata;
+        for m in module.get_modules_mut().iter_mut() {
+            SymbolTable::for_module(m)?;
+        }
+
+        *module.get_metadata_mut() = metadata;
 
         Ok(())
     }
 
-    fn traverse(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
+    fn for_item(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
         match item {
-            Item::Routine(RoutineDef {
-                def,
-                name,
-                params,
-                ty,
-                ..
-            }) => {
-                let def = match def {
-                    RoutineDefType::Function => Type::FunctionDef(
-                        params
-                            .iter()
-                            .map(|(_, ty)| ty.clone())
-                            .collect::<Vec<Type>>(),
-                        Box::new(ty.clone()),
-                    ),
-                    RoutineDefType::Coroutine => Type::CoroutineDef(
-                        params
-                            .iter()
-                            .map(|(_, ty)| ty.clone())
-                            .collect::<Vec<Type>>(),
-                        Box::new(ty.clone()),
-                    ),
-                };
-                sym.sym.add(name, def, false)?;
-            }
-            Item::Struct(sd) => {
-                sym.sym.add(
-                    sd.get_name(),
-                    Type::StructDef(sd.get_fields().clone()),
-                    false,
-                )?;
-            }
+            Item::Routine(rd) => SymbolTable::for_routine(rd, sym),
+            Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
         }
+    }
 
+    fn add_structdef(
+        structdef: &mut StructDef<SemanticMetadata>,
+        sym: &mut SemanticMetadata,
+    ) -> Result<()> {
+        sym.sym.add(
+            structdef.get_name(),
+            Type::StructDef(structdef.get_fields().clone()),
+            false,
+        )
+    }
+
+    fn for_routine(
+        routine: &mut RoutineDef<SemanticMetadata>,
+        sym: &mut SemanticMetadata,
+    ) -> Result<()> {
+        let RoutineDef {
+            def,
+            name,
+            params,
+            ty,
+            ..
+        } = routine;
+
+        let def = match def {
+            RoutineDefType::Function => {
+                Type::FunctionDef(Self::get_types_for_params(params), Box::new(ty.clone()))
+            }
+            RoutineDefType::Coroutine => {
+                Type::CoroutineDef(Self::get_types_for_params(params), Box::new(ty.clone()))
+            }
+        };
+
+        sym.sym.add(name, def, false)
+    }
+
+    fn get_types_for_params(params: &Vec<(String, Type)>) -> Vec<Type> {
+        params
+            .iter()
+            .map(|(_, ty)| ty.clone())
+            .collect::<Vec<Type>>()
+    }
+}
+
+impl std::fmt::Display for SymbolTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("\tName | Type | Mutable\n")?;
+        for symbol in self.sym.iter() {
+            f.write_fmt(format_args!("\t{}\n", symbol))?;
+        }
         Ok(())
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ScopeStack {
-    stack: Vec<SymbolTable>,
+pub struct Symbol {
+    pub name: String,
+    pub ty: Type,
+    pub mutable: bool,
 }
 
-impl std::fmt::Display for ScopeStack {
+impl std::fmt::Display for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut i = 0;
-        for scope in self.stack.iter() {
-            f.write_fmt(format_args!("{}: {}\n", i, scope))?;
-            i += 1;
-        }
-        Ok(())
+        f.write_fmt(format_args!(
+            "{} | {} | {}",
+            self.name, self.ty, self.mutable
+        ))
     }
 }
 
-impl ScopeStack {
-    pub fn new() -> ScopeStack {
-        ScopeStack { stack: vec![] }
-    }
-
-    pub fn push(&mut self, sym: SymbolTable) {
-        self.stack.push(sym);
-    }
-
-    pub fn pop(&mut self) {
-        self.stack.pop();
-    }
-
-    pub fn get(&self, name: &str) -> Option<&Symbol> {
-        for scope in self.stack.iter().rev() {
-            match scope.get(name) {
-                Some(v) => return Some(v),
-                None => {}
-            };
-        }
-        None
-    }
-
-    /// Starting from the bottom of the stack this builds a path
-    /// of all the modules that we are current in, in effect
-    /// the current path within the AST.
-    pub fn to_path(&self, current: &SymbolTable) -> Option<Path> {
-        let mut steps = vec![];
-
-        for node in self.stack.iter() {
-            match &node.ty {
-                ScopeType::Module { name } => {
-                    steps.push(name.clone());
-                }
-                _ => (),
-            }
-        }
-
-        match current {
-            SymbolTable {
-                ty: ScopeType::Module { name },
-                ..
-            } => steps.push(name.clone()),
-            _ => (),
-        }
-
-        if steps.len() > 0 {
-            Some(steps.into())
-        } else {
-            None
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_empty_stack_to_path() {
-        let stack = ScopeStack::new();
-        let local = SymbolTable::new();
-        let path = stack.to_path(&local);
-        assert_eq!(path, None);
-    }
-
-    #[test]
-    fn test_one_module_stack_to_path() {
-        let mut stack = ScopeStack::new();
-        let sym = SymbolTable::new_module("root");
-        stack.push(sym);
-        let local = SymbolTable::new();
-        let path = stack.to_path(&local).unwrap();
-        let expected = vec!["root"].into();
-        assert_eq!(path, expected);
-    }
-
-    #[test]
-    fn test_one_module_stack_module_current_to_path() {
-        let mut stack = ScopeStack::new();
-        let sym = SymbolTable::new_module("root");
-        stack.push(sym);
-        let current = SymbolTable::new_module("inner");
-        let path = stack.to_path(&current).unwrap();
-        let expected = vec!["root", "inner"].into();
-        assert_eq!(path, expected);
-    }
-
-    #[test]
-    fn test_local_then_one_module_stack_to_path() {
-        let mut stack = ScopeStack::new();
-        let module = SymbolTable::new_module("root");
-        stack.push(module);
-        let local = SymbolTable::new();
-        stack.push(local);
-        let local2 = SymbolTable::new();
-        let path = stack.to_path(&local2).unwrap();
-        let expected = vec!["root"].into();
-        assert_eq!(path, expected);
-    }
-
-    #[test]
-    fn test_local_then_two_module_stack_to_path() {
-        let mut stack = ScopeStack::new();
-        let module = SymbolTable::new_module("first");
-        stack.push(module);
-        let module2 = SymbolTable::new_module("second");
-        stack.push(module2);
-        let local = SymbolTable::new();
-        stack.push(local);
-        let local2 = SymbolTable::new();
-        let path = stack.to_path(&local2).unwrap();
-        let expected = vec!["first", "second"].into();
-        assert_eq!(path, expected);
-    }
+#[derive(Clone, Debug, PartialEq)]
+pub(super) enum ScopeType {
+    Local,
+    Routine,
+    Module { name: String },
 }

@@ -11,7 +11,7 @@ use crate::{
         module::Module,
         path::Path,
         routinedef::{RoutineDef, RoutineDefType},
-        statement::{Bind, Mutate, Printbln, Printiln, Prints, Return, Statement, YieldReturn},
+        statement::Statement,
         structdef::StructDef,
         ty::Type,
     },
@@ -22,14 +22,18 @@ use braid_lang::result::Result;
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::{PNode, PResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
+use super::{
+    expression::expression,
+    statement::{return_stmt, statement, statement_or_yield_return},
+};
 
-type ParserResult<T> = Result<Option<T>>;
+pub type ParserInfo = u32;
+pub(super) type ParserResult<T> = Result<Option<T>>;
 
-static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
-static TRACE_START: AtomicUsize = AtomicUsize::new(0);
-static TRACE_END: AtomicUsize = AtomicUsize::new(0);
+pub(super) static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
+pub(super) static TRACE_START: AtomicUsize = AtomicUsize::new(0);
+pub(super) static TRACE_END: AtomicUsize = AtomicUsize::new(0);
 
 pub fn set_tracing(config: TracingConfig) {
     match config {
@@ -62,6 +66,7 @@ pub fn set_tracing(config: TracingConfig) {
     }
 }
 
+#[macro_export]
 macro_rules! trace {
     ($ts:expr) => {
         if ENABLE_TRACING.load(Ordering::SeqCst) {
@@ -295,7 +300,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     }))
 }
 
-fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
+pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
         stmts.push(s);
@@ -311,222 +316,6 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     Ok(stmts)
 }
 
-fn statement_or_yield_return(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
-    let stm = match statement(stream)? {
-        Some(n) => Some(n),
-        None => match yield_return_stmt(stream)? {
-            Some(yr) => Some(yr),
-            None => None,
-        },
-    };
-
-    Ok(stm)
-}
-
-fn statement(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
-    let start_index = stream.index();
-    let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
-    let stm = match let_bind(stream)? {
-        Some(bind) => Some(Statement::Bind(Box::new(bind))),
-        None => match mutate(stream)? {
-            Some(mutate) => Some(Statement::Mutate(Box::new(mutate))),
-            None => match println_stmt(stream)? {
-                Some(p) => Some(p),
-                None => expression(stream)?
-                    .map(|s| Statement::from_ast(s))
-                    .flatten(),
-            },
-        },
-    };
-
-    match stm {
-        Some(stm) => match stream.next_if(&Lex::Semicolon) {
-            Some(Token { s: _, .. }) => Ok(Some(stm)),
-            _ => {
-                if must_have_semicolon {
-                    let line = *stm.get_metadata();
-                    Err(format!(
-                        "L{}: Expected ;, but found {}",
-                        line,
-                        match stream.peek() {
-                            Some(x) => format!("{}", x.s),
-                            None => "EOF".into(),
-                        }
-                    ))
-                } else {
-                    stream.set_index(start_index);
-                    Ok(None)
-                }
-            }
-        },
-        None => {
-            stream.set_index(start_index);
-            Ok(None)
-        }
-    }
-}
-
-fn expression_block(stream: &mut TokenStream) -> PResult {
-    match stream.next_if(&Lex::LBrace) {
-        Some(token) => {
-            let stmts = block(stream)?;
-
-            let final_exp = expression(stream)?.map(|e| Box::new(e));
-
-            stream.next_must_be(&Lex::RBrace)?;
-            Ok(Some(Expression::ExpressionBlock(token.l, stmts, final_exp)))
-        }
-        None => Ok(None),
-    }
-}
-
-fn expression(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    logical_or(stream)
-}
-
-fn logical_or(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    binary_op(stream, &vec![Lex::BOr], logical_and)
-}
-
-fn logical_and(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    binary_op(stream, &vec![Lex::BAnd], comparison)
-}
-
-fn comparison(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    binary_op(
-        stream,
-        &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
-        sum,
-    )
-}
-
-fn sum(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    binary_op(stream, &vec![Lex::Add, Lex::Minus], term)
-}
-
-fn term(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    binary_op(stream, &vec![Lex::Mul, Lex::Div], negate)
-}
-
-fn binary_op(
-    stream: &mut TokenStream,
-    test: &Vec<Lex>,
-    left_pattern: fn(&mut TokenStream) -> PResult,
-) -> PResult {
-    trace!(stream);
-    match left_pattern(stream)? {
-        Some(left) => match stream.next_if_one_of(test.clone()) {
-            Some(op) => {
-                let right = binary_op(stream, test, left_pattern)?
-                    .ok_or(format!("L{}: expected expression after {}", op.l, op.s))?;
-                PNode::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
-            }
-            None => Ok(Some(left)),
-        },
-        None => Ok(None),
-    }
-}
-
-fn negate(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
-        Some(op) => {
-            let factor =
-                negate(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
-            PNode::unary_op(op.l, &op.s, Box::new(factor))
-        }
-        None => member_access(stream),
-    }
-}
-
-fn member_access(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match factor(stream)? {
-        Some(f) => {
-            let mut ma = f;
-            while let Some(token) = stream.next_if(&Lex::MemberAccess) {
-                let line = token.l;
-                let (_, member) = stream.next_if_id().ok_or(format!(
-                    "L{}: expect field name after member access '.'",
-                    line
-                ))?;
-                ma = Expression::MemberAccess(line, Box::new(ma), member);
-            }
-            Ok(Some(ma))
-        }
-        None => Ok(None),
-    }
-}
-
-fn factor(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match stream.peek() {
-        Some(Token {
-            l: _,
-            s: Lex::LParen,
-        }) => {
-            stream.next();
-            let exp = expression(stream)?;
-            stream.next_must_be(&Lex::RParen)?;
-            Ok(exp)
-        }
-        _ => if_expression(stream)
-            .por(expression_block, stream)
-            .por(function_call_or_variable, stream)
-            .por(co_yield, stream)
-            .por(constant, stream),
-    }
-}
-
-fn if_expression(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    Ok(match stream.next_if(&Lex::If) {
-        Some(token) => {
-            stream.next_must_be(&Lex::LParen)?;
-            let cond = expression(stream)?.ok_or(format!(
-                "L{}: Expected conditional expression after if",
-                token.l
-            ))?;
-            stream.next_must_be(&Lex::RParen)?;
-
-            let true_arm = expression_block(stream)?.ok_or(format!(
-                "L{}: Expression in true arm of if expression",
-                token.l
-            ))?;
-            stream.next_must_be(&Lex::Else)?;
-
-            // check for `else if`
-            let false_arm = match stream.peek() {
-                Some(Token { l, s: Lex::If }) => {
-                    let l = *l;
-                    if_expression(stream)?
-                        .ok_or(format!("L{}: Expected if expression after else if", l))?
-                }
-                _ => {
-                    let false_arm = expression_block(stream)?.ok_or(&format!(
-                        "L{}: Expression in false arm of if expression",
-                        token.l
-                    ))?;
-                    false_arm
-                }
-            };
-            Some(Expression::If(
-                token.l,
-                Box::new(cond),
-                Box::new(true_arm),
-                Box::new(false_arm),
-            ))
-        }
-        _ => None,
-    })
-}
-
 fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
@@ -536,7 +325,7 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
     Ok(params)
 }
 
-fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
+pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
     trace!(stream);
     let mut decls = vec![];
 
@@ -553,8 +342,28 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> 
     Ok(decls)
 }
 
-/// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<PNode>> {
+fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+    trace!(stream);
+    if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
+        let (line, fn_name) = stream
+            .next_if_id()
+            .expect("CRITICAL: failed to get identifier");
+        let params = routine_call_params(stream)?
+            .ok_or(format!("L{}: expected parameters in function call", line))?;
+        Ok(Some(Expression::RoutineCall(
+            line,
+            RoutineCall::Function,
+            vec![fn_name].into(),
+            params,
+        )))
+    } else {
+        Ok(None)
+    }
+}
+
+pub(super) fn routine_call_params(
+    stream: &mut TokenStream,
+) -> ParserResult<Vec<Expression<ParserInfo>>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -578,234 +387,7 @@ fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<PNode>> {
     }
 }
 
-fn struct_init_params(stream: &mut TokenStream) -> ParserResult<Vec<(String, PNode)>> {
-    trace!(stream);
-    match stream.next_if(&Lex::LBrace) {
-        Some(_token) => {
-            let mut params = vec![];
-            while let Some((line, field_name)) = stream.next_if_id() {
-                stream.next_must_be(&Lex::Colon)?;
-                let field_value = expression(stream)?.ok_or(format!(
-                    "L{}: expected an expression to be assigned to field {}",
-                    line, field_name
-                ))?;
-                params.push((field_name, field_value));
-                match stream.next_if(&Lex::Comma) {
-                    Some(_) => {}
-                    None => break,
-                };
-            }
-
-            stream.next_must_be(&Lex::RBrace)?;
-            Ok(Some(params))
-        }
-        _ => Ok(None),
-    }
-}
-
-fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<ParserInfo>> {
-    trace!(stream);
-    Ok(match stream.next_if(&Lex::Return) {
-        Some(token) => {
-            let exp = expression(stream)?;
-            stream.next_must_be(&Lex::Semicolon)?;
-            match exp {
-                Some(exp) => Some(Return::new(token.l, Some(exp))),
-                None => Some(Return::new(token.l, None)),
-            }
-        }
-        _ => None,
-    })
-}
-
-fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
-    trace!(stream);
-    Ok(match stream.next_if(&Lex::YieldReturn) {
-        Some(token) => {
-            let exp = expression(stream)?;
-            stream.next_must_be(&Lex::Semicolon)?;
-            let yret = match exp {
-                Some(exp) => YieldReturn::new(token.l, Some(exp)),
-                None => YieldReturn::new(token.l, None),
-            };
-            Some(Statement::YieldReturn(Box::new(yret)))
-        }
-        _ => None,
-    })
-}
-
-fn co_yield(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match stream.next_if(&Lex::Yield) {
-        Some(token) => {
-            let line = token.l;
-            match expression(stream)? {
-                Some(coroutine) => PNode::new_yield(*coroutine.get_metadata(), Box::new(coroutine)),
-                None => Err(format!("L{}: expected an identifier after yield", line)),
-            }
-        }
-        None => Ok(None),
-    }
-}
-
-fn println_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
-    trace!(stream);
-    let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
-        Some(print) => {
-            let exp = expression(stream)?
-                .ok_or(format!("L{}: Expected expression after println", print.l))?;
-            match print.s {
-                Lex::Printiln => Some(Statement::Printiln(Box::new(Printiln::new(print.l, exp)))),
-                Lex::Prints => Some(Statement::Prints(Box::new(Prints::new(print.l, exp)))),
-                Lex::Printbln => Some(Statement::Printbln(Box::new(Printbln::new(print.l, exp)))),
-                _ => panic!(
-                    "CRITICAL: already tested for a print token but found {}",
-                    print.s
-                ),
-            }
-        }
-        _ => None,
-    };
-    Ok(syntax)
-}
-
-fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserInfo>> {
-    trace!(stream);
-    match stream.next_if(&Lex::Let) {
-        Some(token) => {
-            let is_mutable = stream.next_if(&Lex::Mut).is_some();
-            let id_decl = id_declaration(stream)?.ok_or(format!(
-                "L{}: Expected identifier declaration (`<id> : <type>`) after let",
-                token.l
-            ))?;
-            stream.next_must_be(&Lex::Assign)?;
-            let exp = match co_init(stream)? {
-                Some(co_init) => co_init,
-                None => expression(stream)?
-                    .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
-            };
-
-            match id_decl {
-                Expression::IdentifierDeclare(_, id, ty) => {
-                    Ok(Some(Bind::new(token.l, &id, ty.clone(), is_mutable, exp)))
-                }
-                _ => Err(format!(
-                    "L{}: Expected type specification after {}",
-                    token.l,
-                    id_decl.root_str()
-                )),
-            }
-        }
-        None => Ok(None),
-    }
-}
-
-fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserInfo>> {
-    trace!(stream);
-    match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
-        None => Ok(None),
-        Some(tokens) => {
-            let id = tokens[1]
-                .s
-                .get_str()
-                .expect("CRITICAL: identifier token cannot be converted to string");
-            let exp = expression(stream)?.ok_or(format!(
-                "L{}: expected expression on LHS of assignment",
-                tokens[2].l
-            ))?;
-            //PNode::new_mutate(tokens[0].l, &id, Box::new(exp))
-            Ok(Some(Mutate::new(tokens[0].l, &id, exp)))
-        }
-    }
-}
-
-fn co_init(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match stream.next_if(&Lex::Init) {
-        Some(token) => match path(stream)? {
-            Some((l, path)) => {
-                let params = routine_call_params(stream)?
-                    .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
-                Ok(Some(Expression::RoutineCall(
-                    l,
-                    RoutineCall::CoroutineInit,
-                    path,
-                    params,
-                )))
-            }
-            None => Err(format!("L{}: expected identifier after init", token.l)),
-        },
-        _ => Ok(None),
-    }
-}
-
-fn function_call_or_variable(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    let s: Option<Expression<u32>> = match path(stream)? {
-        Some((line, path)) => match routine_call_params(stream)? {
-            Some(params) => Some(Expression::RoutineCall(
-                line,
-                RoutineCall::Function,
-                path,
-                params.clone(),
-            )),
-            None => match struct_init_params(stream)? {
-                Some(params) => Some(Expression::StructExpression(line, path, params.clone())),
-                None => {
-                    if path.len() > 1 {
-                        Some(Expression::Path(line, path))
-                    } else {
-                        Some(Expression::Identifier(line, path.last().unwrap().clone()))
-                    }
-                }
-            },
-        },
-        _ => None,
-    };
-
-    Ok(s)
-}
-
-// TODO: I think what I want ot do is pull the ID/Path parsing up in to `function_call_or_variable` and then
-// determine if it's a function, struct expressoin, or variable by if there is a LParen or LBrace after the path.
-fn function_call(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
-        let (line, fn_name) = stream
-            .next_if_id()
-            .expect("CRITICAL: failed to get identifier");
-        let params = routine_call_params(stream)?
-            .ok_or(format!("L{}: expected parameters in function call", line))?;
-        Ok(Some(Expression::RoutineCall(
-            line,
-            RoutineCall::Function,
-            vec![fn_name].into(),
-            params,
-        )))
-    } else {
-        Ok(None)
-    }
-}
-
-fn struct_expression(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LBrace]) {
-        let (line, struct_name) = path(stream)?.ok_or("CRITICAL: failed to get identifier")?;
-        let fields = struct_init_params(stream)?.ok_or(format!(
-            "L{}: Expected valid field assignments in struct expression",
-            line
-        ))?;
-        Ok(Some(Expression::StructExpression(
-            line,
-            struct_name,
-            fields,
-        )))
-    } else {
-        Ok(None)
-    }
-}
-
-fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
+pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     trace!(stream);
     let mut path = vec![];
 
@@ -831,7 +413,7 @@ fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     }
 }
 
-fn identifier(stream: &mut TokenStream) -> PResult {
+fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if_id() {
         Some((line, id)) => Ok(Some(Expression::Identifier(line, id))),
@@ -870,7 +452,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     Ok(ty)
 }
 
-fn id_declaration(stream: &mut TokenStream) -> ParserResult<PNode> {
+pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
@@ -886,43 +468,6 @@ fn id_declaration(stream: &mut TokenStream) -> ParserResult<PNode> {
             Ok(Some(Expression::IdentifierDeclare(line_id, id, ty)))
         }
         None => Ok(None),
-    }
-}
-
-fn constant(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    number(stream)
-        .por(boolean, stream)
-        .por(string_literal, stream)
-}
-
-fn number(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match stream.next_if(&Lex::Integer(0)) {
-        Some(Token {
-            l,
-            s: Lex::Integer(i),
-        }) => Ok(Some(Expression::Integer(l, i))),
-        _ => Ok(None),
-    }
-}
-
-fn boolean(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match stream.next_if(&Lex::Bool(true)) {
-        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Expression::Boolean(l, b))),
-        _ => Ok(None),
-    }
-}
-
-fn string_literal(stream: &mut TokenStream) -> PResult {
-    trace!(stream);
-    match stream.next_if(&Lex::StringLiteral("".into())) {
-        Some(Token {
-            l,
-            s: Lex::StringLiteral(s),
-        }) => Ok(Some(Expression::StringLiteral(l, s))),
-        _ => Ok(None),
     }
 }
 
@@ -1142,33 +687,6 @@ pub mod tests {
     }
 
     #[test]
-    fn parse_member_access() {
-        for text in vec!["thing.first", "(thing).first", "(thing.first)"] {
-            let tokens: Vec<Token> = Lexer::new(&text)
-                .tokenize()
-                .into_iter()
-                .collect::<Result<_>>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens);
-            match member_access(&mut stream) {
-                Ok(Some(Expression::MemberAccess(l, left, right))) => {
-                    assert_eq!(l, 1);
-                    assert_eq!(
-                        *left,
-                        Expression::Identifier(1, "thing".into()),
-                        "Input: {}",
-                        text,
-                    );
-                    assert_eq!(right, "first");
-                }
-                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
-                Ok(None) => panic!("No node returned for {}", text),
-                Err(msg) => panic!("{} caused {}", text, msg),
-            }
-        }
-    }
-
-    #[test]
     fn parse_multiple_member_access() {
         for text in vec![
             "thing.first.second",
@@ -1220,7 +738,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I32);
                 assert_eq!(b.is_mutable(), false);
-                assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1241,7 +759,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I32);
                 assert_eq!(b.is_mutable(), true);
-                assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1259,7 +777,7 @@ pub mod tests {
         match stm {
             Statement::Mutate(box m) => {
                 assert_eq!(m.get_id(), "x");
-                assert_eq!(*m.get_rhs(), PNode::Integer(1, 5));
+                assert_eq!(*m.get_rhs(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1277,7 +795,7 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Printiln(box p) => {
-                assert_eq!(*p.get_value(), PNode::Integer(1, 5));
+                assert_eq!(*p.get_value(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1295,7 +813,7 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Printbln(box p) => {
-                assert_eq!(*p.get_value(), PNode::Boolean(1, true));
+                assert_eq!(*p.get_value(), Expression::Boolean(1, true));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1313,7 +831,7 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Prints(box p) => {
-                assert_eq!(*p.get_value(), PNode::StringLiteral(1, "hello".into()));
+                assert_eq!(*p.get_value(), Expression::StringLiteral(1, "hello".into()));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1785,101 +1303,6 @@ pub mod tests {
             panic!("No nodes returned by parser, got: {:?}", exp)
         }
     }
-
-    #[test]
-    fn parse_expression_block_oneline() {
-        let text = "{5}";
-        let tokens: Vec<Token> = Lexer::new(&text)
-            .tokenize()
-            .into_iter()
-            .collect::<Result<_>>()
-            .unwrap();
-        let mut stream = TokenStream::new(&tokens);
-        if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
-            expression_block(&mut stream).unwrap()
-        {
-            assert_eq!(l, 1);
-            assert_eq!(body.len(), 0);
-            assert_eq!(*final_exp, Expression::Integer(1, 5));
-        } else {
-            panic!("No nodes returned by parser")
-        }
-    }
-
-    #[test]
-    fn parse_expression_block_bad() {
-        for (text, msg) in [
-            ("{5 10 51}", "L1: Expected }, but found literal 10"),
-            ("{5; 10 51}", "L1: Expected }, but found literal 51"),
-            ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found let"),
-            (
-                "{let x: i32 := 10 5}",
-                "L1: Expected ;, but found literal 5",
-            ),
-        ]
-        .iter()
-        {
-            let tokens: Vec<Token> = Lexer::new(&text)
-                .tokenize()
-                .into_iter()
-                .collect::<Result<_>>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens);
-            assert_eq!(
-                expression_block(&mut stream),
-                Err((*msg).into()),
-                "{:?}",
-                text
-            );
-        }
-    }
-
-    #[test]
-    fn parse_expression_block_multiline() {
-        let text = "{let x:i32 := 5; f(x); x * x}";
-        let tokens: Vec<Token> = Lexer::new(&text)
-            .tokenize()
-            .into_iter()
-            .collect::<Result<_>>()
-            .unwrap();
-        let mut stream = TokenStream::new(&tokens);
-        if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
-            expression_block(&mut stream).unwrap()
-        {
-            assert_eq!(l, 1);
-            assert_eq!(body.len(), 2);
-            match &body[0] {
-                Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), Type::I32);
-                    assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
-                }
-                _ => panic!("Not a binding statement"),
-            }
-            match &body[1] {
-                Statement::Expression(box Expression::RoutineCall(
-                    _,
-                    RoutineCall::Function,
-                    fn_name,
-                    params,
-                )) => {
-                    assert_eq!(*fn_name, vec!["f"].into());
-                    assert_eq!(params[0], Expression::Identifier(1, "x".into()));
-                }
-                _ => panic!("No body: {:?}", &body[1]),
-            }
-            match final_exp {
-                box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(*l.as_ref(), Expression::Identifier(1, "x".into()));
-                    assert_eq!(*r.as_ref(), Expression::Identifier(1, "x".into()));
-                }
-                _ => panic!("No body: {:?}", &body[2]),
-            }
-        } else {
-            panic!("No nodes returned by parser")
-        }
-    }
-
     #[test]
     fn parse_struct_def() {
         for (text, expected) in vec![
