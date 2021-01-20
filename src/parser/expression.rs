@@ -1,9 +1,9 @@
 use std::sync::atomic::Ordering;
 use stdext::function_name;
+use super::parser::{ENABLE_TRACING, TRACE_END, TRACE_START};
 
 use super::{parser::{ParserInfo, ParserResult, block, path, routine_call_params}, tokenstream::TokenStream};
 use crate::{lexer::tokens::{Lex, Token}, syntax::expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator}, trace};
-use super::parser::{ENABLE_TRACING, TRACE_END, TRACE_START};
 
 impl ParserCombinator<ParserResult<Expression<ParserInfo>>> for ParserResult<Expression<ParserInfo>> {
     fn por(&self, f: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>, ts: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
