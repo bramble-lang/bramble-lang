@@ -94,7 +94,7 @@ impl SymbolTable {
         Self::generate(module)
     }
 
-    pub fn generate(m: &mut Module<SemanticMetadata>) -> Result<()> {
+    fn generate(m: &mut Module<SemanticMetadata>) -> Result<()> {
         let mut metadata = m.get_metadata().clone();
 
         let fm = m.get_functions_mut();
