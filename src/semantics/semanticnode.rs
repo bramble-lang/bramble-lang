@@ -1,5 +1,5 @@
 use crate::{
-    diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
+    diagnostics::config::TracingConfig, parser::expression::ParserInfo, syntax::structdef::StructDef,
 };
 use crate::{
     expression::*,

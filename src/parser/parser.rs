@@ -22,7 +22,7 @@ use braid_lang::result::Result;
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::{ParserResult, ParserCombinator, ParserInfo};
+use super::expression::{ParserResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
 
 
