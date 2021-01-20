@@ -1,4 +1,4 @@
-use crate::semantics::semanticnode::SemanticMetadata;
+use crate::{semantics::semanticnode::SemanticMetadata, syntax::structdef::StructDef};
 use crate::syntax::path::Path;
 use crate::syntax::{
     module::{Item, Module},
@@ -90,72 +90,82 @@ impl SymbolTable {
         }
     }
 
-    pub fn from_module(module: &mut Module<SemanticMetadata>) -> Result<()> {
-        Self::generate(module)
-    }
+    pub fn for_module(module: &mut Module<SemanticMetadata>) -> Result<()> {
+        let mut metadata = module.get_metadata().clone();
 
-    fn generate(m: &mut Module<SemanticMetadata>) -> Result<()> {
-        let mut metadata = m.get_metadata().clone();
-
-        let fm = m.get_functions_mut();
+        let fm = module.get_functions_mut();
         for f in fm.iter_mut() {
-            SymbolTable::traverse(f, &mut metadata)?;
+            SymbolTable::for_item(f, &mut metadata)?;
         }
 
-        let cm = m.get_coroutines_mut();
+        let cm = module.get_coroutines_mut();
         for co in cm.iter_mut() {
-            SymbolTable::traverse(co, &mut metadata)?;
+            SymbolTable::for_item(co, &mut metadata)?;
         }
-        for st in m.get_structs_mut().iter_mut() {
-            SymbolTable::traverse(st, &mut metadata)?;
-        }
-
-        for m in m.get_modules_mut().iter_mut() {
-            SymbolTable::generate(m)?;
+        for st in module.get_structs_mut().iter_mut() {
+            SymbolTable::for_item(st, &mut metadata)?;
         }
 
-        *m.get_metadata_mut() = metadata;
+        for m in module.get_modules_mut().iter_mut() {
+            SymbolTable::for_module(m)?;
+        }
+
+        *module.get_metadata_mut() = metadata;
 
         Ok(())
     }
 
-    fn traverse(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
+    fn for_item(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
         match item {
-            Item::Routine(RoutineDef {
-                def,
-                name,
-                params,
-                ty,
-                ..
-            }) => {
-                let def = match def {
-                    RoutineDefType::Function => Type::FunctionDef(
-                        params
-                            .iter()
-                            .map(|(_, ty)| ty.clone())
-                            .collect::<Vec<Type>>(),
-                        Box::new(ty.clone()),
-                    ),
-                    RoutineDefType::Coroutine => Type::CoroutineDef(
-                        params
-                            .iter()
-                            .map(|(_, ty)| ty.clone())
-                            .collect::<Vec<Type>>(),
-                        Box::new(ty.clone()),
-                    ),
-                };
-                sym.sym.add(name, def, false)?;
-            }
-            Item::Struct(sd) => {
-                sym.sym.add(
-                    sd.get_name(),
-                    Type::StructDef(sd.get_fields().clone()),
-                    false,
-                )?;
-            }
+            Item::Routine(rd) =>
+                SymbolTable::for_routine(rd, sym),
+            Item::Struct(sd) =>
+                SymbolTable::add_structdef(sd, sym),
         }
+    }
 
-        Ok(())
+    fn add_structdef(
+        structdef: &mut StructDef<SemanticMetadata>,
+        sym: &mut SemanticMetadata,
+    ) -> Result<()> {
+        sym.sym.add(
+            structdef.get_name(),
+            Type::StructDef(structdef.get_fields().clone()),
+            false,
+        )
+    }
+
+    fn for_routine(
+        routine: &mut RoutineDef<SemanticMetadata>,
+        sym: &mut SemanticMetadata,
+    ) -> Result<()> {
+        let RoutineDef {
+            def,
+            name,
+            params,
+            ty,
+            ..
+        } = routine;
+
+        let def = match def {
+            RoutineDefType::Function => Type::FunctionDef(
+                Self::get_types_for_params(params),
+                Box::new(ty.clone()),
+            ),
+            RoutineDefType::Coroutine => Type::CoroutineDef(
+                Self::get_types_for_params(params),
+                Box::new(ty.clone()),
+            ),
+        };
+
+        sym.sym.add(name, def, false)
+    }
+
+    fn get_types_for_params(params: &Vec<(String,Type)>) -> Vec<Type> {
+        params
+            .iter()
+            .map(|(_, ty)| ty.clone())
+            .collect::<Vec<Type>>()
     }
 }
 

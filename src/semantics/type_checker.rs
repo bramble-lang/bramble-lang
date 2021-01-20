@@ -35,7 +35,7 @@ pub fn type_check(
 ) -> Result<module::Module<SemanticMetadata>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(&ast)?;
-    SymbolTable::from_module(&mut sm_ast)?;
+    SymbolTable::for_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
     let mut semantic = SemanticAnalyzer::new(&sm_ast);
