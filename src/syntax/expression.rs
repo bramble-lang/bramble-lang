@@ -1,73 +1,5 @@
 use super::{path::Path, statement::Statement, ty::Type};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum BinaryOperator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    BAnd,
-    BOr,
-    Eq,
-    NEq,
-    Ls,
-    LsEq,
-    Gr,
-    GrEq,
-}
-
-impl std::fmt::Display for BinaryOperator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        use BinaryOperator::*;
-        match self {
-            Add => f.write_str("+"),
-            Sub => f.write_str("-"),
-            Mul => f.write_str("*"),
-            Div => f.write_str("/"),
-            BAnd => f.write_str("&&"),
-            BOr => f.write_str("||"),
-            Eq => f.write_str("=="),
-            NEq => f.write_str("!="),
-            Ls => f.write_str("<"),
-            LsEq => f.write_str("<="),
-            Gr => f.write_str(">"),
-            GrEq => f.write_str(">="),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum UnaryOperator {
-    Minus,
-    Not,
-}
-
-impl std::fmt::Display for UnaryOperator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        use UnaryOperator::*;
-        match self {
-            Minus => f.write_str("-"),
-            Not => f.write_str("!"),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum RoutineCall {
-    Function,
-    CoroutineInit,
-}
-
-impl std::fmt::Display for RoutineCall {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        use RoutineCall::*;
-        match self {
-            CoroutineInit => f.write_str("coroutine init"),
-            Function => f.write_str("function call"),
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
     Integer(I, i32),
@@ -179,6 +111,74 @@ impl<I> Expression<I> {
         match self {
             Expression::Identifier(_, name) => Some(name),
             _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BinaryOperator {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    BAnd,
+    BOr,
+    Eq,
+    NEq,
+    Ls,
+    LsEq,
+    Gr,
+    GrEq,
+}
+
+impl std::fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use BinaryOperator::*;
+        match self {
+            Add => f.write_str("+"),
+            Sub => f.write_str("-"),
+            Mul => f.write_str("*"),
+            Div => f.write_str("/"),
+            BAnd => f.write_str("&&"),
+            BOr => f.write_str("||"),
+            Eq => f.write_str("=="),
+            NEq => f.write_str("!="),
+            Ls => f.write_str("<"),
+            LsEq => f.write_str("<="),
+            Gr => f.write_str(">"),
+            GrEq => f.write_str(">="),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum UnaryOperator {
+    Minus,
+    Not,
+}
+
+impl std::fmt::Display for UnaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use UnaryOperator::*;
+        match self {
+            Minus => f.write_str("-"),
+            Not => f.write_str("!"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RoutineCall {
+    Function,
+    CoroutineInit,
+}
+
+impl std::fmt::Display for RoutineCall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        use RoutineCall::*;
+        match self {
+            CoroutineInit => f.write_str("coroutine init"),
+            Function => f.write_str("function call"),
         }
     }
 }
