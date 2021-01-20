@@ -80,12 +80,13 @@ impl<'a> Compiler<'a> {
             TargetOS::Linux => {
                 extern_functions.insert("main".into(), "main".into());
                 extern_functions.insert("printf".into(), "printf".into());
-                extern_functions.insert("puts".into(), "puts".into());
+                extern_functions.insert("fputs".into(), "fputs".into());
+                extern_functions.insert("stdout".into(), "stdout".into());
             }
             TargetOS::MacOS => {
                 extern_functions.insert("main".into(), "_main".into());
                 extern_functions.insert("printf".into(), "_printf".into());
-                extern_functions.insert("puts".into(), "_puts".into());
+                extern_functions.insert("fputs".into(), "_fputs".into());
             }
         }
 
@@ -198,10 +199,12 @@ impl<'a> Compiler<'a> {
                     mov %rbp, %rsp;
                     cmp %rax, 0;
                     jz ^false;
-                    push [@_true];
+                    lea %rbx, [@_true];
+                    push %rbx;
                     jmp ^done;
                     ^false:
-                    push [@_false];
+                    lea %rbx, [@_false];
+                    push %rbx;
                     ^done:
                     {{Compiler::make_c64_extern_call("printf", 1)}}
                     mov %rsp, %rbp;
@@ -820,7 +823,8 @@ impl<'a> Compiler<'a> {
         self.traverse(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
-            push [@_i32_fmt];
+            lea %rbx, [@_i32_fmt];
+            push %rbx;
             push %rax;
             {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
@@ -836,7 +840,8 @@ impl<'a> Compiler<'a> {
         self.traverse(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
-            push [@_i32_fmt];
+            lea %rbx, [@_i32_fmt];
+            push %rbx;
             push %rax;
             {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
@@ -867,8 +872,8 @@ impl<'a> Compiler<'a> {
 
         assembly! {(code) {
             push %rax;
-            push [rel @_stdout];
-            {{Compiler::make_c64_extern_call("puts", 2)}}
+            push [@stdout];
+            {{Compiler::make_c64_extern_call("fputs", 2)}}
         }}
         Ok(())
     }
