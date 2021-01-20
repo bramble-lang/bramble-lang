@@ -4,7 +4,7 @@ function run() {
     # test=$1
     rm -f ./target/*
     echo "Compiling"
-    cargo run -- "$@" -o ./target/output.asm
+    cargo run -- -p linux "$@" -o ./target/output.asm
     echo ""
     echo "Assembling"
 

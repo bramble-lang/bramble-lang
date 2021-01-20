@@ -25,6 +25,7 @@ fn main() {
                 .short("i")
                 .long("input")
                 .takes_value(true)
+                .required(true)
                 .help("Source code file to compile"),
         )
         .arg(
@@ -32,7 +33,17 @@ fn main() {
                 .short("o")
                 .long("output")
                 .takes_value(true)
+                .required(true)
                 .help("Name the output file that the assembly will be written to"),
+        )
+        .arg(
+            Arg::with_name("platform")
+                .short("p")
+                .long("platform")
+                .possible_values(&["linux", "machos"])
+                .takes_value(true)
+                .required(true)
+                .help("The target Operation System that this will be compiled for: Linux or Mac"),
         )
         .arg(
             Arg::with_name("trace-parser")
@@ -108,10 +119,21 @@ fn main() {
         }
     };
 
-    let program = Compiler::compile(semantic_ast, TargetOS::Linux);
+    let target_platform = matches.value_of("platform").expect("Must provide a target platform");
+    let target_platform = to_target_os(target_platform);
+    let program = Compiler::compile(semantic_ast, target_platform);
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
     Compiler::print(&program, &mut output).expect("Failed to write assembly");
+}
+
+fn to_target_os(arg: &str) -> TargetOS {
+    let arg = arg.to_lowercase();
+    match arg.as_str() {
+        "linux" => TargetOS::Linux,
+        "machos" => TargetOS::MacOS,
+        _ => panic!("Invalid target platform: {}", arg)
+    }
 }
 
 // Exit Codes for different types of errors

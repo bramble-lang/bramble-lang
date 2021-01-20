@@ -5,7 +5,7 @@ function run_test() {
     rm -f ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
-    ../target/debug/braid-lang -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    ../target/debug/braid-lang -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [ $? -eq 0 ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then

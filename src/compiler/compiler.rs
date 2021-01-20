@@ -103,7 +103,6 @@ impl<'a> Compiler<'a> {
         let extern_functions = Compiler::configure_extern_functionss(target_os);
 
         let mut code = vec![];
-        Compiler::create_base(&mut code, &extern_functions, &string_pool);
         Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
         Compiler::runtime_yield_into_coroutine(&mut code);
         Compiler::runtime_yield_return(&mut code);
@@ -117,6 +116,7 @@ impl<'a> Compiler<'a> {
             struct_table: &struct_table,
             extern_functions: extern_functions,
         };
+        compiler.create_base(&mut code);
         
 
         // Configure the names for functions which will be called by the system
@@ -130,12 +130,12 @@ impl<'a> Compiler<'a> {
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
-    fn create_base(code: &mut Vec<Inst>, extern_functions: &HashMap<String,String>, string_pool: &StringPool) {
-        let main_label = extern_functions["main"].clone();
+    fn create_base(&self, code: &mut Vec<Inst>) {
+        let main_label = self.extern_functions["main"].clone();
         assembly! {
             (code) {
-                {{Compiler::write_includes(extern_functions)}}
-                {{Compiler::write_data_section(&string_pool)}}
+                {{self.write_includes()}}
+                {{self.write_data_section()}}
 
                 section ".text";
                 global {main_label};
@@ -155,36 +155,36 @@ impl<'a> Compiler<'a> {
         };
     }
 
-    fn write_includes(extern_functions: &HashMap<String,String>) -> Vec<Inst> {
+    fn write_includes(&self,) -> Vec<Inst> {
         let mut code = vec![];
-        for (_, platform_name) in extern_functions.iter() {
+        for (_, platform_name) in self.extern_functions.iter() {
             code.push(Inst::Extern(platform_name.clone()));
         }
         code
     }
 
-    fn write_data_section(string_pool: &StringPool) -> Vec<Inst> {
+    fn write_data_section(&self) -> Vec<Inst> {
         let mut code = vec![];
         assembly! {
             (code) {
                 section ".data";
                 data next_stack_addr: dq 0;
                 data stack_size: dq {COROUTINE_STACK_SIZE};
-                {{Compiler::write_string_pool(&string_pool)}}
+                {{self.write_string_pool()}}
             }
         };
 
         code
     }
 
-    fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
+    fn write_string_pool(&self) -> Vec<Inst> {
         let mut code = vec![];
 
         code.push(Inst::DataString("_i32_fmt".into(), "%ld\\n".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
 
-        for (s, id) in string_pool.pool.iter() {
+        for (s, id) in self.string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
             code.push(Inst::DataString(lbl, s.clone()));
         }
