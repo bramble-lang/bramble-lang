@@ -80,7 +80,12 @@ pub enum Expression<I> {
     IdentifierDeclare(I, String, Type),
     RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
     StructExpression(I, Path, Vec<(String, Expression<I>)>),
-    If(I, Box<Expression<I>>, Box<Expression<I>>, Box<Expression<I>>),
+    If(
+        I,
+        Box<Expression<I>>,
+        Box<Expression<I>>,
+        Box<Expression<I>>,
+    ),
     ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Expression<I>>>),
 
     BinaryOp(I, BinaryOperator, Box<Expression<I>>, Box<Expression<I>>),

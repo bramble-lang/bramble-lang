@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
@@ -50,43 +52,57 @@ const COROUTINE_STACK_SIZE: i64 = 8 * 1024;
 // These live above the function's stack frame (hence they are positive)
 const FUNCTION_CALLER_RSP: i32 = 16;
 
+pub enum TargetOS {
+    Linux,
+    MacOS,
+}
+
+impl From<&str> for TargetOS {
+    fn from(s: &str) -> Self {
+        let s = s.to_lowercase();
+        match s.as_str() {
+            "linux" => TargetOS::Linux,
+            "machos" => TargetOS::MacOS,
+            _ => panic!("Invalid target platform: {}", s),
+        }
+    }
+}
+
 pub struct Compiler<'a> {
-    code: Vec<Inst>,
     scope: ScopeStack<'a>,
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
     root: &'a Module<Scope>,
+    extern_functions: HashMap<String, String>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn print(code: &Vec<Inst>, output: &mut dyn std::io::Write) -> std::io::Result<()> {
-        for inst in code.iter() {
-            writeln!(output, "{}", inst)?;
-        }
-        Ok(())
-    }
-
-    pub fn compile(module: Module<SemanticMetadata>) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticMetadata>, target_os: TargetOS) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = CompilerNode::from(&module).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
 
-        let mut code = vec![];
-        Compiler::create_base(&mut code, &string_pool);
-        Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
-        Compiler::runtime_yield_into_coroutine(&mut code);
-        Compiler::runtime_yield_return(&mut code);
-        Compiler::print_bool(&mut code);
+        let extern_functions = Compiler::configure_extern_functionss(target_os);
 
         let mut compiler = Compiler {
-            code: vec![],
             scope: ScopeStack::new(),
             string_pool,
             root: &compiler_ast,
             struct_table: &struct_table,
+            extern_functions: extern_functions,
         };
+
+        let mut code = vec![];
+        compiler.create_base(&mut code);
+        compiler.coroutine_init("next_stack_addr", "stack_size", &mut code);
+        compiler.runtime_yield_into_coroutine(&mut code);
+        compiler.runtime_yield_return(&mut code);
+        compiler.print_bool(&mut code);
+
+        // Configure the names for functions which will be called by the system
+        // and external functions that will be called by this code
 
         let global_func = "".into();
         compiler
@@ -96,15 +112,16 @@ impl<'a> Compiler<'a> {
     }
 
     /// Creates the runtime code that will manage the entire execution of this program.
-    fn create_base(code: &mut Vec<Inst>, string_pool: &StringPool) {
+    fn create_base(&self, code: &mut Vec<Inst>) {
+        let main_label = self.extern_functions["main"].clone();
         assembly! {
             (code) {
-                {{Compiler::write_includes()}}
-                {{Compiler::write_data_section(&string_pool)}}
+                {{self.write_includes()}}
+                {{self.write_data_section()}}
 
                 section ".text";
-                global _main;
-                @_main:
+                global {main_label};
+                @{main_label}:
                     push %rbp;
                     mov %rbp, %rsp;
                     mov %rax, %rsp;
@@ -120,43 +137,43 @@ impl<'a> Compiler<'a> {
         };
     }
 
-    fn write_includes() -> Vec<Inst> {
+    fn write_includes(&self) -> Vec<Inst> {
         let mut code = vec![];
-        code.push(Inst::Extern("_printf".into()));
-        code.push(Inst::Extern("_stdout".into()));
-        code.push(Inst::Extern("_fputs".into()));
+        for (_, platform_name) in self.extern_functions.iter() {
+            code.push(Inst::Extern(platform_name.clone()));
+        }
         code
     }
 
-    fn write_data_section(string_pool: &StringPool) -> Vec<Inst> {
+    fn write_data_section(&self) -> Vec<Inst> {
         let mut code = vec![];
         assembly! {
             (code) {
                 section ".data";
                 data next_stack_addr: dq 0;
                 data stack_size: dq {COROUTINE_STACK_SIZE};
-                {{Compiler::write_string_pool(&string_pool)}}
+                {{self.write_string_pool()}}
             }
         };
 
         code
     }
 
-    fn write_string_pool(string_pool: &StringPool) -> Vec<Inst> {
+    fn write_string_pool(&self) -> Vec<Inst> {
         let mut code = vec![];
 
         code.push(Inst::DataString("_i32_fmt".into(), "%ld\\n".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
 
-        for (s, id) in string_pool.pool.iter() {
+        for (s, id) in self.string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
             code.push(Inst::DataString(lbl, s.clone()));
         }
         code
     }
 
-    fn print_bool(code: &mut Vec<Inst>) {
+    fn print_bool(&self, code: &mut Vec<Inst>) {
         assembly! {
             (code) {
                 @print_bool:
@@ -164,12 +181,14 @@ impl<'a> Compiler<'a> {
                     mov %rbp, %rsp;
                     cmp %rax, 0;
                     jz ^false;
-                    push [@_true];
+                    lea %rbx, [@_true];
+                    push %rbx;
                     jmp ^done;
                     ^false:
-                    push [@_false];
+                    lea %rbx, [@_false];
+                    push %rbx;
                     ^done:
-                    {{Compiler::make_c64_extern_call("_printf", 1)}}
+                    {{Compiler::make_c64_extern_call("printf", 1)}}
                     mov %rsp, %rbp;
                     pop %rbp;
                     ret;
@@ -177,11 +196,11 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn make_c32_extern_call(c_func: &str, nparams: usize) -> Vec<Inst> {
+    fn make_c32_extern_call(extern_func: &str, nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
         assembly! {(code){
             {{Compiler::reverse_c32_params_on_stack(nparams)}}
-            call @{c_func};
+            call @{extern_func};
             add %rsp, {4*nparams as i32};
         }}
         code
@@ -234,6 +253,7 @@ impl<'a> Compiler<'a> {
 
     /// Writes the function which will handle initializing a new coroutine
     fn coroutine_init(
+        &self,
         next_stack_variable: &str,
         stack_increment_variable: &str,
         code: &mut Vec<Inst>,
@@ -293,14 +313,14 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn runtime_yield_into_coroutine(code2: &mut Vec<Inst>) {
+    fn runtime_yield_into_coroutine(&self, code: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - address of the coroutine instance
          * EBX - address of the return point
          */
         assembly! {
-            (code2) {
+            (code) {
                 @runtime_yield_into_coroutine:
                     mov [%rax+{COROUTINE_CALLER_RSP_STORE}], %rsp;
                     mov [%rax+{COROUTINE_CALLER_RBP_STORE}], %rbp;
@@ -312,7 +332,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn runtime_yield_return(code: &mut Vec<Inst>) {
+    fn runtime_yield_return(&self, code: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - value being returned (if any)
@@ -786,9 +806,10 @@ impl<'a> Compiler<'a> {
         self.traverse(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
-            push [@_i32_fmt];
+            lea %rbx, [@_i32_fmt];
+            push %rbx;
             push %rax;
-            {{Compiler::make_c64_extern_call("_printf", 2)}}
+            {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -802,9 +823,10 @@ impl<'a> Compiler<'a> {
         self.traverse(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
-            push [@_i32_fmt];
+            lea %rbx, [@_i32_fmt];
+            push %rbx;
             push %rax;
-            {{Compiler::make_c64_extern_call("_printf", 2)}}
+            {{Compiler::make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -833,8 +855,8 @@ impl<'a> Compiler<'a> {
 
         assembly! {(code) {
             push %rax;
-            push [rel @_stdout];
-            {{Compiler::make_c64_extern_call("_fputs", 2)}}
+            push [@stdout];
+            {{Compiler::make_c64_extern_call("fputs", 2)}}
         }}
         Ok(())
     }
@@ -1367,5 +1389,31 @@ impl<'a> Compiler<'a> {
             }};
         }
         Ok(code)
+    }
+
+    pub fn print(code: &Vec<Inst>, output: &mut dyn std::io::Write) -> std::io::Result<()> {
+        for inst in code.iter() {
+            writeln!(output, "{}", inst)?;
+        }
+        Ok(())
+    }
+
+    pub fn configure_extern_functionss(target_os: TargetOS) -> HashMap<String, String> {
+        let mut extern_functions = HashMap::new();
+        match target_os {
+            TargetOS::Linux => {
+                extern_functions.insert("main".into(), "main".into());
+                extern_functions.insert("printf".into(), "printf".into());
+                extern_functions.insert("fputs".into(), "fputs".into());
+                extern_functions.insert("stdout".into(), "stdout".into());
+            }
+            TargetOS::MacOS => {
+                extern_functions.insert("main".into(), "_main".into());
+                extern_functions.insert("printf".into(), "_printf".into());
+                extern_functions.insert("fputs".into(), "_fputs".into());
+            }
+        }
+
+        extern_functions
     }
 }

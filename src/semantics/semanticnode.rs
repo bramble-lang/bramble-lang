@@ -1,4 +1,7 @@
 use crate::{
+    diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
+};
+use crate::{
     expression::*,
     syntax::path::Path,
     syntax::{
@@ -6,9 +9,6 @@ use crate::{
         routinedef::RoutineDef,
         ty::Type,
     },
-};
-use crate::{
-    diagnostics::config::TracingConfig, parser::pnode::ParserInfo, syntax::structdef::StructDef,
 };
 use crate::{parser::pnode::PNode, syntax::statement::Statement};
 use crate::{
