@@ -49,7 +49,7 @@ pub fn type_check(
 
 pub struct SemanticAnalyzer<'a> {
     root: &'a Module<SemanticMetadata>,
-    stack: ScopeStack,
+    stack: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
 }
@@ -64,7 +64,7 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn new(root: &'a Module<SemanticMetadata>) -> SemanticAnalyzer {
         SemanticAnalyzer {
             root,
-            stack: ScopeStack::new(),
+            stack: SymbolTableScopeStack::new(),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
         }

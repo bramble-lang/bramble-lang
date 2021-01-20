@@ -147,11 +147,11 @@ impl std::fmt::Display for SymbolTable {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ScopeStack {
+pub struct SymbolTableScopeStack {
     stack: Vec<SymbolTable>,
 }
 
-impl std::fmt::Display for ScopeStack {
+impl std::fmt::Display for SymbolTableScopeStack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut i = 0;
         for scope in self.stack.iter() {
@@ -162,9 +162,9 @@ impl std::fmt::Display for ScopeStack {
     }
 }
 
-impl ScopeStack {
-    pub fn new() -> ScopeStack {
-        ScopeStack { stack: vec![] }
+impl SymbolTableScopeStack {
+    pub fn new() -> SymbolTableScopeStack {
+        SymbolTableScopeStack { stack: vec![] }
     }
 
     pub fn push(&mut self, sym: SymbolTable) {
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_empty_stack_to_path() {
-        let stack = ScopeStack::new();
+        let stack = SymbolTableScopeStack::new();
         let local = SymbolTable::new();
         let path = stack.to_path(&local);
         assert_eq!(path, None);
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_one_module_stack_to_path() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolTableScopeStack::new();
         let sym = SymbolTable::new_module("root");
         stack.push(sym);
         let local = SymbolTable::new();
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_one_module_stack_module_current_to_path() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolTableScopeStack::new();
         let sym = SymbolTable::new_module("root");
         stack.push(sym);
         let current = SymbolTable::new_module("inner");
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn test_local_then_one_module_stack_to_path() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolTableScopeStack::new();
         let module = SymbolTable::new_module("root");
         stack.push(module);
         let local = SymbolTable::new();
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_local_then_two_module_stack_to_path() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolTableScopeStack::new();
         let module = SymbolTable::new_module("first");
         stack.push(module);
         let module2 = SymbolTable::new_module("second");
