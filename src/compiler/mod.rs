@@ -7,7 +7,11 @@
  * to primitive and custom types, computing the stack frame size, etc.). These
  * precompilation steps are handled in the `ast` submodule. The final output
  * of the precompilation stage is an `AST<Scope>`, which is an abstract syntax
- * tree that has all the architecture specific data for each node.
+ * tree that has all the architecture specific data for each node. This is the
+ * last stage where a User error can occur: this stage will detect custom types
+ * which have incomputable sizes and return an error to the User. After this
+ * stage, the User input is considered correct and compilable and any faults
+ * in the actual compilation can only come from a bug in the compiler itself.
  * 
  * The Compiler type, which actually generates the x64 assembly, will only accept
  * an `AST<Scope>` as input; because, a tree of this type has been guaranteed to 
@@ -23,6 +27,16 @@
  * and unrecoverable, so the policy is to immeidately panic and return to the console
  * from exactly the point the error was first discovered. So that we are as close 
  * to the origin as possible.
+ * 
+ * Precompilation Tasks:
+ * 1. Compute size of all variables, and custom types.
+ * 2. Compute the stack frame size and assign locations within the stack frame for
+ * all variables and function parameters.  This will also check for cycles in
+ * struct definitions and structs which have infinite size.
+ * 3. Build a global table of all custom defined types and compute the size of
+ * all fields and assign relative offsets within the memory assigned to the struct
+ * for those fields to reside.
+ * 4. Construct a string pool of all string literals.
  */
 mod ast;
 pub mod compiler;
