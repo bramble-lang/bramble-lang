@@ -119,21 +119,16 @@ fn main() {
         }
     };
 
-    let target_platform = matches.value_of("platform").expect("Must provide a target platform");
-    let target_platform = to_target_os(target_platform);
-    let program = Compiler::compile(semantic_ast, target_platform);
+    // Configure the compiler
+    let target_platform = matches.value_of("platform").expect("Must provide a target platform").into();
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
+    
+    // Compile
+    let program = Compiler::compile(semantic_ast, target_platform);
+
+    // Write the resulting assembly code to the target output file
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
     Compiler::print(&program, &mut output).expect("Failed to write assembly");
-}
-
-fn to_target_os(arg: &str) -> TargetOS {
-    let arg = arg.to_lowercase();
-    match arg.as_str() {
-        "linux" => TargetOS::Linux,
-        "machos" => TargetOS::MacOS,
-        _ => panic!("Invalid target platform: {}", arg)
-    }
 }
 
 // Exit Codes for different types of errors

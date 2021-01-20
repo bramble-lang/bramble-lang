@@ -57,6 +57,17 @@ pub enum TargetOS {
     MacOS,
 }
 
+impl From<&str> for TargetOS {
+    fn from(s: &str) -> Self {
+        let s = s.to_lowercase();
+        match s.as_str() {
+            "linux" => TargetOS::Linux,
+            "machos" => TargetOS::MacOS,
+            _ => panic!("Invalid target platform: {}", s)
+        }
+    }
+}
+
 pub struct Compiler<'a> {
     code: Vec<Inst>,
     scope: ScopeStack<'a>,
