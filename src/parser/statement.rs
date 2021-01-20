@@ -1,14 +1,27 @@
+use super::{
+    expression::expression,
+    parser::{id_declaration, path, routine_call_params, ENABLE_TRACING, TRACE_END, TRACE_START},
+};
 use std::sync::atomic::Ordering;
 use stdext::function_name;
-use super::{expression::expression, parser::{ENABLE_TRACING, TRACE_END, TRACE_START, id_declaration, path, routine_call_params}};
 
-use crate::{lexer::tokens::{Lex, Token}, syntax::{expression::{Expression, RoutineCall}, statement::*}, trace};
+use crate::{
+    lexer::tokens::{Lex, Token},
+    syntax::{
+        expression::{Expression, RoutineCall},
+        statement::*,
+    },
+    trace,
+};
 
-use super::{parser::{ParserInfo, ParserResult}, tokenstream::TokenStream};
+use super::{
+    parser::{ParserInfo, ParserResult},
+    tokenstream::TokenStream,
+};
 
-
-
-pub(super) fn statement_or_yield_return(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
+pub(super) fn statement_or_yield_return(
+    stream: &mut TokenStream,
+) -> ParserResult<Statement<ParserInfo>> {
     let stm = match statement(stream)? {
         Some(n) => Some(n),
         None => match yield_return_stmt(stream)? {

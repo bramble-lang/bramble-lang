@@ -1,12 +1,25 @@
+use super::parser::{ENABLE_TRACING, TRACE_END, TRACE_START};
 use std::sync::atomic::Ordering;
 use stdext::function_name;
-use super::parser::{ENABLE_TRACING, TRACE_END, TRACE_START};
 
-use super::{parser::{ParserInfo, ParserResult, block, path, routine_call_params}, tokenstream::TokenStream};
-use crate::{lexer::tokens::{Lex, Token}, syntax::expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator}, trace};
+use super::{
+    parser::{block, path, routine_call_params, ParserInfo, ParserResult},
+    tokenstream::TokenStream,
+};
+use crate::{
+    lexer::tokens::{Lex, Token},
+    syntax::expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator},
+    trace,
+};
 
-impl ParserCombinator<ParserResult<Expression<ParserInfo>>> for ParserResult<Expression<ParserInfo>> {
-    fn por(&self, f: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>, ts: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+impl ParserCombinator<ParserResult<Expression<ParserInfo>>>
+    for ParserResult<Expression<ParserInfo>>
+{
+    fn por(
+        &self,
+        f: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>,
+        ts: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserInfo>> {
         match self {
             Ok(Some(s)) => Ok(Some(s.clone())),
             Ok(None) => f(ts),
@@ -17,7 +30,11 @@ impl ParserCombinator<ParserResult<Expression<ParserInfo>>> for ParserResult<Exp
     fn pif_then(
         &self,
         cond: Vec<Lex>,
-        then: fn(Expression<ParserInfo>, Token, &mut TokenStream) -> ParserResult<Expression<ParserInfo>>,
+        then: fn(
+            Expression<ParserInfo>,
+            Token,
+            &mut TokenStream,
+        ) -> ParserResult<Expression<ParserInfo>>,
         ts: &mut TokenStream,
     ) -> ParserResult<Expression<ParserInfo>> {
         match self {
@@ -42,12 +59,19 @@ pub trait ParserCombinator<R> {
 }
 
 impl Expression<ParserInfo> {
-    pub fn new_yield(line: u32, coroutine_value: Box<Self>) -> ParserResult<Expression<ParserInfo>> {
+    pub fn new_yield(
+        line: u32,
+        coroutine_value: Box<Self>,
+    ) -> ParserResult<Expression<ParserInfo>> {
         let i = line; //ParserInfo{l: line};
         Ok(Some(Expression::Yield(i, coroutine_value)))
     }
 
-    pub fn unary_op(line: u32, op: &Lex, operand: Box<Self>) -> ParserResult<Expression<ParserInfo>> {
+    pub fn unary_op(
+        line: u32,
+        op: &Lex,
+        operand: Box<Self>,
+    ) -> ParserResult<Expression<ParserInfo>> {
         match op {
             Lex::Minus => Ok(Some(Expression::UnaryOp(
                 line,
@@ -59,7 +83,12 @@ impl Expression<ParserInfo> {
         }
     }
 
-    pub fn binary_op(line: u32, op: &Lex, left: Box<Self>, right: Box<Self>) -> ParserResult<Expression<ParserInfo>> {
+    pub fn binary_op(
+        line: u32,
+        op: &Lex,
+        left: Box<Self>,
+        right: Box<Self>,
+    ) -> ParserResult<Expression<ParserInfo>> {
         let i = line; //ParserInfo{l: line};
         match op {
             Lex::Eq => Ok(Some(Expression::BinaryOp(
@@ -333,7 +362,9 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
         Some(token) => {
             let line = token.l;
             match expression(stream)? {
-                Some(coroutine) => Expression::new_yield(*coroutine.get_metadata(), Box::new(coroutine)),
+                Some(coroutine) => {
+                    Expression::new_yield(*coroutine.get_metadata(), Box::new(coroutine))
+                }
                 None => Err(format!("L{}: expected an identifier after yield", line)),
             }
         }
@@ -341,7 +372,9 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     }
 }
 
-fn struct_init_params(stream: &mut TokenStream) -> ParserResult<Vec<(String, Expression<ParserInfo>)>> {
+fn struct_init_params(
+    stream: &mut TokenStream,
+) -> ParserResult<Vec<(String, Expression<ParserInfo>)>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
@@ -404,10 +437,13 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserInf
 }
 
 #[cfg(test)]
-mod test{
-    use crate::{lexer::lexer::Lexer, syntax::{statement::Statement, ty::Type}};
-    use braid_lang::result::Result;
+mod test {
     use super::*;
+    use crate::{
+        lexer::lexer::Lexer,
+        syntax::{statement::Statement, ty::Type},
+    };
+    use braid_lang::result::Result;
 
     #[test]
     fn parse_member_access() {
@@ -529,5 +565,4 @@ mod test{
             panic!("No nodes returned by parser")
         }
     }
-
 }

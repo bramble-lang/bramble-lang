@@ -1,4 +1,4 @@
-pub mod parser;
 pub mod expression;
-mod tokenstream;
+pub mod parser;
 mod statement;
+mod tokenstream;

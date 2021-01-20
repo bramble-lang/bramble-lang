@@ -1,3 +1,4 @@
+use crate::syntax::statement::Statement;
 use crate::{
     diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };
@@ -10,7 +11,6 @@ use crate::{
         ty::Type,
     },
 };
-use crate::syntax::statement::Statement;
 use crate::{
     semantics::symbol_table::*,
     syntax::statement::{
@@ -108,9 +108,7 @@ impl SemanticAst {
     fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>> {
         match m {
             Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(s)),
-            Item::Routine(rd) => {
-                self.from_routinedef(rd).map(|r| Item::Routine(r))
-            }
+            Item::Routine(rd) => self.from_routinedef(rd).map(|r| Item::Routine(r)),
         }
     }
 

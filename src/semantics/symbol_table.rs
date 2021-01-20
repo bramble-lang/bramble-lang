@@ -1,10 +1,10 @@
-use crate::{semantics::semanticnode::SemanticMetadata, syntax::structdef::StructDef};
 use crate::syntax::path::Path;
 use crate::syntax::{
     module::{Item, Module},
     routinedef::{RoutineDef, RoutineDefType},
     ty::Type,
 };
+use crate::{semantics::semanticnode::SemanticMetadata, syntax::structdef::StructDef};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -28,7 +28,7 @@ impl SymbolTable {
         }
     }
 
-    pub(super) fn scope_type(&self) -> &ScopeType{
+    pub(super) fn scope_type(&self) -> &ScopeType {
         &self.ty
     }
 
@@ -88,10 +88,8 @@ impl SymbolTable {
 
     fn for_item(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
         match item {
-            Item::Routine(rd) =>
-                SymbolTable::for_routine(rd, sym),
-            Item::Struct(sd) =>
-                SymbolTable::add_structdef(sd, sym),
+            Item::Routine(rd) => SymbolTable::for_routine(rd, sym),
+            Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
         }
     }
 
@@ -119,20 +117,18 @@ impl SymbolTable {
         } = routine;
 
         let def = match def {
-            RoutineDefType::Function => Type::FunctionDef(
-                Self::get_types_for_params(params),
-                Box::new(ty.clone()),
-            ),
-            RoutineDefType::Coroutine => Type::CoroutineDef(
-                Self::get_types_for_params(params),
-                Box::new(ty.clone()),
-            ),
+            RoutineDefType::Function => {
+                Type::FunctionDef(Self::get_types_for_params(params), Box::new(ty.clone()))
+            }
+            RoutineDefType::Coroutine => {
+                Type::CoroutineDef(Self::get_types_for_params(params), Box::new(ty.clone()))
+            }
         };
 
         sym.sym.add(name, def, false)
     }
 
-    fn get_types_for_params(params: &Vec<(String,Type)>) -> Vec<Type> {
+    fn get_types_for_params(params: &Vec<(String, Type)>) -> Vec<Type> {
         params
             .iter()
             .map(|(_, ty)| ty.clone())
@@ -149,7 +145,6 @@ impl std::fmt::Display for SymbolTable {
         Ok(())
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {

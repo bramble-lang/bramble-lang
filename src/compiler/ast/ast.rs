@@ -330,19 +330,11 @@ impl CompilerNode {
                     layout,
                 )
             }
-            MemberAccess(..) => {
-                Self::compute_layouts_for_member_access(ast, layout, struct_table)
-            }
-            UnaryOp(..) => {
-                Self::compute_layouts_for_unary_op(ast, layout, struct_table)
-            }
-            BinaryOp(..) => {
-                Self::compute_layouts_for_binary_op(ast, layout, struct_table)
-            }
+            MemberAccess(..) => Self::compute_layouts_for_member_access(ast, layout, struct_table),
+            UnaryOp(..) => Self::compute_layouts_for_unary_op(ast, layout, struct_table),
+            BinaryOp(..) => Self::compute_layouts_for_binary_op(ast, layout, struct_table),
             If(..) => Self::compute_layouts_for_if(ast, layout, struct_table),
-            Yield(..) => {
-                Self::compute_layouts_for_yield(ast, layout, struct_table)
-            }
+            Yield(..) => Self::compute_layouts_for_yield(ast, layout, struct_table),
             RoutineCall(..) => Self::compute_layouts_for_routine_call(ast, layout, struct_table),
             StructExpression(..) => {
                 Self::compute_layouts_for_struct_expression(ast, layout, struct_table)
@@ -386,14 +378,16 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
-            if let Expression::MemberAccess(m, src, member) = access {
-                let (src, layout) =
-                    Self::compute_layouts_for_expression(src, layout, struct_table);
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::MemberAccess(meta, Box::new(src), member.clone()), layout)
-            } else {
-                panic!("Expected MemberAccess, but got {:?}", access)
-            }
+        if let Expression::MemberAccess(m, src, member) = access {
+            let (src, layout) = Self::compute_layouts_for_expression(src, layout, struct_table);
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            (
+                Expression::MemberAccess(meta, Box::new(src), member.clone()),
+                layout,
+            )
+        } else {
+            panic!("Expected MemberAccess, but got {:?}", access)
+        }
     }
 
     fn compute_layouts_for_unary_op(
@@ -401,14 +395,14 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
-            if let Expression::UnaryOp(m, op, operand) = un_op {
-                let (operand, layout) =
-                    Self::compute_layouts_for_expression(operand, layout, struct_table);
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::UnaryOp(meta, *op, Box::new(operand)), layout)
-            } else {
-                panic!("Expected UnaryOp, but got {:?}", un_op)
-            }
+        if let Expression::UnaryOp(m, op, operand) = un_op {
+            let (operand, layout) =
+                Self::compute_layouts_for_expression(operand, layout, struct_table);
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            (Expression::UnaryOp(meta, *op, Box::new(operand)), layout)
+        } else {
+            panic!("Expected UnaryOp, but got {:?}", un_op)
+        }
     }
 
     fn compute_layouts_for_binary_op(
@@ -479,14 +473,13 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
-            if let Expression::Yield(m, e) = yield_exp {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) =
-                    Self::compute_layouts_for_expression(e, layout, struct_table);
-                (Expression::Yield(meta, Box::new(e)), layout)
-            } else {
-                panic!("Expected Yield, but got {:?}", yield_exp)
-            }
+        if let Expression::Yield(m, e) = yield_exp {
+            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (e, layout) = Self::compute_layouts_for_expression(e, layout, struct_table);
+            (Expression::Yield(meta, Box::new(e)), layout)
+        } else {
+            panic!("Expected Yield, but got {:?}", yield_exp)
+        }
     }
 
     fn compute_layouts_for_struct_expression(

@@ -22,12 +22,14 @@ use braid_lang::result::Result;
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::{expression::expression, statement::{return_stmt, statement, statement_or_yield_return}};
 use super::tokenstream::TokenStream;
+use super::{
+    expression::expression,
+    statement::{return_stmt, statement, statement_or_yield_return},
+};
 
 pub type ParserInfo = u32;
 pub(super) type ParserResult<T> = Result<Option<T>>;
-
 
 pub(super) static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 pub(super) static TRACE_START: AtomicUsize = AtomicUsize::new(0);
@@ -359,7 +361,9 @@ fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
     }
 }
 
-pub(super) fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<Expression<ParserInfo>>> {
+pub(super) fn routine_call_params(
+    stream: &mut TokenStream,
+) -> ParserResult<Vec<Expression<ParserInfo>>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {

@@ -229,7 +229,9 @@ impl<'a> TypeResolver<'a> {
             Printiln(box x) => Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?)),
             Printbln(box x) => Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?)),
             Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
-            Expression(box e) => Expression(Box::new(self.analyze_expression(e, current_func, sym)?)),
+            Expression(box e) => {
+                Expression(Box::new(self.analyze_expression(e, current_func, sym)?))
+            }
         };
 
         Ok(inner)
@@ -473,15 +475,16 @@ impl<'a> TypeResolver<'a> {
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         self.trace(ast, current_func, sym);
-        self.analyze_expression(ast, current_func, sym).map_err(|e| {
-            if !e.starts_with("L") {
-                format!("L{}: {}", ast.get_metadata().ln, e)
-            } else {
-                e
-            }
-        })
+        self.analyze_expression(ast, current_func, sym)
+            .map_err(|e| {
+                if !e.starts_with("L") {
+                    format!("L{}: {}", ast.get_metadata().ln, e)
+                } else {
+                    e
+                }
+            })
     }
-    
+
     fn analyze_expression(
         &mut self,
         ast: &SemanticNode,

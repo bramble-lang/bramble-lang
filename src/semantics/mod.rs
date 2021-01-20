@@ -10,6 +10,6 @@
  */
 
 pub mod semanticnode;
+mod stack;
 pub mod symbol_table;
 pub mod type_resolver;
-mod stack;
