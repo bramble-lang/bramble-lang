@@ -340,8 +340,6 @@ pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(Strin
     Ok(decls)
 }
 
-// TODO: I think what I want ot do is pull the ID/Path parsing up in to `function_call_or_variable` and then
-// determine if it's a function, struct expressoin, or variable by if there is a LParen or LBrace after the path.
 fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
@@ -361,7 +359,6 @@ fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
     }
 }
 
-/// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
 pub(super) fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<Expression<ParserInfo>>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
