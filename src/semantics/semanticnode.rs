@@ -261,7 +261,7 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_expression(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
+    fn from_expression(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
         use Expression::*;
         let node = match ast {
             Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
