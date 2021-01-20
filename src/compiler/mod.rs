@@ -38,6 +38,6 @@
  * for those fields to reside.
  * 4. Construct a string pool of all string literals.
  */
-mod ast;
 pub mod compiler;
+mod ast;
 mod x86;
