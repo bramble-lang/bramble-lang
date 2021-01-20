@@ -113,11 +113,6 @@ impl<'a> Compiler<'a> {
         
         let extern_functions = Compiler::configure_extern_functionss(target_os);
 
-        let mut code = vec![];
-        Compiler::coroutine_init("next_stack_addr", "stack_size", &mut code);
-        Compiler::runtime_yield_into_coroutine(&mut code);
-        Compiler::runtime_yield_return(&mut code);
-        Compiler::print_bool(&mut code);
 
         let mut compiler = Compiler {
             code: vec![],
@@ -127,7 +122,13 @@ impl<'a> Compiler<'a> {
             struct_table: &struct_table,
             extern_functions: extern_functions,
         };
+
+        let mut code = vec![];
         compiler.create_base(&mut code);
+        compiler.coroutine_init("next_stack_addr", "stack_size", &mut code);
+        compiler.runtime_yield_into_coroutine(&mut code);
+        compiler.runtime_yield_return(&mut code);
+        compiler.print_bool(&mut code);
         
 
         // Configure the names for functions which will be called by the system
@@ -202,7 +203,7 @@ impl<'a> Compiler<'a> {
         code
     }
 
-    fn print_bool(code: &mut Vec<Inst>) {
+    fn print_bool(&self, code: &mut Vec<Inst>) {
         assembly! {
             (code) {
                 @print_bool:
@@ -282,6 +283,7 @@ impl<'a> Compiler<'a> {
 
     /// Writes the function which will handle initializing a new coroutine
     fn coroutine_init(
+        &self,
         next_stack_variable: &str,
         stack_increment_variable: &str,
         code: &mut Vec<Inst>,
@@ -341,14 +343,14 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn runtime_yield_into_coroutine(code2: &mut Vec<Inst>) {
+    fn runtime_yield_into_coroutine(&self, code: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - address of the coroutine instance
          * EBX - address of the return point
          */
         assembly! {
-            (code2) {
+            (code) {
                 @runtime_yield_into_coroutine:
                     mov [%rax+{COROUTINE_CALLER_RSP_STORE}], %rsp;
                     mov [%rax+{COROUTINE_CALLER_RBP_STORE}], %rbp;
@@ -360,7 +362,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn runtime_yield_return(code: &mut Vec<Inst>) {
+    fn runtime_yield_return(&self, code: &mut Vec<Inst>) {
         /*
          * Input:
          * EAX - value being returned (if any)
