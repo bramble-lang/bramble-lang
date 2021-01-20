@@ -362,9 +362,9 @@ impl<'a> Compiler<'a> {
         use BinaryOperator::*;
 
         let mut left_code = vec![];
-        self.traverse(left, current_func, &mut left_code)?;
+        self.traverse_expression(left, current_func, &mut left_code)?;
         let mut right_code = vec![];
-        self.traverse(right, current_func, &mut right_code)?;
+        self.traverse_expression(right, current_func, &mut right_code)?;
 
         let mut op_asm = vec![];
         match op {
@@ -429,7 +429,7 @@ impl<'a> Compiler<'a> {
         self.scope.pop();
     }
 
-    fn traverse(
+    fn traverse_expression(
         &mut self,
         ast: &'a CompilerNode,
         current_func: &String,
@@ -474,7 +474,7 @@ impl<'a> Compiler<'a> {
                 self.member_access(current_func, code, src, member)?;
             }
             Expression::UnaryOp(_, op, operand) => {
-                self.traverse(operand, current_func, code)?;
+                self.traverse_expression(operand, current_func, code)?;
                 match op {
                     UnaryOperator::Minus => {
                         assembly! {(code){
@@ -496,11 +496,11 @@ impl<'a> Compiler<'a> {
             }
             Expression::If(meta, ref cond, ref true_arm, ref false_arm) => {
                 let mut cond_code = vec![];
-                self.traverse(cond, current_func, &mut cond_code)?;
+                self.traverse_expression(cond, current_func, &mut cond_code)?;
                 let mut true_code = vec![];
-                self.traverse(true_arm, current_func, &mut true_code)?;
+                self.traverse_expression(true_arm, current_func, &mut true_code)?;
                 let mut false_code = vec![];
-                self.traverse(false_arm, current_func, &mut false_code)?;
+                self.traverse_expression(false_arm, current_func, &mut false_code)?;
 
                 assembly2! {(code, meta) {
                     {{cond_code}}
@@ -519,7 +519,7 @@ impl<'a> Compiler<'a> {
                 }
                 match final_exp {
                     None => (),
-                    Some(fe) => self.traverse(fe, current_func, code)?,
+                    Some(fe) => self.traverse_expression(fe, current_func, code)?,
                 }
             }
             Expression::Yield(meta, ref id) => {
@@ -752,7 +752,7 @@ impl<'a> Compiler<'a> {
             Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),
             Statement::Printbln(n) => self.traverse_printbln(n, current_func, code),
             Statement::Prints(n) => self.traverse_prints(n, current_func, code),
-            Statement::Expression(n) => self.traverse(n, current_func, code),
+            Statement::Expression(n) => self.traverse_expression(n, current_func, code),
         }
     }
 
@@ -803,7 +803,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             lea %rbx, [@_i32_fmt];
@@ -820,7 +820,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             lea %rbx, [@_i32_fmt];
@@ -837,7 +837,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             call @print_bool;
@@ -851,7 +851,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             push %rax;
@@ -909,7 +909,7 @@ impl<'a> Compiler<'a> {
             Type::Custom(struct_name) => {
                 code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
 
-                self.traverse(src, current_func, code)?;
+                self.traverse_expression(src, current_func, code)?;
 
                 let struct_def = self.struct_table.get(struct_name).ok_or(format!(
                     "Could not find struct definition for {}",
@@ -1027,7 +1027,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             _ => {
-                self.traverse(fvalue, current_func, &mut code)?;
+                self.traverse_expression(fvalue, current_func, &mut code)?;
                 match fvalue.get_metadata().ty() {
                     Type::Custom(struct_name) => {
                         let asm =
@@ -1055,7 +1055,7 @@ impl<'a> Compiler<'a> {
         dst_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        self.traverse(value, current_func, &mut code)?;
+        self.traverse_expression(value, current_func, &mut code)?;
 
         match value.get_metadata().ty() {
             Type::Custom(name) => {
@@ -1092,7 +1092,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        self.traverse(exp, current_func, &mut code)?;
+        self.traverse_expression(exp, current_func, &mut code)?;
         match meta.ty() {
             Type::Custom(struct_name) => {
                 let st = self
@@ -1124,7 +1124,7 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         if let Some(exp) = exp {
-            self.traverse(exp, current_func, &mut code)?;
+            self.traverse_expression(exp, current_func, &mut code)?;
             match exp.get_metadata().ty() {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
@@ -1155,7 +1155,7 @@ impl<'a> Compiler<'a> {
         code.push(Inst::Label(".terminus".into()));
         match exp {
             Some(e) => {
-                self.traverse(e, current_func, &mut code)?;
+                self.traverse_expression(e, current_func, &mut code)?;
                 // If the expression is a custom type then copy the value into the stack frame
                 // of the caller (or the yielder in the case of coroutines)
                 match e.get_metadata().ty() {
@@ -1195,7 +1195,7 @@ impl<'a> Compiler<'a> {
         code.push(Inst::Label(".terminus".into()));
         match exp {
             Some(e) => {
-                self.traverse(e, current_func, &mut code)?;
+                self.traverse_expression(e, current_func, &mut code)?;
                 // If the expression is a custom type then copy the value into the stack frame
                 // of the caller (or the yielder in the case of coroutines)
                 match e.get_metadata().ty() {
@@ -1360,7 +1360,7 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         for param in params.iter() {
-            self.traverse(param, current_func, &mut code)?;
+            self.traverse_expression(param, current_func, &mut code)?;
             assembly! {(code){
                 push %rax;
             }};
