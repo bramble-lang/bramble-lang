@@ -8,7 +8,7 @@ use crate::{
         module::{self, Item, Module},
         routinedef::{RoutineDef, RoutineDefType},
         statement::{
-            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn,
+            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, YieldReturn,
         },
         structdef::StructDef,
     },
@@ -340,11 +340,8 @@ impl CompilerNode {
                 Self::compute_layouts_for_binary_op(ast, layout, struct_table)
             }
             If(..) => Self::compute_layouts_for_if(ast, layout, struct_table),
-            Yield(m, e) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                let (e, layout) =
-                    CompilerNode::compute_layouts_for_expression(e, layout, struct_table);
-                (Yield(meta, Box::new(e)), layout)
+            Yield(..) => {
+                Self::compute_layouts_for_yield(ast, layout, struct_table)
             }
             RoutineCall(..) => Self::compute_layouts_for_routine_call(ast, layout, struct_table),
             StructExpression(..) => {
@@ -477,6 +474,21 @@ impl CompilerNode {
         }
     }
 
+    fn compute_layouts_for_yield(
+        yield_exp: &SemanticNode,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (CompilerNode, LayoutData) {
+            if let Expression::Yield(m, e) = yield_exp {
+                let (meta, layout) = Scope::local_from(m, struct_table, layout);
+                let (e, layout) =
+                    Self::compute_layouts_for_expression(e, layout, struct_table);
+                (Expression::Yield(meta, Box::new(e)), layout)
+            } else {
+                panic!("Expected Yield, but got {:?}", yield_exp)
+            }
+    }
+
     fn compute_layouts_for_struct_expression(
         se: &SemanticNode,
         layout: LayoutData,
@@ -497,17 +509,6 @@ impl CompilerNode {
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
         }
-    }
-
-    fn compute_layouts_for_yield(
-        y: &Yield<SemanticMetadata>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Yield<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(y.get_metadata(), struct_table, layout);
-        let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(y.get_value(), layout, struct_table);
-        (Yield::new(meta, value), layout)
     }
 
     fn compute_layouts_for(
