@@ -43,7 +43,7 @@ fn main() {
                 .possible_values(&["linux", "machos"])
                 .takes_value(true)
                 .required(true)
-                .help("The target Operation System that this will be compiled for: Linux or Mac"),
+                .help("The target Operation System that this will be compiled for: Linux or Mac (Mac is still unreliable and being worked on)"),
         )
         .arg(
             Arg::with_name("trace-parser")
