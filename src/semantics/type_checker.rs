@@ -26,7 +26,7 @@ use crate::{
 use braid_lang::result::Result;
 use Type::*;
 
-use super::semanticnode::SemanticMetadata;
+use super::{semanticnode::SemanticMetadata, stack::SymbolTableScopeStack};
 
 pub fn type_check(
     ast: &module::Module<ParserInfo>,

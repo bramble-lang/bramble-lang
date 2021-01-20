@@ -12,3 +12,4 @@
 pub mod semanticnode;
 pub mod symbol_table;
 pub mod type_checker;
+mod stack;
