@@ -63,7 +63,7 @@ impl From<&str> for TargetOS {
         match s.as_str() {
             "linux" => TargetOS::Linux,
             "machos" => TargetOS::MacOS,
-            _ => panic!("Invalid target platform: {}", s)
+            _ => panic!("Invalid target platform: {}", s),
         }
     }
 }
@@ -74,7 +74,7 @@ pub struct Compiler<'a> {
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
     root: &'a Module<Scope>,
-    extern_functions: HashMap<String,String>,
+    extern_functions: HashMap<String, String>,
 }
 
 impl<'a> Compiler<'a> {
@@ -84,9 +84,8 @@ impl<'a> Compiler<'a> {
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
-        
-        let extern_functions = Compiler::configure_extern_functionss(target_os);
 
+        let extern_functions = Compiler::configure_extern_functionss(target_os);
 
         let mut compiler = Compiler {
             code: vec![],
@@ -103,7 +102,6 @@ impl<'a> Compiler<'a> {
         compiler.runtime_yield_into_coroutine(&mut code);
         compiler.runtime_yield_return(&mut code);
         compiler.print_bool(&mut code);
-        
 
         // Configure the names for functions which will be called by the system
         // and external functions that will be called by this code
@@ -141,7 +139,7 @@ impl<'a> Compiler<'a> {
         };
     }
 
-    fn write_includes(&self,) -> Vec<Inst> {
+    fn write_includes(&self) -> Vec<Inst> {
         let mut code = vec![];
         for (_, platform_name) in self.extern_functions.iter() {
             code.push(Inst::Extern(platform_name.clone()));
@@ -1402,7 +1400,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn configure_extern_functionss(target_os: TargetOS) -> HashMap<String,String> {
+    pub fn configure_extern_functionss(target_os: TargetOS) -> HashMap<String, String> {
         let mut extern_functions = HashMap::new();
         match target_os {
             TargetOS::Linux => {
@@ -1420,5 +1418,4 @@ impl<'a> Compiler<'a> {
 
         extern_functions
     }
-
 }

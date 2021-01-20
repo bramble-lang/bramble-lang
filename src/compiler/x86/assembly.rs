@@ -933,25 +933,32 @@ mod test {
     #[test]
     fn x64() {
         let mut code = vec![];
-        assembly!{(code) {
+        assembly! {(code) {
             mov %rax, 0;
             push %rsp;
             pop %rbp;
         }}
 
         assert_eq!(code.len(), 3);
-        let expected = Inst::Mov(Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rax))), Operand::Direct(DirectOperand::Integer(0)));
+        let expected = Inst::Mov(
+            Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rax))),
+            Operand::Direct(DirectOperand::Integer(0)),
+        );
         assert_eq!(code[0], expected);
-        let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rsp))));
+        let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R64(
+            Reg64::Rsp,
+        ))));
         assert_eq!(code[1], expected);
-        let expected = Inst::Pop(Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rbp))));
+        let expected = Inst::Pop(Operand::Direct(DirectOperand::Register(Reg::R64(
+            Reg64::Rbp,
+        ))));
         assert_eq!(code[2], expected);
     }
 
     #[test]
     fn x64_data() {
         let mut code = vec![];
-        assembly!{(code) {
+        assembly! {(code) {
             data some_value_64: dq 0;
         }}
 
@@ -963,18 +970,25 @@ mod test {
     #[test]
     fn x86() {
         let mut code = vec![];
-        assembly!{(code) {
+        assembly! {(code) {
             mov %eax, 0;
             push %esp;
             pop %ebp;
         }}
 
         assert_eq!(code.len(), 3);
-        let expected = Inst::Mov(Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Eax))), Operand::Direct(DirectOperand::Integer(0)));
+        let expected = Inst::Mov(
+            Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Eax))),
+            Operand::Direct(DirectOperand::Integer(0)),
+        );
         assert_eq!(code[0], expected);
-        let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Esp))));
+        let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R32(
+            Reg32::Esp,
+        ))));
         assert_eq!(code[1], expected);
-        let expected = Inst::Pop(Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Ebp))));
+        let expected = Inst::Pop(Operand::Direct(DirectOperand::Register(Reg::R32(
+            Reg32::Ebp,
+        ))));
         assert_eq!(code[2], expected);
     }
 }

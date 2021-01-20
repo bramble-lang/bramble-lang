@@ -795,7 +795,11 @@ fn struct_expression(stream: &mut TokenStream) -> PResult {
             "L{}: Expected valid field assignments in struct expression",
             line
         ))?;
-        Ok(Some(Expression::StructExpression(line, struct_name, fields)))
+        Ok(Some(Expression::StructExpression(
+            line,
+            struct_name,
+            fields,
+        )))
     } else {
         Ok(None)
     }
@@ -1003,7 +1007,8 @@ pub mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
+            if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap()
+            {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
                 assert_eq!(*left, Expression::Integer(1, 2));
@@ -1028,7 +1033,8 @@ pub mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap() {
+            if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap()
+            {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
                 assert_eq!(*left, Expression::Boolean(1, true));
@@ -1147,7 +1153,12 @@ pub mod tests {
             match member_access(&mut stream) {
                 Ok(Some(Expression::MemberAccess(l, left, right))) => {
                     assert_eq!(l, 1);
-                    assert_eq!(*left, Expression::Identifier(1, "thing".into()), "Input: {}", text,);
+                    assert_eq!(
+                        *left,
+                        Expression::Identifier(1, "thing".into()),
+                        "Input: {}",
+                        text,
+                    );
                     assert_eq!(right, "first");
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
@@ -1685,7 +1696,10 @@ pub mod tests {
                 Statement::Return(box r) => {
                     assert_eq!(
                         *r.get_value(),
-                        Some(Expression::Yield(1, Box::new(Expression::Identifier(1, "cor".into()))))
+                        Some(Expression::Yield(
+                            1,
+                            Box::new(Expression::Identifier(1, "cor".into()))
+                        ))
                     );
                 }
                 _ => panic!("No body"),
@@ -1966,9 +1980,10 @@ pub mod tests {
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
-                        Statement::Return(box r) => {
-                            assert_eq!(*r.get_value(), Some(Expression::StringLiteral(1, expected.into())))
-                        }
+                        Statement::Return(box r) => assert_eq!(
+                            *r.get_value(),
+                            Some(Expression::StringLiteral(1, expected.into()))
+                        ),
                         _ => assert!(false, "Not a return statement"),
                     },
                     _ => assert!(false, "Not a return statement"),

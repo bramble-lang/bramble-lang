@@ -120,9 +120,12 @@ fn main() {
     };
 
     // Configure the compiler
-    let target_platform = matches.value_of("platform").expect("Must provide a target platform").into();
+    let target_platform = matches
+        .value_of("platform")
+        .expect("Must provide a target platform")
+        .into();
     let output_target = matches.value_of("output").unwrap_or("./target/output.asm");
-    
+
     // Compile
     let program = Compiler::compile(semantic_ast, target_platform);
 

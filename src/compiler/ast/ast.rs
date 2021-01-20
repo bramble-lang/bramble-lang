@@ -78,7 +78,10 @@ impl CompilerNode {
             }
             Expression::IdentifierDeclare(m, id, p) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::IdentifierDeclare(meta, id.clone(), p.clone()), layout)
+                (
+                    Expression::IdentifierDeclare(meta, id.clone(), p.clone()),
+                    layout,
+                )
             }
             MemberAccess(m, src, member) => {
                 let (src, layout) = CompilerNode::compute_offsets(src, layout, struct_table);
@@ -95,7 +98,10 @@ impl CompilerNode {
                 let (l, layout) = CompilerNode::compute_offsets(l, layout, struct_table);
                 let (r, layout) = CompilerNode::compute_offsets(r, layout, struct_table);
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::BinaryOp(meta, *op, Box::new(l), Box::new(r)), layout)
+                (
+                    Expression::BinaryOp(meta, *op, Box::new(l), Box::new(r)),
+                    layout,
+                )
             }
             If(m, ref cond, ref tb, ref fb) => {
                 let (meta, layout) = Scope::local_from(m, struct_table, layout);

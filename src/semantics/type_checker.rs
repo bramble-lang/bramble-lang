@@ -7,11 +7,11 @@ use crate::syntax::{
     ty::Type,
 };
 use crate::{
-    expression,
     diagnostics::config::{Tracing, TracingConfig},
+    expression,
 };
 use crate::{
-    expression::{Expression, BinaryOperator, UnaryOperator},
+    expression::{BinaryOperator, Expression, UnaryOperator},
     syntax::{
         module::{self, Item},
         routinedef,
@@ -474,7 +474,11 @@ impl<'a> SemanticAnalyzer<'a> {
                         meta.ty =
                             Self::type_to_canonical_with_path(&canonical_path.parent(), member_ty)?;
                         meta.set_canonical_path(canonical_path);
-                        Ok(Expression::MemberAccess(meta, Box::new(src), member.clone()))
+                        Ok(Expression::MemberAccess(
+                            meta,
+                            Box::new(src),
+                            member.clone(),
+                        ))
                     }
                     _ => Err(format!("Type {} does not have members", src.get_type())),
                 }
@@ -483,7 +487,12 @@ impl<'a> SemanticAnalyzer<'a> {
                 let mut meta = meta.clone();
                 let (ty, l, r) = self.binary_op(*op, &l, &r, current_func, sym)?;
                 meta.ty = ty;
-                Ok(Expression::BinaryOp(meta.clone(), *op, Box::new(l), Box::new(r)))
+                Ok(Expression::BinaryOp(
+                    meta.clone(),
+                    *op,
+                    Box::new(l),
+                    Box::new(r),
+                ))
             }
             Expression::UnaryOp(meta, op, operand) => {
                 let mut meta = meta.clone();
@@ -599,7 +608,11 @@ impl<'a> SemanticAnalyzer<'a> {
                 };
                 self.stack.pop();
                 meta.ty = block_ty;
-                Ok(Expression::ExpressionBlock(meta.clone(), resolved_body, final_exp))
+                Ok(Expression::ExpressionBlock(
+                    meta.clone(),
+                    resolved_body,
+                    final_exp,
+                ))
             }
             Expression::StructExpression(meta, struct_name, params) => {
                 let mut meta = meta.clone();

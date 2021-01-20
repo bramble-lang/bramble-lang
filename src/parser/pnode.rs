@@ -1,7 +1,7 @@
 use super::tokenstream::TokenStream;
 use crate::{
     lexer::tokens::{Lex, Token},
-    syntax::expression::{Expression, BinaryOperator, UnaryOperator},
+    syntax::expression::{BinaryOperator, Expression, UnaryOperator},
 };
 use braid_lang::result::Result;
 
@@ -54,7 +54,11 @@ impl PNode {
 
     pub fn unary_op(line: u32, op: &Lex, operand: Box<Self>) -> PResult {
         match op {
-            Lex::Minus => Ok(Some(Expression::UnaryOp(line, UnaryOperator::Minus, operand))),
+            Lex::Minus => Ok(Some(Expression::UnaryOp(
+                line,
+                UnaryOperator::Minus,
+                operand,
+            ))),
             Lex::Not => Ok(Some(Expression::UnaryOp(line, UnaryOperator::Not, operand))),
             _ => Err(format!("L{}: {} is not a unary operator", line, op)),
         }
@@ -63,18 +67,78 @@ impl PNode {
     pub fn binary_op(line: u32, op: &Lex, left: Box<Self>, right: Box<Self>) -> PResult {
         let i = line; //ParserInfo{l: line};
         match op {
-            Lex::Eq => Ok(Some(Expression::BinaryOp(i, BinaryOperator::Eq, left, right))),
-            Lex::NEq => Ok(Some(Expression::BinaryOp(i, BinaryOperator::NEq, left, right))),
-            Lex::Ls => Ok(Some(Expression::BinaryOp(i, BinaryOperator::Ls, left, right))),
-            Lex::LsEq => Ok(Some(Expression::BinaryOp(i, BinaryOperator::LsEq, left, right))),
-            Lex::Gr => Ok(Some(Expression::BinaryOp(i, BinaryOperator::Gr, left, right))),
-            Lex::GrEq => Ok(Some(Expression::BinaryOp(i, BinaryOperator::GrEq, left, right))),
-            Lex::BAnd => Ok(Some(Expression::BinaryOp(i, BinaryOperator::BAnd, left, right))),
-            Lex::BOr => Ok(Some(Expression::BinaryOp(i, BinaryOperator::BOr, left, right))),
-            Lex::Add => Ok(Some(Expression::BinaryOp(i, BinaryOperator::Add, left, right))),
-            Lex::Minus => Ok(Some(Expression::BinaryOp(i, BinaryOperator::Sub, left, right))),
-            Lex::Mul => Ok(Some(Expression::BinaryOp(i, BinaryOperator::Mul, left, right))),
-            Lex::Div => Ok(Some(Expression::BinaryOp(i, BinaryOperator::Div, left, right))),
+            Lex::Eq => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::Eq,
+                left,
+                right,
+            ))),
+            Lex::NEq => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::NEq,
+                left,
+                right,
+            ))),
+            Lex::Ls => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::Ls,
+                left,
+                right,
+            ))),
+            Lex::LsEq => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::LsEq,
+                left,
+                right,
+            ))),
+            Lex::Gr => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::Gr,
+                left,
+                right,
+            ))),
+            Lex::GrEq => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::GrEq,
+                left,
+                right,
+            ))),
+            Lex::BAnd => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::BAnd,
+                left,
+                right,
+            ))),
+            Lex::BOr => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::BOr,
+                left,
+                right,
+            ))),
+            Lex::Add => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::Add,
+                left,
+                right,
+            ))),
+            Lex::Minus => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::Sub,
+                left,
+                right,
+            ))),
+            Lex::Mul => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::Mul,
+                left,
+                right,
+            ))),
+            Lex::Div => Ok(Some(Expression::BinaryOp(
+                i,
+                BinaryOperator::Div,
+                left,
+                right,
+            ))),
             _ => Err(format!("L{}: {} is not a binary operator", line, op)),
         }
     }
