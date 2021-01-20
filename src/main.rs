@@ -12,7 +12,7 @@ use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
 use lexer::tokens::Token;
-use semantics::type_checker::*;
+use semantics::type_resolver::*;
 use syntax::expression;
 
 fn main() {

@@ -38,31 +38,31 @@ pub fn type_check(
     SymbolTable::for_module(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
-    let mut semantic = SemanticAnalyzer::new(&sm_ast);
+    let mut semantic = TypeResolver::new(&sm_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
     let ast_typed = semantic
-        .resolve_types(&mut root_table)
+        .resolve(&mut root_table)
         .map_err(|e| format!("Semantic: {}", e))?;
     Ok(ast_typed)
 }
 
-pub struct SemanticAnalyzer<'a> {
+pub struct TypeResolver<'a> {
     root: &'a Module<SemanticMetadata>,
     stack: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
 }
 
-impl<'a> Tracing for SemanticAnalyzer<'a> {
+impl<'a> Tracing for TypeResolver<'a> {
     fn set_tracing(&mut self, config: TracingConfig) {
         self.tracing = config;
     }
 }
 
-impl<'a> SemanticAnalyzer<'a> {
-    pub fn new(root: &'a Module<SemanticMetadata>) -> SemanticAnalyzer {
-        SemanticAnalyzer {
+impl<'a> TypeResolver<'a> {
+    pub fn new(root: &'a Module<SemanticMetadata>) -> TypeResolver {
+        TypeResolver {
             root,
             stack: SymbolTableScopeStack::new(),
             tracing: TracingConfig::Off,
@@ -70,7 +70,7 @@ impl<'a> SemanticAnalyzer<'a> {
         }
     }
 
-    fn resolve_types(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
+    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
         self.analyze_module(self.root, sym)
     }
 

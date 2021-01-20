@@ -444,7 +444,7 @@ mod ast_tests {
     use module::Module;
 
     use super::*;
-    use crate::semantics::type_checker::type_check;
+    use crate::semantics::type_resolver::type_check;
     use crate::syntax::routinedef::RoutineDefType;
     use crate::syntax::ty::Type;
     use crate::{compiler::ast::scope, syntax::path::Path};
