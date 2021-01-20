@@ -17,7 +17,7 @@ use crate::{
         routinedef,
     },
 };
-use crate::{parser::expression::ParserInfo, semantics::symbol_table::*, syntax::structdef};
+use crate::{parser::parser::ParserInfo, semantics::symbol_table::*, syntax::structdef};
 use crate::{
     semantics::semanticnode::{SemanticAst, SemanticNode},
     syntax::module::Module,

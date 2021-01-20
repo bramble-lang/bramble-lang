@@ -22,8 +22,11 @@ use braid_lang::result::Result;
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::expression::{ParserResult, ParserCombinator, ParserInfo};
+use super::expression::{ParserCombinator};
 use super::tokenstream::TokenStream;
+
+pub type ParserInfo = u32;
+pub(super) type ParserResult<T> = Result<Option<T>>;
 
 
 static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);

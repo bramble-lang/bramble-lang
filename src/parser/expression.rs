@@ -1,12 +1,8 @@
-use super::tokenstream::TokenStream;
+use super::{parser::{ParserInfo, ParserResult}, tokenstream::TokenStream};
 use crate::{
     lexer::tokens::{Lex, Token},
     syntax::expression::{BinaryOperator, Expression, UnaryOperator},
 };
-use braid_lang::result::Result;
-
-pub type ParserInfo = u32;
-pub(super) type ParserResult<T> = Result<Option<T>>;
 
 impl ParserCombinator<ParserResult<Expression<ParserInfo>>> for ParserResult<Expression<ParserInfo>> {
     fn por(&self, f: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>, ts: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
