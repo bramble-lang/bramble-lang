@@ -6,7 +6,7 @@ use crate::{
 use braid_lang::result::Result;
 
 pub type ParserInfo = u32;
-pub type PResult = Result<Option<PNode>>;
+pub type PResult = Result<Option<Expression<ParserInfo>>>;
 
 impl ParserCombinator<PResult> for PResult {
     fn por(&self, f: fn(&mut TokenStream) -> PResult, ts: &mut TokenStream) -> PResult {
@@ -20,7 +20,7 @@ impl ParserCombinator<PResult> for PResult {
     fn pif_then(
         &self,
         cond: Vec<Lex>,
-        then: fn(PNode, Token, &mut TokenStream) -> PResult,
+        then: fn(Expression<ParserInfo>, Token, &mut TokenStream) -> PResult,
         ts: &mut TokenStream,
     ) -> PResult {
         match self {
@@ -39,14 +39,12 @@ pub trait ParserCombinator<R> {
     fn pif_then(
         &self,
         cond: Vec<Lex>,
-        f: fn(PNode, Token, &mut TokenStream) -> R,
+        f: fn(Expression<ParserInfo>, Token, &mut TokenStream) -> R,
         ts: &mut TokenStream,
     ) -> R;
 }
 
-pub type PNode = Expression<ParserInfo>;
-
-impl PNode {
+impl Expression<ParserInfo> {
     pub fn new_yield(line: u32, coroutine_value: Box<Self>) -> PResult {
         let i = line; //ParserInfo{l: line};
         Ok(Some(Expression::Yield(i, coroutine_value)))

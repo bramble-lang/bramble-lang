@@ -22,7 +22,7 @@ use braid_lang::result::Result;
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::pnode::{PNode, PResult, ParserCombinator, ParserInfo};
+use super::pnode::{PResult, ParserCombinator, ParserInfo};
 use super::tokenstream::TokenStream;
 
 type ParserResult<T> = Result<Option<T>>;
@@ -425,7 +425,7 @@ fn binary_op(
             Some(op) => {
                 let right = binary_op(stream, test, left_pattern)?
                     .ok_or(format!("L{}: expected expression after {}", op.l, op.s))?;
-                PNode::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
+                Expression::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
             }
             None => Ok(Some(left)),
         },
@@ -439,7 +439,7 @@ fn negate(stream: &mut TokenStream) -> PResult {
         Some(op) => {
             let factor =
                 negate(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
-            PNode::unary_op(op.l, &op.s, Box::new(factor))
+            Expression::unary_op(op.l, &op.s, Box::new(factor))
         }
         None => member_access(stream),
     }
@@ -554,7 +554,7 @@ fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> 
 }
 
 /// LPAREN [EXPRESSION [, EXPRESSION]*] RPAREN
-fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<PNode>> {
+fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<Expression<ParserInfo>>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -578,7 +578,7 @@ fn routine_call_params(stream: &mut TokenStream) -> ParserResult<Vec<PNode>> {
     }
 }
 
-fn struct_init_params(stream: &mut TokenStream) -> ParserResult<Vec<(String, PNode)>> {
+fn struct_init_params(stream: &mut TokenStream) -> ParserResult<Vec<(String, Expression<ParserInfo>)>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
@@ -640,7 +640,7 @@ fn co_yield(stream: &mut TokenStream) -> PResult {
         Some(token) => {
             let line = token.l;
             match expression(stream)? {
-                Some(coroutine) => PNode::new_yield(*coroutine.get_metadata(), Box::new(coroutine)),
+                Some(coroutine) => Expression::new_yield(*coroutine.get_metadata(), Box::new(coroutine)),
                 None => Err(format!("L{}: expected an identifier after yield", line)),
             }
         }
@@ -713,7 +713,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserInfo>> {
                 "L{}: expected expression on LHS of assignment",
                 tokens[2].l
             ))?;
-            //PNode::new_mutate(tokens[0].l, &id, Box::new(exp))
+            //Expression::new_mutate(tokens[0].l, &id, Box::new(exp))
             Ok(Some(Mutate::new(tokens[0].l, &id, exp)))
         }
     }
@@ -870,7 +870,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     Ok(ty)
 }
 
-fn id_declaration(stream: &mut TokenStream) -> ParserResult<PNode> {
+fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {
@@ -1220,7 +1220,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I32);
                 assert_eq!(b.is_mutable(), false);
-                assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1241,7 +1241,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I32);
                 assert_eq!(b.is_mutable(), true);
-                assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1259,7 +1259,7 @@ pub mod tests {
         match stm {
             Statement::Mutate(box m) => {
                 assert_eq!(m.get_id(), "x");
-                assert_eq!(*m.get_rhs(), PNode::Integer(1, 5));
+                assert_eq!(*m.get_rhs(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1277,7 +1277,7 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Printiln(box p) => {
-                assert_eq!(*p.get_value(), PNode::Integer(1, 5));
+                assert_eq!(*p.get_value(), Expression::Integer(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1295,7 +1295,7 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Printbln(box p) => {
-                assert_eq!(*p.get_value(), PNode::Boolean(1, true));
+                assert_eq!(*p.get_value(), Expression::Boolean(1, true));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1313,7 +1313,7 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Prints(box p) => {
-                assert_eq!(*p.get_value(), PNode::StringLiteral(1, "hello".into()));
+                assert_eq!(*p.get_value(), Expression::StringLiteral(1, "hello".into()));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1852,7 +1852,7 @@ pub mod tests {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x");
                     assert_eq!(b.get_type(), Type::I32);
-                    assert_eq!(*b.get_rhs(), PNode::Integer(1, 5));
+                    assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
             }

@@ -10,7 +10,7 @@ use crate::{
         ty::Type,
     },
 };
-use crate::{parser::pnode::PNode, syntax::statement::Statement};
+use crate::syntax::statement::Statement;
 use crate::{
     semantics::symbol_table::*,
     syntax::statement::{
@@ -83,7 +83,7 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_parser_ast(&mut self, ast: &PNode) -> Result<Box<SemanticNode>> {
+    pub fn from_parser_ast(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
         use Expression::*;
         let node = match ast {
             Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
