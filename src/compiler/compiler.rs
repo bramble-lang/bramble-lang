@@ -69,7 +69,6 @@ impl From<&str> for TargetOS {
 }
 
 pub struct Compiler<'a> {
-    code: Vec<Inst>,
     scope: ScopeStack<'a>,
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
@@ -88,7 +87,6 @@ impl<'a> Compiler<'a> {
         let extern_functions = Compiler::configure_extern_functionss(target_os);
 
         let mut compiler = Compiler {
-            code: vec![],
             scope: ScopeStack::new(),
             string_pool,
             root: &compiler_ast,
