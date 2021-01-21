@@ -19,6 +19,7 @@ function run_test() {
             gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         else
+            # If we can't figure out the OS, then just try the Linux build steps
             nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
             gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
