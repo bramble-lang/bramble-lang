@@ -5,32 +5,21 @@ function run_test() {
     rm -f ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
-    echo "Running Braid Compiler"
     ../target/debug/braid-lang -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
-    echo "Finished Compiling"
 
     # If there were no compilation errors then run the assembler and linker
-    if [ $? -eq 0 ]
+    if [ -f "./target/output.asm" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            echo "Running nasm for ${OSTYPE}"
             nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-
-            echo "Running gcc for ${OSTYPE}"
             gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            echo "Running nasm for ${OSTYPE}"
             nasm -g -f macho64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-            
-            echo "Running gcc for ${OSTYPE}"
             gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         else
-            echo "Running nasm for Unknown OS (${OSTYPE}), defaulting to Linux"
             nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-
-            echo "Running gcc for Unknown OS (${OSTYPE}), defaulting to Linux"
             gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         fi
