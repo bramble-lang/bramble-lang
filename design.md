@@ -261,4 +261,12 @@ with yield returns in one way or another) but does not require knowledge of the 
 
 Follow ups:
 1. The language Wren supports this behavior in functions called by coroutines, take a look at its semantics and
-see what it does to resolve this problem.
+see what it does to resolve this problem.  Is Wren dynamically typed? That would explain how it could solve this
+problem.
+2. Look into Stackless vs. Stackful coroutines: https://blog.varunramesh.net/posts/stackless-vs-stackful-coroutines/
+3. Lua also supports coroutines: https://www.lua.org/pil/9.1.html
+
+Additionally, is there a type concept I can come up with to differentiate between functions and coroutines?
+How do they differ?  I think a lot will depend on how I implement coroutines: if I can pass data to and from
+at the call point, then the type will need to capture that.  Likewise, if functions can yield when inside a
+coroutine maybe that will need to be captured
