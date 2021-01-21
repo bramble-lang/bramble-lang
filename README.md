@@ -2,7 +2,47 @@
 A language I am creating as a learning tool.
 
 ## Building the Compiler
+### Docker
+To aid with development on other machines, there is a Docker configuration that
+will spin up a container and build Braid and run the unit and Braid tests. The
+container is configured to use Fedora as the build environment.
+
+To run Braid using the Docker container:
+
+1. Build the Docker image (This only needs to be done once to configure
+the Fedora image and install the Rust toolchain)
+```
+docker build -t braid-compiler -f ./docker/linux/Dockerfile .
+```
+This will build a Docker image defined in `./docker/linux/Dockerfile/ with
+the root of the Braid repository directory as the context.
+2. Run the image and open an interactive shell:
+```
+docker run -it braid-compiler:latest bash
+```
+3. Run the unit tests:
+```
+cargo test
+```
+4. Run the Braid tests (integration tests that compile and run Braid code):
+```
+cd ./test
+./test.sh
+```
+5. From here, everything is setup and working and you can run the Braid
+compiler here.
+
+### Locally
 1. You will need to install Rust and Cargo: https://www.rust-lang.org/tools/install
+2. Braid needs the `nightly` toolchain to build, so after Rust has been installed
+go to the Braid repo directory and run:
+```
+rustup default nightly
+```
+3. Build Braid by running:
+```
+cargo build
+```
 
 ## Compiling a Braid File
 Right now, the Braid compiler only generates x64 assembly output. There are two
