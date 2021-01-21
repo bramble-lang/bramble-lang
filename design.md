@@ -264,7 +264,8 @@ Follow ups:
 see what it does to resolve this problem.  Is Wren dynamically typed? That would explain how it could solve this
 problem.
 2. Look into Stackless vs. Stackful coroutines: https://blog.varunramesh.net/posts/stackless-vs-stackful-coroutines/
-3. Lua also supports coroutines: https://www.lua.org/pil/9.1.html
+3. Lua also supports coroutines: https://www.lua.org/pil/9.1.html.  Lua's docs on coroutines seems very well
+written and informative about coroutines, worth my time to read it.
 
 Additionally, is there a type concept I can come up with to differentiate between functions and coroutines?
 How do they differ?  I think a lot will depend on how I implement coroutines: if I can pass data to and from
