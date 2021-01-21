@@ -223,3 +223,31 @@ The other is to just wholesale convert the compiler to use x64.
 The biggest drawback of the first option is that I have to change the ABI for C interop in 64 bit (it uses registers instead of the stack) and doing
 that in a converter would be a pain in the ass.  The other question is why support 32bit right now?  All my dev work and everyone I know would be using
 64bit machines and to support multiple platforms I would rather hop over to LLVM and to implement an IL layer.
+
+# 2021-01-21
+## Thoughts about Coroutines
+I have a goal to update the language to allow for `yield` to work even when called within a function that is in
+the call stack of a coroutine.  For example, let `c` be a coroutine and `main` and `f` be functions; `main`
+yields to `c`, then `c` calls `f`, then `f` does `yret`: this would behave just as if `yret` was called in `c`,
+control is yielded back to `main` and if main calls `yield c` again, then execution would resume in `f` immediately,
+after the `yret`. If `yret` is invoked by `f` but is _not_ in the call stack of a coroutine, then it will behave exactly as if 
+it were invoking a `return`.
+
+This raises a question about semantics when handling communication between routine primitives.  Currently,
+`yret` takes a value which matches the coroutine's return type and returns that value along with control to
+the invoker (in the example, `main`).  But this assumes and requires the return type to be defined and to be
+consistent: the invoker needs to know what type will be returned by a yield so that it can allocate storage
+and properly compile and work with the value returned.  
+
+But then this would mean that `f` maintain the same type requirement when it invokes `yret`. How could `f` possibly
+know the `yret` type of the coroutine which called it?  In addition, for `yret` to behave like `return` when `f` is
+not in the callstack of a coroutine its type must match the defined return type of `f`. This creates a knowledge requirement
+where the User must be aware of the internal workings of `f` when writing `c`, and, when writing `f` they must be
+either aware or prescient about the internal workings of any calling coroutine.
+
+There are at least two possible ways forward that I can think of:
+1. The Semantic Analysis will only let a coroutine, `c`, call a function, `f`, which invokes `yret` if the
+return type of `f` matches the return type of `c`.  And it is a gobal rule that `yret` must match the return
+type of the containing function.
+2. There is a different primitive for communication between routine primitives and coroutines which allows for
+asymetric knowledge of code implementations.  E.g. channels in Go.
