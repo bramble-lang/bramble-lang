@@ -9,7 +9,8 @@ container is configured to use Fedora as the build environment.
 
 To run Braid using the Docker container:
 
-1. Build the Docker image
+1. Build the Docker image (This only needs to be done once to configure
+the Fedora image and install the Rust toolchain)
 ```
 docker build -t braid-compiler -f ./docker/linux/Dockerfile .
 ```
