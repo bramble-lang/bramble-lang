@@ -251,3 +251,14 @@ return type of `f` matches the return type of `c`.  And it is a gobal rule that 
 type of the containing function.
 2. There is a different primitive for communication between routine primitives and coroutines which allows for
 asymetric knowledge of code implementations.  E.g. channels in Go.
+3. `yret` can only be used in a coroutine, but coroutines can be called as functions or birthed as coroutines.
+If called as a function, then its return type must match the caller coroutines return type, if called within
+a coroutine (if called within a function it does not matter).  If created as a coroutine, then it behaves as
+coroutines currently do: `yret` returns the line immediately following the `yield` in the routine (function or
+coroutine) which invoked the yield.  This satisfies the asymetric knowledge requirement as the fact that a `yret`
+may exist is now explicit in the definitin of the routine (if its a coroutine then you must be prepared to deal
+with yield returns in one way or another) but does not require knowledge of the internal implementation.
+
+Follow ups:
+1. The language Wren supports this behavior in functions called by coroutines, take a look at its semantics and
+see what it does to resolve this problem.
