@@ -1,0 +1,11 @@
+FROM alpine
+
+RUN apk add --no-cache gcc diffutils vim g++ make wget curl
+RUN mkdir downloads
+RUN cd downloads; wget https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/nasm-2.15.05.tar.xz && tar -xf nasm-2.15.05.tar.xz && cd nasm-2.15.05 && ./configure --prefix=/usr && make && make install
+
+ADD ./ /
+WORKDIR /
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
+ENV PATH=${PATH}:/root/.cargo/bin
