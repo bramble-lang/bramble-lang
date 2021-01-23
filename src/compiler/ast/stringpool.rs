@@ -194,7 +194,7 @@ mod test {
     use crate::{diagnostics::config::TracingConfig, type_check};
     
     use super::*;
-    use super::super::ast::CompilerNode;
+    use super::super::ast::memory_layout;
 
     #[test]
     fn insert_string() {
@@ -249,7 +249,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let (compiler_ast, ..) = CompilerNode::from(&module).unwrap();
+            let (compiler_ast, ..) = memory_layout::from(&module).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from_module(&compiler_ast);
 

@@ -17,7 +17,7 @@ use crate::{semantics::semanticnode::SemanticNode, syntax::expression::Expressio
 use braid_lang::result::Result;
 
 
-pub mod CompilerNode {
+pub mod memory_layout {
     use super::*;
 
     pub fn from(ast: &Module<SemanticAnnotations>) -> Result<(Module<Scope>, ResolvedStructTable)> {
@@ -115,7 +115,7 @@ pub mod CompilerNode {
         let mut nbody = vec![];
         let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
-            let (e, layout) = CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
+            let (e, layout) = memory_layout::compute_layouts_for_statement(e, nlayout, struct_table);
             nlayout = layout;
             nbody.push(e);
         }
@@ -190,7 +190,7 @@ pub mod CompilerNode {
     ) -> (Bind<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(bind.get_annotations(), struct_table, layout);
         let (rhs, layout) =
-            CompilerNode::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
+            memory_layout::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
         (
             Bind::new(
                 annotations,
@@ -210,7 +210,7 @@ pub mod CompilerNode {
     ) -> (Mutate<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(mutate.get_annotations(), struct_table, layout);
         let (rhs, layout) =
-            CompilerNode::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
+            memory_layout::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(annotations, mutate.get_id(), rhs), layout)
     }
 
@@ -221,7 +221,7 @@ pub mod CompilerNode {
     ) -> (Printi<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            memory_layout::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printi::new(annotations, value), layout)
     }
 
@@ -232,7 +232,7 @@ pub mod CompilerNode {
     ) -> (Printiln<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            memory_layout::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printiln::new(annotations, value), layout)
     }
 
@@ -243,7 +243,7 @@ pub mod CompilerNode {
     ) -> (Printbln<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            memory_layout::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printbln::new(annotations, value), layout)
     }
 
@@ -254,7 +254,7 @@ pub mod CompilerNode {
     ) -> (Prints<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            memory_layout::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Prints::new(annotations, value), layout)
     }
 
@@ -268,7 +268,7 @@ pub mod CompilerNode {
             None => (YieldReturn::new(annotations, None), layout),
             Some(val) => {
                 let (value, layout) =
-                    CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
+                    memory_layout::compute_layouts_for_expression(val, layout, struct_table);
                 (YieldReturn::new(annotations, Some(value)), layout)
             }
         }
@@ -284,7 +284,7 @@ pub mod CompilerNode {
             None => (Return::new(annotations, None), layout),
             Some(val) => {
                 let (value, layout) =
-                    CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
+                    memory_layout::compute_layouts_for_expression(val, layout, struct_table);
                 (Return::new(annotations, Some(value)), layout)
             }
         }
@@ -412,8 +412,8 @@ pub mod CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (Expression<Scope>, LayoutData) {
         if let Expression::BinaryOp(m, op, l, r) = bin_op {
-            let (l, layout) = CompilerNode::compute_layouts_for_expression(l, layout, struct_table);
-            let (r, layout) = CompilerNode::compute_layouts_for_expression(r, layout, struct_table);
+            let (l, layout) = memory_layout::compute_layouts_for_expression(l, layout, struct_table);
+            let (r, layout) = memory_layout::compute_layouts_for_expression(r, layout, struct_table);
             let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             (
                 Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
@@ -432,11 +432,11 @@ pub mod CompilerNode {
         if let SemanticNode::If(m, cond, tb, fb) = if_exp {
             let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             let (cond, layout) =
-                CompilerNode::compute_layouts_for_expression(cond, layout, struct_table);
+                memory_layout::compute_layouts_for_expression(cond, layout, struct_table);
             let (tb, layout) =
-                CompilerNode::compute_layouts_for_expression(tb, layout, struct_table);
+                memory_layout::compute_layouts_for_expression(tb, layout, struct_table);
             let (fb, layout) =
-                CompilerNode::compute_layouts_for_expression(fb, layout, struct_table);
+                memory_layout::compute_layouts_for_expression(fb, layout, struct_table);
             (
                 Expression::If(annotations, Box::new(cond), Box::new(tb), Box::new(fb)),
                 layout,
@@ -570,7 +570,7 @@ mod ast_tests {
             0,
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(
+        let cn = memory_layout::compute_layouts_for_expression(
             &sn,
             LayoutData::new(8),
             &empty_struct_table,
@@ -599,7 +599,7 @@ mod ast_tests {
             0,
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(
+        let cn = memory_layout::compute_layouts_for_expression(
             &sn,
             LayoutData::new(8),
             &empty_struct_table,
@@ -652,7 +652,7 @@ mod ast_tests {
             Box::new(sn2),
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(
+        let cn = memory_layout::compute_layouts_for_expression(
             &snmul,
             LayoutData::new(8),
             &empty_struct_table,
@@ -701,7 +701,7 @@ mod ast_tests {
             None,
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(
+        let cn = memory_layout::compute_layouts_for_expression(
             &sn,
             LayoutData::new(0),
             &empty_struct_table,
@@ -751,7 +751,7 @@ mod ast_tests {
             Some(Box::new(sn)),
         );
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_expression(
+        let cn = memory_layout::compute_layouts_for_expression(
             &sn,
             LayoutData::new(0),
             &empty_struct_table,
@@ -801,7 +801,7 @@ mod ast_tests {
         let mut module = Module::new("root", SemanticAnnotations::new(1, 1, Type::Unit));
         module.add_function(sn).unwrap();
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_layouts_for_module(
+        let cn = memory_layout::compute_layouts_for_module(
             &module,
             LayoutData::new(0),
             &empty_struct_table,
@@ -881,10 +881,10 @@ mod ast_tests {
         };
 
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-        let cn = CompilerNode::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
+        let cn = memory_layout::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
-            CompilerNode::RoutineDef {
+            memory_layout::RoutineDef {
                 annotations,
                 def: RoutineDefType::Function,
                 body,
@@ -897,7 +897,7 @@ mod ast_tests {
                 assert_eq!(annotations.symbols.table["y"].offset, 8);
 
                 match body.iter().nth(0) {
-                    Some(CompilerNode::RoutineDef {
+                    Some(memory_layout::RoutineDef {
                         annotations,
                         def: RoutineDefType::Function,
                         ..
@@ -936,7 +936,7 @@ mod ast_tests {
         };
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn =
-            CompilerNode::compute_layouts_for_routine(&sn, LayoutData::new(0), &empty_struct_table);
+            memory_layout::compute_layouts_for_routine(&sn, LayoutData::new(0), &empty_struct_table);
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             RoutineDef {

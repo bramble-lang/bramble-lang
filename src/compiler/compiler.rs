@@ -3,7 +3,7 @@ use std::collections::HashMap;
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::compiler::ast::ast::CompilerNode;
+use crate::compiler::ast::ast::memory_layout;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
 use crate::compiler::ast::stack::ScopeStack;
@@ -79,7 +79,7 @@ pub struct Compiler<'a> {
 impl<'a> Compiler<'a> {
     pub fn compile(module: Module<SemanticAnnotations>, target_os: TargetOS) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, struct_table) = CompilerNode::from(&module).unwrap();
+        let (compiler_ast, struct_table) = memory_layout::from(&module).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
