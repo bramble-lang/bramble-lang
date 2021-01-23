@@ -355,8 +355,8 @@ impl<'a> Compiler<'a> {
     fn handle_binary_operands(
         &mut self,
         op: BinaryOperator,
-        left: &'a CompilerNode,
-        right: &'a CompilerNode,
+        left: &'a Expression<Scope>,
+        right: &'a Expression<Scope>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
@@ -421,7 +421,7 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn push_scope(&mut self, ast: &'a CompilerNode) {
+    fn push_scope(&mut self, ast: &'a Expression<Scope>) {
         self.scope.push(ast.get_annotations())
     }
 
@@ -431,7 +431,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_expression(
         &mut self,
-        ast: &'a CompilerNode,
+        ast: &'a Expression<Scope>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -901,7 +901,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         current_func: &String,
         code: &mut Vec<Inst>,
-        src: &'a CompilerNode,
+        src: &'a Expression<Scope>,
         member: &str,
     ) -> Result<(), String> {
         let src_ty = src.get_annotations().ty();
@@ -953,7 +953,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         current_func: &String,
         struct_name: &Path,
-        field_values: &'a Vec<(String, CompilerNode)>,
+        field_values: &'a Vec<(String, Expression<Scope>)>,
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
@@ -1006,7 +1006,7 @@ impl<'a> Compiler<'a> {
 
     fn bind_member(
         &mut self,
-        fvalue: &'a CompilerNode,
+        fvalue: &'a Expression<Scope>,
         current_func: &String,
         dst: Reg64,
         dst_offset: i32,
@@ -1049,7 +1049,7 @@ impl<'a> Compiler<'a> {
 
     fn bind(
         &mut self,
-        value: &'a CompilerNode,
+        value: &'a Expression<Scope>,
         current_func: &String,
         dst: Reg64,
         dst_offset: i32,
@@ -1088,7 +1088,7 @@ impl<'a> Compiler<'a> {
     fn yield_exp(
         &mut self,
         meta: &'a Scope,
-        exp: &'a CompilerNode,
+        exp: &'a Expression<Scope>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1119,7 +1119,7 @@ impl<'a> Compiler<'a> {
     fn yield_return(
         &mut self,
         meta: &'a Scope,
-        exp: &'a Option<CompilerNode>,
+        exp: &'a Option<Expression<Scope>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1148,7 +1148,7 @@ impl<'a> Compiler<'a> {
 
     fn return_exp(
         &mut self,
-        exp: &'a Option<CompilerNode>,
+        exp: &'a Option<Expression<Scope>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1188,7 +1188,7 @@ impl<'a> Compiler<'a> {
 
     fn return_exp_temp(
         &mut self,
-        exp: &'a Option<Box<CompilerNode>>,
+        exp: &'a Option<Box<Expression<Scope>>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1355,7 +1355,7 @@ impl<'a> Compiler<'a> {
 
     fn evaluate_routine_params(
         &mut self,
-        params: &'a Vec<CompilerNode>,
+        params: &'a Vec<Expression<Scope>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1370,7 +1370,7 @@ impl<'a> Compiler<'a> {
 
     fn move_routine_params_into_registers(
         &mut self,
-        params: &'a Vec<CompilerNode>,
+        params: &'a Vec<Expression<Scope>>,
         param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before
