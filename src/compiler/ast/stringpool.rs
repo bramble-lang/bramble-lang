@@ -1,9 +1,10 @@
+use crate::expression::Expression;
 use std::collections::HashMap;
+
 
 use module::Module;
 
 use crate::{
-    compiler::ast::ast::CompilerNode,
     syntax::{
         module::{self, Item},
         routinedef::RoutineDef,
@@ -49,7 +50,7 @@ impl StringPool {
 
     /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
-    pub fn extract_from(&mut self, ast: &CompilerNode) {
+    pub fn extract_from(&mut self, ast: &Expression<Scope>) {
         use crate::expression::Expression::*;
 
         match ast {
@@ -187,11 +188,13 @@ impl StringPool {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
     use crate::{diagnostics::config::TracingConfig, type_check};
+    
+    use super::*;
+    use super::super::memory_layout::memory_layout;
 
     #[test]
     fn insert_string() {
@@ -246,7 +249,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let (compiler_ast, ..) = CompilerNode::from(&module).unwrap();
+            let (compiler_ast, ..) = memory_layout::from(&module).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from_module(&compiler_ast);
 

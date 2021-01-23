@@ -20,6 +20,21 @@ impl LayoutData {
     }
 }
 
+/**
+ * For every node in the AST, this models the scope of what symbols are
+ * available to a node and all children of that node. The `level` of the
+ * scope dictates its semantic role in determing whether the symbols in
+ * its parents are available.
+ * 
+ * There are three types of scopes: Local, Routine, and Module.  For a
+ * specific node that has a local scope, it can traverse its ancestors
+ * and use symbols that are in its scope up to and including the Routine
+ * level, and then it cannot access any variables above that node.
+ * 
+ * Routine Scopes will also track the amount of space which must be allocated
+ * for the routine's stackframe (in order to store all parameters and
+ * local variables).
+ */
 #[derive(Debug, PartialEq)]
 pub struct Scope {
     pub(super) id: u32,
@@ -51,7 +66,6 @@ impl Scope {
         Scope::new(
             id,
             Level::Routine {
-                next_label: 0,
                 allocation: 0,
                 routine_type,
             },
@@ -198,7 +212,6 @@ impl std::fmt::Display for Scope {
 pub enum Level {
     Local,
     Routine {
-        next_label: i32,
         allocation: i32,
         routine_type: RoutineDefType,
     },
@@ -221,12 +234,11 @@ impl std::fmt::Display for Level {
         match self {
             Level::Local => f.write_str("Local"),
             Level::Routine {
-                next_label,
                 allocation,
                 routine_type,
             } => f.write_fmt(format_args!(
-                "Routine: [Type: {}, Next Label: {}, Allocation: {}]",
-                routine_type, next_label, allocation
+                "Routine: [Type: {}, Allocation: {}]",
+                routine_type, allocation
             )),
             Level::Module { name } => f.write_fmt(format_args!("Module: {}", name)),
         }

@@ -67,10 +67,11 @@ impl std::fmt::Display for ScopeStack<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::expression::Expression;
+use super::*;
     use crate::syntax::ty::Type;
     use crate::{
-        compiler::ast::{ast::CompilerNode, scope::Scope},
+        compiler::ast::{scope::Scope},
         syntax::{module, routinedef::RoutineDef},
     };
 
@@ -78,7 +79,7 @@ mod tests {
     fn test_find_symbol_in_current_scope() {
         let mut scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         scope.insert("x", 4, 4);
-        let node = CompilerNode::ExpressionBlock(scope, vec![], None);
+        let node = Expression::ExpressionBlock(scope, vec![], None);
         let mut stack = ScopeStack::new();
         stack.push(&node.get_annotations());
 
@@ -94,10 +95,10 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
         let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
 
         let sym = stack.find("x").unwrap();
@@ -112,11 +113,11 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 16);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
 
         let sym = stack.find("x").unwrap();
@@ -131,10 +132,10 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
         let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
 
         assert_eq!(stack.find("y").is_none(), true);
@@ -146,13 +147,12 @@ mod tests {
 
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("nope", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
 
         let mut fun_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
@@ -173,7 +173,7 @@ mod tests {
 
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
 
         assert_eq!(stack.find("x").is_some(), true);
@@ -188,7 +188,6 @@ mod tests {
         let mut fun_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
@@ -215,7 +214,6 @@ mod tests {
         let fun2_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 0,
                 routine_type: RoutineDefType::Function,
             },
@@ -242,7 +240,6 @@ mod tests {
         let mut cor_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Coroutine,
             },
@@ -270,7 +267,6 @@ mod tests {
         let fun2_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 0,
                 routine_type: RoutineDefType::Coroutine,
             },
