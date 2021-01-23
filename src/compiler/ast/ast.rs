@@ -23,7 +23,7 @@ impl CompilerNode {
         let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
         let struct_table = unresolved_struct_table.resolve()?;
         let (compiler_ast, _) =
-            CompilerNode::compute_layouts_for_module(ast, LayoutData::new(0), &struct_table);
+            Self::compute_layouts_for_module(ast, LayoutData::new(0), &struct_table);
         Ok((compiler_ast, struct_table))
     }
 
@@ -114,7 +114,7 @@ impl CompilerNode {
         let mut nbody = vec![];
         let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
-            let (e, layout) = CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
+            let (e, layout) = Self::compute_layouts_for_statement(e, nlayout, struct_table);
             nlayout = layout;
             nbody.push(e);
         }
@@ -189,7 +189,7 @@ impl CompilerNode {
     ) -> (Bind<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(bind.get_annotations(), struct_table, layout);
         let (rhs, layout) =
-            CompilerNode::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
+            Self::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
         (
             Bind::new(
                 annotations,
@@ -209,7 +209,7 @@ impl CompilerNode {
     ) -> (Mutate<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(mutate.get_annotations(), struct_table, layout);
         let (rhs, layout) =
-            CompilerNode::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
+            Self::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(annotations, mutate.get_id(), rhs), layout)
     }
 
@@ -220,7 +220,7 @@ impl CompilerNode {
     ) -> (Printi<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            Self::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printi::new(annotations, value), layout)
     }
 
@@ -231,7 +231,7 @@ impl CompilerNode {
     ) -> (Printiln<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            Self::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printiln::new(annotations, value), layout)
     }
 
@@ -242,7 +242,7 @@ impl CompilerNode {
     ) -> (Printbln<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            Self::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printbln::new(annotations, value), layout)
     }
 
@@ -253,7 +253,7 @@ impl CompilerNode {
     ) -> (Prints<Scope>, LayoutData) {
         let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
-            CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
+            Self::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Prints::new(annotations, value), layout)
     }
 
@@ -267,7 +267,7 @@ impl CompilerNode {
             None => (YieldReturn::new(annotations, None), layout),
             Some(val) => {
                 let (value, layout) =
-                    CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
+                    Self::compute_layouts_for_expression(val, layout, struct_table);
                 (YieldReturn::new(annotations, Some(value)), layout)
             }
         }
@@ -283,7 +283,7 @@ impl CompilerNode {
             None => (Return::new(annotations, None), layout),
             Some(val) => {
                 let (value, layout) =
-                    CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
+                    Self::compute_layouts_for_expression(val, layout, struct_table);
                 (Return::new(annotations, Some(value)), layout)
             }
         }
@@ -352,7 +352,7 @@ impl CompilerNode {
             let mut nbody = vec![];
             for e in body.iter() {
                 let (e, layout) =
-                    CompilerNode::compute_layouts_for_statement(e, nlayout, struct_table);
+                    Self::compute_layouts_for_statement(e, nlayout, struct_table);
                 nlayout = layout;
                 nbody.push(e);
             }
@@ -360,12 +360,12 @@ impl CompilerNode {
                 None => (None, nlayout),
                 Some(fe) => {
                     let (fe, ld) =
-                        CompilerNode::compute_layouts_for_expression(fe, nlayout, struct_table);
+                        Self::compute_layouts_for_expression(fe, nlayout, struct_table);
                     (Some(Box::new(fe)), ld)
                 }
             };
             (
-                CompilerNode::ExpressionBlock(annotations, nbody, final_exp),
+                Self::ExpressionBlock(annotations, nbody, final_exp),
                 nlayout,
             )
         } else {
@@ -411,8 +411,8 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         if let Expression::BinaryOp(m, op, l, r) = bin_op {
-            let (l, layout) = CompilerNode::compute_layouts_for_expression(l, layout, struct_table);
-            let (r, layout) = CompilerNode::compute_layouts_for_expression(r, layout, struct_table);
+            let (l, layout) = Self::compute_layouts_for_expression(l, layout, struct_table);
+            let (r, layout) = Self::compute_layouts_for_expression(r, layout, struct_table);
             let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             (
                 Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
@@ -431,11 +431,11 @@ impl CompilerNode {
         if let SemanticNode::If(m, cond, tb, fb) = if_exp {
             let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             let (cond, layout) =
-                CompilerNode::compute_layouts_for_expression(cond, layout, struct_table);
+                Self::compute_layouts_for_expression(cond, layout, struct_table);
             let (tb, layout) =
-                CompilerNode::compute_layouts_for_expression(tb, layout, struct_table);
+                Self::compute_layouts_for_expression(tb, layout, struct_table);
             let (fb, layout) =
-                CompilerNode::compute_layouts_for_expression(fb, layout, struct_table);
+                Self::compute_layouts_for_expression(fb, layout, struct_table);
             (
                 Self::If(annotations, Box::new(cond), Box::new(tb), Box::new(fb)),
                 layout,
@@ -513,7 +513,7 @@ impl CompilerNode {
         let mut layout = layout;
         for item in items.iter() {
             let (c_ast_item, no) =
-                CompilerNode::compute_layouts_for_expression(item, layout, struct_table);
+                Self::compute_layouts_for_expression(item, layout, struct_table);
             layout = no;
             compiler_ast_items.push(c_ast_item);
         }
