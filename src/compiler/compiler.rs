@@ -291,11 +291,11 @@ impl<'a> Compiler<'a> {
                     push %rbp;
                     mov %rbp, %rsp;
                     mov %rsp, [@{next_stack_variable}];
-                    ; "[-8]: The RIP for the coroutine"
-                    ; "[-16]: The ESP for the caller"
-                    ; "[-24]: The EBP for the caller"
-                    ; "[-32]: The caller return address (for yield return)"
-                    ; "[-40]: The coroutine ESP"
+                    ; {format!("[{}]: The RIP for the coroutine", COROUTINE_RIP_STORE)}
+                    ; {format!("[{}]: The RSP for the caller", COROUTINE_CALLER_RSP_STORE)}
+                    ; {format!("[{}]: The RBP for the caller", COROUTINE_CALLER_RBP_STORE)}
+                    ; {format!("[{}]: The caller return address (for yield return)", COROUTINE_CALLER_RIP_STORE)}
+                    ; {format!("[{}]: The coroutine RSP", COROUTINE_RSP_STORE)}
                     mov [%rsp+{COROUTINE_RIP_STORE}], %rax;
                     mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0;
                     mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0;
