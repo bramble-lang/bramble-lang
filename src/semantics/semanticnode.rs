@@ -20,7 +20,7 @@ use crate::{
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SemanticMetadata {
+pub struct SemanticAnnotations {
     pub id: u32,
     pub ln: u32,
     pub ty: Type,
@@ -28,7 +28,7 @@ pub struct SemanticMetadata {
     pub canonical_path: Path,
 }
 
-pub type SemanticNode = Expression<SemanticMetadata>;
+pub type SemanticNode = Expression<SemanticAnnotations>;
 
 impl SemanticNode {
     pub fn get_type(&self) -> &Type {
@@ -37,16 +37,16 @@ impl SemanticNode {
     }
 }
 
-impl Statement<SemanticMetadata> {
+impl Statement<SemanticAnnotations> {
     pub fn get_type(&self) -> &Type {
         let m = self.get_annotations();
         &m.ty
     }
 }
 
-impl SemanticMetadata {
-    pub fn new(id: u32, ln: u32, ty: Type) -> SemanticMetadata {
-        SemanticMetadata {
+impl SemanticAnnotations {
+    pub fn new(id: u32, ln: u32, ty: Type) -> SemanticAnnotations {
+        SemanticAnnotations {
             id,
             ln,
             ty,
@@ -86,8 +86,8 @@ impl SemanticAst {
     pub fn from_module(
         &mut self,
         m: &module::Module<u32>,
-    ) -> Result<module::Module<SemanticMetadata>> {
-        let meta = self.module_semantic_metadata_from(*m.get_annotations(), m.get_name());
+    ) -> Result<module::Module<SemanticAnnotations>> {
+        let meta = self.module_semantic_annotations_from(*m.get_annotations(), m.get_name());
 
         let mut nmodule = module::Module::new(m.get_name(), meta);
         for module in m.get_modules().iter() {
@@ -105,7 +105,7 @@ impl SemanticAst {
         Ok(nmodule)
     }
 
-    fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticMetadata>> {
+    fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticAnnotations>> {
         match m {
             Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(s)),
             Item::Routine(rd) => self.from_routinedef(rd).map(|r| Item::Routine(r)),
@@ -115,9 +115,9 @@ impl SemanticAst {
     fn from_routinedef(
         &mut self,
         rd: &RoutineDef<ParserInfo>,
-    ) -> Result<RoutineDef<SemanticMetadata>> {
+    ) -> Result<RoutineDef<SemanticAnnotations>> {
         let RoutineDef {
-            meta: ln,
+            annotations: ln,
             def,
             name: fname,
             params,
@@ -131,7 +131,7 @@ impl SemanticAst {
             nbody.push(r);
         }
         Ok(RoutineDef {
-            meta: self.semantic_metadata_from(*ln),
+            annotations: self.semantic_annotations_from(*ln),
             def: *def,
             name: fname.clone(),
             params: params.clone(),
@@ -143,7 +143,7 @@ impl SemanticAst {
     fn from_structdef(
         &mut self,
         sd: &StructDef<ParserInfo>,
-    ) -> Result<StructDef<SemanticMetadata>> {
+    ) -> Result<StructDef<SemanticAnnotations>> {
         if sd.get_name().len() == 0 {
             return Err(format!(
                 "Invalid name for StructDef: must not be an empty string"
@@ -156,7 +156,7 @@ impl SemanticAst {
 
         let semantic = StructDef::new(
             sd.get_name().clone(),
-            self.semantic_metadata_from(*sd.get_annotations()),
+            self.semantic_annotations_from(*sd.get_annotations()),
             sd.get_fields().clone(),
         );
 
@@ -166,7 +166,7 @@ impl SemanticAst {
     fn from_statement(
         &mut self,
         statement: &Statement<ParserInfo>,
-    ) -> Result<Statement<SemanticMetadata>> {
+    ) -> Result<Statement<SemanticAnnotations>> {
         use Statement::*;
 
         let inner = match statement {
@@ -184,9 +184,9 @@ impl SemanticAst {
         Ok(inner)
     }
 
-    fn from_bind(&mut self, bind: &Bind<ParserInfo>) -> Result<Bind<SemanticMetadata>> {
+    fn from_bind(&mut self, bind: &Bind<ParserInfo>) -> Result<Bind<SemanticAnnotations>> {
         Ok(Bind::new(
-            self.semantic_metadata_from(*bind.get_annotations()),
+            self.semantic_annotations_from(*bind.get_annotations()),
             bind.get_id(),
             bind.get_type().clone(),
             bind.is_mutable(),
@@ -194,38 +194,38 @@ impl SemanticAst {
         ))
     }
 
-    fn from_mutate(&mut self, mutate: &Mutate<ParserInfo>) -> Result<Mutate<SemanticMetadata>> {
+    fn from_mutate(&mut self, mutate: &Mutate<ParserInfo>) -> Result<Mutate<SemanticAnnotations>> {
         Ok(Mutate::new(
-            self.semantic_metadata_from(*mutate.get_annotations()),
+            self.semantic_annotations_from(*mutate.get_annotations()),
             mutate.get_id(),
             *self.from_expression(mutate.get_rhs())?,
         ))
     }
 
-    fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticMetadata>> {
+    fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticAnnotations>> {
         Ok(Printi::new(
-            self.semantic_metadata_from(*p.get_annotations()),
+            self.semantic_annotations_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
 
-    fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticMetadata>> {
+    fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticAnnotations>> {
         Ok(Printiln::new(
-            self.semantic_metadata_from(*p.get_annotations()),
+            self.semantic_annotations_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
 
-    fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticMetadata>> {
+    fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticAnnotations>> {
         Ok(Printbln::new(
-            self.semantic_metadata_from(*p.get_annotations()),
+            self.semantic_annotations_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
 
-    fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticMetadata>> {
+    fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticAnnotations>> {
         Ok(Prints::new(
-            self.semantic_metadata_from(*p.get_annotations()),
+            self.semantic_annotations_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
@@ -233,27 +233,27 @@ impl SemanticAst {
     fn from_yieldreturn(
         &mut self,
         yr: &YieldReturn<ParserInfo>,
-    ) -> Result<YieldReturn<SemanticMetadata>> {
+    ) -> Result<YieldReturn<SemanticAnnotations>> {
         match yr.get_value() {
             None => Ok(YieldReturn::new(
-                self.semantic_metadata_from(*yr.get_annotations()),
+                self.semantic_annotations_from(*yr.get_annotations()),
                 None,
             )),
             Some(val) => Ok(YieldReturn::new(
-                self.semantic_metadata_from(*yr.get_annotations()),
+                self.semantic_annotations_from(*yr.get_annotations()),
                 Some(*self.from_expression(val)?),
             )),
         }
     }
 
-    fn from_return(&mut self, r: &Return<ParserInfo>) -> Result<Return<SemanticMetadata>> {
+    fn from_return(&mut self, r: &Return<ParserInfo>) -> Result<Return<SemanticAnnotations>> {
         match r.get_value() {
             None => Ok(Return::new(
-                self.semantic_metadata_from(*r.get_annotations()),
+                self.semantic_annotations_from(*r.get_annotations()),
                 None,
             )),
             Some(val) => Ok(Return::new(
-                self.semantic_metadata_from(*r.get_annotations()),
+                self.semantic_annotations_from(*r.get_annotations()),
                 Some(*self.from_expression(val)?),
             )),
         }
@@ -262,53 +262,53 @@ impl SemanticAst {
     fn from_expression(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
         use Expression::*;
         let node = match ast {
-            Integer(ln, val) => Ok(Box::new(Integer(self.semantic_metadata_from(*ln), *val))),
-            Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_metadata_from(*ln), *val))),
+            Integer(ln, val) => Ok(Box::new(Integer(self.semantic_annotations_from(*ln), *val))),
+            Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_annotations_from(*ln), *val))),
             StringLiteral(ln, val) => Ok(Box::new(StringLiteral(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 val.clone(),
             ))),
             CustomType(ln, val) => Ok(Box::new(CustomType(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 val.clone(),
             ))),
             IdentifierDeclare(ln, name, p) => Ok(Box::new(IdentifierDeclare(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 name.clone(),
                 p.clone(),
             ))),
             Identifier(ln, id) => Ok(Box::new(Identifier(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 id.clone(),
             ))),
             Path(ln, path) => Ok(Box::new(Path(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 path.clone(),
             ))),
             MemberAccess(ln, src, member) => Ok(Box::new(MemberAccess(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 self.from_expression(src)?,
                 member.clone(),
             ))),
             BinaryOp(ln, op, ref l, ref r) => Ok(Box::new(BinaryOp(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 *op,
                 self.from_expression(l)?,
                 self.from_expression(r)?,
             ))),
             UnaryOp(ln, op, ref operand) => Ok(Box::new(UnaryOp(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 *op,
                 self.from_expression(operand)?,
             ))),
             If(ln, cond, true_arm, false_arm) => Ok(Box::new(If(
-                self.semantic_metadata_from(*ln),
+                self.semantic_annotations_from(*ln),
                 self.from_expression(cond)?,
                 self.from_expression(true_arm)?,
                 self.from_expression(false_arm)?,
             ))),
             Yield(l, box exp) => Ok(Box::new(Yield(
-                self.semantic_metadata_from(*l),
+                self.semantic_annotations_from(*l),
                 self.from_expression(exp)?,
             ))),
             ExpressionBlock(ln, body, final_exp) => {
@@ -322,7 +322,7 @@ impl SemanticAst {
                     Some(fe) => Some(self.from_expression(fe)?),
                 };
                 Ok(Box::new(ExpressionBlock(
-                    self.semantic_metadata_from(*ln),
+                    self.semantic_annotations_from(*ln),
                     nbody,
                     final_exp,
                 )))
@@ -336,7 +336,7 @@ impl SemanticAst {
                     nparams.push(*np);
                 }
                 Ok(Box::new(RoutineCall(
-                    self.semantic_metadata_from(*l),
+                    self.semantic_annotations_from(*l),
                     *call,
                     name.clone(),
                     nparams,
@@ -349,7 +349,7 @@ impl SemanticAst {
                     nfields.push((fname.clone(), *fvalue2));
                 }
                 Ok(Box::new(StructExpression(
-                    self.semantic_metadata_from(*l),
+                    self.semantic_annotations_from(*l),
                     name.clone(),
                     nfields,
                 )))
@@ -359,21 +359,21 @@ impl SemanticAst {
         node
     }
 
-    fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticMetadata>> {
+    fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticAnnotations>> {
         Ok(Yield::new(
-            self.semantic_metadata_from(*y.get_annotations()),
+            self.semantic_annotations_from(*y.get_annotations()),
             *self.from_expression(y.get_value())?,
         ))
     }
 
-    fn semantic_metadata_from(&mut self, l: u32) -> SemanticMetadata {
-        let sm_data = SemanticMetadata::new(self.next_id, l, Type::Unknown);
+    fn semantic_annotations_from(&mut self, l: u32) -> SemanticAnnotations {
+        let sm_data = SemanticAnnotations::new(self.next_id, l, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn module_semantic_metadata_from(&mut self, ln: u32, name: &str) -> SemanticMetadata {
-        let sm_data = SemanticMetadata {
+    fn module_semantic_annotations_from(&mut self, ln: u32, name: &str) -> SemanticAnnotations {
+        let sm_data = SemanticAnnotations {
             id: self.next_id,
             ln,
             ty: Type::Unknown,
@@ -394,15 +394,15 @@ mod tests {
         for (node, expected) in [
             (
                 Expression::Integer(1, 3),
-                Expression::Integer(SemanticMetadata::new(0, 1, Type::Unknown), 3),
+                Expression::Integer(SemanticAnnotations::new(0, 1, Type::Unknown), 3),
             ),
             (
                 Expression::Boolean(1, true),
-                Expression::Boolean(SemanticMetadata::new(0, 1, Type::Unknown), true),
+                Expression::Boolean(SemanticAnnotations::new(0, 1, Type::Unknown), true),
             ),
             (
                 Expression::Identifier(1, "x".into()),
-                Expression::Identifier(SemanticMetadata::new(0, 1, Type::Unknown), "x".into()),
+                Expression::Identifier(SemanticAnnotations::new(0, 1, Type::Unknown), "x".into()),
             ),
         ]
         .iter()
@@ -419,8 +419,8 @@ mod tests {
             (
                 (Expression::Integer(1, 3), Expression::Integer(1, 3)),
                 (
-                    Expression::Integer(SemanticMetadata::new(1, 1, Type::Unknown), 3),
-                    Expression::Integer(SemanticMetadata::new(2, 1, Type::Unknown), 3),
+                    Expression::Integer(SemanticAnnotations::new(1, 1, Type::Unknown), 3),
+                    Expression::Integer(SemanticAnnotations::new(2, 1, Type::Unknown), 3),
                 ),
             ),
             (
@@ -429,15 +429,15 @@ mod tests {
                     Expression::Identifier(1, "y".into()),
                 ),
                 (
-                    Expression::Identifier(SemanticMetadata::new(1, 1, Type::Unknown), "x".into()),
-                    Expression::Identifier(SemanticMetadata::new(2, 1, Type::Unknown), "y".into()),
+                    Expression::Identifier(SemanticAnnotations::new(1, 1, Type::Unknown), "x".into()),
+                    Expression::Identifier(SemanticAnnotations::new(2, 1, Type::Unknown), "y".into()),
                 ),
             ),
             (
                 (Expression::Boolean(1, true), Expression::Boolean(1, false)),
                 (
-                    Expression::Boolean(SemanticMetadata::new(1, 1, Type::Unknown), true),
-                    Expression::Boolean(SemanticMetadata::new(2, 1, Type::Unknown), false),
+                    Expression::Boolean(SemanticAnnotations::new(1, 1, Type::Unknown), true),
+                    Expression::Boolean(SemanticAnnotations::new(2, 1, Type::Unknown), false),
                 ),
             ),
         ]
@@ -451,7 +451,7 @@ mod tests {
                     Box::new(r.clone()),
                 ),
                 Expression::BinaryOp(
-                    SemanticMetadata::new(0, 1, Type::Unknown),
+                    SemanticAnnotations::new(0, 1, Type::Unknown),
                     BinaryOperator::Mul,
                     Box::new(el.clone()),
                     Box::new(er.clone()),

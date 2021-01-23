@@ -3,7 +3,7 @@ use struct_table::ResolvedStructTable;
 
 use crate::{
     compiler::ast::scope::{LayoutData, Scope},
-    semantics::semanticnode::SemanticMetadata,
+    semantics::semanticnode::SemanticAnnotations,
     syntax::{
         module::{self, Item, Module},
         routinedef::{RoutineDef, RoutineDefType},
@@ -19,7 +19,7 @@ use braid_lang::result::Result;
 pub type CompilerNode = Expression<Scope>;
 
 impl CompilerNode {
-    pub fn from(ast: &Module<SemanticMetadata>) -> Result<(Module<Scope>, ResolvedStructTable)> {
+    pub fn from(ast: &Module<SemanticAnnotations>) -> Result<(Module<Scope>, ResolvedStructTable)> {
         let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
         let struct_table = unresolved_struct_table.resolve()?;
         let (compiler_ast, _) =
@@ -28,14 +28,14 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_module(
-        m: &module::Module<SemanticMetadata>,
+        m: &module::Module<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (module::Module<Scope>, LayoutData) {
-        let (meta, mut layout) =
+        let (annotations, mut layout) =
             Scope::module_from(m.get_annotations(), m.get_name(), struct_table, layout);
 
-        let mut nmodule = module::Module::new(m.get_name(), meta);
+        let mut nmodule = module::Module::new(m.get_name(), annotations);
         for child_module in m.get_modules().iter() {
             let (nchild_module, nlayout) =
                 Self::compute_layouts_for_module(child_module, layout, struct_table);
@@ -58,7 +58,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_items(
-        items: &Vec<Item<SemanticMetadata>>,
+        items: &Vec<Item<SemanticAnnotations>>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Vec<Item<Scope>>, LayoutData) {
@@ -83,7 +83,7 @@ impl CompilerNode {
     }
 
     fn compute_layout_for_structdef(
-        sd: &StructDef<SemanticMetadata>,
+        sd: &StructDef<SemanticAnnotations>,
     ) -> (StructDef<Scope>, LayoutData) {
         let (scope, layout) = Scope::structdef_from(sd.get_annotations());
         (
@@ -93,12 +93,12 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_routine(
-        rd: &RoutineDef<SemanticMetadata>,
+        rd: &RoutineDef<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (RoutineDef<Scope>, LayoutData) {
         let RoutineDef {
-            meta,
+            annotations,
             def,
             name,
             body,
@@ -110,7 +110,7 @@ impl CompilerNode {
             RoutineDefType::Function => 0,
             RoutineDefType::Coroutine => 40,
         };
-        let (mut meta, offset) = Scope::routine_from(meta, def, struct_table, initial_frame_size);
+        let (mut annotations, offset) = Scope::routine_from(annotations, def, struct_table, initial_frame_size);
         let mut nbody = vec![];
         let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
@@ -118,14 +118,14 @@ impl CompilerNode {
             nlayout = layout;
             nbody.push(e);
         }
-        meta.level = Level::Routine {
+        annotations.level = Level::Routine {
             next_label: 0,
             allocation: nlayout.offset,
             routine_type: *def,
         };
         (
             RoutineDef {
-                meta,
+                annotations,
                 def: *def,
                 name: name.clone(),
                 params: params.clone(),
@@ -137,7 +137,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_statement(
-        statement: &Statement<SemanticMetadata>,
+        statement: &Statement<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Statement<Scope>, LayoutData) {
@@ -183,16 +183,16 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_bind(
-        bind: &Bind<SemanticMetadata>,
+        bind: &Bind<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Bind<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(bind.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(bind.get_annotations(), struct_table, layout);
         let (rhs, layout) =
             CompilerNode::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
         (
             Bind::new(
-                meta,
+                annotations,
                 bind.get_id(),
                 bind.get_type().clone(),
                 bind.is_mutable(),
@@ -203,88 +203,88 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_mutate(
-        mutate: &Mutate<SemanticMetadata>,
+        mutate: &Mutate<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Mutate<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(mutate.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(mutate.get_annotations(), struct_table, layout);
         let (rhs, layout) =
             CompilerNode::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
-        (Mutate::new(meta, mutate.get_id(), rhs), layout)
+        (Mutate::new(annotations, mutate.get_id(), rhs), layout)
     }
 
     fn compute_layouts_for_printi(
-        p: &Printi<SemanticMetadata>,
+        p: &Printi<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printi<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
-        (Printi::new(meta, value), layout)
+        (Printi::new(annotations, value), layout)
     }
 
     fn compute_layouts_for_printiln(
-        p: &Printiln<SemanticMetadata>,
+        p: &Printiln<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printiln<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
-        (Printiln::new(meta, value), layout)
+        (Printiln::new(annotations, value), layout)
     }
 
     fn compute_layouts_for_printbln(
-        p: &Printbln<SemanticMetadata>,
+        p: &Printbln<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printbln<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
-        (Printbln::new(meta, value), layout)
+        (Printbln::new(annotations, value), layout)
     }
 
     fn compute_layouts_for_prints(
-        p: &Prints<SemanticMetadata>,
+        p: &Prints<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Prints<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
-        (Prints::new(meta, value), layout)
+        (Prints::new(annotations, value), layout)
     }
 
     fn compute_layouts_for_yieldreturn(
-        yr: &YieldReturn<SemanticMetadata>,
+        yr: &YieldReturn<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (YieldReturn<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(yr.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(yr.get_annotations(), struct_table, layout);
         match yr.get_value() {
-            None => (YieldReturn::new(meta, None), layout),
+            None => (YieldReturn::new(annotations, None), layout),
             Some(val) => {
                 let (value, layout) =
                     CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
-                (YieldReturn::new(meta, Some(value)), layout)
+                (YieldReturn::new(annotations, Some(value)), layout)
             }
         }
     }
 
     fn compute_layouts_for_return(
-        r: &Return<SemanticMetadata>,
+        r: &Return<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Return<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(r.get_annotations(), struct_table, layout);
+        let (annotations, layout) = Scope::local_from(r.get_annotations(), struct_table, layout);
         match r.get_value() {
-            None => (Return::new(meta, None), layout),
+            None => (Return::new(annotations, None), layout),
             Some(val) => {
                 let (value, layout) =
                     CompilerNode::compute_layouts_for_expression(val, layout, struct_table);
-                (Return::new(meta, Some(value)), layout)
+                (Return::new(annotations, Some(value)), layout)
             }
         }
     }
@@ -300,33 +300,33 @@ impl CompilerNode {
                 Self::compute_layouts_for_expression_block(ast, layout, struct_table)
             }
             Expression::Integer(m, i) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::Integer(meta, *i), layout)
+                let (annotations, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::Integer(annotations, *i), layout)
             }
             Expression::Boolean(m, b) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::Boolean(meta, *b), layout)
+                let (annotations, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::Boolean(annotations, *b), layout)
             }
             Expression::StringLiteral(m, s) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::StringLiteral(meta, s.clone()), layout)
+                let (annotations, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::StringLiteral(annotations, s.clone()), layout)
             }
             Expression::CustomType(m, name) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::CustomType(meta, name.clone()), layout)
+                let (annotations, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::CustomType(annotations, name.clone()), layout)
             }
             Expression::Identifier(m, id) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::Identifier(meta, id.clone()), layout)
+                let (annotations, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::Identifier(annotations, id.clone()), layout)
             }
             Path(m, path) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
-                (Expression::Path(meta, path.clone()), layout)
+                let (annotations, layout) = Scope::local_from(m, struct_table, layout);
+                (Expression::Path(annotations, path.clone()), layout)
             }
             Expression::IdentifierDeclare(m, id, p) => {
-                let (meta, layout) = Scope::local_from(m, struct_table, layout);
+                let (annotations, layout) = Scope::local_from(m, struct_table, layout);
                 (
-                    Expression::IdentifierDeclare(meta, id.clone(), p.clone()),
+                    Expression::IdentifierDeclare(annotations, id.clone(), p.clone()),
                     layout,
                 )
             }
@@ -348,7 +348,7 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         if let SemanticNode::ExpressionBlock(m, body, final_exp) = block {
-            let (meta, mut nlayout) = Scope::local_from(m, struct_table, layout);
+            let (annotations, mut nlayout) = Scope::local_from(m, struct_table, layout);
             let mut nbody = vec![];
             for e in body.iter() {
                 let (e, layout) =
@@ -365,7 +365,7 @@ impl CompilerNode {
                 }
             };
             (
-                CompilerNode::ExpressionBlock(meta, nbody, final_exp),
+                CompilerNode::ExpressionBlock(annotations, nbody, final_exp),
                 nlayout,
             )
         } else {
@@ -380,9 +380,9 @@ impl CompilerNode {
     ) -> (CompilerNode, LayoutData) {
         if let Expression::MemberAccess(m, src, member) = access {
             let (src, layout) = Self::compute_layouts_for_expression(src, layout, struct_table);
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             (
-                Expression::MemberAccess(meta, Box::new(src), member.clone()),
+                Expression::MemberAccess(annotations, Box::new(src), member.clone()),
                 layout,
             )
         } else {
@@ -398,8 +398,8 @@ impl CompilerNode {
         if let Expression::UnaryOp(m, op, operand) = un_op {
             let (operand, layout) =
                 Self::compute_layouts_for_expression(operand, layout, struct_table);
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
-            (Expression::UnaryOp(meta, *op, Box::new(operand)), layout)
+            let (annotations, layout) = Scope::local_from(m, struct_table, layout);
+            (Expression::UnaryOp(annotations, *op, Box::new(operand)), layout)
         } else {
             panic!("Expected UnaryOp, but got {:?}", un_op)
         }
@@ -413,9 +413,9 @@ impl CompilerNode {
         if let Expression::BinaryOp(m, op, l, r) = bin_op {
             let (l, layout) = CompilerNode::compute_layouts_for_expression(l, layout, struct_table);
             let (r, layout) = CompilerNode::compute_layouts_for_expression(r, layout, struct_table);
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             (
-                Expression::BinaryOp(meta, *op, Box::new(l), Box::new(r)),
+                Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
                 layout,
             )
         } else {
@@ -429,7 +429,7 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         if let SemanticNode::If(m, cond, tb, fb) = if_exp {
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             let (cond, layout) =
                 CompilerNode::compute_layouts_for_expression(cond, layout, struct_table);
             let (tb, layout) =
@@ -437,7 +437,7 @@ impl CompilerNode {
             let (fb, layout) =
                 CompilerNode::compute_layouts_for_expression(fb, layout, struct_table);
             (
-                Self::If(meta, Box::new(cond), Box::new(tb), Box::new(fb)),
+                Self::If(annotations, Box::new(cond), Box::new(tb), Box::new(fb)),
                 layout,
             )
         } else {
@@ -451,7 +451,7 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         if let SemanticNode::RoutineCall(m, call, name, params) = rc {
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             let mut nlayout = layout;
             let mut nparams = vec![];
             for p in params.iter() {
@@ -460,7 +460,7 @@ impl CompilerNode {
                 nparams.push(np);
             }
             (
-                Self::RoutineCall(meta, *call, name.clone(), nparams),
+                Self::RoutineCall(annotations, *call, name.clone(), nparams),
                 nlayout,
             )
         } else {
@@ -474,9 +474,9 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
         if let Expression::Yield(m, e) = yield_exp {
-            let (meta, layout) = Scope::local_from(m, struct_table, layout);
+            let (annotations, layout) = Scope::local_from(m, struct_table, layout);
             let (e, layout) = Self::compute_layouts_for_expression(e, layout, struct_table);
-            (Expression::Yield(meta, Box::new(e)), layout)
+            (Expression::Yield(annotations, Box::new(e)), layout)
         } else {
             panic!("Expected Yield, but got {:?}", yield_exp)
         }
@@ -487,8 +487,8 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerNode, LayoutData) {
-        if let SemanticNode::StructExpression(meta, struct_name, fields) = se {
-            let (meta, mut nlayout) = Scope::local_from(meta, struct_table, layout);
+        if let SemanticNode::StructExpression(annotations, struct_name, fields) = se {
+            let (annotations, mut nlayout) = Scope::local_from(annotations, struct_table, layout);
             let mut nfields = vec![];
             for (fname, fvalue) in fields.iter() {
                 let (nfv, no) = Self::compute_layouts_for_expression(fvalue, nlayout, struct_table);
@@ -496,7 +496,7 @@ impl CompilerNode {
                 nfields.push((fname.clone(), nfv));
             }
             (
-                Self::StructExpression(meta, struct_name.clone(), nfields),
+                Self::StructExpression(annotations, struct_name.clone(), nfields),
                 nlayout,
             )
         } else {
@@ -554,12 +554,12 @@ mod ast_tests {
         syntax::{expression::BinaryOperator, routinedef::RoutineDef},
     };
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
-    use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
+    use crate::{semantics::semanticnode::SemanticAnnotations, semantics::semanticnode::SemanticNode};
 
     #[test]
     pub fn test_node_id_is_copied() {
         let sn = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 3,
                 ln: 0,
                 ty: Type::I32,
@@ -588,7 +588,7 @@ mod ast_tests {
     #[test]
     pub fn test_integer() {
         let sn = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -619,7 +619,7 @@ mod ast_tests {
     #[test]
     pub fn test_operator() {
         let sn1 = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -629,7 +629,7 @@ mod ast_tests {
             1,
         );
         let sn2 = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 1,
                 ln: 0,
                 ty: Type::I32,
@@ -639,7 +639,7 @@ mod ast_tests {
             2,
         );
         let snmul = SemanticNode::BinaryOp(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 2,
                 ln: 0,
                 ty: Type::I32,
@@ -689,7 +689,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -724,7 +724,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -739,7 +739,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -784,7 +784,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            meta: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -797,7 +797,7 @@ mod ast_tests {
             ty: Type::I32,
             body: vec![],
         };
-        let mut module = Module::new("root", SemanticMetadata::new(1, 1, Type::Unit));
+        let mut module = Module::new("root", SemanticAnnotations::new(1, 1, Type::Unit));
         module.add_function(sn).unwrap();
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_layouts_for_module(
@@ -809,19 +809,19 @@ mod ast_tests {
         let module = cn.0;
         match module.get_item("func") {
             Some(Item::Routine(RoutineDef {
-                meta,
+                annotations,
                 def: RoutineDefType::Function,
                 name,
                 ..
             })) => {
                 assert_eq!(name, "func");
-                assert_eq!(meta.symbols.table.len(), 2);
-                assert_eq!(meta.symbols.table["x"].size, 8);
-                assert_eq!(meta.symbols.table["x"].offset, 8);
-                assert_eq!(meta.symbols.table["y"].size, 8);
-                assert_eq!(meta.symbols.table["y"].offset, 16);
+                assert_eq!(annotations.symbols.table.len(), 2);
+                assert_eq!(annotations.symbols.table["x"].size, 8);
+                assert_eq!(annotations.symbols.table["x"].offset, 8);
+                assert_eq!(annotations.symbols.table["y"].size, 8);
+                assert_eq!(annotations.symbols.table["y"].offset, 16);
 
-                match meta.level {
+                match annotations.level {
                     scope::Level::Routine {
                         next_label,
                         allocation,
@@ -847,7 +847,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            meta: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -865,7 +865,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            meta: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -884,28 +884,28 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             CompilerNode::RoutineDef {
-                meta,
+                annotations,
                 def: RoutineDefType::Function,
                 body,
                 ..
             } => {
-                assert_eq!(meta.symbols.table.len(), 2);
-                assert_eq!(meta.symbols.table["x"].size, 4);
-                assert_eq!(meta.symbols.table["x"].offset, 4);
-                assert_eq!(meta.symbols.table["y"].size, 4);
-                assert_eq!(meta.symbols.table["y"].offset, 8);
+                assert_eq!(annotations.symbols.table.len(), 2);
+                assert_eq!(annotations.symbols.table["x"].size, 4);
+                assert_eq!(annotations.symbols.table["x"].offset, 4);
+                assert_eq!(annotations.symbols.table["y"].size, 4);
+                assert_eq!(annotations.symbols.table["y"].offset, 8);
 
                 match body.iter().nth(0) {
                     Some(CompilerNode::RoutineDef {
-                        meta,
+                        annotations,
                         def: RoutineDefType::Function,
                         ..
                     }) => {
-                        assert_eq!(meta.symbols.table.len(), 2);
-                        assert_eq!(meta.symbols.table["x"].size, 4);
-                        assert_eq!(meta.symbols.table["x"].offset, 4);
-                        assert_eq!(meta.symbols.table["y"].size, 4);
-                        assert_eq!(meta.symbols.table["y"].offset, 8);
+                        assert_eq!(annotations.symbols.table.len(), 2);
+                        assert_eq!(annotations.symbols.table["x"].size, 4);
+                        assert_eq!(annotations.symbols.table["x"].offset, 4);
+                        assert_eq!(annotations.symbols.table["y"].size, 4);
+                        assert_eq!(annotations.symbols.table["y"].offset, 8);
                     }
                     _ => assert!(false),
                 }
@@ -920,7 +920,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            meta: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -939,19 +939,19 @@ mod ast_tests {
         assert_eq!(cn.1.offset, 0);
         match cn.0 {
             RoutineDef {
-                meta,
+                annotations,
                 def: RoutineDefType::Coroutine,
                 name,
                 ..
             } => {
                 assert_eq!(name, "coroutine");
-                assert_eq!(meta.symbols.table.len(), 2);
-                assert_eq!(meta.symbols.table["x"].size, 8);
-                assert_eq!(meta.symbols.table["x"].offset, 48);
-                assert_eq!(meta.symbols.table["y"].size, 8);
-                assert_eq!(meta.symbols.table["y"].offset, 56);
+                assert_eq!(annotations.symbols.table.len(), 2);
+                assert_eq!(annotations.symbols.table["x"].size, 8);
+                assert_eq!(annotations.symbols.table["x"].offset, 48);
+                assert_eq!(annotations.symbols.table["y"].size, 8);
+                assert_eq!(annotations.symbols.table["y"].offset, 56);
 
-                match meta.level {
+                match annotations.level {
                     scope::Level::Routine { allocation, .. } => assert_eq!(allocation, 56),
                     _ => assert!(false),
                 }

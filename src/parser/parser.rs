@@ -252,7 +252,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        meta: fn_line,
+        annotations: fn_line,
         def: RoutineDefType::Function,
         name: fn_name,
         params,
@@ -291,7 +291,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        meta: co_line,
+        annotations: co_line,
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
@@ -881,7 +881,7 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 0);
             if let Item::Routine(RoutineDef {
-                meta,
+                annotations,
                 def: RoutineDefType::Function,
                 name,
                 params,
@@ -889,7 +889,7 @@ pub mod tests {
                 body,
             }) = &m.get_functions()[0]
             {
-                assert_eq!(*meta, 1);
+                assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
                 assert_eq!(ty, &Type::Unit);
@@ -925,7 +925,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             if let Some(Item::Routine(RoutineDef {
-                meta,
+                annotations,
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
@@ -933,7 +933,7 @@ pub mod tests {
                 body,
             })) = m.get_item("test")
             {
-                assert_eq!(*meta, 1);
+                assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
                 assert_eq!(ty, &Type::Unit);
@@ -988,7 +988,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
-            meta: l,
+            annotations: l,
             def: RoutineDefType::Function,
             name,
             params,
@@ -1020,7 +1020,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
-            meta: l,
+            annotations: l,
             def: RoutineDefType::Function,
             name,
             params,
@@ -1197,7 +1197,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
-            meta: l,
+            annotations: l,
             def: RoutineDefType::Function,
             name,
             params,

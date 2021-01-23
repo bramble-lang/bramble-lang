@@ -28,7 +28,7 @@ use crate::{
         Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
     },
 };
-use crate::{expression::Expression, semantics::semanticnode::SemanticMetadata};
+use crate::{expression::Expression, semantics::semanticnode::SemanticAnnotations};
 use crate::{expression::RoutineCall, syntax::statement::Statement};
 use crate::{
     expression::{BinaryOperator, UnaryOperator},
@@ -37,7 +37,7 @@ use crate::{
 
 use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
-// Coroutine entry/return metadata: offsets relative to the coroutine's RBP
+// Coroutine entry/return annotations: offsets relative to the coroutine's RBP
 // These live within the stack frame of the coroutine
 const COROUTINE_RIP_STORE: i32 = -8;
 const COROUTINE_CALLER_RSP_STORE: i32 = -16;
@@ -48,7 +48,7 @@ const COROUTINE_RSP_STORE: i32 = -40;
 // How much space to allocate for each coroutine's stack
 const COROUTINE_STACK_SIZE: i64 = 8 * 1024;
 
-// Function entry/return metadata: offsets relative to RBP
+// Function entry/return annotations: offsets relative to RBP
 // These live above the function's stack frame (hence they are positive)
 const FUNCTION_CALLER_RSP: i32 = 16;
 
@@ -77,7 +77,7 @@ pub struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(module: Module<SemanticMetadata>, target_os: TargetOS) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticAnnotations>, target_os: TargetOS) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = CompilerNode::from(&module).unwrap();
 
@@ -270,7 +270,7 @@ impl<'a> Compiler<'a> {
          * to be passed to the coroutine.
          *
          * Returns a pointer to the new coroutine stack (which contains the coroutine's
-         * metadata)
+         * annotations)
          *
          * use the next stack address variable as the location for the new coroutine, then
          * increment the next stack address.
@@ -675,7 +675,7 @@ impl<'a> Compiler<'a> {
         let fn_param_registers = vec![Reg64::Rax, Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
 
         if let RoutineDef {
-            meta: scope,
+            annotations: scope,
             def: RoutineDefType::Function,
             name: ref fn_name,
             body: stmts,

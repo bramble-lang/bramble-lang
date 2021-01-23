@@ -1,5 +1,5 @@
 use crate::{
-    semantics::semanticnode::SemanticMetadata,
+    semantics::semanticnode::SemanticAnnotations,
     syntax::path::Path,
     syntax::{routinedef::RoutineDefType, ty::Type},
 };
@@ -105,7 +105,7 @@ impl Scope {
     }
 
     pub(super) fn local_from(
-        m: &SemanticMetadata,
+        m: &SemanticAnnotations,
         struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
     ) -> (Scope, LayoutData) {
@@ -125,7 +125,7 @@ impl Scope {
     }
 
     pub(super) fn routine_from(
-        m: &SemanticMetadata,
+        m: &SemanticAnnotations,
         routine_type: &RoutineDefType,
         struct_table: &ResolvedStructTable,
         current_offset: i32,
@@ -153,7 +153,7 @@ impl Scope {
     }
 
     pub(super) fn module_from(
-        m: &SemanticMetadata,
+        m: &SemanticAnnotations,
         name: &str,
         struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
@@ -168,7 +168,7 @@ impl Scope {
         (scope, layout)
     }
 
-    pub(super) fn structdef_from(m: &SemanticMetadata) -> (Scope, LayoutData) {
+    pub(super) fn structdef_from(m: &SemanticAnnotations) -> (Scope, LayoutData) {
         let mut scope = Scope::new(
             m.id,
             Level::Local,
