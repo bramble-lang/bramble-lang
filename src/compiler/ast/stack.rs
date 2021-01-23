@@ -162,7 +162,7 @@ mod tests {
         fun_scope.insert("y", 4, 4);
         fun_scope.insert("z", 4, 8);
         let outer_node = RoutineDef {
-            meta: fun_scope,
+            annotations: fun_scope,
             def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![],
@@ -198,7 +198,7 @@ mod tests {
         fun_scope.insert("y", 4, 0);
         fun_scope.insert("z", 4, 4);
         let fun_node = RoutineDef {
-            meta: fun_scope,
+            annotations: fun_scope,
             def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![("y".into(), Type::I32)],
@@ -223,7 +223,7 @@ mod tests {
             Type::Unit,
         );
         let fun2_node = RoutineDef {
-            meta: fun2_scope,
+            annotations: fun2_scope,
             def: RoutineDefType::Function,
             name: "func2".into(),
             params: vec![],
@@ -252,7 +252,7 @@ mod tests {
         cor_scope.insert("y", 4, 20);
         cor_scope.insert("z", 4, 24);
         let cor_node = RoutineDef {
-            meta: cor_scope,
+            annotations: cor_scope,
             def: RoutineDefType::Coroutine,
             name: "cor".into(),
             params: vec![("y".into(), Type::I32)],
@@ -278,7 +278,7 @@ mod tests {
             Type::Unit,
         );
         let fun2_node = RoutineDef {
-            meta: fun2_scope,
+            annotations: fun2_scope,
             def: RoutineDefType::Coroutine,
             name: "func2".into(),
             params: vec![],

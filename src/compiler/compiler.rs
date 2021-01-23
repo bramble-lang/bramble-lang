@@ -675,7 +675,7 @@ impl<'a> Compiler<'a> {
         let fn_param_registers = vec![Reg64::Rax, Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
 
         if let RoutineDef {
-            meta: scope,
+            annotations: scope,
             def: RoutineDefType::Function,
             name: ref fn_name,
             body: stmts,
