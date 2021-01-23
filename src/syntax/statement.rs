@@ -74,7 +74,7 @@ impl<M> Statement<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Bind<M> {
-    metadata: M,
+    annotations: M,
     id: String,
     ty: Type,
     mutable: bool,
@@ -82,9 +82,9 @@ pub struct Bind<M> {
 }
 
 impl<M> Bind<M> {
-    pub fn new(metadata: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
+    pub fn new(annotations: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
         Bind {
-            metadata,
+            annotations,
             id: id.into(),
             ty,
             mutable,
@@ -97,11 +97,11 @@ impl<M> Bind<M> {
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn is_mutable(&self) -> bool {
@@ -123,15 +123,15 @@ impl<M> Bind<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Mutate<M> {
-    metadata: M,
+    annotations: M,
     id: String,
     rhs: Expression<M>,
 }
 
 impl<M> Mutate<M> {
-    pub fn new(metadata: M, id: &str, rhs: Expression<M>) -> Self {
+    pub fn new(annotations: M, id: &str, rhs: Expression<M>) -> Self {
         Mutate {
-            metadata,
+            annotations,
             id: id.into(),
             rhs,
         }
@@ -142,11 +142,11 @@ impl<M> Mutate<M> {
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_rhs(&self) -> &Expression<M> {
@@ -160,21 +160,21 @@ impl<M> Mutate<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printi<M> {
-    metadata: M,
+    annotations: M,
     value: Expression<M>,
 }
 
 impl<M> Printi<M> {
-    pub fn new(metadata: M, value: Expression<M>) -> Self {
-        Self { metadata, value }
+    pub fn new(annotations: M, value: Expression<M>) -> Self {
+        Self { annotations, value }
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Expression<M> {
@@ -188,21 +188,21 @@ impl<M> Printi<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printiln<M> {
-    metadata: M,
+    annotations: M,
     value: Expression<M>,
 }
 
 impl<M> Printiln<M> {
-    pub fn new(metadata: M, value: Expression<M>) -> Self {
-        Self { metadata, value }
+    pub fn new(annotations: M, value: Expression<M>) -> Self {
+        Self { annotations, value }
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Expression<M> {
@@ -216,21 +216,21 @@ impl<M> Printiln<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Printbln<M> {
-    metadata: M,
+    annotations: M,
     value: Expression<M>,
 }
 
 impl<M> Printbln<M> {
-    pub fn new(metadata: M, value: Expression<M>) -> Self {
-        Self { metadata, value }
+    pub fn new(annotations: M, value: Expression<M>) -> Self {
+        Self { annotations, value }
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Expression<M> {
@@ -244,21 +244,21 @@ impl<M> Printbln<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Prints<M> {
-    metadata: M,
+    annotations: M,
     value: Expression<M>,
 }
 
 impl<M> Prints<M> {
-    pub fn new(metadata: M, value: Expression<M>) -> Self {
-        Self { metadata, value }
+    pub fn new(annotations: M, value: Expression<M>) -> Self {
+        Self { annotations, value }
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Expression<M> {
@@ -272,21 +272,21 @@ impl<M> Prints<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Yield<M> {
-    metadata: M,
+    annotations: M,
     value: Expression<M>,
 }
 
 impl<M> Yield<M> {
-    pub fn new(metadata: M, value: Expression<M>) -> Self {
-        Self { metadata, value }
+    pub fn new(annotations: M, value: Expression<M>) -> Self {
+        Self { annotations, value }
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Expression<M> {
@@ -300,21 +300,21 @@ impl<M> Yield<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct YieldReturn<M> {
-    metadata: M,
+    annotations: M,
     value: Option<Expression<M>>,
 }
 
 impl<M> YieldReturn<M> {
-    pub fn new(metadata: M, value: Option<Expression<M>>) -> Self {
-        Self { metadata, value }
+    pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
+        Self { annotations, value }
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {
@@ -328,21 +328,21 @@ impl<M> YieldReturn<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Return<M> {
-    metadata: M,
+    annotations: M,
     value: Option<Expression<M>>,
 }
 
 impl<M> Return<M> {
-    pub fn new(metadata: M, value: Option<Expression<M>>) -> Self {
-        Self { metadata, value }
+    pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
+        Self { annotations, value }
     }
 
     pub fn get_annotations(&self) -> &M {
-        &self.metadata
+        &self.annotations
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.metadata
+        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {
