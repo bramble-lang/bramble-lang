@@ -11,7 +11,7 @@
  * for those fields to reside.
  * 4. Construct a string pool of all string literals.
  */
-pub(super) mod memory_layout;
+pub(super) mod layout;
 pub(super) mod scope;
 pub(super) mod stack;
 pub(super) mod stringpool;

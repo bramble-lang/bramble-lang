@@ -190,7 +190,7 @@ mod test {
     use crate::parser::parser;
     use crate::{diagnostics::config::TracingConfig, type_check};
 
-    use super::super::memory_layout::compute;
+    use super::super::layout::compute;
     use super::*;
 
     #[test]
