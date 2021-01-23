@@ -67,11 +67,11 @@ impl std::fmt::Display for ScopeStack<'_> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::expression::Expression;
-use super::*;
     use crate::syntax::ty::Type;
     use crate::{
-        compiler::ast::{scope::Scope},
+        compiler::ast::scope::Scope,
         syntax::{module, routinedef::RoutineDef},
     };
 

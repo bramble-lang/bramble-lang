@@ -1,6 +1,6 @@
 /**
  * Hardware specific input validation and analysis.
- * 
+ *
  * The following tasks are performed by this submodule
  * 1. Compute size of all variables, and custom types.
  * 2. Compute the stack frame size and assign locations within the stack frame for
@@ -11,7 +11,6 @@
  * for those fields to reside.
  * 4. Construct a string pool of all string literals.
  */
-
 pub(super) mod memory_layout;
 pub(super) mod scope;
 pub(super) mod stack;

@@ -429,8 +429,14 @@ mod tests {
                     Expression::Identifier(1, "y".into()),
                 ),
                 (
-                    Expression::Identifier(SemanticAnnotations::new(1, 1, Type::Unknown), "x".into()),
-                    Expression::Identifier(SemanticAnnotations::new(2, 1, Type::Unknown), "y".into()),
+                    Expression::Identifier(
+                        SemanticAnnotations::new(1, 1, Type::Unknown),
+                        "x".into(),
+                    ),
+                    Expression::Identifier(
+                        SemanticAnnotations::new(2, 1, Type::Unknown),
+                        "y".into(),
+                    ),
                 ),
             ),
             (

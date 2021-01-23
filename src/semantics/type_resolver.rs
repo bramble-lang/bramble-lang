@@ -915,7 +915,11 @@ impl<'a> TypeResolver<'a> {
                 .root
                 .go_to_module(&canon_path.parent())
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
-            Ok(node.get_annotations().sym.get(&item).map(|i| (i, canon_path)))
+            Ok(node
+                .get_annotations()
+                .sym
+                .get(&item)
+                .map(|i| (i, canon_path)))
         } else if path.len() == 1 {
             let item = &path[0];
             Ok(sym

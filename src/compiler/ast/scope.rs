@@ -25,12 +25,12 @@ impl LayoutData {
  * available to a node and all children of that node. The `level` of the
  * scope dictates its semantic role in determing whether the symbols in
  * its parents are available.
- * 
+ *
  * There are three types of scopes: Local, Routine, and Module.  For a
  * specific node that has a local scope, it can traverse its ancestors
  * and use symbols that are in its scope up to and including the Routine
  * level, and then it cannot access any variables above that node.
- * 
+ *
  * Routine Scopes will also track the amount of space which must be allocated
  * for the routine's stackframe (in order to store all parameters and
  * local variables).

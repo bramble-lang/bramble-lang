@@ -1,16 +1,13 @@
 use crate::expression::Expression;
 use std::collections::HashMap;
 
-
 use module::Module;
 
-use crate::{
-    syntax::{
-        module::{self, Item},
-        routinedef::RoutineDef,
-        statement::{
-            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn,
-        },
+use crate::syntax::{
+    module::{self, Item},
+    routinedef::RoutineDef,
+    statement::{
+        Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn,
     },
 };
 
@@ -192,9 +189,9 @@ mod test {
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
     use crate::{diagnostics::config::TracingConfig, type_check};
-    
-    use super::*;
+
     use super::super::memory_layout::compute;
+    use super::*;
 
     #[test]
     fn insert_string() {

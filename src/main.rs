@@ -140,5 +140,5 @@ fn configure_cli() -> clap::App<'static, 'static> {
                 .takes_value(true)
                 .help("Prints out the current module path at the current line of code.")
         );
-        app
+    app
 }
