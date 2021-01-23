@@ -536,7 +536,7 @@ impl<'a> Compiler<'a> {
                     .expect("Expected a routine");
                 let total_offset = co_def
                     .get_metadata()
-                    .local_allocation()
+                    .stackframe_allocation()
                     .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
                 co_def.validate_parameters(params)?;

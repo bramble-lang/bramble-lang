@@ -77,7 +77,7 @@ impl Scope {
         &self.level
     }
 
-    pub fn local_allocation(&self) -> Option<i32> {
+    pub fn stackframe_allocation(&self) -> Option<i32> {
         self.level().allocation()
     }
 
