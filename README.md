@@ -7,34 +7,23 @@ To aid with development on other machines, there is a Docker configuration that
 will spin up a container and build Braid and run the unit and Braid tests. The
 container is configured to use Fedora as the build environment.
 
-To run Braid using the Docker container:
+To run Braid using the Docker container, you just need to run the `start-docker.sh`
+script:
 
-1. Build the Docker image (This only needs to be done once to configure
-the Fedora image and install the Rust toolchain)
 ```
-docker build -t braid-compiler -f ./docker/linux/Dockerfile .
-```
-This will build a Docker image defined in `./docker/linux/Dockerfile/ with
-the root of the Braid repository directory as the context.
-
-2. Run the image and open an interactive shell:
-```
-docker run -it braid-compiler:latest bash
+start-docker.sh
 ```
 
-3. Run the unit tests:
-```
-cargo test
-```
+This script will default to a container running Fedora, but you can use the
+`-i` argument to specify a different image.  Options include `ubuntu` or `alpine`.
+This script will, if necessary, build the appropriate Docker image and will then
+start the container, mount the Braid compiler source code to `/work/braid-lang` and
+then run an interactive shell on the container.
 
-4. Run the Braid tests (integration tests that compile and run Braid code):
-```
-cd ./test
-./test.sh
-```
-
-5. From here, everything is setup and working and you can run the Braid
-compiler here.
+With the interactive shell, you will be able to compile and use the Braid compiler
+under a Linux OS. And any changes that you make to the Braid source code on the host
+machine will be reflected in the container, thus creating an effective dev environment
+for any host that can run docker.
 
 ### Locally
 1. You will need to install Rust and Cargo: https://www.rust-lang.org/tools/install
