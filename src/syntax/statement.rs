@@ -17,19 +17,19 @@ pub enum Statement<M> {
 }
 
 impl<M> Statement<M> {
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         use Statement::*;
 
         match self {
-            Return(x) => x.get_metadata(),
-            YieldReturn(x) => x.get_metadata(),
-            Expression(e) => e.get_metadata(),
-            Bind(b) => b.get_metadata(),
-            Mutate(m) => m.get_metadata(),
-            Printi(m) => m.get_metadata(),
-            Printiln(m) => m.get_metadata(),
-            Printbln(m) => m.get_metadata(),
-            Prints(m) => m.get_metadata(),
+            Return(x) => x.get_annotations(),
+            YieldReturn(x) => x.get_annotations(),
+            Expression(e) => e.get_annotations(),
+            Bind(b) => b.get_annotations(),
+            Mutate(m) => m.get_annotations(),
+            Printi(m) => m.get_annotations(),
+            Printiln(m) => m.get_annotations(),
+            Printbln(m) => m.get_annotations(),
+            Prints(m) => m.get_annotations(),
         }
     }
 
@@ -39,19 +39,19 @@ impl<M> Statement<M> {
         }
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         use Statement::*;
 
         match self {
-            Return(x) => x.get_metadata_mut(),
-            YieldReturn(x) => x.get_metadata_mut(),
-            Expression(e) => e.get_metadata_mut(),
-            Bind(b) => b.get_metadata_mut(),
-            Mutate(m) => m.get_metadata_mut(),
-            Printi(m) => m.get_metadata_mut(),
-            Printiln(m) => m.get_metadata_mut(),
-            Printbln(m) => m.get_metadata_mut(),
-            Prints(m) => m.get_metadata_mut(),
+            Return(x) => x.get_annotations_mut(),
+            YieldReturn(x) => x.get_annotations_mut(),
+            Expression(e) => e.get_annotations_mut(),
+            Bind(b) => b.get_annotations_mut(),
+            Mutate(m) => m.get_annotations_mut(),
+            Printi(m) => m.get_annotations_mut(),
+            Printiln(m) => m.get_annotations_mut(),
+            Printbln(m) => m.get_annotations_mut(),
+            Prints(m) => m.get_annotations_mut(),
         }
     }
 
@@ -96,11 +96,11 @@ impl<M> Bind<M> {
         &self.id
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -141,11 +141,11 @@ impl<M> Mutate<M> {
         &self.id
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -169,11 +169,11 @@ impl<M> Printi<M> {
         Self { metadata, value }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -197,11 +197,11 @@ impl<M> Printiln<M> {
         Self { metadata, value }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -225,11 +225,11 @@ impl<M> Printbln<M> {
         Self { metadata, value }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -253,11 +253,11 @@ impl<M> Prints<M> {
         Self { metadata, value }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -281,11 +281,11 @@ impl<M> Yield<M> {
         Self { metadata, value }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -309,11 +309,11 @@ impl<M> YieldReturn<M> {
         Self { metadata, value }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 
@@ -337,11 +337,11 @@ impl<M> Return<M> {
         Self { metadata, value }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.metadata
     }
 

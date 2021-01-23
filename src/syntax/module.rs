@@ -78,11 +78,11 @@ impl<M> Module<M> {
         &self.name
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.meta
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut M {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.meta
     }
 
@@ -194,7 +194,7 @@ mod test {
     pub fn test_new_module() {
         let module = Module::new("test", 1);
         assert_eq!(module.get_name(), "test");
-        assert_eq!(*module.get_metadata(), 1);
+        assert_eq!(*module.get_annotations(), 1);
     }
 
     #[test]
@@ -431,10 +431,10 @@ impl<M> Item<M> {
         }
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         match self {
-            Item::Routine(r) => r.get_metadata(),
-            Item::Struct(s) => s.get_metadata(),
+            Item::Routine(r) => r.get_annotations(),
+            Item::Struct(s) => s.get_annotations(),
         }
     }
 

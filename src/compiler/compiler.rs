@@ -422,7 +422,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn push_scope(&mut self, ast: &'a CompilerNode) {
-        self.scope.push(ast.get_metadata())
+        self.scope.push(ast.get_annotations())
     }
 
     fn pop(&mut self) {
@@ -535,7 +535,7 @@ impl<'a> Compiler<'a> {
                     .to_routine()
                     .expect("Expected a routine");
                 let total_offset = co_def
-                    .get_metadata()
+                    .get_annotations()
                     .stackframe_allocation()
                     .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
@@ -629,7 +629,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.scope.push(module.get_metadata());
+        self.scope.push(module.get_annotations());
         for f in module.get_functions().iter() {
             self.traverse_item(f, code)?;
         }
@@ -645,7 +645,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn traverse_item(&mut self, item: &'a Item<Scope>, code: &mut Vec<Inst>) -> Result<(), String> {
-        self.scope.push(item.get_metadata());
+        self.scope.push(item.get_annotations());
         let result = match item {
             Item::Struct(_) => {
                 panic!("StructDefs should have been pruned from the AST before the compiler layer")
@@ -721,8 +721,8 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            @{routine.get_metadata().canon_path().to_label()}:
-            ; {{format!("Define {}", routine.get_metadata().canon_path())}}
+            @{routine.get_annotations().canon_path().to_label()}:
+            ; {{format!("Define {}", routine.get_annotations().canon_path())}}
         }};
 
         // Prepare stack frame for this function
@@ -868,7 +868,7 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            {{self.yield_exp(y.get_metadata(), y.get_value(), current_func)?}}
+            {{self.yield_exp(y.get_annotations(), y.get_value(), current_func)?}}
         }}
         Ok(())
     }
@@ -880,7 +880,7 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            {{self.yield_return(yr.get_metadata(), yr.get_value(), current_func)?}}
+            {{self.yield_return(yr.get_annotations(), yr.get_value(), current_func)?}}
         }}
         Ok(())
     }
@@ -904,7 +904,7 @@ impl<'a> Compiler<'a> {
         src: &'a CompilerNode,
         member: &str,
     ) -> Result<(), String> {
-        let src_ty = src.get_metadata().ty();
+        let src_ty = src.get_annotations().ty();
         match src_ty {
             Type::Custom(struct_name) => {
                 code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
@@ -1028,7 +1028,7 @@ impl<'a> Compiler<'a> {
             }
             _ => {
                 self.traverse_expression(fvalue, current_func, &mut code)?;
-                match fvalue.get_metadata().ty() {
+                match fvalue.get_annotations().ty() {
                     Type::Custom(struct_name) => {
                         let asm =
                             self.copy_struct_into(struct_name, dst, dst_offset, Reg64::Rax, 0)?;
@@ -1057,7 +1057,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         self.traverse_expression(value, current_func, &mut code)?;
 
-        match value.get_metadata().ty() {
+        match value.get_annotations().ty() {
             Type::Custom(name) => {
                 match value {
                     Expression::Identifier(..) => {
@@ -1125,7 +1125,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         if let Some(exp) = exp {
             self.traverse_expression(exp, current_func, &mut code)?;
-            match exp.get_metadata().ty() {
+            match exp.get_annotations().ty() {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
                     let asm = self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
@@ -1158,7 +1158,7 @@ impl<'a> Compiler<'a> {
                 self.traverse_expression(e, current_func, &mut code)?;
                 // If the expression is a custom type then copy the value into the stack frame
                 // of the caller (or the yielder in the case of coroutines)
-                match e.get_metadata().ty() {
+                match e.get_annotations().ty() {
                     Type::Custom(struct_name) => {
                         // Copy the structure into the stack frame of the calling function
                         let asm =
@@ -1198,7 +1198,7 @@ impl<'a> Compiler<'a> {
                 self.traverse_expression(e, current_func, &mut code)?;
                 // If the expression is a custom type then copy the value into the stack frame
                 // of the caller (or the yielder in the case of coroutines)
-                match e.get_metadata().ty() {
+                match e.get_annotations().ty() {
                     Type::Custom(struct_name) => {
                         // Copy the structure into the stack frame of the calling function
                         let asm =
@@ -1321,7 +1321,7 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
-        let routine_sym_table = routine.get_metadata();
+        let routine_sym_table = routine.get_annotations();
         for idx in 0..params.len() {
             let param_offset = routine_sym_table
                 .get(&params[idx].0)

@@ -48,7 +48,7 @@ impl<I> Expression<I> {
         }
     }
 
-    pub fn get_metadata(&self) -> &I {
+    pub fn get_annotations(&self) -> &I {
         use Expression::*;
         match self {
             Integer(m, ..)
@@ -69,7 +69,7 @@ impl<I> Expression<I> {
         }
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut I {
+    pub fn get_annotations_mut(&mut self) -> &mut I {
         use Expression::*;
         match self {
             Integer(m, ..)

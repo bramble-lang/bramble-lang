@@ -62,7 +62,7 @@ impl SymbolTable {
     }
 
     pub fn for_module(module: &mut Module<SemanticMetadata>) -> Result<()> {
-        let mut metadata = module.get_metadata().clone();
+        let mut metadata = module.get_annotations().clone();
 
         let fm = module.get_functions_mut();
         for f in fm.iter_mut() {
@@ -81,7 +81,7 @@ impl SymbolTable {
             SymbolTable::for_module(m)?;
         }
 
-        *module.get_metadata_mut() = metadata;
+        *module.get_annotations_mut() = metadata;
 
         Ok(())
     }

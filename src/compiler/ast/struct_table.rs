@@ -87,7 +87,7 @@ impl UnresolvedStructTable {
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<()> {
         let def = StructDefinition::new(struct_def.get_name(), struct_def.get_fields().clone());
-        Self::insert_struct(table, struct_def.get_metadata().get_canonical_path(), def)?;
+        Self::insert_struct(table, struct_def.get_annotations().get_canonical_path(), def)?;
         Ok(())
     }
 

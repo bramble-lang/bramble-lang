@@ -80,7 +80,7 @@ mod tests {
         scope.insert("x", 4, 4);
         let node = CompilerNode::ExpressionBlock(scope, vec![], None);
         let mut stack = ScopeStack::new();
-        stack.push(&node.get_metadata());
+        stack.push(&node.get_annotations());
 
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
@@ -95,10 +95,10 @@ mod tests {
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
+        stack.push(&outer_node.get_annotations());
         let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        stack.push(&inner_node.get_annotations());
 
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
@@ -113,11 +113,11 @@ mod tests {
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
+        stack.push(&outer_node.get_annotations());
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 16);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        stack.push(&inner_node.get_annotations());
 
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
@@ -132,10 +132,10 @@ mod tests {
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
+        stack.push(&outer_node.get_annotations());
         let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        stack.push(&inner_node.get_annotations());
 
         assert_eq!(stack.find("y").is_none(), true);
     }
@@ -147,7 +147,7 @@ mod tests {
         let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("nope", 4, 4);
         let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
+        stack.push(&outer_node.get_annotations());
 
         let mut fun_scope = Scope::new(
             0,
@@ -169,12 +169,12 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&outer_node.get_metadata());
+        stack.push(&outer_node.get_annotations());
 
         let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
         let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        stack.push(&inner_node.get_annotations());
 
         assert_eq!(stack.find("x").is_some(), true);
         assert_eq!(stack.find("y").is_some(), true);
@@ -210,7 +210,7 @@ mod tests {
         module_scope.insert("func", 0, 0);
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_function(fun_node).unwrap();
-        stack.push(&module_node.get_metadata());
+        stack.push(&module_node.get_annotations());
 
         let fun2_scope = Scope::new(
             0,
@@ -230,7 +230,7 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&fun2_node.get_metadata());
+        stack.push(&fun2_node.get_annotations());
 
         assert_eq!(stack.find("func").is_none(), true);
     }
@@ -265,7 +265,7 @@ mod tests {
 
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_coroutine(cor_node).unwrap();
-        stack.push(&module_node.get_metadata());
+        stack.push(&module_node.get_annotations());
 
         let fun2_scope = Scope::new(
             0,
@@ -285,7 +285,7 @@ mod tests {
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&fun2_node.get_metadata());
+        stack.push(&fun2_node.get_annotations());
 
         assert!(stack.in_coroutine());
     }

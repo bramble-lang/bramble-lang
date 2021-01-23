@@ -32,14 +32,14 @@ pub type SemanticNode = Expression<SemanticMetadata>;
 
 impl SemanticNode {
     pub fn get_type(&self) -> &Type {
-        let meta = self.get_metadata();
+        let meta = self.get_annotations();
         &meta.ty
     }
 }
 
 impl Statement<SemanticMetadata> {
     pub fn get_type(&self) -> &Type {
-        let m = self.get_metadata();
+        let m = self.get_annotations();
         &m.ty
     }
 }
@@ -87,7 +87,7 @@ impl SemanticAst {
         &mut self,
         m: &module::Module<u32>,
     ) -> Result<module::Module<SemanticMetadata>> {
-        let meta = self.module_semantic_metadata_from(*m.get_metadata(), m.get_name());
+        let meta = self.module_semantic_metadata_from(*m.get_annotations(), m.get_name());
 
         let mut nmodule = module::Module::new(m.get_name(), meta);
         for module in m.get_modules().iter() {
@@ -150,13 +150,13 @@ impl SemanticAst {
             ));
         }
 
-        if *sd.get_metadata() == 0 {
+        if *sd.get_annotations() == 0 {
             return Err("Source code line must be greater than 0".into());
         }
 
         let semantic = StructDef::new(
             sd.get_name().clone(),
-            self.semantic_metadata_from(*sd.get_metadata()),
+            self.semantic_metadata_from(*sd.get_annotations()),
             sd.get_fields().clone(),
         );
 
@@ -186,7 +186,7 @@ impl SemanticAst {
 
     fn from_bind(&mut self, bind: &Bind<ParserInfo>) -> Result<Bind<SemanticMetadata>> {
         Ok(Bind::new(
-            self.semantic_metadata_from(*bind.get_metadata()),
+            self.semantic_metadata_from(*bind.get_annotations()),
             bind.get_id(),
             bind.get_type().clone(),
             bind.is_mutable(),
@@ -196,7 +196,7 @@ impl SemanticAst {
 
     fn from_mutate(&mut self, mutate: &Mutate<ParserInfo>) -> Result<Mutate<SemanticMetadata>> {
         Ok(Mutate::new(
-            self.semantic_metadata_from(*mutate.get_metadata()),
+            self.semantic_metadata_from(*mutate.get_annotations()),
             mutate.get_id(),
             *self.from_expression(mutate.get_rhs())?,
         ))
@@ -204,28 +204,28 @@ impl SemanticAst {
 
     fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticMetadata>> {
         Ok(Printi::new(
-            self.semantic_metadata_from(*p.get_metadata()),
+            self.semantic_metadata_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
 
     fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticMetadata>> {
         Ok(Printiln::new(
-            self.semantic_metadata_from(*p.get_metadata()),
+            self.semantic_metadata_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
 
     fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticMetadata>> {
         Ok(Printbln::new(
-            self.semantic_metadata_from(*p.get_metadata()),
+            self.semantic_metadata_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
 
     fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticMetadata>> {
         Ok(Prints::new(
-            self.semantic_metadata_from(*p.get_metadata()),
+            self.semantic_metadata_from(*p.get_annotations()),
             *self.from_expression(p.get_value())?,
         ))
     }
@@ -236,11 +236,11 @@ impl SemanticAst {
     ) -> Result<YieldReturn<SemanticMetadata>> {
         match yr.get_value() {
             None => Ok(YieldReturn::new(
-                self.semantic_metadata_from(*yr.get_metadata()),
+                self.semantic_metadata_from(*yr.get_annotations()),
                 None,
             )),
             Some(val) => Ok(YieldReturn::new(
-                self.semantic_metadata_from(*yr.get_metadata()),
+                self.semantic_metadata_from(*yr.get_annotations()),
                 Some(*self.from_expression(val)?),
             )),
         }
@@ -249,11 +249,11 @@ impl SemanticAst {
     fn from_return(&mut self, r: &Return<ParserInfo>) -> Result<Return<SemanticMetadata>> {
         match r.get_value() {
             None => Ok(Return::new(
-                self.semantic_metadata_from(*r.get_metadata()),
+                self.semantic_metadata_from(*r.get_annotations()),
                 None,
             )),
             Some(val) => Ok(Return::new(
-                self.semantic_metadata_from(*r.get_metadata()),
+                self.semantic_metadata_from(*r.get_annotations()),
                 Some(*self.from_expression(val)?),
             )),
         }
@@ -361,7 +361,7 @@ impl SemanticAst {
 
     fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticMetadata>> {
         Ok(Yield::new(
-            self.semantic_metadata_from(*y.get_metadata()),
+            self.semantic_metadata_from(*y.get_annotations()),
             *self.from_expression(y.get_value())?,
         ))
     }

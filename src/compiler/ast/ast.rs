@@ -33,7 +33,7 @@ impl CompilerNode {
         struct_table: &ResolvedStructTable,
     ) -> (module::Module<Scope>, LayoutData) {
         let (meta, mut layout) =
-            Scope::module_from(m.get_metadata(), m.get_name(), struct_table, layout);
+            Scope::module_from(m.get_annotations(), m.get_name(), struct_table, layout);
 
         let mut nmodule = module::Module::new(m.get_name(), meta);
         for child_module in m.get_modules().iter() {
@@ -85,7 +85,7 @@ impl CompilerNode {
     fn compute_layout_for_structdef(
         sd: &StructDef<SemanticMetadata>,
     ) -> (StructDef<Scope>, LayoutData) {
-        let (scope, layout) = Scope::structdef_from(sd.get_metadata());
+        let (scope, layout) = Scope::structdef_from(sd.get_annotations());
         (
             StructDef::new(sd.get_name(), scope, sd.get_fields().clone()),
             layout,
@@ -187,7 +187,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Bind<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(bind.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(bind.get_annotations(), struct_table, layout);
         let (rhs, layout) =
             CompilerNode::compute_layouts_for_expression(bind.get_rhs(), layout, struct_table);
         (
@@ -207,7 +207,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Mutate<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(mutate.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(mutate.get_annotations(), struct_table, layout);
         let (rhs, layout) =
             CompilerNode::compute_layouts_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(meta, mutate.get_id(), rhs), layout)
@@ -218,7 +218,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printi<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printi::new(meta, value), layout)
@@ -229,7 +229,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printiln<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printiln::new(meta, value), layout)
@@ -240,7 +240,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printbln<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Printbln::new(meta, value), layout)
@@ -251,7 +251,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Prints<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(p.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(p.get_annotations(), struct_table, layout);
         let (value, layout) =
             CompilerNode::compute_layouts_for_expression(p.get_value(), layout, struct_table);
         (Prints::new(meta, value), layout)
@@ -262,7 +262,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (YieldReturn<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(yr.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(yr.get_annotations(), struct_table, layout);
         match yr.get_value() {
             None => (YieldReturn::new(meta, None), layout),
             Some(val) => {
@@ -278,7 +278,7 @@ impl CompilerNode {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Return<Scope>, LayoutData) {
-        let (meta, layout) = Scope::local_from(r.get_metadata(), struct_table, layout);
+        let (meta, layout) = Scope::local_from(r.get_annotations(), struct_table, layout);
         match r.get_value() {
             None => (Return::new(meta, None), layout),
             Some(val) => {

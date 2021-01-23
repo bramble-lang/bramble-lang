@@ -21,7 +21,7 @@ impl<M> StructDef<M> {
         &self.name
     }
 
-    pub fn get_metadata(&self) -> &M {
+    pub fn get_annotations(&self) -> &M {
         &self.metadata
     }
 
