@@ -2,7 +2,7 @@ use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
 use crate::{
-    compiler::ast::scope::{LayoutData, Scope},
+    compiler::memory::scope::{LayoutData, Scope},
     semantics::semanticnode::SemanticAnnotations,
     syntax::{
         module::{self, Item, Module},
@@ -514,14 +514,16 @@ pub mod compute {
         use crate::semantics::type_resolver::type_check;
         use crate::syntax::routinedef::RoutineDefType;
         use crate::syntax::ty::Type;
-        use crate::{compiler::ast::scope, syntax::path::Path};
+        use crate::{compiler::memory::scope, syntax::path::Path};
         use crate::{
-            compiler::ast::scope::Level,
+            compiler::memory::scope::Level,
             diagnostics::config::TracingConfig,
             lexer::{lexer::Lexer, tokens::Token},
             syntax::{expression::BinaryOperator, routinedef::RoutineDef},
         };
-        use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
+        use crate::{
+            compiler::memory::struct_table::UnresolvedStructTable, semantics::symbol_table,
+        };
         use crate::{
             semantics::semanticnode::SemanticAnnotations, semantics::semanticnode::SemanticNode,
         };

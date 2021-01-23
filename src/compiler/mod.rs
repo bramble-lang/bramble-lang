@@ -1,4 +1,3 @@
-mod ast;
 /**
  * The Compiler takes an AST that has been semantically analyzed and converts
  * it into x64 assembly language.
@@ -40,4 +39,5 @@ mod ast;
  * 4. Construct a string pool of all string literals.
  */
 pub mod compiler;
+mod memory;
 mod x86;

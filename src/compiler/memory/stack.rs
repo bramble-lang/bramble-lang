@@ -1,4 +1,4 @@
-use crate::compiler::ast::scope::Level;
+use crate::compiler::memory::scope::Level;
 use crate::syntax::routinedef::RoutineDefType;
 
 use super::{scope::Scope, symbol_table::Symbol};
@@ -71,7 +71,7 @@ mod tests {
     use crate::expression::Expression;
     use crate::syntax::ty::Type;
     use crate::{
-        compiler::ast::scope::Scope,
+        compiler::memory::scope::Scope,
         syntax::{module, routinedef::RoutineDef},
     };
 
