@@ -16,7 +16,13 @@ use crate::{
 use crate::{semantics::semanticnode::SemanticNode, syntax::expression::Expression};
 use braid_lang::result::Result;
 
-
+/**
+ * Compute the how every function and struct will be laid out in memory: for functions
+ * this computes the size of the stack frame and the offset within the stack frame for
+ * every function parameter and variable that is local to the function, for structures
+ * it computes how large the structure is and what the relative offset of every field
+ * in the structure is.
+ */
 pub mod memory_layout {
     use super::*;
 
