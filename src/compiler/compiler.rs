@@ -662,8 +662,8 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         match routine.get_def() {
-            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, code),
             RoutineDefType::Function => self.traverse_function_def(routine, code),
+            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, code),
         }
     }
 
