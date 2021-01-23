@@ -4,7 +4,7 @@ use crate::syntax::{
     routinedef::{RoutineDef, RoutineDefType},
     ty::Type,
 };
-use crate::{semantics::semanticnode::SemanticMetadata, syntax::structdef::StructDef};
+use crate::{semantics::semanticnode::SemanticAnnotations, syntax::structdef::StructDef};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -61,32 +61,32 @@ impl SymbolTable {
         }
     }
 
-    pub fn for_module(module: &mut Module<SemanticMetadata>) -> Result<()> {
-        let mut metadata = module.get_annotations().clone();
+    pub fn for_module(module: &mut Module<SemanticAnnotations>) -> Result<()> {
+        let mut annotations = module.get_annotations().clone();
 
         let fm = module.get_functions_mut();
         for f in fm.iter_mut() {
-            SymbolTable::for_item(f, &mut metadata)?;
+            SymbolTable::for_item(f, &mut annotations)?;
         }
 
         let cm = module.get_coroutines_mut();
         for co in cm.iter_mut() {
-            SymbolTable::for_item(co, &mut metadata)?;
+            SymbolTable::for_item(co, &mut annotations)?;
         }
         for st in module.get_structs_mut().iter_mut() {
-            SymbolTable::for_item(st, &mut metadata)?;
+            SymbolTable::for_item(st, &mut annotations)?;
         }
 
         for m in module.get_modules_mut().iter_mut() {
             SymbolTable::for_module(m)?;
         }
 
-        *module.get_annotations_mut() = metadata;
+        *module.get_annotations_mut() = annotations;
 
         Ok(())
     }
 
-    fn for_item(item: &mut Item<SemanticMetadata>, sym: &mut SemanticMetadata) -> Result<()> {
+    fn for_item(item: &mut Item<SemanticAnnotations>, sym: &mut SemanticAnnotations) -> Result<()> {
         match item {
             Item::Routine(rd) => SymbolTable::for_routine(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
@@ -94,8 +94,8 @@ impl SymbolTable {
     }
 
     fn add_structdef(
-        structdef: &mut StructDef<SemanticMetadata>,
-        sym: &mut SemanticMetadata,
+        structdef: &mut StructDef<SemanticAnnotations>,
+        sym: &mut SemanticAnnotations,
     ) -> Result<()> {
         sym.sym.add(
             structdef.get_name(),
@@ -105,8 +105,8 @@ impl SymbolTable {
     }
 
     fn for_routine(
-        routine: &mut RoutineDef<SemanticMetadata>,
-        sym: &mut SemanticMetadata,
+        routine: &mut RoutineDef<SemanticAnnotations>,
+        sym: &mut SemanticAnnotations,
     ) -> Result<()> {
         let RoutineDef {
             def,

@@ -26,13 +26,13 @@ use crate::{
 use braid_lang::result::Result;
 use Type::*;
 
-use super::{semanticnode::SemanticMetadata, stack::SymbolTableScopeStack};
+use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
 pub fn type_check(
     ast: &module::Module<ParserInfo>,
     trace: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<module::Module<SemanticMetadata>> {
+) -> Result<module::Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(&ast)?;
     SymbolTable::for_module(&mut sm_ast)?;
@@ -48,7 +48,7 @@ pub fn type_check(
 }
 
 pub struct TypeResolver<'a> {
-    root: &'a Module<SemanticMetadata>,
+    root: &'a Module<SemanticAnnotations>,
     stack: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
@@ -61,7 +61,7 @@ impl<'a> Tracing for TypeResolver<'a> {
 }
 
 impl<'a> TypeResolver<'a> {
-    pub fn new(root: &'a Module<SemanticMetadata>) -> TypeResolver {
+    pub fn new(root: &'a Module<SemanticAnnotations>) -> TypeResolver {
         TypeResolver {
             root,
             stack: SymbolTableScopeStack::new(),
@@ -70,15 +70,15 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
+    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticAnnotations>> {
         self.analyze_module(self.root, sym)
     }
 
     fn analyze_module(
         &mut self,
-        m: &module::Module<SemanticMetadata>,
+        m: &module::Module<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Module<SemanticMetadata>> {
+    ) -> Result<module::Module<SemanticAnnotations>> {
         let mut nmodule = module::Module::new(m.get_name(), m.get_annotations().clone());
         let mut meta = nmodule.get_annotations_mut().clone();
 
@@ -89,22 +89,22 @@ impl<'a> TypeResolver<'a> {
             .get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
-            .collect::<Result<Vec<module::Module<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Module<SemanticAnnotations>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
             .map(|f| self.analyze_item(f, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
             .map(|s| self.analyze_item(s, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
 
         self.stack.pop();
 
@@ -115,9 +115,9 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_item(
         &mut self,
-        i: &module::Item<SemanticMetadata>,
+        i: &module::Item<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Item<SemanticMetadata>> {
+    ) -> Result<module::Item<SemanticAnnotations>> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s, sym).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
@@ -126,9 +126,9 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_routine(
         &mut self,
-        routine: &routinedef::RoutineDef<SemanticMetadata>,
+        routine: &routinedef::RoutineDef<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<routinedef::RoutineDef<SemanticMetadata>> {
+    ) -> Result<routinedef::RoutineDef<SemanticAnnotations>> {
         let routinedef::RoutineDef {
             annotations,
             name,
@@ -176,9 +176,9 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_structdef(
         &mut self,
-        struct_def: &structdef::StructDef<SemanticMetadata>,
+        struct_def: &structdef::StructDef<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<structdef::StructDef<SemanticMetadata>> {
+    ) -> Result<structdef::StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
         for (field_name, field_type) in fields.iter() {
@@ -197,7 +197,7 @@ impl<'a> TypeResolver<'a> {
         // Update all fields so that their types use the full canonical path of the type
         let canonical_fields = self.params_to_canonical(sym, &fields)?;
 
-        // Update the metadata with canonical path information and set the type to Unit
+        // Update the annotations with canonical path information and set the type to Unit
         let mut meta = struct_def.get_annotations().clone();
         meta.ty = Unit;
         meta.set_canonical_path(
@@ -213,10 +213,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_statement(
         &mut self,
-        stmt: &Statement<SemanticMetadata>,
+        stmt: &Statement<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Statement<SemanticMetadata>> {
+    ) -> Result<Statement<SemanticAnnotations>> {
         use statement::Statement::*;
         let inner = match stmt {
             Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
@@ -239,10 +239,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_bind(
         &mut self,
-        bind: &Bind<SemanticMetadata>,
+        bind: &Bind<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Bind<SemanticMetadata>> {
+    ) -> Result<Bind<SemanticAnnotations>> {
         let meta = bind.get_annotations();
         let rhs = bind.get_rhs();
         let result = match current_func {
@@ -279,10 +279,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_mutate(
         &mut self,
-        mutate: &Mutate<SemanticMetadata>,
+        mutate: &Mutate<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Mutate<SemanticMetadata>> {
+    ) -> Result<Mutate<SemanticAnnotations>> {
         let result = match current_func {
             Some(_) => {
                 let mut meta = mutate.get_annotations().clone();
@@ -318,10 +318,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_printi(
         &mut self,
-        p: &Printi<SemanticMetadata>,
+        p: &Printi<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Printi<SemanticMetadata>> {
+    ) -> Result<Printi<SemanticAnnotations>> {
         let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == I32 {
@@ -334,10 +334,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_printiln(
         &mut self,
-        p: &Printiln<SemanticMetadata>,
+        p: &Printiln<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Printiln<SemanticMetadata>> {
+    ) -> Result<Printiln<SemanticAnnotations>> {
         let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == I32 {
@@ -350,10 +350,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_printbln(
         &mut self,
-        p: &Printbln<SemanticMetadata>,
+        p: &Printbln<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Printbln<SemanticMetadata>> {
+    ) -> Result<Printbln<SemanticAnnotations>> {
         let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == Bool {
@@ -369,10 +369,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_prints(
         &mut self,
-        p: &Prints<SemanticMetadata>,
+        p: &Prints<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Prints<SemanticMetadata>> {
+    ) -> Result<Prints<SemanticAnnotations>> {
         let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == Type::StringLiteral {
@@ -388,10 +388,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_yieldreturn(
         &mut self,
-        yr: &YieldReturn<SemanticMetadata>,
+        yr: &YieldReturn<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<YieldReturn<SemanticMetadata>> {
+    ) -> Result<YieldReturn<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("yret appears outside of function")),
             Some(cf) => {
@@ -429,10 +429,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_return(
         &mut self,
-        r: &Return<SemanticMetadata>,
+        r: &Return<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Return<SemanticMetadata>> {
+    ) -> Result<Return<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("return appears outside of function")),
             Some(cf) => {
@@ -746,10 +746,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_yield(
         &mut self,
-        y: &Yield<SemanticMetadata>,
+        y: &Yield<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Yield<SemanticMetadata>> {
+    ) -> Result<Yield<SemanticAnnotations>> {
         match current_func {
             None => Err(format!("yield appears outside of function")),
             Some(_) => {

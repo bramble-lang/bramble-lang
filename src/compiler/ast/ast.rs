@@ -3,7 +3,7 @@ use struct_table::ResolvedStructTable;
 
 use crate::{
     compiler::ast::scope::{LayoutData, Scope},
-    semantics::semanticnode::SemanticMetadata,
+    semantics::semanticnode::SemanticAnnotations,
     syntax::{
         module::{self, Item, Module},
         routinedef::{RoutineDef, RoutineDefType},
@@ -19,7 +19,7 @@ use braid_lang::result::Result;
 pub type CompilerNode = Expression<Scope>;
 
 impl CompilerNode {
-    pub fn from(ast: &Module<SemanticMetadata>) -> Result<(Module<Scope>, ResolvedStructTable)> {
+    pub fn from(ast: &Module<SemanticAnnotations>) -> Result<(Module<Scope>, ResolvedStructTable)> {
         let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
         let struct_table = unresolved_struct_table.resolve()?;
         let (compiler_ast, _) =
@@ -28,7 +28,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_module(
-        m: &module::Module<SemanticMetadata>,
+        m: &module::Module<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (module::Module<Scope>, LayoutData) {
@@ -58,7 +58,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_items(
-        items: &Vec<Item<SemanticMetadata>>,
+        items: &Vec<Item<SemanticAnnotations>>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Vec<Item<Scope>>, LayoutData) {
@@ -83,7 +83,7 @@ impl CompilerNode {
     }
 
     fn compute_layout_for_structdef(
-        sd: &StructDef<SemanticMetadata>,
+        sd: &StructDef<SemanticAnnotations>,
     ) -> (StructDef<Scope>, LayoutData) {
         let (scope, layout) = Scope::structdef_from(sd.get_annotations());
         (
@@ -93,7 +93,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_routine(
-        rd: &RoutineDef<SemanticMetadata>,
+        rd: &RoutineDef<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (RoutineDef<Scope>, LayoutData) {
@@ -137,7 +137,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_statement(
-        statement: &Statement<SemanticMetadata>,
+        statement: &Statement<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Statement<Scope>, LayoutData) {
@@ -183,7 +183,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_bind(
-        bind: &Bind<SemanticMetadata>,
+        bind: &Bind<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Bind<Scope>, LayoutData) {
@@ -203,7 +203,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_mutate(
-        mutate: &Mutate<SemanticMetadata>,
+        mutate: &Mutate<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Mutate<Scope>, LayoutData) {
@@ -214,7 +214,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_printi(
-        p: &Printi<SemanticMetadata>,
+        p: &Printi<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printi<Scope>, LayoutData) {
@@ -225,7 +225,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_printiln(
-        p: &Printiln<SemanticMetadata>,
+        p: &Printiln<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printiln<Scope>, LayoutData) {
@@ -236,7 +236,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_printbln(
-        p: &Printbln<SemanticMetadata>,
+        p: &Printbln<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Printbln<Scope>, LayoutData) {
@@ -247,7 +247,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_prints(
-        p: &Prints<SemanticMetadata>,
+        p: &Prints<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Prints<Scope>, LayoutData) {
@@ -258,7 +258,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_yieldreturn(
-        yr: &YieldReturn<SemanticMetadata>,
+        yr: &YieldReturn<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (YieldReturn<Scope>, LayoutData) {
@@ -274,7 +274,7 @@ impl CompilerNode {
     }
 
     fn compute_layouts_for_return(
-        r: &Return<SemanticMetadata>,
+        r: &Return<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Return<Scope>, LayoutData) {
@@ -554,12 +554,12 @@ mod ast_tests {
         syntax::{expression::BinaryOperator, routinedef::RoutineDef},
     };
     use crate::{compiler::ast::struct_table::UnresolvedStructTable, semantics::symbol_table};
-    use crate::{semantics::semanticnode::SemanticMetadata, semantics::semanticnode::SemanticNode};
+    use crate::{semantics::semanticnode::SemanticAnnotations, semantics::semanticnode::SemanticNode};
 
     #[test]
     pub fn test_node_id_is_copied() {
         let sn = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 3,
                 ln: 0,
                 ty: Type::I32,
@@ -588,7 +588,7 @@ mod ast_tests {
     #[test]
     pub fn test_integer() {
         let sn = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -619,7 +619,7 @@ mod ast_tests {
     #[test]
     pub fn test_operator() {
         let sn1 = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -629,7 +629,7 @@ mod ast_tests {
             1,
         );
         let sn2 = SemanticNode::Integer(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 1,
                 ln: 0,
                 ty: Type::I32,
@@ -639,7 +639,7 @@ mod ast_tests {
             2,
         );
         let snmul = SemanticNode::BinaryOp(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 2,
                 ln: 0,
                 ty: Type::I32,
@@ -689,7 +689,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -724,7 +724,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -739,7 +739,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = SemanticNode::ExpressionBlock(
-            SemanticMetadata {
+            SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -784,7 +784,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            annotations: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -797,7 +797,7 @@ mod ast_tests {
             ty: Type::I32,
             body: vec![],
         };
-        let mut module = Module::new("root", SemanticMetadata::new(1, 1, Type::Unit));
+        let mut module = Module::new("root", SemanticAnnotations::new(1, 1, Type::Unit));
         module.add_function(sn).unwrap();
         let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
         let cn = CompilerNode::compute_layouts_for_module(
@@ -847,7 +847,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            annotations: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -865,7 +865,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            annotations: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
@@ -920,7 +920,7 @@ mod ast_tests {
         semantic_table.add("x", Type::I32, false).unwrap();
         semantic_table.add("y", Type::I32, false).unwrap();
         let sn = RoutineDef {
-            annotations: SemanticMetadata {
+            annotations: SemanticAnnotations {
                 id: 0,
                 ln: 0,
                 ty: Type::I32,
