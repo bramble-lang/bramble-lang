@@ -117,7 +117,7 @@ impl SemanticAst {
         rd: &RoutineDef<ParserInfo>,
     ) -> Result<RoutineDef<SemanticMetadata>> {
         let RoutineDef {
-            meta: ln,
+            annotations: ln,
             def,
             name: fname,
             params,
@@ -131,7 +131,7 @@ impl SemanticAst {
             nbody.push(r);
         }
         Ok(RoutineDef {
-            meta: self.semantic_metadata_from(*ln),
+            annotations: self.semantic_metadata_from(*ln),
             def: *def,
             name: fname.clone(),
             params: params.clone(),

@@ -130,7 +130,7 @@ impl<'a> TypeResolver<'a> {
         sym: &mut SymbolTable,
     ) -> Result<routinedef::RoutineDef<SemanticMetadata>> {
         let routinedef::RoutineDef {
-            meta,
+            annotations,
             name,
             def,
             params,
@@ -138,7 +138,7 @@ impl<'a> TypeResolver<'a> {
             ty: p,
             ..
         } = routine;
-        let mut meta = meta.clone();
+        let mut meta = annotations.clone();
         let canonical_params = self.params_to_canonical(sym, &params)?;
         for (pname, pty) in canonical_params.iter() {
             meta.sym.add(pname, pty.clone(), false)?;
@@ -165,7 +165,7 @@ impl<'a> TypeResolver<'a> {
             .expect("Failed to create canonical path for function");
         meta.set_canonical_path(canon_path);
         Ok(routinedef::RoutineDef {
-            meta: meta.clone(),
+            annotations: meta.clone(),
             def: def.clone(),
             name: name.clone(),
             params: canonical_params,
