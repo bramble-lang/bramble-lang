@@ -153,7 +153,6 @@ use super::*;
         let mut fun_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
@@ -189,7 +188,6 @@ use super::*;
         let mut fun_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
@@ -216,7 +214,6 @@ use super::*;
         let fun2_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 0,
                 routine_type: RoutineDefType::Function,
             },
@@ -243,7 +240,6 @@ use super::*;
         let mut cor_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Coroutine,
             },
@@ -271,7 +267,6 @@ use super::*;
         let fun2_scope = Scope::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 0,
                 routine_type: RoutineDefType::Coroutine,
             },

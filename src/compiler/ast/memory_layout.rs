@@ -126,7 +126,6 @@ pub mod memory_layout {
             nbody.push(e);
         }
         annotations.level = Level::Routine {
-            next_label: 0,
             allocation: nlayout.offset,
             routine_type: *def,
         };
@@ -830,11 +829,9 @@ mod ast_tests {
 
                 match annotations.level {
                     scope::Level::Routine {
-                        next_label,
                         allocation,
                         routine_type,
                     } => {
-                        assert_eq!(next_label, 0);
                         assert_eq!(allocation, 16);
                         assert_eq!(routine_type, RoutineDefType::Function);
                     }
