@@ -190,7 +190,7 @@ mod test {
     use crate::parser::parser;
     use crate::{diagnostics::config::TracingConfig, type_check};
 
-    use super::super::layout::compute;
+    use super::super::layout::compute_layout_for_program;
     use super::*;
 
     #[test]
@@ -246,7 +246,7 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let (compiler_ast, ..) = compute::from(&module).unwrap();
+            let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from_module(&compiler_ast);
 

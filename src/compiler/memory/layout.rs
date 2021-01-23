@@ -23,17 +23,20 @@ use braid_lang::result::Result;
  * it computes how large the structure is and what the relative offset of every field
  * in the structure is.
  */
-pub mod compute {
+
+pub fn compute_layout_for_program(
+    ast: &Module<SemanticAnnotations>,
+) -> Result<(Module<Scope>, ResolvedStructTable)> {
+    let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
+    let struct_table = unresolved_struct_table.resolve()?;
+    let (compiler_ast, _) = compute::layouts_for_module(ast, LayoutData::new(0), &struct_table);
+    Ok((compiler_ast, struct_table))
+}
+
+mod compute {
     use super::*;
 
-    pub fn from(ast: &Module<SemanticAnnotations>) -> Result<(Module<Scope>, ResolvedStructTable)> {
-        let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
-        let struct_table = unresolved_struct_table.resolve()?;
-        let (compiler_ast, _) = layouts_for_module(ast, LayoutData::new(0), &struct_table);
-        Ok((compiler_ast, struct_table))
-    }
-
-    fn layouts_for_module(
+    pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
