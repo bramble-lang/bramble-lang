@@ -194,7 +194,7 @@ mod test {
     use crate::{diagnostics::config::TracingConfig, type_check};
     
     use super::*;
-    use super::super::ast::memory_layout;
+    use super::super::memory_layout::memory_layout;
 
     #[test]
     fn insert_string() {

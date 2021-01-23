@@ -3,7 +3,7 @@ use std::collections::HashMap;
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::compiler::ast::ast::memory_layout;
+use crate::compiler::ast::memory_layout::memory_layout;
 use crate::compiler::ast::scope::Level::Routine;
 use crate::compiler::ast::scope::Scope;
 use crate::compiler::ast::stack::ScopeStack;
