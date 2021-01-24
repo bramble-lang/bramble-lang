@@ -303,7 +303,7 @@ that semantic meaning.
 One reason, I like approaching this from the trait perspective is that it will let me keep the heterogenous types
 for nodes and the homogenous nodes from the Language Design Patterns book.
 
-## Compiler::Scope
+## Compiler::Scope Design
 I am consistently not happy with how the Compiler's `Scope` and `Ast<Scope>` works. I do not know if it's the
 naming of the type is confusing or just how it's structured.  I think that there is too much overlap in what
 is being stored in that type:
