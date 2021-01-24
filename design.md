@@ -324,3 +324,9 @@ inefficient, tedious, and hard to get correct.  How can I write this in Braid an
 compilation process.  At least these two problems need to be solved: 1. Braid needs to be able to work with
 things like the stack pointers and registers and 2. need a way to compile a separate set of code and inject it into
 the project.
+
+## C Interop Functionality
+In order to get my language to the point of being useable for actual problems as quickly as possible, I want
+to be able to interop with existing C libraries so that I can just use those to fill gaps. To that end, I want
+to implement a C interop system so that I can easily call C functions from within Braid code. So, I should take
+a look at how some languages to C interop and steal one of their designs.
