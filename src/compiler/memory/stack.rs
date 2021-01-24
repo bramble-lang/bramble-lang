@@ -1,25 +1,25 @@
 use crate::compiler::memory::scope::Level;
 use crate::syntax::routinedef::RoutineDefType;
 
-use super::{scope::Scope, symbol_table::Symbol};
+use super::{scope::SymbolOffsetTable, symbol_table::Symbol};
 
 #[derive(Debug)]
-pub struct ScopeStack<'a> {
-    stack: Vec<&'a Scope>,
+pub struct SymbolOffsetTableStack<'a> {
+    stack: Vec<&'a SymbolOffsetTable>,
 }
 
-impl<'a> ScopeStack<'a> {
-    pub fn new() -> ScopeStack<'a> {
-        ScopeStack { stack: vec![] }
+impl<'a> SymbolOffsetTableStack<'a> {
+    pub fn new() -> SymbolOffsetTableStack<'a> {
+        SymbolOffsetTableStack { stack: vec![] }
     }
 
     /// Push a new scope onto the stack.
-    pub fn push(&mut self, scope: &'a Scope) {
+    pub fn push(&mut self, scope: &'a SymbolOffsetTable) {
         self.stack.push(scope);
     }
 
     /// Pop the current scope off of the stack
-    pub fn pop(&mut self) -> Option<&'a Scope> {
+    pub fn pop(&mut self) -> Option<&'a SymbolOffsetTable> {
         self.stack.pop()
     }
 
@@ -55,7 +55,7 @@ impl<'a> ScopeStack<'a> {
     }
 }
 
-impl std::fmt::Display for ScopeStack<'_> {
+impl std::fmt::Display for SymbolOffsetTableStack<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for scope in self.stack.iter() {
             f.write_fmt(format_args!("{}\n", scope))?;
@@ -71,16 +71,16 @@ mod tests {
     use crate::expression::Expression;
     use crate::syntax::ty::Type;
     use crate::{
-        compiler::memory::scope::Scope,
+        compiler::memory::scope::SymbolOffsetTable,
         syntax::{module, routinedef::RoutineDef},
     };
 
     #[test]
     fn test_find_symbol_in_current_scope() {
-        let mut scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut scope = SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         scope.insert("x", 4, 4);
         let node = Expression::ExpressionBlock(scope, vec![], None);
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
         stack.push(&node.get_annotations());
 
         let sym = stack.find("x").unwrap();
@@ -91,13 +91,14 @@ mod tests {
 
     #[test]
     fn test_find_symbol_in_outer_scope() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
-        let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let inner_scope = SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
 
@@ -109,13 +110,15 @@ mod tests {
 
     #[test]
     fn test_find_symbol_defined_in_both_scopes() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
-        let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut inner_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 16);
         let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
@@ -128,13 +131,14 @@ mod tests {
 
     #[test]
     fn test_find_symbol_does_not_exist() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
         let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
-        let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let inner_scope = SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
 
@@ -143,14 +147,15 @@ mod tests {
 
     #[test]
     fn test_find_symbol_does_not_pass_function() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("nope", 4, 4);
         let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
         stack.push(&outer_node.get_annotations());
 
-        let mut fun_scope = Scope::new(
+        let mut fun_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
                 allocation: 8,
@@ -171,7 +176,8 @@ mod tests {
         };
         stack.push(&outer_node.get_annotations());
 
-        let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut inner_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
         let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
         stack.push(&inner_node.get_annotations());
@@ -183,9 +189,9 @@ mod tests {
 
     #[test]
     fn test_get_routine_parameters() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut fun_scope = Scope::new(
+        let mut fun_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
                 allocation: 8,
@@ -205,13 +211,14 @@ mod tests {
             body: vec![],
         };
 
-        let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut module_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("func", 0, 0);
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_function(fun_node).unwrap();
         stack.push(&module_node.get_annotations());
 
-        let fun2_scope = Scope::new(
+        let fun2_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
                 allocation: 0,
@@ -235,9 +242,9 @@ mod tests {
 
     #[test]
     fn test_get_coroutine_parameters() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut cor_scope = Scope::new(
+        let mut cor_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
                 allocation: 8,
@@ -257,14 +264,15 @@ mod tests {
             body: vec![],
         };
 
-        let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut module_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("cor", 0, 0);
 
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_coroutine(cor_node).unwrap();
         stack.push(&module_node.get_annotations());
 
-        let fun2_scope = Scope::new(
+        let fun2_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
                 allocation: 0,
