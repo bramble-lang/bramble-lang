@@ -286,4 +286,4 @@ to avoid, when at all possible, doing match expressions on enums.
 So, when writing a tree traversal algorithm, here's what I would need in order to make it generic:
 1. Be able to recursively iterate over the children
 2. Be able to map the children to transform them
-3. 
+3.  
