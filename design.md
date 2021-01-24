@@ -286,4 +286,16 @@ to avoid, when at all possible, doing match expressions on enums.
 So, when writing a tree traversal algorithm, here's what I would need in order to make it generic:
 1. Be able to recursively iterate over the children
 2. Be able to map the children to transform them
-3.  
+3. Be able to take a node, update it's annotation, and create a new instance of the node with a new annotation
+type. For example: Take a node from the parser AST and create the semantic annotation and then create a copy
+of the node but with SemanticAnnotation
+
+So, if I do a trait I would want it to have:
+1. A way to iterate over the child nodes
+2. A way to transform the annotation on the node and it's children and output a copy of the AST data but with
+new annotation type: `map: (AST<T>, T -> U) -> AST<U>`.
+3. A way to get a list of the child nodes
+
+So, I am differentiating between 1 and 2 because some nodes (e.g. if statements) will have children that are each
+fundamentally different in there semantic role and when you return just a list or an iterator over them you remove
+that semantic meaning.
