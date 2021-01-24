@@ -299,3 +299,6 @@ new annotation type: `map: (AST<T>, T -> U) -> AST<U>`.
 So, I am differentiating between 1 and 2 because some nodes (e.g. if statements) will have children that are each
 fundamentally different in there semantic role and when you return just a list or an iterator over them you remove
 that semantic meaning.
+
+One reason, I like approaching this from the trait perspective is that it will let me keep the heterogenous types
+for nodes and the homogenous nodes from the Language Design Patterns book.
