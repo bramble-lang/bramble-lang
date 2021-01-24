@@ -271,3 +271,19 @@ Additionally, is there a type concept I can come up with to differentiate betwee
 How do they differ?  I think a lot will depend on how I implement coroutines: if I can pass data to and from
 at the call point, then the type will need to capture that.  Likewise, if functions can yield when inside a
 coroutine maybe that will need to be captured
+
+# 2021-01-24
+## AST Design
+I am still not happy with the design of the AST. Following the design I saw in `lalr_pop` was still a significant
+improvement, but does not address the challenge of simplifying traversal of the tree as much as possible. My hope
+was that the `lalrpop` design would address the tree traversals in some way: either by solving it or by simplifying
+the code enough to make it a non-issue.  But it really hasn't: the code is much better organized and easier to
+reason about, but tree traversals still require writing specialized code.
+
+I want to update the design to allow for writing as generic as possible code in the semantic analysis stages:
+to avoid, when at all possible, doing match expressions on enums.
+
+So, when writing a tree traversal algorithm, here's what I would need in order to make it generic:
+1. Be able to recursively iterate over the children
+2. Be able to map the children to transform them
+3. 
