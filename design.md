@@ -312,3 +312,15 @@ is being stored in that type:
 2. The amount of space that needs to be allocated to the stack frame in a routine
 3. The relative memory offsets for structures
 
+## Core Library Design
+Currently the core library consists of a small number of functions which setup and manage coroutine stack
+allocation and switching to and from coroutines.  There's also functions that back print statements. There
+are a few things which need to be done to improve this:
+
+1. Heap creation, allocation of data on the heap, and heap management.
+2. Cleaning up completed coroutines
+3. Be able to write the core in Braid.  Right now, the Core is written by and in assembly and this seems pretty
+inefficient, tedious, and hard to get correct.  How can I write this in Braid and then compile it as part of the
+compilation process.  At least these two problems need to be solved: 1. Braid needs to be able to work with
+things like the stack pointers and registers and 2. need a way to compile a separate set of code and inject it into
+the project.
