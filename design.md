@@ -330,3 +330,34 @@ In order to get my language to the point of being useable for actual problems as
 to be able to interop with existing C libraries so that I can just use those to fill gaps. To that end, I want
 to implement a C interop system so that I can easily call C functions from within Braid code. So, I should take
 a look at how some languages to C interop and steal one of their designs.
+
+# 2021-01-25
+## Expanding on scoped mutability
+Here's another, better example, of what I want to be able to address.  When you have two operations on two values
+which must follow a specific pattern of executions.  I got this example from Ch3.2 of my Concurrency book:
+but if you are using two semaphores to create a producer-consumer queue then you wind up with logic like 
+this:
+
+```
+fn produce:
+    FREE.down
+    // write to queue
+    BUSY.up
+
+fn consume:
+    BUSY.down
+    // read from queue
+    FREE.up
+```
+
+For this to work, `BUSY.up` must be the next primitive operation executed after `FREE.down` in `produce`,
+if you do `FREE.down` twice or forget to do `BUSY.up` the code will be broken. I think of this as an informal
+semantic rule or, maybe a better name, semantic norm.  It's not enforced but it must be followed for things to work
+correctly.  I want to allow semantic norms to be more accurately captured by developers so that when I create the
+entities `FREE` and `BUSY` I can be confident that they will always be used correctly in any subsequent code
+that is written.
+
+This also gets the root of what I mean when I talk about consistency within a program. Backing the `FREE` and
+`BUSY` primitives are counters that keep track of how much of the queue is free and how much is being used
+(busy). There are certain invariants which these values must maintain, at a minimum, for this code to work correctly.
+I think that providing the definition of semantic norms will make that easier to manage.
