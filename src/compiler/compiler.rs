@@ -1190,46 +1190,6 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn return_exp_temp(
-        &mut self,
-        exp: &'a Option<Box<Expression<SymbolOffsetTable>>>,
-        current_func: &String,
-    ) -> Result<Vec<Inst>, String> {
-        let mut code = vec![];
-        code.push(Inst::Label(".terminus".into()));
-        match exp {
-            Some(e) => {
-                self.traverse_expression(e, current_func, &mut code)?;
-                // If the expression is a custom type then copy the value into the stack frame
-                // of the caller (or the yielder in the case of coroutines)
-                match e.get_annotations().ty() {
-                    Type::Custom(struct_name) => {
-                        // Copy the structure into the stack frame of the calling function
-                        let asm =
-                            self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
-
-                        let is_coroutine = self.scope.in_coroutine();
-                        if is_coroutine {
-                            assembly! {(code){
-                                mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];   // Load the Caller functions ESP pointer
-                                {{asm}}
-                            }};
-                        } else {
-                            assembly! {(code){
-                                lea %rsi, [%rbp+{FUNCTION_CALLER_RSP}];  // Load the caller function's ESP pointer
-                                {{asm}}
-                            }};
-                        }
-                    }
-                    _ => (),
-                }
-            }
-            None => (),
-        }
-
-        Ok(code)
-    }
-
     fn pop_struct_into(&self, struct_name: &Path, id_offset: u32) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
