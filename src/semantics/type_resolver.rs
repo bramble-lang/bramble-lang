@@ -628,18 +628,21 @@ impl<'a> TypeResolver<'a> {
 
                     resolved_params.push(ty);
                 }
+
+                // Check that the function being called exists
                 let (symbol, routine_canon_path) =
                     self.lookup_symbol_by_path(sym, routine_path)?
                         .ok_or(format!("function {} not declared", routine_path))?;
 
                 let (expected_param_tys, ret_ty) =
                     Self::extract_routine_type_info(symbol, call, &routine_path)?;
-
                 let expected_param_tys = expected_param_tys
                     .iter()
                     .map(|pty| Self::type_to_canonical_with_path(&routine_canon_path.parent(), pty))
                     .collect::<Result<Vec<Type>>>()?;
 
+                // Check that parameters are correct and if so, return the node annotated with
+                // semantic information
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
                         "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
@@ -907,7 +910,10 @@ impl<'a> TypeResolver<'a> {
         path: &Path,
     ) -> Result<Option<(&'a Symbol, Path)>> {
         let canon_path = self.to_canonical(sym, path)?;
+
         if path.len() > 1 {
+            // If the path contains more than just the item's name then
+            // traverse the parent path to find the specified item
             let item = canon_path
                 .item()
                 .expect("Expected a canonical path with at least one step in it");
@@ -921,11 +927,10 @@ impl<'a> TypeResolver<'a> {
                 .get(&item)
                 .map(|i| (i, canon_path)))
         } else if path.len() == 1 {
+            // If the path has just the item name, then check the local scope and
+            // the parent scopes for the given symbol
             let item = &path[0];
-            Ok(sym
-                .get(item)
-                .or(self.stack.get(item))
-                .map(|i| (i, canon_path)))
+            self.lookup(sym, item).map(|i| Some((i, canon_path)))
         } else {
             Err("empty path passed to lookup_path".into())
         }
@@ -2121,7 +2126,7 @@ mod tests {
                 }
                 fn number() -> i32 {return 5;}
                 ",
-                Err("Semantic: L2: function bad_fun not declared"),
+                Err("Semantic: L2: bad_fun is not defined"),
             ),
             (
                 "fn main() -> i32 {
