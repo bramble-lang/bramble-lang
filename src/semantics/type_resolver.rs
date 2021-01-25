@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::syntax::{
     path::Path,
     statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
@@ -52,6 +54,7 @@ pub struct TypeResolver<'a> {
     stack: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
+    imported_symbols: HashMap<String, Symbol>,
 }
 
 impl<'a> Tracing for TypeResolver<'a> {
@@ -67,7 +70,26 @@ impl<'a> TypeResolver<'a> {
             stack: SymbolTableScopeStack::new(),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
+            imported_symbols: HashMap::new(),
         }
+    }
+
+    pub fn import_symbol(&mut self, canonical_name: Path, ty: Type) -> Option<Symbol> {
+        match canonical_name.item() {
+            Some(item) => self.imported_symbols.insert(
+                canonical_name.to_string(),
+                Symbol {
+                    name: item.into(),
+                    ty,
+                    mutable: false,
+                },
+            ),
+            None => None,
+        }
+    }
+
+    fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
+        self.imported_symbols.get(&canonical_name.to_string())
     }
 
     fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticAnnotations>> {
@@ -917,15 +939,24 @@ impl<'a> TypeResolver<'a> {
             let item = canon_path
                 .item()
                 .expect("Expected a canonical path with at least one step in it");
-            let node = self
+            let module = self
                 .root
-                .go_to_module(&canon_path.parent())
-                .ok_or(format!("Could not find item with the given path: {}", path))?;
-            Ok(node
-                .get_annotations()
-                .sym
-                .get(&item)
-                .map(|i| (i, canon_path)))
+                .go_to_module(&canon_path.parent());
+            match module {
+                Some(module) => 
+                    Ok(module
+                        .get_annotations()
+                        .sym
+                        .get(&item)
+                        .map(|i| (i, canon_path))),
+                None => {
+                    let imported_symbol = self.get_imported_symbol(&canon_path);
+                    match imported_symbol {
+                        Some(is) => Ok(Some((is, canon_path))),
+                        None => Err(format!("Could not find item with the given path: {}", path)),
+                    }
+                }
+            }
         } else if path.len() == 1 {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
@@ -2888,5 +2919,97 @@ mod tests {
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
                 }
             }
+    }
+
+    #[test]
+    pub fn test_imported_functions() {
+        for (text, import_func, expected) in vec![
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test();
+                    return;
+                }
+                ",
+                Type::FunctionDef(vec![], Box::new(Type::I32)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5);
+                    return;
+                }
+                ",
+                Type::FunctionDef(vec![Type::I32], Box::new(Type::I32)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5, true);
+                    return;
+                }
+                ",
+                Type::FunctionDef(vec![Type::I32, Type::Bool], Box::new(Type::I32)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test2();
+                    return;
+                }
+                ",
+                Type::FunctionDef(vec![], Box::new(Type::I32)),
+                Err("Semantic: L3: Could not find item with the given path: root::std::test2"),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5);
+                    return;
+                }
+                ",
+                Type::FunctionDef(vec![], Box::new(Type::I32)),
+                Err("Semantic: L3: Incorrect number of parameters passed to routine: root::std::test. Expected 0 but got 1"),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5, 2);
+                    return;
+                }
+                ",
+                Type::FunctionDef(vec![Type::I32, Type::Bool], Box::new(Type::I32)),
+                Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i32"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let mut sa = SemanticAst::new();
+            let mut sm_ast = sa.from_module(&ast).unwrap();
+            SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
+
+            let mut root_table = SymbolTable::new();
+            let mut semantic = TypeResolver::new(&sm_ast);
+
+            semantic.import_symbol(
+                vec!["root", "std", "test"].into(),
+                import_func,
+            );
+
+            let result = semantic
+                .resolve(&mut root_table)
+                .map_err(|e| format!("Semantic: {}", e));
+            match expected {
+                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+            }
+        }
     }
 }
