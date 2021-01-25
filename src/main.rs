@@ -56,7 +56,7 @@ fn main() {
     // Type Check
     let trace_semantic_analysis = TracingConfig::parse(config.value_of("trace-symbol-table"));
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
-    let semantic_ast = match type_check(&ast, trace_semantic_analysis, trace_path) {
+    let semantic_ast = match resolve_types(&ast, trace_semantic_analysis, trace_path) {
         Ok(ast) => ast,
         Err(msg) => {
             println!("Error: {}", msg);

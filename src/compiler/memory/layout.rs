@@ -527,7 +527,7 @@ mod compute {
         use module::Module;
 
         use super::*;
-        use crate::semantics::type_resolver::type_check;
+        use crate::semantics::type_resolver::resolve_types;
         use crate::syntax::routinedef::RoutineDefType;
         use crate::syntax::ty::Type;
         use crate::{compiler::memory::scope, syntax::path::Path};
@@ -959,7 +959,7 @@ mod compute {
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
                 let semantic_module =
-                    type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+                    resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
                 let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
                 let resolved = unrealized_st.resolve();
 
