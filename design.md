@@ -223,3 +223,141 @@ The other is to just wholesale convert the compiler to use x64.
 The biggest drawback of the first option is that I have to change the ABI for C interop in 64 bit (it uses registers instead of the stack) and doing
 that in a converter would be a pain in the ass.  The other question is why support 32bit right now?  All my dev work and everyone I know would be using
 64bit machines and to support multiple platforms I would rather hop over to LLVM and to implement an IL layer.
+
+# 2021-01-21
+## Thoughts about Coroutines
+I have a goal to update the language to allow for `yield` to work even when called within a function that is in
+the call stack of a coroutine.  For example, let `c` be a coroutine and `main` and `f` be functions; `main`
+yields to `c`, then `c` calls `f`, then `f` does `yret`: this would behave just as if `yret` was called in `c`,
+control is yielded back to `main` and if main calls `yield c` again, then execution would resume in `f` immediately,
+after the `yret`. If `yret` is invoked by `f` but is _not_ in the call stack of a coroutine, then it will behave exactly as if 
+it were invoking a `return`.
+
+This raises a question about semantics when handling communication between routine primitives.  Currently,
+`yret` takes a value which matches the coroutine's return type and returns that value along with control to
+the invoker (in the example, `main`).  But this assumes and requires the return type to be defined and to be
+consistent: the invoker needs to know what type will be returned by a yield so that it can allocate storage
+and properly compile and work with the value returned.  
+
+But then this would mean that `f` maintain the same type requirement when it invokes `yret`. How could `f` possibly
+know the `yret` type of the coroutine which called it?  In addition, for `yret` to behave like `return` when `f` is
+not in the callstack of a coroutine its type must match the defined return type of `f`. This creates a knowledge requirement
+where the User must be aware of the internal workings of `f` when writing `c`, and, when writing `f` they must be
+either aware or prescient about the internal workings of any calling coroutine.
+
+There are at least two possible ways forward that I can think of:
+1. The Semantic Analysis will only let a coroutine, `c`, call a function, `f`, which invokes `yret` if the
+return type of `f` matches the return type of `c`.  And it is a gobal rule that `yret` must match the return
+type of the containing function.
+2. There is a different primitive for communication between routine primitives and coroutines which allows for
+asymetric knowledge of code implementations.  E.g. channels in Go.
+3. `yret` can only be used in a coroutine, but coroutines can be called as functions or birthed as coroutines.
+If called as a function, then its return type must match the caller coroutines return type, if called within
+a coroutine (if called within a function it does not matter).  If created as a coroutine, then it behaves as
+coroutines currently do: `yret` returns the line immediately following the `yield` in the routine (function or
+coroutine) which invoked the yield.  This satisfies the asymetric knowledge requirement as the fact that a `yret`
+may exist is now explicit in the definitin of the routine (if its a coroutine then you must be prepared to deal
+with yield returns in one way or another) but does not require knowledge of the internal implementation.
+
+Follow ups:
+1. The language Wren supports this behavior in functions called by coroutines, take a look at its semantics and
+see what it does to resolve this problem.  Is Wren dynamically typed? That would explain how it could solve this
+problem.
+2. Look into Stackless vs. Stackful coroutines: https://blog.varunramesh.net/posts/stackless-vs-stackful-coroutines/
+3. Lua also supports coroutines: https://www.lua.org/pil/9.1.html.  Lua's docs on coroutines seems very well
+written and informative about coroutines, worth my time to read it.
+
+Additionally, is there a type concept I can come up with to differentiate between functions and coroutines?
+How do they differ?  I think a lot will depend on how I implement coroutines: if I can pass data to and from
+at the call point, then the type will need to capture that.  Likewise, if functions can yield when inside a
+coroutine maybe that will need to be captured
+
+# 2021-01-24
+## AST Design
+I am still not happy with the design of the AST. Following the design I saw in `lalr_pop` was still a significant
+improvement, but does not address the challenge of simplifying traversal of the tree as much as possible. My hope
+was that the `lalrpop` design would address the tree traversals in some way: either by solving it or by simplifying
+the code enough to make it a non-issue.  But it really hasn't: the code is much better organized and easier to
+reason about, but tree traversals still require writing specialized code.
+
+I want to update the design to allow for writing as generic as possible code in the semantic analysis stages:
+to avoid, when at all possible, doing match expressions on enums.
+
+So, when writing a tree traversal algorithm, here's what I would need in order to make it generic:
+1. Be able to recursively iterate over the children
+2. Be able to map the children to transform them
+3. Be able to take a node, update it's annotation, and create a new instance of the node with a new annotation
+type. For example: Take a node from the parser AST and create the semantic annotation and then create a copy
+of the node but with SemanticAnnotation
+
+So, if I do a trait I would want it to have:
+1. A way to iterate over the child nodes
+2. A way to transform the annotation on the node and it's children and output a copy of the AST data but with
+new annotation type: `map: (AST<T>, T -> U) -> AST<U>`.
+3. A way to get a list of the child nodes
+
+So, I am differentiating between 1 and 2 because some nodes (e.g. if statements) will have children that are each
+fundamentally different in there semantic role and when you return just a list or an iterator over them you remove
+that semantic meaning.
+
+One reason, I like approaching this from the trait perspective is that it will let me keep the heterogenous types
+for nodes and the homogenous nodes from the Language Design Patterns book.
+
+## Compiler::Scope Design
+I am consistently not happy with how the Compiler's `Scope` and `Ast<Scope>` works. I do not know if it's the
+naming of the type is confusing or just how it's structured.  I think that there is too much overlap in what
+is being stored in that type:
+
+1. The symbol table with memory offsets within the stack frame
+2. The amount of space that needs to be allocated to the stack frame in a routine
+3. The relative memory offsets for structures
+
+## Core Library Design
+Currently the core library consists of a small number of functions which setup and manage coroutine stack
+allocation and switching to and from coroutines.  There's also functions that back print statements. There
+are a few things which need to be done to improve this:
+
+1. Heap creation, allocation of data on the heap, and heap management.
+2. Cleaning up completed coroutines
+3. Be able to write the core in Braid.  Right now, the Core is written by and in assembly and this seems pretty
+inefficient, tedious, and hard to get correct.  How can I write this in Braid and then compile it as part of the
+compilation process.  At least these two problems need to be solved: 1. Braid needs to be able to work with
+things like the stack pointers and registers and 2. need a way to compile a separate set of code and inject it into
+the project.
+
+## C Interop Functionality
+In order to get my language to the point of being useable for actual problems as quickly as possible, I want
+to be able to interop with existing C libraries so that I can just use those to fill gaps. To that end, I want
+to implement a C interop system so that I can easily call C functions from within Braid code. So, I should take
+a look at how some languages to C interop and steal one of their designs.
+
+# 2021-01-25
+## Expanding on scoped mutability
+Here's another, better example, of what I want to be able to address.  When you have two operations on two values
+which must follow a specific pattern of executions.  I got this example from Ch3.2 of my Concurrency book:
+but if you are using two semaphores to create a producer-consumer queue then you wind up with logic like 
+this:
+
+```
+fn produce:
+    FREE.down
+    // write to queue
+    BUSY.up
+
+fn consume:
+    BUSY.down
+    // read from queue
+    FREE.up
+```
+
+For this to work, `BUSY.up` must be the next primitive operation executed after `FREE.down` in `produce`,
+if you do `FREE.down` twice or forget to do `BUSY.up` the code will be broken. I think of this as an informal
+semantic rule or, maybe a better name, semantic norm.  It's not enforced but it must be followed for things to work
+correctly.  I want to allow semantic norms to be more accurately captured by developers so that when I create the
+entities `FREE` and `BUSY` I can be confident that they will always be used correctly in any subsequent code
+that is written.
+
+This also gets the root of what I mean when I talk about consistency within a program. Backing the `FREE` and
+`BUSY` primitives are counters that keep track of how much of the queue is free and how much is being used
+(busy). There are certain invariants which these values must maintain, at a minimum, for this code to work correctly.
+I think that providing the definition of semantic norms will make that easier to manage.

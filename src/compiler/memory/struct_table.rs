@@ -2,7 +2,7 @@ use braid_lang::result::Result;
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
-    semantics::semanticnode::SemanticMetadata,
+    semantics::semanticnode::SemanticAnnotations,
     syntax::path::Path,
     syntax::{
         module::{Item, Module},
@@ -51,7 +51,7 @@ impl UnresolvedStructTable {
         }
     }
 
-    pub fn from_module(root: &Module<SemanticMetadata>) -> Result<UnresolvedStructTable> {
+    pub fn from_module(root: &Module<SemanticAnnotations>) -> Result<UnresolvedStructTable> {
         let mut table = UnresolvedStructTable {
             table: HashMap::new(),
             state: PhantomData,
@@ -62,7 +62,7 @@ impl UnresolvedStructTable {
     }
 
     fn traverse_module(
-        module: &Module<SemanticMetadata>,
+        module: &Module<SemanticAnnotations>,
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<()> {
         for s in module.get_structs().iter() {
@@ -83,11 +83,15 @@ impl UnresolvedStructTable {
     }
 
     pub fn from_structdef(
-        struct_def: &StructDef<SemanticMetadata>,
+        struct_def: &StructDef<SemanticAnnotations>,
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<()> {
         let def = StructDefinition::new(struct_def.get_name(), struct_def.get_fields().clone());
-        Self::insert_struct(table, struct_def.get_metadata().get_canonical_path(), def)?;
+        Self::insert_struct(
+            table,
+            struct_def.get_annotations().get_canonical_path(),
+            def,
+        )?;
         Ok(())
     }
 
@@ -226,7 +230,7 @@ mod test {
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},
         parser::parser,
-        semantics::type_resolver::type_check,
+        semantics::type_resolver::resolve_types,
     };
 
     #[test]
@@ -243,7 +247,8 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module =
+                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             //let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
@@ -278,7 +283,8 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module =
+                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             //let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
@@ -316,7 +322,8 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module =
+                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -450,7 +457,8 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module =
+                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -557,7 +565,8 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module =
+                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -590,7 +599,8 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module =
+                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved = unrealized_st.resolve();
 

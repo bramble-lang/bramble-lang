@@ -2,7 +2,7 @@ use super::{statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
-    pub meta: M,
+    pub annotations: M,
     pub def: RoutineDefType,
     pub name: String,
     pub params: Vec<(String, Type)>,
@@ -13,13 +13,13 @@ pub struct RoutineDef<M> {
 impl<M> RoutineDef<M> {
     pub fn new_function(
         name: &str,
-        metadata: M,
+        annotations: M,
         params: Vec<(String, Type)>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
         RoutineDef {
-            meta: metadata,
+            annotations,
             def: RoutineDefType::Function,
             name: name.into(),
             params,
@@ -30,13 +30,13 @@ impl<M> RoutineDef<M> {
 
     pub fn new_coroutine(
         name: &str,
-        metadata: M,
+        annotations: M,
         params: Vec<(String, Type)>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
         RoutineDef {
-            meta: metadata,
+            annotations,
             def: RoutineDefType::Coroutine,
             name: name.into(),
             params,
@@ -45,12 +45,8 @@ impl<M> RoutineDef<M> {
         }
     }
 
-    pub fn get_metadata(&self) -> &M {
-        &self.meta
-    }
-
-    pub fn get_metadata_mut(&mut self) -> &mut M {
-        &mut self.meta
+    pub fn get_annotations(&self) -> &M {
+        &self.annotations
     }
 
     pub fn get_name(&self) -> &str {

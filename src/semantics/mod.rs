@@ -5,8 +5,8 @@
  * 2. Checking functions, variables, coroutines, etc. to make sure that they exist
  * 3. Constructing the symbol table for the code.
  *
- * These functions will take an AST that has ParserInfo metadata and will output the AST updated
- * with SemanticMetadata (including the type of each node and the symbol tables).
+ * These functions will take an AST that has ParserInfo annotations and will output the AST updated
+ * with SemanticAnnotations (including the type of each node and the symbol tables).
  */
 
 pub mod semanticnode;

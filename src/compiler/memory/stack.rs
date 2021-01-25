@@ -1,25 +1,25 @@
-use crate::compiler::ast::scope::Level;
+use crate::compiler::memory::scope::Level;
 use crate::syntax::routinedef::RoutineDefType;
 
-use super::{scope::Scope, symbol_table::Symbol};
+use super::{scope::SymbolOffsetTable, symbol_table::Symbol};
 
 #[derive(Debug)]
-pub struct ScopeStack<'a> {
-    stack: Vec<&'a Scope>,
+pub struct SymbolOffsetTableStack<'a> {
+    stack: Vec<&'a SymbolOffsetTable>,
 }
 
-impl<'a> ScopeStack<'a> {
-    pub fn new() -> ScopeStack<'a> {
-        ScopeStack { stack: vec![] }
+impl<'a> SymbolOffsetTableStack<'a> {
+    pub fn new() -> SymbolOffsetTableStack<'a> {
+        SymbolOffsetTableStack { stack: vec![] }
     }
 
     /// Push a new scope onto the stack.
-    pub fn push(&mut self, scope: &'a Scope) {
+    pub fn push(&mut self, scope: &'a SymbolOffsetTable) {
         self.stack.push(scope);
     }
 
     /// Pop the current scope off of the stack
-    pub fn pop(&mut self) -> Option<&'a Scope> {
+    pub fn pop(&mut self) -> Option<&'a SymbolOffsetTable> {
         self.stack.pop()
     }
 
@@ -55,7 +55,7 @@ impl<'a> ScopeStack<'a> {
     }
 }
 
-impl std::fmt::Display for ScopeStack<'_> {
+impl std::fmt::Display for SymbolOffsetTableStack<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for scope in self.stack.iter() {
             f.write_fmt(format_args!("{}\n", scope))?;
@@ -68,19 +68,20 @@ impl std::fmt::Display for ScopeStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::expression::Expression;
     use crate::syntax::ty::Type;
     use crate::{
-        compiler::ast::{ast::CompilerNode, scope::Scope},
+        compiler::memory::scope::SymbolOffsetTable,
         syntax::{module, routinedef::RoutineDef},
     };
 
     #[test]
     fn test_find_symbol_in_current_scope() {
-        let mut scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut scope = SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         scope.insert("x", 4, 4);
-        let node = CompilerNode::ExpressionBlock(scope, vec![], None);
-        let mut stack = ScopeStack::new();
-        stack.push(&node.get_metadata());
+        let node = Expression::ExpressionBlock(scope, vec![], None);
+        let mut stack = SymbolOffsetTableStack::new();
+        stack.push(&node.get_annotations());
 
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
@@ -90,15 +91,16 @@ mod tests {
 
     #[test]
     fn test_find_symbol_in_outer_scope() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
-        let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
+        stack.push(&outer_node.get_annotations());
+        let inner_scope = SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
+        stack.push(&inner_node.get_annotations());
 
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
@@ -108,16 +110,18 @@ mod tests {
 
     #[test]
     fn test_find_symbol_defined_in_both_scopes() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
-        let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
+        stack.push(&outer_node.get_annotations());
+        let mut inner_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 16);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
+        stack.push(&inner_node.get_annotations());
 
         let sym = stack.find("x").unwrap();
         assert_eq!(sym.name, "x");
@@ -127,32 +131,33 @@ mod tests {
 
     #[test]
     fn test_find_symbol_does_not_exist() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("x", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
-        let inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
+        stack.push(&outer_node.get_annotations());
+        let inner_scope = SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
+        stack.push(&inner_node.get_annotations());
 
         assert_eq!(stack.find("y").is_none(), true);
     }
 
     #[test]
     fn test_find_symbol_does_not_pass_function() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut outer_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut outer_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         outer_scope.insert("nope", 4, 4);
-        let outer_node = CompilerNode::ExpressionBlock(outer_scope, vec![], None);
-        stack.push(&outer_node.get_metadata());
+        let outer_node = Expression::ExpressionBlock(outer_scope, vec![], None);
+        stack.push(&outer_node.get_annotations());
 
-        let mut fun_scope = Scope::new(
+        let mut fun_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
@@ -162,19 +167,20 @@ mod tests {
         fun_scope.insert("y", 4, 4);
         fun_scope.insert("z", 4, 8);
         let outer_node = RoutineDef {
-            meta: fun_scope,
+            annotations: fun_scope,
             def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&outer_node.get_metadata());
+        stack.push(&outer_node.get_annotations());
 
-        let mut inner_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut inner_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         inner_scope.insert("x", 4, 4);
-        let inner_node = CompilerNode::ExpressionBlock(inner_scope, vec![], None);
-        stack.push(&inner_node.get_metadata());
+        let inner_node = Expression::ExpressionBlock(inner_scope, vec![], None);
+        stack.push(&inner_node.get_annotations());
 
         assert_eq!(stack.find("x").is_some(), true);
         assert_eq!(stack.find("y").is_some(), true);
@@ -183,12 +189,11 @@ mod tests {
 
     #[test]
     fn test_get_routine_parameters() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut fun_scope = Scope::new(
+        let mut fun_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
@@ -198,7 +203,7 @@ mod tests {
         fun_scope.insert("y", 4, 0);
         fun_scope.insert("z", 4, 4);
         let fun_node = RoutineDef {
-            meta: fun_scope,
+            annotations: fun_scope,
             def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![("y".into(), Type::I32)],
@@ -206,16 +211,16 @@ mod tests {
             body: vec![],
         };
 
-        let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut module_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("func", 0, 0);
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_function(fun_node).unwrap();
-        stack.push(&module_node.get_metadata());
+        stack.push(&module_node.get_annotations());
 
-        let fun2_scope = Scope::new(
+        let fun2_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 0,
                 routine_type: RoutineDefType::Function,
             },
@@ -223,26 +228,25 @@ mod tests {
             Type::Unit,
         );
         let fun2_node = RoutineDef {
-            meta: fun2_scope,
+            annotations: fun2_scope,
             def: RoutineDefType::Function,
             name: "func2".into(),
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&fun2_node.get_metadata());
+        stack.push(&fun2_node.get_annotations());
 
         assert_eq!(stack.find("func").is_none(), true);
     }
 
     #[test]
     fn test_get_coroutine_parameters() {
-        let mut stack = ScopeStack::new();
+        let mut stack = SymbolOffsetTableStack::new();
 
-        let mut cor_scope = Scope::new(
+        let mut cor_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 8,
                 routine_type: RoutineDefType::Coroutine,
             },
@@ -252,7 +256,7 @@ mod tests {
         cor_scope.insert("y", 4, 20);
         cor_scope.insert("z", 4, 24);
         let cor_node = RoutineDef {
-            meta: cor_scope,
+            annotations: cor_scope,
             def: RoutineDefType::Coroutine,
             name: "cor".into(),
             params: vec![("y".into(), Type::I32)],
@@ -260,17 +264,17 @@ mod tests {
             body: vec![],
         };
 
-        let mut module_scope = Scope::new(0, Level::Local, vec!["root"].into(), Type::Unit);
+        let mut module_scope =
+            SymbolOffsetTable::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("cor", 0, 0);
 
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_coroutine(cor_node).unwrap();
-        stack.push(&module_node.get_metadata());
+        stack.push(&module_node.get_annotations());
 
-        let fun2_scope = Scope::new(
+        let fun2_scope = SymbolOffsetTable::new(
             0,
             Level::Routine {
-                next_label: 0,
                 allocation: 0,
                 routine_type: RoutineDefType::Coroutine,
             },
@@ -278,14 +282,14 @@ mod tests {
             Type::Unit,
         );
         let fun2_node = RoutineDef {
-            meta: fun2_scope,
+            annotations: fun2_scope,
             def: RoutineDefType::Coroutine,
             name: "func2".into(),
             params: vec![],
             ty: Type::I32,
             body: vec![],
         };
-        stack.push(&fun2_node.get_metadata());
+        stack.push(&fun2_node.get_annotations());
 
         assert!(stack.in_coroutine());
     }

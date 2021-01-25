@@ -3,11 +3,11 @@ use std::collections::HashMap;
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::compiler::ast::ast::CompilerNode;
-use crate::compiler::ast::scope::Level::Routine;
-use crate::compiler::ast::scope::Scope;
-use crate::compiler::ast::stack::ScopeStack;
-use crate::compiler::ast::stringpool::StringPool;
+use crate::compiler::memory::layout::compute_layout_for_program;
+use crate::compiler::memory::scope::Level::Routine;
+use crate::compiler::memory::scope::SymbolOffsetTable;
+use crate::compiler::memory::stack::SymbolOffsetTableStack;
+use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::register;
@@ -28,16 +28,16 @@ use crate::{
         Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
     },
 };
-use crate::{expression::Expression, semantics::semanticnode::SemanticMetadata};
+use crate::{expression::Expression, semantics::semanticnode::SemanticAnnotations};
 use crate::{expression::RoutineCall, syntax::statement::Statement};
 use crate::{
     expression::{BinaryOperator, UnaryOperator},
     syntax::ty::Type,
 };
 
-use super::ast::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
+use super::memory::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
-// Coroutine entry/return metadata: offsets relative to the coroutine's RBP
+// Coroutine entry/return annotations: offsets relative to the coroutine's RBP
 // These live within the stack frame of the coroutine
 const COROUTINE_RIP_STORE: i32 = -8;
 const COROUTINE_CALLER_RSP_STORE: i32 = -16;
@@ -48,7 +48,7 @@ const COROUTINE_RSP_STORE: i32 = -40;
 // How much space to allocate for each coroutine's stack
 const COROUTINE_STACK_SIZE: i64 = 8 * 1024;
 
-// Function entry/return metadata: offsets relative to RBP
+// Function entry/return annotations: offsets relative to RBP
 // These live above the function's stack frame (hence they are positive)
 const FUNCTION_CALLER_RSP: i32 = 16;
 
@@ -69,17 +69,17 @@ impl From<&str> for TargetOS {
 }
 
 pub struct Compiler<'a> {
-    scope: ScopeStack<'a>,
+    scope: SymbolOffsetTableStack<'a>,
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
-    root: &'a Module<Scope>,
+    root: &'a Module<SymbolOffsetTable>,
     extern_functions: HashMap<String, String>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(module: Module<SemanticMetadata>, target_os: TargetOS) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticAnnotations>, target_os: TargetOS) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, struct_table) = CompilerNode::from(&module).unwrap();
+        let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
@@ -87,7 +87,7 @@ impl<'a> Compiler<'a> {
         let extern_functions = Compiler::configure_extern_functionss(target_os);
 
         let mut compiler = Compiler {
-            scope: ScopeStack::new(),
+            scope: SymbolOffsetTableStack::new(),
             string_pool,
             root: &compiler_ast,
             struct_table: &struct_table,
@@ -270,7 +270,7 @@ impl<'a> Compiler<'a> {
          * to be passed to the coroutine.
          *
          * Returns a pointer to the new coroutine stack (which contains the coroutine's
-         * metadata)
+         * annotations)
          *
          * use the next stack address variable as the location for the new coroutine, then
          * increment the next stack address.
@@ -291,11 +291,11 @@ impl<'a> Compiler<'a> {
                     push %rbp;
                     mov %rbp, %rsp;
                     mov %rsp, [@{next_stack_variable}];
-                    ; "[-8]: The RIP for the coroutine"
-                    ; "[-16]: The ESP for the caller"
-                    ; "[-24]: The EBP for the caller"
-                    ; "[-32]: The caller return address (for yield return)"
-                    ; "[-40]: The coroutine ESP"
+                    ; {format!("[{}]: The RIP for the coroutine", COROUTINE_RIP_STORE)}
+                    ; {format!("[{}]: The RSP for the caller", COROUTINE_CALLER_RSP_STORE)}
+                    ; {format!("[{}]: The RBP for the caller", COROUTINE_CALLER_RBP_STORE)}
+                    ; {format!("[{}]: The caller return address (for yield return)", COROUTINE_CALLER_RIP_STORE)}
+                    ; {format!("[{}]: The coroutine RSP", COROUTINE_RSP_STORE)}
                     mov [%rsp+{COROUTINE_RIP_STORE}], %rax;
                     mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0;
                     mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0;
@@ -355,16 +355,16 @@ impl<'a> Compiler<'a> {
     fn handle_binary_operands(
         &mut self,
         op: BinaryOperator,
-        left: &'a CompilerNode,
-        right: &'a CompilerNode,
+        left: &'a Expression<SymbolOffsetTable>,
+        right: &'a Expression<SymbolOffsetTable>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
 
         let mut left_code = vec![];
-        self.traverse(left, current_func, &mut left_code)?;
+        self.traverse_expression(left, current_func, &mut left_code)?;
         let mut right_code = vec![];
-        self.traverse(right, current_func, &mut right_code)?;
+        self.traverse_expression(right, current_func, &mut right_code)?;
 
         let mut op_asm = vec![];
         match op {
@@ -421,17 +421,17 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn push_scope(&mut self, ast: &'a CompilerNode) {
-        self.scope.push(ast.get_metadata())
+    fn push_scope(&mut self, ast: &'a Expression<SymbolOffsetTable>) {
+        self.scope.push(ast.get_annotations())
     }
 
     fn pop(&mut self) {
         self.scope.pop();
     }
 
-    fn traverse(
+    fn traverse_expression(
         &mut self,
-        ast: &'a CompilerNode,
+        ast: &'a Expression<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -474,7 +474,7 @@ impl<'a> Compiler<'a> {
                 self.member_access(current_func, code, src, member)?;
             }
             Expression::UnaryOp(_, op, operand) => {
-                self.traverse(operand, current_func, code)?;
+                self.traverse_expression(operand, current_func, code)?;
                 match op {
                     UnaryOperator::Minus => {
                         assembly! {(code){
@@ -496,11 +496,11 @@ impl<'a> Compiler<'a> {
             }
             Expression::If(meta, ref cond, ref true_arm, ref false_arm) => {
                 let mut cond_code = vec![];
-                self.traverse(cond, current_func, &mut cond_code)?;
+                self.traverse_expression(cond, current_func, &mut cond_code)?;
                 let mut true_code = vec![];
-                self.traverse(true_arm, current_func, &mut true_code)?;
+                self.traverse_expression(true_arm, current_func, &mut true_code)?;
                 let mut false_code = vec![];
-                self.traverse(false_arm, current_func, &mut false_code)?;
+                self.traverse_expression(false_arm, current_func, &mut false_code)?;
 
                 assembly2! {(code, meta) {
                     {{cond_code}}
@@ -519,7 +519,7 @@ impl<'a> Compiler<'a> {
                 }
                 match final_exp {
                     None => (),
-                    Some(fe) => self.traverse(fe, current_func, code)?,
+                    Some(fe) => self.traverse_expression(fe, current_func, code)?,
                 }
             }
             Expression::Yield(meta, ref id) => {
@@ -535,8 +535,8 @@ impl<'a> Compiler<'a> {
                     .to_routine()
                     .expect("Expected a routine");
                 let total_offset = co_def
-                    .get_metadata()
-                    .local_allocation()
+                    .get_annotations()
+                    .stackframe_allocation()
                     .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
                 co_def.validate_parameters(params)?;
@@ -625,11 +625,11 @@ impl<'a> Compiler<'a> {
 
     fn traverse_module(
         &mut self,
-        module: &'a Module<Scope>,
+        module: &'a Module<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.scope.push(module.get_metadata());
+        self.scope.push(module.get_annotations());
         for f in module.get_functions().iter() {
             self.traverse_item(f, code)?;
         }
@@ -644,8 +644,12 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn traverse_item(&mut self, item: &'a Item<Scope>, code: &mut Vec<Inst>) -> Result<(), String> {
-        self.scope.push(item.get_metadata());
+    fn traverse_item(
+        &mut self,
+        item: &'a Item<SymbolOffsetTable>,
+        code: &mut Vec<Inst>,
+    ) -> Result<(), String> {
+        self.scope.push(item.get_annotations());
         let result = match item {
             Item::Struct(_) => {
                 panic!("StructDefs should have been pruned from the AST before the compiler layer")
@@ -658,24 +662,24 @@ impl<'a> Compiler<'a> {
 
     fn traverse_routine_def(
         &mut self,
-        routine: &'a RoutineDef<Scope>,
+        routine: &'a RoutineDef<SymbolOffsetTable>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         match routine.get_def() {
-            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, code),
             RoutineDefType::Function => self.traverse_function_def(routine, code),
+            RoutineDefType::Coroutine => self.traverse_coroutine_def(routine, code),
         }
     }
 
     fn traverse_function_def(
         &mut self,
-        routine: &'a RoutineDef<Scope>,
+        routine: &'a RoutineDef<SymbolOffsetTable>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         let fn_param_registers = vec![Reg64::Rax, Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
 
         if let RoutineDef {
-            meta: scope,
+            annotations: scope,
             def: RoutineDefType::Function,
             name: ref fn_name,
             body: stmts,
@@ -717,12 +721,12 @@ impl<'a> Compiler<'a> {
 
     fn traverse_coroutine_def(
         &mut self,
-        routine: &'a RoutineDef<Scope>,
+        routine: &'a RoutineDef<SymbolOffsetTable>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            @{routine.get_metadata().canon_path().to_label()}:
-            ; {{format!("Define {}", routine.get_metadata().canon_path())}}
+            @{routine.get_annotations().canon_path().to_label()}:
+            ; {{format!("Define {}", routine.get_annotations().canon_path())}}
         }};
 
         // Prepare stack frame for this function
@@ -739,7 +743,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_statement(
         &mut self,
-        statement: &'a Statement<Scope>,
+        statement: &'a Statement<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -752,13 +756,13 @@ impl<'a> Compiler<'a> {
             Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),
             Statement::Printbln(n) => self.traverse_printbln(n, current_func, code),
             Statement::Prints(n) => self.traverse_prints(n, current_func, code),
-            Statement::Expression(n) => self.traverse(n, current_func, code),
+            Statement::Expression(n) => self.traverse_expression(n, current_func, code),
         }
     }
 
     fn traverse_bind(
         &mut self,
-        bind: &'a Bind<Scope>,
+        bind: &'a Bind<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -780,7 +784,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_mutate(
         &mut self,
-        mutate: &'a Mutate<Scope>,
+        mutate: &'a Mutate<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -799,11 +803,11 @@ impl<'a> Compiler<'a> {
 
     fn traverse_printi(
         &mut self,
-        p: &'a Printi<Scope>,
+        p: &'a Printi<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             lea %rbx, [@_i32_fmt];
@@ -816,11 +820,11 @@ impl<'a> Compiler<'a> {
 
     fn traverse_printiln(
         &mut self,
-        p: &'a Printiln<Scope>,
+        p: &'a Printiln<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             lea %rbx, [@_i32_fmt];
@@ -833,11 +837,11 @@ impl<'a> Compiler<'a> {
 
     fn traverse_printbln(
         &mut self,
-        p: &'a Printbln<Scope>,
+        p: &'a Printbln<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             call @print_bool;
@@ -847,11 +851,11 @@ impl<'a> Compiler<'a> {
 
     fn traverse_prints(
         &mut self,
-        p: &'a Prints<Scope>,
+        p: &'a Prints<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.traverse(p.get_value(), current_func, code)?;
+        self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
             push %rax;
@@ -863,31 +867,31 @@ impl<'a> Compiler<'a> {
 
     fn traverse_yield(
         &mut self,
-        y: &'a Yield<Scope>,
+        y: &'a Yield<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            {{self.yield_exp(y.get_metadata(), y.get_value(), current_func)?}}
+            {{self.yield_exp(y.get_annotations(), y.get_value(), current_func)?}}
         }}
         Ok(())
     }
 
     fn traverse_yieldreturn(
         &mut self,
-        yr: &'a YieldReturn<Scope>,
+        yr: &'a YieldReturn<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            {{self.yield_return(yr.get_metadata(), yr.get_value(), current_func)?}}
+            {{self.yield_return(yr.get_annotations(), yr.get_value(), current_func)?}}
         }}
         Ok(())
     }
 
     fn traverse_return(
         &mut self,
-        r: &'a Return<Scope>,
+        r: &'a Return<SymbolOffsetTable>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -901,15 +905,15 @@ impl<'a> Compiler<'a> {
         &mut self,
         current_func: &String,
         code: &mut Vec<Inst>,
-        src: &'a CompilerNode,
+        src: &'a Expression<SymbolOffsetTable>,
         member: &str,
     ) -> Result<(), String> {
-        let src_ty = src.get_metadata().ty();
+        let src_ty = src.get_annotations().ty();
         match src_ty {
             Type::Custom(struct_name) => {
                 code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
 
-                self.traverse(src, current_func, code)?;
+                self.traverse_expression(src, current_func, code)?;
 
                 let struct_def = self.struct_table.get(struct_name).ok_or(format!(
                     "Could not find struct definition for {}",
@@ -953,7 +957,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         current_func: &String,
         struct_name: &Path,
-        field_values: &'a Vec<(String, CompilerNode)>,
+        field_values: &'a Vec<(String, Expression<SymbolOffsetTable>)>,
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
@@ -1006,7 +1010,7 @@ impl<'a> Compiler<'a> {
 
     fn bind_member(
         &mut self,
-        fvalue: &'a CompilerNode,
+        fvalue: &'a Expression<SymbolOffsetTable>,
         current_func: &String,
         dst: Reg64,
         dst_offset: i32,
@@ -1027,8 +1031,8 @@ impl<'a> Compiler<'a> {
                 }};
             }
             _ => {
-                self.traverse(fvalue, current_func, &mut code)?;
-                match fvalue.get_metadata().ty() {
+                self.traverse_expression(fvalue, current_func, &mut code)?;
+                match fvalue.get_annotations().ty() {
                     Type::Custom(struct_name) => {
                         let asm =
                             self.copy_struct_into(struct_name, dst, dst_offset, Reg64::Rax, 0)?;
@@ -1049,15 +1053,15 @@ impl<'a> Compiler<'a> {
 
     fn bind(
         &mut self,
-        value: &'a CompilerNode,
+        value: &'a Expression<SymbolOffsetTable>,
         current_func: &String,
         dst: Reg64,
         dst_offset: i32,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        self.traverse(value, current_func, &mut code)?;
+        self.traverse_expression(value, current_func, &mut code)?;
 
-        match value.get_metadata().ty() {
+        match value.get_annotations().ty() {
             Type::Custom(name) => {
                 match value {
                     Expression::Identifier(..) => {
@@ -1087,12 +1091,12 @@ impl<'a> Compiler<'a> {
 
     fn yield_exp(
         &mut self,
-        meta: &'a Scope,
-        exp: &'a CompilerNode,
+        meta: &'a SymbolOffsetTable,
+        exp: &'a Expression<SymbolOffsetTable>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
-        self.traverse(exp, current_func, &mut code)?;
+        self.traverse_expression(exp, current_func, &mut code)?;
         match meta.ty() {
             Type::Custom(struct_name) => {
                 let st = self
@@ -1118,14 +1122,14 @@ impl<'a> Compiler<'a> {
 
     fn yield_return(
         &mut self,
-        meta: &'a Scope,
-        exp: &'a Option<CompilerNode>,
+        meta: &'a SymbolOffsetTable,
+        exp: &'a Option<Expression<SymbolOffsetTable>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         if let Some(exp) = exp {
-            self.traverse(exp, current_func, &mut code)?;
-            match exp.get_metadata().ty() {
+            self.traverse_expression(exp, current_func, &mut code)?;
+            match exp.get_annotations().ty() {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
                     let asm = self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
@@ -1148,17 +1152,17 @@ impl<'a> Compiler<'a> {
 
     fn return_exp(
         &mut self,
-        exp: &'a Option<CompilerNode>,
+        exp: &'a Option<Expression<SymbolOffsetTable>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         code.push(Inst::Label(".terminus".into()));
         match exp {
             Some(e) => {
-                self.traverse(e, current_func, &mut code)?;
+                self.traverse_expression(e, current_func, &mut code)?;
                 // If the expression is a custom type then copy the value into the stack frame
                 // of the caller (or the yielder in the case of coroutines)
-                match e.get_metadata().ty() {
+                match e.get_annotations().ty() {
                     Type::Custom(struct_name) => {
                         // Copy the structure into the stack frame of the calling function
                         let asm =
@@ -1173,46 +1177,6 @@ impl<'a> Compiler<'a> {
                         } else {
                             assembly! {(code){
                                 lea %rsi, [%rbp+{FUNCTION_CALLER_RSP}]; // load the caller function's ESP pointer
-                                {{asm}}
-                            }};
-                        }
-                    }
-                    _ => (),
-                }
-            }
-            None => (),
-        }
-
-        Ok(code)
-    }
-
-    fn return_exp_temp(
-        &mut self,
-        exp: &'a Option<Box<CompilerNode>>,
-        current_func: &String,
-    ) -> Result<Vec<Inst>, String> {
-        let mut code = vec![];
-        code.push(Inst::Label(".terminus".into()));
-        match exp {
-            Some(e) => {
-                self.traverse(e, current_func, &mut code)?;
-                // If the expression is a custom type then copy the value into the stack frame
-                // of the caller (or the yielder in the case of coroutines)
-                match e.get_metadata().ty() {
-                    Type::Custom(struct_name) => {
-                        // Copy the structure into the stack frame of the calling function
-                        let asm =
-                            self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
-
-                        let is_coroutine = self.scope.in_coroutine();
-                        if is_coroutine {
-                            assembly! {(code){
-                                mov %rsi, [%rbp+{COROUTINE_CALLER_RSP_STORE}];   // Load the Caller functions ESP pointer
-                                {{asm}}
-                            }};
-                        } else {
-                            assembly! {(code){
-                                lea %rsi, [%rbp+{FUNCTION_CALLER_RSP}];  // Load the caller function's ESP pointer
                                 {{asm}}
                             }};
                         }
@@ -1309,7 +1273,7 @@ impl<'a> Compiler<'a> {
 
     fn move_params_into_stackframe(
         &self,
-        routine: &RoutineDef<Scope>,
+        routine: &RoutineDef<SymbolOffsetTable>,
         param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         let routine_name = routine.get_name();
@@ -1321,7 +1285,7 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
-        let routine_sym_table = routine.get_metadata();
+        let routine_sym_table = routine.get_annotations();
         for idx in 0..params.len() {
             let param_offset = routine_sym_table
                 .get(&params[idx].0)
@@ -1355,12 +1319,12 @@ impl<'a> Compiler<'a> {
 
     fn evaluate_routine_params(
         &mut self,
-        params: &'a Vec<CompilerNode>,
+        params: &'a Vec<Expression<SymbolOffsetTable>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         for param in params.iter() {
-            self.traverse(param, current_func, &mut code)?;
+            self.traverse_expression(param, current_func, &mut code)?;
             assembly! {(code){
                 push %rax;
             }};
@@ -1370,7 +1334,7 @@ impl<'a> Compiler<'a> {
 
     fn move_routine_params_into_registers(
         &mut self,
-        params: &'a Vec<CompilerNode>,
+        params: &'a Vec<Expression<SymbolOffsetTable>>,
         param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before

@@ -54,7 +54,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
             Some(Token { s: _, .. }) => Ok(Some(stm)),
             _ => {
                 if must_have_semicolon {
-                    let line = *stm.get_metadata();
+                    let line = *stm.get_annotations();
                     Err(format!(
                         "L{}: Expected ;, but found {}",
                         line,

@@ -1,19 +1,17 @@
+use crate::expression::Expression;
 use std::collections::HashMap;
 
 use module::Module;
 
-use crate::{
-    compiler::ast::ast::CompilerNode,
-    syntax::{
-        module::{self, Item},
-        routinedef::RoutineDef,
-        statement::{
-            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn,
-        },
+use crate::syntax::{
+    module::{self, Item},
+    routinedef::RoutineDef,
+    statement::{
+        Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, Yield, YieldReturn,
     },
 };
 
-use super::scope::Scope;
+use super::scope::SymbolOffsetTable;
 
 #[derive(Debug, PartialEq)]
 pub struct StringPool {
@@ -49,7 +47,7 @@ impl StringPool {
 
     /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
-    pub fn extract_from(&mut self, ast: &CompilerNode) {
+    pub fn extract_from(&mut self, ast: &Expression<SymbolOffsetTable>) {
         use crate::expression::Expression::*;
 
         match ast {
@@ -102,7 +100,7 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_module(&mut self, module: &Module<Scope>) {
+    pub fn extract_from_module(&mut self, module: &Module<SymbolOffsetTable>) {
         for m in module.get_modules().iter() {
             self.extract_from_module(m);
         }
@@ -115,20 +113,20 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_item(&mut self, item: &Item<Scope>) {
+    pub fn extract_from_item(&mut self, item: &Item<SymbolOffsetTable>) {
         match item {
             Item::Routine(r) => self.extract_from_routine(r),
             Item::Struct(_) => (),
         }
     }
 
-    pub fn extract_from_routine(&mut self, routine: &RoutineDef<Scope>) {
+    pub fn extract_from_routine(&mut self, routine: &RoutineDef<SymbolOffsetTable>) {
         for s in routine.get_body().iter() {
             self.extract_from_statement(s);
         }
     }
 
-    pub fn extract_from_statement(&mut self, statement: &Statement<Scope>) {
+    pub fn extract_from_statement(&mut self, statement: &Statement<SymbolOffsetTable>) {
         match statement {
             Statement::Bind(b) => self.extract_from_bind(b),
             Statement::Mutate(m) => self.extract_from_mutate(m),
@@ -142,42 +140,42 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_bind(&mut self, bind: &Bind<Scope>) {
+    pub fn extract_from_bind(&mut self, bind: &Bind<SymbolOffsetTable>) {
         self.extract_from(bind.get_rhs())
     }
 
-    pub fn extract_from_mutate(&mut self, mutate: &Mutate<Scope>) {
+    pub fn extract_from_mutate(&mut self, mutate: &Mutate<SymbolOffsetTable>) {
         self.extract_from(mutate.get_rhs())
     }
 
-    pub fn extract_from_printi(&mut self, p: &Printi<Scope>) {
+    pub fn extract_from_printi(&mut self, p: &Printi<SymbolOffsetTable>) {
         self.extract_from(p.get_value())
     }
 
-    pub fn extract_from_printiln(&mut self, p: &Printiln<Scope>) {
+    pub fn extract_from_printiln(&mut self, p: &Printiln<SymbolOffsetTable>) {
         self.extract_from(p.get_value())
     }
 
-    pub fn extract_from_printbln(&mut self, p: &Printbln<Scope>) {
+    pub fn extract_from_printbln(&mut self, p: &Printbln<SymbolOffsetTable>) {
         self.extract_from(p.get_value())
     }
 
-    pub fn extract_from_prints(&mut self, p: &Prints<Scope>) {
+    pub fn extract_from_prints(&mut self, p: &Prints<SymbolOffsetTable>) {
         self.extract_from(p.get_value())
     }
 
-    pub fn extract_from_yield(&mut self, y: &Yield<Scope>) {
+    pub fn extract_from_yield(&mut self, y: &Yield<SymbolOffsetTable>) {
         self.extract_from(y.get_value())
     }
 
-    pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<Scope>) {
+    pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<SymbolOffsetTable>) {
         match yr.get_value() {
             None => (),
             Some(val) => self.extract_from(val),
         }
     }
 
-    pub fn extract_from_return(&mut self, r: &Return<Scope>) {
+    pub fn extract_from_return(&mut self, r: &Return<SymbolOffsetTable>) {
         match r.get_value() {
             None => (),
             Some(val) => self.extract_from(val),
@@ -187,11 +185,13 @@ impl StringPool {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
-    use crate::{diagnostics::config::TracingConfig, type_check};
+    use crate::{diagnostics::config::TracingConfig, resolve_types};
+
+    use super::super::layout::compute_layout_for_program;
+    use super::*;
 
     #[test]
     fn insert_string() {
@@ -245,8 +245,8 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            let (compiler_ast, ..) = CompilerNode::from(&module).unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from_module(&compiler_ast);
 

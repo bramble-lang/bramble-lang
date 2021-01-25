@@ -3,15 +3,15 @@ use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructDef<M> {
-    metadata: M,
+    annotations: M,
     name: String,
     fields: Vec<(String, Type)>,
 }
 
 impl<M> StructDef<M> {
-    pub fn new(name: &str, metadata: M, fields: Vec<(String, Type)>) -> StructDef<M> {
+    pub fn new(name: &str, annotations: M, fields: Vec<(String, Type)>) -> StructDef<M> {
         StructDef {
-            metadata,
+            annotations,
             name: name.into(),
             fields,
         }
@@ -21,8 +21,8 @@ impl<M> StructDef<M> {
         &self.name
     }
 
-    pub fn get_metadata(&self) -> &M {
-        &self.metadata
+    pub fn get_annotations(&self) -> &M {
+        &self.annotations
     }
 
     pub fn get_fields(&self) -> &Vec<(String, Type)> {

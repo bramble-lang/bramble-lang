@@ -26,16 +26,16 @@ use crate::{
 use braid_lang::result::Result;
 use Type::*;
 
-use super::{semanticnode::SemanticMetadata, stack::SymbolTableScopeStack};
+use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
-pub fn type_check(
+pub fn resolve_types(
     ast: &module::Module<ParserInfo>,
     trace: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<module::Module<SemanticMetadata>> {
+) -> Result<module::Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(&ast)?;
-    SymbolTable::for_module(&mut sm_ast)?;
+    SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
     let mut root_table = SymbolTable::new();
     let mut semantic = TypeResolver::new(&sm_ast);
@@ -48,7 +48,7 @@ pub fn type_check(
 }
 
 pub struct TypeResolver<'a> {
-    root: &'a Module<SemanticMetadata>,
+    root: &'a Module<SemanticAnnotations>,
     stack: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
@@ -61,7 +61,7 @@ impl<'a> Tracing for TypeResolver<'a> {
 }
 
 impl<'a> TypeResolver<'a> {
-    pub fn new(root: &'a Module<SemanticMetadata>) -> TypeResolver {
+    pub fn new(root: &'a Module<SemanticAnnotations>) -> TypeResolver {
         TypeResolver {
             root,
             stack: SymbolTableScopeStack::new(),
@@ -70,17 +70,17 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticMetadata>> {
+    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticAnnotations>> {
         self.analyze_module(self.root, sym)
     }
 
     fn analyze_module(
         &mut self,
-        m: &module::Module<SemanticMetadata>,
+        m: &module::Module<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Module<SemanticMetadata>> {
-        let mut nmodule = module::Module::new(m.get_name(), m.get_metadata().clone());
-        let mut meta = nmodule.get_metadata_mut().clone();
+    ) -> Result<module::Module<SemanticAnnotations>> {
+        let mut nmodule = module::Module::new(m.get_name(), m.get_annotations().clone());
+        let mut meta = nmodule.get_annotations_mut().clone();
 
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
@@ -89,35 +89,35 @@ impl<'a> TypeResolver<'a> {
             .get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
-            .collect::<Result<Vec<module::Module<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Module<SemanticAnnotations>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
             .map(|f| self.analyze_item(f, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
             .map(|s| self.analyze_item(s, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticMetadata>>>>()?;
+            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
 
         self.stack.pop();
 
         meta.ty = Unit;
-        *nmodule.get_metadata_mut() = meta;
+        *nmodule.get_annotations_mut() = meta;
         Ok(nmodule)
     }
 
     fn analyze_item(
         &mut self,
-        i: &module::Item<SemanticMetadata>,
+        i: &module::Item<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Item<SemanticMetadata>> {
+    ) -> Result<module::Item<SemanticAnnotations>> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s, sym).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
@@ -126,11 +126,11 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_routine(
         &mut self,
-        routine: &routinedef::RoutineDef<SemanticMetadata>,
+        routine: &routinedef::RoutineDef<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<routinedef::RoutineDef<SemanticMetadata>> {
+    ) -> Result<routinedef::RoutineDef<SemanticAnnotations>> {
         let routinedef::RoutineDef {
-            meta,
+            annotations,
             name,
             def,
             params,
@@ -138,7 +138,7 @@ impl<'a> TypeResolver<'a> {
             ty: p,
             ..
         } = routine;
-        let mut meta = meta.clone();
+        let mut meta = annotations.clone();
         let canonical_params = self.params_to_canonical(sym, &params)?;
         for (pname, pty) in canonical_params.iter() {
             meta.sym.add(pname, pty.clone(), false)?;
@@ -165,7 +165,7 @@ impl<'a> TypeResolver<'a> {
             .expect("Failed to create canonical path for function");
         meta.set_canonical_path(canon_path);
         Ok(routinedef::RoutineDef {
-            meta: meta.clone(),
+            annotations: meta.clone(),
             def: def.clone(),
             name: name.clone(),
             params: canonical_params,
@@ -176,9 +176,9 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_structdef(
         &mut self,
-        struct_def: &structdef::StructDef<SemanticMetadata>,
+        struct_def: &structdef::StructDef<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<structdef::StructDef<SemanticMetadata>> {
+    ) -> Result<structdef::StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
         for (field_name, field_type) in fields.iter() {
@@ -197,8 +197,8 @@ impl<'a> TypeResolver<'a> {
         // Update all fields so that their types use the full canonical path of the type
         let canonical_fields = self.params_to_canonical(sym, &fields)?;
 
-        // Update the metadata with canonical path information and set the type to Unit
-        let mut meta = struct_def.get_metadata().clone();
+        // Update the annotations with canonical path information and set the type to Unit
+        let mut meta = struct_def.get_annotations().clone();
         meta.ty = Unit;
         meta.set_canonical_path(
             self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
@@ -213,10 +213,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_statement(
         &mut self,
-        stmt: &Statement<SemanticMetadata>,
+        stmt: &Statement<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Statement<SemanticMetadata>> {
+    ) -> Result<Statement<SemanticAnnotations>> {
         use statement::Statement::*;
         let inner = match stmt {
             Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
@@ -239,11 +239,11 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_bind(
         &mut self,
-        bind: &Bind<SemanticMetadata>,
+        bind: &Bind<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Bind<SemanticMetadata>> {
-        let meta = bind.get_metadata();
+    ) -> Result<Bind<SemanticAnnotations>> {
+        let meta = bind.get_annotations();
         let rhs = bind.get_rhs();
         let result = match current_func {
             Some(_) => {
@@ -274,18 +274,18 @@ impl<'a> TypeResolver<'a> {
                 bind.get_id()
             )),
         };
-        result.map_err(|e| format!("L{}: {}", bind.get_metadata().ln, e))
+        result.map_err(|e| format!("L{}: {}", bind.get_annotations().ln, e))
     }
 
     fn analyze_mutate(
         &mut self,
-        mutate: &Mutate<SemanticMetadata>,
+        mutate: &Mutate<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Mutate<SemanticMetadata>> {
+    ) -> Result<Mutate<SemanticAnnotations>> {
         let result = match current_func {
             Some(_) => {
-                let mut meta = mutate.get_metadata().clone();
+                let mut meta = mutate.get_annotations().clone();
                 let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
                 match self.lookup(sym, mutate.get_id()) {
                     Ok(symbol) => {
@@ -313,16 +313,16 @@ impl<'a> TypeResolver<'a> {
                 mutate.get_id()
             )),
         };
-        result.map_err(|e| format!("L{}: {}", mutate.get_metadata().ln, e))
+        result.map_err(|e| format!("L{}: {}", mutate.get_annotations().ln, e))
     }
 
     fn analyze_printi(
         &mut self,
-        p: &Printi<SemanticMetadata>,
+        p: &Printi<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Printi<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
+    ) -> Result<Printi<SemanticAnnotations>> {
+        let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == I32 {
             meta.ty = Unit;
@@ -334,11 +334,11 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_printiln(
         &mut self,
-        p: &Printiln<SemanticMetadata>,
+        p: &Printiln<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Printiln<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
+    ) -> Result<Printiln<SemanticAnnotations>> {
+        let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == I32 {
             meta.ty = Unit;
@@ -350,11 +350,11 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_printbln(
         &mut self,
-        p: &Printbln<SemanticMetadata>,
+        p: &Printbln<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Printbln<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
+    ) -> Result<Printbln<SemanticAnnotations>> {
+        let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == Bool {
             meta.ty = Unit;
@@ -369,11 +369,11 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_prints(
         &mut self,
-        p: &Prints<SemanticMetadata>,
+        p: &Prints<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Prints<SemanticMetadata>> {
-        let mut meta = p.get_metadata().clone();
+    ) -> Result<Prints<SemanticAnnotations>> {
+        let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
         if value.get_type() == Type::StringLiteral {
             meta.ty = Unit;
@@ -388,14 +388,14 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_yieldreturn(
         &mut self,
-        yr: &YieldReturn<SemanticMetadata>,
+        yr: &YieldReturn<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<YieldReturn<SemanticMetadata>> {
+    ) -> Result<YieldReturn<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("yret appears outside of function")),
             Some(cf) => {
-                let mut meta = yr.get_metadata().clone();
+                let mut meta = yr.get_annotations().clone();
                 match yr.get_value() {
                     None => {
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
@@ -424,19 +424,19 @@ impl<'a> TypeResolver<'a> {
                 }
             }
         };
-        result.map_err(|e| format!("L{}: {}", yr.get_metadata().ln, e))
+        result.map_err(|e| format!("L{}: {}", yr.get_annotations().ln, e))
     }
 
     fn analyze_return(
         &mut self,
-        r: &Return<SemanticMetadata>,
+        r: &Return<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Return<SemanticMetadata>> {
+    ) -> Result<Return<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("return appears outside of function")),
             Some(cf) => {
-                let mut meta = r.get_metadata().clone();
+                let mut meta = r.get_annotations().clone();
                 match r.get_value() {
                     None => {
                         let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
@@ -465,7 +465,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
         };
-        result.map_err(|e| format!("L{}: {}", r.get_metadata().ln, e))
+        result.map_err(|e| format!("L{}: {}", r.get_annotations().ln, e))
     }
 
     fn traverse(
@@ -478,7 +478,7 @@ impl<'a> TypeResolver<'a> {
         self.analyze_expression(ast, current_func, sym)
             .map_err(|e| {
                 if !e.starts_with("L") {
-                    format!("L{}: {}", ast.get_metadata().ln, e)
+                    format!("L{}: {}", ast.get_annotations().ln, e)
                 } else {
                     e
                 }
@@ -746,14 +746,14 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_yield(
         &mut self,
-        y: &Yield<SemanticMetadata>,
+        y: &Yield<SemanticAnnotations>,
         current_func: &Option<String>,
         sym: &mut SymbolTable,
-    ) -> Result<Yield<SemanticMetadata>> {
+    ) -> Result<Yield<SemanticAnnotations>> {
         match current_func {
             None => Err(format!("yield appears outside of function")),
             Some(_) => {
-                let mut meta = y.get_metadata().clone();
+                let mut meta = y.get_annotations().clone();
                 let exp = self.traverse(y.get_value(), current_func, sym)?;
                 meta.ty = match exp.get_type() {
                     Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
@@ -915,7 +915,11 @@ impl<'a> TypeResolver<'a> {
                 .root
                 .go_to_module(&canon_path.parent())
                 .ok_or(format!("Could not find item with the given path: {}", path))?;
-            Ok(node.get_metadata().sym.get(&item).map(|i| (i, canon_path)))
+            Ok(node
+                .get_annotations()
+                .sym
+                .get(&item)
+                .map(|i| (i, canon_path)))
         } else if path.len() == 1 {
             let item = &path[0];
             Ok(sym
@@ -1041,7 +1045,7 @@ impl<'a> TypeResolver<'a> {
         current_func: &Option<String>,
         current_scope: &SymbolTable,
     ) {
-        let md = node.get_metadata();
+        let md = node.get_annotations();
         let line = md.ln as usize;
         let print_trace = match self.tracing {
             TracingConfig::All => true,
@@ -1136,13 +1140,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1190,7 +1194,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
@@ -1241,7 +1245,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             assert!(result.is_ok());
         }
     }
@@ -1279,7 +1283,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
@@ -1321,7 +1325,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Routine(routinedef::RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
@@ -1356,7 +1360,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0]
             {
                 if let (_, Custom(ty_path)) = &params[0] {
@@ -1388,7 +1392,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Routine(routinedef::RoutineDef { params, .. }) =
                 &result.get_coroutines()[0]
             {
@@ -1419,7 +1423,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let (_, Custom(ty_path)) = &fields[0] {
@@ -1472,13 +1476,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1530,7 +1534,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1539,7 +1543,7 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.get_metadata().ty, I32);
+                        assert_eq!(bind_stm.get_annotations().ty, I32);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1547,7 +1551,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1599,14 +1603,14 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_metadata().ty, I32);
+                    assert_eq!(bind_stm.get_annotations().ty, I32);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1617,7 +1621,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1669,14 +1673,14 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_metadata().ty, Bool);
+                    assert_eq!(bind_stm.get_annotations().ty, Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1687,7 +1691,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1739,14 +1743,14 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_metadata().ty, Bool);
+                    assert_eq!(bind_stm.get_annotations().ty, Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1757,7 +1761,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_metadata().ty, expected_ty);
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1818,7 +1822,7 @@ mod tests {
                     .collect::<Result<_>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+                let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(expected_ty) => {
                         let module = module.unwrap();
@@ -1897,7 +1901,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1978,7 +1982,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2056,7 +2060,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2174,7 +2178,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2261,7 +2265,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2344,7 +2348,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2419,7 +2423,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2480,7 +2484,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2545,7 +2549,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2622,7 +2626,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2839,7 +2843,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -2873,7 +2877,7 @@ mod tests {
                     .collect::<Result<_>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = type_check(&ast, TracingConfig::Off, TracingConfig::Off);
+                let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),

@@ -244,7 +244,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Function must end with a return statement, got {:?}",
-                stmts.last().map_or(fn_line, |s| *s.get_metadata()),
+                stmts.last().map_or(fn_line, |s| *s.get_annotations()),
                 stream.peek(),
             ))
         }
@@ -252,7 +252,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        meta: fn_line,
+        annotations: fn_line,
         def: RoutineDefType::Function,
         name: fn_name,
         params,
@@ -284,14 +284,14 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Coroutine must end with a return statement",
-                stmts.last().map_or(co_line, |s| *s.get_metadata()),
+                stmts.last().map_or(co_line, |s| *s.get_annotations()),
             ))
         }
     }
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        meta: co_line,
+        annotations: co_line,
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
@@ -847,7 +847,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(*m.get_annotations(), 1);
             assert_eq!(m.get_name(), "test_mod");
         } else {
             panic!("No nodes returned by parser")
@@ -864,7 +864,7 @@ pub mod tests {
             .unwrap();
 
         if let Some(m) = parse(tokens).unwrap() {
-            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(*m.get_annotations(), 1);
             assert_eq!(m.get_name(), "root");
 
             assert_eq!(m.get_modules().len(), 1);
@@ -873,7 +873,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             let m = &m.get_modules()[0];
-            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(*m.get_annotations(), 1);
             assert_eq!(m.get_name(), "test_fn_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -881,7 +881,7 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 0);
             if let Item::Routine(RoutineDef {
-                meta,
+                annotations,
                 def: RoutineDefType::Function,
                 name,
                 params,
@@ -889,7 +889,7 @@ pub mod tests {
                 body,
             }) = &m.get_functions()[0]
             {
-                assert_eq!(*meta, 1);
+                assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
                 assert_eq!(ty, &Type::Unit);
@@ -916,7 +916,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(*m.get_annotations(), 1);
             assert_eq!(m.get_name(), "test_co_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -925,7 +925,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             if let Some(Item::Routine(RoutineDef {
-                meta,
+                annotations,
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
@@ -933,7 +933,7 @@ pub mod tests {
                 body,
             })) = m.get_item("test")
             {
-                assert_eq!(*meta, 1);
+                assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![("x".into(), Type::I32)]);
                 assert_eq!(ty, &Type::Unit);
@@ -960,7 +960,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(*m.get_annotations(), 1);
             assert_eq!(m.get_name(), "test_struct_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -969,7 +969,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 1);
 
             if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
-                assert_eq!(*sd.get_metadata(), 1);
+                assert_eq!(*sd.get_annotations(), 1);
                 assert_eq!(sd.get_name(), "my_struct");
                 assert_eq!(sd.get_fields(), &vec![("x".into(), Type::I32)]);
             }
@@ -988,7 +988,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
-            meta: l,
+            annotations: l,
             def: RoutineDefType::Function,
             name,
             params,
@@ -1020,7 +1020,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
-            meta: l,
+            annotations: l,
             def: RoutineDefType::Function,
             name,
             params,
@@ -1105,7 +1105,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         if let Some(m) = parse(tokens).unwrap() {
-            assert_eq!(*m.get_metadata(), 1);
+            assert_eq!(*m.get_annotations(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
                 name,
@@ -1197,7 +1197,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(RoutineDef {
-            meta: l,
+            annotations: l,
             def: RoutineDefType::Function,
             name,
             params,
