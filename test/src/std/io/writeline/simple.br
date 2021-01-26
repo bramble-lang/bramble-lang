@@ -1,4 +1,4 @@
 fn my_main() {
-    root::std::io::writeline("hello, world");
+    root::std::io::writeline("hell\no, world");
     return;
 }
