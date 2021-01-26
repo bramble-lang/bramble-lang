@@ -297,7 +297,7 @@ impl Lexer {
         let num = branch.merge();
         Ok(Some(Token::new(
             self.line,
-            Integer(num.parse::<i32>().unwrap()),
+            Integer64(num.parse::<i32>().unwrap()),
         )))
     }
 
@@ -390,7 +390,7 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
-                "i32" => Token::new(self.line, Primitive(Primitive::I32)),
+                "i32" => Token::new(self.line, Primitive(Primitive::I64)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
                 "string" => Token::new(self.line, Primitive(Primitive::StringLiteral)),
                 _ => Token::new(self.line, Identifier(id.clone())),
@@ -440,7 +440,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer(5)));
+        assert_eq!(token, Token::new(1, Integer64(5)));
     }
 
     #[test]
@@ -524,7 +524,7 @@ mod tests {
         let token = tokens[1].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Colon));
         let token = tokens[2].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Primitive(Primitive::I32)));
+        assert_eq!(token, Token::new(1, Primitive(Primitive::I64)));
         let token = tokens[3].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Semicolon));
         let token = tokens[4].clone().expect("Expected valid token");
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
-            ("i32", Token::new(1, Primitive(Primitive::I32))),
+            ("i32", Token::new(1, Primitive(Primitive::I64))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),
             ("string", Token::new(1, Primitive(Primitive::StringLiteral))),
         ]
@@ -613,7 +613,7 @@ mod tests {
                 Token::new(*t3, Identifier("x".into()))
             );
             assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer(5)));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer64(5)));
             assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
             assert_eq!(tokens[6].clone().unwrap(), Token::new(*t7, Bool(true)));
             assert_eq!(tokens[7].clone().unwrap(), Token::new(*t8, RParen));
@@ -653,7 +653,7 @@ mod tests {
                 Token::new(*t3, Identifier("x".into()))
             );
             assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer(5)));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer64(5)));
             assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
         }
     }

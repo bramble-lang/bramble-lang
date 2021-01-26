@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
-    I32,
+    I64,
     Bool,
     StringLiteral,
 }
@@ -8,7 +8,7 @@ pub enum Primitive {
 impl std::fmt::Display for Primitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Primitive::I32 => f.write_str("i32"),
+            Primitive::I64 => f.write_str("i32"),
             Primitive::Bool => f.write_str("bool"),
             Primitive::StringLiteral => f.write_str("string"),
         }
@@ -17,7 +17,7 @@ impl std::fmt::Display for Primitive {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lex {
-    Integer(i32),
+    Integer64(i32),
     Bool(bool),
     Identifier(String),
     StringLiteral(String),
@@ -77,7 +77,7 @@ impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
         match self {
-            Integer(i) => f.write_str(&format!("literal {}", i)),
+            Integer64(i) => f.write_str(&format!("literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
@@ -145,8 +145,8 @@ impl Token {
 
     pub fn token_eq(&self, a: &Lex) -> bool {
         match self.s {
-            Lex::Integer(_) => match a {
-                Lex::Integer(_) => true,
+            Lex::Integer64(_) => match a {
+                Lex::Integer64(_) => true,
                 _ => false,
             },
             Lex::Bool(_) => match a {

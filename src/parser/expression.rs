@@ -408,10 +408,10 @@ fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
 
 fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
-    match stream.next_if(&Lex::Integer(0)) {
+    match stream.next_if(&Lex::Integer64(0)) {
         Some(Token {
             l,
-            s: Lex::Integer(i),
+            s: Lex::Integer64(i),
         }) => Ok(Some(Expression::Integer64(l, i))),
         _ => Ok(None),
     }
