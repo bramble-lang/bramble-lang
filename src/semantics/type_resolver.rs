@@ -74,13 +74,13 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    pub fn import_symbol(&mut self, canonical_name: Path, ty: Type) -> Option<Symbol> {
+    pub fn import_function(&mut self, canonical_name: Path, params: Vec<Type>, return_ty: Type) -> Option<Symbol> {
         match canonical_name.item() {
             Some(item) => self.imported_symbols.insert(
                 canonical_name.to_string(),
                 Symbol {
                     name: item.into(),
-                    ty,
+                    ty: Type::FunctionDef(params, Box::new(return_ty)),
                     mutable: false,
                 },
             ),
@@ -2931,7 +2931,7 @@ mod tests {
                     return;
                 }
                 ",
-                Type::FunctionDef(vec![], Box::new(Type::I32)),
+                (vec![],(Type::I32)),
                 Ok(()),
             ),
             (
@@ -2941,7 +2941,7 @@ mod tests {
                     return;
                 }
                 ",
-                Type::FunctionDef(vec![Type::I32], Box::new(Type::I32)),
+                (vec![Type::I32], (Type::I32)),
                 Ok(()),
             ),
             (
@@ -2951,7 +2951,7 @@ mod tests {
                     return;
                 }
                 ",
-                Type::FunctionDef(vec![Type::I32, Type::Bool], Box::new(Type::I32)),
+                (vec![Type::I32, Type::Bool], (Type::I32)),
                 Ok(()),
             ),
             (
@@ -2961,7 +2961,7 @@ mod tests {
                     return;
                 }
                 ",
-                Type::FunctionDef(vec![], Box::new(Type::I32)),
+                (vec![], (Type::I32)),
                 Err("Semantic: L3: Could not find item with the given path: root::std::test2"),
             ),
             (
@@ -2971,7 +2971,7 @@ mod tests {
                     return;
                 }
                 ",
-                Type::FunctionDef(vec![], Box::new(Type::I32)),
+                (vec![], (Type::I32)),
                 Err("Semantic: L3: Incorrect number of parameters passed to routine: root::std::test. Expected 0 but got 1"),
             ),
             (
@@ -2981,7 +2981,7 @@ mod tests {
                     return;
                 }
                 ",
-                Type::FunctionDef(vec![Type::I32, Type::Bool], Box::new(Type::I32)),
+                (vec![Type::I32, Type::Bool], (Type::I32)),
                 Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i32"),
             ),
         ] {
@@ -2998,9 +2998,9 @@ mod tests {
             let mut root_table = SymbolTable::new();
             let mut semantic = TypeResolver::new(&sm_ast);
 
-            semantic.import_symbol(
+            semantic.import_function(
                 vec!["root", "std", "test"].into(),
-                import_func,
+                import_func.0, import_func.1,
             );
 
             let result = semantic
