@@ -76,7 +76,7 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     // Compile
-    let program = Compiler::compile(semantic_ast, target_platform, imported.iter().map(|(p, _, _)| p.clone()).collect());
+    let program = Compiler::compile(semantic_ast, imported.iter().map(|(p, _, _)| p.clone()).collect(), target_platform);
 
     // Write the resulting assembly code to the target output file
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");

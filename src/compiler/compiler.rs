@@ -78,7 +78,7 @@ pub struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(module: Module<SemanticAnnotations>, target_os: TargetOS, imported_functions: Vec<Path>) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticAnnotations>, imported_functions: Vec<Path>, target_os: TargetOS) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
