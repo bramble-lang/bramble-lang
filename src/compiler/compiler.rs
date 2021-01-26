@@ -73,11 +73,12 @@ pub struct Compiler<'a> {
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
     root: &'a Module<SymbolOffsetTable>,
-    extern_functions: HashMap<String, String>,
+    c_extern_functions: HashMap<String, String>,
+    imported_functions: Vec<Path>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(module: Module<SemanticAnnotations>, target_os: TargetOS) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticAnnotations>, target_os: TargetOS, imported_functions: Vec<Path>) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
@@ -91,7 +92,8 @@ impl<'a> Compiler<'a> {
             string_pool,
             root: &compiler_ast,
             struct_table: &struct_table,
-            extern_functions: extern_functions,
+            c_extern_functions: extern_functions,
+            imported_functions,
         };
 
         let mut code = vec![];
@@ -113,7 +115,7 @@ impl<'a> Compiler<'a> {
 
     /// Creates the runtime code that will manage the entire execution of this program.
     fn create_base(&self, code: &mut Vec<Inst>) {
-        let main_label = self.extern_functions["main"].clone();
+        let main_label = self.c_extern_functions["main"].clone();
         assembly! {
             (code) {
                 {{self.write_includes()}}
@@ -139,8 +141,11 @@ impl<'a> Compiler<'a> {
 
     fn write_includes(&self) -> Vec<Inst> {
         let mut code = vec![];
-        for (_, platform_name) in self.extern_functions.iter() {
+        for (_, platform_name) in self.c_extern_functions.iter() {
             code.push(Inst::Extern(platform_name.clone()));
+        }
+        for imported_function in self.imported_functions.iter() {
+            code.push(Inst::Extern(imported_function.to_label()));
         }
         code
     }
