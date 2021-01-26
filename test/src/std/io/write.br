@@ -1,0 +1,4 @@
+fn my_main() {
+    root::std::io::write("hello, world\n");
+    return;
+}

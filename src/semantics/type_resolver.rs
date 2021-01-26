@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::syntax::{
     path::Path,
     statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
@@ -33,25 +35,37 @@ pub fn resolve_types(
     trace: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<module::Module<SemanticAnnotations>> {
+    resolve_types_with_imports(ast, &vec![], trace, trace_path)
+}
+
+pub fn resolve_types_with_imports(
+    ast: &module::Module<ParserInfo>,
+    imported_functions: &Vec<(Path, Vec<Type>, Type)>,
+    trace: TracingConfig,
+    trace_path: TracingConfig,
+) -> Result<module::Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(&ast)?;
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
-    let mut root_table = SymbolTable::new();
     let mut semantic = TypeResolver::new(&sm_ast);
+
+    for (name, params, ret_ty) in imported_functions.into_iter() {
+        semantic.import_function(name.clone(), params.clone(), ret_ty.clone());
+    }
+
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
-    let ast_typed = semantic
-        .resolve(&mut root_table)
-        .map_err(|e| format!("Semantic: {}", e))?;
-    Ok(ast_typed)
+    semantic
+        .resolve_types()
 }
 
 pub struct TypeResolver<'a> {
     root: &'a Module<SemanticAnnotations>,
-    stack: SymbolTableScopeStack,
+    stack: SymbolTableScopeStack,                   // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
     tracing: TracingConfig,
     path_tracing: TracingConfig,
+    imported_symbols: HashMap<String, Symbol>,
 }
 
 impl<'a> Tracing for TypeResolver<'a> {
@@ -67,11 +81,32 @@ impl<'a> TypeResolver<'a> {
             stack: SymbolTableScopeStack::new(),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
+            imported_symbols: HashMap::new(),
         }
     }
 
-    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticAnnotations>> {
-        self.analyze_module(self.root, sym)
+    pub fn import_function(&mut self, canonical_name: Path, params: Vec<Type>, return_ty: Type) -> Option<Symbol> {
+        match canonical_name.item() {
+            Some(item) => self.imported_symbols.insert(
+                canonical_name.to_string(),
+                Symbol {
+                    name: item.into(),
+                    ty: Type::FunctionDef(params, Box::new(return_ty)),
+                    mutable: false,
+                },
+            ),
+            None => None,
+        }
+    }
+
+    pub fn resolve_types(&mut self) -> Result<module::Module<SemanticAnnotations>> {
+        let mut empty_table = SymbolTable::new();
+        self.analyze_module(self.root, &mut empty_table)
+            .map_err(|e| format!("Semantic: {}", e))
+    }
+
+    fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
+        self.imported_symbols.get(&canonical_name.to_string())
     }
 
     fn analyze_module(
@@ -287,7 +322,7 @@ impl<'a> TypeResolver<'a> {
             Some(_) => {
                 let mut meta = mutate.get_annotations().clone();
                 let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
-                match self.lookup(sym, mutate.get_id()) {
+                match self.lookup_var(sym, mutate.get_id()) {
                     Ok(symbol) => {
                         if symbol.mutable {
                             if symbol.ty == rhs.get_type() {
@@ -525,7 +560,7 @@ impl<'a> TypeResolver<'a> {
                 None => Err(format!("Variable {} appears outside of function", id)),
                 Some(_) => {
                     let mut meta = meta.clone();
-                    match self.lookup(sym, &id)? {
+                    match self.lookup_var(sym, &id)? {
                         Symbol { ty: p, .. } => meta.ty = self.type_to_canonical(sym, p)?,
                     };
                     Ok(Expression::Identifier(meta.clone(), id.clone()))
@@ -543,8 +578,7 @@ impl<'a> TypeResolver<'a> {
                 match src.get_type() {
                     Custom(struct_name) => {
                         let (struct_def, canonical_path) = self
-                            .lookup_symbol_by_path(sym, &struct_name)?
-                            .ok_or(format!("{} was not found", struct_name))?;
+                            .lookup_symbol_by_path(sym, &struct_name)?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
@@ -628,18 +662,20 @@ impl<'a> TypeResolver<'a> {
 
                     resolved_params.push(ty);
                 }
+
+                // Check that the function being called exists
                 let (symbol, routine_canon_path) =
-                    self.lookup_symbol_by_path(sym, routine_path)?
-                        .ok_or(format!("function {} not declared", routine_path))?;
+                    self.lookup_symbol_by_path(sym, routine_path)?;
 
                 let (expected_param_tys, ret_ty) =
                     Self::extract_routine_type_info(symbol, call, &routine_path)?;
-
                 let expected_param_tys = expected_param_tys
                     .iter()
                     .map(|pty| Self::type_to_canonical_with_path(&routine_canon_path.parent(), pty))
                     .collect::<Result<Vec<Type>>>()?;
 
+                // Check that parameters are correct and if so, return the node annotated with
+                // semantic information
                 if resolved_params.len() != expected_param_tys.len() {
                     Err(format!(
                         "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
@@ -697,8 +733,7 @@ impl<'a> TypeResolver<'a> {
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
                 let (struct_def, canonical_path) =
-                    self.lookup_symbol_by_path(sym, &struct_name)?
-                        .ok_or(format!("Could not find struct {}", struct_name))?;
+                    self.lookup_symbol_by_path(sym, &struct_name)?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
@@ -905,40 +940,48 @@ impl<'a> TypeResolver<'a> {
         &'a self,
         sym: &'a SymbolTable,
         path: &Path,
-    ) -> Result<Option<(&'a Symbol, Path)>> {
+    ) -> Result<(&'a Symbol, Path)> {
         let canon_path = self.to_canonical(sym, path)?;
+
         if path.len() > 1 {
+            // If the path contains more than just the item's name then
+            // traverse the parent path to find the specified item
             let item = canon_path
                 .item()
                 .expect("Expected a canonical path with at least one step in it");
-            let node = self
+
+            // Look in the project being compiled
+            let project_symbol = self
                 .root
                 .go_to_module(&canon_path.parent())
-                .ok_or(format!("Could not find item with the given path: {}", path))?;
-            Ok(node
-                .get_annotations()
-                .sym
-                .get(&item)
-                .map(|i| (i, canon_path)))
+                .map(|module| module.get_annotations().sym.get(&item))
+                .flatten();
+
+            // look in any imported symbols
+            let imported_symbol = self.get_imported_symbol(&canon_path);
+
+            // Make sure that there is no ambiguity about what is being referenced
+            match (project_symbol, imported_symbol) {
+                (Some(ps), None) => Ok((ps, canon_path)),
+                (None, Some(is)) => Ok((is, canon_path)),
+                (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
+                (None, None) => Err(format!("Could not find item with the given path: {}", path)),
+            }
         } else if path.len() == 1 {
+            // If the path has just the item name, then check the local scope and
+            // the parent scopes for the given symbol
             let item = &path[0];
-            Ok(sym
-                .get(item)
-                .or(self.stack.get(item))
-                .map(|i| (i, canon_path)))
+            sym.get(item)
+                .or_else(|| self.stack.get(item))
+                .map(|i| (i, canon_path))
+                .ok_or(format!("{} is not defined", item))
         } else {
             Err("empty path passed to lookup_path".into())
         }
     }
 
-    fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
-        sym.get(id)
-            .or(self.stack.get(id))
-            .ok_or(format!("{} is not defined", id))
-    }
-
     fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup(sym, id)? {
+        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -952,7 +995,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup(sym, id)? {
+        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -961,11 +1004,11 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Type> {
-        let p = &self.lookup(sym, id)?.ty;
-        match p {
-            Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
-            _ => return Err(format!("{} is not a variable", id)),
+    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
+        let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
+        match symbol.ty {
+            FunctionDef(..) | CoroutineDef(..) | StructDef{..} | Unknown => return Err(format!("{} is not a variable", id)),
+            Custom(..) | Coroutine(_) | I32 | Bool | StringLiteral | Unit => Ok(symbol),
         }
     }
 
@@ -2121,7 +2164,7 @@ mod tests {
                 }
                 fn number() -> i32 {return 5;}
                 ",
-                Err("Semantic: L2: function bad_fun not declared"),
+                Err("Semantic: L2: bad_fun is not defined"),
             ),
             (
                 "fn main() -> i32 {
@@ -2883,5 +2926,119 @@ mod tests {
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
                 }
             }
+    }
+
+    #[test]
+    pub fn test_imported_functions() {
+        for (text, import_func, expected) in vec![
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test();
+                    return;
+                }
+                ",
+                (vec![],(Type::I32)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
+                    return root::std::test();
+                }
+                ",
+                (vec![],(Type::Unit)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5);
+                    return;
+                }
+                ",
+                (vec![Type::I32], (Type::I32)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5, true);
+                    return;
+                }
+                ",
+                (vec![Type::I32, Type::Bool], (Type::I32)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test2();
+                    return;
+                }
+                ",
+                (vec![], (Type::I32)),
+                Err("Semantic: L3: Could not find item with the given path: root::std::test2"),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5);
+                    return;
+                }
+                ",
+                (vec![], (Type::I32)),
+                Err("Semantic: L3: Incorrect number of parameters passed to routine: root::std::test. Expected 0 but got 1"),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5, 2);
+                    return;
+                }
+                ",
+                (vec![Type::I32, Type::Bool], (Type::I32)),
+                Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i32"),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5);
+                    return;
+                }
+                mod std {
+                    fn test(x: i32) -> i32 {
+                        return x;
+                    }
+                }
+                ",
+                (vec![Type::I32], (Type::I32)),
+                Err("Semantic: L3: Found multiple definitions of root::std::test"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let mut sa = SemanticAst::new();
+            let mut sm_ast = sa.from_module(&ast).unwrap();
+            SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
+
+            let mut semantic = TypeResolver::new(&sm_ast);
+
+            semantic.import_function(
+                vec!["root", "std", "test"].into(),
+                import_func.0, import_func.1,
+            );
+
+            let result = semantic
+                .resolve_types();
+            match expected {
+                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+            }
+        }
     }
 }

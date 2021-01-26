@@ -2,7 +2,8 @@
 
 run_test() {
     test=$1
-    rm -f ./target/*
+    input=./src/$2
+    rm -rf ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     ../target/debug/braid-lang -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
@@ -11,12 +12,14 @@ run_test() {
     if [ -f "./target/output.asm" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            nasm -g -f elf64 ../braid/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
             nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            gcc -no-pie -fno-pie -w ./target/std_io.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         elif [[ "$OSTYPE" == "darwin"* ]]; then
+            nasm -g -f elf64 ../braid/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
             nasm -g -f macho64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
-            gcc -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            gcc -w ./target/std_io.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         else
             # If we can't figure out the OS, then just try the Linux build steps
@@ -26,7 +29,11 @@ run_test() {
         fi
 
         if [[ $built -eq 1 ]]; then
-            ./target/output >> ./target/stdout
+            if [[ -f $input ]]; then
+                ./target/output < $input >> ./target/stdout
+            else
+                ./target/output >> ./target/stdout
+            fi
         else 
             echo "Build failed"
         fi
@@ -106,4 +113,6 @@ then
     run_test "modules/nested"
     run_test "modules/struct"
     run_test "modules/return"
+
+    run_test "std/io/readi64" "std/io/readi64.in"
 fi

@@ -73,25 +73,27 @@ pub struct Compiler<'a> {
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
     root: &'a Module<SymbolOffsetTable>,
-    extern_functions: HashMap<String, String>,
+    c_extern_functions: HashMap<String, String>,
+    imported_functions: Vec<Path>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(module: Module<SemanticAnnotations>, target_os: TargetOS) -> Vec<Inst> {
+    pub fn compile(module: Module<SemanticAnnotations>, imported_functions: Vec<Path>, target_os: TargetOS) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
 
-        let extern_functions = Compiler::configure_extern_functionss(target_os);
+        let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 
         let mut compiler = Compiler {
             scope: SymbolOffsetTableStack::new(),
             string_pool,
             root: &compiler_ast,
             struct_table: &struct_table,
-            extern_functions: extern_functions,
+            c_extern_functions,
+            imported_functions,
         };
 
         let mut code = vec![];
@@ -113,7 +115,7 @@ impl<'a> Compiler<'a> {
 
     /// Creates the runtime code that will manage the entire execution of this program.
     fn create_base(&self, code: &mut Vec<Inst>) {
-        let main_label = self.extern_functions["main"].clone();
+        let main_label = self.c_extern_functions["main"].clone();
         assembly! {
             (code) {
                 {{self.write_includes()}}
@@ -139,8 +141,11 @@ impl<'a> Compiler<'a> {
 
     fn write_includes(&self) -> Vec<Inst> {
         let mut code = vec![];
-        for (_, platform_name) in self.extern_functions.iter() {
+        for (_, platform_name) in self.c_extern_functions.iter() {
             code.push(Inst::Extern(platform_name.clone()));
+        }
+        for imported_function in self.imported_functions.iter() {
+            code.push(Inst::Extern(imported_function.to_label()));
         }
         code
     }
@@ -562,16 +567,6 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Expression::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
-                // Check if function exists and if the right number of parameters are being
-                // passed
-                let fn_def = self
-                    .root
-                    .go_to(fn_path)
-                    .ok_or(format!("Could not find: {}", fn_path))?
-                    .to_routine()
-                    .expect("Expected a routine");
-                fn_def.validate_parameters(params)?;
-
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
@@ -1362,7 +1357,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn configure_extern_functionss(target_os: TargetOS) -> HashMap<String, String> {
+    pub fn configure_c_extern_functions(target_os: TargetOS) -> HashMap<String, String> {
         let mut extern_functions = HashMap::new();
         match target_os {
             TargetOS::Linux => {
