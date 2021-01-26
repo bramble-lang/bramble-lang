@@ -45,7 +45,6 @@ pub fn resolve_types(
     
     semantic
         .resolve_types()
-        .map_err(|e| format!("Semantic: {}", e))
 }
 
 pub fn resolve_types_with_imports(
@@ -67,10 +66,8 @@ pub fn resolve_types_with_imports(
 
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
-    let ast_typed = semantic
+    semantic
         .resolve(&mut root_table)
-        .map_err(|e| format!("Semantic: {}", e))?;
-    Ok(ast_typed)
 }
 
 pub struct TypeResolver<'a> {
