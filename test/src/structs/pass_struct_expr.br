@@ -9,7 +9,7 @@ fn my_main() {
 struct MyStruct {
     x: i64,
     y: i64,
-    z: i32,
+    z: i64,
 }
 
 fn test(x: i64, t: MyStruct) -> i64 {

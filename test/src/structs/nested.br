@@ -63,7 +63,7 @@ fn my_main() {
 struct MyStruct {
     x: i64,
     y: i64,
-    z: i32,
+    z: i64,
 }
 
 struct MyStruct2 {
@@ -71,11 +71,11 @@ struct MyStruct2 {
     ms1: MyStruct,
     ms2: MyStruct,
     b: i64,
-    c: i32,
+    c: i64,
 }
 
 struct MyStruct3 {
-    h: i32,
+    h: i64,
     k: bool,
     ms1: MyStruct2,
     ms2: MyStruct2,

@@ -17,7 +17,7 @@ mod my_mod {
         return a + b;
     }
 
-    co count(start: i32) -> i64 {
+    co count(start: i64) -> i64 {
         yret start + 1;
         yret start + 2;
         return start + 3;

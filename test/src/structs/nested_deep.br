@@ -58,7 +58,7 @@ fn my_main() {
 struct MyStruct {
     x: i64,
     y: i64,
-    z: i32,
+    z: i64,
 }
 
 struct MyStruct2 {

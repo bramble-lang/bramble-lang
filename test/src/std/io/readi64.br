@@ -5,7 +5,7 @@ fn my_main() {
     let y: i64 := root::std::io::readi64();
     printiln y;
 
-    let z: i32 := root::std::io::readi64();
+    let z: i64 := root::std::io::readi64();
     printiln z;
     return;
 }
