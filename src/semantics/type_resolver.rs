@@ -2249,7 +2249,7 @@ mod tests {
         for (text, expected) in vec![
             (
                 "fn main() {
-                    let c: co i32 := init number();
+                    let c: co i64 := init number();
                     return;
                 }
                 co number() -> i64 {return 5;}
@@ -2258,7 +2258,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number(3);
+                    let c: co i64 := init number(3);
                     return;
                 }
                 co number() -> i64 {return 5;}
@@ -2267,7 +2267,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number(5);
+                    let c: co i64 := init number(5);
                     return;
                 }
                 co number(i: i64) -> i64 {return i;}
@@ -2276,7 +2276,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number();
+                    let c: co i64 := init number();
                     return;
                 }
                 co number(i: i64) -> i64 {return i;}
@@ -2285,7 +2285,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number(5, 3);
+                    let c: co i64 := init number(5, 3);
                     return;
                 }
                 co number(i: i64) -> i64 {return i;}
@@ -2294,7 +2294,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number(5);
+                    let c: co i64 := init number(5);
                     return;
                 }
                 fn number(i: i64) -> i64 {return i;}
@@ -2336,7 +2336,7 @@ mod tests {
         for (text, expected) in vec![
             (
                 "fn main() {
-                    let c: co i32 := init number();
+                    let c: co i64 := init number();
                     return;
                 }
                 co number() -> i64 {
@@ -2348,7 +2348,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number();
+                    let c: co i64 := init number();
                     return;
                 }
                 co number() -> i64 {
@@ -2360,7 +2360,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number();
+                    let c: co i64 := init number();
                     return;
                 }
                 co number() -> i64 {
@@ -2422,7 +2422,7 @@ mod tests {
         for (text, expected) in vec![
             (
                 "fn main() {
-                    let c: co i32 := init number();
+                    let c: co i64 := init number();
                     let i: i64 := yield c;
                     return;
                 }
@@ -2448,7 +2448,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let c: co i32 := init number();
+                    let c: co i64 := init number();
                     let i: bool := yield c;
                     return;
                 }
@@ -2876,7 +2876,7 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:co i32} fn test(c: co i32) -> MyStruct {return MyStruct{x: c};}",
+                "struct MyStruct{x:co i64} fn test(c: co i64) -> MyStruct {return MyStruct{x: c};}",
                 Ok(()),
             ),
         ] {

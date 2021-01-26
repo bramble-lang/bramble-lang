@@ -1,5 +1,5 @@
 fn my_main( p: bool) {
-    let c: co i32 := init numbers();
+    let c: co i64 := init numbers();
     
     let ms:MyStruct := MyStruct {
         x: c,
@@ -11,7 +11,7 @@ fn my_main( p: bool) {
     printiln (yield ms.x);
     printiln (yield ms.x);
     
-    let c2: co i32 := make_co();
+    let c2: co i64 := make_co();
     let x:i64 := takes_co(c2);
     printiln x;
     let x2:i64 := takes_co(c2);
@@ -20,12 +20,12 @@ fn my_main( p: bool) {
     return;
 }
 
-fn takes_co(c: co i32) -> i64{
+fn takes_co(c: co i64) -> i64{
     return (yield c);
 }
 
-fn make_co() -> co i32 {
-    let c: co i32 := init numbers();
+fn make_co() -> co i64 {
+    let c: co i64 := init numbers();
     return c;
 }
 
@@ -36,7 +36,7 @@ co numbers() -> i64 {
 }
 
 struct MyStruct {
-    x: co i32,
+    x: co i64,
     y: i64,
     z: bool,
 }

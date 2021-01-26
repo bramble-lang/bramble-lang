@@ -1,6 +1,6 @@
 fn my_main( p: bool) {
-    let c:co i32 := init my_co(5, 13);
-    let c2:co i32 := init my_co(17, 27);
+    let c:co i64 := init my_co(5, 13);
+    let c2:co i64 := init my_co(17, 27);
     printiln (yield c);
     printiln (yield c2);
     printiln (yield c);

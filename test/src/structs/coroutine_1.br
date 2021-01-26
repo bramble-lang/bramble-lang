@@ -1,6 +1,6 @@
 fn my_main( p: bool) {
     let ms:MyStruct := MyStruct {x: 5, y: 13, z: true};
-    let c : co i32 := init my_co(ms, ms);
+    let c : co i64 := init my_co(ms, ms);
     let w : i32 := yield c;
     let x : i32 := 1;
     printiln x;

@@ -1133,7 +1133,7 @@ pub mod tests {
 
     #[test]
     fn parse_coroutine_init() {
-        let text = "let x:co i32 := init c(1, 2);";
+        let text = "let x:co i64 := init c(1, 2);";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1161,7 +1161,7 @@ pub mod tests {
 
     #[test]
     fn parse_coroutine_path_init() {
-        let text = "let x:co i32 := init a::b::c(1, 2);";
+        let text = "let x:co i64 := init a::b::c(1, 2);";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()

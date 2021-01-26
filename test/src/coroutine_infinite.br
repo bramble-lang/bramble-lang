@@ -1,5 +1,5 @@
 fn my_main( p: bool) {
-    let c: co i32 := init my_co(5);
+    let c: co i64 := init my_co(5);
     let w1 : i32 := yield c;
     printiln w1;
     let w2 : i32 := yield c;
