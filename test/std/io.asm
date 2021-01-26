@@ -6,12 +6,26 @@
 %define stdout 1
 
 section .text
-global root_std_io_writeline
-root_std_io_writeline:
+global root_std_io_write
+root_std_io_write:
+    call str_len
     mov rsi, rax
     mov rax, sys_write
     mov rdi, stdout
-    mov rdx, 5
     syscall
     
+    ret
+    
+    
+str_len:
+    ; set counter to 0
+    mov rdx, 0
+    ; check if value is 0
+    ; if not, then increment the counter
+.loop:
+    cmp [rax+rdx], BYTE 0
+    jz .done
+    inc rdx
+    jmp .loop
+.done:
     ret
