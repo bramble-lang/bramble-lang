@@ -85,14 +85,14 @@ impl<'a> Compiler<'a> {
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
 
-        let extern_functions = Compiler::configure_extern_functionss(target_os);
+        let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 
         let mut compiler = Compiler {
             scope: SymbolOffsetTableStack::new(),
             string_pool,
             root: &compiler_ast,
             struct_table: &struct_table,
-            c_extern_functions: extern_functions,
+            c_extern_functions,
             imported_functions,
         };
 
@@ -1357,7 +1357,7 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn configure_extern_functionss(target_os: TargetOS) -> HashMap<String, String> {
+    pub fn configure_c_extern_functions(target_os: TargetOS) -> HashMap<String, String> {
         let mut extern_functions = HashMap::new();
         match target_os {
             TargetOS::Linux => {
