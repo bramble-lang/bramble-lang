@@ -215,9 +215,18 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         assembly! {(code){
             {{Compiler::pop_params_to_c64_registers(nparams)}}
+
+            push %rbp;
+            mov %rbp, %rsp;
+
+            and %rsp, 18446744073709551600;
+
             mov %rax, 0;
             call @{c_func};
             mov %rax, 0;
+
+            mov %rsp, %rbp;
+            pop %rbp;
         }}
         code
     }
