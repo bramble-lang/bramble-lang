@@ -205,7 +205,7 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
@@ -221,7 +221,7 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
@@ -237,7 +237,7 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
@@ -253,7 +253,7 @@ mod test {
             name: "cor".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_coroutine(cdef.clone()).unwrap();
@@ -269,7 +269,7 @@ mod test {
             name: "cor".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_coroutine(cdef.clone()).unwrap();
@@ -285,7 +285,7 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
@@ -295,7 +295,7 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         let result = module.add_coroutine(cdef.clone());
@@ -310,7 +310,7 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_coroutine(cdef.clone()).unwrap();
@@ -320,7 +320,7 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         let result = module.add_function(fdef.clone());
@@ -335,7 +335,7 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
@@ -351,7 +351,7 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
@@ -367,7 +367,7 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
@@ -383,7 +383,7 @@ mod test {
             name: "co".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_coroutine(fdef.clone()).unwrap();
@@ -399,7 +399,7 @@ mod test {
             name: "co".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         module.add_coroutine(fdef.clone()).unwrap();

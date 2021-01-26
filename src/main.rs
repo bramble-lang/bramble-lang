@@ -58,7 +58,7 @@ fn main() {
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
     let imported = vec![
         (vec!["root", "std", "io", "write"].into(),vec![Type::StringLiteral], Type::Unit),
-        (vec!["root", "std", "io", "readi64"].into(),vec![], Type::I32),
+        (vec!["root", "std", "io", "readi64"].into(),vec![], Type::I64),
     ];
     let semantic_ast = match resolve_types_with_imports(&ast, &imported, trace_semantic_analysis, trace_path) {
         Ok(ast) => ast,

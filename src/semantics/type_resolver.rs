@@ -359,7 +359,7 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<Printi<SemanticAnnotations>> {
         let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I32 {
+        if value.get_type() == I64 {
             meta.ty = Unit;
             Ok(Printi::new(meta.clone(), value))
         } else {
@@ -375,7 +375,7 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<Printiln<SemanticAnnotations>> {
         let mut meta = p.get_annotations().clone();
         let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I32 {
+        if value.get_type() == I64 {
             meta.ty = Unit;
             Ok(Printiln::new(meta.clone(), value))
         } else {
@@ -529,7 +529,7 @@ impl<'a> TypeResolver<'a> {
         match &ast {
             &Expression::Integer(meta, v) => {
                 let mut meta = meta.clone();
-                meta.ty = I32;
+                meta.ty = I64;
                 Ok(Expression::Integer(meta, *v))
             }
             Expression::Boolean(meta, v) => {
@@ -812,8 +812,8 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Minus => {
-                if operand.get_type() == I32 {
-                    Ok((I32, operand))
+                if operand.get_type() == I64 {
+                    Ok((I64, operand))
                 } else {
                     Err(format!(
                         "{} expected i32 but found {}",
@@ -851,8 +851,8 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if l.get_type() == I32 && r.get_type() == I32 {
-                    Ok((I32, l, r))
+                if l.get_type() == I64 && r.get_type() == I64 {
+                    Ok((I64, l, r))
                 } else {
                     Err(format!(
                         "{} expected i32 but found {} and {}",
@@ -1008,7 +1008,7 @@ impl<'a> TypeResolver<'a> {
         let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
         match symbol.ty {
             FunctionDef(..) | CoroutineDef(..) | StructDef{..} | Unknown => return Err(format!("{} is not a variable", id)),
-            Custom(..) | Coroutine(_) | I32 | Bool | StringLiteral | Unit => Ok(symbol),
+            Custom(..) | Coroutine(_) | I64 | Bool | StringLiteral | Unit => Ok(symbol),
         }
     }
 
@@ -1146,7 +1146,7 @@ mod tests {
                     let k: i32 := 5;
                     return k;
                 }",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> bool {
@@ -1489,7 +1489,7 @@ mod tests {
                     let k: i32 := 5;
                     return -k;
                 }",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> bool {
@@ -1547,7 +1547,7 @@ mod tests {
                     let k: i32 := 1 + 5;
                     return k + 3;
                 }",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> bool {
@@ -1586,7 +1586,7 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.get_annotations().ty, I32);
+                        assert_eq!(bind_stm.get_annotations().ty, I64);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1616,7 +1616,7 @@ mod tests {
                     let k: i32 := 1 * 5;
                     return k * 3;
                 }",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> bool {
@@ -1653,7 +1653,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_annotations().ty, I32);
+                    assert_eq!(bind_stm.get_annotations().ty, I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1906,7 +1906,7 @@ mod tests {
                     let k: i32 := 5;
                     return k;
                 }",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> i32 {
@@ -1952,7 +1952,7 @@ mod tests {
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I32);
+                    assert_eq!(bind_stm.get_type(), I64);
                     if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
@@ -1984,7 +1984,7 @@ mod tests {
                     mut k := 3;
                     return k;
                 }",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> i32 {
@@ -2032,7 +2032,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I32);
+                    assert_eq!(bind_stm.get_type(), I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2043,7 +2043,7 @@ mod tests {
 
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
-                    assert_eq!(mut_stm.get_type(), I32);
+                    assert_eq!(mut_stm.get_type(), I64);
                     if let Statement::Mutate(box m) = mut_stm {
                         assert_eq!(m.get_rhs().get_type(), expected_ty);
                     } else {
@@ -2064,7 +2064,7 @@ mod tests {
                 "fn main() -> i32 {
                     return 5;
                 }",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> bool {
@@ -2139,7 +2139,7 @@ mod tests {
                 }
                 fn number() -> i32 {return 5;}
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 // test recursion
@@ -2148,7 +2148,7 @@ mod tests {
                 }
                 fn number() -> i32 {return number();}
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> bool {
@@ -2172,7 +2172,7 @@ mod tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() -> i32 {
@@ -2254,7 +2254,7 @@ mod tests {
                 }
                 co number() -> i32 {return 5;}
                 ",
-                Ok(Coroutine(Box::new(I32))),
+                Ok(Coroutine(Box::new(I64))),
             ),
             (
                 "fn main() {
@@ -2272,7 +2272,7 @@ mod tests {
                 }
                 co number(i: i32) -> i32 {return i;}
                 ",
-                Ok(Coroutine(Box::new(I32))),
+                Ok(Coroutine(Box::new(I64))),
             ),
             (
                 "fn main() {
@@ -2315,7 +2315,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Coroutine(Box::new(I32)));
+                    assert_eq!(bind_stm.get_type(), Coroutine(Box::new(I64)));
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2344,7 +2344,7 @@ mod tests {
                     return 5;
                 }
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() {
@@ -2398,7 +2398,7 @@ mod tests {
                     let co_number = module.get_coroutines()[0].to_routine().unwrap();
 
                     let yret_stm = &co_number.get_body()[0];
-                    assert_eq!(yret_stm.get_type(), I32);
+                    assert_eq!(yret_stm.get_type(), I64);
 
                     // validate that the RHS of the yield return is the correct type
                     if let Statement::YieldReturn(box yr) = yret_stm {
@@ -2431,7 +2431,7 @@ mod tests {
                     return 5;
                 }
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() {
@@ -2473,7 +2473,7 @@ mod tests {
                     let co_number = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &co_number.get_body()[1];
-                    assert_eq!(bind_stm.get_type(), I32);
+                    assert_eq!(bind_stm.get_type(), I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2497,7 +2497,7 @@ mod tests {
                     return i;
                 }
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main(b: bool) -> i32 {
@@ -2562,7 +2562,7 @@ mod tests {
                     return i;
                 }
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "co main(b: bool) -> i32 {
@@ -2628,7 +2628,7 @@ mod tests {
                     return;
                 }
                 ",
-                Ok(I32),
+                Ok(I64),
             ),
             (
                 "fn main() {
@@ -2676,7 +2676,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I32);
+                    assert_eq!(bind_stm.get_type(), I64);
 
                     // Check the return value
                     if let Statement::Bind(box b) = bind_stm {
@@ -2938,7 +2938,7 @@ mod tests {
                     return;
                 }
                 ",
-                (vec![],(Type::I32)),
+                (vec![],(Type::I64)),
                 Ok(()),
             ),
             (
@@ -2957,7 +2957,7 @@ mod tests {
                     return;
                 }
                 ",
-                (vec![Type::I32], (Type::I32)),
+                (vec![Type::I64], (Type::I64)),
                 Ok(()),
             ),
             (
@@ -2967,7 +2967,7 @@ mod tests {
                     return;
                 }
                 ",
-                (vec![Type::I32, Type::Bool], (Type::I32)),
+                (vec![Type::I64, Type::Bool], (Type::I64)),
                 Ok(()),
             ),
             (
@@ -2977,7 +2977,7 @@ mod tests {
                     return;
                 }
                 ",
-                (vec![], (Type::I32)),
+                (vec![], (Type::I64)),
                 Err("Semantic: L3: Could not find item with the given path: root::std::test2"),
             ),
             (
@@ -2987,7 +2987,7 @@ mod tests {
                     return;
                 }
                 ",
-                (vec![], (Type::I32)),
+                (vec![], (Type::I64)),
                 Err("Semantic: L3: Incorrect number of parameters passed to routine: root::std::test. Expected 0 but got 1"),
             ),
             (
@@ -2997,7 +2997,7 @@ mod tests {
                     return;
                 }
                 ",
-                (vec![Type::I32, Type::Bool], (Type::I32)),
+                (vec![Type::I64, Type::Bool], (Type::I64)),
                 Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i32"),
             ),
             (
@@ -3012,7 +3012,7 @@ mod tests {
                     }
                 }
                 ",
-                (vec![Type::I32], (Type::I32)),
+                (vec![Type::I64], (Type::I64)),
                 Err("Semantic: L3: Found multiple definitions of root::std::test"),
             ),
         ] {

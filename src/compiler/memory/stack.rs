@@ -171,7 +171,7 @@ mod tests {
             def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         stack.push(&outer_node.get_annotations());
@@ -206,8 +206,8 @@ mod tests {
             annotations: fun_scope,
             def: RoutineDefType::Function,
             name: "func".into(),
-            params: vec![("y".into(), Type::I32)],
-            ty: Type::I32,
+            params: vec![("y".into(), Type::I64)],
+            ty: Type::I64,
             body: vec![],
         };
 
@@ -232,7 +232,7 @@ mod tests {
             def: RoutineDefType::Function,
             name: "func2".into(),
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         stack.push(&fun2_node.get_annotations());
@@ -259,8 +259,8 @@ mod tests {
             annotations: cor_scope,
             def: RoutineDefType::Coroutine,
             name: "cor".into(),
-            params: vec![("y".into(), Type::I32)],
-            ty: Type::I32,
+            params: vec![("y".into(), Type::I64)],
+            ty: Type::I64,
             body: vec![],
         };
 
@@ -286,7 +286,7 @@ mod tests {
             def: RoutineDefType::Coroutine,
             name: "func2".into(),
             params: vec![],
-            ty: Type::I32,
+            ty: Type::I64,
             body: vec![],
         };
         stack.push(&fun2_node.get_annotations());

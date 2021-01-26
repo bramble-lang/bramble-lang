@@ -152,7 +152,7 @@ impl UnresolvedStructTable {
             resolved_structs: &HashMap<String, StructDefinition>,
         ) -> Option<i32> {
             match ty {
-                Type::I32 => Some(8),
+                Type::I64 => Some(8),
                 Type::Bool => Some(8),
                 Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
                 Type::Coroutine(_) => Some(8),
@@ -209,7 +209,7 @@ impl ResolvedStructTable {
 
     pub fn size_of(&self, ty: &Type) -> Option<i32> {
         match ty {
-            Type::I32 => Some(8),
+            Type::I64 => Some(8),
             Type::Bool => Some(8),
             Type::StringLiteral => Some(8),
             Type::Coroutine(_) => Some(8),
@@ -254,7 +254,7 @@ mod test {
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
                 unrealized_st.table["root::test"],
-                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+                StructDefinition::new("test", vec![("i".into(), Type::I64)])
             );
             assert_eq!(
                 unrealized_st.table["root::test2"],
@@ -290,7 +290,7 @@ mod test {
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
                 unrealized_st.table["root::my_mod::test"],
-                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+                StructDefinition::new("test", vec![("i".into(), Type::I64)])
             );
             assert_eq!(
                 unrealized_st.table["root::test2"],
@@ -328,7 +328,7 @@ mod test {
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
                 unrealized_st.table["root::my_mod::test"],
-                StructDefinition::new("test", vec![("i".into(), Type::I32)])
+                StructDefinition::new("test", vec![("i".into(), Type::I64)])
             );
             assert_eq!(
                 unrealized_st.table["root::test"],
@@ -352,13 +352,13 @@ mod test {
         let result = UnresolvedStructTable::insert_struct(
             &mut st.table,
             &vec!["root", "test"].into(),
-            StructDefinition::new("test", vec![("i".into(), Type::I32)]),
+            StructDefinition::new("test", vec![("i".into(), Type::I64)]),
         );
         assert_eq!(result, Ok(()));
         let result = UnresolvedStructTable::insert_struct(
             &mut st.table,
             &vec!["root", "test"].into(),
-            StructDefinition::new("test", vec![("i".into(), Type::I32)]),
+            StructDefinition::new("test", vec![("i".into(), Type::I64)]),
         );
         assert_eq!(result, Err("Struct root::test already exists".into()));
     }
@@ -379,7 +379,7 @@ mod test {
                     size: Some(8),
                     fields: vec![FieldInfo {
                         name: "i".into(),
-                        ty: Type::I32,
+                        ty: Type::I64,
                         offset: Some(8),
                     }],
                 },
@@ -406,7 +406,7 @@ mod test {
                     fields: vec![
                         FieldInfo {
                             name: "i".into(),
-                            ty: Type::I32,
+                            ty: Type::I64,
                             offset: Some(8),
                         },
                         FieldInfo {
@@ -439,7 +439,7 @@ mod test {
                     fields: vec![
                         FieldInfo {
                             name: "i".into(),
-                            ty: Type::I32,
+                            ty: Type::I64,
                             offset: Some(8),
                         },
                         FieldInfo {
@@ -497,7 +497,7 @@ mod test {
                     fields: vec![
                         FieldInfo {
                             name: "x".into(),
-                            ty: Type::I32,
+                            ty: Type::I64,
                             offset: Some(8),
                         },
                         FieldInfo {
@@ -525,7 +525,7 @@ mod test {
                     fields: vec![
                         FieldInfo {
                             name: "x".into(),
-                            ty: Type::I32,
+                            ty: Type::I64,
                             offset: Some(8),
                         },
                         FieldInfo {

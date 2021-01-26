@@ -537,7 +537,7 @@ mod test {
             match &body[0] {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), Type::I32);
+                    assert_eq!(b.get_type(), Type::I64);
                     assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
                 }
                 _ => panic!("Not a binding statement"),

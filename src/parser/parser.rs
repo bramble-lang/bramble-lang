@@ -430,7 +430,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
             s: Lex::Primitive(primitive),
         }) => {
             let ty = match *primitive {
-                Primitive::I32 => Some(Type::I32),
+                Primitive::I32 => Some(Type::I64),
                 Primitive::Bool => Some(Type::Bool),
                 Primitive::StringLiteral => Some(Type::StringLiteral),
             };
@@ -736,7 +736,7 @@ pub mod tests {
         match stm {
             Statement::Bind(box b) => {
                 assert_eq!(b.get_id(), "x");
-                assert_eq!(b.get_type(), Type::I32);
+                assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), false);
                 assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
             }
@@ -757,7 +757,7 @@ pub mod tests {
         match stm {
             Statement::Bind(box b) => {
                 assert_eq!(b.get_id(), "x");
-                assert_eq!(b.get_type(), Type::I32);
+                assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), true);
                 assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
             }
@@ -891,7 +891,7 @@ pub mod tests {
             {
                 assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(params, &vec![("x".into(), Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -935,7 +935,7 @@ pub mod tests {
             {
                 assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(params, &vec![("x".into(), Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -971,7 +971,7 @@ pub mod tests {
             if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
                 assert_eq!(*sd.get_annotations(), 1);
                 assert_eq!(sd.get_name(), "my_struct");
-                assert_eq!(sd.get_fields(), &vec![("x".into(), Type::I32)]);
+                assert_eq!(sd.get_fields(), &vec![("x".into(), Type::I64)]);
             }
         } else {
             panic!("No nodes returned by parser")
@@ -998,7 +998,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(params, vec![("x".into(), Type::I64)]);
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1030,7 +1030,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(params, vec![("x".into(), Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1116,7 +1116,7 @@ pub mod tests {
             })) = m.get_item("test")
             {
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I32)]);
+                assert_eq!(params, &vec![("x".into(), Type::I64)]);
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -1144,7 +1144,7 @@ pub mod tests {
         match stm {
             Statement::Bind(box b) => {
                 assert_eq!(b.get_id(), "x");
-                assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
+                assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
                     *b.get_rhs(),
                     Expression::RoutineCall(
@@ -1172,7 +1172,7 @@ pub mod tests {
         match stm {
             Statement::Bind(box b) => {
                 assert_eq!(b.get_id(), "x");
-                assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I32)));
+                assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
                     *b.get_rhs(),
                     Expression::RoutineCall(
@@ -1207,7 +1207,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I32)]);
+            assert_eq!(params, vec![("x".into(), Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1309,14 +1309,14 @@ pub mod tests {
             ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
             (
                 "struct MyStruct {x: i32}",
-                StructDef::new("MyStruct", 1, vec![("x".into(), Type::I32)]),
+                StructDef::new("MyStruct", 1, vec![("x".into(), Type::I64)]),
             ),
             (
                 "struct MyStruct {x: i32, y: bool}",
                 StructDef::new(
                     "MyStruct",
                     1,
-                    vec![("x".into(), Type::I32), ("y".into(), Type::Bool)],
+                    vec![("x".into(), Type::I64), ("y".into(), Type::Bool)],
                 ),
             ),
         ] {

@@ -550,7 +550,7 @@ mod compute {
                 SemanticAnnotations {
                     id: 3,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: symbol_table::SymbolTable::new(),
                     canonical_path: vec!["root"].into(),
                 },
@@ -580,7 +580,7 @@ mod compute {
                 SemanticAnnotations {
                     id: 0,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: symbol_table::SymbolTable::new(),
                     canonical_path: vec!["root"].into(),
                 },
@@ -612,7 +612,7 @@ mod compute {
                 SemanticAnnotations {
                     id: 0,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: symbol_table::SymbolTable::new(),
                     canonical_path: vec!["root"].into(),
                 },
@@ -622,7 +622,7 @@ mod compute {
                 SemanticAnnotations {
                     id: 1,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: symbol_table::SymbolTable::new(),
                     canonical_path: vec!["root"].into(),
                 },
@@ -632,7 +632,7 @@ mod compute {
                 SemanticAnnotations {
                     id: 2,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: symbol_table::SymbolTable::new(),
                     canonical_path: vec!["root"].into(),
                 },
@@ -673,13 +673,13 @@ mod compute {
         #[test]
         pub fn test_expression_block() {
             let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I32, false).unwrap();
-            semantic_table.add("y", Type::I32, false).unwrap();
+            semantic_table.add("x", Type::I64, false).unwrap();
+            semantic_table.add("y", Type::I64, false).unwrap();
             let sn = SemanticNode::ExpressionBlock(
                 SemanticAnnotations {
                     id: 0,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: semantic_table,
                     canonical_path: Path::new(),
                 },
@@ -704,13 +704,13 @@ mod compute {
         #[test]
         pub fn test_nested_expression_block() {
             let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I32, false).unwrap();
-            semantic_table.add("y", Type::I32, false).unwrap();
+            semantic_table.add("x", Type::I64, false).unwrap();
+            semantic_table.add("y", Type::I64, false).unwrap();
             let sn = SemanticNode::ExpressionBlock(
                 SemanticAnnotations {
                     id: 0,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: semantic_table,
                     canonical_path: Path::new(),
                 },
@@ -719,13 +719,13 @@ mod compute {
             );
 
             let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I32, false).unwrap();
-            semantic_table.add("y", Type::I32, false).unwrap();
+            semantic_table.add("x", Type::I64, false).unwrap();
+            semantic_table.add("y", Type::I64, false).unwrap();
             let sn = SemanticNode::ExpressionBlock(
                 SemanticAnnotations {
                     id: 0,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: semantic_table,
                     canonical_path: Path::new(),
                 },
@@ -760,20 +760,20 @@ mod compute {
         #[test]
         pub fn test_function() {
             let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I32, false).unwrap();
-            semantic_table.add("y", Type::I32, false).unwrap();
+            semantic_table.add("x", Type::I64, false).unwrap();
+            semantic_table.add("y", Type::I64, false).unwrap();
             let sn = RoutineDef {
                 annotations: SemanticAnnotations {
                     id: 0,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: semantic_table,
                     canonical_path: Path::new(),
                 },
                 def: RoutineDefType::Function,
                 name: "func".into(),
                 params: vec![],
-                ty: Type::I32,
+                ty: Type::I64,
                 body: vec![],
             };
             let mut module = Module::new("root", SemanticAnnotations::new(1, 1, Type::Unit));
@@ -890,20 +890,20 @@ mod compute {
         #[test]
         pub fn test_coroutine() {
             let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I32, false).unwrap();
-            semantic_table.add("y", Type::I32, false).unwrap();
+            semantic_table.add("x", Type::I64, false).unwrap();
+            semantic_table.add("y", Type::I64, false).unwrap();
             let sn = RoutineDef {
                 annotations: SemanticAnnotations {
                     id: 0,
                     ln: 0,
-                    ty: Type::I32,
+                    ty: Type::I64,
                     sym: semantic_table,
                     canonical_path: Path::new(),
                 },
                 def: RoutineDefType::Coroutine,
                 name: "coroutine".into(),
                 params: vec![],
-                ty: Type::I32,
+                ty: Type::I64,
                 body: vec![],
             };
             let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
