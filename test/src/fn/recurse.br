@@ -4,7 +4,7 @@ fn my_main() {
 	return;
 }
 
-fn recurse(a: i32) -> i64 {
+fn recurse(a: i64) -> i64 {
 	printiln a;
 	let i:i64 := if (a <= 5) {
 		recurse(a+1)

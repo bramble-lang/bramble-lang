@@ -22,8 +22,8 @@ struct MyStruct {
 }
 
 struct MyStruct2 {
-    a: i32,
+    a: i64,
     ms1: MyStruct,
     ms2: MyStruct,
-    b: i32,
+    b: i64,
 }

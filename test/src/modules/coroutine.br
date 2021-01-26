@@ -13,7 +13,7 @@ mod my_mod {
         return b;
     }
 
-    fn add(a: i32, b: i32) -> i64 {
+    fn add(a: i64, b: i64) -> i64 {
         return a + b;
     }
 

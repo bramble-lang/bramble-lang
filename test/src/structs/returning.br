@@ -26,9 +26,9 @@ struct MyStruct {
 }
 
 struct MyStruct2 {
-    a: i32,
+    a: i64,
     ms: MyStruct,
-    b: i32,
+    b: i64,
 }
 
 fn test() -> MyStruct {

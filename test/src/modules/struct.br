@@ -12,12 +12,12 @@ fn my_main() {
 
 mod my_mod {
     struct MyStruct {
-        a: i32,
+        a: i64,
     }
 
     mod inner {
         struct MyStruct {
-            b: i32,
+            b: i64,
         }
         
         struct MyStruct2 {

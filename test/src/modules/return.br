@@ -24,7 +24,7 @@ mod my_mod {
         return b;
     }
 
-    fn add(a: i32, b: i32) -> self::MyStruct {
+    fn add(a: i64, b: i64) -> self::MyStruct {
         return MyStruct{a: a + b};
     }
 
@@ -33,7 +33,7 @@ mod my_mod {
     }
 
     struct MyStruct {
-        a: i32,
+        a: i64,
     }
 
     co count(start: root::my_mod::MyStruct) -> MyStruct {

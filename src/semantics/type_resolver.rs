@@ -2170,7 +2170,7 @@ mod tests {
                 "fn main() -> i64 {
                     return add(1, 2);
                 }
-                fn add(a: i32, b: i32) -> i64 {return a + b;}
+                fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Ok(I64),
             ),
@@ -2178,7 +2178,7 @@ mod tests {
                 "fn main() -> i64 {
                     return add(false, 2);
                 }
-                fn add(a: i32, b: i32) -> i64 {return a + b;}
+                fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i64 but got bool"),
             ),
@@ -2186,7 +2186,7 @@ mod tests {
                 "fn main() -> i64 {
                     return add(1, true);
                 }
-                fn add(a: i32, b: i32) -> i64 {return a + b;}
+                fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i64 but got bool"),
             ),
@@ -2194,7 +2194,7 @@ mod tests {
                 "fn main() -> i64 {
                     return add(1);
                 }
-                fn add(a: i32, b: i32) -> i64 {return a + b;}
+                fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
             ),
@@ -2202,7 +2202,7 @@ mod tests {
                 "fn main() -> i64 {
                     return add(1, 2, 3);
                 }
-                fn add(a: i32, b: i32) -> i64 {return a + b;}
+                fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 3"),
             ),
@@ -2210,7 +2210,7 @@ mod tests {
                 "fn main() -> i64 {
                     return add(false);
                 }
-                fn add(a: i32, b: i32) -> i64 {return a + b;}
+                fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
             ),
