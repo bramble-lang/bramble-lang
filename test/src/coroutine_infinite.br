@@ -13,7 +13,7 @@ fn my_main( p: bool) {
 }
 
 co my_co (x: i64) -> i64 {
-    let mut i: i32 := x;
+    let mut i: i64 := x;
     return {
         mut i := i + 1;
         i - 1

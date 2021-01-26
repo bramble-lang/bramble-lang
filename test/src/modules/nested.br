@@ -15,7 +15,7 @@ fn my_main() {
 }
 
 mod my_mod {
-    fn is_3(i: i32) -> bool {
+    fn is_3(i: i64) -> bool {
         let x: i64 := self::inner::add(1, 2);
         return i == x;
     }

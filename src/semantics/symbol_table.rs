@@ -13,7 +13,7 @@ use braid_lang::result::Result;
  *
  *```
  * mod my_mod {
- *      fn hello(i: i32) {
+ *      fn hello(i: i64) {
  *          let x: i64 := i * i;
  *          // do something
  *      }

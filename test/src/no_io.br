@@ -1,5 +1,5 @@
 fn my_main() {
-    let i: i32 := 2 + test(5);
+    let i: i64 := 2 + test(5);
     return;
 }
 
