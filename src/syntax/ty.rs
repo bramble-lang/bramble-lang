@@ -45,7 +45,7 @@ impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Type::*;
         match self {
-            I64 => f.write_str("i32"),
+            I64 => f.write_str("i64"),
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
             Unit => f.write_str("unit"),

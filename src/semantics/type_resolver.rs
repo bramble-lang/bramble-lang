@@ -816,7 +816,7 @@ impl<'a> TypeResolver<'a> {
                     Ok((I64, operand))
                 } else {
                     Err(format!(
-                        "{} expected i32 but found {}",
+                        "{} expected i64 but found {}",
                         op,
                         operand.get_type()
                     ))
@@ -855,7 +855,7 @@ impl<'a> TypeResolver<'a> {
                     Ok((I64, l, r))
                 } else {
                     Err(format!(
-                        "{} expected i32 but found {} and {}",
+                        "{} expected i64 but found {} and {}",
                         op,
                         l.get_type(),
                         r.get_type()
@@ -1167,14 +1167,14 @@ mod tests {
                     let k: i64 := false;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i32 but got bool"),
+                Err("Semantic: L2: Bind expected i64 but got bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k;
                 }",
-                Err("Semantic: L3: Return expected bool but got i32"),
+                Err("Semantic: L3: Return expected bool but got i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1496,7 +1496,7 @@ mod tests {
                     let k: bool := false;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i32 but found bool"),
+                Err("Semantic: L3: - expected i64 but found bool"),
             ),
             (
                 "fn main() -> bool {
@@ -1510,7 +1510,7 @@ mod tests {
                     let k: i64 := 5;
                     return !k;
                 }",
-                Err("Semantic: L3: ! expected bool but found i32"),
+                Err("Semantic: L3: ! expected bool but found i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1554,21 +1554,21 @@ mod tests {
                     let k: i64 := 1 + false;
                     return k + 3;
                 }",
-                Err("Semantic: L2: + expected i32 but found i32 and bool"),
+                Err("Semantic: L2: + expected i64 but found i64 and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := \"hello\" + 5;
                     return k + 3;
                 }",
-                Err("Semantic: L2: + expected i32 but found string and i32"),
+                Err("Semantic: L2: + expected i64 but found string and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := true;
                     return k + 3;
                 }",
-                Err("Semantic: L3: + expected i32 but found bool and i32"),
+                Err("Semantic: L3: + expected i64 but found bool and i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1623,21 +1623,21 @@ mod tests {
                     let k: i64 := 1 * false;
                     return k * 3;
                 }",
-                Err("Semantic: L2: * expected i32 but found i32 and bool"),
+                Err("Semantic: L2: * expected i64 but found i64 and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := \"hello\" * 5;
                     return k * 3;
                 }",
-                Err("Semantic: L2: * expected i32 but found string and i32"),
+                Err("Semantic: L2: * expected i64 but found string and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := true;
                     return k * 3;
                 }",
-                Err("Semantic: L3: * expected i32 but found bool and i32"),
+                Err("Semantic: L3: * expected i64 but found bool and i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1693,7 +1693,7 @@ mod tests {
                     let k: bool := true && 1;
                     return k && true;
                 }",
-                Err("Semantic: L2: && expected bool but found bool and i32"),
+                Err("Semantic: L2: && expected bool but found bool and i64"),
             ),
             (
                 "fn main() -> bool {
@@ -1707,7 +1707,7 @@ mod tests {
                     let k: i64 := 5;
                     return k && true;
                 }",
-                Err("Semantic: L3: && expected bool but found i32 and bool"),
+                Err("Semantic: L3: && expected bool but found i64 and bool"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1763,7 +1763,7 @@ mod tests {
                     let k: bool := true || 1;
                     return k || true;
                 }",
-                Err("Semantic: L2: || expected bool but found bool and i32"),
+                Err("Semantic: L2: || expected bool but found bool and i64"),
             ),
             (
                 "fn main() -> bool {
@@ -1777,7 +1777,7 @@ mod tests {
                     let k: i64 := 5;
                     return k || true;
                 }",
-                Err("Semantic: L3: || expected bool but found i32 and bool"),
+                Err("Semantic: L3: || expected bool but found i64 and bool"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1841,7 +1841,7 @@ mod tests {
                         op
                     )),
                     Err(format!(
-                        "Semantic: L2: {} expected i32 but found i32 and bool",
+                        "Semantic: L2: {} expected i64 but found i64 and bool",
                         op
                     )),
                 ),
@@ -1854,7 +1854,7 @@ mod tests {
                         op
                     )),
                     Err(format!(
-                        "Semantic: L2: {} expected bool but found bool and i32",
+                        "Semantic: L2: {} expected bool but found bool and i64",
                         op
                     )),
                 ),
@@ -1913,14 +1913,14 @@ mod tests {
                     let k: bool := 5;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected bool but got i32"),
+                Err("Semantic: L2: Bind expected bool but got i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k;
                 }",
-                Err("Semantic: L3: Return expected bool but got i32"),
+                Err("Semantic: L3: Return expected bool but got i64"),
             ),
             (
                 // Test recursive definition
@@ -1992,7 +1992,7 @@ mod tests {
                     mut k := false;
                     return k;
                 }",
-                Err("Semantic: L3: k is of type i32 but is assigned bool"),
+                Err("Semantic: L3: k is of type i64 but is assigned bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2088,13 +2088,13 @@ mod tests {
                 "fn main() -> bool {
                     return 5;
                 }",
-                Err("Semantic: L2: Return expected bool but got i32"),
+                Err("Semantic: L2: Return expected bool but got i64"),
             ),
             (
                 "fn main() {
                     return 5;
                 }",
-                Err("Semantic: L2: Return expected unit but got i32"),
+                Err("Semantic: L2: Return expected unit but got i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2156,7 +2156,7 @@ mod tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: Return expected bool but got i32"),
+                Err("Semantic: L2: Return expected bool but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -2180,7 +2180,7 @@ mod tests {
                 }
                 fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got bool"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2188,7 +2188,7 @@ mod tests {
                 }
                 fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i32 but got bool"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2299,7 +2299,7 @@ mod tests {
                 }
                 fn number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Expected coroutine but number is a fn (i32) -> i64"),
+                Err("Semantic: L2: Expected coroutine but number is a fn (i64) -> i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2356,7 +2356,7 @@ mod tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected i32 but got bool"),
+                Err("Semantic: L6: Yield return expected i64 but got bool"),
             ),
             (
                 "fn main() {
@@ -2368,7 +2368,7 @@ mod tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected i32 but got unit"),
+                Err("Semantic: L6: Yield return expected i64 but got unit"),
             ),
             /*
                 Need to add a symbol for the unit type
@@ -2382,7 +2382,7 @@ mod tests {
                     return;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected unit but got i32"),
+                Err("Semantic: L6: Yield return expected unit but got i64"),
             ),*/
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2457,7 +2457,7 @@ mod tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L3: Bind expected bool but got i32"),
+                Err("Semantic: L3: Bind expected bool but got i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2504,14 +2504,14 @@ mod tests {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected i32 but got bool"),
+                Err("Semantic: L2: Return expected i64 but got bool"),
             ),
             (
                 "fn main(b: bool) -> i64 {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Return expected i32 but got unit"),
+                Err("Semantic: L2: Return expected i64 but got unit"),
             ),
             (
                 "fn main(b: bool) {
@@ -2569,14 +2569,14 @@ mod tests {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected i32 but got bool"),
+                Err("Semantic: L2: Return expected i64 but got bool"),
             ),
             (
                 "co main(b: bool) -> i64 {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Return expected i32 but got unit"),
+                Err("Semantic: L2: Return expected i64 but got unit"),
             ),
             (
                 "co main(b: bool) {
@@ -2636,7 +2636,7 @@ mod tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Expected boolean expression in if conditional, got: i32"),
+                Err("Semantic: L2: Expected boolean expression in if conditional, got: i64"),
             ),
             (
                 "fn main() {
@@ -2644,7 +2644,7 @@ mod tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected bool got i32"),
+                Err("Semantic: L2: If expression has mismatching arms: expected bool got i64"),
             ),
             (
                 "fn main() {
@@ -2652,7 +2652,7 @@ mod tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected i32 got string"),
+                Err("Semantic: L2: If expression has mismatching arms: expected i64 got string"),
             ),
             (
                 "fn main() {
@@ -2660,7 +2660,7 @@ mod tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Bind expected i32 but got string"),
+                Err("Semantic: L2: Bind expected i64 but got string"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2862,7 +2862,7 @@ mod tests {
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:false};}",
-                Err("Semantic: L1: root::MyStruct.x expects i32 but got bool"),
+                Err("Semantic: L1: root::MyStruct.x expects i64 but got bool"),
             ),
             (
                 line!(),
@@ -2872,7 +2872,7 @@ mod tests {
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> i64 {return MyStruct{x:5};}",
-                Err("Semantic: L1: Return expected i32 but got root::MyStruct"),
+                Err("Semantic: L1: Return expected i64 but got root::MyStruct"),
             ),
             (
                 line!(),
@@ -2904,7 +2904,7 @@ mod tests {
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
-                Err("Semantic: L1: Return expected bool but got i32")),
+                Err("Semantic: L1: Return expected bool but got i64")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
@@ -2912,7 +2912,7 @@ mod tests {
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
-                Err("Semantic: L1: Return expected bool but got i32")),
+                Err("Semantic: L1: Return expected bool but got i64")),
             ] {
                 let tokens: Vec<Token> = Lexer::new(&text)
                     .tokenize()
@@ -2998,7 +2998,7 @@ mod tests {
                 }
                 ",
                 (vec![Type::I64, Type::Bool], (Type::I64)),
-                Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i32"),
+                Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i64"),
             ),
             (
                 " 
