@@ -182,6 +182,12 @@ impl From<i32> for DirectOperand {
     }
 }
 
+impl From<&str> for DirectOperand {
+    fn from(l: &str) -> Self {
+        DirectOperand::Label(l.into())
+    }
+}
+
 impl From<String> for DirectOperand {
     fn from(l: String) -> Self {
         DirectOperand::Label(l)
@@ -540,20 +546,20 @@ macro_rules! operand {
         Operand::Memory(DirectOperand::Register(register!($e)))
     };
     ([@ {$e:expr}]) => {
-        Operand::Memory(DirectOperand::Label($e.into()))
+        Operand::Memory($e.into())
     };
     ([rel @ $e:tt]) => {
-        Operand::IPRelativeMemory(DirectOperand::Label(stringify!($e).into()))
+        Operand::IPRelativeMemory(stringify!($e).into())
     };
     ([@ $e:tt]) => {
-        Operand::Memory(DirectOperand::Label(stringify!($e).into()))
+        Operand::Memory(stringify!($e).into())
     };
     ([^ {$e:expr}]) => {
-        Operand::Memory(DirectOperand::Label(format!(".{}", $e)))
+        Operand::Memory(format!(".{}", $e).into())
     };
     ([^ $e:tt]) => {
         let label = format!(".{}", stringify!($e));
-        Operand::Memory(DirectOperand::Label(label))
+        Operand::Memory(label.into())
     };
     ({$e:expr}) => {
         Operand::Direct($e.into())
@@ -570,16 +576,16 @@ macro_rules! operand {
         Operand::Direct($e.into())
     };
     (@{$e:expr}) => {
-        Operand::Direct(DirectOperand::Label($e.into()))
+        Operand::Direct($e.into())
     };
     (@$e:tt) => {
-        Operand::Direct(DirectOperand::Label(stringify!($e).into()))
+        Operand::Direct(stringify!($e).into())
     };
     (^{$e:expr}) => {
-        Operand::Direct(DirectOperand::Label(format!(".{}", $e)))
+        Operand::Direct(format!(".{}", $e).into())
     };
     (^$e:tt) => {
-        Operand::Direct(DirectOperand::Label(format!(".{}", stringify!($e)).into()))
+        Operand::Direct(format!(".{}", stringify!($e)).into())
     };
 }
 
@@ -888,14 +894,14 @@ macro_rules! assembly2 {
     };
 
     (($buf:expr, $info:expr) {$inst:tt ^{$a:expr}; $($tail:tt)*}) => {
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", $a, $info.id())));
+        let lbl = Operand::Direct(format!(".{}_{}", $a, $info.id()).into());
         $buf.push(unary_op!($inst)(lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };
 
     (($buf:expr, $info:expr) {$inst:tt ^ $a:tt; $($tail:tt)*}) => {
         let lbl = stringify!($a);
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.id())));
+        let lbl = Operand::Direct(format!(".{}_{}", lbl, $info.id()).into());
         $buf.push(unary_op!($inst)(lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };
@@ -922,7 +928,7 @@ macro_rules! assembly2 {
     // reg, local label
     (($buf:expr, $info:expr) {$inst:tt % $a:tt, ^ $b:tt; $($tail:tt)*}) => {
         let lbl = stringify!($b);
-        let lbl = Operand::Direct(DirectOperand::Label(format!(".{}_{}", lbl, $info.id())));
+        let lbl = Operand::Direct(format!(".{}_{}", lbl, $info.id()).into());
         $buf.push(binary_op!($inst)(operand!(% $a), lbl));
         assembly2!(($buf, $info) {$($tail)*})
     };
