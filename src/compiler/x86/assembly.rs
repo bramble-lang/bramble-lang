@@ -147,7 +147,9 @@ impl Display for Reg {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DirectOperand {
-    Integer(i64),
+    Integer64(i64),
+    UInteger64(u64),
+    Integer32(i32),
     Register(Reg),
     Label(String),
 }
@@ -162,11 +164,37 @@ impl DirectOperand {
     }
 }
 
+impl From<u64> for DirectOperand {
+    fn from(u: u64) -> Self {
+        DirectOperand::UInteger64(u)
+    }
+}
+
+impl From<i64> for DirectOperand {
+    fn from(i: i64) -> Self {
+        DirectOperand::Integer64(i)
+    }
+}
+
+impl From<i32> for DirectOperand {
+    fn from(i: i32) -> Self {
+        DirectOperand::Integer32(i)
+    }
+}
+
+impl From<String> for DirectOperand {
+    fn from(l: String) -> Self {
+        DirectOperand::Label(l)
+    }
+}
+
 impl Display for DirectOperand {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         use DirectOperand::*;
         match self {
-            Integer(i) => f.write_fmt(format_args!("{}", i)),
+            Integer64(i) => f.write_fmt(format_args!("{}", i)),
+            UInteger64(i) => f.write_fmt(format_args!("{}", i)),
+            Integer32(i) => f.write_fmt(format_args!("{}", i)),
             Register(reg) => f.write_fmt(format_args!("{}", reg)),
             Label(lbl) => f.write_fmt(format_args!("{}", lbl)),
         }
@@ -287,7 +315,7 @@ impl Display for Inst {
                 "mov {}, {}",
                 a,
                 match b {
-                    Operand::Direct(DirectOperand::Integer(_))
+                    Operand::Direct(DirectOperand::Integer64(_))
                     | Operand::Memory(_)
                     | Operand::MemoryAddr(_, _) => format!("{}", b),
                     _ => format!("{}", b),
@@ -297,7 +325,7 @@ impl Display for Inst {
                 "movzx {}, {}",
                 a,
                 match b {
-                    Operand::Direct(DirectOperand::Integer(_))
+                    Operand::Direct(DirectOperand::Integer64(_))
                     | Operand::Memory(_)
                     | Operand::MemoryAddr(_, _) => format!("{}", b),
                     _ => format!("{}", b),
@@ -528,7 +556,7 @@ macro_rules! operand {
         Operand::Memory(DirectOperand::Label(label))
     };
     ({$e:expr}) => {
-        Operand::Direct(DirectOperand::Integer($e))
+        Operand::Direct($e.into())
     };
 
     // register
@@ -539,7 +567,7 @@ macro_rules! operand {
         Operand::Direct(DirectOperand::Register(register!($reg)))
     };
     ($e:literal) => {
-        Operand::Direct(DirectOperand::Integer($e))
+        Operand::Direct($e.into())
     };
     (@{$e:expr}) => {
         Operand::Direct(DirectOperand::Label($e.into()))
@@ -942,7 +970,7 @@ mod test {
         assert_eq!(code.len(), 3);
         let expected = Inst::Mov(
             Operand::Direct(DirectOperand::Register(Reg::R64(Reg64::Rax))),
-            Operand::Direct(DirectOperand::Integer(0)),
+            Operand::Direct(DirectOperand::Integer64(0)),
         );
         assert_eq!(code[0], expected);
         let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R64(
@@ -979,7 +1007,7 @@ mod test {
         assert_eq!(code.len(), 3);
         let expected = Inst::Mov(
             Operand::Direct(DirectOperand::Register(Reg::R32(Reg32::Eax))),
-            Operand::Direct(DirectOperand::Integer(0)),
+            Operand::Direct(DirectOperand::Integer64(0)),
         );
         assert_eq!(code[0], expected);
         let expected = Inst::Push(Operand::Direct(DirectOperand::Register(Reg::R32(

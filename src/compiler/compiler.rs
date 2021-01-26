@@ -219,7 +219,7 @@ impl<'a> Compiler<'a> {
             push %rbp;
             mov %rbp, %rsp;
 
-            and %rsp, 18446744073709551600;
+            and %rsp, 18446744073709551600u64;
 
             mov %rax, 0;
             call @{c_func};
