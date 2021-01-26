@@ -2,7 +2,7 @@
 
 run_test() {
     test=$1
-    rm -f ./target/*
+    rm -rf ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     ../target/debug/braid-lang -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
