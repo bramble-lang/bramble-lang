@@ -78,7 +78,11 @@ pub struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(module: Module<SemanticAnnotations>, imported_functions: Vec<Path>, target_os: TargetOS) -> Vec<Inst> {
+    pub fn compile(
+        module: Module<SemanticAnnotations>,
+        imported_functions: Vec<Path>,
+        target_os: TargetOS,
+    ) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
@@ -201,22 +205,17 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn make_c32_extern_call(extern_func: &str, nparams: usize) -> Vec<Inst> {
-        let mut code = vec![];
-        assembly! {(code){
-            {{Compiler::reverse_c32_params_on_stack(nparams)}}
-            call @{extern_func};
-            add %rsp, {4*nparams as i64};
-        }}
-        code
-    }
-
     fn make_c64_extern_call(&self, c_func: &str, nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
-        let platform_name = self.extern_functions.get(c_func).expect(&format!(
-            "Cannot find {} in list of c extern functions",
-            c_func
-        ));
+        let platform_name: String = self
+            .c_extern_functions
+            .get(c_func)
+            .expect(&format!(
+                "Cannot find {} in list of c extern functions",
+                c_func
+            ))
+            .into();
+
         assembly! {(code){
             {{Compiler::pop_params_to_c64_registers(nparams)}}
 
@@ -868,7 +867,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             push %rax;
 
-            {{self.make_c64_extern_call("_puts", 1)}}
+            {{self.make_c64_extern_call("puts", 1)}}
         }}
         Ok(())
     }
@@ -1383,6 +1382,7 @@ impl<'a> Compiler<'a> {
                 extern_functions.insert("main".into(), "_main".into());
                 extern_functions.insert("printf".into(), "_printf".into());
                 extern_functions.insert("fputs".into(), "_fputs".into());
+                extern_functions.insert("puts".into(), "_puts".into());
             }
         }
 

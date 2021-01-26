@@ -23,7 +23,7 @@ root_std_io_write:
 
 global root_std_io_readi64
 root_std_io_readi64:
-    extern scanf
+    extern _scanf
     push rbp
     mov rbp, rsp
     
@@ -36,7 +36,7 @@ root_std_io_readi64:
     xor rax, rax
     mov rdi, fmt_i64
     lea rsi, QWORD [rel dest_i64]
-    call scanf
+    call _scanf
     mov rax, QWORD [rel dest_i64]
     
     mov rsp, rbp
