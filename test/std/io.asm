@@ -32,12 +32,9 @@ root_std_io_readi64:
     ; !! This is a temporary hack and what should happen is that Braid compiler sizes
     ; each stack frame to be 16byte aligned
     mov rax, rsp
-    test rax, 15
-    sete al
-    jz .read
-    sub rsp, 8
+    and rax, 15
+    sub rsp, rax
     
-.read:
     xor rax, rax
     mov rdi, fmt_i64
     lea rsi, QWORD [dest_i64]
