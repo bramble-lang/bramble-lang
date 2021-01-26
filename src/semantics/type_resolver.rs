@@ -49,6 +49,31 @@ pub fn resolve_types(
     Ok(ast_typed)
 }
 
+pub fn resolve_types_with_imports(
+    ast: &module::Module<ParserInfo>,
+    imported_functions: &Vec<(Path, Vec<Type>, Type)>,
+    trace: TracingConfig,
+    trace_path: TracingConfig,
+) -> Result<module::Module<SemanticAnnotations>> {
+    let mut sa = SemanticAst::new();
+    let mut sm_ast = sa.from_module(&ast)?;
+    SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
+
+    let mut root_table = SymbolTable::new();
+    let mut semantic = TypeResolver::new(&sm_ast);
+
+    for (n, params, ret_ty) in imported_functions.into_iter() {
+        semantic.import_function(n.clone(), params.clone(), ret_ty.clone());
+    }
+
+    semantic.set_tracing(trace);
+    semantic.path_tracing = trace_path;
+    let ast_typed = semantic
+        .resolve(&mut root_table)
+        .map_err(|e| format!("Semantic: {}", e))?;
+    Ok(ast_typed)
+}
+
 pub struct TypeResolver<'a> {
     root: &'a Module<SemanticAnnotations>,
     stack: SymbolTableScopeStack,

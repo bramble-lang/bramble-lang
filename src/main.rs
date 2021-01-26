@@ -13,7 +13,7 @@ use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
 use lexer::tokens::Token;
 use semantics::type_resolver::*;
-use syntax::expression;
+use syntax::{expression, ty::Type};
 
 fn main() {
     let config = configure_cli().get_matches();
@@ -56,7 +56,10 @@ fn main() {
     // Type Check
     let trace_semantic_analysis = TracingConfig::parse(config.value_of("trace-symbol-table"));
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
-    let semantic_ast = match resolve_types(&ast, trace_semantic_analysis, trace_path) {
+    let imported = vec![
+        (vec!["root", "std", "io", "writeline"].into(),vec![Type::StringLiteral], Type::Unit)
+    ];
+    let semantic_ast = match resolve_types_with_imports(&ast, &imported, trace_semantic_analysis, trace_path) {
         Ok(ast) => ast,
         Err(msg) => {
             println!("Error: {}", msg);
@@ -73,7 +76,7 @@ fn main() {
 
     // Compile
     let imported = vec![
-        vec!["root", "std", "io", "printi"].into(),
+        vec!["root", "std", "io", "writeline"].into(),
     ];
     let program = Compiler::compile(semantic_ast, target_platform, imported);
 
