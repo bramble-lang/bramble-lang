@@ -107,7 +107,7 @@ fn copy(e: MyStruct) -> MyStruct {
     return t;
 }
 
-fn print(e: MyStruct) -> i32 {
+fn print(e: MyStruct) -> i64 {
     printiln e.x00;
     printiln e.x30;
 

@@ -12,7 +12,7 @@ fn my_main( p: bool) {
     return;
 }
 
-co my_co (x: i64) -> i32 {
+co my_co (x: i64) -> i64 {
     let mut i: i32 := x;
     return {
         mut i := i + 1;

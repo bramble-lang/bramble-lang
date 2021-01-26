@@ -14,7 +14,7 @@ struct MyStruct {
     z: bool,
 }
 
-fn test() -> i32 {
+fn test() -> i64 {
     let t: MyStruct := MyStruct{z: true, x: 5, y: 2};
     printiln t.x;
     return t.x;

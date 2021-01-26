@@ -17,17 +17,17 @@ struct MyStruct {
     z: i32,
 }
 
-fn test(t: MyStruct) -> i32 {
+fn test(t: MyStruct) -> i64 {
     printiln t.x;
     return t.y + t.z;
 }
 
-fn test2(x: i64, t: MyStruct) -> i32 {
+fn test2(x: i64, t: MyStruct) -> i64 {
     printiln x * t.x;
     return t.y + t.z;
 }
 
-fn test3(t: MyStruct) -> i32 {
+fn test3(t: MyStruct) -> i64 {
     printiln t.x;
     printiln t.y;
     printiln t.z;
@@ -35,7 +35,7 @@ fn test3(t: MyStruct) -> i32 {
     return t.x + t.y + t.z;
 }
 
-fn test4(x: i64, t: MyStruct) -> i32 {
+fn test4(x: i64, t: MyStruct) -> i64 {
     printiln x;
     printiln t.x;
     printiln t.y;

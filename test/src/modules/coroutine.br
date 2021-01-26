@@ -13,11 +13,11 @@ mod my_mod {
         return b;
     }
 
-    fn add(a: i32, b: i32) -> i32 {
+    fn add(a: i32, b: i32) -> i64 {
         return a + b;
     }
 
-    co count(start: i32) -> i32 {
+    co count(start: i32) -> i64 {
         yret start + 1;
         yret start + 2;
         return start + 3;

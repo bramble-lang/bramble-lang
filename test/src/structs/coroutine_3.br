@@ -20,7 +20,7 @@ fn my_main( p: bool) {
     return;
 }
 
-fn takes_co(c: co i32) -> i32{
+fn takes_co(c: co i32) -> i64{
     return (yield c);
 }
 
@@ -29,7 +29,7 @@ fn make_co() -> co i32 {
     return c;
 }
 
-co numbers() -> i32 {
+co numbers() -> i64 {
     yret 1;
     yret 2;
     return 3;

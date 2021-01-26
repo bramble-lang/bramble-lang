@@ -1142,7 +1142,7 @@ mod tests {
     pub fn test_identifiers() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 5;
                     return k;
                 }",
@@ -1208,7 +1208,7 @@ mod tests {
         for (text, expected) in vec![
             (
                 "mod my_mod{ 
-                    fn test() -> i32{ 
+                    fn test() -> i64{ 
                         return 0;
                     } 
                     fn main() {
@@ -1222,7 +1222,7 @@ mod tests {
             ),
             (
                 "mod my_mod{ 
-                    fn test() -> i32{ return 0;} 
+                    fn test() -> i64{ return 0;} 
                     fn main() {
                         let i: i32 := my_mod::test(); 
                         return;
@@ -1249,7 +1249,7 @@ mod tests {
     pub fn test_path_to_function_in_different_module() {
         for (text,) in vec![
             ("mod my_mod{ 
-                    fn test() -> i32{ return 0;} 
+                    fn test() -> i64{ return 0;} 
                 }
                 mod main_mod{
                     fn main() {
@@ -1259,7 +1259,7 @@ mod tests {
                 }",),
             ("mod my_mod{ 
                     mod inner {
-                        fn test() -> i32{ return 0;} 
+                        fn test() -> i64{ return 0;} 
                     }
                 }
                 mod main_mod{
@@ -1278,7 +1278,7 @@ mod tests {
                     }
 
                     mod inner {
-                        fn test() -> i32{ return 0;} 
+                        fn test() -> i64{ return 0;} 
                     }
                 }",),
         ] {
@@ -1311,7 +1311,7 @@ mod tests {
             ),
             (
                 "mod my_mod{ 
-                    fn test() -> i32{ return 0;} 
+                    fn test() -> i64{ return 0;} 
                     fn main() {
                         let i: i32 := my_mod::test(); 
                         return;
@@ -1485,7 +1485,7 @@ mod tests {
     pub fn test_unary_ops() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 5;
                     return -k;
                 }",
@@ -1506,7 +1506,7 @@ mod tests {
                 Ok(Bool),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 5;
                     return !k;
                 }",
@@ -1543,7 +1543,7 @@ mod tests {
     pub fn test_add_op() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 1 + 5;
                     return k + 3;
                 }",
@@ -1612,7 +1612,7 @@ mod tests {
     pub fn test_mul_op() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 1 * 5;
                     return k * 3;
                 }",
@@ -1902,14 +1902,14 @@ mod tests {
     pub fn test_bind_statement() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 5;
                     return k;
                 }",
                 Ok(I64),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: bool := 5;
                     return k;
                 }",
@@ -1979,7 +1979,7 @@ mod tests {
     pub fn test_mutate_statement() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let mut k: i32 := 5;
                     mut k := 3;
                     return k;
@@ -1987,7 +1987,7 @@ mod tests {
                 Ok(I64),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let mut k: i32 := 5;
                     mut k := false;
                     return k;
@@ -1995,7 +1995,7 @@ mod tests {
                 Err("Semantic: L3: k is of type i32 but is assigned bool"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 5;
                     mut k := 3;
                     return k;
@@ -2003,7 +2003,7 @@ mod tests {
                 Err("Semantic: L3: Variable k is not mutable"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 5;
                     mut k := false;
                     return k;
@@ -2011,7 +2011,7 @@ mod tests {
                 Err("Semantic: L3: Variable k is not mutable"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     let k: i32 := 5;
                     mut x := false;
                     return k;
@@ -2061,7 +2061,7 @@ mod tests {
     pub fn test_return_statement() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return 5;
                 }",
                 Ok(I64),
@@ -2134,19 +2134,19 @@ mod tests {
     pub fn test_function_calls() {
         for (text, expected) in vec![
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return number();
                 }
-                fn number() -> i32 {return 5;}
+                fn number() -> i64 {return 5;}
                 ",
                 Ok(I64),
             ),
             (
                 // test recursion
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return number();
                 }
-                fn number() -> i32 {return number();}
+                fn number() -> i64 {return number();}
                 ",
                 Ok(I64),
             ),
@@ -2154,7 +2154,7 @@ mod tests {
                 "fn main() -> bool {
                     return number();
                 }
-                fn number() -> i32 {return 5;}
+                fn number() -> i64 {return 5;}
                 ",
                 Err("Semantic: L2: Return expected bool but got i32"),
             ),
@@ -2162,55 +2162,55 @@ mod tests {
                 "fn main() -> bool {
                     return bad_fun();
                 }
-                fn number() -> i32 {return 5;}
+                fn number() -> i64 {return 5;}
                 ",
                 Err("Semantic: L2: bad_fun is not defined"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return add(1, 2);
                 }
-                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
                 Ok(I64),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return add(false, 2);
                 }
-                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got bool"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return add(1, true);
                 }
-                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i32 but got bool"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return add(1);
                 }
-                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return add(1, 2, 3);
                 }
-                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 3"),
             ),
             (
-                "fn main() -> i32 {
+                "fn main() -> i64 {
                     return add(false);
                 }
-                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                fn add(a: i32, b: i32) -> i64 {return a + b;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
             ),
@@ -2252,7 +2252,7 @@ mod tests {
                     let c: co i32 := init number();
                     return;
                 }
-                co number() -> i32 {return 5;}
+                co number() -> i64 {return 5;}
                 ",
                 Ok(Coroutine(Box::new(I64))),
             ),
@@ -2261,7 +2261,7 @@ mod tests {
                     let c: co i32 := init number(3);
                     return;
                 }
-                co number() -> i32 {return 5;}
+                co number() -> i64 {return 5;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 0 but got 1"),
             ),
@@ -2270,7 +2270,7 @@ mod tests {
                     let c: co i32 := init number(5);
                     return;
                 }
-                co number(i: i32) -> i32 {return i;}
+                co number(i: i32) -> i64 {return i;}
                 ",
                 Ok(Coroutine(Box::new(I64))),
             ),
@@ -2279,7 +2279,7 @@ mod tests {
                     let c: co i32 := init number();
                     return;
                 }
-                co number(i: i32) -> i32 {return i;}
+                co number(i: i32) -> i64 {return i;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 0"),
             ),
@@ -2288,7 +2288,7 @@ mod tests {
                     let c: co i32 := init number(5, 3);
                     return;
                 }
-                co number(i: i32) -> i32 {return i;}
+                co number(i: i32) -> i64 {return i;}
                 ",
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 2"),
             ),
@@ -2297,9 +2297,9 @@ mod tests {
                     let c: co i32 := init number(5);
                     return;
                 }
-                fn number(i: i32) -> i32 {return i;}
+                fn number(i: i32) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Expected coroutine but number is a fn (i32) -> i32"),
+                Err("Semantic: L2: Expected coroutine but number is a fn (i32) -> i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2339,7 +2339,7 @@ mod tests {
                     let c: co i32 := init number();
                     return;
                 }
-                co number() -> i32 {
+                co number() -> i64 {
                     yret 1;
                     return 5;
                 }
@@ -2351,7 +2351,7 @@ mod tests {
                     let c: co i32 := init number();
                     return;
                 }
-                co number() -> i32 {
+                co number() -> i64 {
                     yret false;
                     return 5;
                 }
@@ -2363,7 +2363,7 @@ mod tests {
                     let c: co i32 := init number();
                     return;
                 }
-                co number() -> i32 {
+                co number() -> i64 {
                     yret;
                     return 5;
                 }
@@ -2426,7 +2426,7 @@ mod tests {
                     let i: i32 := yield c;
                     return;
                 }
-                co number() -> i32 {
+                co number() -> i64 {
                     yret 1;
                     return 5;
                 }
@@ -2439,7 +2439,7 @@ mod tests {
                     let i: i32 := yield c;
                     return;
                 }
-                co number() -> i32 {
+                co number() -> i64 {
                     yret 1;
                     return 5;
                 }
@@ -2452,7 +2452,7 @@ mod tests {
                     let i: bool := yield c;
                     return;
                 }
-                co number() -> i32 {
+                co number() -> i64 {
                     yret 1;
                     return 5;
                 }
@@ -2493,21 +2493,21 @@ mod tests {
     pub fn test_function_definition() {
         for (text, expected) in vec![
             (
-                "fn main(i: i32) -> i32 {
+                "fn main(i: i32) -> i64 {
                     return i;
                 }
                 ",
                 Ok(I64),
             ),
             (
-                "fn main(b: bool) -> i32 {
+                "fn main(b: bool) -> i64 {
                     return b;
                 }
                 ",
                 Err("Semantic: L2: Return expected i32 but got bool"),
             ),
             (
-                "fn main(b: bool) -> i32 {
+                "fn main(b: bool) -> i64 {
                     return;
                 }
                 ",
@@ -2558,21 +2558,21 @@ mod tests {
     pub fn test_coroutine_definition() {
         for (text, expected) in vec![
             (
-                "co main(i: i32) -> i32 {
+                "co main(i: i32) -> i64 {
                     return i;
                 }
                 ",
                 Ok(I64),
             ),
             (
-                "co main(b: bool) -> i32 {
+                "co main(b: bool) -> i64 {
                     return b;
                 }
                 ",
                 Err("Semantic: L2: Return expected i32 but got bool"),
             ),
             (
-                "co main(b: bool) -> i32 {
+                "co main(b: bool) -> i64 {
                     return;
                 }
                 ",
@@ -2798,8 +2798,8 @@ mod tests {
             (
                 line!(),
                 "struct MyStruct{x:i64}
-                fn test2(ms: MyStruct) -> i32 {return ms.x;}
-                fn test() -> i32
+                fn test2(ms: MyStruct) -> i64 {return ms.x;}
+                fn test() -> i64
                 {
                     let x: root::MyStruct := self::MyStruct{x: 1};
                     let y: i64 := test2(x);
@@ -2811,7 +2811,7 @@ mod tests {
                 line!(),
                 "struct MyStruct{x:i64}
                 fn test2(ms: MyStruct) -> MyStruct {return ms;}
-                fn test() -> i32
+                fn test() -> i64
                 {
                     let x: root::MyStruct := self::MyStruct{x: 1};
                     let y: MyStruct := test2(x);
@@ -2839,8 +2839,8 @@ mod tests {
                 line!(),
                 "struct MyStruct{x:i64}
                 struct MyStruct2{ms: MyStruct}
-                fn test2(ms2: MyStruct2) -> i32 {return ms2.ms.x;}
-                fn test() -> i32
+                fn test2(ms2: MyStruct2) -> i64 {return ms2.ms.x;}
+                fn test() -> i64
                 {
                     let x: root::MyStruct := self::MyStruct{x: 1};
                     let y: i64 := test2(x);
@@ -2871,7 +2871,7 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i64} fn test() -> i32 {return MyStruct{x:5};}",
+                "struct MyStruct{x:i64} fn test() -> i64 {return MyStruct{x:5};}",
                 Err("Semantic: L1: Return expected i32 but got root::MyStruct"),
             ),
             (
@@ -2898,18 +2898,18 @@ mod tests {
     pub fn test_member_access() {
         for (text, expected) in vec![
                 ("struct MyStruct{x:i64}
-                fn test(ms:MyStruct) -> i32 {
+                fn test(ms:MyStruct) -> i64 {
                     return ms.x;}",
                 Ok(())),
-                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i32 {return ms.y;}",
+                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
-                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.x;}",
+                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
-                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.y;}",
+                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
@@ -3007,7 +3007,7 @@ mod tests {
                     return;
                 }
                 mod std {
-                    fn test(x: i64) -> i32 {
+                    fn test(x: i64) -> i64 {
                         return x;
                     }
                 }

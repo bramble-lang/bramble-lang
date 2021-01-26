@@ -7,7 +7,7 @@ fn my_main( p: bool) {
     return;
 }
 
-co my_co (x: MyStruct) -> i32 {
+co my_co (x: MyStruct) -> i64 {
     printiln x.x;
     yret x.y + x.y;
     printiln x.y;

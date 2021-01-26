@@ -12,7 +12,7 @@ struct MyStruct {
     z: i32,
 }
 
-fn test(x: i64, t: MyStruct) -> i32 {
+fn test(x: i64, t: MyStruct) -> i64 {
     printiln x;
     printiln t.x;
     printiln t.y;

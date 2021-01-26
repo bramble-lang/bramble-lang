@@ -4,7 +4,7 @@ fn my_main() {
     return;
 }
 
-fn if_in_conditional(b:bool) -> i32 {
+fn if_in_conditional(b:bool) -> i64 {
     let x:i64 := if (if (b) {false} else {true}) {0} else {7};
     return x;
 }
