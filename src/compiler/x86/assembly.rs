@@ -194,6 +194,12 @@ impl From<String> for DirectOperand {
     }
 }
 
+impl From<Reg> for DirectOperand {
+    fn from(r: Reg) -> Self {
+        DirectOperand::Register(r)
+    }
+}
+
 impl Display for DirectOperand {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         use DirectOperand::*;
@@ -522,7 +528,7 @@ macro_rules! register {
 macro_rules! operand {
     // memory
     ([%$e:tt]) => {
-        Operand::Memory(DirectOperand::Register(register!($e)))
+        Operand::Memory(register!($e).into())
     };
     ([%$reg:tt-$d:literal]) => {
         Operand::MemoryAddr(register!($reg), -$d)
@@ -543,7 +549,7 @@ macro_rules! operand {
         Operand::MemoryAddr(register!($reg), $e)
     };
     ([%$e:tt]) => {
-        Operand::Memory(DirectOperand::Register(register!($e)))
+        Operand::Memory(register!($e).into())
     };
     ([@ {$e:expr}]) => {
         Operand::Memory($e.into())
@@ -567,10 +573,10 @@ macro_rules! operand {
 
     // register
     (%{$reg:expr}) => {
-        Operand::Direct(DirectOperand::Register($reg))
+        Operand::Direct($reg.into())
     };
     (%$reg:tt) => {
-        Operand::Direct(DirectOperand::Register(register!($reg)))
+        Operand::Direct(register!($reg).into())
     };
     ($e:literal) => {
         Operand::Direct($e.into())
@@ -968,7 +974,7 @@ mod test {
     fn x64() {
         let mut code = vec![];
         assembly! {(code) {
-            mov %rax, 0;
+            mov %rax, 0i64;
             push %rsp;
             pop %rbp;
         }}
@@ -1005,7 +1011,7 @@ mod test {
     fn x86() {
         let mut code = vec![];
         assembly! {(code) {
-            mov %eax, 0;
+            mov %eax, 0i64;
             push %esp;
             pop %ebp;
         }}
