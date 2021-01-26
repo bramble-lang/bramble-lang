@@ -100,18 +100,13 @@ impl<'a> TypeResolver<'a> {
     }
 
     pub fn resolve_types(&mut self) -> Result<module::Module<SemanticAnnotations>> {
-        let mut root_table = SymbolTable::new();
-        self
-            .resolve(&mut root_table)
+        let mut empty_table = SymbolTable::new();
+        self.analyze_module(self.root, &mut empty_table)
             .map_err(|e| format!("Semantic: {}", e))
     }
 
     fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
         self.imported_symbols.get(&canonical_name.to_string())
-    }
-
-    fn resolve(&mut self, sym: &mut SymbolTable) -> Result<module::Module<SemanticAnnotations>> {
-        self.analyze_module(self.root, sym)
     }
 
     fn analyze_module(
@@ -2997,7 +2992,6 @@ mod tests {
             let mut sm_ast = sa.from_module(&ast).unwrap();
             SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
 
-            let mut root_table = SymbolTable::new();
             let mut semantic = TypeResolver::new(&sm_ast);
 
             semantic.import_function(
@@ -3006,8 +3000,7 @@ mod tests {
             );
 
             let result = semantic
-                .resolve(&mut root_table)
-                .map_err(|e| format!("Semantic: {}", e));
+                .resolve_types();
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
