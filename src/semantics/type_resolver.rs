@@ -954,25 +954,14 @@ impl<'a> TypeResolver<'a> {
             let item = canon_path
                 .item()
                 .expect("Expected a canonical path with at least one step in it");
-            let module = self
+            self
                 .root
-                .go_to_module(&canon_path.parent());
-            match module {
-                Some(module) => 
-                    module
-                        .get_annotations()
-                        .sym
-                        .get(&item)
-                        .map(|i| (i, canon_path))
-                        .ok_or(format!("Could not find item with the given path: {}", path)),
-                None => {
-                    let imported_symbol = self.get_imported_symbol(&canon_path);
-                    match imported_symbol {
-                        Some(is) => Ok((is, canon_path)),
-                        None => Err(format!("Could not find item with the given path: {}", path)),
-                    }
-                }
-            }
+                .go_to_module(&canon_path.parent())
+                .map(|module| module.get_annotations().sym.get(&item))
+                .flatten()
+                .or_else(|| self.get_imported_symbol(&canon_path))
+                .map(|i| (i, canon_path))
+                .ok_or(format!("Could not find item with the given path: {}", path))
         } else if path.len() == 1 {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
