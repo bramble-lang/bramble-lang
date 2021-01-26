@@ -218,7 +218,7 @@ impl<'a> TypeResolver<'a> {
         let fields = struct_def.get_fields();
         for (field_name, field_type) in fields.iter() {
             if let Custom(ty_name) = field_type {
-                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {  // What if Ok(None) is returned? Then ty_name was not found but we still say it's good
+                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
                     format!(
                         "member {}.{} invalid: {}",
                         struct_def.get_name(),
