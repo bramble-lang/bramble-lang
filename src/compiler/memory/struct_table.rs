@@ -237,7 +237,7 @@ mod test {
     pub fn test_adding_a_struct_that_references_a_struct() {
         for text in vec![
             "
-                struct test{i: i32}
+                struct test{i: i64}
                 struct test2{t: test}
                 ",
         ] {
@@ -271,7 +271,7 @@ mod test {
         for text in vec![
             "
             mod my_mod {
-                struct test{i: i32}
+                struct test{i: i64}
             }
 
             struct test2{t: my_mod::test}
@@ -310,7 +310,7 @@ mod test {
         for text in vec![
             "
             mod my_mod {
-                struct test{i: i32}
+                struct test{i: i64}
             }
 
             struct test{t: my_mod::test}
@@ -372,7 +372,7 @@ mod test {
     pub fn test_resolving_a_flat_struct() {
         for (text, canonical_name, expected) in vec![
             (
-                "struct test{i: i32}",
+                "struct test{i: i64}",
                 "root::test",
                 StructDefinition {
                     name: "test".into(),
@@ -398,7 +398,7 @@ mod test {
                 },
             ),
             (
-                "struct test{i: i32, y: bool}",
+                "struct test{i: i64, y: bool}",
                 "root::test",
                 StructDefinition {
                     name: "test".into(),
@@ -431,7 +431,7 @@ mod test {
                 },
             ),
             (
-                "mod my_mod{struct inner_test{i: i32, y: bool}}",
+                "mod my_mod{struct inner_test{i: i64, y: bool}}",
                 "root::my_mod::inner_test",
                 StructDefinition {
                     name: "inner_test".into(),
@@ -471,7 +471,7 @@ mod test {
         for (text, canonical_name, expected) in vec![
             (
                 "
-            struct test{i: i32}
+            struct test{i: i64}
             struct test2{t: test}
             ",
                 "root::test2",
@@ -487,8 +487,8 @@ mod test {
             ),
             (
                 "
-            struct test{i: i32}
-            struct test2{x: i32, t: test, b: bool}
+            struct test{i: i64}
+            struct test2{x: i64, t: test, b: bool}
             ",
                 "root::test2",
                 StructDefinition {
@@ -515,8 +515,8 @@ mod test {
             ),
             (
                 "
-            struct test{i: i32, j: i32}
-            struct test2{x: i32, b: bool, t: test}
+            struct test{i: i64, j: i64}
+            struct test2{x: i64, b: bool, t: test}
             ",
                 "root::test2",
                 StructDefinition {
@@ -543,7 +543,7 @@ mod test {
             ),
             (
                 "
-            struct test{i: i32}
+            struct test{i: i64}
             struct test2{t: test}
             struct test3{t2: test2}
             ",
@@ -584,12 +584,12 @@ mod test {
             "
                 struct test{t2: test2}
                 struct test2{t: test}
-                struct good{i: i32, b: bool}
+                struct good{i: i64, b: bool}
                 ",
             "
                 struct test{t2: test2}
                 struct test2{t: test}
-                struct good{i: i32, b: bool}
+                struct good{i: i64, b: bool}
                 struct good2{g: good}
                 ",
         ] {

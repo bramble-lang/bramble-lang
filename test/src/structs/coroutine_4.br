@@ -15,7 +15,7 @@ co my_co (x: MyStruct) -> i32 {
 }
 
 struct MyStruct {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
     z: bool,
 }

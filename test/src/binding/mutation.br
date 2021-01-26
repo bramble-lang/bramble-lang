@@ -1,7 +1,7 @@
 
 fn my_main() {
-    let mut x:i32 := 1;
-    let mut y:i32 := 5;
+    let mut x:i64 := 1;
+    let mut y:i64 := 5;
     printiln x;
     printiln y;
     mut x := 13;

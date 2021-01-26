@@ -11,7 +11,7 @@ fn my_main( p: bool) {
     return;
 }
 
-co my_co (x: i32, y: i32) -> i32 {
+co my_co (x: i64, y: i64) -> i32 {
     let mut z : i32 := y;
     yret x;
     return {

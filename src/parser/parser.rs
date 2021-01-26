@@ -725,7 +725,7 @@ pub mod tests {
 
     #[test]
     fn parse_bind() {
-        let text = "let x:i32 := 5;";
+        let text = "let x:i64 := 5;";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -746,7 +746,7 @@ pub mod tests {
 
     #[test]
     fn parse_mut_bind() {
-        let text = "let mut x:i32 := 5;";
+        let text = "let mut x:i64 := 5;";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -856,7 +856,7 @@ pub mod tests {
 
     #[test]
     fn parse_module_with_function() {
-        let text = "mod test_fn_mod { fn test(x:i32) {return;} }";
+        let text = "mod test_fn_mod { fn test(x:i64) {return;} }";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -908,7 +908,7 @@ pub mod tests {
 
     #[test]
     fn parse_module_with_coroutine() {
-        let text = "mod test_co_mod { co test(x:i32) {return;} }";
+        let text = "mod test_co_mod { co test(x:i64) {return;} }";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -952,7 +952,7 @@ pub mod tests {
 
     #[test]
     fn parse_module_with_struct() {
-        let text = "mod test_struct_mod { struct my_struct{x: i32} }";
+        let text = "mod test_struct_mod { struct my_struct{x: i64} }";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -980,7 +980,7 @@ pub mod tests {
 
     #[test]
     fn parse_unit_function_def() {
-        let text = "fn test(x:i32) {return;}";
+        let text = "fn test(x:i64) {return;}";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1012,7 +1012,7 @@ pub mod tests {
 
     #[test]
     fn parse_function_def() {
-        let text = "fn test(x:i32) -> bool {return true;}";
+        let text = "fn test(x:i64) -> bool {return true;}";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1098,7 +1098,7 @@ pub mod tests {
 
     #[test]
     fn parse_coroutine_def() {
-        let text = "co test(x:i32) -> bool {return true;}";
+        let text = "co test(x:i64) -> bool {return true;}";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1189,7 +1189,7 @@ pub mod tests {
 
     #[test]
     fn parse_yield() {
-        let text = "fn test(x:i32) -> bool {return yield cor;}";
+        let text = "fn test(x:i64) -> bool {return yield cor;}";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
@@ -1308,11 +1308,11 @@ pub mod tests {
         for (text, expected) in vec![
             ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
             (
-                "struct MyStruct {x: i32}",
+                "struct MyStruct {x: i64}",
                 StructDef::new("MyStruct", 1, vec![("x".into(), Type::I64)]),
             ),
             (
-                "struct MyStruct {x: i32, y: bool}",
+                "struct MyStruct {x: i64, y: bool}",
                 StructDef::new(
                     "MyStruct",
                     1,

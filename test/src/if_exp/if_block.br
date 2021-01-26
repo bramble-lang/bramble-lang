@@ -1,19 +1,19 @@
 fn my_main() {
-    let x:i32 := test(2);
-    let y:i32 := test(11);
+    let x:i64 := test(2);
+    let y:i64 := test(11);
     printiln x;
     printiln y;
     return;
 }
 
 fn test(a: i32) -> i32 {
-    let x:i32 := if (a < 10) {
+    let x:i64 := if (a < 10) {
         printiln 0;
-        let i:i32 := a * 2;
+        let i:i64 := a * 2;
         i
     } else {
         printiln 1;
-        let j:i32 := a * 2;
+        let j:i64 := a * 2;
         j + a
     };
 

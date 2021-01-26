@@ -12,9 +12,9 @@ fn my_main( p: bool) {
     printiln (yield ms.x);
     
     let c2: co i32 := make_co();
-    let x:i32 := takes_co(c2);
+    let x:i64 := takes_co(c2);
     printiln x;
-    let x2:i32 := takes_co(c2);
+    let x2:i64 := takes_co(c2);
     printiln x2;
 
     return;
@@ -37,6 +37,6 @@ co numbers() -> i32 {
 
 struct MyStruct {
     x: co i32,
-    y: i32,
+    y: i64,
     z: bool,
 }

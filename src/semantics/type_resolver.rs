@@ -2624,7 +2624,7 @@ mod tests {
         for (text, expected) in vec![
             (
                 "fn main() {
-                    let x: i32 := if (true) {1} else {2};
+                    let x: i64 := if (true) {1} else {2};
                     return;
                 }
                 ",
@@ -2632,7 +2632,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let x: i32 := if (4) {1} else {2};
+                    let x: i64 := if (4) {1} else {2};
                     return;
                 }
                 ",
@@ -2640,7 +2640,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let x: i32 := if (false) {true} else {2};
+                    let x: i64 := if (false) {true} else {2};
                     return;
                 }
                 ",
@@ -2648,7 +2648,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let x: i32 := if (false) {5} else {\"hello\"};
+                    let x: i64 := if (false) {5} else {\"hello\"};
                     return;
                 }
                 ",
@@ -2656,7 +2656,7 @@ mod tests {
             ),
             (
                 "fn main() {
-                    let x: i32 := if (false) {\"true\"} else {\"false\"};
+                    let x: i64 := if (false) {\"true\"} else {\"false\"};
                     return;
                 }
                 ",
@@ -2698,32 +2698,32 @@ mod tests {
         for (line, text, expected) in vec![
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> root::MyStruct {return MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> root::MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> self::MyStruct {return MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> self::MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> MyStruct {return self::MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> MyStruct {return self::MyStruct{x:1};}",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> MyStruct {return root::MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> MyStruct {return root::MyStruct{x:1};}",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 fn test() -> MyStruct 
                 {
                     let x: MyStruct := MyStruct{x: 1};
@@ -2733,7 +2733,7 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 fn test() -> MyStruct 
                 {
                     let x: root::MyStruct := MyStruct{x: 1};
@@ -2743,7 +2743,7 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 fn test() -> MyStruct 
                 {
                     let x: root::MyStruct := self::MyStruct{x: 1};
@@ -2753,7 +2753,7 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 fn test() -> MyStruct 
                 {
                     let x: root::MyStruct := {self::MyStruct{x: 1}};
@@ -2763,7 +2763,7 @@ mod tests {
             ),
             (
                 line!(),
-                "mod my_mod{struct MyStruct{x:i32}}
+                "mod my_mod{struct MyStruct{x:i64}}
                 fn test() -> my_mod::MyStruct 
                 {
                     let x: root::my_mod::MyStruct := self::my_mod::MyStruct{x: 1};
@@ -2773,7 +2773,7 @@ mod tests {
             ),
             (
                 line!(),
-                "mod my_mod{struct MyStruct{x:i32}}
+                "mod my_mod{struct MyStruct{x:i64}}
                 mod fn_mod {
                     fn test() -> self::super::my_mod::MyStruct 
                     {
@@ -2785,7 +2785,7 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 struct MyStruct2{ms: MyStruct}
                 fn test() -> MyStruct2
                 {
@@ -2797,19 +2797,19 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 fn test2(ms: MyStruct) -> i32 {return ms.x;}
                 fn test() -> i32
                 {
                     let x: root::MyStruct := self::MyStruct{x: 1};
-                    let y: i32 := test2(x);
+                    let y: i64 := test2(x);
                     return y;
                 }",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 fn test2(ms: MyStruct) -> MyStruct {return ms;}
                 fn test() -> i32
                 {
@@ -2821,7 +2821,7 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 co test2(ms: MyStruct) -> MyStruct { 
                     yret ms; 
                     return ms;
@@ -2837,21 +2837,21 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
+                "struct MyStruct{x:i64}
                 struct MyStruct2{ms: MyStruct}
                 fn test2(ms2: MyStruct2) -> i32 {return ms2.ms.x;}
                 fn test() -> i32
                 {
                     let x: root::MyStruct := self::MyStruct{x: 1};
-                    let y: i32 := test2(x);
+                    let y: i64 := test2(x);
                     return y;
                 }",
                 Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 but got root::MyStruct"),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32}
-                struct MyStruct2{x:i32}
+                "struct MyStruct{x:i64}
+                struct MyStruct2{x:i64}
                 fn test() -> MyStruct 
                 {
                     let x: root::MyStruct2 := self::MyStruct{x: 1};
@@ -2861,17 +2861,17 @@ mod tests {
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{x:false};}",
+                "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:false};}",
                 Err("Semantic: L1: root::MyStruct.x expects i32 but got bool"),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> MyStruct {return MyStruct{};}",
+                "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{};}",
                 Err("Semantic: L1: expected 1 parameters but found 0"),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i32} fn test() -> i32 {return MyStruct{x:5};}",
+                "struct MyStruct{x:i64} fn test() -> i32 {return MyStruct{x:5};}",
                 Err("Semantic: L1: Return expected i32 but got root::MyStruct"),
             ),
             (
@@ -2897,21 +2897,21 @@ mod tests {
     #[test]
     pub fn test_member_access() {
         for (text, expected) in vec![
-                ("struct MyStruct{x:i32}
+                ("struct MyStruct{x:i64}
                 fn test(ms:MyStruct) -> i32 {
                     return ms.x;}",
                 Ok(())),
-                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> i32 {return ms.y;}",
+                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i32 {return ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),
-                ("struct MyStruct{x:i32} fn test(ms:MyStruct) -> bool{return ms.x;}",
+                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
-                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.x;}",
+                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.x;}",
                 Ok(())),
-                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
+                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
-                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.y;}",
+                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i32 {return ms.ms.y;}",
                 Err("Semantic: L1: root::MyStruct does not have member y")),
-                ("struct MyStruct{x:i32} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
+                ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i32")),
             ] {
                 let tokens: Vec<Token> = Lexer::new(&text)
@@ -3007,7 +3007,7 @@ mod tests {
                     return;
                 }
                 mod std {
-                    fn test(x: i32) -> i32 {
+                    fn test(x: i64) -> i32 {
                         return x;
                     }
                 }

@@ -1,6 +1,6 @@
 fn my_main() {
     let t: MyStruct := MyStruct{x: 5, y: 1, z: 10};
-    let mut y: i32 := test(t);
+    let mut y: i64 := test(t);
     printiln y;
 
     mut y := test4(10, t);
@@ -12,8 +12,8 @@ fn my_main() {
 }
 
 struct MyStruct {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
     z: i32,
 }
 
@@ -22,7 +22,7 @@ fn test(t: MyStruct) -> i32 {
     return t.y + t.z;
 }
 
-fn test2(x: i32, t: MyStruct) -> i32 {
+fn test2(x: i64, t: MyStruct) -> i32 {
     printiln x * t.x;
     return t.y + t.z;
 }
@@ -35,7 +35,7 @@ fn test3(t: MyStruct) -> i32 {
     return t.x + t.y + t.z;
 }
 
-fn test4(x: i32, t: MyStruct) -> i32 {
+fn test4(x: i64, t: MyStruct) -> i32 {
     printiln x;
     printiln t.x;
     printiln t.y;

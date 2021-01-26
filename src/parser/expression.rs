@@ -497,9 +497,9 @@ mod test {
         for (text, msg) in [
             ("{5 10 51}", "L1: Expected }, but found literal 10"),
             ("{5; 10 51}", "L1: Expected }, but found literal 51"),
-            ("{5; 10 let x:i32 := 5}", "L1: Expected }, but found let"),
+            ("{5; 10 let x:i64 := 5}", "L1: Expected }, but found let"),
             (
-                "{let x: i32 := 10 5}",
+                "{let x: i64 := 10 5}",
                 "L1: Expected ;, but found literal 5",
             ),
         ]
@@ -522,7 +522,7 @@ mod test {
 
     #[test]
     fn parse_expression_block_multiline() {
-        let text = "{let x:i32 := 5; f(x); x * x}";
+        let text = "{let x:i64 := 5; f(x); x * x}";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()

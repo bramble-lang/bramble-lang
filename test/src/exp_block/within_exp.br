@@ -1,8 +1,8 @@
 fn my_main() {
-    let x:i32 := {
-        let x: i32 := 1;
+    let x:i64 := {
+        let x: i64 := 1;
         x + {
-            let x: i32 := 2;
+            let x: i64 := 2;
             2 * x
         }
     };

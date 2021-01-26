@@ -1,8 +1,8 @@
 fn my_main() {
-    let x: i32 := root::std::io::readi64();
+    let x: i64 := root::std::io::readi64();
     printiln x;
 
-    let y: i32 := root::std::io::readi64();
+    let y: i64 := root::std::io::readi64();
     printiln y;
 
     let z: i32 := root::std::io::readi64();

@@ -938,7 +938,7 @@ mod compute {
             for text in vec![
                 "
             fn my_main() {
-                let x:i32 := 5;
+                let x:i64 := 5;
                 printiln x;
 
                 let b:bool := my_bool();

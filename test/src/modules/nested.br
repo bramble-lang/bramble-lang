@@ -1,5 +1,5 @@
 fn my_main() {
-    let x:i32 := my_mod::inner::add(3, 2);
+    let x:i64 := my_mod::inner::add(3, 2);
     printiln x;
 
     let b:bool := root::my_mod::is_3(1);
@@ -8,7 +8,7 @@ fn my_main() {
     let b2:bool := root::my_mod::is_3(3);
     printbln b2;
     
-    let y:i32 := self::my_mod::inner::add(7, 2);
+    let y:i64 := self::my_mod::inner::add(7, 2);
     printiln y;
 
     return;
@@ -16,7 +16,7 @@ fn my_main() {
 
 mod my_mod {
     fn is_3(i: i32) -> bool {
-        let x: i32 := self::inner::add(1, 2);
+        let x: i64 := self::inner::add(1, 2);
         return i == x;
     }
     

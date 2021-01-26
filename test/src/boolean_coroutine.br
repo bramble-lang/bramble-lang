@@ -8,7 +8,7 @@ fn my_main() {
     return;
 }
 
-co my_co (b: bool, x: i32, y: i32) -> bool {
+co my_co (b: bool, x: i64, y: i64) -> bool {
     yret b;
     yret x < y;
     yret true;

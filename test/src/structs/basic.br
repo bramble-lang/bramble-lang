@@ -3,14 +3,14 @@ fn my_main() {
     printiln t.x;
     printiln t.y;
     printbln t.z;
-    let y: i32 := test();
+    let y: i64 := test();
     printiln y;
     return;
 }
 
 struct MyStruct {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
     z: bool,
 }
 

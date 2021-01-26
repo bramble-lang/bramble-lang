@@ -1,7 +1,7 @@
 fn my_main() {
     let t: MyStruct := if (true) {
-        let x:i32 := 5;
-        let y:i32 := 1;
+        let x:i64 := 5;
+        let y:i64 := 1;
         MyStruct{x: x, y: y, z: true}
     } else {
         MyStruct{x: 0, y: -1, z: false}
@@ -14,7 +14,7 @@ fn my_main() {
 }
 
 struct MyStruct {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
     z: bool,
 }
