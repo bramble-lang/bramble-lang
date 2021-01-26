@@ -327,7 +327,7 @@ impl<'a> TypeResolver<'a> {
             Some(_) => {
                 let mut meta = mutate.get_annotations().clone();
                 let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
-                match self.lookup(sym, mutate.get_id()) {
+                match self.lookup_var(sym, mutate.get_id()) {
                     Ok(symbol) => {
                         if symbol.mutable {
                             if symbol.ty == rhs.get_type() {
@@ -565,7 +565,7 @@ impl<'a> TypeResolver<'a> {
                 None => Err(format!("Variable {} appears outside of function", id)),
                 Some(_) => {
                     let mut meta = meta.clone();
-                    match self.lookup(sym, &id)? {
+                    match self.lookup_var(sym, &id)? {
                         Symbol { ty: p, .. } => meta.ty = self.type_to_canonical(sym, p)?,
                     };
                     Ok(Expression::Identifier(meta.clone(), id.clone()))
@@ -966,20 +966,17 @@ impl<'a> TypeResolver<'a> {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
             let item = &path[0];
-            self.lookup(sym, item).map(|i| (i, canon_path))
+            sym.get(item)
+                .or_else(|| self.stack.get(item))
+                .map(|i| (i, canon_path))
+                .ok_or(format!("{} is not defined", item))
         } else {
             Err("empty path passed to lookup_path".into())
         }
     }
 
-    fn lookup(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
-        sym.get(id)
-            .or(self.stack.get(id))
-            .ok_or(format!("{} is not defined", id))
-    }
-
     fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup(sym, id)? {
+        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -993,7 +990,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup(sym, id)? {
+        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -1002,11 +999,11 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&Type> {
-        let p = &self.lookup(sym, id)?.ty;
-        match p {
-            Custom(..) | Coroutine(_) | I32 | Bool => Ok(p),
-            _ => return Err(format!("{} is not a variable", id)),
+    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
+        let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
+        match symbol.ty {
+            FunctionDef(..) | CoroutineDef(..) | StructDef{..} | Unknown => return Err(format!("{} is not a variable", id)),
+            Custom(..) | Coroutine(_) | I32 | Bool | StringLiteral | Unit => Ok(symbol),
         }
     }
 
