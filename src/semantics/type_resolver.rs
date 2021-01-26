@@ -1214,7 +1214,7 @@ mod tests {
                     fn main() {
                         let k: i64 := test();
                         let i: i64 := self::test(); 
-                        let j: i32 := root::my_mod::test();
+                        let j: i64 := root::my_mod::test();
                         return;
                     }
                 }",
@@ -1253,7 +1253,7 @@ mod tests {
                 }
                 mod main_mod{
                     fn main() {
-                        let j: i32 := root::my_mod::test();
+                        let j: i64 := root::my_mod::test();
                         return;
                     }
                 }",),
@@ -1264,16 +1264,16 @@ mod tests {
                 }
                 mod main_mod{
                     fn main() {
-                        let j: i32 := root::my_mod::inner::test();
+                        let j: i64 := root::my_mod::inner::test();
                         return;
                     }
                 }",),
             ("
                 mod main_mod{
                     fn main() {
-                        let j: i32 := root::main_mod::inner::test();
+                        let j: i64 := root::main_mod::inner::test();
                         let k: i64 := inner::test();
-                        let l: i32 := self::inner::test();
+                        let l: i64 := self::inner::test();
                         return;
                     }
 
