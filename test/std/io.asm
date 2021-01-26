@@ -5,6 +5,10 @@
 %define stdin 0
 %define stdout 1
 
+section .data
+    dest_i64: dq 0 ; 64-bits integer = 8 bytes.  Destination for scanf to write to
+    fmt_i64: db "%ld", 0
+
 section .text
 global root_std_io_write
 root_std_io_write:
@@ -13,6 +17,23 @@ root_std_io_write:
     mov rax, sys_write
     mov rdi, stdout
     syscall
+    
+    ret
+
+
+global root_std_io_readi64
+root_std_io_readi64:
+    extern scanf
+    push rbp
+    mov rbp, rsp
+    mov rax, 0
+    push rax
+    mov rdi, fmt_i64
+    lea rsi, QWORD [dest_i64]
+    call scanf
+    mov rax, QWORD [dest_i64]
+    mov rsp, rbp
+    pop rbp
     
     ret
     

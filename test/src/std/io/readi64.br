@@ -1,0 +1,5 @@
+fn my_main() {
+    let x: i32 := root::std::io::readi64();
+    printiln x;
+    return;
+}
