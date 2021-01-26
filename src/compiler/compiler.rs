@@ -567,16 +567,6 @@ impl<'a> Compiler<'a> {
                 }};
             }
             Expression::RoutineCall(meta, RoutineCall::Function, ref fn_path, params) => {
-                // Check if function exists and if the right number of parameters are being
-                // passed
-                /*let fn_def = self
-                    .root
-                    .go_to(fn_path)
-                    .ok_or(format!("Could not find: {}", fn_path))?
-                    .to_routine()
-                    .expect("Expected a routine"); */
-                //fn_def.validate_parameters(params)?;
-
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
