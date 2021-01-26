@@ -6,7 +6,7 @@ run_test() {
     rm -rf ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
-    ../target/debug/braid-lang -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    ../target/debug/braid-lang -p machos -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
 
     # If there were no compilation errors then run the assembler and linker
     if [ -f "./target/output.asm" ]
