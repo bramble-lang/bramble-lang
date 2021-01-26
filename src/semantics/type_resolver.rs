@@ -39,14 +39,13 @@ pub fn resolve_types(
     let mut sm_ast = sa.from_module(&ast)?;
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
-    let mut root_table = SymbolTable::new();
     let mut semantic = TypeResolver::new(&sm_ast);
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
-    let ast_typed = semantic
-        .resolve(&mut root_table)
-        .map_err(|e| format!("Semantic: {}", e))?;
-    Ok(ast_typed)
+    
+    semantic
+        .resolve_types()
+        .map_err(|e| format!("Semantic: {}", e))
 }
 
 pub fn resolve_types_with_imports(
@@ -62,8 +61,8 @@ pub fn resolve_types_with_imports(
     let mut root_table = SymbolTable::new();
     let mut semantic = TypeResolver::new(&sm_ast);
 
-    for (n, params, ret_ty) in imported_functions.into_iter() {
-        semantic.import_function(n.clone(), params.clone(), ret_ty.clone());
+    for (name, params, ret_ty) in imported_functions.into_iter() {
+        semantic.import_function(name.clone(), params.clone(), ret_ty.clone());
     }
 
     semantic.set_tracing(trace);
@@ -76,7 +75,7 @@ pub fn resolve_types_with_imports(
 
 pub struct TypeResolver<'a> {
     root: &'a Module<SemanticAnnotations>,
-    stack: SymbolTableScopeStack,
+    stack: SymbolTableScopeStack,                   // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
@@ -111,6 +110,13 @@ impl<'a> TypeResolver<'a> {
             ),
             None => None,
         }
+    }
+
+    pub fn resolve_types(&mut self) -> Result<module::Module<SemanticAnnotations>> {
+        let mut root_table = SymbolTable::new();
+        self
+            .resolve(&mut root_table)
+            .map_err(|e| format!("Semantic: {}", e))
     }
 
     fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
