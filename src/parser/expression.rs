@@ -412,7 +412,7 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
         Some(Token {
             l,
             s: Lex::Integer(i),
-        }) => Ok(Some(Expression::Integer(l, i))),
+        }) => Ok(Some(Expression::Integer64(l, i))),
         _ => Ok(None),
     }
 }
@@ -486,7 +486,7 @@ mod test {
         {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 0);
-            assert_eq!(*final_exp, Expression::Integer(1, 5));
+            assert_eq!(*final_exp, Expression::Integer64(1, 5));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -538,7 +538,7 @@ mod test {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x");
                     assert_eq!(b.get_type(), Type::I64);
-                    assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
+                    assert_eq!(*b.get_rhs(), Expression::Integer64(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
             }

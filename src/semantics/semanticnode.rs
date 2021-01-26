@@ -262,7 +262,7 @@ impl SemanticAst {
     fn from_expression(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
         use Expression::*;
         let node = match ast {
-            Integer(ln, val) => Ok(Box::new(Integer(self.semantic_annotations_from(*ln), *val))),
+            Integer64(ln, val) => Ok(Box::new(Integer64(self.semantic_annotations_from(*ln), *val))),
             Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_annotations_from(*ln), *val))),
             StringLiteral(ln, val) => Ok(Box::new(StringLiteral(
                 self.semantic_annotations_from(*ln),
@@ -393,8 +393,8 @@ mod tests {
     fn test_single_node() {
         for (node, expected) in [
             (
-                Expression::Integer(1, 3),
-                Expression::Integer(SemanticAnnotations::new(0, 1, Type::Unknown), 3),
+                Expression::Integer64(1, 3),
+                Expression::Integer64(SemanticAnnotations::new(0, 1, Type::Unknown), 3),
             ),
             (
                 Expression::Boolean(1, true),
@@ -417,10 +417,10 @@ mod tests {
     fn test_multi_nodes() {
         for ((l, r), (el, er)) in [
             (
-                (Expression::Integer(1, 3), Expression::Integer(1, 3)),
+                (Expression::Integer64(1, 3), Expression::Integer64(1, 3)),
                 (
-                    Expression::Integer(SemanticAnnotations::new(1, 1, Type::Unknown), 3),
-                    Expression::Integer(SemanticAnnotations::new(2, 1, Type::Unknown), 3),
+                    Expression::Integer64(SemanticAnnotations::new(1, 1, Type::Unknown), 3),
+                    Expression::Integer64(SemanticAnnotations::new(2, 1, Type::Unknown), 3),
                 ),
             ),
             (

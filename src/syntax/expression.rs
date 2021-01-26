@@ -2,7 +2,7 @@ use super::{path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
-    Integer(I, i32),
+    Integer64(I, i32),
     Boolean(I, bool),
     StringLiteral(I, String),
     CustomType(I, Path),
@@ -30,7 +30,7 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
-            Integer(_, v) => format!("{}", v),
+            Integer64(_, v) => format!("{}", v),
             Boolean(_, v) => format!("{}", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
             CustomType(_, v) => format!("{}", v),
@@ -51,7 +51,7 @@ impl<I> Expression<I> {
     pub fn get_annotations(&self) -> &I {
         use Expression::*;
         match self {
-            Integer(m, ..)
+            Integer64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)
@@ -72,7 +72,7 @@ impl<I> Expression<I> {
     pub fn get_annotations_mut(&mut self) -> &mut I {
         use Expression::*;
         match self {
-            Integer(m, ..)
+            Integer64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)

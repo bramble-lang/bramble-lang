@@ -556,8 +556,8 @@ pub mod tests {
             {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
-                assert_eq!(*left, Expression::Integer(1, 2));
-                assert_eq!(*right, Expression::Integer(1, 2));
+                assert_eq!(*left, Expression::Integer64(1, 2));
+                assert_eq!(*right, Expression::Integer64(1, 2));
             } else {
                 panic!("No nodes returned by parser for {}", text)
             }
@@ -605,12 +605,12 @@ pub mod tests {
             assert_eq!(l, 1);
             match left.as_ref() {
                 Expression::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
-                    assert_eq!(**ll, Expression::Integer(1, 2));
-                    assert_eq!(**lr, Expression::Integer(1, 4));
+                    assert_eq!(**ll, Expression::Integer64(1, 2));
+                    assert_eq!(**lr, Expression::Integer64(1, 4));
                 }
                 _ => panic!("Expected Add syntax"),
             }
-            assert_eq!(*right, Expression::Integer(1, 3));
+            assert_eq!(*right, Expression::Integer64(1, 3));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -738,7 +738,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), false);
-                assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::Integer64(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -759,7 +759,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), true);
-                assert_eq!(*b.get_rhs(), Expression::Integer(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::Integer64(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -777,7 +777,7 @@ pub mod tests {
         match stm {
             Statement::Mutate(box m) => {
                 assert_eq!(m.get_id(), "x");
-                assert_eq!(*m.get_rhs(), Expression::Integer(1, 5));
+                assert_eq!(*m.get_rhs(), Expression::Integer64(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -795,7 +795,7 @@ pub mod tests {
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Printiln(box p) => {
-                assert_eq!(*p.get_value(), Expression::Integer(1, 5));
+                assert_eq!(*p.get_value(), Expression::Integer64(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1151,7 +1151,7 @@ pub mod tests {
                         1,
                         RoutineCall::CoroutineInit,
                         vec!["c"].into(),
-                        vec![Expression::Integer(1, 1), Expression::Integer(1, 2)]
+                        vec![Expression::Integer64(1, 1), Expression::Integer64(1, 2)]
                     )
                 );
             }
@@ -1179,7 +1179,7 @@ pub mod tests {
                         1,
                         RoutineCall::CoroutineInit,
                         vec!["a", "b", "c"].into(),
-                        vec![Expression::Integer(1, 1), Expression::Integer(1, 2)]
+                        vec![Expression::Integer64(1, 1), Expression::Integer64(1, 2)]
                     )
                 );
             }
@@ -1241,13 +1241,13 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(*cond, Expression::Identifier(1, "x".into()));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Expression::Integer(1, 5));
+                assert_eq!(*final_exp, Expression::Integer64(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
-                assert_eq!(*final_exp, Expression::Integer(1, 7));
+                assert_eq!(*final_exp, Expression::Integer64(1, 7));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1270,7 +1270,7 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(*cond, Expression::Identifier(1, "x".into()));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Expression::Integer(1, 5));
+                assert_eq!(*final_exp, Expression::Integer64(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1286,13 +1286,13 @@ pub mod tests {
                     )
                 );
                 if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                    assert_eq!(*final_exp, Expression::Integer(1, 7));
+                    assert_eq!(*final_exp, Expression::Integer64(1, 7));
                 } else {
                     panic!("Expected Expression block");
                 }
 
                 if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
-                    assert_eq!(*final_exp, Expression::Integer(1, 8));
+                    assert_eq!(*final_exp, Expression::Integer64(1, 8));
                 } else {
                     panic!("Expected Expression block");
                 }
@@ -1344,7 +1344,7 @@ pub mod tests {
                 Expression::StructExpression(
                     1,
                     vec!["MyStruct"].into(),
-                    vec![("x".into(), Expression::Integer(1, 5))],
+                    vec![("x".into(), Expression::Integer64(1, 5))],
                 ),
             ),
             (
@@ -1353,7 +1353,7 @@ pub mod tests {
                     1,
                     vec!["MyStruct"].into(),
                     vec![
-                        ("x".into(), Expression::Integer(1, 5)),
+                        ("x".into(), Expression::Integer64(1, 5)),
                         ("y".into(), Expression::Boolean(1, false)),
                     ],
                 ),
@@ -1364,13 +1364,13 @@ pub mod tests {
                     1,
                     vec!["MyStruct"].into(),
                     vec![
-                        ("x".into(), Expression::Integer(1, 5)),
+                        ("x".into(), Expression::Integer64(1, 5)),
                         (
                             "y".into(),
                             Expression::StructExpression(
                                 1,
                                 vec!["MyStruct2"].into(),
-                                vec![("z".into(), Expression::Integer(1, 3))],
+                                vec![("z".into(), Expression::Integer64(1, 3))],
                             ),
                         ),
                     ],

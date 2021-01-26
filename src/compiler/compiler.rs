@@ -448,7 +448,7 @@ impl<'a> Compiler<'a> {
         self.push_scope(ast);
 
         match ast {
-            Expression::Integer(_, i) => {
+            Expression::Integer64(_, i) => {
                 assembly! {(code) {mov %rax, {*i};}}
             }
             Expression::Boolean(_, b) => {

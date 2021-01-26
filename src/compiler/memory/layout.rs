@@ -302,9 +302,9 @@ mod compute {
         use Expression::*;
         match ast {
             ExpressionBlock(..) => layout_for_expression_block(ast, layout, struct_table),
-            Expression::Integer(m, i) => {
+            Expression::Integer64(m, i) => {
                 let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
-                (Expression::Integer(annotations, *i), layout)
+                (Expression::Integer64(annotations, *i), layout)
             }
             Expression::Boolean(m, b) => {
                 let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
@@ -546,7 +546,7 @@ mod compute {
 
         #[test]
         pub fn test_node_id_is_copied() {
-            let sn = SemanticNode::Integer(
+            let sn = SemanticNode::Integer64(
                 SemanticAnnotations {
                     id: 3,
                     ln: 0,
@@ -559,7 +559,7 @@ mod compute {
             let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
             let cn = compute::layout_for_expression(&sn, LayoutData::new(8), &empty_struct_table);
             match cn.0 {
-                Expression::Integer(m, _) => {
+                Expression::Integer64(m, _) => {
                     assert_eq!(
                         m,
                         SymbolOffsetTable::new(
@@ -576,7 +576,7 @@ mod compute {
 
         #[test]
         pub fn test_integer() {
-            let sn = SemanticNode::Integer(
+            let sn = SemanticNode::Integer64(
                 SemanticAnnotations {
                     id: 0,
                     ln: 0,
@@ -590,7 +590,7 @@ mod compute {
             let cn = compute::layout_for_expression(&sn, LayoutData::new(8), &empty_struct_table);
             assert_eq!(cn.1.offset, 8);
             match cn.0 {
-                Expression::Integer(m, v) => {
+                Expression::Integer64(m, v) => {
                     assert_eq!(v, 0);
                     assert_eq!(
                         m,
@@ -608,7 +608,7 @@ mod compute {
 
         #[test]
         pub fn test_operator() {
-            let sn1 = SemanticNode::Integer(
+            let sn1 = SemanticNode::Integer64(
                 SemanticAnnotations {
                     id: 0,
                     ln: 0,
@@ -618,7 +618,7 @@ mod compute {
                 },
                 1,
             );
-            let sn2 = SemanticNode::Integer(
+            let sn2 = SemanticNode::Integer64(
                 SemanticAnnotations {
                     id: 1,
                     ln: 0,
@@ -652,14 +652,14 @@ mod compute {
                     );
 
                     match *l {
-                        Expression::Integer(m, v) => {
+                        Expression::Integer64(m, v) => {
                             assert_eq!(m.id, 0);
                             assert_eq!(v, 1);
                         }
                         _ => assert!(false),
                     }
                     match *r {
-                        Expression::Integer(m, v) => {
+                        Expression::Integer64(m, v) => {
                             assert_eq!(m.id, 1);
                             assert_eq!(v, 2);
                         }

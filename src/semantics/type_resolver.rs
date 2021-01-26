@@ -527,10 +527,10 @@ impl<'a> TypeResolver<'a> {
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         match &ast {
-            &Expression::Integer(meta, v) => {
+            &Expression::Integer64(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = I64;
-                Ok(Expression::Integer(meta, *v))
+                Ok(Expression::Integer64(meta, *v))
             }
             Expression::Boolean(meta, v) => {
                 let mut meta = meta.clone();
