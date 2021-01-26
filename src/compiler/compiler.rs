@@ -206,7 +206,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code){
             {{Compiler::reverse_c32_params_on_stack(nparams)}}
             call @{extern_func};
-            add %rsp, {4*nparams as i32};
+            add %rsp, {4*nparams as i64};
         }}
         code
     }
@@ -552,7 +552,7 @@ impl<'a> Compiler<'a> {
                     {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
                     lea %rax, [@{co_path.to_label()}];
-                    mov %rdi, {total_offset};
+                    mov %rdi, {total_offset as i64};
                     call @runtime_init_coroutine;
                     ; "move into coroutine's stack frame"
                     push %rbp;
@@ -575,7 +575,7 @@ impl<'a> Compiler<'a> {
                         .ok_or(format!("no size for {} found", return_type))?;
 
                     assembly! {(code){
-                        sub %rsp, {st_sz};
+                        sub %rsp, {st_sz as i64};
                     }}
                 }
 
@@ -692,7 +692,7 @@ impl<'a> Compiler<'a> {
                 ;"Prepare stack frame for this function"
                 push %rbp;
                 mov %rbp, %rsp;
-                sub %rsp, {*total_offset};
+                sub %rsp, {*total_offset as i64};
                 ; "Move function parameters from registers into the stack frame"
                 {{self.move_params_into_stackframe(routine, &fn_param_registers)?}}
                 ; "Done moving function parameters from registers into the stack frame"
@@ -985,7 +985,7 @@ impl<'a> Compiler<'a> {
         )));
         if allocate {
             assembly! {(code){
-                sub %rsp, {struct_sz};
+                sub %rsp, {struct_sz as i64};
             }};
         }
         for (fname, fvalue) in field_values.iter() {
@@ -1102,7 +1102,7 @@ impl<'a> Compiler<'a> {
                     .size
                     .ok_or(format!("struct {} has no resolved size", struct_name))?;
                 assembly! {(code){
-                    sub %rsp, {st_sz};
+                    sub %rsp, {st_sz as i64};
                 }}
             }
             _ => (),

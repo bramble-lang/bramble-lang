@@ -2,7 +2,7 @@ use super::{path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
-    Integer64(I, i32),
+    Integer64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
     CustomType(I, Path),

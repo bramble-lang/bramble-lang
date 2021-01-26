@@ -297,7 +297,7 @@ impl Lexer {
         let num = branch.merge();
         Ok(Some(Token::new(
             self.line,
-            Integer64(num.parse::<i32>().unwrap()),
+            Integer64(num.parse::<i64>().unwrap()),
         )))
     }
 
@@ -390,7 +390,7 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
-                "i32" => Token::new(self.line, Primitive(Primitive::I64)),
+                "i64" => Token::new(self.line, Primitive(Primitive::I64)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
                 "string" => Token::new(self.line, Primitive(Primitive::StringLiteral)),
                 _ => Token::new(self.line, Identifier(id.clone())),
@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_multiple_tokens() {
-        let text = "x:i32;->yield";
+        let text = "x:i64;->yield";
         let mut lexer = Lexer::new(text);
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 6);
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
-            ("i32", Token::new(1, Primitive(Primitive::I64))),
+            ("i64", Token::new(1, Primitive(Primitive::I64))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),
             ("string", Token::new(1, Primitive(Primitive::StringLiteral))),
         ]

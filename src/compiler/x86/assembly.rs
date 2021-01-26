@@ -147,7 +147,7 @@ impl Display for Reg {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DirectOperand {
-    Integer(i32),
+    Integer(i64),
     Register(Reg),
     Label(String),
 }
