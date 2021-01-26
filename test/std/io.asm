@@ -26,12 +26,24 @@ root_std_io_readi64:
     extern scanf
     push rbp
     mov rbp, rsp
-    mov rax, 0
-    push rax
+    
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    mov rax, rsp
+    test rax, 15
+    sete al
+    jz .read
+    sub rsp, 8
+    
+.read:
+    xor rax, rax
     mov rdi, fmt_i64
     lea rsi, QWORD [dest_i64]
     call scanf
     mov rax, QWORD [dest_i64]
+    
     mov rsp, rbp
     pop rbp
     
