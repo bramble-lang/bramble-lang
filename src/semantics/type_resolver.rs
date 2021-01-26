@@ -223,7 +223,7 @@ impl<'a> TypeResolver<'a> {
         let fields = struct_def.get_fields();
         for (field_name, field_type) in fields.iter() {
             if let Custom(ty_name) = field_type {
-                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
+                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {  // What if Ok(None) is returned? Then ty_name was not found but we still say it's good
                     format!(
                         "member {}.{} invalid: {}",
                         struct_def.get_name(),
@@ -583,8 +583,7 @@ impl<'a> TypeResolver<'a> {
                 match src.get_type() {
                     Custom(struct_name) => {
                         let (struct_def, canonical_path) = self
-                            .lookup_symbol_by_path(sym, &struct_name)?
-                            .ok_or(format!("{} was not found", struct_name))?;
+                            .lookup_symbol_by_path(sym, &struct_name)?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
@@ -671,8 +670,7 @@ impl<'a> TypeResolver<'a> {
 
                 // Check that the function being called exists
                 let (symbol, routine_canon_path) =
-                    self.lookup_symbol_by_path(sym, routine_path)?
-                        .ok_or(format!("function {} not declared", routine_path))?;
+                    self.lookup_symbol_by_path(sym, routine_path)?;
 
                 let (expected_param_tys, ret_ty) =
                     Self::extract_routine_type_info(symbol, call, &routine_path)?;
@@ -740,8 +738,7 @@ impl<'a> TypeResolver<'a> {
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
                 let (struct_def, canonical_path) =
-                    self.lookup_symbol_by_path(sym, &struct_name)?
-                        .ok_or(format!("Could not find struct {}", struct_name))?;
+                    self.lookup_symbol_by_path(sym, &struct_name)?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
@@ -948,7 +945,7 @@ impl<'a> TypeResolver<'a> {
         &'a self,
         sym: &'a SymbolTable,
         path: &Path,
-    ) -> Result<Option<(&'a Symbol, Path)>> {
+    ) -> Result<(&'a Symbol, Path)> {
         let canon_path = self.to_canonical(sym, path)?;
 
         if path.len() > 1 {
@@ -962,15 +959,16 @@ impl<'a> TypeResolver<'a> {
                 .go_to_module(&canon_path.parent());
             match module {
                 Some(module) => 
-                    Ok(module
+                    module
                         .get_annotations()
                         .sym
                         .get(&item)
-                        .map(|i| (i, canon_path))),
+                        .map(|i| (i, canon_path))
+                        .ok_or(format!("Could not find item with the given path: {}", path)),
                 None => {
                     let imported_symbol = self.get_imported_symbol(&canon_path);
                     match imported_symbol {
-                        Some(is) => Ok(Some((is, canon_path))),
+                        Some(is) => Ok((is, canon_path)),
                         None => Err(format!("Could not find item with the given path: {}", path)),
                     }
                 }
@@ -979,7 +977,7 @@ impl<'a> TypeResolver<'a> {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
             let item = &path[0];
-            self.lookup(sym, item).map(|i| Some((i, canon_path)))
+            self.lookup(sym, item).map(|i| (i, canon_path))
         } else {
             Err("empty path passed to lookup_path".into())
         }
