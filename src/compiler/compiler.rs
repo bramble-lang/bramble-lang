@@ -193,7 +193,7 @@ impl<'a> Compiler<'a> {
                     lea %rbx, [@_false];
                     push %rbx;
                     ^done:
-                    {{Compiler::make_c64_extern_call("printf", 1)}}
+                    {{self.make_c64_extern_call("printf", 1)}}
                     mov %rsp, %rbp;
                     pop %rbp;
                     ret;
@@ -211,8 +211,12 @@ impl<'a> Compiler<'a> {
         code
     }
 
-    fn make_c64_extern_call(c_func: &str, nparams: usize) -> Vec<Inst> {
+    fn make_c64_extern_call(&self, c_func: &str, nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
+        let platform_name = self.extern_functions.get(c_func).expect(&format!(
+            "Cannot find {} in list of c extern functions",
+            c_func
+        ));
         assembly! {(code){
             {{Compiler::pop_params_to_c64_registers(nparams)}}
 
@@ -222,7 +226,7 @@ impl<'a> Compiler<'a> {
             and %rsp, 18446744073709551600u64;
 
             mov %rax, 0;
-            call @{c_func};
+            call @{platform_name};
             mov %rax, 0;
 
             mov %rsp, %rbp;
@@ -817,7 +821,7 @@ impl<'a> Compiler<'a> {
             lea %rbx, [@_i32_fmt];
             push %rbx;
             push %rax;
-            {{Compiler::make_c64_extern_call("printf", 2)}}
+            {{self.make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -834,7 +838,7 @@ impl<'a> Compiler<'a> {
             lea %rbx, [@_i32_fmt];
             push %rbx;
             push %rax;
-            {{Compiler::make_c64_extern_call("printf", 2)}}
+            {{self.make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -864,7 +868,7 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             push %rax;
 
-            {{Compiler::make_c64_extern_call("_puts", 1)}}
+            {{self.make_c64_extern_call("_puts", 1)}}
         }}
         Ok(())
     }
