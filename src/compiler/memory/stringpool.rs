@@ -60,7 +60,7 @@ impl StringPool {
                     Some(fe) => self.extract_from(fe),
                 }
             }
-            Integer(..) => {}
+            Integer64(..) => {}
             Boolean(..) => {}
             StringLiteral(_, s) => {
                 self.insert(s);
