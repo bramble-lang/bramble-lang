@@ -949,14 +949,24 @@ impl<'a> TypeResolver<'a> {
             let item = canon_path
                 .item()
                 .expect("Expected a canonical path with at least one step in it");
-            self
+
+            // Look in the project being compiled
+            let project_symbol = self
                 .root
                 .go_to_module(&canon_path.parent())
                 .map(|module| module.get_annotations().sym.get(&item))
-                .flatten()
-                .or_else(|| self.get_imported_symbol(&canon_path))
-                .map(|i| (i, canon_path))
-                .ok_or(format!("Could not find item with the given path: {}", path))
+                .flatten();
+
+            // look in any imported symbols
+            let imported_symbol = self.get_imported_symbol(&canon_path);
+
+            // Make sure that there is no ambiguity about what is being referenced
+            match (project_symbol, imported_symbol) {
+                (Some(ps), None) => Ok((ps, canon_path)),
+                (None, Some(is)) => Ok((is, canon_path)),
+                (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
+                (None, None) => Err(format!("Could not find item with the given path: {}", path)),
+            }
         } else if path.len() == 1 {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
@@ -2980,6 +2990,21 @@ mod tests {
                 ",
                 (vec![Type::I32, Type::Bool], (Type::I32)),
                 Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i32"),
+            ),
+            (
+                " 
+                fn main() {
+                    let k: i32 := root::std::test(5);
+                    return;
+                }
+                mod std {
+                    fn test(x: i32) -> i32 {
+                        return x;
+                    }
+                }
+                ",
+                (vec![Type::I32], (Type::I32)),
+                Err("Semantic: L3: Found multiple definitions of root::std::test"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
