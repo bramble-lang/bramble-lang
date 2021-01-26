@@ -31,9 +31,7 @@ root_std_io_readi64:
     ; before calling scanf
     ; !! This is a temporary hack and what should happen is that Braid compiler sizes
     ; each stack frame to be 16byte aligned
-    mov rax, rsp
-    and rax, 15
-    sub rsp, rax
+    and rsp, 18446744073709551600
     
     xor rax, rax
     mov rdi, fmt_i64
