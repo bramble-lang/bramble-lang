@@ -2944,6 +2944,15 @@ mod tests {
             (
                 " 
                 fn main() {
+                    return root::std::test();
+                }
+                ",
+                (vec![],(Type::Unit)),
+                Ok(()),
+            ),
+            (
+                " 
+                fn main() {
                     let k: i32 := root::std::test(5);
                     return;
                 }
