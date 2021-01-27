@@ -159,6 +159,7 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 section ".data";
+                data stdout: dq 1;
                 data next_stack_addr: dq 0;
                 data stack_size: dq {COROUTINE_STACK_SIZE};
                 {{self.write_string_pool()}}
@@ -172,6 +173,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
 
         code.push(Inst::DataString("_i32_fmt".into(), "%ld\\n".into()));
+        code.push(Inst::DataString("_str_fmt".into(), "%s".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
 
@@ -865,9 +867,10 @@ impl<'a> Compiler<'a> {
         self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
+            lea %rbx, [@_str_fmt];
+            push %rbx;
             push %rax;
-
-            {{self.make_c64_extern_call("puts", 1)}}
+            {{self.make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -1375,14 +1378,10 @@ impl<'a> Compiler<'a> {
             TargetOS::Linux => {
                 extern_functions.insert("main".into(), "main".into());
                 extern_functions.insert("printf".into(), "printf".into());
-                extern_functions.insert("fputs".into(), "fputs".into());
-                extern_functions.insert("stdout".into(), "stdout".into());
             }
             TargetOS::MacOS => {
                 extern_functions.insert("main".into(), "_main".into());
                 extern_functions.insert("printf".into(), "_printf".into());
-                extern_functions.insert("fputs".into(), "_fputs".into());
-                extern_functions.insert("puts".into(), "_puts".into());
             }
         }
 
