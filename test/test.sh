@@ -6,18 +6,22 @@ run_test() {
     rm -rf ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
-    ../target/debug/braid-lang -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        ../target/debug/braid-lang -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        ../target/debug/braid-lang -p machos -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    fi
 
     # If there were no compilation errors then run the assembler and linker
     if [ -f "./target/output.asm" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            nasm -g -f elf64 ../braid/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
+            nasm -g -f elf64 ../braid/linux/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
             nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
             gcc -no-pie -fno-pie -w ./target/std_io.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            nasm -g -f elf64 ../braid/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
+            nasm -g -f macho64 ../braid/macho64/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
             nasm -g -f macho64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj > assembler.log
             gcc -w ./target/std_io.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1

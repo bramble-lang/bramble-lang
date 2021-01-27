@@ -78,7 +78,11 @@ pub struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(module: Module<SemanticAnnotations>, imported_functions: Vec<Path>, target_os: TargetOS) -> Vec<Inst> {
+    pub fn compile(
+        module: Module<SemanticAnnotations>,
+        imported_functions: Vec<Path>,
+        target_os: TargetOS,
+    ) -> Vec<Inst> {
         // Put user code here
         let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
@@ -155,6 +159,7 @@ impl<'a> Compiler<'a> {
         assembly! {
             (code) {
                 section ".data";
+                data stdout: dq 1;
                 data next_stack_addr: dq 0;
                 data stack_size: dq {COROUTINE_STACK_SIZE};
                 {{self.write_string_pool()}}
@@ -168,6 +173,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
 
         code.push(Inst::DataString("_i32_fmt".into(), "%ld\\n".into()));
+        code.push(Inst::DataString("_str_fmt".into(), "%s".into()));
         code.push(Inst::DataString("_true".into(), "true\\n".into()));
         code.push(Inst::DataString("_false".into(), "false\\n".into()));
 
@@ -193,7 +199,7 @@ impl<'a> Compiler<'a> {
                     lea %rbx, [@_false];
                     push %rbx;
                     ^done:
-                    {{Compiler::make_c64_extern_call("printf", 1)}}
+                    {{self.make_c64_extern_call("printf", 1)}}
                     mov %rsp, %rbp;
                     pop %rbp;
                     ret;
@@ -201,23 +207,31 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn make_c32_extern_call(extern_func: &str, nparams: usize) -> Vec<Inst> {
+    fn make_c64_extern_call(&self, c_func: &str, nparams: usize) -> Vec<Inst> {
         let mut code = vec![];
-        assembly! {(code){
-            {{Compiler::reverse_c32_params_on_stack(nparams)}}
-            call @{extern_func};
-            add %rsp, {4*nparams as i64};
-        }}
-        code
-    }
+        let platform_name: String = self
+            .c_extern_functions
+            .get(c_func)
+            .expect(&format!(
+                "Cannot find {} in list of c extern functions",
+                c_func
+            ))
+            .into();
 
-    fn make_c64_extern_call(c_func: &str, nparams: usize) -> Vec<Inst> {
-        let mut code = vec![];
         assembly! {(code){
             {{Compiler::pop_params_to_c64_registers(nparams)}}
+
+            push %rbp;
+            mov %rbp, %rsp;
+
+            and %rsp, 18446744073709551600u64;
+
             mov %rax, 0;
-            call @{c_func};
+            call @{platform_name};
             mov %rax, 0;
+
+            mov %rsp, %rbp;
+            pop %rbp;
         }}
         code
     }
@@ -460,7 +474,7 @@ impl<'a> Compiler<'a> {
                     .get(s)
                     .ok_or(format!("Could not find string {} in string pool", s))?;
                 assembly! {(code) {
-                        lea %rax, @{format!("str_{}", str_id)};
+                        lea %rax, [@{format!("str_{}", str_id)}];
                     }
                 }
             }
@@ -808,7 +822,7 @@ impl<'a> Compiler<'a> {
             lea %rbx, [@_i32_fmt];
             push %rbx;
             push %rax;
-            {{Compiler::make_c64_extern_call("printf", 2)}}
+            {{self.make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -825,7 +839,7 @@ impl<'a> Compiler<'a> {
             lea %rbx, [@_i32_fmt];
             push %rbx;
             push %rax;
-            {{Compiler::make_c64_extern_call("printf", 2)}}
+            {{self.make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -853,9 +867,10 @@ impl<'a> Compiler<'a> {
         self.traverse_expression(p.get_value(), current_func, code)?;
 
         assembly! {(code) {
+            lea %rbx, [@_str_fmt];
+            push %rbx;
             push %rax;
-            push [@stdout];
-            {{Compiler::make_c64_extern_call("fputs", 2)}}
+            {{self.make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }
@@ -1363,13 +1378,10 @@ impl<'a> Compiler<'a> {
             TargetOS::Linux => {
                 extern_functions.insert("main".into(), "main".into());
                 extern_functions.insert("printf".into(), "printf".into());
-                extern_functions.insert("fputs".into(), "fputs".into());
-                extern_functions.insert("stdout".into(), "stdout".into());
             }
             TargetOS::MacOS => {
                 extern_functions.insert("main".into(), "_main".into());
                 extern_functions.insert("printf".into(), "_printf".into());
-                extern_functions.insert("fputs".into(), "_fputs".into());
             }
         }
 
