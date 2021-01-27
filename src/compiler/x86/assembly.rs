@@ -336,12 +336,7 @@ impl Display for Inst {
             Movzx(a, b) => f.write_fmt(format_args!(
                 "movzx {}, {}",
                 a,
-                match b {
-                    Operand::Direct(DirectOperand::Integer64(_))
-                    | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("{}", b),
-                    _ => format!("{}", b),
-                }
+                format!("{}", b),
             )),
 
             Cdq => f.write_str("cdq"),
