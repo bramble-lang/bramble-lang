@@ -1,6 +1,0 @@
-fn my_main() {
-    println x;
-    println y;
-    y := 5;
-    return;
-}

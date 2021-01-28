@@ -1,4 +1,0 @@
-fn my_main() {
-    println x;
-    return;
-}
