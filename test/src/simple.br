@@ -1,9 +1,9 @@
 fn my_main() {
     let x:i64 := 5;
-    printiln x;
+    root::std::io::writei64ln(x);
 
     let b:bool := my_bool();
-    printbln b;
+    root::std::io::writeboolln(b);
     return;
 }
 
