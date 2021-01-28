@@ -10,6 +10,7 @@ section .data
     fmt_i64: db "%ld", 0
     fmt_i64ln: db `%ld\n`, 0
     fmt_str: db "%s", 0
+
     true: db "true", 0
     false: db "false", 0
     true_ln: db `true\n`, 0
