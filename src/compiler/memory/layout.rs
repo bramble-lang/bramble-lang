@@ -163,22 +163,6 @@ mod compute {
                 let (e, l) = layout_for_yieldreturn(yr, layout, struct_table);
                 (Statement::YieldReturn(Box::new(e)), l)
             }
-            Statement::Printi(pi) => {
-                let (e, l) = layout_for_printi(pi, layout, struct_table);
-                (Statement::Printi(Box::new(e)), l)
-            }
-            Statement::Printiln(pi) => {
-                let (e, l) = layout_for_printiln(pi, layout, struct_table);
-                (Statement::Printiln(Box::new(e)), l)
-            }
-            Statement::Printbln(pb) => {
-                let (e, l) = layout_for_printbln(pb, layout, struct_table);
-                (Statement::Printbln(Box::new(e)), l)
-            }
-            Statement::Prints(ps) => {
-                let (e, l) = layout_for_prints(ps, layout, struct_table);
-                (Statement::Prints(Box::new(e)), l)
-            }
             Statement::Expression(e) => {
                 let (e, l) = layout_for_expression(e, layout, struct_table);
                 (Statement::Expression(Box::new(e)), l)
@@ -929,41 +913,6 @@ mod compute {
                     }
                 }
                 _ => assert!(false),
-            }
-        }
-
-        #[test]
-        pub fn test_bug() {
-            use crate::parser::parser;
-            for text in vec![
-                "
-            fn my_main() {
-                let x:i64 := 5;
-                printiln x;
-
-                let b:bool := my_bool();
-                printbln b;
-                return;
-            }
-
-            fn my_bool() -> bool {
-                let b:bool := false;
-                return b;
-            }
-                ",
-            ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
-                    .tokenize()
-                    .into_iter()
-                    .collect::<Result<_>>()
-                    .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
-                let semantic_module =
-                    resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-                let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
-                let resolved = unrealized_st.resolve();
-
-                assert_eq!(resolved.err(), None);
             }
         }
     }

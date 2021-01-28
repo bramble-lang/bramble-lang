@@ -174,10 +174,6 @@ impl SemanticAst {
             Mutate(x) => Mutate(Box::new(self.from_mutate(x)?)),
             Return(x) => Return(Box::new(self.from_return(x)?)),
             YieldReturn(x) => YieldReturn(Box::new(self.from_yieldreturn(x)?)),
-            Printi(x) => Printi(Box::new(self.from_printi(x)?)),
-            Printiln(x) => Printiln(Box::new(self.from_printiln(x)?)),
-            Printbln(x) => Printbln(Box::new(self.from_printbln(x)?)),
-            Prints(x) => Prints(Box::new(self.from_prints(x)?)),
             Expression(e) => Expression(self.from_expression(e)?),
         };
 
@@ -199,34 +195,6 @@ impl SemanticAst {
             self.semantic_annotations_from(*mutate.get_annotations()),
             mutate.get_id(),
             *self.from_expression(mutate.get_rhs())?,
-        ))
-    }
-
-    fn from_printi(&mut self, p: &Printi<ParserInfo>) -> Result<Printi<SemanticAnnotations>> {
-        Ok(Printi::new(
-            self.semantic_annotations_from(*p.get_annotations()),
-            *self.from_expression(p.get_value())?,
-        ))
-    }
-
-    fn from_printiln(&mut self, p: &Printiln<ParserInfo>) -> Result<Printiln<SemanticAnnotations>> {
-        Ok(Printiln::new(
-            self.semantic_annotations_from(*p.get_annotations()),
-            *self.from_expression(p.get_value())?,
-        ))
-    }
-
-    fn from_printbln(&mut self, p: &Printbln<ParserInfo>) -> Result<Printbln<SemanticAnnotations>> {
-        Ok(Printbln::new(
-            self.semantic_annotations_from(*p.get_annotations()),
-            *self.from_expression(p.get_value())?,
-        ))
-    }
-
-    fn from_prints(&mut self, p: &Prints<ParserInfo>) -> Result<Prints<SemanticAnnotations>> {
-        Ok(Prints::new(
-            self.semantic_annotations_from(*p.get_annotations()),
-            *self.from_expression(p.get_value())?,
         ))
     }
 

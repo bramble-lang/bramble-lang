@@ -761,10 +761,6 @@ impl<'a> Compiler<'a> {
             Statement::Mutate(m) => self.traverse_mutate(m, current_func, code),
             Statement::Return(n) => self.traverse_return(n, current_func, code),
             Statement::YieldReturn(n) => self.traverse_yieldreturn(n, current_func, code),
-            Statement::Printi(n) => self.traverse_printi(n, current_func, code),
-            Statement::Printiln(n) => self.traverse_printiln(n, current_func, code),
-            Statement::Printbln(n) => self.traverse_printbln(n, current_func, code),
-            Statement::Prints(n) => self.traverse_prints(n, current_func, code),
             Statement::Expression(n) => self.traverse_expression(n, current_func, code),
         }
     }
@@ -806,71 +802,6 @@ impl<'a> Compiler<'a> {
         assembly! {(code) {
             ; {format!("Binding {}", id)}
             {{self.bind(mutate.get_rhs(), current_func, Reg64::Rbp, id_offset)?}}
-        }}
-        Ok(())
-    }
-
-    fn traverse_printi(
-        &mut self,
-        p: &'a Printi<SymbolOffsetTable>,
-        current_func: &String,
-        code: &mut Vec<Inst>,
-    ) -> Result<(), String> {
-        self.traverse_expression(p.get_value(), current_func, code)?;
-
-        assembly! {(code) {
-            lea %rbx, [@_i32_fmt];
-            push %rbx;
-            push %rax;
-            {{self.make_c64_extern_call("printf", 2)}}
-        }}
-        Ok(())
-    }
-
-    fn traverse_printiln(
-        &mut self,
-        p: &'a Printiln<SymbolOffsetTable>,
-        current_func: &String,
-        code: &mut Vec<Inst>,
-    ) -> Result<(), String> {
-        self.traverse_expression(p.get_value(), current_func, code)?;
-
-        assembly! {(code) {
-            lea %rbx, [@_i32_fmt];
-            push %rbx;
-            push %rax;
-            {{self.make_c64_extern_call("printf", 2)}}
-        }}
-        Ok(())
-    }
-
-    fn traverse_printbln(
-        &mut self,
-        p: &'a Printbln<SymbolOffsetTable>,
-        current_func: &String,
-        code: &mut Vec<Inst>,
-    ) -> Result<(), String> {
-        self.traverse_expression(p.get_value(), current_func, code)?;
-
-        assembly! {(code) {
-            call @print_bool;
-        }}
-        Ok(())
-    }
-
-    fn traverse_prints(
-        &mut self,
-        p: &'a Prints<SymbolOffsetTable>,
-        current_func: &String,
-        code: &mut Vec<Inst>,
-    ) -> Result<(), String> {
-        self.traverse_expression(p.get_value(), current_func, code)?;
-
-        assembly! {(code) {
-            lea %rbx, [@_str_fmt];
-            push %rbx;
-            push %rax;
-            {{self.make_c64_extern_call("printf", 2)}}
         }}
         Ok(())
     }

@@ -784,60 +784,6 @@ pub mod tests {
     }
 
     #[test]
-    fn parse_printiln() {
-        let text = "printiln 5;";
-        let tokens: Vec<Token> = Lexer::new(&text)
-            .tokenize()
-            .into_iter()
-            .collect::<Result<_>>()
-            .unwrap();
-        let mut stream = TokenStream::new(&tokens);
-        let stm = statement(&mut stream).unwrap().unwrap();
-        match stm {
-            Statement::Printiln(box p) => {
-                assert_eq!(*p.get_value(), Expression::Integer64(1, 5));
-            }
-            _ => panic!("Not a binding statement"),
-        }
-    }
-
-    #[test]
-    fn parse_printbln() {
-        let text = "printbln true;";
-        let tokens: Vec<Token> = Lexer::new(&text)
-            .tokenize()
-            .into_iter()
-            .collect::<Result<_>>()
-            .unwrap();
-        let mut stream = TokenStream::new(&tokens);
-        let stm = statement(&mut stream).unwrap().unwrap();
-        match stm {
-            Statement::Printbln(box p) => {
-                assert_eq!(*p.get_value(), Expression::Boolean(1, true));
-            }
-            _ => panic!("Not a binding statement"),
-        }
-    }
-
-    #[test]
-    fn parse_prints() {
-        let text = "prints \"hello\";";
-        let tokens: Vec<Token> = Lexer::new(&text)
-            .tokenize()
-            .into_iter()
-            .collect::<Result<_>>()
-            .unwrap();
-        let mut stream = TokenStream::new(&tokens);
-        let stm = statement(&mut stream).unwrap().unwrap();
-        match stm {
-            Statement::Prints(box p) => {
-                assert_eq!(*p.get_value(), Expression::StringLiteral(1, "hello".into()));
-            }
-            _ => panic!("Not a binding statement"),
-        }
-    }
-
-    #[test]
     fn parse_module_empty() {
         let text = "mod test_mod {}";
         let tokens: Vec<Token> = Lexer::new(&text)
