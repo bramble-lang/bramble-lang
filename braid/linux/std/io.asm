@@ -8,16 +8,29 @@
 section .data
     dest_i64: dq 0 ; 64-bits integer = 8 bytes.  Destination for scanf to write to
     fmt_i64: db "%ld", 0
+    fmt_str: db "%s", 0
+
 
 section .text
 global root_std_io_write
 root_std_io_write:
-    call str_len
+    extern printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rdi, fmt_str
     mov rsi, rax
-    mov rax, sys_write
-    mov rdi, stdout
-    syscall
-    
+    xor rax, rax
+    call printf
+
+    mov rsp, rbp
+    pop rbp
     ret
 
 
@@ -42,6 +55,28 @@ root_std_io_readi64:
     mov rsp, rbp
     pop rbp
     
+    ret
+
+
+global root_std_io_writei64
+root_std_io_writei64:
+    extern printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rdi, fmt_i64
+    mov rsi, rax
+    xor rax, rax
+    call printf
+
+    mov rsp, rbp
+    pop rbp
     ret
     
     
