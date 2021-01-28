@@ -2,7 +2,7 @@
 
 run_test() {
     test=$1
-    input=./src/$2
+    input="./src/${test}.in"
     rm -rf ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
@@ -118,5 +118,6 @@ then
     run_test "modules/struct"
     run_test "modules/return"
 
-    run_test "std/io/readi64" "std/io/readi64.in"
+    run_test "std/io/readi64"
+    run_test "std/io/writei64"
 fi
