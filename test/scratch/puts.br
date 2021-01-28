@@ -1,6 +1,7 @@
 fn my_main() {
     let s: string := "hello\n";
-    prints s;
+    root::std::io::writei64ln(5);
+    root::std::io::writei64(10);
 
     return;
 }
