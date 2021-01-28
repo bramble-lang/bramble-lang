@@ -14,7 +14,7 @@ use crate::{
 use crate::{
     semantics::symbol_table::*,
     syntax::statement::{
-        Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Yield, YieldReturn,
+        Bind, Mutate, Return, Yield, YieldReturn,
     },
 };
 use braid_lang::result::Result;

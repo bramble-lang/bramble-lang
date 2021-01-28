@@ -8,7 +8,7 @@ use crate::{
         module::{self, Item, Module},
         routinedef::{RoutineDef, RoutineDefType},
         statement::{
-            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, YieldReturn,
+            Bind, Mutate, Return, Statement, YieldReturn,
         },
         structdef::StructDef,
     },
@@ -200,50 +200,6 @@ mod compute {
             SymbolOffsetTable::local_from(mutate.get_annotations(), struct_table, layout);
         let (rhs, layout) = compute::layout_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(annotations, mutate.get_id(), rhs), layout)
-    }
-
-    fn layout_for_printi(
-        p: &Printi<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Printi<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Printi::new(annotations, value), layout)
-    }
-
-    fn layout_for_printiln(
-        p: &Printiln<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Printiln<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Printiln::new(annotations, value), layout)
-    }
-
-    fn layout_for_printbln(
-        p: &Printbln<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Printbln<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Printbln::new(annotations, value), layout)
-    }
-
-    fn layout_for_prints(
-        p: &Prints<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Prints<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Prints::new(annotations, value), layout)
     }
 
     fn layout_for_yieldreturn(
@@ -511,14 +467,11 @@ mod compute {
         use module::Module;
 
         use super::*;
-        use crate::semantics::type_resolver::resolve_types;
         use crate::syntax::routinedef::RoutineDefType;
         use crate::syntax::ty::Type;
         use crate::{compiler::memory::scope, syntax::path::Path};
         use crate::{
             compiler::memory::scope::Level,
-            diagnostics::config::TracingConfig,
-            lexer::{lexer::Lexer, tokens::Token},
             syntax::{expression::BinaryOperator, routinedef::RoutineDef},
         };
         use crate::{

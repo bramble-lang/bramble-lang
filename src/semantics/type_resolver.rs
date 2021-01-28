@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::syntax::{
     path::Path,
-    statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
+    statement::{Bind, Mutate, Yield, YieldReturn},
 };
 use crate::syntax::{
     statement::{Return, Statement},
