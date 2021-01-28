@@ -9,9 +9,9 @@ fn create_a_string() -> string {
 }
 
 fn say_something(a: string, b: string) {
-    prints a;
-    prints b;
-    prints "\n";
+    root::std::io::write(a);
+    root::std::io::write(b);
+    root::std::io::write("\n");
 
     return;
 }

@@ -2,8 +2,8 @@ fn my_main() {
     let ms: my_mod::MyStruct := my_mod::MyStruct{a: 5};
     let ms2: my_mod::inner::MyStruct := my_mod::inner::MyStruct{b: 10};
 
-    printiln ms.a;
-    printiln ms2.b;
+    root::std::io::writei64ln(ms.a);
+    root::std::io::writei64ln(ms2.b);
 
     my_mod::test();
 
@@ -30,9 +30,9 @@ mod my_mod {
         let ms2: self::inner::MyStruct := inner::MyStruct{b: 33};
         let ms3: self::inner::MyStruct2 := inner::MyStruct2{ms: ms};
 
-        printiln ms.a;
-        printiln ms2.b;
-        printiln ms3.ms.a;
+        root::std::io::writei64ln(ms.a);
+        root::std::io::writei64ln(ms2.b);
+        root::std::io::writei64ln(ms3.ms.a);
         
         return;
     }

@@ -1,7 +1,7 @@
 fn my_main() {
     let a:bool := true || false;
     let b:bool := !a;
-    printbln a;
-    printbln b;
+    root::std::io::writeboolln(a);
+    root::std::io::writeboolln(b);
     return;
 }

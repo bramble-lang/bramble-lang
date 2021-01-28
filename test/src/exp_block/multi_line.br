@@ -4,13 +4,13 @@ fn my_main() {
         let y: i64 := 4;
         x + y
     };
-    printiln x;
+    root::std::io::writei64ln(x);
 
     let b:bool := {
         let b: bool := true;
         b && my_bool()
     };
-    printbln b;
+    root::std::io::writeboolln(b);
     return;
 }
 

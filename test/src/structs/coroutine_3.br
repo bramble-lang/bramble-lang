@@ -7,15 +7,15 @@ fn my_main( p: bool) {
         z: false,
     };
 
-    printiln (yield ms.x);
-    printiln (yield ms.x);
-    printiln (yield ms.x);
+    root::std::io::writei64ln((yield ms.x));
+    root::std::io::writei64ln((yield ms.x));
+    root::std::io::writei64ln((yield ms.x));
     
     let c2: co i64 := make_co();
     let x:i64 := takes_co(c2);
-    printiln x;
+    root::std::io::writei64ln(x);
     let x2:i64 := takes_co(c2);
-    printiln x2;
+    root::std::io::writei64ln(x2);
 
     return;
 }

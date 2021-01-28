@@ -1,19 +1,19 @@
 fn my_main() {
     let x:my_mod::MyStruct := my_mod::add(3, 2);
-    printiln x.a;
+    root::std::io::writei64ln(x.a);
 
     let y: root::my_mod::MyStruct := my_mod::add_ms(x, x);
-    printiln y.a;
+    root::std::io::writei64ln(y.a);
 
     let b:bool := my_mod::my_bool();
-    printbln b;
+    root::std::io::writeboolln(b);
 
     let c: co my_mod::MyStruct := init root::my_mod::count(x);
-    printiln (yield c).a;
-    printiln (yield c).a;
-    printiln (yield c).a;
-    printiln (yield c).a;
-    printiln (yield c).a;
+    root::std::io::writei64ln((yield c).a);
+    root::std::io::writei64ln((yield c).a);
+    root::std::io::writei64ln((yield c).a);
+    root::std::io::writei64ln((yield c).a);
+    root::std::io::writei64ln((yield c).a);
 
     return;
 }

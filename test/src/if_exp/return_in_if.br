@@ -1,6 +1,6 @@
 fn my_main() {
-    printiln test(0);
-    printiln test(20);
+    root::std::io::writei64ln(test(0));
+    root::std::io::writei64ln(test(20));
     return;
 }
 

@@ -8,7 +8,7 @@ use crate::{
         module::{self, Item, Module},
         routinedef::{RoutineDef, RoutineDefType},
         statement::{
-            Bind, Mutate, Printbln, Printi, Printiln, Prints, Return, Statement, YieldReturn,
+            Bind, Mutate, Return, Statement, YieldReturn,
         },
         structdef::StructDef,
     },
@@ -163,22 +163,6 @@ mod compute {
                 let (e, l) = layout_for_yieldreturn(yr, layout, struct_table);
                 (Statement::YieldReturn(Box::new(e)), l)
             }
-            Statement::Printi(pi) => {
-                let (e, l) = layout_for_printi(pi, layout, struct_table);
-                (Statement::Printi(Box::new(e)), l)
-            }
-            Statement::Printiln(pi) => {
-                let (e, l) = layout_for_printiln(pi, layout, struct_table);
-                (Statement::Printiln(Box::new(e)), l)
-            }
-            Statement::Printbln(pb) => {
-                let (e, l) = layout_for_printbln(pb, layout, struct_table);
-                (Statement::Printbln(Box::new(e)), l)
-            }
-            Statement::Prints(ps) => {
-                let (e, l) = layout_for_prints(ps, layout, struct_table);
-                (Statement::Prints(Box::new(e)), l)
-            }
             Statement::Expression(e) => {
                 let (e, l) = layout_for_expression(e, layout, struct_table);
                 (Statement::Expression(Box::new(e)), l)
@@ -216,50 +200,6 @@ mod compute {
             SymbolOffsetTable::local_from(mutate.get_annotations(), struct_table, layout);
         let (rhs, layout) = compute::layout_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(annotations, mutate.get_id(), rhs), layout)
-    }
-
-    fn layout_for_printi(
-        p: &Printi<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Printi<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Printi::new(annotations, value), layout)
-    }
-
-    fn layout_for_printiln(
-        p: &Printiln<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Printiln<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Printiln::new(annotations, value), layout)
-    }
-
-    fn layout_for_printbln(
-        p: &Printbln<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Printbln<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Printbln::new(annotations, value), layout)
-    }
-
-    fn layout_for_prints(
-        p: &Prints<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Prints<SymbolOffsetTable>, LayoutData) {
-        let (annotations, layout) =
-            SymbolOffsetTable::local_from(p.get_annotations(), struct_table, layout);
-        let (value, layout) = compute::layout_for_expression(p.get_value(), layout, struct_table);
-        (Prints::new(annotations, value), layout)
     }
 
     fn layout_for_yieldreturn(
@@ -527,14 +467,11 @@ mod compute {
         use module::Module;
 
         use super::*;
-        use crate::semantics::type_resolver::resolve_types;
         use crate::syntax::routinedef::RoutineDefType;
         use crate::syntax::ty::Type;
         use crate::{compiler::memory::scope, syntax::path::Path};
         use crate::{
             compiler::memory::scope::Level,
-            diagnostics::config::TracingConfig,
-            lexer::{lexer::Lexer, tokens::Token},
             syntax::{expression::BinaryOperator, routinedef::RoutineDef},
         };
         use crate::{
@@ -929,41 +866,6 @@ mod compute {
                     }
                 }
                 _ => assert!(false),
-            }
-        }
-
-        #[test]
-        pub fn test_bug() {
-            use crate::parser::parser;
-            for text in vec![
-                "
-            fn my_main() {
-                let x:i64 := 5;
-                printiln x;
-
-                let b:bool := my_bool();
-                printbln b;
-                return;
-            }
-
-            fn my_bool() -> bool {
-                let b:bool := false;
-                return b;
-            }
-                ",
-            ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
-                    .tokenize()
-                    .into_iter()
-                    .collect::<Result<_>>()
-                    .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
-                let semantic_module =
-                    resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-                let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
-                let resolved = unrealized_st.resolve();
-
-                assert_eq!(resolved.err(), None);
             }
         }
     }

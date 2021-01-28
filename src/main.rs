@@ -168,5 +168,20 @@ fn configure_imported_functions() -> Vec<(Path, Vec<Type>, Type)> {
             vec![Type::I64],
             Type::Unit,
         ),
+        (
+            vec!["root", "std", "io", "writei64ln"].into(),
+            vec![Type::I64],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writebool"].into(),
+            vec![Type::Bool],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeboolln"].into(),
+            vec![Type::Bool],
+            Type::Unit,
+        ),
     ]
 }

@@ -41,16 +41,16 @@ fn my_main() {
         x38: 4,
         x39: 4,
     };
-    printiln t.x00;
-    printiln t.x30;
-    printiln print(t);
+    root::std::io::writei64ln(t.x00);
+    root::std::io::writei64ln(t.x30);
+    root::std::io::writei64ln(print(t));
     let y: MyStruct := copy(t);
-    printiln y.x00;
-    printiln y.x30;
+    root::std::io::writei64ln(y.x00);
+    root::std::io::writei64ln(y.x30);
 
     let z: MyStruct := new();
-    printiln z.x00;
-    printiln z.x30;
+    root::std::io::writei64ln(z.x00);
+    root::std::io::writei64ln(z.x30);
 
     return;
 }
@@ -99,17 +99,17 @@ struct MyStruct {
 }
 
 fn copy(e: MyStruct) -> MyStruct {
-    printiln e.x10;
-    printiln e.x20;
+    root::std::io::writei64ln(e.x10);
+    root::std::io::writei64ln(e.x20);
     let t: MyStruct := e;
-    printiln t.x00;
-    printiln t.x30;
+    root::std::io::writei64ln(t.x00);
+    root::std::io::writei64ln(t.x30);
     return t;
 }
 
 fn print(e: MyStruct) -> i64 {
-    printiln e.x00;
-    printiln e.x30;
+    root::std::io::writei64ln(e.x00);
+    root::std::io::writei64ln(e.x30);
 
     return e.x11;
 }

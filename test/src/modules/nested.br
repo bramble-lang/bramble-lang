@@ -1,15 +1,15 @@
 fn my_main() {
     let x:i64 := my_mod::inner::add(3, 2);
-    printiln x;
+    root::std::io::writei64ln(x);
 
     let b:bool := root::my_mod::is_3(1);
-    printbln b;
+    root::std::io::writeboolln(b);
 
     let b2:bool := root::my_mod::is_3(3);
-    printbln b2;
+    root::std::io::writeboolln(b2);
     
     let y:i64 := self::my_mod::inner::add(7, 2);
-    printiln y;
+    root::std::io::writei64ln(y);
 
     return;
 }

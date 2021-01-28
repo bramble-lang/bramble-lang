@@ -7,15 +7,15 @@ fn my_main() {
         c: 100,
     };
 
-    printiln t.a;
-    printiln t.ms1.x;
-    printiln t.ms1.y;
-    printiln t.ms1.z;
-    printiln t.ms2.x;
-    printiln t.ms2.y;
-    printiln t.ms2.z;
-    printiln t.b;
-    printiln t.c;
+    root::std::io::writei64ln(t.a);
+    root::std::io::writei64ln(t.ms1.x);
+    root::std::io::writei64ln(t.ms1.y);
+    root::std::io::writei64ln(t.ms1.z);
+    root::std::io::writei64ln(t.ms2.x);
+    root::std::io::writei64ln(t.ms2.y);
+    root::std::io::writei64ln(t.ms2.z);
+    root::std::io::writei64ln(t.b);
+    root::std::io::writei64ln(t.c);
 
     let t3: MyStruct3 := MyStruct3{
         h: 666,
@@ -36,26 +36,26 @@ fn my_main() {
         },
     };
 
-    printiln t3.h;
-    printbln t3.k;
-    printiln t3.ms1.a;
-    printiln t3.ms1.ms1.x;
-    printiln t3.ms1.ms1.y;
-    printiln t3.ms1.ms1.z;
-    printiln t3.ms1.ms2.x;
-    printiln t3.ms1.ms2.y;
-    printiln t3.ms1.ms2.z;
-    printiln t3.ms1.b;
-    printiln t3.ms1.c;
-    printiln t3.ms2.a;
-    printiln t3.ms2.ms1.x;
-    printiln t3.ms2.ms1.y;
-    printiln t3.ms2.ms1.z;
-    printiln t3.ms2.ms2.x;
-    printiln t3.ms2.ms2.y;
-    printiln t3.ms2.ms2.z;
-    printiln t3.ms2.b;
-    printiln t3.ms2.c;
+    root::std::io::writei64ln(t3.h);
+    root::std::io::writeboolln(t3.k);
+    root::std::io::writei64ln(t3.ms1.a);
+    root::std::io::writei64ln(t3.ms1.ms1.x);
+    root::std::io::writei64ln(t3.ms1.ms1.y);
+    root::std::io::writei64ln(t3.ms1.ms1.z);
+    root::std::io::writei64ln(t3.ms1.ms2.x);
+    root::std::io::writei64ln(t3.ms1.ms2.y);
+    root::std::io::writei64ln(t3.ms1.ms2.z);
+    root::std::io::writei64ln(t3.ms1.b);
+    root::std::io::writei64ln(t3.ms1.c);
+    root::std::io::writei64ln(t3.ms2.a);
+    root::std::io::writei64ln(t3.ms2.ms1.x);
+    root::std::io::writei64ln(t3.ms2.ms1.y);
+    root::std::io::writei64ln(t3.ms2.ms1.z);
+    root::std::io::writei64ln(t3.ms2.ms2.x);
+    root::std::io::writei64ln(t3.ms2.ms2.y);
+    root::std::io::writei64ln(t3.ms2.ms2.z);
+    root::std::io::writei64ln(t3.ms2.b);
+    root::std::io::writei64ln(t3.ms2.c);
 
     return;
 }

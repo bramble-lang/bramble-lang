@@ -5,13 +5,13 @@ fn my_main() {
         z: 3,
     };
 
-    printiln ms.x;
-    printiln ms.y;
-    printiln ms.z;
+    root::std::io::writei64ln(ms.x);
+    root::std::io::writei64ln(ms.y);
+    root::std::io::writei64ln(ms.z);
     let ms2: MyStruct := ms;
-    printiln ms2.x;
-    printiln ms2.y;
-    printiln ms2.z;
+    root::std::io::writei64ln(ms2.x);
+    root::std::io::writei64ln(ms2.y);
+    root::std::io::writei64ln(ms2.z);
 
 
     return;

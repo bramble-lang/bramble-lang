@@ -6,9 +6,9 @@ fn my_main() {
     };
 
     let ms2: MyStruct := ms;
-    printiln ms2.x;
-    printiln ms2.y;
-    printiln ms2.z;
+    root::std::io::writei64ln(ms2.x);
+    root::std::io::writei64ln(ms2.y);
+    root::std::io::writei64ln(ms2.z);
 
 
     let t:MyStruct2 := MyStruct2{
@@ -17,11 +17,11 @@ fn my_main() {
         b: 456,
     };
 
-    printiln t.a;
-    printiln t.ms.x;
-    printiln t.ms.y;
-    printiln t.ms.z;
-    printiln t.b;
+    root::std::io::writei64ln(t.a);
+    root::std::io::writei64ln(t.ms.x);
+    root::std::io::writei64ln(t.ms.y);
+    root::std::io::writei64ln(t.ms.z);
+    root::std::io::writei64ln(t.b);
 
     let t3: MyStruct3 := MyStruct3{
         h: 321,
@@ -29,30 +29,30 @@ fn my_main() {
         k: true,
     };
 
-    printiln t3.h;
-    printiln t3.ms2.a;
-    printiln t3.ms2.ms.x;
-    printiln t3.ms2.ms.y;
-    printiln t3.ms2.ms.z;
-    printiln t3.ms2.b;
-    printbln t3.k;
+    root::std::io::writei64ln(t3.h);
+    root::std::io::writei64ln(t3.ms2.a);
+    root::std::io::writei64ln(t3.ms2.ms.x);
+    root::std::io::writei64ln(t3.ms2.ms.y);
+    root::std::io::writei64ln(t3.ms2.ms.z);
+    root::std::io::writei64ln(t3.ms2.b);
+    root::std::io::writeboolln(t3.k);
 
     let t4: MyStruct4 := MyStruct4 {
         a: t3,
         b: t3,
     };
 
-    printiln t4.a.ms2.a;
-    printiln t4.a.ms2.ms.x;
-    printiln t4.a.ms2.ms.y;
-    printiln t4.a.ms2.ms.z;
-    printiln t4.a.ms2.b;
+    root::std::io::writei64ln(t4.a.ms2.a);
+    root::std::io::writei64ln(t4.a.ms2.ms.x);
+    root::std::io::writei64ln(t4.a.ms2.ms.y);
+    root::std::io::writei64ln(t4.a.ms2.ms.z);
+    root::std::io::writei64ln(t4.a.ms2.b);
 
-    printiln t4.b.ms2.a;
-    printiln t4.b.ms2.ms.x;
-    printiln t4.b.ms2.ms.y;
-    printiln t4.b.ms2.ms.z;
-    printiln t4.b.ms2.b;
+    root::std::io::writei64ln(t4.b.ms2.a);
+    root::std::io::writei64ln(t4.b.ms2.ms.x);
+    root::std::io::writei64ln(t4.b.ms2.ms.y);
+    root::std::io::writei64ln(t4.b.ms2.ms.z);
+    root::std::io::writei64ln(t4.b.ms2.b);
 
     return;
 }

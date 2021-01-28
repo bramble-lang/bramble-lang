@@ -5,11 +5,11 @@ fn my_main() {
     let d:bool := 2 < 3 || 3 < 2 && 2 > 4 && 2 <= 1;
     let e: bool := 2 > 3 || 2 != 2;
     let f:bool := a && b && c && d || e;
-    printbln a;
-    printbln b;
-    printbln c;
-    printbln d;
-    printbln e;
-    printbln f;
+    root::std::io::writeboolln(a);
+    root::std::io::writeboolln(b);
+    root::std::io::writeboolln(c);
+    root::std::io::writeboolln(d);
+    root::std::io::writeboolln(e);
+    root::std::io::writeboolln(f);
     return;
 }

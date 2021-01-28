@@ -1,9 +1,9 @@
 fn my_main() {
     let s: string := "cadabra\n";
     let c:co string  := init my_co("abra\n", s);
-    prints (yield c);
-    prints (yield c);
-    prints (yield c);
+    root::std::io::write((yield c));
+    root::std::io::write((yield c));
+    root::std::io::write((yield c));
     return;
 }
 

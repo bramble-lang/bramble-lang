@@ -2,15 +2,15 @@
 fn my_main() {
     let mut x:i64 := 1;
     let mut y:i64 := 5;
-    printiln x;
-    printiln y;
+    root::std::io::writei64ln(x);
+    root::std::io::writei64ln(y);
     mut x := 13;
     mut y := y * x;
-    printiln x;
-    printiln y;
+    root::std::io::writei64ln(x);
+    root::std::io::writei64ln(y);
     mut x := -13;
     mut y := -y;
-    printiln x;
-    printiln y;
+    root::std::io::writei64ln(x);
+    root::std::io::writei64ln(y);
     return;
 }

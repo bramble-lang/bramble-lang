@@ -73,14 +73,14 @@ run_test() {
 cargo build
 if [ $? -eq 0 ]
 then
-    start_time=$(($(date +%s%N)/1000000))
+    start_time=$SECONDS
     tests=`find ./src | grep "\.out" | sed 's/\.\/src\/\(.*\)\.out/\1/'`
     for test in ${tests[@]}; do
         ((num_tests=num_tests+1))
         run_test $test
     done
-    stop_time=$(($(date +%s%N)/1000000))
-    duration=$(echo "scale=2;($stop_time-$start_time)/1000.0" | bc)
+    stop_time=$SECONDS
+    duration=$(($stop_time-$start_time))
     echo ""
     echo "${num_pass}/${num_tests} Tests Passed in ${duration}secs"
 fi

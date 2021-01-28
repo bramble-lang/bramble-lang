@@ -1,11 +1,11 @@
 fn my_main() {
     let x: i64 := root::std::io::readi64();
-    printiln x;
+    root::std::io::writei64ln(x);
 
     let y: i64 := root::std::io::readi64();
-    printiln y;
+    root::std::io::writei64ln(y);
 
     let z: i64 := root::std::io::readi64();
-    printiln z;
+    root::std::io::writei64ln(z);
     return;
 }

@@ -5,11 +5,6 @@ pub enum Statement<M> {
     Bind(Box<Bind<M>>),
     Mutate(Box<Mutate<M>>),
 
-    Printi(Box<Printi<M>>),
-    Printiln(Box<Printiln<M>>),
-    Printbln(Box<Printbln<M>>),
-    Prints(Box<Prints<M>>),
-
     YieldReturn(Box<YieldReturn<M>>),
     Expression(Box<Expression<M>>),
 
@@ -26,10 +21,6 @@ impl<M> Statement<M> {
             Expression(e) => e.get_annotations(),
             Bind(b) => b.get_annotations(),
             Mutate(m) => m.get_annotations(),
-            Printi(m) => m.get_annotations(),
-            Printiln(m) => m.get_annotations(),
-            Printbln(m) => m.get_annotations(),
-            Prints(m) => m.get_annotations(),
         }
     }
 
@@ -48,10 +39,6 @@ impl<M> Statement<M> {
             Expression(e) => e.get_annotations_mut(),
             Bind(b) => b.get_annotations_mut(),
             Mutate(m) => m.get_annotations_mut(),
-            Printi(m) => m.get_annotations_mut(),
-            Printiln(m) => m.get_annotations_mut(),
-            Printbln(m) => m.get_annotations_mut(),
-            Prints(m) => m.get_annotations_mut(),
         }
     }
 
@@ -64,10 +51,6 @@ impl<M> Statement<M> {
             Expression(e) => e.root_str(),
             Bind(b) => b.root_str(),
             Mutate(m) => m.root_str(),
-            Printi(m) => m.root_str(),
-            Printiln(m) => m.root_str(),
-            Printbln(m) => m.root_str(),
-            Prints(m) => m.root_str(),
         }
     }
 }
@@ -155,118 +138,6 @@ impl<M> Mutate<M> {
 
     pub fn root_str(&self) -> String {
         format!("mut {}", self.id)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Printi<M> {
-    annotations: M,
-    value: Expression<M>,
-}
-
-impl<M> Printi<M> {
-    pub fn new(annotations: M, value: Expression<M>) -> Self {
-        Self { annotations, value }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
-    pub fn get_value(&self) -> &Expression<M> {
-        &self.value
-    }
-
-    pub fn root_str(&self) -> String {
-        format!("printi")
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Printiln<M> {
-    annotations: M,
-    value: Expression<M>,
-}
-
-impl<M> Printiln<M> {
-    pub fn new(annotations: M, value: Expression<M>) -> Self {
-        Self { annotations, value }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
-    pub fn get_value(&self) -> &Expression<M> {
-        &self.value
-    }
-
-    pub fn root_str(&self) -> String {
-        format!("printiln")
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Printbln<M> {
-    annotations: M,
-    value: Expression<M>,
-}
-
-impl<M> Printbln<M> {
-    pub fn new(annotations: M, value: Expression<M>) -> Self {
-        Self { annotations, value }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
-    pub fn get_value(&self) -> &Expression<M> {
-        &self.value
-    }
-
-    pub fn root_str(&self) -> String {
-        format!("printbln")
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Prints<M> {
-    annotations: M,
-    value: Expression<M>,
-}
-
-impl<M> Prints<M> {
-    pub fn new(annotations: M, value: Expression<M>) -> Self {
-        Self { annotations, value }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
-    pub fn get_value(&self) -> &Expression<M> {
-        &self.value
-    }
-
-    pub fn root_str(&self) -> String {
-        format!("prints")
     }
 }
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::syntax::{
     path::Path,
-    statement::{Bind, Mutate, Printbln, Printi, Printiln, Prints, Yield, YieldReturn},
+    statement::{Bind, Mutate, Yield, YieldReturn},
 };
 use crate::syntax::{
     statement::{Return, Statement},
@@ -260,10 +260,6 @@ impl<'a> TypeResolver<'a> {
             YieldReturn(box x) => {
                 YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
             }
-            Printi(box x) => Printi(Box::new(self.analyze_printi(x, current_func, sym)?)),
-            Printiln(box x) => Printiln(Box::new(self.analyze_printiln(x, current_func, sym)?)),
-            Printbln(box x) => Printbln(Box::new(self.analyze_printbln(x, current_func, sym)?)),
-            Prints(box x) => Prints(Box::new(self.analyze_prints(x, current_func, sym)?)),
             Expression(box e) => {
                 Expression(Box::new(self.analyze_expression(e, current_func, sym)?))
             }
@@ -349,76 +345,6 @@ impl<'a> TypeResolver<'a> {
             )),
         };
         result.map_err(|e| format!("L{}: {}", mutate.get_annotations().ln, e))
-    }
-
-    fn analyze_printi(
-        &mut self,
-        p: &Printi<SemanticAnnotations>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Printi<SemanticAnnotations>> {
-        let mut meta = p.get_annotations().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I64 {
-            meta.ty = Unit;
-            Ok(Printi::new(meta.clone(), value))
-        } else {
-            Err(format!("Expected i32 for printi got {}", value.get_type()))
-        }
-    }
-
-    fn analyze_printiln(
-        &mut self,
-        p: &Printiln<SemanticAnnotations>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Printiln<SemanticAnnotations>> {
-        let mut meta = p.get_annotations().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == I64 {
-            meta.ty = Unit;
-            Ok(Printiln::new(meta.clone(), value))
-        } else {
-            Err(format!("Expected i32 for printi got {}", value.get_type()))
-        }
-    }
-
-    fn analyze_printbln(
-        &mut self,
-        p: &Printbln<SemanticAnnotations>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Printbln<SemanticAnnotations>> {
-        let mut meta = p.get_annotations().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == Bool {
-            meta.ty = Unit;
-            Ok(Printbln::new(meta.clone(), value))
-        } else {
-            Err(format!(
-                "Expected bool for printbln got {}",
-                value.get_type()
-            ))
-        }
-    }
-
-    fn analyze_prints(
-        &mut self,
-        p: &Prints<SemanticAnnotations>,
-        current_func: &Option<String>,
-        sym: &mut SymbolTable,
-    ) -> Result<Prints<SemanticAnnotations>> {
-        let mut meta = p.get_annotations().clone();
-        let value = self.traverse(p.get_value(), current_func, sym)?;
-        if value.get_type() == Type::StringLiteral {
-            meta.ty = Unit;
-            Ok(Prints::new(meta.clone(), value))
-        } else {
-            Err(format!(
-                "Expected string for prints got {}",
-                value.get_type()
-            ))
-        }
     }
 
     fn analyze_yieldreturn(

@@ -1,9 +1,9 @@
 fn my_main() {
     let c:co bool := init my_co(true, 5, 13);
 
-    printbln (yield c);
-    printbln (yield c);
-    printbln ((yield c) == (yield c));
+    root::std::io::writeboolln((yield c));
+    root::std::io::writeboolln((yield c));
+    root::std::io::writeboolln(((yield c) == (yield c)));
 
     return;
 }
