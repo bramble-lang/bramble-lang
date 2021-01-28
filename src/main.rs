@@ -8,6 +8,7 @@ mod parser;
 mod semantics;
 mod syntax;
 
+use crate::syntax::path::Path;
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
@@ -56,17 +57,16 @@ fn main() {
     // Type Check
     let trace_semantic_analysis = TracingConfig::parse(config.value_of("trace-symbol-table"));
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
-    let imported = vec![
-        (vec!["root", "std", "io", "write"].into(),vec![Type::StringLiteral], Type::Unit),
-        (vec!["root", "std", "io", "readi64"].into(),vec![], Type::I64),
-    ];
-    let semantic_ast = match resolve_types_with_imports(&ast, &imported, trace_semantic_analysis, trace_path) {
-        Ok(ast) => ast,
-        Err(msg) => {
-            println!("Error: {}", msg);
-            std::process::exit(ERR_TYPE_CHECK);
-        }
-    };
+    let imported = configure_imported_functions();
+
+    let semantic_ast =
+        match resolve_types_with_imports(&ast, &imported, trace_semantic_analysis, trace_path) {
+            Ok(ast) => ast,
+            Err(msg) => {
+                println!("Error: {}", msg);
+                std::process::exit(ERR_TYPE_CHECK);
+            }
+        };
 
     // Configure the compiler
     let target_platform = config
@@ -76,7 +76,11 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     // Compile
-    let program = Compiler::compile(semantic_ast, imported.iter().map(|(p, _, _)| p.clone()).collect(), target_platform);
+    let program = Compiler::compile(
+        semantic_ast,
+        imported.iter().map(|(p, _, _)| p.clone()).collect(),
+        target_platform,
+    );
 
     // Write the resulting assembly code to the target output file
     let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
@@ -145,4 +149,24 @@ fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Prints out the current module path at the current line of code.")
         );
     app
+}
+
+fn configure_imported_functions() -> Vec<(Path, Vec<Type>, Type)> {
+    vec![
+        (
+            vec!["root", "std", "io", "write"].into(),
+            vec![Type::StringLiteral],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "readi64"].into(),
+            vec![],
+            Type::I64,
+        ),
+        (
+            vec!["root", "std", "io", "writei64"].into(),
+            vec![Type::I64],
+            Type::Unit,
+        ),
+    ]
 }
