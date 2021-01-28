@@ -11,9 +11,9 @@ fn my_main() {
         MyStruct{x: 0, y: 0, z: 0}
     };
 
-    printiln t.x;
-    printiln t.y;
-    printiln t.z;
+    root::std::io::writei64ln(t.x);
+    root::std::io::writei64ln(t.y);
+    root::std::io::writei64ln(t.z);
     
     return;
 }

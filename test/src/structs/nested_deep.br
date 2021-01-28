@@ -18,15 +18,15 @@ fn my_main() {
         y: 456,
     };
     
-    printiln t4.x;
-    printiln t4.a.ms2.ms.x;
-    printiln t4.a.ms2.ms.y;
-    printiln t4.a.ms2.ms.z;
+    root::std::io::writei64ln(t4.x);
+    root::std::io::writei64ln(t4.a.ms2.ms.x);
+    root::std::io::writei64ln(t4.a.ms2.ms.y);
+    root::std::io::writei64ln(t4.a.ms2.ms.z);
 
-    printiln t4.b.ms2.ms.x;
-    printiln t4.b.ms2.ms.y;
-    printiln t4.b.ms2.ms.z;
-    printiln t4.y;
+    root::std::io::writei64ln(t4.b.ms2.ms.x);
+    root::std::io::writei64ln(t4.b.ms2.ms.y);
+    root::std::io::writei64ln(t4.b.ms2.ms.z);
+    root::std::io::writei64ln(t4.y);
 
     let deep: MS10 := MS10 {
         a: MS9{
@@ -42,15 +42,15 @@ fn my_main() {
         }
     };
 
-    printiln deep.a.a.a.a.a.a.x;
-    printiln deep.a.a.a.a.a.a.a.ms2.ms.x;
-    printiln deep.a.a.a.a.a.a.a.ms2.ms.y;
-    printiln deep.a.a.a.a.a.a.a.ms2.ms.z;
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.x);
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.a.ms2.ms.x);
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.a.ms2.ms.y);
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.a.ms2.ms.z);
 
-    printiln deep.a.a.a.a.a.a.b.ms2.ms.x;
-    printiln deep.a.a.a.a.a.a.b.ms2.ms.y;
-    printiln deep.a.a.a.a.a.a.b.ms2.ms.z;
-    printiln deep.a.a.a.a.a.a.y;
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.b.ms2.ms.x);
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.b.ms2.ms.y);
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.b.ms2.ms.z);
+    root::std::io::writei64ln(deep.a.a.a.a.a.a.y);
 
     return;
 }

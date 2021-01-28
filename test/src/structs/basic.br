@@ -1,10 +1,10 @@
 fn my_main() {
     let t: MyStruct := MyStruct{x: 5, y: 1, z: true};
-    printiln t.x;
-    printiln t.y;
+    root::std::io::writei64ln(t.x);
+    root::std::io::writei64ln(t.y);
     printbln t.z;
     let y: i64 := test();
-    printiln y;
+    root::std::io::writei64ln(y);
     return;
 }
 
@@ -16,6 +16,6 @@ struct MyStruct {
 
 fn test() -> i64 {
     let t: MyStruct := MyStruct{z: true, x: 5, y: 2};
-    printiln t.x;
+    root::std::io::writei64ln(t.x);
     return t.x;
 }

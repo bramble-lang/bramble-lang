@@ -1,10 +1,10 @@
 fn my_main() {
     let z: MyStruct2 := test2();
-    printiln z.a;
-    printiln z.ms.x;
-    printiln z.ms.y;
-    printiln z.ms.z;
-    printiln z.b;
+    root::std::io::writei64ln(z.a);
+    root::std::io::writei64ln(z.ms.x);
+    root::std::io::writei64ln(z.ms.y);
+    root::std::io::writei64ln(z.ms.z);
+    root::std::io::writei64ln(z.b);
 
     return;
 }

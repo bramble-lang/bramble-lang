@@ -5,9 +5,9 @@ fn my_main() {
     // Test that struct expressions can be passed and returned
     // Pass two to test if multiple parameters cause corruption 
     let y: MyStruct := test4(MyStruct{ x: 5, y: 75, z: 18}, MyStruct{ x: 15, y: 125, z: 22});
-    printiln y.x;
-    printiln y.y;
-    printiln y.z;
+    root::std::io::writei64ln(y.x);
+    root::std::io::writei64ln(y.y);
+    root::std::io::writei64ln(y.z);
 
     
     return;

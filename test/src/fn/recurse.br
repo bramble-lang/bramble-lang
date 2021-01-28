@@ -1,11 +1,11 @@
 fn my_main() {
 	let i:i64 := recurse(0);
-	printiln i;
+	root::std::io::writei64ln(i);
 	return;
 }
 
 fn recurse(a: i64) -> i64 {
-	printiln a;
+	root::std::io::writei64ln(a);
 	let i:i64 := if (a <= 5) {
 		recurse(a+1)
 	} else {

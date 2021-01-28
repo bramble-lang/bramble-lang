@@ -5,25 +5,25 @@ fn my_main( p: bool) {
     let c: co MyStruct := init my_co(ms, ms2);
     
     let w : MyStruct := yield (c);
-    printiln w.x;
-    printiln w.y;
+    root::std::io::writei64ln(w.x);
+    root::std::io::writei64ln(w.y);
     printbln w.z;
     
     let w2 : MyStruct := yield c;
-    printiln w2.x;
-    printiln w2.y;
+    root::std::io::writei64ln(w2.x);
+    root::std::io::writei64ln(w2.y);
     printbln w2.z;
     
     let w3 : MyStruct := yield c;
-    printiln w3.x;
-    printiln w3.y;
+    root::std::io::writei64ln(w3.x);
+    root::std::io::writei64ln(w3.y);
     printbln w3.z;
     
     return;
 }
 
 co my_co (x: MyStruct, y: MyStruct) -> MyStruct {
-    printiln x.x;
+    root::std::io::writei64ln(x.x);
     yret x;
     printbln y.z;
     return y;

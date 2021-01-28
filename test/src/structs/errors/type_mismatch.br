@@ -4,8 +4,8 @@ fn my_main() {
         y: 1, 
         z: 10,
     };
-    printiln t.x;
-    printiln t.y;
+    root::std::io::writei64ln(t.x);
+    root::std::io::writei64ln(t.y);
     printbln t.z;
     
     return;

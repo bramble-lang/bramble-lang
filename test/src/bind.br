@@ -1,7 +1,7 @@
 fn my_main() {
     let x:i64 := 1;
-    printiln x;
+    root::std::io::writei64ln(x);
     let x:i64 := 13;
-    printiln x;
+    root::std::io::writei64ln(x);
     return;
 }

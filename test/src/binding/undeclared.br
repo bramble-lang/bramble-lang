@@ -1,4 +1,4 @@
 fn my_main() {
-    printiln x;
+    root::std::io::writei64ln(x);
     return;
 }

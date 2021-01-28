@@ -6,7 +6,7 @@ fn my_main() {
             2 * x
         }
     };
-    printiln x;
+    root::std::io::writei64ln(x);
 
     let b:bool := {
         let b: bool := true;
