@@ -117,10 +117,10 @@ root_std_io_writebool:
 
     cmp rax, 0
     jz .false
-    lea rdi, [true]
+    mov rdi, true
     jmp .done
 .false:
-    lea rdi, [false]
+    mov rdi, false
 .done:
 
     ; This is to make sure that the boundary of the stack frame is 16 byte aligned
@@ -145,10 +145,10 @@ root_std_io_writeboolln:
 
     cmp rax, 0
     jz .false
-    lea rdi, [true_ln]
+    mov rdi, true_ln
     jmp .done
 .false:
-    lea rdi, [false_ln]
+    mov rdi, false_ln
 .done:
 
     ; This is to make sure that the boundary of the stack frame is 16 byte aligned
