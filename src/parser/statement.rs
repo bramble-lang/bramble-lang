@@ -40,12 +40,9 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
         Some(bind) => Some(Statement::Bind(Box::new(bind))),
         None => match mutate(stream)? {
             Some(mutate) => Some(Statement::Mutate(Box::new(mutate))),
-            None => match println_stmt(stream)? {
-                Some(p) => Some(p),
-                None => expression(stream)?
+            None => expression(stream)?
                     .map(|s| Statement::from_ast(s))
                     .flatten(),
-            },
         },
     };
 
@@ -144,27 +141,6 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
         },
         _ => Ok(None),
     }
-}
-
-fn println_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
-    trace!(stream);
-    let syntax = match stream.next_if_one_of(vec![Lex::Printiln, Lex::Prints, Lex::Printbln]) {
-        Some(print) => {
-            let exp = expression(stream)?
-                .ok_or(format!("L{}: Expected expression after println", print.l))?;
-            match print.s {
-                Lex::Printiln => Some(Statement::Printiln(Box::new(Printiln::new(print.l, exp)))),
-                Lex::Prints => Some(Statement::Prints(Box::new(Prints::new(print.l, exp)))),
-                Lex::Printbln => Some(Statement::Printbln(Box::new(Printbln::new(print.l, exp)))),
-                _ => panic!(
-                    "CRITICAL: already tested for a print token but found {}",
-                    print.s
-                ),
-            }
-        }
-        _ => None,
-    };
-    Ok(syntax)
 }
 
 pub(super) fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<ParserInfo>> {
