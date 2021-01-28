@@ -15,7 +15,7 @@ fn my_main() {
             b
         }
     };
-    printbln b;
+    root::std::io::writeboolln(b);
     return;
 }
 

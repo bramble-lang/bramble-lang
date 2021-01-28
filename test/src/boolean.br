@@ -1,12 +1,12 @@
 fn my_main() {
     let b1:bool := my_bool(true, true);
-    printbln b1;
+    root::std::io::writeboolln(b1);
 
     let b2:bool := my_bool(false, true);
-    printbln b2;
+    root::std::io::writeboolln(b2);
 
     let b3:bool := my_or(false, true);
-    printbln b3;
+    root::std::io::writeboolln(b3);
     
     return;
 }

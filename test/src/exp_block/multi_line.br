@@ -10,7 +10,7 @@ fn my_main() {
         let b: bool := true;
         b && my_bool()
     };
-    printbln b;
+    root::std::io::writeboolln(b);
     return;
 }
 

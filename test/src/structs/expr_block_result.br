@@ -8,7 +8,7 @@ fn my_main() {
     };
     root::std::io::writei64ln(t.x);
     root::std::io::writei64ln(t.y);
-    printbln t.z;
+    root::std::io::writeboolln(t.z);
     
     return;
 }

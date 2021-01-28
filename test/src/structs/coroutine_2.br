@@ -7,17 +7,17 @@ fn my_main( p: bool) {
     let w : MyStruct := yield (c);
     root::std::io::writei64ln(w.x);
     root::std::io::writei64ln(w.y);
-    printbln w.z;
+    root::std::io::writeboolln(w.z);
     
     let w2 : MyStruct := yield c;
     root::std::io::writei64ln(w2.x);
     root::std::io::writei64ln(w2.y);
-    printbln w2.z;
+    root::std::io::writeboolln(w2.z);
     
     let w3 : MyStruct := yield c;
     root::std::io::writei64ln(w3.x);
     root::std::io::writei64ln(w3.y);
-    printbln w3.z;
+    root::std::io::writeboolln(w3.z);
     
     return;
 }
@@ -25,7 +25,7 @@ fn my_main( p: bool) {
 co my_co (x: MyStruct, y: MyStruct) -> MyStruct {
     root::std::io::writei64ln(x.x);
     yret x;
-    printbln y.z;
+    root::std::io::writeboolln(y.z);
     return y;
 }
 

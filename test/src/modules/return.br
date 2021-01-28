@@ -6,7 +6,7 @@ fn my_main() {
     root::std::io::writei64ln(y.a);
 
     let b:bool := my_mod::my_bool();
-    printbln b;
+    root::std::io::writeboolln(b);
 
     let c: co my_mod::MyStruct := init root::my_mod::count(x);
     root::std::io::writei64ln((yield c).a);

@@ -35,7 +35,7 @@ fn my_main() {
     root::std::io::writei64ln(t3.ms2.ms.y);
     root::std::io::writei64ln(t3.ms2.ms.z);
     root::std::io::writei64ln(t3.ms2.b);
-    printbln t3.k;
+    root::std::io::writeboolln(t3.k);
 
     let t4: MyStruct4 := MyStruct4 {
         a: t3,

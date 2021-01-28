@@ -2,7 +2,7 @@ fn my_main() {
     let t: MyStruct := MyStruct{x: 5, y: 1, z: true};
     root::std::io::writei64ln(t.x);
     root::std::io::writei64ln(t.y);
-    printbln t.z;
+    root::std::io::writeboolln(t.z);
     let y: i64 := test();
     root::std::io::writei64ln(y);
     return;
