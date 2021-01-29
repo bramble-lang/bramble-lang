@@ -56,13 +56,12 @@ pub fn resolve_types_with_imports(
 
     semantic.set_tracing(trace);
     semantic.path_tracing = trace_path;
-    semantic
-        .resolve_types()
+    semantic.resolve_types()
 }
 
 pub struct TypeResolver<'a> {
     root: &'a Module<SemanticAnnotations>,
-    stack: SymbolTableScopeStack,                   // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
+    stack: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
@@ -85,7 +84,12 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    pub fn import_function(&mut self, canonical_name: Path, params: Vec<Type>, return_ty: Type) -> Option<Symbol> {
+    pub fn import_function(
+        &mut self,
+        canonical_name: Path,
+        params: Vec<Type>,
+        return_ty: Type,
+    ) -> Option<Symbol> {
         match canonical_name.item() {
             Some(item) => self.imported_symbols.insert(
                 canonical_name.to_string(),
@@ -503,8 +507,8 @@ impl<'a> TypeResolver<'a> {
                 let src = self.traverse(&src, current_func, sym)?;
                 match src.get_type() {
                     Custom(struct_name) => {
-                        let (struct_def, canonical_path) = self
-                            .lookup_symbol_by_path(sym, &struct_name)?;
+                        let (struct_def, canonical_path) =
+                            self.lookup_symbol_by_path(sym, &struct_name)?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
@@ -590,8 +594,7 @@ impl<'a> TypeResolver<'a> {
                 }
 
                 // Check that the function being called exists
-                let (symbol, routine_canon_path) =
-                    self.lookup_symbol_by_path(sym, routine_path)?;
+                let (symbol, routine_canon_path) = self.lookup_symbol_by_path(sym, routine_path)?;
 
                 let (expected_param_tys, ret_ty) =
                     Self::extract_routine_type_info(symbol, call, &routine_path)?;
@@ -658,8 +661,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
-                let (struct_def, canonical_path) =
-                    self.lookup_symbol_by_path(sym, &struct_name)?;
+                let (struct_def, canonical_path) = self.lookup_symbol_by_path(sym, &struct_name)?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
@@ -933,7 +935,9 @@ impl<'a> TypeResolver<'a> {
     fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
         let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
         match symbol.ty {
-            FunctionDef(..) | CoroutineDef(..) | StructDef{..} | Unknown => return Err(format!("{} is not a variable", id)),
+            FunctionDef(..) | CoroutineDef(..) | StructDef { .. } | Unknown => {
+                return Err(format!("{} is not a variable", id))
+            }
             Custom(..) | Coroutine(_) | I64 | Bool | StringLiteral | Unit => Ok(symbol),
         }
     }

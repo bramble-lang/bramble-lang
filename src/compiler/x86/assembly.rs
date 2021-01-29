@@ -333,11 +333,7 @@ impl Display for Inst {
                     _ => format!("{}", b),
                 }
             )),
-            Movzx(a, b) => f.write_fmt(format_args!(
-                "movzx {}, {}",
-                a,
-                format!("{}", b),
-            )),
+            Movzx(a, b) => f.write_fmt(format_args!("movzx {}, {}", a, format!("{}", b),)),
 
             Cdq => f.write_str("cdq"),
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),

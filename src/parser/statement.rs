@@ -41,8 +41,8 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
         None => match mutate(stream)? {
             Some(mutate) => Some(Statement::Mutate(Box::new(mutate))),
             None => expression(stream)?
-                    .map(|s| Statement::from_ast(s))
-                    .flatten(),
+                .map(|s| Statement::from_ast(s))
+                .flatten(),
         },
     };
 

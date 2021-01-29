@@ -13,9 +13,7 @@ use crate::{
 };
 use crate::{
     semantics::symbol_table::*,
-    syntax::statement::{
-        Bind, Mutate, Return, Yield, YieldReturn,
-    },
+    syntax::statement::{Bind, Mutate, Return, Yield, YieldReturn},
 };
 use braid_lang::result::Result;
 
@@ -230,7 +228,10 @@ impl SemanticAst {
     fn from_expression(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
         use Expression::*;
         let node = match ast {
-            Integer64(ln, val) => Ok(Box::new(Integer64(self.semantic_annotations_from(*ln), *val))),
+            Integer64(ln, val) => Ok(Box::new(Integer64(
+                self.semantic_annotations_from(*ln),
+                *val,
+            ))),
             Boolean(ln, val) => Ok(Box::new(Boolean(self.semantic_annotations_from(*ln), *val))),
             StringLiteral(ln, val) => Ok(Box::new(StringLiteral(
                 self.semantic_annotations_from(*ln),

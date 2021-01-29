@@ -6,9 +6,7 @@ use module::Module;
 use crate::syntax::{
     module::{self, Item},
     routinedef::RoutineDef,
-    statement::{
-        Bind, Mutate, Return, Statement, Yield, YieldReturn,
-    },
+    statement::{Bind, Mutate, Return, Statement, Yield, YieldReturn},
 };
 
 use super::scope::SymbolOffsetTable;

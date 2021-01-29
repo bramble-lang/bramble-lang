@@ -7,9 +7,7 @@ use crate::{
     syntax::{
         module::{self, Item, Module},
         routinedef::{RoutineDef, RoutineDefType},
-        statement::{
-            Bind, Mutate, Return, Statement, YieldReturn,
-        },
+        statement::{Bind, Mutate, Return, Statement, YieldReturn},
         structdef::StructDef,
     },
 };

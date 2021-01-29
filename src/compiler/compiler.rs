@@ -24,9 +24,7 @@ use crate::{
 };
 use crate::{
     binary_op,
-    syntax::statement::{
-        Bind, Mutate, Return, Yield, YieldReturn,
-    },
+    syntax::statement::{Bind, Mutate, Return, Yield, YieldReturn},
 };
 use crate::{expression::Expression, semantics::semanticnode::SemanticAnnotations};
 use crate::{expression::RoutineCall, syntax::statement::Statement};
