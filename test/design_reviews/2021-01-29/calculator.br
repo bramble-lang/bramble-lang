@@ -1,0 +1,79 @@
+fn my_main() {
+    let choice: i64 := get_user_action();
+    if (choice == 0) {
+        root::std::io::write("Goodbye!\n");
+    } else if (choice == 1) {
+        let result: i64 := add();
+        root::std::io::write("Sum = ");
+        root::std::io::writei64ln(result);
+    } else if (choice == 2) {
+        let result: i64 := subtract();
+        root::std::io::write("Sub = ");
+        root::std::io::writei64ln(result);
+    } else if (choice == 3) {
+        let result: i64 := multiply();
+        root::std::io::write("Mul = ");
+        root::std::io::writei64ln(result);
+    } else if (choice == 4) {
+        let result: i64 := divide();
+        root::std::io::write("Div = ");
+        root::std::io::writei64ln(result);
+    } else {
+
+    };
+
+    return;
+}
+
+fn get_user_action() -> i64 {
+    print_menu();
+    root::std::io::write(">: ");
+    let choice:i64 := root::std::io::readi64();
+
+    return if (choice < 0 || choice > 4) {
+        root::std::io::write("Invalid choice.  Must be between 0 and 4.\n");
+        get_user_action()
+    } else {
+        choice
+    };
+}
+
+fn print_menu() {
+    root::std::io::write("1. Add\n");
+    root::std::io::write("2. Subtract\n");
+    root::std::io::write("3. Multiply\n");
+    root::std::io::write("4. Divide\n");
+    root::std::io::write("0. Quit\n");
+
+    return;
+}
+
+fn add() -> i64 {
+    return get_number() + get_number();
+}
+
+fn subtract() -> i64 {
+    return get_number() - get_number();
+}
+
+fn multiply() -> i64 {
+    return get_number() * get_number();
+}
+
+fn divide() -> i64 {
+    return get_number() / get_number();
+}
+
+fn get_number() -> i64 {
+    root::std::io::write("Integer: ");
+    return root::std::io::readi64();
+}
+
+/*
+thoughts:
+1. having to write an `else` clause for an if statement that will resolve to unit
+2. Having to put ; after an if expression when it's not being used in a binding
+3. Really missing the ADTs for capturing the domain of menu options, using numbers is
+such a contextless approach
+
+*/

@@ -1,0 +1,37 @@
+fn my_main() {
+    tower(3, 1, 3, 2);
+    return;
+}
+
+fn tower(n: i64, from: i64, to: i64, aux: i64) {
+    if (n==1) {
+        print_move(from, to);
+    } else {
+        tower(n-1, from, aux, to);
+        print_move(from, to);
+        tower(n-1, aux, to, from);
+    };
+
+    return;
+}
+
+fn print_move(from: i64, to: i64) {
+    root::std::io::writei64(from);
+    root::std::io::write(" -> ");
+    root::std::io::writei64ln(to);
+
+    return;
+}
+
+/*
+thoughts in writing this:
+
+1. The return statement is a pain and I need to address that
+2. Writing the full path to access anything is a pain and will need
+to be improved, but not nearly as problematic as the return statement
+stuff.
+3. Very very happy that this worked and over all, I am happy with
+how writing this feels
+4. Will need to build more powerful IO functions but I want to implement
+a good string primitive before then, so all IO can be built off of that.
+*/
