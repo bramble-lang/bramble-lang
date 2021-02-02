@@ -552,20 +552,28 @@ impl<'a> TypeResolver<'a> {
                 let cond = self.traverse(&cond, current_func, sym)?;
                 if cond.get_type() == Bool {
                     let true_arm = self.traverse(&true_arm, current_func, sym)?;
-                    let false_arm = self.traverse(&false_arm, current_func, sym)?;
-                    if true_arm.get_type() == false_arm.get_type() {
+                    let (false_arm, false_arm_ty) = match false_arm {
+                        Some(f) => {
+                            let fa = self.traverse(&f, current_func, sym)?;
+                            let ty = fa.get_type().clone();
+                            (Some(box fa), ty)
+                        }
+                        None => (None, Type::Unit),
+                    };
+
+                    if true_arm.get_type() == false_arm_ty {
                         meta.ty = true_arm.get_type().clone();
                         Ok(Expression::If {
                             annotation: meta.clone(),
                             cond: Box::new(cond),
                             arm: Box::new(true_arm),
-                            else_arm: Box::new(false_arm),
+                            else_arm: false_arm,
                         })
                     } else {
                         Err(format!(
                             "If expression has mismatching arms: expected {} got {}",
                             true_arm.get_type(),
-                            false_arm.get_type()
+                            false_arm_ty
                         ))
                     }
                 } else {

@@ -275,12 +275,20 @@ impl SemanticAst {
                 cond,
                 arm,
                 else_arm,
-            } => Ok(Box::new(If {
-                annotation: self.semantic_annotations_from(*ln),
-                cond: self.from_expression(cond)?,
-                arm: self.from_expression(arm)?,
-                else_arm: self.from_expression(else_arm)?,
-            })),
+            } => {
+                let cond = self.from_expression(cond)?;
+                let arm = self.from_expression(arm)?;
+                let else_arm = match else_arm {
+                    Some(e) => Some(self.from_expression(e)?),
+                    None => None,
+                };
+                Ok(Box::new(If {
+                    annotation: self.semantic_annotations_from(*ln),
+                    cond,
+                    arm,
+                    else_arm: else_arm,
+                }))
+            }
             Yield(l, box exp) => Ok(Box::new(Yield(
                 self.semantic_annotations_from(*l),
                 self.from_expression(exp)?,

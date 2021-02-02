@@ -1198,7 +1198,7 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+            if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
                 assert_eq!(*final_exp, Expression::Integer64(1, 7));
             } else {
                 panic!("Expected Expression block");
@@ -1233,12 +1233,12 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Expression::If {
+            if let Some(box Expression::If {
                 cond,
                 arm: if_arm,
                 else_arm,
                 ..
-            } = *else_arm
+            }) = else_arm
             {
                 assert_eq!(
                     *cond,
@@ -1255,7 +1255,8 @@ pub mod tests {
                     panic!("Expected Expression block");
                 }
 
-                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+                if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm
+                {
                     assert_eq!(*final_exp, Expression::Integer64(1, 8));
                 } else {
                     panic!("Expected Expression block");
