@@ -12,12 +12,12 @@ pub enum Expression<I> {
     IdentifierDeclare(I, String, Type),
     RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
     StructExpression(I, Path, Vec<(String, Expression<I>)>),
-    If(
-        I,
-        Box<Expression<I>>,
-        Box<Expression<I>>,
-        Box<Expression<I>>,
-    ),
+    If {
+        annotation: I,
+        cond: Box<Expression<I>>,
+        arm: Box<Expression<I>>,
+        else_arm: Box<Expression<I>>,
+    },
     ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Expression<I>>>),
 
     BinaryOp(I, BinaryOperator, Box<Expression<I>>, Box<Expression<I>>),
@@ -42,7 +42,7 @@ impl<I> Expression<I> {
             UnaryOp(_, op, _) => format!("{}", op),
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
             RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
-            If(_, _, _, _) => "if".into(),
+            If { .. } => "if".into(),
             ExpressionBlock(..) => "expression block".into(),
             Yield(_, _) => "yield".into(),
         }
@@ -61,7 +61,7 @@ impl<I> Expression<I> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | If(m, ..)
+            | If { annotation: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
@@ -82,7 +82,7 @@ impl<I> Expression<I> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | If(m, ..)
+            | If { annotation: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,

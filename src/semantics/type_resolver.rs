@@ -542,7 +542,12 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = ty;
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
-            Expression::If(meta, cond, true_arm, false_arm) => {
+            Expression::If {
+                annotation: meta,
+                cond,
+                arm: true_arm,
+                else_arm: false_arm,
+            } => {
                 let mut meta = meta.clone();
                 let cond = self.traverse(&cond, current_func, sym)?;
                 if cond.get_type() == Bool {
@@ -550,12 +555,12 @@ impl<'a> TypeResolver<'a> {
                     let false_arm = self.traverse(&false_arm, current_func, sym)?;
                     if true_arm.get_type() == false_arm.get_type() {
                         meta.ty = true_arm.get_type().clone();
-                        Ok(Expression::If(
-                            meta.clone(),
-                            Box::new(cond),
-                            Box::new(true_arm),
-                            Box::new(false_arm),
-                        ))
+                        Ok(Expression::If {
+                            annotation: meta.clone(),
+                            cond: Box::new(cond),
+                            arm: Box::new(true_arm),
+                            else_arm: Box::new(false_arm),
+                        })
                     } else {
                         Err(format!(
                             "If expression has mismatching arms: expected {} got {}",

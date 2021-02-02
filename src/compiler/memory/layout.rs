@@ -274,7 +274,7 @@ mod compute {
             MemberAccess(..) => layout_for_member_access(ast, layout, struct_table),
             UnaryOp(..) => layout_for_unary_op(ast, layout, struct_table),
             BinaryOp(..) => layout_for_binary_op(ast, layout, struct_table),
-            If(..) => layout_for_if(ast, layout, struct_table),
+            If { .. } => layout_for_if(ast, layout, struct_table),
             Yield(..) => layout_for_yield(ast, layout, struct_table),
             RoutineCall(..) => layout_for_routine_call(ast, layout, struct_table),
             StructExpression(..) => layout_for_struct_expression(ast, layout, struct_table),
@@ -367,13 +367,24 @@ mod compute {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Expression<SymbolOffsetTable>, LayoutData) {
-        if let SemanticNode::If(m, cond, tb, fb) = if_exp {
-            let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+        if let SemanticNode::If {
+            annotation: m,
+            cond,
+            arm: tb,
+            else_arm: fb,
+        } = if_exp
+        {
+            let (annotation, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
             let (cond, layout) = compute::layout_for_expression(cond, layout, struct_table);
             let (tb, layout) = compute::layout_for_expression(tb, layout, struct_table);
             let (fb, layout) = compute::layout_for_expression(fb, layout, struct_table);
             (
-                Expression::If(annotations, Box::new(cond), Box::new(tb), Box::new(fb)),
+                Expression::If {
+                    annotation,
+                    cond: Box::new(cond),
+                    arm: Box::new(tb),
+                    else_arm: Box::new(fb),
+                },
                 layout,
             )
         } else {

@@ -318,12 +318,12 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
                     false_arm
                 }
             };
-            Some(Expression::If(
-                token.l,
-                Box::new(cond),
-                Box::new(true_arm),
-                Box::new(false_arm),
-            ))
+            Some(Expression::If {
+                annotation: token.l,
+                cond: Box::new(cond),
+                arm: Box::new(true_arm),
+                else_arm: Box::new(false_arm),
+            })
         }
         _ => None,
     })
