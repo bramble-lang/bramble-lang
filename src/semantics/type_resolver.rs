@@ -2605,6 +2605,22 @@ mod tests {
                 ",
                 Err("Semantic: L2: Bind expected i64 but got string"),
             ),
+            (
+                "fn main() {
+                    if (false) {1};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: If expression has mismatching arms: expected i64 got unit"),
+            ),
+            (
+                "fn main() {
+                    if (false) {};
+                    return;
+                }
+                ",
+                Ok(Unit),
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -2619,14 +2635,16 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I64);
+                    assert_eq!(bind_stm.get_type(), expected_ty);
 
                     // Check the return value
-                    if let Statement::Bind(box b) = bind_stm {
-                        let rhs_ty = b.get_rhs().get_type();
-                        assert_eq!(rhs_ty, expected_ty);
-                    } else {
-                        panic!("Expected a return statement")
+                    if expected_ty != Unit {
+                        if let Statement::Bind(box b) = bind_stm {
+                            let rhs_ty = b.get_rhs().get_type();
+                            assert_eq!(rhs_ty, expected_ty);
+                        } else {
+                            panic!("Expected a return statement")
+                        }
                     }
                 }
                 Err(msg) => {
