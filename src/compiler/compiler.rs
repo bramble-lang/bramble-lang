@@ -523,7 +523,9 @@ impl<'a> Compiler<'a> {
                 let mut true_code = vec![];
                 self.traverse_expression(true_arm, current_func, &mut true_code)?;
                 let mut false_code = vec![];
-                self.traverse_expression(false_arm, current_func, &mut false_code)?;
+                if let Some(false_arm) = false_arm {
+                    self.traverse_expression(false_arm, current_func, &mut false_code)?;
+                }
 
                 assembly2! {(code, meta) {
                     {{cond_code}}

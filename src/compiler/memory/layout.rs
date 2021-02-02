@@ -377,13 +377,19 @@ mod compute {
             let (annotation, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
             let (cond, layout) = compute::layout_for_expression(cond, layout, struct_table);
             let (tb, layout) = compute::layout_for_expression(tb, layout, struct_table);
-            let (fb, layout) = compute::layout_for_expression(fb, layout, struct_table);
+            let (fb, layout) = match fb {
+                Some(fb) => {
+                    let (fb, layout) = compute::layout_for_expression(&fb, layout, struct_table);
+                    (Some(box fb), layout)
+                }
+                None => (None, layout),
+            };
             (
                 Expression::If {
                     annotation,
                     cond: Box::new(cond),
                     arm: Box::new(tb),
-                    else_arm: Box::new(fb),
+                    else_arm: fb,
                 },
                 layout,
             )
