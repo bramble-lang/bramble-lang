@@ -512,7 +512,12 @@ impl<'a> Compiler<'a> {
                     {{self.handle_binary_operands(*op, l.as_ref(), r.as_ref(), current_func)?}}
                 }}
             }
-            Expression::If(meta, ref cond, ref true_arm, ref false_arm) => {
+            Expression::If {
+                annotation: meta,
+                cond,
+                arm: true_arm,
+                else_arm: false_arm,
+            } => {
                 let mut cond_code = vec![];
                 self.traverse_expression(cond, current_func, &mut cond_code)?;
                 let mut true_code = vec![];
