@@ -264,9 +264,7 @@ impl<'a> TypeResolver<'a> {
             YieldReturn(box x) => {
                 YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
             }
-            Expression(box e) => {
-                Expression(Box::new(self.analyze_expression(e, current_func, sym)?))
-            }
+            Expression(box e) => Expression(Box::new(self.traverse(e, current_func, sym)?)),
         };
 
         Ok(inner)
