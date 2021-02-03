@@ -301,7 +301,6 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
                 "L{}: Expression in true arm of if expression",
                 token.l
             ))?;
-            //stream.next_must_be(&Lex::Else)?;
 
             // check for `else if`
             let else_arm = match stream.next_if(&Lex::Else) {
