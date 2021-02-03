@@ -550,14 +550,16 @@ impl<'a> TypeResolver<'a> {
                 let cond = self.traverse(&cond, current_func, sym)?;
                 if cond.get_type() == Bool {
                     let if_arm = self.traverse(&if_arm, current_func, sym)?;
-                    let (else_arm, else_arm_ty) = match else_arm {
-                        Some(ea) => {
-                            let ea = self.traverse(&ea, current_func, sym)?;
-                            let ty = ea.get_type().clone();
-                            (Some(box ea), ty)
-                        }
-                        None => (None, Type::Unit),
-                    };
+
+                    let else_arm = else_arm
+                        .as_ref()
+                        .map(|e| self.traverse(&e, current_func, sym))
+                        .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
+
+                    let else_arm_ty = else_arm
+                        .as_ref()
+                        .map(|e| e.get_type().clone())
+                        .unwrap_or(Type::Unit);
 
                     if if_arm.get_type() == else_arm_ty {
                         meta.ty = if_arm.get_type().clone();
@@ -565,7 +567,7 @@ impl<'a> TypeResolver<'a> {
                             annotation: meta.clone(),
                             cond: box cond,
                             if_arm: box if_arm,
-                            else_arm,
+                            else_arm: else_arm,
                         })
                     } else {
                         Err(format!(
