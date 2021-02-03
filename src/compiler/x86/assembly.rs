@@ -432,11 +432,15 @@ impl Display for Inst {
 
 fn format_move_operands(a: &Operand, b: &Operand) -> (String, String) {
     match (a, b) {
+        (Operand::Direct(a), b) => (format!("{}", a), format!("{}", b)),
         (a, Operand::Direct(DirectOperand::Integer32(i))) => {
-            (format!("{}", a), format!("DWORD {}", i))
+            (format!("DWORD {}", a), format!("{}", i))
         }
         (a, Operand::Direct(DirectOperand::Integer64(i))) => {
-            (format!("{}", a), format!("QWORD {}", i))
+            (format!("QWORD {}", a), format!("{}", i))
+        }
+        (a, Operand::Direct(DirectOperand::UInteger64(i))) => {
+            (format!("QWORD {}", a), format!("{}", i))
         }
         (a, b) => (format!("{}", a), format!("{}", b)),
     }

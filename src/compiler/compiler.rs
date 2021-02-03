@@ -233,9 +233,9 @@ impl<'a> Compiler<'a> {
                     ; {format!("[{}]: The caller return address (for yield return)", COROUTINE_CALLER_RIP_STORE)}
                     ; {format!("[{}]: The coroutine RSP", COROUTINE_RSP_STORE)}
                     mov [%rsp+{COROUTINE_RIP_STORE}], %rax;
-                    mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0;
-                    mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0;
-                    mov [%rsp+{COROUTINE_CALLER_RIP_STORE}], 0;
+                    mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0u64;
+                    mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0u64;
+                    mov [%rsp+{COROUTINE_CALLER_RIP_STORE}], 0u64;
                     mov %rax, %rsp;
                     sub %rax, %rdi;
                     mov [%rsp+{COROUTINE_RSP_STORE}], %rax;
@@ -966,12 +966,22 @@ impl<'a> Compiler<'a> {
                 }
             }
             _ => {
+                let reg = Self::register_by_type(value.get_annotations().ty());
+
                 assembly! {(code) {
-                    mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
+                    mov [%{Reg::R64(dst)}-{dst_offset}], %{reg};
                 }};
             }
         }
         Ok(code)
+    }
+
+    fn register_by_type(ty: &Type) -> Reg {
+        match ty {
+            Type::I32 => Reg::R32(Reg32::Eax),
+            Type::I64 => Reg::R64(Reg64::Rax),
+            _ => Reg::R64(Reg64::Rax),
+        }
     }
 
     fn yield_exp(
