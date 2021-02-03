@@ -79,12 +79,12 @@ impl StringPool {
             }
             If {
                 cond,
-                arm,
+                if_arm,
                 else_arm,
                 ..
             } => {
                 self.extract_from(cond);
-                self.extract_from(arm);
+                self.extract_from(if_arm);
                 else_arm.as_ref().map(|ea| self.extract_from(&ea));
             }
             Yield(_, e) => {

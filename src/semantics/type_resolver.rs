@@ -543,35 +543,35 @@ impl<'a> TypeResolver<'a> {
             Expression::If {
                 annotation: meta,
                 cond,
-                arm: true_arm,
-                else_arm: false_arm,
+                if_arm,
+                else_arm,
             } => {
                 let mut meta = meta.clone();
                 let cond = self.traverse(&cond, current_func, sym)?;
                 if cond.get_type() == Bool {
-                    let true_arm = self.traverse(&true_arm, current_func, sym)?;
-                    let (false_arm, false_arm_ty) = match false_arm {
-                        Some(f) => {
-                            let fa = self.traverse(&f, current_func, sym)?;
-                            let ty = fa.get_type().clone();
-                            (Some(box fa), ty)
+                    let if_arm = self.traverse(&if_arm, current_func, sym)?;
+                    let (else_arm, else_arm_ty) = match else_arm {
+                        Some(ea) => {
+                            let ea = self.traverse(&ea, current_func, sym)?;
+                            let ty = ea.get_type().clone();
+                            (Some(box ea), ty)
                         }
                         None => (None, Type::Unit),
                     };
 
-                    if true_arm.get_type() == false_arm_ty {
-                        meta.ty = true_arm.get_type().clone();
+                    if if_arm.get_type() == else_arm_ty {
+                        meta.ty = if_arm.get_type().clone();
                         Ok(Expression::If {
                             annotation: meta.clone(),
-                            cond: Box::new(cond),
-                            arm: Box::new(true_arm),
-                            else_arm: false_arm,
+                            cond: box cond,
+                            if_arm: box if_arm,
+                            else_arm,
                         })
                     } else {
                         Err(format!(
                             "If expression has mismatching arms: expected {} got {}",
-                            true_arm.get_type(),
-                            false_arm_ty
+                            if_arm.get_type(),
+                            else_arm_ty
                         ))
                     }
                 } else {

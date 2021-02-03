@@ -273,11 +273,11 @@ impl SemanticAst {
             If {
                 annotation: ln,
                 cond,
-                arm,
+                if_arm,
                 else_arm,
             } => {
                 let cond = self.from_expression(cond)?;
-                let arm = self.from_expression(arm)?;
+                let if_arm = self.from_expression(if_arm)?;
                 let else_arm = match else_arm {
                     Some(e) => Some(self.from_expression(e)?),
                     None => None,
@@ -285,7 +285,7 @@ impl SemanticAst {
                 Ok(Box::new(If {
                     annotation: self.semantic_annotations_from(*ln),
                     cond,
-                    arm,
+                    if_arm,
                     else_arm: else_arm,
                 }))
             }

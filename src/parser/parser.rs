@@ -1186,7 +1186,7 @@ pub mod tests {
         if let Some(Expression::If {
             annotation: l,
             cond,
-            arm: if_arm,
+            if_arm,
             else_arm,
         }) = exp
         {
@@ -1221,7 +1221,7 @@ pub mod tests {
         if let Some(Expression::If {
             annotation: l,
             cond,
-            arm: if_arm,
+            if_arm,
             else_arm,
         }) = exp
         {
@@ -1235,7 +1235,7 @@ pub mod tests {
 
             if let Some(box Expression::If {
                 cond,
-                arm: if_arm,
+                if_arm,
                 else_arm,
                 ..
             }) = else_arm
