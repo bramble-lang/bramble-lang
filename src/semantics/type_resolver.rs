@@ -1907,7 +1907,7 @@ mod tests {
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I64);
+                    assert_eq!(bind_stm.get_type(), expected_ty);
                     if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
