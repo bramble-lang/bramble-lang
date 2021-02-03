@@ -515,26 +515,26 @@ impl<'a> Compiler<'a> {
             Expression::If {
                 annotation: meta,
                 cond,
-                arm: true_arm,
-                else_arm: false_arm,
+                if_arm,
+                else_arm,
             } => {
                 let mut cond_code = vec![];
                 self.traverse_expression(cond, current_func, &mut cond_code)?;
-                let mut true_code = vec![];
-                self.traverse_expression(true_arm, current_func, &mut true_code)?;
-                let mut false_code = vec![];
-                if let Some(false_arm) = false_arm {
-                    self.traverse_expression(false_arm, current_func, &mut false_code)?;
+                let mut if_code = vec![];
+                self.traverse_expression(if_arm, current_func, &mut if_code)?;
+                let mut else_code = vec![];
+                if let Some(else_arm) = else_arm {
+                    self.traverse_expression(else_arm, current_func, &mut else_code)?;
                 }
 
                 assembly2! {(code, meta) {
                     {{cond_code}}
                     cmp %rax, 0;
                     jz ^else_lbl;
-                    {{true_code}}
+                    {{if_code}}
                     jmp ^end_lbl;
                 ^else_lbl:
-                    {{false_code}}
+                    {{else_code}}
                 ^end_lbl:
                 }};
             }

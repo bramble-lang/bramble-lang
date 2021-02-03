@@ -370,26 +370,27 @@ mod compute {
         if let SemanticNode::If {
             annotation: m,
             cond,
-            arm: tb,
-            else_arm: fb,
+            if_arm,
+            else_arm,
         } = if_exp
         {
             let (annotation, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
             let (cond, layout) = compute::layout_for_expression(cond, layout, struct_table);
-            let (tb, layout) = compute::layout_for_expression(tb, layout, struct_table);
-            let (fb, layout) = match fb {
+            let (if_arm, layout) = compute::layout_for_expression(if_arm, layout, struct_table);
+            let (else_arm, layout) = match else_arm {
                 Some(fb) => {
-                    let (fb, layout) = compute::layout_for_expression(&fb, layout, struct_table);
-                    (Some(box fb), layout)
+                    let (else_arm, layout) =
+                        compute::layout_for_expression(&fb, layout, struct_table);
+                    (Some(box else_arm), layout)
                 }
                 None => (None, layout),
             };
             (
                 Expression::If {
                     annotation,
-                    cond: Box::new(cond),
-                    arm: Box::new(tb),
-                    else_arm: fb,
+                    cond: box cond,
+                    if_arm: box if_arm,
+                    else_arm,
                 },
                 layout,
             )

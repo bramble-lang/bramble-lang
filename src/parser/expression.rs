@@ -297,14 +297,14 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
-            let true_arm = expression_block(stream)?.ok_or(format!(
+            let if_arm = expression_block(stream)?.ok_or(format!(
                 "L{}: Expression in true arm of if expression",
                 token.l
             ))?;
             //stream.next_must_be(&Lex::Else)?;
 
             // check for `else if`
-            let false_arm = match stream.next_if(&Lex::Else) {
+            let else_arm = match stream.next_if(&Lex::Else) {
                 Some(_) => match stream.peek() {
                     Some(Token { l, s: Lex::If }) => {
                         let l = *l;
@@ -327,8 +327,8 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
             Some(Expression::If {
                 annotation: token.l,
                 cond: Box::new(cond),
-                arm: Box::new(true_arm),
-                else_arm: false_arm.map(|f| box f),
+                if_arm: Box::new(if_arm),
+                else_arm: else_arm.map(|f| box f),
             })
         }
         _ => None,

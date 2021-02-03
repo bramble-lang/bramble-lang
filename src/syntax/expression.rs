@@ -15,7 +15,7 @@ pub enum Expression<I> {
     If {
         annotation: I,
         cond: Box<Expression<I>>,
-        arm: Box<Expression<I>>,
+        if_arm: Box<Expression<I>>,
         else_arm: Option<Box<Expression<I>>>,
     },
     ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Expression<I>>>),
