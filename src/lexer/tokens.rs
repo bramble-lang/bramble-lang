@@ -19,6 +19,7 @@ impl std::fmt::Display for Primitive {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lex {
+    Integer32(i32),
     Integer64(i64),
     Bool(bool),
     Identifier(String),
@@ -75,7 +76,8 @@ impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
         match self {
-            Integer64(i) => f.write_str(&format!("literal {}", i)),
+            Integer32(i) => f.write_str(&format!("i32 literal {}", i)),
+            Integer64(i) => f.write_str(&format!("i64 literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
@@ -139,6 +141,10 @@ impl Token {
 
     pub fn token_eq(&self, a: &Lex) -> bool {
         match self.s {
+            Lex::Integer32(_) => match a {
+                Lex::Integer32(_) => true,
+                _ => false,
+            },
             Lex::Integer64(_) => match a {
                 Lex::Integer64(_) => true,
                 _ => false,

@@ -227,6 +227,10 @@ impl SemanticAst {
     fn from_expression(&mut self, ast: &Expression<ParserInfo>) -> Result<Box<SemanticNode>> {
         use Expression::*;
         let node = match ast {
+            Integer32(ln, val) => Ok(Box::new(Integer32(
+                self.semantic_annotations_from(*ln),
+                *val,
+            ))),
             Integer64(ln, val) => Ok(Box::new(Integer64(
                 self.semantic_annotations_from(*ln),
                 *val,

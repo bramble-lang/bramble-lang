@@ -413,12 +413,17 @@ fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
 
 fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
-    match stream.next_if(&Lex::Integer64(0)) {
+    match stream.next_if_one_of(vec![Lex::Integer64(0), Lex::Integer32(0)]) {
         Some(Token {
             l,
             s: Lex::Integer64(i),
         }) => Ok(Some(Expression::Integer64(l, i))),
-        _ => Ok(None),
+        Some(Token {
+            l,
+            s: Lex::Integer32(i),
+        }) => Ok(Some(Expression::Integer32(l, i))),
+        Some(t) => panic!("Unexpected token: {:?}", t),
+        None => Ok(None),
     }
 }
 
@@ -449,6 +454,27 @@ mod test {
         syntax::{statement::Statement, ty::Type},
     };
     use braid_lang::result::Result;
+
+    #[test]
+    fn parse_number() {
+        for (text, expected) in vec![
+            ("5i32", Expression::Integer32(1, 5)),
+            ("64i64", Expression::Integer64(1, 64)),
+            ("64", Expression::Integer64(1, 64)),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            match number(&mut stream) {
+                Ok(Some(e)) => assert_eq!(e, expected),
+                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
+                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+            }
+        }
+    }
 
     #[test]
     fn parse_member_access() {
@@ -500,12 +526,12 @@ mod test {
     #[test]
     fn parse_expression_block_bad() {
         for (text, msg) in [
-            ("{5 10 51}", "L1: Expected }, but found literal 10"),
-            ("{5; 10 51}", "L1: Expected }, but found literal 51"),
+            ("{5 10 51}", "L1: Expected }, but found i64 literal 10"),
+            ("{5; 10 51}", "L1: Expected }, but found i64 literal 51"),
             ("{5; 10 let x:i64 := 5}", "L1: Expected }, but found let"),
             (
                 "{let x: i64 := 10 5}",
-                "L1: Expected ;, but found literal 5",
+                "L1: Expected ;, but found i64 literal 5",
             ),
         ]
         .iter()

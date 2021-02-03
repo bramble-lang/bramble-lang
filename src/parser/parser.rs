@@ -770,6 +770,7 @@ pub mod tests {
     fn parse_primitives() {
         for (text, expected_ty) in vec![
             ("let x:i32 := 5;", Type::I32),
+            ("let x:i32 := 5i32;", Type::I32),
             ("let x:i64 := 5;", Type::I64),
             ("let x: bool := true;", Type::Bool),
         ]
@@ -781,6 +782,7 @@ pub mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
+
             let stm = statement(&mut stream).unwrap().unwrap();
             match stm {
                 Statement::Bind(box b) => {

@@ -47,6 +47,20 @@ impl<'a> LexerBranch<'a> {
     }
 
     pub fn merge(&mut self) -> String {
+        let s = self.cut();
+
+        self.lexer.index = self.index;
+        self.lexer.line = self.line;
+
+        s
+    }
+
+    /// Cuts a string from the current branch from the last
+    /// branch or cut point up to where the cursor currently is.
+    /// Then advance the start point of the next token in this
+    /// branch.  This will NOT update the source.  That must be
+    /// done with `merge`.
+    pub fn cut(&mut self) -> String {
         let start = self.lexer.index;
         let stop = self.index;
         let mut s = String::new();
@@ -54,9 +68,6 @@ impl<'a> LexerBranch<'a> {
         for i in start..stop {
             s.push(self.lexer.chars[i]);
         }
-
-        self.lexer.index = self.index;
-        self.lexer.line = self.line;
 
         s
     }
@@ -280,25 +291,47 @@ impl Lexer {
             return Ok(None);
         }
 
+        // read until a non-digit is hit
         while let Some(c) = branch.peek() {
             if !c.is_numeric() {
-                if c.is_alphabetic() || c == '_' {
-                    return Err(format!(
-                        "L{}: Invalid integer, should not contain characters",
-                        self.line
-                    ));
-                } else {
-                    break;
-                }
+                break;
             }
             branch.next();
         }
 
-        let num = branch.merge();
-        Ok(Some(Token::new(
-            self.line,
-            Integer64(num.parse::<i64>().unwrap()),
-        )))
+        let int_token = branch.cut();
+
+        // Check if there is a postfix (i32, i64, etc) on the integer literal
+        let mut is_i32 = false;
+        if branch.next_ifn("i32") {
+            is_i32 = true;
+        } else if branch.next_ifn("i64") {
+            is_i32 = false;
+        }
+
+        if branch
+            .peek()
+            .map(|c| c.is_alphabetic() || c == '_')
+            .unwrap_or(false)
+        {
+            return Err(format!(
+                "L{}: Invalid integer, should not contain characters",
+                self.line
+            ));
+        }
+
+        branch.merge();
+        if !is_i32 {
+            Ok(Some(Token::new(
+                self.line,
+                Integer64(int_token.parse::<i64>().unwrap()),
+            )))
+        } else {
+            Ok(Some(Token::new(
+                self.line,
+                Integer32(int_token.parse::<i32>().unwrap()),
+            )))
+        }
     }
 
     pub fn consume_operator(&mut self) -> Result<Option<Token>> {
@@ -433,6 +466,26 @@ mod tests {
     #[test]
     fn test_integer() {
         let text = "5";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, Integer64(5)));
+    }
+
+    #[test]
+    fn test_integer32() {
+        let text = "5i32";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, Integer32(5)));
+    }
+
+    #[test]
+    fn test_integer64() {
+        let text = "5i64";
         let mut lexer = Lexer::new(text);
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);

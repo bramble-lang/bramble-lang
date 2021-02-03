@@ -455,6 +455,11 @@ impl<'a> TypeResolver<'a> {
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         match &ast {
+            &Expression::Integer32(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = I32;
+                Ok(Expression::Integer32(meta, *v))
+            }
             &Expression::Integer64(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = I64;
@@ -1853,7 +1858,7 @@ mod tests {
             ),
             (
                 "fn main() -> i32 {
-                    let k: i32 := 5;
+                    let k: i32 := 5i32;
                     return k;
                 }",
                 Ok(I32),
