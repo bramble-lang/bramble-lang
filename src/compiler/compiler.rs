@@ -420,6 +420,7 @@ impl<'a> Compiler<'a> {
                     cmp %rax, %rbx;
                     {{[set]}}
                     and %al, 1;
+                    movzx %rax, %al;
                 }}
             }
         };

@@ -1,0 +1,121 @@
+fn my_main() {
+    test(2);
+    test(5);
+    test(10);
+    test(15);
+    test(110);
+    test(255);
+    test(256);
+    test(65535);
+    test(65536);
+    test(12342143144316);
+    test(-12342143144316);
+
+    root::std::io::write("\n");
+
+    test2(2);
+    test2(5);
+    test2(10);
+    test2(15);
+    test2(110);
+    test2(255);
+    test2(256);
+    test2(65535);
+    test2(65536);
+    test2(12342143144316);
+    test2(-12342143144316);
+
+    root::std::io::write("\n");
+
+    test3(2);
+    test3(5);
+    test3(10);
+    test3(15);
+    test3(110);
+    test3(255);
+    test3(256);
+    test3(65535);
+    test3(65536);
+    test3(12342143144316);
+    test3(-12342143144316);
+
+    root::std::io::write("\n");
+
+    test4(2);
+    test4(5);
+    test4(10);
+    test4(15);
+    test4(110);
+    test4(255);
+    test4(256);
+    test4(65535);
+    test4(65536);
+    test4(12342143144316);
+    test4(-12342143144316);
+
+    root::std::io::write("\n");
+
+    test5(2);
+    test5(5);
+    test5(10);
+    test5(15);
+    test5(110);
+    test5(255);
+    test5(256);
+    test5(65535);
+    test5(65536);
+    test5(12342143144316);
+    test5(-12342143144316);
+
+    return;
+}
+
+fn test(a: i64) {
+    if (a < 10) {
+        root::std::io::writei64ln(a)
+    } else {
+        root::std::io::write("failed\n")
+    };
+
+    return;
+}
+
+fn test2(a: i64) {
+    if (a > 10) {
+        root::std::io::writei64ln(a)
+    } else {
+        root::std::io::write("failed\n")
+    };
+
+    return;
+}
+
+fn test3(a: i64) {
+    if (a <= 10) {
+        root::std::io::writei64ln(a)
+    } else {
+        root::std::io::write("failed\n")
+    };
+
+    return;
+}
+
+fn test4(a: i64) {
+    if (a >= 10) {
+        root::std::io::writei64ln(a)
+    } else {
+        root::std::io::write("failed\n")
+    };
+
+    return;
+}
+
+fn test5(a: i64) {
+    if (a == 10) {
+        root::std::io::writei64ln(a)
+    } else {
+        root::std::io::write("failed\n")
+    };
+
+    return;
+}
