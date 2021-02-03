@@ -1,0 +1,24 @@
+fn my_main() {
+    test(2);
+    test(5);
+    test(15);
+    test(110);
+    test(255);
+    test(256);
+    test(65535);
+    test(65536);
+    test(12342143144316);
+    test(-12342143144316);
+
+    return;
+}
+
+fn test(a: i64) {
+    if (a < 10) {
+        root::std::io::writei64ln(a)
+    } else {
+        root::std::io::write("failed\n")
+    };
+
+    return;
+}
