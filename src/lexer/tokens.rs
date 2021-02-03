@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
+    I32,
     I64,
     Bool,
     StringLiteral,
@@ -8,6 +9,7 @@ pub enum Primitive {
 impl std::fmt::Display for Primitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Primitive::I32 => f.write_str("i32"),
             Primitive::I64 => f.write_str("i64"),
             Primitive::Bool => f.write_str("bool"),
             Primitive::StringLiteral => f.write_str("string"),

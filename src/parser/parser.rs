@@ -430,6 +430,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
             s: Lex::Primitive(primitive),
         }) => {
             let ty = match *primitive {
+                Primitive::I32 => Some(Type::I32),
                 Primitive::I64 => Some(Type::I64),
                 Primitive::Bool => Some(Type::Bool),
                 Primitive::StringLiteral => Some(Type::StringLiteral),
@@ -764,6 +765,34 @@ pub mod tests {
             _ => panic!("Not a binding statement"),
         }
     }
+
+    #[test]
+    fn parse_primitives() {
+        for (text, expected_ty) in vec![
+            ("let x:i32 := 5;", Type::I32),
+            ("let x:i64 := 5;", Type::I64),
+            ("let x: bool := true;", Type::Bool),
+        ]
+        .iter()
+        {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            let stm = statement(&mut stream).unwrap().unwrap();
+            match stm {
+                Statement::Bind(box b) => {
+                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_type(), expected_ty);
+                    assert_eq!(b.is_mutable(), false);
+                }
+                _ => panic!("Not a binding statement"),
+            }
+        }
+    }
+
     #[test]
     fn parse_mutation() {
         let text = "mut x := 5;";

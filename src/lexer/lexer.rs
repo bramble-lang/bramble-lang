@@ -390,6 +390,7 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
+                "i32" => Token::new(self.line, Primitive(Primitive::I32)),
                 "i64" => Token::new(self.line, Primitive(Primitive::I64)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
                 "string" => Token::new(self.line, Primitive(Primitive::StringLiteral)),
@@ -557,6 +558,7 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
+            ("i32", Token::new(1, Primitive(Primitive::I32))),
             ("i64", Token::new(1, Primitive(Primitive::I64))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),
             ("string", Token::new(1, Primitive(Primitive::StringLiteral))),
