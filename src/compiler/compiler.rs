@@ -396,6 +396,9 @@ impl<'a> Compiler<'a> {
         self.push_scope(ast);
 
         match ast {
+            Expression::Integer32(_, i) => {
+                assembly! {(code) {mov %eax, {*i};}}
+            }
             Expression::Integer64(_, i) => {
                 assembly! {(code) {mov %rax, {*i};}}
             }
