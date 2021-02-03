@@ -395,9 +395,10 @@ impl<'a> Compiler<'a> {
 
         self.push_scope(ast);
 
+        let register = Self::register_by_type(ast.get_annotations().ty());
         match ast {
             Expression::Integer32(_, i) => {
-                assembly! {(code) {mov %eax, {*i};}}
+                assembly! {(code) {mov %{register}, {*i};}}
             }
             Expression::Integer64(_, i) => {
                 assembly! {(code) {mov %rax, {*i};}}
@@ -422,7 +423,7 @@ impl<'a> Compiler<'a> {
                         assembly! {(code) {lea %rax, [%rbp-{id_offset}];}}
                     }
                     _ => {
-                        assembly! {(code) {mov %rax, [%rbp-{id_offset}];}}
+                        assembly! {(code) {mov %{register}, [%rbp-{id_offset}];}}
                     }
                 }
             }
@@ -1206,9 +1207,13 @@ impl<'a> Compiler<'a> {
                         {{asm}}
                     }}
                 }
-                _ => {
+                ty => {
+                    let param_sz =
+                        self.struct_table
+                            .size_of(ty)
+                            .expect("Type found with no size") as usize;
                     assembly! {(code){
-                        mov [%rbp-{param_offset}], %{Reg::R64(param_registers[idx])};
+                        mov [%rbp-{param_offset}], %{param_registers[idx].scale(param_sz)};
                     }};
                 }
             }
