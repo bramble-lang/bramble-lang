@@ -1,0 +1,25 @@
+
+fn my_main() {
+    let ms: MyStruct := my_mod::g();
+    return;
+}
+
+struct MyStruct {
+    b: i64,
+}
+
+fn f() -> MyStruct {
+    return MyStruct{b: 6};
+}
+
+mod my_mod {
+    struct MyStruct {
+        a: i64,
+    }
+
+    fn g() -> MyStruct {
+        return MyStruct{
+            a: 5,
+        };
+    }
+}
