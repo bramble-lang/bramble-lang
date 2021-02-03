@@ -295,15 +295,15 @@ impl Display for Operand {
         use Operand::*;
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
-            Memory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
+            Memory(mem) => f.write_fmt(format_args!("[rel {}]", mem)),
             IPRelativeMemory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
             MemoryAddr(mem, d) => {
                 if *d < 0 {
-                    f.write_fmt(format_args!("QWORD [rel {}-{}]", mem, -d))
+                    f.write_fmt(format_args!("[rel {}-{}]", mem, -d))
                 } else if *d > 0 {
-                    f.write_fmt(format_args!("QWORD [rel {}+{}]", mem, d))
+                    f.write_fmt(format_args!("[rel {}+{}]", mem, d))
                 } else {
-                    f.write_fmt(format_args!("QWORD [rel {}]", mem))
+                    f.write_fmt(format_args!("[rel {}]", mem))
                 }
             }
         }
@@ -392,17 +392,14 @@ impl Display for Inst {
             Push(a) => f.write_fmt(format_args!("push {}", a)),
             Pop(a) => f.write_fmt(format_args!("pop {}", a)),
 
-            Mov(a, b) => f.write_fmt(format_args!(
-                "mov {}, {}",
-                a,
-                match b {
-                    Operand::Direct(DirectOperand::Integer64(_))
-                    | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("{}", b),
-                    _ => format!("{}", b),
-                }
-            )),
-            Movzx(a, b) => f.write_fmt(format_args!("movzx {}, {}", a, format!("{}", b),)),
+            Mov(a, b) => {
+                let (fa, fb) = format_move_operands(a, b);
+                f.write_fmt(format_args!("mov {}, {}", fa, fb))
+            }
+            Movzx(a, b) => {
+                let (fa, fb) = format_move_operands(a, b);
+                f.write_fmt(format_args!("movzx {}, {}", fa, fb))
+            }
 
             Cdq => f.write_str("cdq"),
             Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
@@ -430,6 +427,18 @@ impl Display for Inst {
             PrintDec(val) => f.write_fmt(format_args!("PRINT_DEC 4, {}", val)),
             NewLine => f.write_fmt(format_args!("NEWLINE")),
         }
+    }
+}
+
+fn format_move_operands(a: &Operand, b: &Operand) -> (String, String) {
+    match (a, b) {
+        (a, Operand::Direct(DirectOperand::Integer32(i))) => {
+            (format!("{}", a), format!("DWORD {}", i))
+        }
+        (a, Operand::Direct(DirectOperand::Integer64(i))) => {
+            (format!("{}", a), format!("QWORD {}", i))
+        }
+        (a, b) => (format!("{}", a), format!("{}", b)),
     }
 }
 
