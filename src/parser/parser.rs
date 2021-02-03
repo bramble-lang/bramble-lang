@@ -782,6 +782,7 @@ pub mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
+
             let stm = statement(&mut stream).unwrap().unwrap();
             match stm {
                 Statement::Bind(box b) => {

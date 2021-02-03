@@ -1858,7 +1858,7 @@ mod tests {
             ),
             (
                 "fn main() -> i32 {
-                    let k: i32 := 5;
+                    let k: i32 := 5i32;
                     return k;
                 }",
                 Ok(I32),
