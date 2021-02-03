@@ -951,7 +951,7 @@ impl<'a> TypeResolver<'a> {
             FunctionDef(..) | CoroutineDef(..) | StructDef { .. } | Unknown => {
                 return Err(format!("{} is not a variable", id))
             }
-            Custom(..) | Coroutine(_) | I64 | Bool | StringLiteral | Unit => Ok(symbol),
+            Custom(..) | Coroutine(_) | I32 | I64 | Bool | StringLiteral | Unit => Ok(symbol),
         }
     }
 
