@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::Level::Routine;
 use crate::compiler::memory::scope::SymbolOffsetTable;
+use crate::compiler::memory::set_reg;
 use crate::compiler::memory::stack::SymbolOffsetTableStack;
 use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
@@ -86,6 +87,9 @@ impl<'a> Compiler<'a> {
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
+
+        // assign register sizes
+        set_reg::assign::for_module(&compiler_ast, &struct_table);
 
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 
