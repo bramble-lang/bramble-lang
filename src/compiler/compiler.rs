@@ -1208,10 +1208,7 @@ impl<'a> Compiler<'a> {
                     }}
                 }
                 ty => {
-                    let param_sz =
-                        self.struct_table
-                            .size_of(ty)
-                            .expect("Type found with no size") as usize;
+                    let param_sz = self.size_of(ty);
                     assembly! {(code){
                         mov [%rbp-{param_offset}], %{param_registers[idx].scale(param_sz)};
                     }};
@@ -1338,5 +1335,11 @@ impl<'a> Compiler<'a> {
         }
 
         extern_functions
+    }
+
+    pub fn size_of(&self, ty: &Type) -> usize {
+        self.struct_table
+            .size_of(ty)
+            .expect("Type found with no size") as usize
     }
 }
