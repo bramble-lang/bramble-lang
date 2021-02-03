@@ -297,33 +297,38 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
-            let true_arm = expression_block(stream)?.ok_or(format!(
+            let if_arm = expression_block(stream)?.ok_or(format!(
                 "L{}: Expression in true arm of if expression",
                 token.l
             ))?;
-            stream.next_must_be(&Lex::Else)?;
 
             // check for `else if`
-            let false_arm = match stream.peek() {
-                Some(Token { l, s: Lex::If }) => {
-                    let l = *l;
-                    if_expression(stream)?
-                        .ok_or(format!("L{}: Expected if expression after else if", l))?
-                }
-                _ => {
-                    let false_arm = expression_block(stream)?.ok_or(&format!(
-                        "L{}: Expression in false arm of if expression",
-                        token.l
-                    ))?;
-                    false_arm
-                }
+            let else_arm = match stream.next_if(&Lex::Else) {
+                Some(_) => match stream.peek() {
+                    Some(Token { l, s: Lex::If }) => {
+                        let l = *l;
+                        Some(
+                            if_expression(stream)?
+                                .ok_or(format!("L{}: Expected if expression after else if", l))?,
+                        )
+                    }
+                    _ => {
+                        let false_arm = expression_block(stream)?.ok_or(&format!(
+                            "L{}: Expression in false arm of if expression",
+                            token.l
+                        ))?;
+                        Some(false_arm)
+                    }
+                },
+                None => None,
             };
-            Some(Expression::If(
-                token.l,
-                Box::new(cond),
-                Box::new(true_arm),
-                Box::new(false_arm),
-            ))
+
+            Some(Expression::If {
+                annotation: token.l,
+                cond: Box::new(cond),
+                if_arm: Box::new(if_arm),
+                else_arm: else_arm.map(|f| box f),
+            })
         }
         _ => None,
     })

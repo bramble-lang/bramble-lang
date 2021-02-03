@@ -1183,7 +1183,13 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
-        if let Some(Expression::If(l, cond, if_arm, else_arm)) = exp {
+        if let Some(Expression::If {
+            annotation: l,
+            cond,
+            if_arm,
+            else_arm,
+        }) = exp
+        {
             assert_eq!(l, 1);
             assert_eq!(*cond, Expression::Identifier(1, "x".into()));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
@@ -1192,7 +1198,7 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+            if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
                 assert_eq!(*final_exp, Expression::Integer64(1, 7));
             } else {
                 panic!("Expected Expression block");
@@ -1212,7 +1218,13 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
-        if let Some(Expression::If(l, cond, if_arm, else_arm)) = exp {
+        if let Some(Expression::If {
+            annotation: l,
+            cond,
+            if_arm,
+            else_arm,
+        }) = exp
+        {
             assert_eq!(l, 1);
             assert_eq!(*cond, Expression::Identifier(1, "x".into()));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
@@ -1221,7 +1233,13 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Expression::If(_l, cond, if_arm, else_arm) = *else_arm {
+            if let Some(box Expression::If {
+                cond,
+                if_arm,
+                else_arm,
+                ..
+            }) = else_arm
+            {
                 assert_eq!(
                     *cond,
                     Expression::BinaryOp(
@@ -1237,7 +1255,8 @@ pub mod tests {
                     panic!("Expected Expression block");
                 }
 
-                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *else_arm {
+                if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm
+                {
                     assert_eq!(*final_exp, Expression::Integer64(1, 8));
                 } else {
                     panic!("Expected Expression block");

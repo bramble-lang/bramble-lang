@@ -264,9 +264,7 @@ impl<'a> TypeResolver<'a> {
             YieldReturn(box x) => {
                 YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
             }
-            Expression(box e) => {
-                Expression(Box::new(self.analyze_expression(e, current_func, sym)?))
-            }
+            Expression(box e) => Expression(Box::new(self.traverse(e, current_func, sym)?)),
         };
 
         Ok(inner)
@@ -542,25 +540,40 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = ty;
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
-            Expression::If(meta, cond, true_arm, false_arm) => {
+            Expression::If {
+                annotation: meta,
+                cond,
+                if_arm,
+                else_arm,
+            } => {
                 let mut meta = meta.clone();
                 let cond = self.traverse(&cond, current_func, sym)?;
                 if cond.get_type() == Bool {
-                    let true_arm = self.traverse(&true_arm, current_func, sym)?;
-                    let false_arm = self.traverse(&false_arm, current_func, sym)?;
-                    if true_arm.get_type() == false_arm.get_type() {
-                        meta.ty = true_arm.get_type().clone();
-                        Ok(Expression::If(
-                            meta.clone(),
-                            Box::new(cond),
-                            Box::new(true_arm),
-                            Box::new(false_arm),
-                        ))
+                    let if_arm = self.traverse(&if_arm, current_func, sym)?;
+
+                    let else_arm = else_arm
+                        .as_ref()
+                        .map(|e| self.traverse(&e, current_func, sym))
+                        .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
+
+                    let else_arm_ty = else_arm
+                        .as_ref()
+                        .map(|e| e.get_type().clone())
+                        .unwrap_or(Type::Unit);
+
+                    if if_arm.get_type() == else_arm_ty {
+                        meta.ty = if_arm.get_type().clone();
+                        Ok(Expression::If {
+                            annotation: meta.clone(),
+                            cond: box cond,
+                            if_arm: box if_arm,
+                            else_arm: else_arm,
+                        })
                     } else {
                         Err(format!(
                             "If expression has mismatching arms: expected {} got {}",
-                            true_arm.get_type(),
-                            false_arm.get_type()
+                            if_arm.get_type(),
+                            else_arm_ty
                         ))
                     }
                 } else {
@@ -2592,6 +2605,22 @@ mod tests {
                 ",
                 Err("Semantic: L2: Bind expected i64 but got string"),
             ),
+            (
+                "fn main() {
+                    if (false) {1};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: If expression has mismatching arms: expected i64 got unit"),
+            ),
+            (
+                "fn main() {
+                    if (false) {};
+                    return;
+                }
+                ",
+                Ok(Unit),
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -2606,14 +2635,16 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I64);
+                    assert_eq!(bind_stm.get_type(), expected_ty);
 
                     // Check the return value
-                    if let Statement::Bind(box b) = bind_stm {
-                        let rhs_ty = b.get_rhs().get_type();
-                        assert_eq!(rhs_ty, expected_ty);
-                    } else {
-                        panic!("Expected a return statement")
+                    if expected_ty != Unit {
+                        if let Statement::Bind(box b) = bind_stm {
+                            let rhs_ty = b.get_rhs().get_type();
+                            assert_eq!(rhs_ty, expected_ty);
+                        } else {
+                            panic!("Expected a return statement")
+                        }
                     }
                 }
                 Err(msg) => {
