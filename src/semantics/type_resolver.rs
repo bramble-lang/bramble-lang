@@ -1852,6 +1852,13 @@ mod tests {
                 Ok(I64),
             ),
             (
+                "fn main() -> i32 {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
                 "fn main() -> i64 {
                     let k: bool := 5;
                     return k;
