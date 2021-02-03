@@ -44,7 +44,7 @@ pub mod assign {
             trace!(i, 0);
             match i {
                 Item::Struct(sd) => {
-                    for_structdef(sd);
+                    for_structdef(sd, struct_table);
                 }
                 Item::Routine(rd) => {
                     for_routine(rd, struct_table);
@@ -53,8 +53,12 @@ pub mod assign {
         }
     }
 
-    fn for_structdef(sd: &StructDef<SymbolOffsetTable>) {
+    fn for_structdef(sd: &StructDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(sd, 0);
+
+        for (fname, fty) in sd.get_fields() {
+            println!("{}:{} -> {:?}", fname, fty, struct_table.size_of(fty));
+        }
     }
 
     fn for_routine(rd: &RoutineDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
