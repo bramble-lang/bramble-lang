@@ -99,6 +99,10 @@ impl<M> Bind<M> {
         &self.rhs
     }
 
+    pub fn get_rhs_mut(&mut self) -> &mut Expression<M> {
+        &mut self.rhs
+    }
+
     pub fn get_type(&self) -> &Type {
         &self.ty
     }
@@ -142,6 +146,10 @@ impl<M> Mutate<M> {
 
     pub fn get_rhs(&self) -> &Expression<M> {
         &self.rhs
+    }
+
+    pub fn get_rhs_mut(&mut self) -> &mut Expression<M> {
+        &mut self.rhs
     }
 
     pub fn root_str(&self) -> String {
@@ -204,6 +212,10 @@ impl<M> YieldReturn<M> {
         &self.value
     }
 
+    pub fn get_value_mut(&mut self) -> &mut Option<Expression<M>> {
+        &mut self.value
+    }
+
     pub fn root_str(&self) -> String {
         format!("yret")
     }
@@ -234,6 +246,10 @@ impl<M> Return<M> {
 
     pub fn get_value(&self) -> &Option<Expression<M>> {
         &self.value
+    }
+
+    pub fn get_value_mut(&mut self) -> &mut Option<Expression<M>> {
+        &mut self.value
     }
 
     pub fn root_str(&self) -> String {

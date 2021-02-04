@@ -25,6 +25,10 @@ impl<M> StructDef<M> {
         &self.annotations
     }
 
+    pub fn get_annotations_mut(&mut self) -> &mut M {
+        &mut self.annotations
+    }
+
     pub fn get_fields(&self) -> &Vec<(String, Type)> {
         &self.fields
     }

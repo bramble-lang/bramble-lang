@@ -1,3 +1,4 @@
+use crate::compiler::memory::set_reg::RegSize;
 use crate::{
     semantics::semanticnode::SemanticAnnotations,
     syntax::path::Path,
@@ -46,6 +47,7 @@ pub struct SymbolOffsetTable {
     pub(super) ty: Type,
     pub(super) symbols: SymbolTable,
     pub(super) canon_path: Path,
+    pub(super) reg_size: Option<RegSize>,
 }
 
 impl SymbolOffsetTable {
@@ -57,6 +59,7 @@ impl SymbolOffsetTable {
             ty,
             symbols: SymbolTable::new(),
             canon_path,
+            reg_size: None,
         }
     }
 
@@ -119,6 +122,14 @@ impl SymbolOffsetTable {
 
     pub fn canon_path(&self) -> &Path {
         &self.canon_path
+    }
+
+    pub fn reg_size(&self) -> Option<RegSize> {
+        self.reg_size
+    }
+
+    pub fn set_reg_size(&mut self, r: Option<RegSize>) {
+        self.reg_size = r;
     }
 
     pub(super) fn local_from(

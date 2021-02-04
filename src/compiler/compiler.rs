@@ -83,13 +83,13 @@ impl<'a> Compiler<'a> {
         target_os: TargetOS,
     ) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
+        let (mut compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
 
         // assign register sizes
-        set_reg::assign::for_module(&compiler_ast, &struct_table);
+        set_reg::assign::for_module(&mut compiler_ast, &struct_table);
 
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 

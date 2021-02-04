@@ -65,27 +65,34 @@ pub mod assign {
         };
     }
 
-    fn assign_register(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
+    fn register_for_type(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
         let sz = struct_table.size_of(ty);
         sz.and_then(|sz| RegSize::assign(sz as usize))
     }
 
-    pub fn for_module(m: &Module<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
-        trace!(m, struct_table.size_of(m.get_annotations().ty()));
-
-        for child_module in m.get_modules().iter() {
-            for_module(child_module, struct_table);
-        }
-        for_items(m.get_functions(), struct_table);
-
-        for_items(m.get_coroutines(), struct_table);
-
-        for_items(m.get_structs(), struct_table);
+    fn assign_register(a: &mut SymbolOffsetTable, struct_table: &ResolvedStructTable) {
+        let reg = register_for_type(a.ty(), struct_table);
+        a.set_reg_size(reg);
     }
 
-    fn for_items(items: &Vec<Item<SymbolOffsetTable>>, struct_table: &ResolvedStructTable) {
-        for i in items {
+    pub fn for_module(m: &mut Module<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+        trace!(m, struct_table.size_of(m.get_annotations().ty()));
+        assign_register(m.get_annotations_mut(), struct_table);
+
+        for child_module in m.get_modules_mut().iter_mut() {
+            for_module(child_module, struct_table);
+        }
+        for_items(m.get_functions_mut(), struct_table);
+
+        for_items(m.get_coroutines_mut(), struct_table);
+
+        for_items(m.get_structs_mut(), struct_table);
+    }
+
+    fn for_items(items: &mut Vec<Item<SymbolOffsetTable>>, struct_table: &ResolvedStructTable) {
+        for i in items.iter_mut() {
             trace!(i, struct_table.size_of(i.get_annotations().ty()));
+            assign_register(i.get_annotations_mut(), struct_table);
             match i {
                 Item::Struct(sd) => {
                     for_structdef(sd, struct_table);
@@ -97,11 +104,12 @@ pub mod assign {
         }
     }
 
-    fn for_structdef(sd: &StructDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_structdef(sd: &mut StructDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(sd, struct_table.size_of(sd.get_annotations().ty()));
+        assign_register(sd.get_annotations_mut(), struct_table);
 
         for (fname, fty) in sd.get_fields() {
-            let reg = assign_register(fty, struct_table);
+            let reg = register_for_type(fty, struct_table);
             println!(
                 "{}:({},{:?}) -> {:?}",
                 fname,
@@ -112,8 +120,9 @@ pub mod assign {
         }
     }
 
-    fn for_routine(rd: &RoutineDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_routine(rd: &mut RoutineDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(rd, struct_table.size_of(rd.get_annotations().ty()));
+        assign_register(rd.get_annotations_mut(), struct_table);
 
         // loop through all the params
         for p in rd.get_params() {
@@ -126,16 +135,21 @@ pub mod assign {
         }
 
         // loop through every statement and analyze the child nodes of the routine definition
-        for e in rd.get_body().iter() {
+        for e in rd.get_body_mut().iter_mut() {
             for_statement(e, struct_table);
         }
     }
 
-    fn for_statement(statement: &Statement<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_statement(
+        statement: &mut Statement<SymbolOffsetTable>,
+        struct_table: &ResolvedStructTable,
+    ) {
         trace!(
             statement,
             struct_table.size_of(statement.get_annotations().ty())
         );
+        assign_register(statement.get_annotations_mut(), struct_table);
+
         match statement {
             Statement::Bind(b) => {
                 for_bind(b, struct_table);
@@ -155,38 +169,46 @@ pub mod assign {
         };
     }
 
-    fn for_bind(bind: &Bind<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_bind(bind: &mut Bind<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(bind, struct_table.size_of(bind.get_annotations().ty()));
-        for_expression(bind.get_rhs(), struct_table)
+        assign_register(bind.get_annotations_mut(), struct_table);
+        for_expression(bind.get_rhs_mut(), struct_table)
     }
 
-    fn for_mutate(mutate: &Mutate<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_mutate(mutate: &mut Mutate<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(mutate, struct_table.size_of(mutate.get_annotations().ty()));
+        assign_register(mutate.get_annotations_mut(), struct_table);
 
-        for_expression(mutate.get_rhs(), struct_table);
+        for_expression(mutate.get_rhs_mut(), struct_table);
     }
 
-    fn for_yieldreturn(yr: &YieldReturn<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_yieldreturn(
+        yr: &mut YieldReturn<SymbolOffsetTable>,
+        struct_table: &ResolvedStructTable,
+    ) {
         trace!(yr, struct_table.size_of(yr.get_annotations().ty()));
 
-        yr.get_value()
-            .as_ref()
-            .map(|rv| for_expression(&rv, struct_table));
+        assign_register(yr.get_annotations_mut(), struct_table);
+        yr.get_value_mut()
+            .as_mut()
+            .map(|rv| for_expression(rv, struct_table));
     }
 
-    fn for_return(r: &Return<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_return(r: &mut Return<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(r, struct_table.size_of(r.get_annotations().ty()));
 
-        r.get_value()
-            .as_ref()
-            .map(|rv| for_expression(&rv, struct_table));
+        assign_register(r.get_annotations_mut(), struct_table);
+        r.get_value_mut()
+            .as_mut()
+            .map(|rv| for_expression(rv, struct_table));
     }
 
-    fn for_expression(exp: &Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_expression(exp: &mut Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         use Expression::*;
 
         trace!(exp, struct_table.size_of(exp.get_annotations().ty()));
 
+        assign_register(exp.get_annotations_mut(), struct_table);
         match exp {
             ExpressionBlock(..) => for_expression_block(exp, struct_table),
             Expression::Integer64(_m, _i) => {}
@@ -207,30 +229,32 @@ pub mod assign {
     }
 
     fn for_expression_block(
-        block: &Expression<SymbolOffsetTable>,
+        block: &mut Expression<SymbolOffsetTable>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(block, struct_table.size_of(block.get_annotations().ty()));
 
-        if let Expression::ExpressionBlock(_m, body, final_exp) = block {
-            for e in body.iter() {
+        assign_register(block.get_annotations_mut(), struct_table);
+        if let Expression::ExpressionBlock(_m, ref mut body, ref mut final_exp) = block {
+            for e in body.iter_mut() {
                 for_statement(e, struct_table);
             }
 
             final_exp
-                .as_ref()
-                .map(|fe| for_expression(&fe, struct_table));
+                .as_mut()
+                .map(|fe| for_expression(fe, struct_table));
         } else {
             panic!("Expected ExpressionBlock, but got {:?}", block)
         }
     }
 
     fn for_member_access(
-        access: &Expression<SymbolOffsetTable>,
+        access: &mut Expression<SymbolOffsetTable>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(access, struct_table.size_of(access.get_annotations().ty()));
 
+        assign_register(access.get_annotations_mut(), struct_table);
         if let Expression::MemberAccess(_m, src, _member) = access {
             for_expression(src, struct_table);
         } else {
@@ -238,9 +262,10 @@ pub mod assign {
         }
     }
 
-    fn for_unary_op(un_op: &Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_unary_op(un_op: &mut Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(un_op, struct_table.size_of(un_op.get_annotations().ty()));
 
+        assign_register(un_op.get_annotations_mut(), struct_table);
         if let Expression::UnaryOp(_m, _op, operand) = un_op {
             for_expression(operand, struct_table);
         } else {
@@ -248,9 +273,13 @@ pub mod assign {
         }
     }
 
-    fn for_binary_op(bin_op: &Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_binary_op(
+        bin_op: &mut Expression<SymbolOffsetTable>,
+        struct_table: &ResolvedStructTable,
+    ) {
         trace!(bin_op, struct_table.size_of(bin_op.get_annotations().ty()));
 
+        assign_register(bin_op.get_annotations_mut(), struct_table);
         if let Expression::BinaryOp(_m, _op, l, r) = bin_op {
             for_expression(l, struct_table);
             for_expression(r, struct_table);
@@ -259,9 +288,10 @@ pub mod assign {
         }
     }
 
-    fn for_if(if_exp: &Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_if(if_exp: &mut Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
         trace!(if_exp, struct_table.size_of(if_exp.get_annotations().ty()));
 
+        assign_register(if_exp.get_annotations_mut(), struct_table);
         if let Expression::If {
             annotation: _m,
             cond,
@@ -271,17 +301,19 @@ pub mod assign {
         {
             for_expression(cond, struct_table);
             for_expression(if_arm, struct_table);
-            else_arm
-                .as_ref()
-                .map(|ea| for_expression(&ea, struct_table));
+            else_arm.as_mut().map(|ea| for_expression(ea, struct_table));
         } else {
             panic!("Expected IfExpression, but got {:?}", if_exp)
         }
     }
 
-    fn for_routine_call(rc: &Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_routine_call(
+        rc: &mut Expression<SymbolOffsetTable>,
+        struct_table: &ResolvedStructTable,
+    ) {
         trace!(rc, struct_table.size_of(rc.get_annotations().ty()));
 
+        assign_register(rc.get_annotations_mut(), struct_table);
         if let Expression::RoutineCall(_m, _call, _name, params) = rc {
             for p in params {
                 for_expression(p, struct_table);
@@ -291,12 +323,16 @@ pub mod assign {
         }
     }
 
-    fn for_yield(yield_exp: &Expression<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_yield(
+        yield_exp: &mut Expression<SymbolOffsetTable>,
+        struct_table: &ResolvedStructTable,
+    ) {
         trace!(
             yield_exp,
             struct_table.size_of(yield_exp.get_annotations().ty())
         );
 
+        assign_register(yield_exp.get_annotations_mut(), struct_table);
         if let Expression::Yield(_m, e) = yield_exp {
             for_expression(e, struct_table);
         } else {
@@ -305,11 +341,12 @@ pub mod assign {
     }
 
     fn for_struct_expression(
-        se: &Expression<SymbolOffsetTable>,
+        se: &mut Expression<SymbolOffsetTable>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(se, struct_table.size_of(se.get_annotations().ty()));
 
+        assign_register(se.get_annotations_mut(), struct_table);
         if let Expression::StructExpression(_annotations, _struct_name, fields) = se {
             for (_, fe) in fields {
                 for_expression(fe, struct_table);

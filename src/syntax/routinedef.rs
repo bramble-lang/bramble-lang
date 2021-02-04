@@ -49,6 +49,10 @@ impl<M> RoutineDef<M> {
         &self.annotations
     }
 
+    pub fn get_annotations_mut(&mut self) -> &mut M {
+        &mut self.annotations
+    }
+
     pub fn get_name(&self) -> &str {
         &self.name
     }
@@ -67,6 +71,10 @@ impl<M> RoutineDef<M> {
 
     pub fn get_body(&self) -> &Vec<Statement<M>> {
         &self.body
+    }
+
+    pub fn get_body_mut(&mut self) -> &mut Vec<Statement<M>> {
+        &mut self.body
     }
 
     pub fn get_def(&self) -> &RoutineDefType {

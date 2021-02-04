@@ -438,6 +438,13 @@ impl<M> Item<M> {
         }
     }
 
+    pub fn get_annotations_mut(&mut self) -> &mut M {
+        match self {
+            Item::Routine(r) => r.get_annotations_mut(),
+            Item::Struct(s) => s.get_annotations_mut(),
+        }
+    }
+
     pub fn root_str(&self) -> String {
         match self {
             Item::Routine(r) => format!("{} {}", r.get_def(), r.get_name()),
