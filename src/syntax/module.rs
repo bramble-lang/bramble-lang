@@ -205,7 +205,6 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -222,7 +221,6 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -239,7 +237,6 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -256,7 +253,6 @@ mod test {
             name: "cor".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -273,7 +269,6 @@ mod test {
             name: "cor".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -290,7 +285,6 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -301,7 +295,6 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -317,7 +310,6 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -328,7 +320,6 @@ mod test {
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -344,7 +335,6 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -361,7 +351,6 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -378,7 +367,6 @@ mod test {
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -395,7 +383,6 @@ mod test {
             name: "co".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -412,7 +399,6 @@ mod test {
             name: "co".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
-            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };

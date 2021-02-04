@@ -48,6 +48,7 @@ pub struct SymbolOffsetTable {
     pub(super) symbols: SymbolTable,
     pub(super) canon_path: Path,
     pub(super) reg_size: Option<RegSize>,
+    pub(super) param_reg_size: Vec<Option<RegSize>>,
 }
 
 impl SymbolOffsetTable {
@@ -60,6 +61,7 @@ impl SymbolOffsetTable {
             symbols: SymbolTable::new(),
             canon_path,
             reg_size: None,
+            param_reg_size: vec![],
         }
     }
 

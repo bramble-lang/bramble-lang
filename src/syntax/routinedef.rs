@@ -6,7 +6,6 @@ pub struct RoutineDef<M> {
     pub def: RoutineDefType,
     pub name: String,
     pub params: Vec<(String, Type)>,
-    pub param_annotations: Vec<M>,
     pub ty: Type,
     pub body: Vec<Statement<M>>,
 }
@@ -24,7 +23,6 @@ impl<M> RoutineDef<M> {
             def: RoutineDefType::Function,
             name: name.into(),
             params,
-            param_annotations: vec![],
             ty,
             body,
         }
@@ -42,7 +40,6 @@ impl<M> RoutineDef<M> {
             def: RoutineDefType::Coroutine,
             name: name.into(),
             params,
-            param_annotations: vec![],
             ty,
             body,
         }
@@ -66,10 +63,6 @@ impl<M> RoutineDef<M> {
 
     pub fn set_params(&mut self, params: Vec<(String, Type)>) {
         self.params = params;
-    }
-
-    pub fn get_param_annotations_mut(&mut self) -> &mut Vec<M> {
-        &mut self.param_annotations
     }
 
     pub fn get_return_type(&self) -> &Type {

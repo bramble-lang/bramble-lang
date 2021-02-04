@@ -134,7 +134,6 @@ impl SemanticAst {
             def: *def,
             name: fname.clone(),
             params: params.clone(),
-            param_annotations: vec![],
             ty: ty.clone(),
             body: nbody,
         })
