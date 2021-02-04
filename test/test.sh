@@ -50,9 +50,9 @@ run_test() {
 
         if [[ $built -eq 1 ]]; then
             if [[ -f $input ]]; then
-                ./target/output < $input >> ./target/stdout
+                timeout 5 "./target/output" < $input >> ./target/stdout
             else
-                ./target/output >> ./target/stdout
+                timeout 5 "./target/output" >> ./target/stdout
             fi
         else 
             echo "Build failed"
