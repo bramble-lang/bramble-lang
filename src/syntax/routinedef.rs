@@ -10,6 +10,12 @@ pub struct RoutineDef<M> {
     pub body: Vec<Statement<M>>,
 }
 
+impl<M> std::fmt::Display for RoutineDef<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(self.get_name())
+    }
+}
+
 impl<M> RoutineDef<M> {
     pub fn new_function(
         name: &str,

@@ -26,6 +26,12 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
+impl<M> std::fmt::Display for Expression<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
+}
+
 impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;

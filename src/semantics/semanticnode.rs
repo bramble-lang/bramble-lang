@@ -62,12 +62,6 @@ impl SemanticAnnotations {
     }
 }
 
-impl std::fmt::Display for SemanticNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.root_str())
-    }
-}
-
 pub struct SemanticAst {
     next_id: u32,
     tracing: TracingConfig,

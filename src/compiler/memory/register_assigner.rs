@@ -26,7 +26,7 @@ macro_rules! trace {
                 "{} [{}]{} -> {:?} {:?}",
                 function_name!(),
                 $ts.get_annotations().id(),
-                $ts.get_name(),
+                $ts,
                 $sz,
                 RegSize::assign($sz.unwrap_or(0) as usize)
             )
