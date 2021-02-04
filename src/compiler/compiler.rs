@@ -1,3 +1,4 @@
+use crate::compiler::memory::register_assigner::RegisterAssigner;
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to
@@ -14,6 +15,7 @@ use crate::register;
 use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
 use crate::unit_op;
+use crate::TracingConfig;
 use crate::{assembly, syntax::path::Path};
 use crate::{
     assembly2,
@@ -82,10 +84,14 @@ impl<'a> Compiler<'a> {
         target_os: TargetOS,
     ) -> Vec<Inst> {
         // Put user code here
-        let (compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
+        let (mut compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
 
         let mut string_pool = StringPool::new();
         string_pool.extract_from_module(&compiler_ast);
+
+        // assign register sizes
+        let reg_assigner = RegisterAssigner::new(TracingConfig::Off);
+        reg_assigner.for_module(&mut compiler_ast, &struct_table);
 
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 

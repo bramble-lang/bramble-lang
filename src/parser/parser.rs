@@ -833,6 +833,7 @@ pub mod tests {
                 params,
                 ty,
                 body,
+                ..
             }) = &m.get_functions()[0]
             {
                 assert_eq!(*annotations, 1);
@@ -877,6 +878,7 @@ pub mod tests {
                 params,
                 ty,
                 body,
+                ..
             })) = m.get_item("test")
             {
                 assert_eq!(*annotations, 1);
@@ -940,6 +942,7 @@ pub mod tests {
             params,
             ty,
             body,
+            ..
         }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -972,6 +975,7 @@ pub mod tests {
             params,
             ty,
             body,
+            ..
         }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -1149,6 +1153,7 @@ pub mod tests {
             params,
             ty,
             body,
+            ..
         }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);

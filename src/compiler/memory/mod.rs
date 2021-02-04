@@ -12,6 +12,7 @@
  * 4. Construct a string pool of all string literals.
  */
 pub(super) mod layout;
+pub(super) mod register_assigner;
 pub(super) mod scope;
 pub(super) mod stack;
 pub(super) mod stringpool;

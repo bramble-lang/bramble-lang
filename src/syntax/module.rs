@@ -15,6 +15,12 @@ pub struct Module<M> {
     structs: Vec<Item<M>>,
 }
 
+impl<M> std::fmt::Display for Module<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(self.get_name())
+    }
+}
+
 impl<M> Module<M> {
     pub fn new(name: &str, annotation: M) -> Module<M> {
         Module {
@@ -416,6 +422,12 @@ pub enum Item<M> {
     Struct(StructDef<M>),
 }
 
+impl<M> std::fmt::Display for Item<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(self.get_name())
+    }
+}
+
 impl<M> Item<M> {
     pub fn get_name(&self) -> &str {
         match self {
@@ -435,6 +447,13 @@ impl<M> Item<M> {
         match self {
             Item::Routine(r) => r.get_annotations(),
             Item::Struct(s) => s.get_annotations(),
+        }
+    }
+
+    pub fn get_annotations_mut(&mut self) -> &mut M {
+        match self {
+            Item::Routine(r) => r.get_annotations_mut(),
+            Item::Struct(s) => s.get_annotations_mut(),
         }
     }
 

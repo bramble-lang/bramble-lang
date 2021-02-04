@@ -39,5 +39,7 @@
  * 4. Construct a string pool of all string literals.
  */
 pub mod compiler;
+
+mod arch;
 mod memory;
 mod x86;

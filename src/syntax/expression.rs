@@ -26,6 +26,12 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
+impl<M> std::fmt::Display for Expression<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
+}
+
 impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
@@ -102,14 +108,6 @@ impl<I> Expression<I> {
     /// otherwise return None.
     pub fn get_return_type(&self) -> Option<&Type> {
         match self {
-            _ => None,
-        }
-    }
-
-    /// If a node is an identifier, function or coroutine, then this will return the name; otherwise it will return `None`.
-    pub fn get_name(&self) -> Option<&str> {
-        match self {
-            Expression::Identifier(_, name) => Some(name),
             _ => None,
         }
     }

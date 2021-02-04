@@ -8,6 +8,12 @@ pub struct StructDef<M> {
     fields: Vec<(String, Type)>,
 }
 
+impl<M> std::fmt::Display for StructDef<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(self.get_name())
+    }
+}
+
 impl<M> StructDef<M> {
     pub fn new(name: &str, annotations: M, fields: Vec<(String, Type)>) -> StructDef<M> {
         StructDef {
@@ -23,6 +29,10 @@ impl<M> StructDef<M> {
 
     pub fn get_annotations(&self) -> &M {
         &self.annotations
+    }
+
+    pub fn get_annotations_mut(&mut self) -> &mut M {
+        &mut self.annotations
     }
 
     pub fn get_fields(&self) -> &Vec<(String, Type)> {

@@ -11,6 +11,12 @@ pub enum Statement<M> {
     Return(Box<Return<M>>),
 }
 
+impl<M> std::fmt::Display for Statement<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
+}
+
 impl<M> Statement<M> {
     pub fn get_annotations(&self) -> &M {
         use Statement::*;
@@ -64,6 +70,12 @@ pub struct Bind<M> {
     rhs: Expression<M>,
 }
 
+impl<M> std::fmt::Display for Bind<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
+}
+
 impl<M> Bind<M> {
     pub fn new(annotations: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
         Bind {
@@ -95,6 +107,10 @@ impl<M> Bind<M> {
         &self.rhs
     }
 
+    pub fn get_rhs_mut(&mut self) -> &mut Expression<M> {
+        &mut self.rhs
+    }
+
     pub fn get_type(&self) -> &Type {
         &self.ty
     }
@@ -109,6 +125,12 @@ pub struct Mutate<M> {
     annotations: M,
     id: String,
     rhs: Expression<M>,
+}
+
+impl<M> std::fmt::Display for Mutate<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
 }
 
 impl<M> Mutate<M> {
@@ -134,6 +156,10 @@ impl<M> Mutate<M> {
 
     pub fn get_rhs(&self) -> &Expression<M> {
         &self.rhs
+    }
+
+    pub fn get_rhs_mut(&mut self) -> &mut Expression<M> {
+        &mut self.rhs
     }
 
     pub fn root_str(&self) -> String {
@@ -175,6 +201,12 @@ pub struct YieldReturn<M> {
     value: Option<Expression<M>>,
 }
 
+impl<M> std::fmt::Display for YieldReturn<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
+}
+
 impl<M> YieldReturn<M> {
     pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
         Self { annotations, value }
@@ -192,6 +224,10 @@ impl<M> YieldReturn<M> {
         &self.value
     }
 
+    pub fn get_value_mut(&mut self) -> &mut Option<Expression<M>> {
+        &mut self.value
+    }
+
     pub fn root_str(&self) -> String {
         format!("yret")
     }
@@ -201,6 +237,12 @@ impl<M> YieldReturn<M> {
 pub struct Return<M> {
     annotations: M,
     value: Option<Expression<M>>,
+}
+
+impl<M> std::fmt::Display for Return<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
 }
 
 impl<M> Return<M> {
@@ -218,6 +260,10 @@ impl<M> Return<M> {
 
     pub fn get_value(&self) -> &Option<Expression<M>> {
         &self.value
+    }
+
+    pub fn get_value_mut(&mut self) -> &mut Option<Expression<M>> {
+        &mut self.value
     }
 
     pub fn root_str(&self) -> String {
