@@ -1161,13 +1161,17 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         let routine_sym_table = routine.get_annotations();
         for idx in 0..params.len() {
-            let param_offset = routine_sym_table
-                .get(&params[idx].0)
-                .ok_or(format!(
-                    "Critical: could not find parameter {} in symbol table for {}",
-                    params[idx].0, routine_name
-                ))?
-                .offset;
+            let param_symbol = routine_sym_table.get(&params[idx].0).ok_or(format!(
+                "Critical: could not find parameter {} in symbol table for {}",
+                params[idx].0, routine_name
+            ))?;
+
+            // Don't move parameters that have no size
+            if param_symbol.size == 0 {
+                continue;
+            }
+
+            let param_offset = param_symbol.offset;
             match &params[idx].1 {
                 Type::Custom(struct_name) => {
                     let asm = self.copy_struct_into(
