@@ -487,8 +487,8 @@ impl<'a> Compiler<'a> {
 
                 assembly! {(code) {
                     ; {format!("Call {}", co_path)}
-                    {{self.evaluate_routine_params(params, current_func)?}}
-                    {{self.move_routine_params_into_registers(params, &co_param_registers)?}}
+                    {{self.evaluate_routine_call_params(params, current_func)?}}
+                    {{self.move_routine_call_params_into_registers(params, &co_param_registers)?}}
                     ; "Load the IP for the coroutine (EAX) and the stack frame allocation (EDI)"
                     lea %rax, [@{co_path.to_label()}];
                     mov %rdi, {total_offset as i64};
@@ -522,8 +522,8 @@ impl<'a> Compiler<'a> {
                 // calling the function
                 assembly! {(code) {
                     ; {{format!("Call {}", fn_path)}}
-                    {{self.evaluate_routine_params(params, current_func)?}}
-                    {{self.move_routine_params_into_registers(params, &fn_param_registers)?}}
+                    {{self.evaluate_routine_call_params(params, current_func)?}}
+                    {{self.move_routine_call_params_into_registers(params, &fn_param_registers)?}}
                     call @{fn_path.to_label()};
                 }};
             }
@@ -1183,7 +1183,7 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn evaluate_routine_params(
+    fn evaluate_routine_call_params(
         &mut self,
         params: &'a Vec<Expression<SymbolOffsetTable>>,
         current_func: &String,
@@ -1198,7 +1198,7 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn move_routine_params_into_registers(
+    fn move_routine_call_params_into_registers(
         &mut self,
         params: &'a Vec<Expression<SymbolOffsetTable>>,
         param_registers: &Vec<Reg64>,
