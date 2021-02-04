@@ -33,6 +33,7 @@ pub fn compute_layout_for_program(
 
 mod compute {
     use super::*;
+    use crate::compiler::memory::symbol_table::Symbol;
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
@@ -412,13 +413,24 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::RoutineCall(m, call, name, params) = rc {
-            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+            let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             let mut nlayout = layout;
             let mut nparams = vec![];
             for p in params.iter() {
                 let (mut np, playout) = layout_for_expression(p, nlayout, struct_table);
                 np.get_annotations_mut().in_stackframe = true;
-                nlayout = playout;
+                let anonymous_name = format!("!{}_{}", m.get_canonical_path(), m.id());
+
+                let sz = struct_table
+                    .size_of(np.get_annotations().ty())
+                    .expect("Expected a size for an expression");
+
+                nlayout = LayoutData::new(playout.offset + sz);
+                annotations.symbols.table.insert(
+                    anonymous_name.clone(),
+                    Symbol::new(&anonymous_name, sz, nlayout.offset),
+                );
+
                 nparams.push(np);
             }
             (
