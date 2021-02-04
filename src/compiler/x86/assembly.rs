@@ -1,4 +1,4 @@
-use crate::compiler::memory::register_assigner::RegSize;
+use crate::compiler::arch::registers::RegSize;
 use std::fmt::*;
 
 /*
