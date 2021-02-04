@@ -138,10 +138,6 @@ impl RegisterAssigner {
     ) {
         trace!(self, sd, struct_table.size_of(sd.get_annotations().ty()));
         Self::assign_register(sd.get_annotations_mut(), struct_table);
-
-        for (fname, fty) in sd.get_fields() {
-            let reg = Self::register_for_type(fty, struct_table);
-        }
     }
 
     fn for_routine(
