@@ -71,6 +71,14 @@ impl<M> RoutineDef<M> {
         self.params = params;
     }
 
+    pub fn get_param_annotations(&self) -> &Vec<M> {
+        &self.param_annotations
+    }
+
+    pub fn get_param_annotations_mut(&mut self) -> &mut Vec<M> {
+        &mut self.param_annotations
+    }
+
     pub fn get_return_type(&self) -> &Type {
         &self.ty
     }

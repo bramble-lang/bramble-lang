@@ -1,0 +1,17 @@
+fn my_main() {
+    let x:i32 := 5i32;
+    let y:i32 := test();
+    let z:i32 := test2(5i32);
+
+    let w: i32 := x + y;
+    
+    return;
+}
+
+fn test() -> i32 {
+    return 5i32;
+}
+
+fn test2(i: i32) -> i32 {
+    return i;
+}

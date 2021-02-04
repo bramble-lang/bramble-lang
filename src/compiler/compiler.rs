@@ -1207,10 +1207,15 @@ impl<'a> Compiler<'a> {
                         {{asm}}
                     }}
                 }
-                ty => {
-                    let param_sz = self.size_of(ty);
+                _ => {
+                    let param_reg_sz = routine.get_param_annotations()[idx]
+                        .reg_size()
+                        .expect("param must have a register size");
+                    let param_reg = param_registers[idx]
+                        .scale(param_reg_sz)
+                        .expect("Could not find an appropriate register");
                     assembly! {(code){
-                        mov [%rbp-{param_offset}], %{param_registers[idx].scale(param_sz)};
+                        mov [%rbp-{param_offset}], %{param_reg};
                     }};
                 }
             }
