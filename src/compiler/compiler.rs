@@ -320,10 +320,22 @@ impl<'a> Compiler<'a> {
             mov [%rbp-{r_offset}], %rax;
         }};
 
+        let reg_sz = left
+            .get_annotations()
+            .reg_size()
+            .expect("Expression must have a register size");
+
+        let reg_l = Reg64::Rax
+            .scale(reg_sz)
+            .expect("Register could not be found for expression");
+        let reg_r = Reg64::Rbx
+            .scale(reg_sz)
+            .expect("Register could not be found for expression");
+
         let mut op_asm = vec![];
         match op {
             BinaryOperator::Add => {
-                assembly! {(op_asm) {add %rax, %rbx;}}
+                assembly! {(op_asm) {add %{reg_l}, %{reg_r};}}
             }
             BinaryOperator::Sub => {
                 assembly! {(op_asm) {sub %rax, %rbx;}}
@@ -366,8 +378,8 @@ impl<'a> Compiler<'a> {
         assembly! {(code){
             {{left_code}}
             {{right_code}}
-            mov %rax, [%rbp - {l_offset}];
-            mov %rbx, [%rbp - {r_offset}];
+            mov %{reg_l}, [%rbp - {l_offset}];
+            mov %{reg_r}, [%rbp - {r_offset}];
             {{op_asm}}
         }}
 
@@ -395,7 +407,13 @@ impl<'a> Compiler<'a> {
 
         self.push_scope(ast);
 
-        let register = Self::register_by_type(ast.get_annotations().ty());
+        let reg_sz = ast
+            .get_annotations()
+            .reg_size()
+            .expect("Expression must have a register size");
+        let register = Reg64::Rax
+            .scale(reg_sz)
+            .expect("Register could not be found for expression");
         match ast {
             Expression::Integer32(_, i) => {
                 assembly! {(code) {mov %{register}, {*i};}}

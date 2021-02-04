@@ -797,8 +797,10 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if l.get_type() == I64 && r.get_type() == I64 {
-                    Ok((I64, l, r))
+                if (l.get_type() == I64 && r.get_type() == I64)
+                    || (l.get_type() == I32 && r.get_type() == I32)
+                {
+                    Ok((l.get_type().clone(), l, r))
                 } else {
                     Err(format!(
                         "{} expected i64 but found {} and {}",
