@@ -1,3 +1,8 @@
+/**
+ * RegSize stores the bit size of a register.  This is used by the compiler to
+ * assign a minimum register size needed to store a value.  It is meant to be
+ * independent of specific CPU architectures (e.g. x86 or ARM).
+ */
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RegSize {
     R8,
