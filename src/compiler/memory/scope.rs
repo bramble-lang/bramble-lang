@@ -32,7 +32,7 @@ impl LayoutData {
  * and use symbols that are in its scope up to and including the Routine
  * level, and then it cannot access any variables above that node.
  *
- * Routine SymbolOffsetTables will also track the amount of space which must be allocated
+ * Routine CompilerAnnotations will also track the amount of space which must be allocated
  * for the routine's stackframe (in order to store all parameters and
  * local variables).
  *
@@ -40,7 +40,7 @@ impl LayoutData {
  * and their size in bytes and their relative offset to the stack frame.
  */
 #[derive(Clone, Debug, PartialEq)]
-pub struct SymbolOffsetTable {
+pub struct CompilerAnnotation {
     pub(super) id: u32,
     pub(super) line: u32,
     pub(super) level: Level,
@@ -51,9 +51,9 @@ pub struct SymbolOffsetTable {
     pub(super) param_reg_size: Vec<Option<RegSize>>,
 }
 
-impl SymbolOffsetTable {
-    pub fn new(id: u32, level: Level, canon_path: Path, ty: Type) -> SymbolOffsetTable {
-        SymbolOffsetTable {
+impl CompilerAnnotation {
+    pub fn new(id: u32, level: Level, canon_path: Path, ty: Type) -> CompilerAnnotation {
+        CompilerAnnotation {
             id,
             line: 0,
             level,
@@ -70,8 +70,8 @@ impl SymbolOffsetTable {
         canon_path: &Path,
         routine_type: RoutineDefType,
         ret_ty: &Type,
-    ) -> SymbolOffsetTable {
-        SymbolOffsetTable::new(
+    ) -> CompilerAnnotation {
+        CompilerAnnotation::new(
             id,
             Level::Routine {
                 allocation: 0,
@@ -82,8 +82,8 @@ impl SymbolOffsetTable {
         )
     }
 
-    pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &Type) -> SymbolOffsetTable {
-        SymbolOffsetTable::new(
+    pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &Type) -> CompilerAnnotation {
+        CompilerAnnotation::new(
             id,
             Level::Module { name: name.into() },
             canon_path.clone(),
@@ -138,9 +138,9 @@ impl SymbolOffsetTable {
         m: &SemanticAnnotations,
         struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
-    ) -> (SymbolOffsetTable, LayoutData) {
+    ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = SymbolOffsetTable::new(
+        let mut scope = CompilerAnnotation::new(
             m.id,
             Level::Local,
             m.get_canonical_path().clone(),
@@ -159,9 +159,9 @@ impl SymbolOffsetTable {
         routine_type: &RoutineDefType,
         struct_table: &ResolvedStructTable,
         current_offset: i32,
-    ) -> (SymbolOffsetTable, i32) {
+    ) -> (CompilerAnnotation, i32) {
         let mut scope =
-            SymbolOffsetTable::new_routine(m.id, m.get_canonical_path(), *routine_type, &m.ty);
+            CompilerAnnotation::new_routine(m.id, m.get_canonical_path(), *routine_type, &m.ty);
         scope.line = m.ln;
         let mut current_offset = current_offset;
         for s in m.sym.table().iter() {
@@ -188,9 +188,9 @@ impl SymbolOffsetTable {
         name: &str,
         struct_table: &ResolvedStructTable,
         current_layout: LayoutData,
-    ) -> (SymbolOffsetTable, LayoutData) {
+    ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = SymbolOffsetTable::new_module(m.id, &name, m.get_canonical_path(), &m.ty);
+        let mut scope = CompilerAnnotation::new_module(m.id, &name, m.get_canonical_path(), &m.ty);
         scope.line = m.ln;
         for s in m.sym.table().iter() {
             layout.offset =
@@ -199,8 +199,8 @@ impl SymbolOffsetTable {
         (scope, layout)
     }
 
-    pub(super) fn structdef_from(m: &SemanticAnnotations) -> (SymbolOffsetTable, LayoutData) {
-        let mut scope = SymbolOffsetTable::new(
+    pub(super) fn structdef_from(m: &SemanticAnnotations) -> (CompilerAnnotation, LayoutData) {
+        let mut scope = CompilerAnnotation::new(
             m.id,
             Level::Local,
             m.get_canonical_path().clone(),
@@ -212,7 +212,7 @@ impl SymbolOffsetTable {
     }
 }
 
-impl std::fmt::Display for SymbolOffsetTable {
+impl std::fmt::Display for CompilerAnnotation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("Level: {} | ", self.level))?;
         f.write_fmt(format_args!("Type: {}\n", self.ty))?;

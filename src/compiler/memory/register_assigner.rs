@@ -1,5 +1,5 @@
 use crate::compiler::arch::registers::RegSize;
-use crate::compiler::memory::scope::SymbolOffsetTable;
+use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::struct_table::ResolvedStructTable;
 use crate::expression::Expression;
 use crate::syntax::module::*;
@@ -54,14 +54,14 @@ impl RegisterAssigner {
         sz.and_then(|sz| RegSize::assign(sz as usize))
     }
 
-    fn assign_register(a: &mut SymbolOffsetTable, struct_table: &ResolvedStructTable) {
+    fn assign_register(a: &mut CompilerAnnotation, struct_table: &ResolvedStructTable) {
         let reg = Self::register_for_type(a.ty(), struct_table);
         a.set_reg_size(reg);
     }
 
     pub fn for_module(
         &self,
-        m: &mut Module<SymbolOffsetTable>,
+        m: &mut Module<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(self, m, struct_table.size_of(m.get_annotations().ty()));
@@ -79,7 +79,7 @@ impl RegisterAssigner {
 
     fn for_items(
         &self,
-        items: &mut Vec<Item<SymbolOffsetTable>>,
+        items: &mut Vec<Item<CompilerAnnotation>>,
         struct_table: &ResolvedStructTable,
     ) {
         for i in items.iter_mut() {
@@ -98,7 +98,7 @@ impl RegisterAssigner {
 
     fn for_structdef(
         &self,
-        sd: &mut StructDef<SymbolOffsetTable>,
+        sd: &mut StructDef<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(self, sd, struct_table.size_of(sd.get_annotations().ty()));
@@ -107,7 +107,7 @@ impl RegisterAssigner {
 
     fn for_routine(
         &self,
-        rd: &mut RoutineDef<SymbolOffsetTable>,
+        rd: &mut RoutineDef<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(self, rd, struct_table.size_of(rd.get_annotations().ty()));
@@ -132,7 +132,7 @@ impl RegisterAssigner {
 
     fn for_statement(
         &self,
-        statement: &mut Statement<SymbolOffsetTable>,
+        statement: &mut Statement<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -161,7 +161,7 @@ impl RegisterAssigner {
         };
     }
 
-    fn for_bind(&self, bind: &mut Bind<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_bind(&self, bind: &mut Bind<CompilerAnnotation>, struct_table: &ResolvedStructTable) {
         trace!(
             self,
             bind,
@@ -173,7 +173,7 @@ impl RegisterAssigner {
 
     fn for_mutate(
         &self,
-        mutate: &mut Mutate<SymbolOffsetTable>,
+        mutate: &mut Mutate<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -188,7 +188,7 @@ impl RegisterAssigner {
 
     fn for_yieldreturn(
         &self,
-        yr: &mut YieldReturn<SymbolOffsetTable>,
+        yr: &mut YieldReturn<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(self, yr, struct_table.size_of(yr.get_annotations().ty()));
@@ -199,7 +199,7 @@ impl RegisterAssigner {
             .map(|rv| self.for_expression(rv, struct_table));
     }
 
-    fn for_return(&self, r: &mut Return<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
+    fn for_return(&self, r: &mut Return<CompilerAnnotation>, struct_table: &ResolvedStructTable) {
         trace!(self, r, struct_table.size_of(r.get_annotations().ty()));
 
         Self::assign_register(r.get_annotations_mut(), struct_table);
@@ -210,7 +210,7 @@ impl RegisterAssigner {
 
     fn for_expression(
         &self,
-        exp: &mut Expression<SymbolOffsetTable>,
+        exp: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         use Expression::*;
@@ -239,7 +239,7 @@ impl RegisterAssigner {
 
     fn for_expression_block(
         &self,
-        block: &mut Expression<SymbolOffsetTable>,
+        block: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -264,7 +264,7 @@ impl RegisterAssigner {
 
     fn for_member_access(
         &self,
-        access: &mut Expression<SymbolOffsetTable>,
+        access: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -283,7 +283,7 @@ impl RegisterAssigner {
 
     fn for_unary_op(
         &self,
-        un_op: &mut Expression<SymbolOffsetTable>,
+        un_op: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -302,7 +302,7 @@ impl RegisterAssigner {
 
     fn for_binary_op(
         &self,
-        bin_op: &mut Expression<SymbolOffsetTable>,
+        bin_op: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -322,7 +322,7 @@ impl RegisterAssigner {
 
     fn for_if(
         &self,
-        if_exp: &mut Expression<SymbolOffsetTable>,
+        if_exp: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -351,7 +351,7 @@ impl RegisterAssigner {
 
     fn for_routine_call(
         &self,
-        rc: &mut Expression<SymbolOffsetTable>,
+        rc: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(self, rc, struct_table.size_of(rc.get_annotations().ty()));
@@ -368,7 +368,7 @@ impl RegisterAssigner {
 
     fn for_yield(
         &self,
-        yield_exp: &mut Expression<SymbolOffsetTable>,
+        yield_exp: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(
@@ -387,7 +387,7 @@ impl RegisterAssigner {
 
     fn for_struct_expression(
         &self,
-        se: &mut Expression<SymbolOffsetTable>,
+        se: &mut Expression<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
     ) {
         trace!(self, se, struct_table.size_of(se.get_annotations().ty()));
