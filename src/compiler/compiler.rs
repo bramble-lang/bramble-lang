@@ -1,4 +1,4 @@
-use crate::compiler::memory::set_reg::RegisterAssigner;
+use crate::compiler::memory::register_assigner::RegisterAssigner;
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to

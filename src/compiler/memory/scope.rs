@@ -1,4 +1,4 @@
-use crate::compiler::memory::set_reg::RegSize;
+use crate::compiler::memory::register_assigner::RegSize;
 use crate::{
     semantics::semanticnode::SemanticAnnotations,
     syntax::path::Path,
