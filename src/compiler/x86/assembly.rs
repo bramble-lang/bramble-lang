@@ -163,33 +163,33 @@ impl Reg64 {
      * For example, given `Rax` and a target register size of
      * `R16` (16 bits), scale will return `Ax`.
      */
-    pub fn scale(&self, sz: RegSize) -> Reg {
+    pub fn scale(&self, sz: RegSize) -> Option<Reg> {
         match self {
-            Reg64::Rax => match sz {
+            Reg64::Rax => Some(match sz {
                 RegSize::R8 => Reg::R8(Reg8::Al),
                 RegSize::R16 => Reg::R16(Reg16::Ax),
                 RegSize::R32 => Reg::R32(Reg32::Eax),
                 RegSize::R64 => Reg::R64(Reg64::Rax),
-            },
-            Reg64::Rbx => match sz {
+            }),
+            Reg64::Rbx => Some(match sz {
                 RegSize::R8 => Reg::R8(Reg8::Bl),
                 RegSize::R16 => Reg::R16(Reg16::Bx),
                 RegSize::R32 => Reg::R32(Reg32::Ebx),
                 RegSize::R64 => Reg::R64(Reg64::Rbx),
-            },
-            Reg64::Rcx => match sz {
+            }),
+            Reg64::Rcx => Some(match sz {
                 RegSize::R8 => Reg::R8(Reg8::Cl),
                 RegSize::R16 => Reg::R16(Reg16::Cx),
                 RegSize::R32 => Reg::R32(Reg32::Ecx),
                 RegSize::R64 => Reg::R64(Reg64::Rcx),
-            },
-            Reg64::Rdx => match sz {
+            }),
+            Reg64::Rdx => Some(match sz {
                 RegSize::R8 => Reg::R8(Reg8::Dl),
                 RegSize::R16 => Reg::R16(Reg16::Dx),
                 RegSize::R32 => Reg::R32(Reg32::Edx),
                 RegSize::R64 => Reg::R64(Reg64::Rdx),
-            },
-            _ => panic!("Cannot scale register {}", self),
+            }),
+            _ => None,
         }
     }
 }
