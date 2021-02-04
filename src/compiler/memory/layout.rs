@@ -2,7 +2,7 @@ use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
 use crate::{
-    compiler::memory::scope::{LayoutData, SymbolOffsetTable},
+    compiler::memory::scope::{CompilerAnnotation, LayoutData},
     semantics::semanticnode::SemanticAnnotations,
     syntax::{
         module::{self, Item, Module},
@@ -24,7 +24,7 @@ use braid_lang::result::Result;
 
 pub fn compute_layout_for_program(
     ast: &Module<SemanticAnnotations>,
-) -> Result<(Module<SymbolOffsetTable>, ResolvedStructTable)> {
+) -> Result<(Module<CompilerAnnotation>, ResolvedStructTable)> {
     let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
     let struct_table = unresolved_struct_table.resolve()?;
     let (compiler_ast, _) = compute::layouts_for_module(ast, LayoutData::new(0), &struct_table);
@@ -38,9 +38,13 @@ mod compute {
         m: &module::Module<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (module::Module<SymbolOffsetTable>, LayoutData) {
-        let (annotations, mut layout) =
-            SymbolOffsetTable::module_from(m.get_annotations(), m.get_name(), struct_table, layout);
+    ) -> (module::Module<CompilerAnnotation>, LayoutData) {
+        let (annotations, mut layout) = CompilerAnnotation::module_from(
+            m.get_annotations(),
+            m.get_name(),
+            struct_table,
+            layout,
+        );
 
         let mut nmodule = module::Module::new(m.get_name(), annotations);
         for child_module in m.get_modules().iter() {
@@ -64,7 +68,7 @@ mod compute {
         items: &Vec<Item<SemanticAnnotations>>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Vec<Item<SymbolOffsetTable>>, LayoutData) {
+    ) -> (Vec<Item<CompilerAnnotation>>, LayoutData) {
         let mut compiler_ast_items = vec![];
         let mut layout = layout;
         for item in items.iter() {
@@ -87,8 +91,8 @@ mod compute {
 
     fn layout_for_structdef(
         sd: &StructDef<SemanticAnnotations>,
-    ) -> (StructDef<SymbolOffsetTable>, LayoutData) {
-        let (scope, layout) = SymbolOffsetTable::structdef_from(sd.get_annotations());
+    ) -> (StructDef<CompilerAnnotation>, LayoutData) {
+        let (scope, layout) = CompilerAnnotation::structdef_from(sd.get_annotations());
         (
             StructDef::new(sd.get_name(), scope, sd.get_fields().clone()),
             layout,
@@ -99,7 +103,7 @@ mod compute {
         rd: &RoutineDef<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (RoutineDef<SymbolOffsetTable>, LayoutData) {
+    ) -> (RoutineDef<CompilerAnnotation>, LayoutData) {
         let RoutineDef {
             annotations,
             def,
@@ -114,7 +118,7 @@ mod compute {
             RoutineDefType::Coroutine => 40,
         };
         let (mut annotations, offset) =
-            SymbolOffsetTable::routine_from(annotations, def, struct_table, initial_frame_size);
+            CompilerAnnotation::routine_from(annotations, def, struct_table, initial_frame_size);
         let mut nbody = vec![];
         let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
@@ -143,7 +147,7 @@ mod compute {
         statement: &Statement<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Statement<SymbolOffsetTable>, LayoutData) {
+    ) -> (Statement<CompilerAnnotation>, LayoutData) {
         let (e, l) = match statement {
             Statement::Bind(b) => {
                 let (e, l) = layout_for_bind(b, layout, struct_table);
@@ -173,9 +177,9 @@ mod compute {
         bind: &Bind<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Bind<SymbolOffsetTable>, LayoutData) {
+    ) -> (Bind<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            SymbolOffsetTable::local_from(bind.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(bind.get_annotations(), struct_table, layout);
         let (rhs, layout) = compute::layout_for_expression(bind.get_rhs(), layout, struct_table);
         (
             Bind::new(
@@ -193,9 +197,9 @@ mod compute {
         mutate: &Mutate<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Mutate<SymbolOffsetTable>, LayoutData) {
+    ) -> (Mutate<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            SymbolOffsetTable::local_from(mutate.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(mutate.get_annotations(), struct_table, layout);
         let (rhs, layout) = compute::layout_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(annotations, mutate.get_id(), rhs), layout)
     }
@@ -204,9 +208,9 @@ mod compute {
         yr: &YieldReturn<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (YieldReturn<SymbolOffsetTable>, LayoutData) {
+    ) -> (YieldReturn<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            SymbolOffsetTable::local_from(yr.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(yr.get_annotations(), struct_table, layout);
         match yr.get_value() {
             None => (YieldReturn::new(annotations, None), layout),
             Some(val) => {
@@ -220,9 +224,9 @@ mod compute {
         r: &Return<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Return<SymbolOffsetTable>, LayoutData) {
+    ) -> (Return<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            SymbolOffsetTable::local_from(r.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(r.get_annotations(), struct_table, layout);
         match r.get_value() {
             None => (Return::new(annotations, None), layout),
             Some(val) => {
@@ -236,36 +240,36 @@ mod compute {
         ast: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         use Expression::*;
         match ast {
             ExpressionBlock(..) => layout_for_expression_block(ast, layout, struct_table),
             Expression::Integer64(m, i) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::Integer64(annotations, *i), layout)
             }
             Expression::Boolean(m, b) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::Boolean(annotations, *b), layout)
             }
             Expression::StringLiteral(m, s) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::StringLiteral(annotations, s.clone()), layout)
             }
             Expression::CustomType(m, name) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::CustomType(annotations, name.clone()), layout)
             }
             Expression::Identifier(m, id) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::Identifier(annotations, id.clone()), layout)
             }
             Path(m, path) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::Path(annotations, path.clone()), layout)
             }
             Expression::IdentifierDeclare(m, id, p) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (
                     Expression::IdentifierDeclare(annotations, id.clone(), p.clone()),
                     layout,
@@ -285,9 +289,10 @@ mod compute {
         block: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::ExpressionBlock(m, body, final_exp) = block {
-            let (annotations, mut nlayout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+            let (annotations, mut nlayout) =
+                CompilerAnnotation::local_from(m, struct_table, layout);
             let mut nbody = vec![];
             for e in body.iter() {
                 let (e, layout) = layout_for_statement(e, nlayout, struct_table);
@@ -314,10 +319,10 @@ mod compute {
         access: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::MemberAccess(m, src, member) = access {
             let (src, layout) = layout_for_expression(src, layout, struct_table);
-            let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             (
                 Expression::MemberAccess(annotations, Box::new(src), member.clone()),
                 layout,
@@ -331,10 +336,10 @@ mod compute {
         un_op: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::UnaryOp(m, op, operand) = un_op {
             let (operand, layout) = layout_for_expression(operand, layout, struct_table);
-            let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             (
                 Expression::UnaryOp(annotations, *op, Box::new(operand)),
                 layout,
@@ -348,11 +353,11 @@ mod compute {
         bin_op: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::BinaryOp(m, op, l, r) = bin_op {
             let (l, layout) = compute::layout_for_expression(l, layout, struct_table);
             let (r, layout) = compute::layout_for_expression(r, layout, struct_table);
-            let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             (
                 Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
                 layout,
@@ -366,7 +371,7 @@ mod compute {
         if_exp: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let SemanticNode::If {
             annotation: m,
             cond,
@@ -374,7 +379,7 @@ mod compute {
             else_arm,
         } = if_exp
         {
-            let (annotation, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+            let (annotation, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             let (cond, layout) = compute::layout_for_expression(cond, layout, struct_table);
             let (if_arm, layout) = compute::layout_for_expression(if_arm, layout, struct_table);
             let (else_arm, layout) = match else_arm {
@@ -403,9 +408,9 @@ mod compute {
         rc: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::RoutineCall(m, call, name, params) = rc {
-            let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             let mut nlayout = layout;
             let mut nparams = vec![];
             for p in params.iter() {
@@ -426,9 +431,9 @@ mod compute {
         yield_exp: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::Yield(m, e) = yield_exp {
-            let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             let (e, layout) = layout_for_expression(e, layout, struct_table);
             (Expression::Yield(annotations, Box::new(e)), layout)
         } else {
@@ -440,10 +445,10 @@ mod compute {
         se: &SemanticNode,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Expression<SymbolOffsetTable>, LayoutData) {
+    ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let SemanticNode::StructExpression(annotations, struct_name, fields) = se {
             let (annotations, mut nlayout) =
-                SymbolOffsetTable::local_from(annotations, struct_table, layout);
+                CompilerAnnotation::local_from(annotations, struct_table, layout);
             let mut nfields = vec![];
             for (fname, fvalue) in fields.iter() {
                 let (nfv, no) = layout_for_expression(fvalue, nlayout, struct_table);
@@ -459,10 +464,10 @@ mod compute {
         }
     }
 
-    impl<SymbolOffsetTable> RoutineDef<SymbolOffsetTable> {
+    impl<CompilerAnnotation> RoutineDef<CompilerAnnotation> {
         pub fn validate_parameters(
             &self,
-            params: &Vec<Expression<SymbolOffsetTable>>,
+            params: &Vec<Expression<CompilerAnnotation>>,
         ) -> Result<()> {
             let expected_params = self.get_params();
             if params.len() == expected_params.len() {
@@ -515,7 +520,7 @@ mod compute {
                 Expression::Integer64(m, _) => {
                     assert_eq!(
                         m,
-                        SymbolOffsetTable::new(
+                        CompilerAnnotation::new(
                             3,
                             scope::Level::Local,
                             vec!["root"].into(),
@@ -547,7 +552,7 @@ mod compute {
                     assert_eq!(v, 0);
                     assert_eq!(
                         m,
-                        SymbolOffsetTable::new(
+                        CompilerAnnotation::new(
                             0,
                             scope::Level::Local,
                             vec!["root"].into(),
@@ -601,7 +606,7 @@ mod compute {
                 Expression::BinaryOp(m, BinaryOperator::Mul, l, r) => {
                     assert_eq!(
                         m,
-                        SymbolOffsetTable::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),
+                        CompilerAnnotation::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),
                     );
 
                     match *l {

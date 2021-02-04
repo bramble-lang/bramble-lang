@@ -5,9 +5,9 @@ use std::collections::HashMap;
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
 use crate::compiler::memory::layout::compute_layout_for_program;
+use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::scope::Level::Routine;
-use crate::compiler::memory::scope::SymbolOffsetTable;
-use crate::compiler::memory::stack::SymbolOffsetTableStack;
+use crate::compiler::memory::stack::CompilerAnnotationStack;
 use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
@@ -69,10 +69,10 @@ impl From<&str> for TargetOS {
 }
 
 pub struct Compiler<'a> {
-    scope: SymbolOffsetTableStack<'a>,
+    scope: CompilerAnnotationStack<'a>,
     string_pool: StringPool,
     struct_table: &'a ResolvedStructTable,
-    root: &'a Module<SymbolOffsetTable>,
+    root: &'a Module<CompilerAnnotation>,
     c_extern_functions: HashMap<String, String>,
     imported_functions: Vec<Path>,
 }
@@ -96,7 +96,7 @@ impl<'a> Compiler<'a> {
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 
         let mut compiler = Compiler {
-            scope: SymbolOffsetTableStack::new(),
+            scope: CompilerAnnotationStack::new(),
             string_pool,
             root: &compiler_ast,
             struct_table: &struct_table,
@@ -291,8 +291,8 @@ impl<'a> Compiler<'a> {
     fn handle_binary_operands(
         &mut self,
         op: BinaryOperator,
-        left: &'a Expression<SymbolOffsetTable>,
-        right: &'a Expression<SymbolOffsetTable>,
+        left: &'a Expression<CompilerAnnotation>,
+        right: &'a Expression<CompilerAnnotation>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
@@ -358,7 +358,7 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn push_scope(&mut self, ast: &'a Expression<SymbolOffsetTable>) {
+    fn push_scope(&mut self, ast: &'a Expression<CompilerAnnotation>) {
         self.scope.push(ast.get_annotations())
     }
 
@@ -368,7 +368,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_expression(
         &mut self,
-        ast: &'a Expression<SymbolOffsetTable>,
+        ast: &'a Expression<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -559,7 +559,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_module(
         &mut self,
-        module: &'a Module<SymbolOffsetTable>,
+        module: &'a Module<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -580,7 +580,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_item(
         &mut self,
-        item: &'a Item<SymbolOffsetTable>,
+        item: &'a Item<CompilerAnnotation>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         self.scope.push(item.get_annotations());
@@ -596,7 +596,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_routine_def(
         &mut self,
-        routine: &'a RoutineDef<SymbolOffsetTable>,
+        routine: &'a RoutineDef<CompilerAnnotation>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         match routine.get_def() {
@@ -607,7 +607,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_function_def(
         &mut self,
-        routine: &'a RoutineDef<SymbolOffsetTable>,
+        routine: &'a RoutineDef<CompilerAnnotation>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         let fn_param_registers = vec![Reg64::Rax, Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
@@ -655,7 +655,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_coroutine_def(
         &mut self,
-        routine: &'a RoutineDef<SymbolOffsetTable>,
+        routine: &'a RoutineDef<CompilerAnnotation>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
@@ -677,7 +677,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_statement(
         &mut self,
-        statement: &'a Statement<SymbolOffsetTable>,
+        statement: &'a Statement<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -692,7 +692,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_bind(
         &mut self,
-        bind: &'a Bind<SymbolOffsetTable>,
+        bind: &'a Bind<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -714,7 +714,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_mutate(
         &mut self,
-        mutate: &'a Mutate<SymbolOffsetTable>,
+        mutate: &'a Mutate<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -733,7 +733,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_yield(
         &mut self,
-        y: &'a Yield<SymbolOffsetTable>,
+        y: &'a Yield<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -745,7 +745,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_yieldreturn(
         &mut self,
-        yr: &'a YieldReturn<SymbolOffsetTable>,
+        yr: &'a YieldReturn<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -757,7 +757,7 @@ impl<'a> Compiler<'a> {
 
     fn traverse_return(
         &mut self,
-        r: &'a Return<SymbolOffsetTable>,
+        r: &'a Return<CompilerAnnotation>,
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
@@ -771,7 +771,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         current_func: &String,
         code: &mut Vec<Inst>,
-        src: &'a Expression<SymbolOffsetTable>,
+        src: &'a Expression<CompilerAnnotation>,
         member: &str,
     ) -> Result<(), String> {
         let src_ty = src.get_annotations().ty();
@@ -823,7 +823,7 @@ impl<'a> Compiler<'a> {
         &mut self,
         current_func: &String,
         struct_name: &Path,
-        field_values: &'a Vec<(String, Expression<SymbolOffsetTable>)>,
+        field_values: &'a Vec<(String, Expression<CompilerAnnotation>)>,
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
@@ -876,7 +876,7 @@ impl<'a> Compiler<'a> {
 
     fn bind_member(
         &mut self,
-        fvalue: &'a Expression<SymbolOffsetTable>,
+        fvalue: &'a Expression<CompilerAnnotation>,
         current_func: &String,
         dst: Reg64,
         dst_offset: i32,
@@ -919,7 +919,7 @@ impl<'a> Compiler<'a> {
 
     fn bind(
         &mut self,
-        value: &'a Expression<SymbolOffsetTable>,
+        value: &'a Expression<CompilerAnnotation>,
         current_func: &String,
         dst: Reg64,
         dst_offset: i32,
@@ -957,8 +957,8 @@ impl<'a> Compiler<'a> {
 
     fn yield_exp(
         &mut self,
-        meta: &'a SymbolOffsetTable,
-        exp: &'a Expression<SymbolOffsetTable>,
+        meta: &'a CompilerAnnotation,
+        exp: &'a Expression<CompilerAnnotation>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -988,8 +988,8 @@ impl<'a> Compiler<'a> {
 
     fn yield_return(
         &mut self,
-        meta: &'a SymbolOffsetTable,
-        exp: &'a Option<Expression<SymbolOffsetTable>>,
+        meta: &'a CompilerAnnotation,
+        exp: &'a Option<Expression<CompilerAnnotation>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1018,7 +1018,7 @@ impl<'a> Compiler<'a> {
 
     fn return_exp(
         &mut self,
-        exp: &'a Option<Expression<SymbolOffsetTable>>,
+        exp: &'a Option<Expression<CompilerAnnotation>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1139,7 +1139,7 @@ impl<'a> Compiler<'a> {
 
     fn move_params_into_stackframe(
         &self,
-        routine: &RoutineDef<SymbolOffsetTable>,
+        routine: &RoutineDef<CompilerAnnotation>,
         param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         let routine_name = routine.get_name();
@@ -1185,7 +1185,7 @@ impl<'a> Compiler<'a> {
 
     fn evaluate_routine_call_params(
         &mut self,
-        params: &'a Vec<Expression<SymbolOffsetTable>>,
+        params: &'a Vec<Expression<CompilerAnnotation>>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
@@ -1200,7 +1200,7 @@ impl<'a> Compiler<'a> {
 
     fn move_routine_call_params_into_registers(
         &mut self,
-        params: &'a Vec<Expression<SymbolOffsetTable>>,
+        params: &'a Vec<Expression<CompilerAnnotation>>,
         param_registers: &Vec<Reg64>,
     ) -> Result<Vec<Inst>, String> {
         // evaluate each paramater then store in registers Eax, Ebx, Ecx, Edx before

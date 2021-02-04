@@ -9,7 +9,7 @@ use crate::syntax::{
     statement::{Bind, Mutate, Return, Statement, Yield, YieldReturn},
 };
 
-use super::scope::SymbolOffsetTable;
+use super::scope::CompilerAnnotation;
 
 #[derive(Debug, PartialEq)]
 pub struct StringPool {
@@ -45,7 +45,7 @@ impl StringPool {
 
     /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
-    pub fn extract_from(&mut self, ast: &Expression<SymbolOffsetTable>) {
+    pub fn extract_from(&mut self, ast: &Expression<CompilerAnnotation>) {
         use crate::expression::Expression::*;
 
         match ast {
@@ -103,7 +103,7 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_module(&mut self, module: &Module<SymbolOffsetTable>) {
+    pub fn extract_from_module(&mut self, module: &Module<CompilerAnnotation>) {
         for m in module.get_modules().iter() {
             self.extract_from_module(m);
         }
@@ -116,20 +116,20 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_item(&mut self, item: &Item<SymbolOffsetTable>) {
+    pub fn extract_from_item(&mut self, item: &Item<CompilerAnnotation>) {
         match item {
             Item::Routine(r) => self.extract_from_routine(r),
             Item::Struct(_) => (),
         }
     }
 
-    pub fn extract_from_routine(&mut self, routine: &RoutineDef<SymbolOffsetTable>) {
+    pub fn extract_from_routine(&mut self, routine: &RoutineDef<CompilerAnnotation>) {
         for s in routine.get_body().iter() {
             self.extract_from_statement(s);
         }
     }
 
-    pub fn extract_from_statement(&mut self, statement: &Statement<SymbolOffsetTable>) {
+    pub fn extract_from_statement(&mut self, statement: &Statement<CompilerAnnotation>) {
         match statement {
             Statement::Bind(b) => self.extract_from_bind(b),
             Statement::Mutate(m) => self.extract_from_mutate(m),
@@ -139,26 +139,26 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_bind(&mut self, bind: &Bind<SymbolOffsetTable>) {
+    pub fn extract_from_bind(&mut self, bind: &Bind<CompilerAnnotation>) {
         self.extract_from(bind.get_rhs())
     }
 
-    pub fn extract_from_mutate(&mut self, mutate: &Mutate<SymbolOffsetTable>) {
+    pub fn extract_from_mutate(&mut self, mutate: &Mutate<CompilerAnnotation>) {
         self.extract_from(mutate.get_rhs())
     }
 
-    pub fn extract_from_yield(&mut self, y: &Yield<SymbolOffsetTable>) {
+    pub fn extract_from_yield(&mut self, y: &Yield<CompilerAnnotation>) {
         self.extract_from(y.get_value())
     }
 
-    pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<SymbolOffsetTable>) {
+    pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<CompilerAnnotation>) {
         match yr.get_value() {
             None => (),
             Some(val) => self.extract_from(val),
         }
     }
 
-    pub fn extract_from_return(&mut self, r: &Return<SymbolOffsetTable>) {
+    pub fn extract_from_return(&mut self, r: &Return<CompilerAnnotation>) {
         match r.get_value() {
             None => (),
             Some(val) => self.extract_from(val),
