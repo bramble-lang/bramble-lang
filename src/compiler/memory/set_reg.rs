@@ -3,8 +3,45 @@
  * assign to each node in the AST: if it makes sense to assign
  * it to a register.
  */
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RegSize {
+    R8,
+    R16,
+    R32,
+    R64,
+}
+
+impl RegSize {
+    pub fn assign(nbytes: usize) -> Option<RegSize> {
+        if nbytes == 0 {
+            None
+        } else if nbytes <= 1 {
+            Some(RegSize::R8)
+        } else if nbytes <= 2 {
+            Some(RegSize::R16)
+        } else if nbytes <= 4 {
+            Some(RegSize::R32)
+        } else if nbytes <= 8 {
+            Some(RegSize::R64)
+        } else {
+            None
+        }
+    }
+}
+
+impl std::fmt::Display for RegSize {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        match self {
+            RegSize::R8 => f.write_str("R8"),
+            RegSize::R16 => f.write_str("R16"),
+            RegSize::R32 => f.write_str("R32"),
+            RegSize::R64 => f.write_str("R64"),
+        }
+    }
+}
 
 pub mod assign {
+    use super::*;
     use crate::compiler::memory::scope::SymbolOffsetTable;
     use crate::compiler::memory::struct_table::ResolvedStructTable;
     use crate::expression::Expression;
@@ -12,22 +49,29 @@ pub mod assign {
     use crate::syntax::routinedef::*;
     use crate::syntax::statement::*;
     use crate::syntax::structdef::*;
+    use crate::syntax::ty::Type;
     use stdext::function_name;
 
     macro_rules! trace {
         ($ts:expr, $sz:expr) => {
             println!(
-                "{} {} ({}) -> {:?}",
+                "{} [{}]{} -> {:?} {:?}",
                 function_name!(),
-                $ts.get_name(),
                 $ts.get_annotations().id(),
+                $ts.get_name(),
                 $sz,
+                RegSize::assign($sz.unwrap_or(0) as usize)
             )
         };
     }
 
+    fn assign_register(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
+        let sz = struct_table.size_of(ty);
+        sz.and_then(|sz| RegSize::assign(sz as usize))
+    }
+
     pub fn for_module(m: &Module<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
-        trace!(m, 0);
+        trace!(m, struct_table.size_of(m.get_annotations().ty()));
 
         for child_module in m.get_modules().iter() {
             for_module(child_module, struct_table);
@@ -41,7 +85,7 @@ pub mod assign {
 
     fn for_items(items: &Vec<Item<SymbolOffsetTable>>, struct_table: &ResolvedStructTable) {
         for i in items {
-            trace!(i, 0);
+            trace!(i, struct_table.size_of(i.get_annotations().ty()));
             match i {
                 Item::Struct(sd) => {
                     for_structdef(sd, struct_table);
@@ -54,15 +98,22 @@ pub mod assign {
     }
 
     fn for_structdef(sd: &StructDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
-        trace!(sd, 0);
+        trace!(sd, struct_table.size_of(sd.get_annotations().ty()));
 
         for (fname, fty) in sd.get_fields() {
-            println!("{}:{} -> {:?}", fname, fty, struct_table.size_of(fty));
+            let reg = assign_register(fty, struct_table);
+            println!(
+                "{}:({},{:?}) -> {:?}",
+                fname,
+                fty,
+                struct_table.size_of(fty),
+                reg
+            );
         }
     }
 
     fn for_routine(rd: &RoutineDef<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
-        trace!(rd, 0);
+        trace!(rd, struct_table.size_of(rd.get_annotations().ty()));
 
         // loop through all the params
         for p in rd.get_params() {
@@ -81,7 +132,10 @@ pub mod assign {
     }
 
     fn for_statement(statement: &Statement<SymbolOffsetTable>, struct_table: &ResolvedStructTable) {
-        trace!(statement, 0);
+        trace!(
+            statement,
+            struct_table.size_of(statement.get_annotations().ty())
+        );
         match statement {
             Statement::Bind(b) => {
                 for_bind(b, struct_table);
