@@ -1226,6 +1226,10 @@ impl<'a> Compiler<'a> {
             code.append(&mut symbol_table);
             self.traverse_expression(param, current_func, &mut code)?;
             if let Some(offset) = offset {
+                if offset == 0 {
+                    continue;
+                }
+
                 assembly! {(code){
                     mov [%rbp-{offset}], %rax;
                 }};
@@ -1256,6 +1260,10 @@ impl<'a> Compiler<'a> {
         for reg in param_registers.iter().take(params.len()).rev() {
             let offset = self.get_expression_offset(&params[idx]);
             if let Some(offset) = offset {
+                if offset == 0 {
+                    continue;
+                }
+
                 assembly! {(code){
                     mov %{Reg::R64(*reg)}, [%rbp-{offset}];
                 }};
