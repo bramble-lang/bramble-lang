@@ -109,7 +109,6 @@ impl<'a> Compiler<'a> {
         compiler.coroutine_init("next_stack_addr", "stack_size", &mut code);
         compiler.runtime_yield_into_coroutine(&mut code);
         compiler.runtime_yield_return(&mut code);
-        compiler.print_bool(&mut code);
 
         // Configure the names for functions which will be called by the system
         // and external functions that will be called by this code
@@ -185,92 +184,6 @@ impl<'a> Compiler<'a> {
             let lbl = format!("str_{}", id);
             code.push(Inst::DataString(lbl, s.clone()));
         }
-        code
-    }
-
-    fn print_bool(&self, code: &mut Vec<Inst>) {
-        assembly! {
-            (code) {
-                @print_bool:
-                    push %rbp;
-                    mov %rbp, %rsp;
-                    cmp %rax, 0;
-                    jz ^false;
-                    lea %rbx, [@_true];
-                    push %rbx;
-                    jmp ^done;
-                    ^false:
-                    lea %rbx, [@_false];
-                    push %rbx;
-                    ^done:
-                    {{self.make_c64_extern_call("printf", 1)}}
-                    mov %rsp, %rbp;
-                    pop %rbp;
-                    ret;
-            }
-        }
-    }
-
-    fn make_c64_extern_call(&self, c_func: &str, nparams: usize) -> Vec<Inst> {
-        let mut code = vec![];
-        let platform_name: String = self
-            .c_extern_functions
-            .get(c_func)
-            .expect(&format!(
-                "Cannot find {} in list of c extern functions",
-                c_func
-            ))
-            .into();
-
-        assembly! {(code){
-            {{Compiler::pop_params_to_c64_registers(nparams)}}
-
-            push %rbp;
-            mov %rbp, %rsp;
-
-            and %rsp, 18446744073709551600u64;
-
-            mov %rax, 0;
-            call @{platform_name};
-            mov %rax, 0;
-
-            mov %rsp, %rbp;
-            pop %rbp;
-        }}
-        code
-    }
-
-    fn pop_params_to_c64_registers(nparams: usize) -> Vec<Inst> {
-        let mut code = vec![];
-        let c64_param_registers = vec![Reg64::Rdi, Reg64::Rsi, Reg64::Rdx];
-        let used_registers: Vec<&Reg64> =
-            c64_param_registers[0..nparams].into_iter().rev().collect();
-        for pl in 0..nparams {
-            assembly! {(code){
-                pop %{Reg::R64(*used_registers[pl])};
-            }}
-        }
-        code
-    }
-
-    /// The GCC32 uses a different order for parameters from the order that
-    /// Braid pushes parameters onto the stack as they are evaluated.  This
-    /// function reverses the order of the parameters.
-    fn reverse_c32_params_on_stack(nparams: usize) -> Vec<Inst> {
-        let mut code = vec![];
-        for pl in 0..nparams {
-            let pr = nparams - pl - 1;
-            if pr <= pl {
-                break;
-            }
-            assembly! {(code){
-                mov %rsi, [%rsp+{4*pl as i32}];
-                mov %rdi, [%rsp+{4*pr as i32}];
-                mov [%rsp+{4*pl as i32}], %rdi;
-                mov [%rsp+{4*pr as i32}], %rsi;
-            }}
-        }
-
         code
     }
 
