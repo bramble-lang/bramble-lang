@@ -105,6 +105,10 @@ impl CompilerAnnotation {
         self.level().allocation()
     }
 
+    pub fn symbols(&self) -> &SymbolTable {
+        &self.symbols
+    }
+
     pub fn insert(&mut self, name: &str, size: i32, offset: i32) -> i32 {
         self.symbols
             .table

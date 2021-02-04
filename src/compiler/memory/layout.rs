@@ -418,8 +418,9 @@ mod compute {
             let mut nparams = vec![];
             for p in params.iter() {
                 let (mut np, playout) = layout_for_expression(p, nlayout, struct_table);
+                let id = np.get_annotations().id();
                 np.get_annotations_mut().in_stackframe = true;
-                let anonymous_name = format!("!{}_{}", m.get_canonical_path(), m.id());
+                let anonymous_name = format!("!{}_{}", m.get_canonical_path(), id);
 
                 let sz = struct_table
                     .size_of(np.get_annotations().ty())

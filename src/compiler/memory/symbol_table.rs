@@ -11,6 +11,10 @@ impl SymbolTable {
             table: HashMap::new(),
         }
     }
+
+    pub fn table(&self) -> &HashMap<String, Symbol> {
+        &self.table
+    }
 }
 
 impl std::fmt::Display for SymbolTable {

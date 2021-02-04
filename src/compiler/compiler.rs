@@ -379,10 +379,6 @@ impl<'a> Compiler<'a> {
 
         self.push_scope(ast);
 
-        if ast.get_annotations().in_stackframe() {
-            code.push(Inst::Comment(format!("In stack frame {}", ast)));
-        }
-
         match ast {
             Expression::Integer64(_, i) => {
                 assembly! {(code) {mov %rax, {*i};}}
@@ -629,10 +625,18 @@ impl<'a> Compiler<'a> {
                 _ => panic!("Invalid scope for function definition"),
             };
 
+            let stack_frame_contents: Vec<Inst> = scope
+                .symbols()
+                .table()
+                .iter()
+                .map(|(_, s)| Inst::Comment(format!("{}[{}] @ {}", s.name, s.size, s.offset)))
+                .collect();
+
             assembly! {(code) {
             @{scope.canon_path().to_label()}:
                 ; {{format!("Define {}", scope.canon_path())}}
                 ;"Prepare stack frame for this function"
+                {{stack_frame_contents}}
                 push %rbp;
                 mov %rbp, %rsp;
                 sub %rsp, {*total_offset as i64};
@@ -1187,6 +1191,15 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
+    fn get_expression_offset(&self, node: &Expression<CompilerAnnotation>) -> Option<i32> {
+        let anonymous_name = format!(
+            "!{}_{}",
+            node.get_annotations().canon_path(),
+            node.get_annotations().id()
+        );
+        self.scope.find(&anonymous_name).map(|s| s.offset)
+    }
+
     fn evaluate_routine_call_params(
         &mut self,
         params: &'a Vec<Expression<CompilerAnnotation>>,
@@ -1194,7 +1207,29 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         for param in params.iter() {
+            let mut symbol_table: Vec<Inst> = param
+                .get_annotations()
+                .symbols()
+                .table()
+                .iter()
+                .map(|(_, s)| Inst::Comment(format!("{}[{}] @ {}", s.name, s.size, s.offset)))
+                .collect();
+
+            let offset = self.get_expression_offset(param);
+            if param.get_annotations().in_stackframe() {
+                code.push(Inst::Comment(format!(
+                    "In stack frame {} @ {:?}",
+                    param, offset
+                )));
+            }
+
+            code.append(&mut symbol_table);
             self.traverse_expression(param, current_func, &mut code)?;
+            if let Some(offset) = offset {
+                assembly! {(code){
+                    mov [%rbp-{offset}], %rax;
+                }};
+            }
             assembly! {(code){
                 push %rax;
             }};
@@ -1217,10 +1252,18 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
+        let mut idx = 0;
         for reg in param_registers.iter().take(params.len()).rev() {
+            let offset = self.get_expression_offset(&params[idx]);
+            if let Some(offset) = offset {
+                assembly! {(code){
+                    mov %{Reg::R64(*reg)}, [%rbp-{offset}];
+                }};
+            }
             assembly! {(code){
                 pop %{Reg::R64(*reg)};
             }};
+            idx += 1;
         }
         Ok(code)
     }
