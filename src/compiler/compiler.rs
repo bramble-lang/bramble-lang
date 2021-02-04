@@ -1,3 +1,4 @@
+use crate::compiler::memory::set_reg::RegisterAssigner;
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to
@@ -6,7 +7,6 @@ use std::collections::HashMap;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::Level::Routine;
 use crate::compiler::memory::scope::SymbolOffsetTable;
-use crate::compiler::memory::set_reg;
 use crate::compiler::memory::stack::SymbolOffsetTableStack;
 use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
@@ -15,6 +15,7 @@ use crate::register;
 use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
 use crate::unit_op;
+use crate::TracingConfig;
 use crate::{assembly, syntax::path::Path};
 use crate::{
     assembly2,
@@ -89,7 +90,8 @@ impl<'a> Compiler<'a> {
         string_pool.extract_from_module(&compiler_ast);
 
         // assign register sizes
-        set_reg::assign::for_module(&mut compiler_ast, &struct_table);
+        let reg_assigner = RegisterAssigner::new(TracingConfig::Off);
+        reg_assigner.for_module(&mut compiler_ast, &struct_table);
 
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 
