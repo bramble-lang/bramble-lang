@@ -355,9 +355,11 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::BinaryOp(m, op, l, r) = bin_op {
-            let (l, layout) = compute::layout_for_expression(l, layout, struct_table);
-            let (r, layout) = compute::layout_for_expression(r, layout, struct_table);
+            let (mut l, layout) = compute::layout_for_expression(l, layout, struct_table);
+            let (mut r, layout) = compute::layout_for_expression(r, layout, struct_table);
             let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+            l.get_annotations_mut().in_stackframe = true;
+            r.get_annotations_mut().in_stackframe = true;
             (
                 Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
                 layout,
@@ -414,7 +416,8 @@ mod compute {
             let mut nlayout = layout;
             let mut nparams = vec![];
             for p in params.iter() {
-                let (np, playout) = layout_for_expression(p, nlayout, struct_table);
+                let (mut np, playout) = layout_for_expression(p, nlayout, struct_table);
+                np.get_annotations_mut().in_stackframe = true;
                 nlayout = playout;
                 nparams.push(np);
             }

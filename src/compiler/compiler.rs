@@ -379,6 +379,10 @@ impl<'a> Compiler<'a> {
 
         self.push_scope(ast);
 
+        if ast.get_annotations().in_stackframe() {
+            code.push(Inst::Comment("In stack frame".into()));
+        }
+
         match ast {
             Expression::Integer64(_, i) => {
                 assembly! {(code) {mov %rax, {*i};}}
