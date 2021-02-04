@@ -54,10 +54,6 @@ impl<I> Expression<I> {
         }
     }
 
-    pub fn get_name(&self) -> String {
-        self.root_str()
-    }
-
     pub fn get_annotations(&self) -> &I {
         use Expression::*;
         match self {

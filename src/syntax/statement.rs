@@ -59,10 +59,6 @@ impl<M> Statement<M> {
             Mutate(m) => m.root_str(),
         }
     }
-
-    pub fn get_name(&self) -> String {
-        self.root_str()
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -122,10 +118,6 @@ impl<M> Bind<M> {
     pub fn root_str(&self) -> String {
         format!("bind {}", self.id)
     }
-
-    pub fn get_name(&self) -> String {
-        self.root_str()
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -172,10 +164,6 @@ impl<M> Mutate<M> {
 
     pub fn root_str(&self) -> String {
         format!("mut {}", self.id)
-    }
-
-    pub fn get_name(&self) -> String {
-        self.root_str()
     }
 }
 
@@ -243,10 +231,6 @@ impl<M> YieldReturn<M> {
     pub fn root_str(&self) -> String {
         format!("yret")
     }
-
-    pub fn get_name(&self) -> String {
-        self.root_str()
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -284,9 +268,5 @@ impl<M> Return<M> {
 
     pub fn root_str(&self) -> String {
         format!("return")
-    }
-
-    pub fn get_name(&self) -> String {
-        self.root_str()
     }
 }
