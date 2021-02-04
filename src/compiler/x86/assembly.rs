@@ -1,3 +1,4 @@
+use crate::compiler::memory::set_reg::RegSize;
 use std::fmt::*;
 
 /*
@@ -60,6 +61,9 @@ _
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Reg8 {
     Al,
+    Bl,
+    Cl,
+    Dl,
 }
 
 impl Display for Reg8 {
@@ -67,6 +71,29 @@ impl Display for Reg8 {
         use Reg8::*;
         match self {
             Al => f.write_str("al"),
+            Bl => f.write_str("bl"),
+            Cl => f.write_str("cl"),
+            Dl => f.write_str("dl"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Reg16 {
+    Ax,
+    Bx,
+    Cx,
+    Dx,
+}
+
+impl Display for Reg16 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        use Reg16::*;
+        match self {
+            Ax => f.write_str("ax"),
+            Bx => f.write_str("bx"),
+            Cx => f.write_str("cx"),
+            Dx => f.write_str("dx"),
         }
     }
 }
@@ -127,9 +154,50 @@ impl Display for Reg64 {
     }
 }
 
+impl Reg64 {
+    /**
+     * scale will take a given 64 bit register and a target size
+     * and returns the smallest subregister that can hold the given
+     * register size.
+     *
+     * For example, given `Rax` and a target register size of
+     * `R16` (16 bits), scale will return `Ax`.
+     */
+    pub fn scale(&self, sz: RegSize) -> Reg {
+        match self {
+            Reg64::Rax => match sz {
+                RegSize::R8 => Reg::R8(Reg8::Al),
+                RegSize::R16 => Reg::R16(Reg16::Ax),
+                RegSize::R32 => Reg::R32(Reg32::Eax),
+                RegSize::R64 => Reg::R64(Reg64::Rax),
+            },
+            Reg64::Rbx => match sz {
+                RegSize::R8 => Reg::R8(Reg8::Bl),
+                RegSize::R16 => Reg::R16(Reg16::Bx),
+                RegSize::R32 => Reg::R32(Reg32::Ebx),
+                RegSize::R64 => Reg::R64(Reg64::Rbx),
+            },
+            Reg64::Rcx => match sz {
+                RegSize::R8 => Reg::R8(Reg8::Cl),
+                RegSize::R16 => Reg::R16(Reg16::Cx),
+                RegSize::R32 => Reg::R32(Reg32::Ecx),
+                RegSize::R64 => Reg::R64(Reg64::Rcx),
+            },
+            Reg64::Rdx => match sz {
+                RegSize::R8 => Reg::R8(Reg8::Dl),
+                RegSize::R16 => Reg::R16(Reg16::Dx),
+                RegSize::R32 => Reg::R32(Reg32::Edx),
+                RegSize::R64 => Reg::R64(Reg64::Rdx),
+            },
+            _ => panic!("Cannot scale register {}", self),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Reg {
     R8(Reg8),
+    R16(Reg16),
     R32(Reg32),
     R64(Reg64),
 }
@@ -139,6 +207,7 @@ impl Display for Reg {
         use Reg::*;
         match self {
             R8(r8) => f.write_fmt(format_args!("{}", r8)),
+            R16(r16) => f.write_fmt(format_args!("{}", r16)),
             R32(r32) => f.write_fmt(format_args!("{}", r32)),
             R64(r64) => f.write_fmt(format_args!("{}", r64)),
         }
