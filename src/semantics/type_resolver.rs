@@ -208,6 +208,7 @@ impl<'a> TypeResolver<'a> {
             def: def.clone(),
             name: name.clone(),
             params: canonical_params,
+            param_annotations: vec![],
             ty: canonical_ret_ty,
             body: resolved_body,
         })

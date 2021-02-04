@@ -132,6 +132,7 @@ mod compute {
                 def: *def,
                 name: name.clone(),
                 params: params.clone(),
+                param_annotations: vec![],
                 ty: ty.clone(),
                 body: nbody,
             },
@@ -726,6 +727,7 @@ mod compute {
                 def: RoutineDefType::Function,
                 name: "func".into(),
                 params: vec![],
+                param_annotations: vec![],
                 ty: Type::I64,
                 body: vec![],
             };
@@ -856,6 +858,7 @@ mod compute {
                 def: RoutineDefType::Coroutine,
                 name: "coroutine".into(),
                 params: vec![],
+                param_annotations: vec![],
                 ty: Type::I64,
                 body: vec![],
             };

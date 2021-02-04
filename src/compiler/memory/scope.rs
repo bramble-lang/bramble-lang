@@ -39,7 +39,7 @@ impl LayoutData {
  * The Symbol Table stores all the symbols that are defined at this node
  * and their size in bytes and their relative offset to the stack frame.
  */
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolOffsetTable {
     pub(super) id: u32,
     pub(super) line: u32,
@@ -223,7 +223,7 @@ impl std::fmt::Display for SymbolOffsetTable {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Level {
     Local,
     Routine {

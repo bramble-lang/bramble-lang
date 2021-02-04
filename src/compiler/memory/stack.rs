@@ -171,6 +171,7 @@ mod tests {
             def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![],
+            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -207,6 +208,7 @@ mod tests {
             def: RoutineDefType::Function,
             name: "func".into(),
             params: vec![("y".into(), Type::I64)],
+            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -232,6 +234,7 @@ mod tests {
             def: RoutineDefType::Function,
             name: "func2".into(),
             params: vec![],
+            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -260,6 +263,7 @@ mod tests {
             def: RoutineDefType::Coroutine,
             name: "cor".into(),
             params: vec![("y".into(), Type::I64)],
+            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };
@@ -286,6 +290,7 @@ mod tests {
             def: RoutineDefType::Coroutine,
             name: "func2".into(),
             params: vec![],
+            param_annotations: vec![],
             ty: Type::I64,
             body: vec![],
         };

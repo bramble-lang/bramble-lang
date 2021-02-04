@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     pub(super) table: HashMap<String, Symbol>,
 }
@@ -27,7 +27,7 @@ impl std::fmt::Display for SymbolTable {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
     pub name: String,
     pub size: i32,

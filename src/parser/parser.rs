@@ -256,6 +256,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         def: RoutineDefType::Function,
         name: fn_name,
         params,
+        param_annotations: vec![],
         ty: fn_type,
         body: stmts,
     }))
@@ -295,6 +296,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
+        param_annotations: vec![],
         ty: co_type,
         body: stmts,
     }))
@@ -833,6 +835,7 @@ pub mod tests {
                 params,
                 ty,
                 body,
+                ..
             }) = &m.get_functions()[0]
             {
                 assert_eq!(*annotations, 1);
@@ -877,6 +880,7 @@ pub mod tests {
                 params,
                 ty,
                 body,
+                ..
             })) = m.get_item("test")
             {
                 assert_eq!(*annotations, 1);
@@ -940,6 +944,7 @@ pub mod tests {
             params,
             ty,
             body,
+            ..
         }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -972,6 +977,7 @@ pub mod tests {
             params,
             ty,
             body,
+            ..
         }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
@@ -1149,6 +1155,7 @@ pub mod tests {
             params,
             ty,
             body,
+            ..
         }) = function_def(&mut iter).unwrap()
         {
             assert_eq!(l, 1);

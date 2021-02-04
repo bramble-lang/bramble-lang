@@ -125,6 +125,7 @@ pub mod assign {
         assign_register(rd.get_annotations_mut(), struct_table);
 
         // loop through all the params
+        let mut param_annotations = vec![];
         for p in rd.get_params() {
             println!(
                 "{} {} -> {:?}",
@@ -132,7 +133,14 @@ pub mod assign {
                 p.0,
                 struct_table.size_of(&p.1)
             );
+            let mut param_annotation = rd.get_annotations().clone();
+            param_annotation.ty = p.1.clone();
+            assign_register(&mut param_annotation, struct_table);
+            param_annotations.push(param_annotation);
         }
+
+        rd.get_param_annotations_mut()
+            .append(&mut param_annotations);
 
         // loop through every statement and analyze the child nodes of the routine definition
         for e in rd.get_body_mut().iter_mut() {
