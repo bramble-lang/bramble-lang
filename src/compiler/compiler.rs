@@ -641,6 +641,7 @@ impl<'a> Compiler<'a> {
                 _ => panic!("Invalid scope for function definition"),
             };
 
+            // This is an incomplete list of the contents of the stack frame
             let stack_frame_contents: Vec<Inst> = scope
                 .symbols()
                 .iter()
