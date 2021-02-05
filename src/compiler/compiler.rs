@@ -302,6 +302,24 @@ impl<'a> Compiler<'a> {
         let mut right_code = vec![];
         self.traverse_expression(right, current_func, &mut right_code)?;
 
+        let la = left.get_annotations();
+        let l_offset = self
+            .get_expression_offset(la)
+            .expect("Must be an offset for the left operand");
+        self.insert_comment_from_annotations(&mut left_code, &left.to_string(), la);
+        assembly! {(left_code){
+            mov [%rbp-{l_offset}], %rax;
+        }};
+
+        let ra = right.get_annotations();
+        let r_offset = self
+            .get_expression_offset(ra)
+            .expect("Must be an offset for the right operand");
+        self.insert_comment_from_annotations(&mut right_code, &right.to_string(), ra);
+        assembly! {(right_code){
+            mov [%rbp-{r_offset}], %rax;
+        }};
+
         let mut op_asm = vec![];
         match op {
             BinaryOperator::Add => {
@@ -347,11 +365,9 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         assembly! {(code){
             {{left_code}}
-            push %rax;
             {{right_code}}
-            push %rax;
-            pop %rbx;
-            pop %rax;
+            mov %rax, [%rbp - {l_offset}];
+            mov %rbx, [%rbp - {r_offset}];
             {{op_asm}}
         }}
 
@@ -1153,13 +1169,17 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         let routine_sym_table = routine.get_annotations();
         for idx in 0..params.len() {
-            let param_offset = routine_sym_table
-                .get(&params[idx].0)
-                .ok_or(format!(
-                    "Critical: could not find parameter {} in symbol table for {}",
-                    params[idx].0, routine_name
-                ))?
-                .offset;
+            let param_symbol = routine_sym_table.get(&params[idx].0).ok_or(format!(
+                "Critical: could not find parameter {} in symbol table for {}",
+                params[idx].0, routine_name
+            ))?;
+
+            // Don't move parameters that have no size
+            if param_symbol.size == 0 {
+                continue;
+            }
+
+            let param_offset = param_symbol.offset;
             match &params[idx].1 {
                 Type::Custom(struct_name) => {
                     let asm = self.copy_struct_into(
@@ -1182,6 +1202,20 @@ impl<'a> Compiler<'a> {
         }
         Ok(code)
     }
+    fn insert_comment_from_annotations(
+        &self,
+        code: &mut Vec<Inst>,
+        label: &str,
+        annotation: &CompilerAnnotation,
+    ) {
+        let offset = self.get_expression_offset(annotation);
+        code.push(Inst::Comment(format!(
+            "{} [{}] @ {:?}",
+            label,
+            annotation.anonymous_name(),
+            offset
+        )));
+    }
 
     fn evaluate_routine_call_params(
         &mut self,
@@ -1191,9 +1225,13 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         for param in params.iter() {
             self.traverse_expression(param, current_func, &mut code)?;
-            assembly! {(code){
-                push %rax;
-            }};
+            let pa = param.get_annotations();
+            self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
+            if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
+                assembly! {(code){
+                    mov [%rbp-{offset}], %rax;
+                }};
+            }
         }
         Ok(code)
     }
@@ -1213,12 +1251,52 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
-        for reg in param_registers.iter().take(params.len()).rev() {
-            assembly! {(code){
-                pop %{Reg::R64(*reg)};
-            }};
+        for idx in 0..params.len() {
+            let pa = params[idx].get_annotations();
+            if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
+                let reg = param_registers[idx];
+                assembly! {(code){
+                    mov %{Reg::R64(reg)}, [%rbp-{offset}];
+                }};
+            }
         }
         Ok(code)
+    }
+
+    /**
+     * If an expression has a value that is stored in the stack frame then this will
+     * return the location of that value.
+     *
+     * Ok(None) => If the expression has not value (e.g. a Unit type or an empty struct)
+     * Ok(Some(offset)) => The stack frame offset
+     * Err => If the given expression's anonymous name was not found in the symbol table
+     */
+    fn get_expression_result_location(
+        &self,
+        pa: &CompilerAnnotation,
+    ) -> Result<Option<i32>, String> {
+        let size = self
+            .get_expression_size(pa)
+            .ok_or("Expression could not be found in stack frame, when looking up size")?;
+
+        if size == 0 {
+            Ok(None)
+        } else {
+            let offset = self
+                .get_expression_offset(pa)
+                .ok_or("Expression could not be found in stack frame, when looking up offset")?;
+            Ok(Some(offset))
+        }
+    }
+
+    fn get_expression_offset(&self, annotation: &CompilerAnnotation) -> Option<i32> {
+        let anonymous_name = annotation.anonymous_name();
+        self.scope.find(&anonymous_name).map(|s| s.offset)
+    }
+
+    fn get_expression_size(&self, annotation: &CompilerAnnotation) -> Option<i32> {
+        let anonymous_name = annotation.anonymous_name();
+        self.scope.find(&anonymous_name).map(|s| s.size)
     }
 
     pub fn print(code: &Vec<Inst>, output: &mut dyn std::io::Write) -> std::io::Result<()> {

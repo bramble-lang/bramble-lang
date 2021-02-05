@@ -103,6 +103,10 @@ impl CompilerAnnotation {
         self.level().allocation()
     }
 
+    pub fn symbols(&self) -> &SymbolTable {
+        &self.symbols
+    }
+
     pub fn insert(&mut self, name: &str, size: i32, offset: i32) -> i32 {
         self.symbols
             .table
@@ -124,6 +128,10 @@ impl CompilerAnnotation {
 
     pub fn canon_path(&self) -> &Path {
         &self.canon_path
+    }
+
+    pub fn anonymous_name(&self) -> String {
+        format!("!{}_{}", self.canon_path, self.id)
     }
 
     pub fn reg_size(&self) -> Option<RegSize> {

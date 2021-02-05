@@ -60,6 +60,10 @@ impl SemanticAnnotations {
     pub fn set_canonical_path(&mut self, path: Path) {
         self.canonical_path = path;
     }
+
+    pub fn id(&self) -> u32 {
+        self.id
+    }
 }
 
 pub struct SemanticAst {

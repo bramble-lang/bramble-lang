@@ -33,6 +33,7 @@ pub fn compute_layout_for_program(
 
 mod compute {
     use super::*;
+    use crate::compiler::memory::symbol_table::Symbol;
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
@@ -323,6 +324,7 @@ mod compute {
         if let Expression::MemberAccess(m, src, member) = access {
             let (src, layout) = layout_for_expression(src, layout, struct_table);
             let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+
             (
                 Expression::MemberAccess(annotations, Box::new(src), member.clone()),
                 layout,
@@ -355,9 +357,21 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::BinaryOp(m, op, l, r) = bin_op {
-            let (l, layout) = compute::layout_for_expression(l, layout, struct_table);
-            let (r, layout) = compute::layout_for_expression(r, layout, struct_table);
-            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+            let (mut l, layout) = compute::layout_for_expression(l, layout, struct_table);
+            let (mut r, layout) = compute::layout_for_expression(r, layout, struct_table);
+            let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+            let layout = allocate_into_stackframe(
+                &mut annotations,
+                l.get_annotations_mut(),
+                layout,
+                struct_table,
+            );
+            let layout = allocate_into_stackframe(
+                &mut annotations,
+                r.get_annotations_mut(),
+                layout,
+                struct_table,
+            );
             (
                 Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
                 layout,
@@ -410,12 +424,19 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (Expression<CompilerAnnotation>, LayoutData) {
         if let Expression::RoutineCall(m, call, name, params) = rc {
-            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+            let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             let mut nlayout = layout;
             let mut nparams = vec![];
             for p in params.iter() {
-                let (np, playout) = layout_for_expression(p, nlayout, struct_table);
-                nlayout = playout;
+                let (mut np, playout) = layout_for_expression(p, nlayout, struct_table);
+
+                nlayout = allocate_into_stackframe(
+                    &mut annotations,
+                    np.get_annotations_mut(),
+                    playout,
+                    struct_table,
+                );
+
                 nparams.push(np);
             }
             (
@@ -464,6 +485,25 @@ mod compute {
         }
     }
 
+    fn allocate_into_stackframe(
+        current: &mut CompilerAnnotation,
+        child: &mut CompilerAnnotation,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> LayoutData {
+        let anonymous_name = child.anonymous_name();
+        let sz = struct_table
+            .size_of(child.ty())
+            .expect("Expected a size for an expression");
+
+        let layout = LayoutData::new(layout.offset + sz);
+        current.symbols.table.insert(
+            anonymous_name.clone(),
+            Symbol::new(&anonymous_name, sz, layout.offset),
+        );
+        layout
+    }
+
     impl<CompilerAnnotation> RoutineDef<CompilerAnnotation> {
         pub fn validate_parameters(
             &self,
@@ -485,6 +525,7 @@ mod compute {
 
     #[cfg(test)]
     mod ast_tests {
+        use crate::compiler::memory::symbol_table::SymbolTable;
         use module::Module;
 
         use super::*;
@@ -601,13 +642,20 @@ mod compute {
             let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
             let cn =
                 compute::layout_for_expression(&snmul, LayoutData::new(8), &empty_struct_table);
-            assert_eq!(cn.1.offset, 8);
+            assert_eq!(cn.1.offset, 24); // Will add 16 bytes because of the BinaryOp storing two i64s into the stack frame
             match cn.0 {
                 Expression::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(
-                        m,
-                        CompilerAnnotation::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),
-                    );
+                    assert_eq!(m.id, 2);
+                    assert_eq!(m.level, Level::Local);
+                    assert_eq!(m.ty, Type::I64);
+                    assert_eq!(m.canon_path, vec!["root"].into());
+
+                    let mut sym = SymbolTable::new();
+                    sym.table
+                        .insert("!root_1".into(), Symbol::new("!root_1", 8, 24));
+                    sym.table
+                        .insert("!root_0".into(), Symbol::new("!root_0", 8, 16));
+                    assert_eq!(m.symbols, sym);
 
                     match *l {
                         Expression::Integer64(m, v) => {

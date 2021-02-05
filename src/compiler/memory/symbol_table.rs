@@ -11,6 +11,10 @@ impl SymbolTable {
             table: HashMap::new(),
         }
     }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<String, Symbol> {
+        self.table.iter()
+    }
 }
 
 impl std::fmt::Display for SymbolTable {

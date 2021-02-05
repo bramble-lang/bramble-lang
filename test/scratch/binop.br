@@ -1,0 +1,10 @@
+
+fn my_main() {
+    let a: i64 := 1;
+    let b: i64 := 2;
+    let c: i64 := a + b;
+
+    root::std::io::writei64ln(c);
+
+    return;
+}
