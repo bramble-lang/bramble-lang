@@ -1195,13 +1195,25 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn get_expression_offset(&self, node: &Expression<CompilerAnnotation>) -> Option<i32> {
-        let anonymous_name = format!(
-            "!{}_{}",
-            node.get_annotations().canon_path(),
-            node.get_annotations().id()
-        );
+    fn get_expression_offset(&self, annotation: &CompilerAnnotation) -> Option<i32> {
+        let anonymous_name = annotation.anonymous_name();
         self.scope.find(&anonymous_name).map(|s| s.offset)
+    }
+
+    fn insert_comment_from_annotations(
+        &self,
+        code: &mut Vec<Inst>,
+        label: &str,
+        annotation: &CompilerAnnotation,
+    ) {
+        let offset = self.get_expression_offset(annotation);
+        code.push(Inst::Comment(format!(
+            "{} [{}] @ {} {:?}",
+            label,
+            annotation.anonymous_name(),
+            annotation.in_stackframe(),
+            offset
+        )));
     }
 
     fn evaluate_routine_call_params(
@@ -1219,13 +1231,9 @@ impl<'a> Compiler<'a> {
                 .map(|(_, s)| Inst::Comment(format!("{}[{}] @ {}", s.name, s.size, s.offset)))
                 .collect();
 
-            let offset = self.get_expression_offset(param);
-            if param.get_annotations().in_stackframe() {
-                code.push(Inst::Comment(format!(
-                    "In stack frame {} @ {:?}",
-                    param, offset
-                )));
-            }
+            let pa = param.get_annotations();
+            let offset = self.get_expression_offset(pa);
+            self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
 
             code.append(&mut symbol_table);
             self.traverse_expression(param, current_func, &mut code)?;
@@ -1238,9 +1246,6 @@ impl<'a> Compiler<'a> {
                     mov [%rbp-{offset}], %rax;
                 }};
             }
-            assembly! {(code){
-                //push %rax;
-            }};
         }
         Ok(code)
     }
@@ -1262,7 +1267,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         let mut idx = params.len();
         for reg in param_registers.iter().take(params.len()).rev() {
-            let offset = self.get_expression_offset(&params[idx - 1]);
+            let offset = self.get_expression_offset(&params[idx - 1].get_annotations());
             idx -= 1;
             if let Some(offset) = offset {
                 if offset == 0 {
@@ -1273,9 +1278,6 @@ impl<'a> Compiler<'a> {
                     mov %{Reg::R64(*reg)}, [%rbp-{offset}];
                 }};
             }
-            assembly! {(code){
-                //pop %{Reg::R64(*reg)};
-            }};
         }
         Ok(code)
     }

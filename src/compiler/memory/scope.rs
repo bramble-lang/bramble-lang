@@ -132,6 +132,10 @@ impl CompilerAnnotation {
         &self.canon_path
     }
 
+    pub fn anonymous_name(&self) -> String {
+        format!("!{}_{}", self.canon_path, self.id)
+    }
+
     pub fn reg_size(&self) -> Option<RegSize> {
         self.reg_size
     }

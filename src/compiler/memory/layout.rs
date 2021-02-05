@@ -359,9 +359,21 @@ mod compute {
         if let Expression::BinaryOp(m, op, l, r) = bin_op {
             let (mut l, layout) = compute::layout_for_expression(l, layout, struct_table);
             let (mut r, layout) = compute::layout_for_expression(r, layout, struct_table);
-            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+            let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             l.get_annotations_mut().in_stackframe = true;
             r.get_annotations_mut().in_stackframe = true;
+            /*let layout = allocate_into_stackframe(
+                &mut annotations,
+                l.get_annotations_mut(),
+                layout,
+                struct_table,
+            );
+            let layout = allocate_into_stackframe(
+                &mut annotations,
+                r.get_annotations_mut(),
+                layout,
+                struct_table,
+            );*/
             (
                 Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
                 layout,
@@ -408,6 +420,26 @@ mod compute {
         }
     }
 
+    fn allocate_into_stackframe(
+        parent: &mut CompilerAnnotation,
+        child: &mut CompilerAnnotation,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> LayoutData {
+        child.in_stackframe = true;
+        let anonymous_name = child.anonymous_name();
+        let sz = struct_table
+            .size_of(child.ty())
+            .expect("Expected a size for an expression");
+
+        let layout = LayoutData::new(layout.offset + sz);
+        parent.symbols.table.insert(
+            anonymous_name.clone(),
+            Symbol::new(&anonymous_name, sz, layout.offset),
+        );
+        layout
+    }
+
     fn layout_for_routine_call(
         rc: &SemanticNode,
         layout: LayoutData,
@@ -419,18 +451,12 @@ mod compute {
             let mut nparams = vec![];
             for p in params.iter() {
                 let (mut np, playout) = layout_for_expression(p, nlayout, struct_table);
-                np.get_annotations_mut().in_stackframe = true;
-                let id = np.get_annotations().id();
-                let anonymous_name = format!("!{}_{}", m.get_canonical_path(), id);
 
-                let sz = struct_table
-                    .size_of(np.get_annotations().ty())
-                    .expect("Expected a size for an expression");
-
-                nlayout = LayoutData::new(playout.offset + sz);
-                annotations.symbols.table.insert(
-                    anonymous_name.clone(),
-                    Symbol::new(&anonymous_name, sz, nlayout.offset),
+                nlayout = allocate_into_stackframe(
+                    &mut annotations,
+                    np.get_annotations_mut(),
+                    playout,
+                    struct_table,
                 );
 
                 nparams.push(np);

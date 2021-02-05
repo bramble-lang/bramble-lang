@@ -1,0 +1,15 @@
+
+fn my_main() {
+    let a: i64 := 1;
+    let b: i64 := 2;
+    test(a, a);
+
+    return;
+}
+
+fn test(a: i64, b: i64) {
+    root::std::io::writei64ln(a);
+    root::std::io::writei64ln(b);
+
+    return;
+}
