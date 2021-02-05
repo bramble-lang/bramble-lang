@@ -1224,10 +1224,9 @@ impl<'a> Compiler<'a> {
     ) {
         let offset = self.get_expression_offset(annotation);
         code.push(Inst::Comment(format!(
-            "{} [{}] @ {} {:?}",
+            "{} [{}] @ {:?}",
             label,
             annotation.anonymous_name(),
-            annotation.in_stackframe(),
             offset
         )));
     }

@@ -424,7 +424,6 @@ mod compute {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> LayoutData {
-        child.in_stackframe = true;
         let anonymous_name = child.anonymous_name();
         let sz = struct_table
             .size_of(child.ty())
