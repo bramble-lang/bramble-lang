@@ -1264,12 +1264,12 @@ impl<'a> Compiler<'a> {
     }
 
     /**
-     * Returns the location in the stack frame of a given AST Node value, if it has been
-     * assigned a location in the stack frame.  If the Node has a size of 0 then none is
-     * returned to reflect the fact that no information can be stored for this expression.
+     * If an expression has a value that is stored in the stack frame then this will
+     * return the location of that value.
      *
-     * If an error occurs while retrieving this information (e.g. the node cannot be found
-     * in the symbol table) then an error is returned.
+     * Ok(None) => If the expression has not value (e.g. a Unit type or an empty struct)
+     * Ok(Some(offset)) => The stack frame offset
+     * Err => If the given expression's anonymous name was not found in the symbol table
      */
     fn get_expression_result_location(
         &self,
