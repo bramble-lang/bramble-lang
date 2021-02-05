@@ -643,7 +643,6 @@ impl<'a> Compiler<'a> {
 
             let stack_frame_contents: Vec<Inst> = scope
                 .symbols()
-                .table()
                 .iter()
                 .map(|(_, s)| Inst::Comment(format!("{}[{}] @ {}", s.name, s.size, s.offset)))
                 .collect();

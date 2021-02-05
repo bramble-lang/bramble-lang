@@ -12,8 +12,8 @@ impl SymbolTable {
         }
     }
 
-    pub fn table(&self) -> &HashMap<String, Symbol> {
-        &self.table
+    pub fn iter(&self) -> std::collections::hash_map::Iter<String, Symbol> {
+        self.table.iter()
     }
 }
 
