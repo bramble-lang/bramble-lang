@@ -1210,17 +1210,6 @@ impl<'a> Compiler<'a> {
         }
         Ok(code)
     }
-
-    fn get_expression_offset(&self, annotation: &CompilerAnnotation) -> Option<i32> {
-        let anonymous_name = annotation.anonymous_name();
-        self.scope.find(&anonymous_name).map(|s| s.offset)
-    }
-
-    fn get_expression_size(&self, annotation: &CompilerAnnotation) -> Option<i32> {
-        let anonymous_name = annotation.anonymous_name();
-        self.scope.find(&anonymous_name).map(|s| s.size)
-    }
-
     fn insert_comment_from_annotations(
         &self,
         code: &mut Vec<Inst>,
@@ -1243,25 +1232,14 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         for param in params.iter() {
+            self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.get_annotations();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
-
-            self.traverse_expression(param, current_func, &mut code)?;
-
-            let size = self
-                .get_expression_size(pa)
-                .expect("Could not find size value for routine parameter");
-            if size == 0 {
-                continue;
+            if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
+                assembly! {(code){
+                    mov [%rbp-{offset}], %rax;
+                }};
             }
-
-            // Get location of the expression value in the stack frame
-            let offset = self
-                .get_expression_offset(pa)
-                .expect("Routine call parameter must have a stack frame offset");
-            assembly! {(code){
-                mov [%rbp-{offset}], %rax;
-            }};
         }
         Ok(code)
     }
@@ -1283,23 +1261,50 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         for idx in 0..params.len() {
             let pa = params[idx].get_annotations();
-
-            let size = self
-                .get_expression_size(pa)
-                .expect("Could not find size value for routine parameter");
-            if size == 0 {
-                continue;
+            if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
+                let reg = param_registers[idx];
+                assembly! {(code){
+                    mov %{Reg::R64(reg)}, [%rbp-{offset}];
+                }};
             }
-
-            let offset = self
-                .get_expression_offset(pa)
-                .expect("Routine call parameter must have a stack frame offset");
-            let reg = param_registers[idx];
-            assembly! {(code){
-                mov %{Reg::R64(reg)}, [%rbp-{offset}];
-            }};
         }
         Ok(code)
+    }
+
+    /**
+     * Returns the location in the stack frame of a given AST Node value, if it has been
+     * assigned a location in the stack frame.  If the Node has a size of 0 then none is
+     * returned to reflect the fact that no information can be stored for this expression.
+     *
+     * If an error occurs while retrieving this information (e.g. the node cannot be found
+     * in the symbol table) then an error is returned.
+     */
+    fn get_expression_result_location(
+        &self,
+        pa: &CompilerAnnotation,
+    ) -> Result<Option<i32>, String> {
+        let size = self
+            .get_expression_size(pa)
+            .ok_or("Expression could not be found in stack frame, when looking up size")?;
+
+        if size == 0 {
+            Ok(None)
+        } else {
+            let offset = self
+                .get_expression_offset(pa)
+                .ok_or("Expression could not be found in stack frame, when looking up offset")?;
+            Ok(Some(offset))
+        }
+    }
+
+    fn get_expression_offset(&self, annotation: &CompilerAnnotation) -> Option<i32> {
+        let anonymous_name = annotation.anonymous_name();
+        self.scope.find(&anonymous_name).map(|s| s.offset)
+    }
+
+    fn get_expression_size(&self, annotation: &CompilerAnnotation) -> Option<i32> {
+        let anonymous_name = annotation.anonymous_name();
+        self.scope.find(&anonymous_name).map(|s| s.size)
     }
 
     pub fn print(code: &Vec<Inst>, output: &mut dyn std::io::Write) -> std::io::Result<()> {
