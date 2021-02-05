@@ -641,18 +641,10 @@ impl<'a> Compiler<'a> {
                 _ => panic!("Invalid scope for function definition"),
             };
 
-            // This is an incomplete list of the contents of the stack frame
-            let stack_frame_contents: Vec<Inst> = scope
-                .symbols()
-                .iter()
-                .map(|(_, s)| Inst::Comment(format!("{}[{}] @ {}", s.name, s.size, s.offset)))
-                .collect();
-
             assembly! {(code) {
             @{scope.canon_path().to_label()}:
                 ; {{format!("Define {}", scope.canon_path())}}
                 ;"Prepare stack frame for this function"
-                {{stack_frame_contents}}
                 push %rbp;
                 mov %rbp, %rsp;
                 sub %rsp, {*total_offset as i64};
