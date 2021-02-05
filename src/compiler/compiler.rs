@@ -1281,11 +1281,10 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
-        let mut idx = params.len();
-        for reg in param_registers.iter().take(params.len()).rev() {
-            idx -= 1;
-
+        let mut idx = 0;
+        for reg in param_registers.iter().take(params.len()) {
             let pa = params[idx].get_annotations();
+            idx += 1;
 
             let size = self
                 .get_expression_size(pa)
