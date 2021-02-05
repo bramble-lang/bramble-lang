@@ -419,7 +419,7 @@ mod compute {
     }
 
     fn allocate_into_stackframe(
-        parent: &mut CompilerAnnotation,
+        current: &mut CompilerAnnotation,
         child: &mut CompilerAnnotation,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
@@ -430,7 +430,7 @@ mod compute {
             .expect("Expected a size for an expression");
 
         let layout = LayoutData::new(layout.offset + sz);
-        parent.symbols.table.insert(
+        current.symbols.table.insert(
             anonymous_name.clone(),
             Symbol::new(&anonymous_name, sz, layout.offset),
         );
