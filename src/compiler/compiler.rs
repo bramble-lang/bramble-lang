@@ -1248,8 +1248,9 @@ impl<'a> Compiler<'a> {
 
             self.traverse_expression(param, current_func, &mut code)?;
 
-            // if offset is 0, then skip.
-            let size = self.get_expression_size(pa).unwrap_or(0);
+            let size = self
+                .get_expression_size(pa)
+                .expect("Could not find size value for routine parameter");
             if size == 0 {
                 continue;
             }
@@ -1282,17 +1283,23 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         let mut idx = params.len();
         for reg in param_registers.iter().take(params.len()).rev() {
-            let offset = self.get_expression_offset(&params[idx - 1].get_annotations());
             idx -= 1;
-            if let Some(offset) = offset {
-                if offset == 0 {
-                    continue;
-                }
 
-                assembly! {(code){
-                    mov %{Reg::R64(*reg)}, [%rbp-{offset}];
-                }};
+            let pa = params[idx].get_annotations();
+
+            let size = self
+                .get_expression_size(pa)
+                .expect("Could not find size value for routine parameter");
+            if size == 0 {
+                continue;
             }
+
+            let offset = self
+                .get_expression_offset(pa)
+                .expect("Routine call parameter must have a stack frame offset");
+            assembly! {(code){
+                mov %{Reg::R64(*reg)}, [%rbp-{offset}];
+            }};
         }
         Ok(code)
     }
