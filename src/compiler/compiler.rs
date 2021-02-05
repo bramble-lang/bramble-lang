@@ -1216,6 +1216,11 @@ impl<'a> Compiler<'a> {
         self.scope.find(&anonymous_name).map(|s| s.offset)
     }
 
+    fn get_expression_size(&self, annotation: &CompilerAnnotation) -> Option<i32> {
+        let anonymous_name = annotation.anonymous_name();
+        self.scope.find(&anonymous_name).map(|s| s.size)
+    }
+
     fn insert_comment_from_annotations(
         &self,
         code: &mut Vec<Inst>,
@@ -1238,30 +1243,24 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         for param in params.iter() {
-            // TODO: what's this supposed to print out?  I can probably get rid of it unless it's useful diagnostics
-            let mut symbol_table: Vec<Inst> = param
-                .get_annotations()
-                .symbols()
-                .table()
-                .iter()
-                .map(|(_, s)| Inst::Comment(format!("{}[{}] @ {}", s.name, s.size, s.offset)))
-                .collect();
-            code.append(&mut symbol_table);
-
             let pa = param.get_annotations();
-            let offset = self.get_expression_offset(pa);
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
 
             self.traverse_expression(param, current_func, &mut code)?;
-            if let Some(offset) = offset {
-                if offset == 0 {
-                    continue;
-                }
 
-                assembly! {(code){
-                    mov [%rbp-{offset}], %rax;
-                }};
+            // if offset is 0, then skip.
+            let size = self.get_expression_size(pa).unwrap_or(0);
+            if size == 0 {
+                continue;
             }
+
+            // Get location of the expression value in the stack frame
+            let offset = self
+                .get_expression_offset(pa)
+                .expect("Routine call parameter must have a stack frame offset");
+            assembly! {(code){
+                mov [%rbp-{offset}], %rax;
+            }};
         }
         Ok(code)
     }
