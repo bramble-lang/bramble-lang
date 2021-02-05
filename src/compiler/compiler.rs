@@ -365,13 +365,9 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         assembly! {(code){
             {{left_code}}
-            push %rax;
             {{right_code}}
-            push %rax;
             mov %rax, [%rbp - {l_offset}];
             mov %rbx, [%rbp - {r_offset}];
-            pop %rbx;
-            pop %rax;
             {{op_asm}}
         }}
 
