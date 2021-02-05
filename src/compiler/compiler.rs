@@ -1239,7 +1239,7 @@ impl<'a> Compiler<'a> {
                 }};
             }
             assembly! {(code){
-                push %rax;
+                //push %rax;
             }};
         }
         Ok(code)
@@ -1260,9 +1260,10 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
-        let mut idx = 0;
+        let mut idx = params.len();
         for reg in param_registers.iter().take(params.len()).rev() {
-            let offset = self.get_expression_offset(&params[idx]);
+            let offset = self.get_expression_offset(&params[idx - 1]);
+            idx -= 1;
             if let Some(offset) = offset {
                 if offset == 0 {
                     continue;
@@ -1273,9 +1274,8 @@ impl<'a> Compiler<'a> {
                 }};
             }
             assembly! {(code){
-                pop %{Reg::R64(*reg)};
+                //pop %{Reg::R64(*reg)};
             }};
-            idx += 1;
         }
         Ok(code)
     }

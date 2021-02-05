@@ -324,6 +324,7 @@ mod compute {
         if let Expression::MemberAccess(m, src, member) = access {
             let (src, layout) = layout_for_expression(src, layout, struct_table);
             let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+
             (
                 Expression::MemberAccess(annotations, Box::new(src), member.clone()),
                 layout,
@@ -418,8 +419,8 @@ mod compute {
             let mut nparams = vec![];
             for p in params.iter() {
                 let (mut np, playout) = layout_for_expression(p, nlayout, struct_table);
-                let id = np.get_annotations().id();
                 np.get_annotations_mut().in_stackframe = true;
+                let id = np.get_annotations().id();
                 let anonymous_name = format!("!{}_{}", m.get_canonical_path(), id);
 
                 let sz = struct_table
