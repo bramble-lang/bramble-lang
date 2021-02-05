@@ -360,9 +360,7 @@ mod compute {
             let (mut l, layout) = compute::layout_for_expression(l, layout, struct_table);
             let (mut r, layout) = compute::layout_for_expression(r, layout, struct_table);
             let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-            l.get_annotations_mut().in_stackframe = true;
-            r.get_annotations_mut().in_stackframe = true;
-            /*let layout = allocate_into_stackframe(
+            let layout = allocate_into_stackframe(
                 &mut annotations,
                 l.get_annotations_mut(),
                 layout,
@@ -373,7 +371,7 @@ mod compute {
                 r.get_annotations_mut(),
                 layout,
                 struct_table,
-            );*/
+            );
             (
                 Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
                 layout,

@@ -302,6 +302,24 @@ impl<'a> Compiler<'a> {
         let mut right_code = vec![];
         self.traverse_expression(right, current_func, &mut right_code)?;
 
+        let la = left.get_annotations();
+        let l_offset = self
+            .get_expression_offset(la)
+            .expect("Must be an offset for the left operand");
+        self.insert_comment_from_annotations(&mut left_code, &left.to_string(), la);
+        assembly! {(left_code){
+            mov [%rbp-{l_offset}], %rax;
+        }};
+
+        let ra = right.get_annotations();
+        let r_offset = self
+            .get_expression_offset(ra)
+            .expect("Must be an offset for the right operand");
+        self.insert_comment_from_annotations(&mut right_code, &right.to_string(), ra);
+        assembly! {(right_code){
+            mov [%rbp-{r_offset}], %rax;
+        }};
+
         let mut op_asm = vec![];
         match op {
             BinaryOperator::Add => {
@@ -350,6 +368,8 @@ impl<'a> Compiler<'a> {
             push %rax;
             {{right_code}}
             push %rax;
+            mov %rax, [%rbp - {l_offset}];
+            mov %rbx, [%rbp - {r_offset}];
             pop %rbx;
             pop %rax;
             {{op_asm}}
@@ -1223,6 +1243,7 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         for param in params.iter() {
+            // TODO: what's this supposed to print out?  I can probably get rid of it unless it's useful diagnostics
             let mut symbol_table: Vec<Inst> = param
                 .get_annotations()
                 .symbols()
@@ -1230,12 +1251,12 @@ impl<'a> Compiler<'a> {
                 .iter()
                 .map(|(_, s)| Inst::Comment(format!("{}[{}] @ {}", s.name, s.size, s.offset)))
                 .collect();
+            code.append(&mut symbol_table);
 
             let pa = param.get_annotations();
             let offset = self.get_expression_offset(pa);
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
 
-            code.append(&mut symbol_table);
             self.traverse_expression(param, current_func, &mut code)?;
             if let Some(offset) = offset {
                 if offset == 0 {
