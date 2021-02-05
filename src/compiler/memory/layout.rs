@@ -525,6 +525,7 @@ mod compute {
 
     #[cfg(test)]
     mod ast_tests {
+        use crate::compiler::memory::symbol_table::SymbolTable;
         use module::Module;
 
         use super::*;
@@ -641,13 +642,20 @@ mod compute {
             let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
             let cn =
                 compute::layout_for_expression(&snmul, LayoutData::new(8), &empty_struct_table);
-            assert_eq!(cn.1.offset, 8);
+            assert_eq!(cn.1.offset, 24); // Will add 16 bytes because of the BinaryOp storing two i64s into the stack frame
             match cn.0 {
                 Expression::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(
-                        m,
-                        CompilerAnnotation::new(2, Level::Local, vec!["root"].into(), m.ty.clone()),
-                    );
+                    assert_eq!(m.id, 2);
+                    assert_eq!(m.level, Level::Local);
+                    assert_eq!(m.ty, Type::I64);
+                    assert_eq!(m.canon_path, vec!["root"].into());
+
+                    let mut sym = SymbolTable::new();
+                    sym.table
+                        .insert("!root_1".into(), Symbol::new("!root_1", 8, 24));
+                    sym.table
+                        .insert("!root_0".into(), Symbol::new("!root_0", 8, 16));
+                    assert_eq!(m.symbols, sym);
 
                     match *l {
                         Expression::Integer64(m, v) => {
