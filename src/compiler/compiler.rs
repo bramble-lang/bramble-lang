@@ -1281,10 +1281,8 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
-        let mut idx = 0;
-        for reg in param_registers.iter().take(params.len()) {
+        for idx in 0..params.len() {
             let pa = params[idx].get_annotations();
-            idx += 1;
 
             let size = self
                 .get_expression_size(pa)
@@ -1296,8 +1294,9 @@ impl<'a> Compiler<'a> {
             let offset = self
                 .get_expression_offset(pa)
                 .expect("Routine call parameter must have a stack frame offset");
+            let reg = param_registers[idx];
             assembly! {(code){
-                mov %{Reg::R64(*reg)}, [%rbp-{offset}];
+                mov %{Reg::R64(reg)}, [%rbp-{offset}];
             }};
         }
         Ok(code)
