@@ -418,25 +418,6 @@ mod compute {
         }
     }
 
-    fn allocate_into_stackframe(
-        current: &mut CompilerAnnotation,
-        child: &mut CompilerAnnotation,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> LayoutData {
-        let anonymous_name = child.anonymous_name();
-        let sz = struct_table
-            .size_of(child.ty())
-            .expect("Expected a size for an expression");
-
-        let layout = LayoutData::new(layout.offset + sz);
-        current.symbols.table.insert(
-            anonymous_name.clone(),
-            Symbol::new(&anonymous_name, sz, layout.offset),
-        );
-        layout
-    }
-
     fn layout_for_routine_call(
         rc: &SemanticNode,
         layout: LayoutData,
@@ -502,6 +483,25 @@ mod compute {
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
         }
+    }
+
+    fn allocate_into_stackframe(
+        current: &mut CompilerAnnotation,
+        child: &mut CompilerAnnotation,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> LayoutData {
+        let anonymous_name = child.anonymous_name();
+        let sz = struct_table
+            .size_of(child.ty())
+            .expect("Expected a size for an expression");
+
+        let layout = LayoutData::new(layout.offset + sz);
+        current.symbols.table.insert(
+            anonymous_name.clone(),
+            Symbol::new(&anonymous_name, sz, layout.offset),
+        );
+        layout
     }
 
     impl<CompilerAnnotation> RoutineDef<CompilerAnnotation> {
