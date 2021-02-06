@@ -4,6 +4,8 @@ fn my_main() {
     let z:i32 := test2(5i32);
 
     let w: i32 := x + y;
+
+    root::std::io::writei32ln(w);
     
     return;
 }
