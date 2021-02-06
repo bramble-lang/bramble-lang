@@ -142,6 +142,10 @@ impl CompilerAnnotation {
         self.reg_size = r;
     }
 
+    pub fn param_reg_size(&self) -> &Vec<Option<RegSize>> {
+        &self.param_reg_size
+    }
+
     pub(super) fn local_from(
         m: &SemanticAnnotations,
         struct_table: &ResolvedStructTable,

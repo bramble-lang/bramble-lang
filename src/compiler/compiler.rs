@@ -1226,12 +1226,11 @@ impl<'a> Compiler<'a> {
                     }}
                 }
                 _ => {
-                    let param_reg_sz = routine.get_param_annotations()[idx]
-                        .reg_size()
-                        .expect("param must have a register size");
+                    let reg_sz = routine_sym_table.param_reg_size()[idx]
+                        .expect("Expect a register size to be assigned for a parameter");
                     let param_reg = param_registers[idx]
-                        .scale(param_reg_sz)
-                        .expect("Could not find an appropriate register");
+                        .scale(reg_sz)
+                        .expect("Cannot scale assigned register to the needed size");
                     assembly! {(code){
                         mov [%rbp-{param_offset}], %{param_reg};
                     }};

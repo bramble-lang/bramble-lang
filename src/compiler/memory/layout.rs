@@ -246,7 +246,7 @@ mod compute {
         match ast {
             ExpressionBlock(..) => layout_for_expression_block(ast, layout, struct_table),
             Expression::Integer32(m, i) => {
-                let (annotations, layout) = SymbolOffsetTable::local_from(m, struct_table, layout);
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::Integer32(annotations, *i), layout)
             }
             Expression::Integer64(m, i) => {

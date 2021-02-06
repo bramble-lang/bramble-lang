@@ -220,6 +220,7 @@ impl RegisterAssigner {
         Self::assign_register(exp.get_annotations_mut(), struct_table);
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, struct_table),
+            Expression::Integer32(_m, _i) => {}
             Expression::Integer64(_m, _i) => {}
             Expression::Boolean(_m, _b) => {}
             Expression::StringLiteral(_m, _s) => {}
