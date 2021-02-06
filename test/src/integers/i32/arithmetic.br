@@ -12,6 +12,21 @@ fn my_main() {
 
     let a: i32 := w + z;
     root::std::io::writei32ln(a); // 5
+
+    let b: i32 := a * w * z;
+    root::std::io::writei32ln(b); // -250
+
+    let c: i32 := -(a * w * z * (12i32 * y));
+    root::std::io::writei32ln(c); // 15000
+
+    let d: i32 := -(a * w * z * (12i32 + y));
+    root::std::io::writei32ln(d); // 4250
+
+    let e: i32 := -(a * w * z * (12i32 - y * (20i32 / x)));
+    root::std::io::writei32ln(e); // 4250
+
+    let f: i32 := x/w;
+    root::std::io::writei32ln(f); // 0
     
     return;
 }
