@@ -758,11 +758,11 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Minus => {
-                if operand.get_type() == I64 {
-                    Ok((I64, operand))
+                if operand.get_type() == I32 || operand.get_type() == I64 {
+                    Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(format!(
-                        "{} expected i64 but found {}",
+                        "{} expected i32 or i64 but found {}",
                         op,
                         operand.get_type()
                     ))

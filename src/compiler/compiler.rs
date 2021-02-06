@@ -297,29 +297,6 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
 
-        let mut left_code = vec![];
-        self.traverse_expression(left, current_func, &mut left_code)?;
-        let mut right_code = vec![];
-        self.traverse_expression(right, current_func, &mut right_code)?;
-
-        let la = left.get_annotations();
-        let l_offset = self
-            .get_expression_offset(la)
-            .expect("Must be an offset for the left operand");
-        self.insert_comment_from_annotations(&mut left_code, &left.to_string(), la);
-        assembly! {(left_code){
-            mov [%rbp-{l_offset}], %rax;
-        }};
-
-        let ra = right.get_annotations();
-        let r_offset = self
-            .get_expression_offset(ra)
-            .expect("Must be an offset for the right operand");
-        self.insert_comment_from_annotations(&mut right_code, &right.to_string(), ra);
-        assembly! {(right_code){
-            mov [%rbp-{r_offset}], %rax;
-        }};
-
         let reg_sz = left
             .get_annotations()
             .reg_size()
@@ -331,6 +308,29 @@ impl<'a> Compiler<'a> {
         let reg_r = Reg64::Rbx
             .scale(reg_sz)
             .expect("Register could not be found for expression");
+
+        let mut left_code = vec![];
+        self.traverse_expression(left, current_func, &mut left_code)?;
+        let mut right_code = vec![];
+        self.traverse_expression(right, current_func, &mut right_code)?;
+
+        let la = left.get_annotations();
+        let l_offset = self
+            .get_expression_offset(la)
+            .expect("Must be an offset for the left operand");
+        self.insert_comment_from_annotations(&mut left_code, &left.to_string(), la);
+        assembly! {(left_code){
+            mov [%rbp-{l_offset}], %{reg_l};
+        }};
+
+        let ra = right.get_annotations();
+        let r_offset = self
+            .get_expression_offset(ra)
+            .expect("Must be an offset for the right operand");
+        self.insert_comment_from_annotations(&mut right_code, &right.to_string(), ra);
+        assembly! {(right_code){
+            mov [%rbp-{r_offset}], %{reg_l};
+        }};
 
         let mut op_asm = vec![];
         match op {
