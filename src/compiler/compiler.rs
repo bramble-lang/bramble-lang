@@ -985,7 +985,11 @@ impl<'a> Compiler<'a> {
                 }
             }
             _ => {
-                let reg = Self::register_by_type(value.get_annotations().ty());
+                let reg_sz = value
+                    .get_annotations()
+                    .reg_size()
+                    .expect("Register size not assigned");
+                let reg = Reg64::Rax.scale(reg_sz).expect("Cannot scale register");
 
                 assembly! {(code) {
                     mov [%{Reg::R64(dst)}-{dst_offset}], %{reg};
@@ -993,14 +997,6 @@ impl<'a> Compiler<'a> {
             }
         }
         Ok(code)
-    }
-
-    fn register_by_type(ty: &Type) -> Reg {
-        match ty {
-            Type::I32 => Reg::R32(Reg32::Eax),
-            Type::I64 => Reg::R64(Reg64::Rax),
-            _ => Reg::R64(Reg64::Rax),
-        }
     }
 
     fn yield_exp(
@@ -1357,11 +1353,5 @@ impl<'a> Compiler<'a> {
         }
 
         extern_functions
-    }
-
-    pub fn size_of(&self, ty: &Type) -> usize {
-        self.struct_table
-            .size_of(ty)
-            .expect("Type found with no size") as usize
     }
 }
