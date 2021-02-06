@@ -27,6 +27,9 @@ fn my_main() {
 
     let f: i32 := x/w;
     root::std::io::writei32ln(f); // 0
+
+    let g: i32 := add(x, y);
+    root::std::io::writei32ln(g); // 10
     
     return;
 }
@@ -37,4 +40,8 @@ fn test() -> i32 {
 
 fn test2(i: i32) -> i32 {
     return -i;
+}
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
 }
