@@ -23,10 +23,12 @@ macro_rules! trace {
         };
         if print_trace {
             println!(
-                "{} [{}]{} -> {:?} {:?}",
+                "{} L{}n{}: {}[{}] -> {:?} {:?}",
                 function_name!(),
+                $ts.get_annotations().line(),
                 $ts.get_annotations().id(),
                 $ts,
+                $ts.get_annotations().ty(),
                 $sz,
                 RegSize::assign($sz.unwrap_or(0) as usize)
             )

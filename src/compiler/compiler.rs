@@ -1,3 +1,4 @@
+use crate::compiler::arch::registers::RegSize;
 use crate::compiler::memory::register_assigner::RegisterAssigner;
 use std::collections::HashMap;
 
@@ -810,7 +811,8 @@ impl<'a> Compiler<'a> {
         src: &'a Expression<CompilerAnnotation>,
         member: &str,
     ) -> Result<(), String> {
-        let src_ty = src.get_annotations().ty();
+        let src_annotations = src.get_annotations();
+        let src_ty = src_annotations.ty();
         match src_ty {
             Type::Custom(struct_name) => {
                 code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
@@ -837,9 +839,18 @@ impl<'a> Compiler<'a> {
                             lea %rax, [%rax+{field_offset}];
                         }}
                     }
-                    _ => {
+                    ty => {
+                        let field_sz = self
+                            .struct_table
+                            .size_of(ty)
+                            .expect("There must be a size for a struct field");
+                        let reg_sz =
+                            RegSize::assign(field_sz as usize).expect("Cannot find register size");
+                        let register = Reg64::Rax
+                            .scale(reg_sz)
+                            .expect("Cannot scale a register to this field");
                         assembly! {(code) {
-                            mov %rax, [%rax+{field_offset}];
+                            mov %{register}, [%rax+{field_offset}];
                         }}
                     }
                 }
@@ -943,8 +954,12 @@ impl<'a> Compiler<'a> {
                         }};
                     }
                     _ => {
+                        let register = fvalue
+                            .get_annotations()
+                            .scale_reg(Reg64::Rax)
+                            .expect("Could not scale register");
                         assembly! {(code) {
-                            mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
+                            mov [%{Reg::R64(dst)}-{dst_offset}], %{register};
                         }};
                     }
                 }
@@ -1255,7 +1270,11 @@ impl<'a> Compiler<'a> {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.get_annotations();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
-            let reg = pa.scale_reg(Reg64::Rax).expect("Expected a register size");
+            let reg = pa.scale_reg(Reg64::Rax).expect(&format!(
+                "Expected a register size: L{} [{}]",
+                pa.line(),
+                pa.ty()
+            ));
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
                 assembly! {(code){
                     mov [%rbp-{offset}], %{reg};

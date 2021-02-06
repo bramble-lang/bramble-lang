@@ -1,0 +1,27 @@
+
+fn my_main() {
+    let x:i32 := 4i32;
+    let y: i32 := 5i32;
+
+    let b: Basic := Basic {
+        a: x,
+        b: y,
+    };
+
+    root::std::io::writei32ln(b.a);
+    root::std::io::writei32ln(b.b);
+
+    let z: i32 := b.a;
+
+    return;
+}
+
+struct Basic {
+    a: i32,
+    b: i32,
+}
+
+struct Mixed {
+    a: i32,
+    b: i64,
+}
