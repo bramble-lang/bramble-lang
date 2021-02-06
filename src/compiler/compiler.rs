@@ -1219,11 +1219,9 @@ impl<'a> Compiler<'a> {
                     }}
                 }
                 _ => {
-                    let reg_sz = routine_sym_table.param_reg_size()[idx]
+                    let param_reg = routine_sym_table.param_reg_size()[idx]
+                        .and_then(|sz| param_registers[idx].scale(sz))
                         .expect("Expect a register size to be assigned for a parameter");
-                    let param_reg = param_registers[idx]
-                        .scale(reg_sz)
-                        .expect("Cannot scale assigned register to the needed size");
                     assembly! {(code){
                         mov [%rbp-{param_offset}], %{param_reg};
                     }};
