@@ -405,15 +405,16 @@ impl<'a> Compiler<'a> {
         let fn_param_registers = vec![Reg64::Rax, Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
         let co_param_registers = vec![Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
 
-        self.push_scope(ast);
+        let reg_sz = ast.get_annotations().reg_size();
+        let register = reg_sz
+            .map(|sz| {
+                Reg64::Rax
+                    .scale(sz)
+                    .expect("Register could not be found for expression")
+            })
+            .unwrap_or(Reg::R64(Reg64::Rax));
 
-        let reg_sz = ast
-            .get_annotations()
-            .reg_size()
-            .expect("Expression must have a register size");
-        let register = Reg64::Rax
-            .scale(reg_sz)
-            .expect("Register could not be found for expression");
+        self.push_scope(ast);
         match ast {
             Expression::Integer32(_, i) => {
                 assembly! {(code) {mov %{register}, {*i};}}
