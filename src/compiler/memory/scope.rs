@@ -1,4 +1,6 @@
 use crate::compiler::arch::registers::RegSize;
+use crate::compiler::x86::assembly::Reg;
+use crate::compiler::x86::assembly::Reg64;
 use crate::{
     semantics::semanticnode::SemanticAnnotations,
     syntax::path::Path,
@@ -136,6 +138,11 @@ impl CompilerAnnotation {
 
     pub fn reg_size(&self) -> Option<RegSize> {
         self.reg_size
+    }
+
+    pub fn scale_reg(&self, reg: Reg64) -> Option<Reg> {
+        let reg_sz = self.reg_size()?;
+        reg.scale(reg_sz)
     }
 
     pub fn set_reg_size(&mut self, r: Option<RegSize>) {

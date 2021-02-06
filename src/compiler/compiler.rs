@@ -297,16 +297,14 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
 
-        let reg_sz = left
+        let reg_l = left
             .get_annotations()
-            .reg_size()
+            .scale_reg(Reg64::Rax)
             .expect("Expression must have a register size");
 
-        let reg_l = Reg64::Rax
-            .scale(reg_sz)
-            .expect("Register could not be found for expression");
-        let reg_r = Reg64::Rbx
-            .scale(reg_sz)
+        let reg_r = right
+            .get_annotations()
+            .scale_reg(Reg64::Rbx)
             .expect("Register could not be found for expression");
 
         let mut left_code = vec![];
@@ -427,13 +425,9 @@ impl<'a> Compiler<'a> {
                 }
             }
             Expression::Identifier(m, id) => {
-                let reg_sz = ast.get_annotations().reg_size();
-                let register = reg_sz
-                    .map(|sz| {
-                        Reg64::Rax
-                            .scale(sz)
-                            .expect("Register could not be found for expression")
-                    })
+                let register = ast
+                    .get_annotations()
+                    .scale_reg(Reg64::Rax)
                     .unwrap_or(Reg::R64(Reg64::Rax));
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
@@ -452,13 +446,9 @@ impl<'a> Compiler<'a> {
                 self.traverse_expression(operand, current_func, code)?;
                 match op {
                     UnaryOperator::Minus => {
-                        let reg_sz = ast.get_annotations().reg_size();
-                        let register = reg_sz
-                            .map(|sz| {
-                                Reg64::Rax
-                                    .scale(sz)
-                                    .expect("Register could not be found for expression")
-                            })
+                        let register = ast
+                            .get_annotations()
+                            .scale_reg(Reg64::Rax)
                             .unwrap_or(Reg::R64(Reg64::Rax));
                         assembly! {(code){
                             neg %{register};
@@ -993,11 +983,10 @@ impl<'a> Compiler<'a> {
                 }
             }
             _ => {
-                let reg_sz = value
+                let reg = value
                     .get_annotations()
-                    .reg_size()
+                    .scale_reg(Reg64::Rax)
                     .expect("Register size not assigned");
-                let reg = Reg64::Rax.scale(reg_sz).expect("Cannot scale register");
 
                 assembly! {(code) {
                     mov [%{Reg::R64(dst)}-{dst_offset}], %{reg};
@@ -1268,8 +1257,7 @@ impl<'a> Compiler<'a> {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.get_annotations();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
-            let reg_sz = pa.reg_size().expect("Expected a register size");
-            let reg = Reg64::Rax.scale(reg_sz).expect("Could not scale register");
+            let reg = pa.scale_reg(Reg64::Rax).expect("Expected a register size");
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
                 assembly! {(code){
                     mov [%rbp-{offset}], %{reg};
@@ -1297,9 +1285,8 @@ impl<'a> Compiler<'a> {
         for idx in 0..params.len() {
             let pa = params[idx].get_annotations();
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
-                let reg_sz = pa.reg_size().expect("Expected a register size");
-                let reg = param_registers[idx]
-                    .scale(reg_sz)
+                let reg = pa
+                    .scale_reg(param_registers[idx])
                     .expect("Could not scale register");
                 assembly! {(code){
                     mov %{reg}, [%rbp-{offset}];
