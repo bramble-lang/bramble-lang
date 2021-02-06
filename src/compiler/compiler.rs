@@ -452,8 +452,16 @@ impl<'a> Compiler<'a> {
                 self.traverse_expression(operand, current_func, code)?;
                 match op {
                     UnaryOperator::Minus => {
+                        let reg_sz = ast.get_annotations().reg_size();
+                        let register = reg_sz
+                            .map(|sz| {
+                                Reg64::Rax
+                                    .scale(sz)
+                                    .expect("Register could not be found for expression")
+                            })
+                            .unwrap_or(Reg::R64(Reg64::Rax));
                         assembly! {(code){
-                            neg %rax;
+                            neg %{register};
                         }}
                     }
                     UnaryOperator::Not => {
