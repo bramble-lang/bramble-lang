@@ -338,22 +338,22 @@ impl<'a> Compiler<'a> {
                 assembly! {(op_asm) {add %{reg_l}, %{reg_r};}}
             }
             BinaryOperator::Sub => {
-                assembly! {(op_asm) {sub %rax, %rbx;}}
+                assembly! {(op_asm) {sub %{reg_l}, %{reg_r};}}
             }
             BinaryOperator::Mul => {
-                assembly! {(op_asm) {imul %rax, %rbx;}}
+                assembly! {(op_asm) {imul %{reg_l}, %{reg_r};}}
             }
             BinaryOperator::Div => {
                 assembly! {(op_asm) {
                     cdq;
-                    idiv %rbx;
+                    idiv %{reg_r};
                 }}
             }
             BinaryOperator::BAnd => {
-                assembly! {(op_asm) {and %rax, %rbx;}}
+                assembly! {(op_asm) {and %{reg_l}, %{reg_r};}}
             }
             BinaryOperator::BOr => {
-                assembly! {(op_asm) {or %rax, %rbx;}}
+                assembly! {(op_asm) {or %{reg_l}, %{reg_r};}}
             }
             cond => {
                 let set = match cond {
@@ -366,7 +366,7 @@ impl<'a> Compiler<'a> {
                     _ => panic!("Invalid conditional operator: {}", cond),
                 };
                 assembly! {(op_asm){
-                    cmp %rax, %rbx;
+                    cmp %{reg_l}, %{reg_r};
                     {{[set]}}
                     and %al, 1;
                     movzx %rax, %al;

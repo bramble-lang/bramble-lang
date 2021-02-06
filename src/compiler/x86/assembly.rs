@@ -543,6 +543,9 @@ macro_rules! reg32 {
 
 #[macro_export]
 macro_rules! register {
+    ({$reg:expr}) => {
+        $reg
+    };
     (rax) => {
         Reg::R64(Reg64::Rax)
     };
