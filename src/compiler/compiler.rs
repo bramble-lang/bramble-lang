@@ -1260,9 +1260,11 @@ impl<'a> Compiler<'a> {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.get_annotations();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
+            let reg_sz = pa.reg_size().expect("Expected a register size");
+            let reg = Reg64::Rax.scale(reg_sz).expect("Could not scale register");
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
                 assembly! {(code){
-                    mov [%rbp-{offset}], %rax;
+                    mov [%rbp-{offset}], %{reg};
                 }};
             }
         }
@@ -1287,9 +1289,12 @@ impl<'a> Compiler<'a> {
         for idx in 0..params.len() {
             let pa = params[idx].get_annotations();
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
-                let reg = param_registers[idx];
+                let reg_sz = pa.reg_size().expect("Expected a register size");
+                let reg = param_registers[idx]
+                    .scale(reg_sz)
+                    .expect("Could not scale register");
                 assembly! {(code){
-                    mov %{Reg::R64(reg)}, [%rbp-{offset}];
+                    mov %{reg}, [%rbp-{offset}];
                 }};
             }
         }
