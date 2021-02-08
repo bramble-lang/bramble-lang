@@ -9,6 +9,8 @@ section .data
     dest_i64: dq 0 ; 64-bits integer = 8 bytes.  Destination for scanf to write to
     fmt_i64: db "%ld", 0
     fmt_i64ln: db `%ld\n`, 0
+    fmt_i32: db "%d", 0
+    fmt_i32ln: db `%d\n`, 0
     fmt_str: db "%s", 0
 
     true: db "true", 0
@@ -100,6 +102,50 @@ root_std_io_writei64ln:
 
     mov rdi, fmt_i64ln
     mov rsi, rax
+    xor rax, rax
+    call printf
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+global root_std_io_writei32
+root_std_io_writei32:
+    extern printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rdi, fmt_i32
+    mov esi, eax
+    xor rax, rax
+    call printf
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+global root_std_io_writei32ln
+root_std_io_writei32ln:
+    extern printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rdi, fmt_i32ln
+    mov esi, eax
     xor rax, rax
     call printf
 
