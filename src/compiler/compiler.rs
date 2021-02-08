@@ -301,7 +301,7 @@ impl<'a> Compiler<'a> {
         let primary = left
             .get_annotations()
             .scale_reg(Reg64::Rax)
-            .expect("Expression must have a register size");
+            .expect("Register could not be found for expression");
 
         let secondary = right
             .get_annotations()
@@ -1270,11 +1270,9 @@ impl<'a> Compiler<'a> {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.get_annotations();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
-            let reg = pa.scale_reg(Reg64::Rax).expect(&format!(
-                "Expected a register size: L{} [{}]",
-                pa.line(),
-                pa.ty()
-            ));
+            let reg = pa
+                .scale_reg(Reg64::Rax)
+                .expect("Register could not be found for function parameter");
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
                 assembly! {(code){
                     mov [%rbp-{offset}], %{reg};
