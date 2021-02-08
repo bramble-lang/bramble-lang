@@ -429,7 +429,7 @@ impl<'a> Compiler<'a> {
                 let register = ast
                     .get_annotations()
                     .scale_reg(Reg64::Rax)
-                    .unwrap_or(Reg::R64(Reg64::Rax));
+                    .expect("Expect a register to be assigned to an identifier");
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
                     Type::Custom(_) => {
