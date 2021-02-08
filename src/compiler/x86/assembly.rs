@@ -392,10 +392,8 @@ impl Display for Inst {
             Push(a) => f.write_fmt(format_args!("push {}", a)),
             Pop(a) => f.write_fmt(format_args!("pop {}", a)),
 
-            Mov(a, b) =>
-                f.write_str(&format_binary_op("mov", a, b)),
-            Movzx(a, b) =>
-                f.write_str(&format_binary_op("movzx", a, b)),
+            Mov(a, b) => f.write_str(&format_binary_op("mov", a, b)),
+            Movzx(a, b) => f.write_str(&format_binary_op("movzx", a, b)),
 
             Cdq => f.write_str("cdq"),
             Lea(a, b) => f.write_str(&format_binary_op("lea", a, b)),
@@ -429,15 +427,9 @@ impl Display for Inst {
 fn format_binary_op(op: &str, a: &Operand, b: &Operand) -> String {
     let operands = match (a, b) {
         (Operand::Direct(a), b) => format!("{}, {}", a, b),
-        (a, Operand::Direct(DirectOperand::Integer32(i))) => {
-            format!("DWORD {}, {}", a, i)
-        }
-        (a, Operand::Direct(DirectOperand::Integer64(i))) => {
-            format!("QWORD {}, {}", a, i)
-        }
-        (a, Operand::Direct(DirectOperand::UInteger64(i))) => {
-            format!("QWORD {}, {}", a, i)
-        }
+        (a, Operand::Direct(DirectOperand::Integer32(i))) => format!("DWORD {}, {}", a, i),
+        (a, Operand::Direct(DirectOperand::Integer64(i))) => format!("QWORD {}, {}", a, i),
+        (a, Operand::Direct(DirectOperand::UInteger64(i))) => format!("QWORD {}, {}", a, i),
         (a, b) => format!("{}, {}", a, b),
     };
     format!("{} {}", op, operands)
