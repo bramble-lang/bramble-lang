@@ -298,12 +298,12 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
 
-        let reg_l = left
+        let primary = left
             .get_annotations()
             .scale_reg(Reg64::Rax)
             .expect("Expression must have a register size");
 
-        let reg_r = right
+        let secondary = right
             .get_annotations()
             .scale_reg(Reg64::Rbx)
             .expect("Register could not be found for expression");
@@ -319,7 +319,7 @@ impl<'a> Compiler<'a> {
             .expect("Must be an offset for the left operand");
         self.insert_comment_from_annotations(&mut left_code, &left.to_string(), la);
         assembly! {(left_code){
-            mov [%rbp-{l_offset}], %{reg_l};
+            mov [%rbp-{l_offset}], %{primary};
         }};
 
         let ra = right.get_annotations();
@@ -328,31 +328,31 @@ impl<'a> Compiler<'a> {
             .expect("Must be an offset for the right operand");
         self.insert_comment_from_annotations(&mut right_code, &right.to_string(), ra);
         assembly! {(right_code){
-            mov [%rbp-{r_offset}], %{reg_l};
+            mov [%rbp-{r_offset}], %{primary};
         }};
 
         let mut op_asm = vec![];
         match op {
             BinaryOperator::Add => {
-                assembly! {(op_asm) {add %{reg_l}, %{reg_r};}}
+                assembly! {(op_asm) {add %{primary}, %{secondary};}}
             }
             BinaryOperator::Sub => {
-                assembly! {(op_asm) {sub %{reg_l}, %{reg_r};}}
+                assembly! {(op_asm) {sub %{primary}, %{secondary};}}
             }
             BinaryOperator::Mul => {
-                assembly! {(op_asm) {imul %{reg_l}, %{reg_r};}}
+                assembly! {(op_asm) {imul %{primary}, %{secondary};}}
             }
             BinaryOperator::Div => {
                 assembly! {(op_asm) {
                     cdq;
-                    idiv %{reg_r};
+                    idiv %{secondary};
                 }}
             }
             BinaryOperator::BAnd => {
-                assembly! {(op_asm) {and %{reg_l}, %{reg_r};}}
+                assembly! {(op_asm) {and %{primary}, %{secondary};}}
             }
             BinaryOperator::BOr => {
-                assembly! {(op_asm) {or %{reg_l}, %{reg_r};}}
+                assembly! {(op_asm) {or %{primary}, %{secondary};}}
             }
             cond => {
                 let set = match cond {
@@ -365,7 +365,7 @@ impl<'a> Compiler<'a> {
                     _ => panic!("Invalid conditional operator: {}", cond),
                 };
                 assembly! {(op_asm){
-                    cmp %{reg_l}, %{reg_r};
+                    cmp %{primary}, %{secondary};
                     {{[set]}}
                     and %al, 1;
                     movzx %rax, %al;
@@ -377,8 +377,8 @@ impl<'a> Compiler<'a> {
         assembly! {(code){
             {{left_code}}
             {{right_code}}
-            mov %{reg_l}, [%rbp - {l_offset}];
-            mov %{reg_r}, [%rbp - {r_offset}];
+            mov %{primary}, [%rbp - {l_offset}];
+            mov %{secondary}, [%rbp - {r_offset}];
             {{op_asm}}
         }}
 
