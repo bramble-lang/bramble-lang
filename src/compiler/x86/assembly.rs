@@ -392,26 +392,22 @@ impl Display for Inst {
             Push(a) => f.write_fmt(format_args!("push {}", a)),
             Pop(a) => f.write_fmt(format_args!("pop {}", a)),
 
-            Mov(a, b) => {
-                let (fa, fb) = format_move_operands(a, b);
-                f.write_fmt(format_args!("mov {}, {}", fa, fb))
-            }
-            Movzx(a, b) => {
-                let (fa, fb) = format_move_operands(a, b);
-                f.write_fmt(format_args!("movzx {}, {}", fa, fb))
-            }
+            Mov(a, b) =>
+                f.write_str(&format_binary_op("mov", a, b)),
+            Movzx(a, b) =>
+                f.write_str(&format_binary_op("movzx", a, b)),
 
             Cdq => f.write_str("cdq"),
-            Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
-            Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
-            Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
-            IMul(a, b) => f.write_fmt(format_args!("imul {}, {}", a, b)),
+            Lea(a, b) => f.write_str(&format_binary_op("lea", a, b)),
+            Add(a, b) => f.write_str(&format_binary_op("add", a, b)),
+            Sub(a, b) => f.write_str(&format_binary_op("sub", a, b)),
+            IMul(a, b) => f.write_str(&format_binary_op("imul", a, b)),
             IDiv(a) => f.write_fmt(format_args!("idiv {}", a)),
             Neg(a) => f.write_fmt(format_args!("neg {}", a)),
-            Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
-            And(a, b) => f.write_fmt(format_args!("and {}, {}", a, b)),
-            Or(a, b) => f.write_fmt(format_args!("or {}, {}", a, b)),
-            Xor(a, b) => f.write_fmt(format_args!("xor {}, {}", a, b)),
+            Cmp(a, b) => f.write_str(&format_binary_op("cmp", a, b)),
+            And(a, b) => f.write_str(&format_binary_op("and", a, b)),
+            Or(a, b) => f.write_str(&format_binary_op("or", a, b)),
+            Xor(a, b) => f.write_str(&format_binary_op("xor", a, b)),
 
             Sete(a) => f.write_fmt(format_args!("sete {}", a)),
             Setne(a) => f.write_fmt(format_args!("setne {}", a)),
@@ -430,20 +426,21 @@ impl Display for Inst {
     }
 }
 
-fn format_move_operands(a: &Operand, b: &Operand) -> (String, String) {
-    match (a, b) {
-        (Operand::Direct(a), b) => (format!("{}", a), format!("{}", b)),
+fn format_binary_op(op: &str, a: &Operand, b: &Operand) -> String {
+    let operands = match (a, b) {
+        (Operand::Direct(a), b) => format!("{}, {}", a, b),
         (a, Operand::Direct(DirectOperand::Integer32(i))) => {
-            (format!("DWORD {}", a), format!("{}", i))
+            format!("DWORD {}, {}", a, i)
         }
         (a, Operand::Direct(DirectOperand::Integer64(i))) => {
-            (format!("QWORD {}", a), format!("{}", i))
+            format!("QWORD {}, {}", a, i)
         }
         (a, Operand::Direct(DirectOperand::UInteger64(i))) => {
-            (format!("QWORD {}", a), format!("{}", i))
+            format!("QWORD {}, {}", a, i)
         }
-        (a, b) => (format!("{}", a), format!("{}", b)),
-    }
+        (a, b) => format!("{}, {}", a, b),
+    };
+    format!("{} {}", op, operands)
 }
 
 #[macro_export]
