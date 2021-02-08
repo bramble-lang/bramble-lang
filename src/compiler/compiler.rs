@@ -1,4 +1,3 @@
-use crate::compiler::arch::registers::RegSize;
 use crate::compiler::memory::register_assigner::RegisterAssigner;
 use std::collections::HashMap;
 
@@ -840,12 +839,8 @@ impl<'a> Compiler<'a> {
                         }}
                     }
                     ty => {
-                        let field_sz = self
-                            .struct_table
-                            .size_of(ty)
+                        let reg_sz = RegisterAssigner::register_size_for_type(ty, self.struct_table)
                             .expect("There must be a size for a struct field");
-                        let reg_sz =
-                            RegSize::assign(field_sz as usize).expect("Cannot find register size");
                         let register = Reg64::Rax
                             .scale(reg_sz)
                             .expect("Cannot scale a register to this field");

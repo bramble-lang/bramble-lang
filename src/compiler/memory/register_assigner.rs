@@ -58,7 +58,7 @@ impl RegisterAssigner {
      * Custom types are always represented using 64bit registers because they are currently
      * always referred to via addresses.
      */
-    fn register_for_type(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
+    pub fn register_size_for_type(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
         match ty {
             Type::Custom(_) => Some(RegSize::R64),
             _ => {
@@ -69,7 +69,7 @@ impl RegisterAssigner {
     }
 
     fn assign_register(a: &mut CompilerAnnotation, struct_table: &ResolvedStructTable) {
-        let reg = Self::register_for_type(a.ty(), struct_table);
+        let reg = Self::register_size_for_type(a.ty(), struct_table);
         a.set_reg_size(reg);
     }
 
@@ -78,7 +78,7 @@ impl RegisterAssigner {
         or: RegSize,
         struct_table: &ResolvedStructTable,
     ) {
-        let reg = Self::register_for_type(a.ty(), struct_table).or(Some(or));
+        let reg = Self::register_size_for_type(a.ty(), struct_table).or(Some(or));
         a.set_reg_size(reg);
     }
 
@@ -139,7 +139,7 @@ impl RegisterAssigner {
         // loop through all the params
         let mut param_reg_szs = vec![];
         for p in rd.get_params() {
-            let p_reg_sz = Self::register_for_type(&p.1, struct_table);
+            let p_reg_sz = Self::register_size_for_type(&p.1, struct_table);
             param_reg_szs.push(p_reg_sz);
         }
 
