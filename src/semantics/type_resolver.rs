@@ -2240,6 +2240,14 @@ mod tests {
                 Ok(I64),
             ),
             (
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return 5i32;}
+                ",
+                Ok(I32),
+            ),
+            (
                 // test recursion
                 "fn main() -> i64 {
                     return number();
@@ -2247,6 +2255,14 @@ mod tests {
                 fn number() -> i64 {return number();}
                 ",
                 Ok(I64),
+            ),
+            (
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L4: Return expected i32 but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -2271,6 +2287,30 @@ mod tests {
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Ok(I64),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1i32, 2i32);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, 2i32);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got i64"),
+            ),
+            (
+                "fn main() -> i64 {
+                    return add(1i32, 2i32);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Return expected i64 but got i32"),
             ),
             (
                 "fn main() -> i64 {
@@ -2399,6 +2439,24 @@ mod tests {
                 ",
                 Err("Semantic: L2: Expected coroutine but number is a fn (i64) -> i64"),
             ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5i32);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Ok(Coroutine(Box::new(I32))),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function number: parameter 1 expected i32 but got i64"),
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -2413,7 +2471,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Coroutine(Box::new(I64)));
+                    assert_eq!(bind_stm.get_type(), expected_ty);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
