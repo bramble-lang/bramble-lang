@@ -82,6 +82,7 @@ impl<'a> Compiler<'a> {
         module: Module<SemanticAnnotations>,
         imported_functions: Vec<Path>,
         target_os: TargetOS,
+        trace_reg_assigner: TracingConfig,
     ) -> Vec<Inst> {
         // Put user code here
         let (mut compiler_ast, struct_table) = compute_layout_for_program(&module).unwrap();
@@ -90,7 +91,7 @@ impl<'a> Compiler<'a> {
         string_pool.extract_from_module(&compiler_ast);
 
         // assign register sizes
-        let reg_assigner = RegisterAssigner::new(TracingConfig::Off);
+        let reg_assigner = RegisterAssigner::new(trace_reg_assigner);
         reg_assigner.for_module(&mut compiler_ast, &struct_table);
 
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);

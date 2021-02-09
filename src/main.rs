@@ -74,12 +74,14 @@ fn main() {
         .expect("Must provide a target platform")
         .into();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
+    let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
 
     // Compile
     let program = Compiler::compile(
         semantic_ast,
         imported.iter().map(|(p, _, _)| p.clone()).collect(),
         target_platform,
+        trace_reg_assigner,
     );
 
     // Write the resulting assembly code to the target output file
@@ -128,6 +130,12 @@ fn configure_cli() -> clap::App<'static, 'static> {
                 .takes_value(true)
                 .help("Prints out a trace of all the steps the parser follows as it converts the token vector into an AST.  The current token is printed next to the step.
                 This is for debugging the parser when adding new syntactical elements.")
+        )
+        .arg(
+            Arg::with_name("trace-reg-assigner")
+                .long("trace-reg-assigner")
+                .takes_value(true)
+                .help("Prints out a trace of all the nodes in the AST and their register assignment annotation data.")
         )
         .arg(
             Arg::with_name("trace-lexer")

@@ -10,7 +10,8 @@ pub enum TracingConfig {
 
 impl TracingConfig {
     pub fn parse(v: Option<&str>) -> TracingConfig {
-        match v {
+        match v.map(|v| v.to_lowercase()) {
+            Some(s) if s == "all" => TracingConfig::All,
             Some(v) => {
                 let split: Vec<_> = v.split(':').collect();
                 if split.len() == 1 {
