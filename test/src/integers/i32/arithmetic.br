@@ -30,6 +30,10 @@ fn my_main() {
 
     let g: i32 := add(x, y);
     root::std::io::writei32ln(g); // 10
+
+    if (5i32 < 10i32) {
+        root::std::io::write("5 is less than 10\n");
+    };
     
     return;
 }
