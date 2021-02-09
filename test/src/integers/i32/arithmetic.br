@@ -3,9 +3,9 @@ fn my_main() {
     let y:i32 := test();
     let z:i32 := test2(y);
     
-    root::std::io::writei32ln(x);
-    root::std::io::writei32ln(y);
-    root::std::io::writei32ln(z);
+    root::std::io::writei32ln(x);    // 5
+    root::std::io::writei32ln(y);    // 5
+    root::std::io::writei32ln(z);    // -5
 
     let w: i32 := x + y;
     root::std::io::writei32ln(w);    // 10
