@@ -71,7 +71,7 @@ impl From<&str> for TargetOS {
 pub struct Compiler<'a> {
     scope: CompilerAnnotationStack<'a>,
     string_pool: StringPool,
-    struct_table: &'a ResolvedStructTable,
+    type_table: &'a ResolvedStructTable,
     root: &'a Module<CompilerAnnotation>,
     c_extern_functions: HashMap<String, String>,
     imported_functions: Vec<Path>,
@@ -99,7 +99,7 @@ impl<'a> Compiler<'a> {
             scope: CompilerAnnotationStack::new(),
             string_pool,
             root: &compiler_ast,
-            struct_table: &struct_table,
+            type_table: &struct_table,
             c_extern_functions,
             imported_functions,
         };
@@ -545,7 +545,7 @@ impl<'a> Compiler<'a> {
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
-                        .struct_table
+                        .type_table
                         .size_of(return_type)
                         .ok_or(format!("no size for {} found", return_type))?;
 
@@ -818,7 +818,7 @@ impl<'a> Compiler<'a> {
 
                 self.traverse_expression(src, current_func, code)?;
 
-                let struct_def = self.struct_table.get(struct_name).ok_or(format!(
+                let struct_def = self.type_table.get(struct_name).ok_or(format!(
                     "Could not find struct definition for {}",
                     struct_name
                 ))?;
@@ -839,7 +839,7 @@ impl<'a> Compiler<'a> {
                         }}
                     }
                     ty => {
-                        let reg_sz = RegisterAssigner::register_size_for_type(ty, self.struct_table)
+                        let reg_sz = RegisterAssigner::register_size_for_type(ty, self.type_table)
                             .expect("There must be a size for a struct field");
                         let reg = Reg64::Rax
                             .scale(reg_sz)
@@ -869,7 +869,7 @@ impl<'a> Compiler<'a> {
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
-        let struct_def = self.struct_table.get(struct_name).expect(&format!(
+        let struct_def = self.type_table.get(struct_name).expect(&format!(
             "{}, used in {}, was not found",
             struct_name, current_func
         ));
@@ -1017,7 +1017,7 @@ impl<'a> Compiler<'a> {
         match meta.ty() {
             Type::Custom(struct_name) => {
                 let st = self
-                    .struct_table
+                    .type_table
                     .get(struct_name)
                     .ok_or(format!("no definition for {} found", struct_name))?;
                 let st_sz = st
@@ -1117,7 +1117,7 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
-            .struct_table
+            .type_table
             .get(struct_name)
             .expect(&format!("Could not find definition for {}", struct_name));
         let struct_sz = ty_def
@@ -1141,7 +1141,7 @@ impl<'a> Compiler<'a> {
                     }}
                 }
                 ty => {
-                    let reg_sz = RegisterAssigner::register_size_for_type(ty, self.struct_table)
+                    let reg_sz = RegisterAssigner::register_size_for_type(ty, self.type_table)
                         .expect("There must be a size for a struct field");
                     let reg = Reg64::Rdi
                         .scale(reg_sz)
