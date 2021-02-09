@@ -425,7 +425,7 @@ impl<'a> Compiler<'a> {
                 }
             }
             Expression::Identifier(m, id) => {
-                let register = ast
+                let reg = ast
                     .get_annotations()
                     .scale_reg(Reg64::Rax)
                     .expect("Expect a register to be assigned to an identifier");
@@ -435,7 +435,7 @@ impl<'a> Compiler<'a> {
                         assembly! {(code) {lea %rax, [%rbp-{id_offset}];}}
                     }
                     _ => {
-                        assembly! {(code) {mov %{register}, [%rbp-{id_offset}];}}
+                        assembly! {(code) {mov %{reg}, [%rbp-{id_offset}];}}
                     }
                 }
             }
@@ -446,12 +446,12 @@ impl<'a> Compiler<'a> {
                 self.traverse_expression(operand, current_func, code)?;
                 match op {
                     UnaryOperator::Minus => {
-                        let register = ast
+                        let reg = ast
                             .get_annotations()
                             .scale_reg(Reg64::Rax)
                             .unwrap_or(Reg::R64(Reg64::Rax));
                         assembly! {(code){
-                            neg %{register};
+                            neg %{reg};
                         }}
                     }
                     UnaryOperator::Not => {
@@ -841,11 +841,11 @@ impl<'a> Compiler<'a> {
                     ty => {
                         let reg_sz = RegisterAssigner::register_size_for_type(ty, self.struct_table)
                             .expect("There must be a size for a struct field");
-                        let register = Reg64::Rax
+                        let reg = Reg64::Rax
                             .scale(reg_sz)
                             .expect("Cannot scale a register to this field");
                         assembly! {(code) {
-                            mov %{register}, [%rax+{field_offset}];
+                            mov %{reg}, [%rax+{field_offset}];
                         }}
                     }
                 }
@@ -949,12 +949,12 @@ impl<'a> Compiler<'a> {
                         }};
                     }
                     _ => {
-                        let register = fvalue
+                        let reg = fvalue
                             .get_annotations()
                             .scale_reg(Reg64::Rax)
                             .expect("Could not scale register");
                         assembly! {(code) {
-                            mov [%{Reg::R64(dst)}-{dst_offset}], %{register};
+                            mov [%{Reg::R64(dst)}-{dst_offset}], %{reg};
                         }};
                     }
                 }
@@ -1143,13 +1143,13 @@ impl<'a> Compiler<'a> {
                 ty => {
                     let reg_sz = RegisterAssigner::register_size_for_type(ty, self.struct_table)
                         .expect("There must be a size for a struct field");
-                    let register = Reg64::Rdi
+                    let reg = Reg64::Rdi
                         .scale(reg_sz)
                         .expect("Cannot scale a register to this field");
                     assembly! {(code) {
                         ; {format!("copy {}.{}", struct_name, field_name)}
-                        mov %{register}, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
-                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %{register};
+                        mov %{reg}, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
+                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %{reg};
                     }};
                 }
             }
