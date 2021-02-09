@@ -1107,41 +1107,6 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn pop_struct_into(&self, struct_name: &Path, id_offset: u32) -> Result<Vec<Inst>, String> {
-        let mut code = vec![];
-        let ty_def = self
-            .struct_table
-            .get(struct_name)
-            .ok_or(format!("Could not find definition for {}", struct_name))?;
-        for FieldInfo {
-            name: field_name,
-            ty: field_ty,
-            ..
-        } in ty_def.get_fields().iter().rev()
-        {
-            let rel_field_offset = ty_def.get_offset_of(field_name).expect(&format!(
-                "CRITICAL: struct {} has member, {}, with no relative offset",
-                struct_name, field_name,
-            )) as u32;
-            let field_offset = id_offset - rel_field_offset;
-            match field_ty {
-                Type::Custom(name) => {
-                    assembly! {(code){
-                        {{self.pop_struct_into(name, field_offset)?}}
-                    }}
-                }
-                _ => {
-                    assembly! {(code) {
-                        pop %rax;
-                        mov [%rbp-{field_offset as i32}], %rax;
-                    }};
-                }
-            }
-        }
-
-        Ok(code)
-    }
-
     fn copy_struct_into(
         &self,
         struct_name: &Path,
@@ -1175,11 +1140,16 @@ impl<'a> Compiler<'a> {
                         {{self.copy_struct_into(name, dst_reg, dst_field_offset, src_reg, src_offset-(struct_sz - rel_field_offset))?}}
                     }}
                 }
-                _ => {
+                ty => {
+                    let reg_sz = RegisterAssigner::register_size_for_type(ty, self.struct_table)
+                        .expect("There must be a size for a struct field");
+                    let register = Reg64::Rdi
+                        .scale(reg_sz)
+                        .expect("Cannot scale a register to this field");
                     assembly! {(code) {
                         ; {format!("copy {}.{}", struct_name, field_name)}
-                        mov %rdi, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
-                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %rdi;
+                        mov %{register}, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
+                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %{register};
                     }};
                 }
             }

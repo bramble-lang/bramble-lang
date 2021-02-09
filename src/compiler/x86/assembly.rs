@@ -84,6 +84,7 @@ pub enum Reg16 {
     Bx,
     Cx,
     Dx,
+    Di,
 }
 
 impl Display for Reg16 {
@@ -94,6 +95,7 @@ impl Display for Reg16 {
             Bx => f.write_str("bx"),
             Cx => f.write_str("cx"),
             Dx => f.write_str("dx"),
+            Di => f.write_str("di"),
         }
     }
 }
@@ -188,6 +190,12 @@ impl Reg64 {
                 RegSize::R16 => Reg::R16(Reg16::Dx),
                 RegSize::R32 => Reg::R32(Reg32::Edx),
                 RegSize::R64 => Reg::R64(Reg64::Rdx),
+            }),
+            Reg64::Rdi => Some(match sz {
+                RegSize::R16 => Reg::R16(Reg16::Di),
+                RegSize::R32 => Reg::R32(Reg32::Edi),
+                RegSize::R64 => Reg::R64(Reg64::Rdi),
+                _ => return None,
             }),
             _ => None,
         }
