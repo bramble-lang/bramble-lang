@@ -8,9 +8,9 @@ fn my_main() {
     test(m);
     test(m);
 
-    /*let c: co i32 := init cotest(m);
+    let c: co i32 := init cotest(m);
     root::std::io::writei32ln(yield c);
-    root::std::io::writei32ln(yield c);*/
+    root::std::io::writei32ln(yield c);
 
     return;
 }
@@ -21,14 +21,14 @@ fn test(m: Mixed) {
     return;
 }
 
-/*co cotest(m: Mixed) -> i32 {
+co cotest(m: Mixed) -> i32 {
     root::std::io::writei32ln(m.a);
     yret 41i32;
     root::std::io::writei64ln(m.b);
     yret 42i32;
 
     return 5i32;
-}*/
+}
 
 struct Mixed {
     a: i32,
