@@ -802,10 +802,11 @@ impl<'a> TypeResolver<'a> {
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
+                    let expected = if l.get_type() == I64 || l.get_type() == I32  {format!("{}", l.get_type())} else {"i64".into()};
                     Err(format!(
                         "{} expected {} but found {} and {}",
                         op,
-                        l.get_type(),
+                        expected,
                         l.get_type(),
                         r.get_type()
                     ))
@@ -1552,7 +1553,7 @@ mod tests {
                     let k: bool := false;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i64 but found bool"),
+                Err("Semantic: L3: - expected i32 or i64 but found bool"),
             ),
             (
                 "fn main() -> bool {
