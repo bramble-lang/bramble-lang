@@ -64,6 +64,7 @@ pub enum Reg8 {
     Bl,
     Cl,
     Dl,
+    Dil
 }
 
 impl Display for Reg8 {
@@ -74,6 +75,7 @@ impl Display for Reg8 {
             Bl => f.write_str("bl"),
             Cl => f.write_str("cl"),
             Dl => f.write_str("dl"),
+            Dil => f.write_str("dil"),
         }
     }
 }
@@ -192,10 +194,10 @@ impl Reg64 {
                 RegSize::R64 => Reg::R64(Reg64::Rdx),
             }),
             Reg64::Rdi => Some(match sz {
+                RegSize::R8 => Reg::R8(Reg8::Dil),
                 RegSize::R16 => Reg::R16(Reg16::Di),
                 RegSize::R32 => Reg::R32(Reg32::Edi),
                 RegSize::R64 => Reg::R64(Reg64::Rdi),
-                _ => return None,
             }),
             _ => None,
         }
