@@ -773,6 +773,7 @@ pub mod tests {
             ("let x:i32 := 5i32;", Type::I32),
             ("let x:i64 := 5;", Type::I64),
             ("let x: bool := true;", Type::Bool),
+            ("let x: string := \"hello\";", Type::StringLiteral),
         ]
         .iter()
         {

@@ -803,8 +803,9 @@ impl<'a> TypeResolver<'a> {
                     Ok((l.get_type().clone(), l, r))
                 } else {
                     Err(format!(
-                        "{} expected i64 but found {} and {}",
+                        "{} expected {} but found {} and {}",
                         op,
+                        l.get_type(),
                         l.get_type(),
                         r.get_type()
                     ))
@@ -1432,6 +1433,111 @@ mod tests {
     }
 
     #[test]
+    pub fn test_integer_arithmetic_type_checking() {
+        for (line, text, expected) in vec![
+            (
+                line!(),
+                "fn main() -> i64 {
+                    let k: i64 := 1 + 5;
+                    return k;
+                }",
+                Ok(I64),
+            ),
+            (
+                line!(),
+                "fn main() -> i64 {
+                    let k: i64 := (1 + 5i64) * (3 - 4/(2 + 3));
+                    return k;
+                }",
+                Ok(I64),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := 1i32 + 5i32;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3i32));
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2 + 3));
+                    return k;
+                }",
+                Err("Semantic: L2: / expected i32 but found i32 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1 + 5i32;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i64 but found i64 and i32"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1i32 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    if let Statement::Bind(box b) = bind_stm {
+                        assert_eq!(bind_stm.get_annotations().ty, expected_ty, "Test Case at L:{}", line);
+                        assert_eq!(b.get_rhs().get_type(), expected_ty, "Test Case at L:{}", line);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty, "Test Case at L:{}", line);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_unary_ops() {
         for (text, expected) in vec![
             (
@@ -1885,6 +1991,20 @@ mod tests {
                     return k;
                 }",
                 Ok(I32),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i32 but got i64"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 5i32;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i64 but got i32"),
             ),
             (
                 "fn main() -> i64 {
