@@ -73,15 +73,6 @@ impl RegisterAssigner {
         a.set_reg_size(reg);
     }
 
-    fn assign_register_or(
-        a: &mut CompilerAnnotation,
-        or: RegSize,
-        struct_table: &ResolvedStructTable,
-    ) {
-        let reg = Self::register_size_for_type(a.ty(), struct_table).or(Some(or));
-        a.set_reg_size(reg);
-    }
-
     pub fn for_module(
         &self,
         m: &mut Module<CompilerAnnotation>,
@@ -417,7 +408,6 @@ impl RegisterAssigner {
         trace!(self, se, struct_table.size_of(se.get_annotations().ty()));
 
         Self::assign_register(se.get_annotations_mut(), struct_table);
-        //se.get_annotations_mut().reg_size = Some(RegSize::R64);
         if let Expression::StructExpression(_annotations, _struct_name, fields) = se {
             for (_, fe) in fields {
                 self.for_expression(fe, struct_table);
