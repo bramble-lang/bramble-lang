@@ -152,6 +152,7 @@ impl UnresolvedStructTable {
             resolved_structs: &HashMap<String, StructDefinition>,
         ) -> Option<i32> {
             match ty {
+                Type::I32 => Some(4),
                 Type::I64 => Some(8),
                 Type::Bool => Some(8),
                 Type::Custom(name) => resolved_structs.get(&name.to_string())?.size,
@@ -209,6 +210,7 @@ impl ResolvedStructTable {
 
     pub fn size_of(&self, ty: &Type) -> Option<i32> {
         match ty {
+            Type::I32 => Some(4),
             Type::I64 => Some(8),
             Type::Bool => Some(8),
             Type::StringLiteral => Some(8),

@@ -1,0 +1,64 @@
+
+fn my_main() {
+    let m: Mixed := Mixed {
+        a: 5i32,
+        b: 13,
+    };
+
+    test(m);
+    let m2: Mixed := test2(55i32, 1313i64);
+    root::std::io::writei32ln(m2.a);
+    root::std::io::writei64ln(m2.b);
+
+    let c: co i32 := init cotest(m);
+    root::std::io::writei32ln(yield c);
+    root::std::io::writei32ln(yield c);
+    
+    let c2: co Mixed := init cotest2(144i32, 169);
+    let m3: Mixed := yield c2;
+    root::std::io::writei32ln(m3.a);
+    root::std::io::writei64ln(m3.b);
+    let m4: Mixed := yield c2;
+    root::std::io::writei32ln(m4.a);
+    root::std::io::writei64ln(m4.b);
+
+    return;
+}
+
+fn test(m: Mixed) {
+    root::std::io::writei32ln(m.a);
+    root::std::io::writei64ln(m.b);
+    return;
+}
+
+fn test2(a: i32, b: i64) -> Mixed {
+    return Mixed {
+        a: a,
+        b: b,
+    };
+}
+
+co cotest(m: Mixed) -> i32 {
+    root::std::io::writei32ln(m.a);
+    yret 41i32;
+    root::std::io::writei64ln(m.b);
+    yret 42i32;
+
+    return 5i32;
+}
+
+co cotest2(a: i32, b: i64) -> Mixed {
+    let m: Mixed := Mixed {
+        a: a,
+        b: b,
+    };
+    yret m;
+    yret m;
+
+    return m;
+}
+
+struct Mixed {
+    a: i32,
+    b: i64,
+}

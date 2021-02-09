@@ -245,6 +245,10 @@ mod compute {
         use Expression::*;
         match ast {
             ExpressionBlock(..) => layout_for_expression_block(ast, layout, struct_table),
+            Expression::Integer32(m, i) => {
+                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
+                (Expression::Integer32(annotations, *i), layout)
+            }
             Expression::Integer64(m, i) => {
                 let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
                 (Expression::Integer64(annotations, *i), layout)

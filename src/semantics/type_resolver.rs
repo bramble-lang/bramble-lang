@@ -455,6 +455,11 @@ impl<'a> TypeResolver<'a> {
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         match &ast {
+            &Expression::Integer32(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = I32;
+                Ok(Expression::Integer32(meta, *v))
+            }
             &Expression::Integer64(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = I64;
@@ -753,11 +758,11 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Minus => {
-                if operand.get_type() == I64 {
-                    Ok((I64, operand))
+                if operand.get_type() == I32 || operand.get_type() == I64 {
+                    Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(format!(
-                        "{} expected i64 but found {}",
+                        "{} expected i32 or i64 but found {}",
                         op,
                         operand.get_type()
                     ))
@@ -792,12 +797,16 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if l.get_type() == I64 && r.get_type() == I64 {
-                    Ok((I64, l, r))
+                if (l.get_type() == I64 && r.get_type() == I64)
+                    || (l.get_type() == I32 && r.get_type() == I32)
+                {
+                    Ok((l.get_type().clone(), l, r))
                 } else {
+                    let expected = if l.get_type() == I64 || l.get_type() == I32  {format!("{}", l.get_type())} else {"i64".into()};
                     Err(format!(
-                        "{} expected i64 but found {} and {}",
+                        "{} expected {} but found {} and {}",
                         op,
+                        expected,
                         l.get_type(),
                         r.get_type()
                     ))
@@ -951,7 +960,7 @@ impl<'a> TypeResolver<'a> {
             FunctionDef(..) | CoroutineDef(..) | StructDef { .. } | Unknown => {
                 return Err(format!("{} is not a variable", id))
             }
-            Custom(..) | Coroutine(_) | I64 | Bool | StringLiteral | Unit => Ok(symbol),
+            Custom(..) | Coroutine(_) | I32 | I64 | Bool | StringLiteral | Unit => Ok(symbol),
         }
     }
 
@@ -1425,6 +1434,111 @@ mod tests {
     }
 
     #[test]
+    pub fn test_integer_arithmetic_type_checking() {
+        for (line, text, expected) in vec![
+            (
+                line!(),
+                "fn main() -> i64 {
+                    let k: i64 := 1 + 5;
+                    return k;
+                }",
+                Ok(I64),
+            ),
+            (
+                line!(),
+                "fn main() -> i64 {
+                    let k: i64 := (1 + 5i64) * (3 - 4/(2 + 3));
+                    return k;
+                }",
+                Ok(I64),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := 1i32 + 5i32;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3i32));
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2 + 3));
+                    return k;
+                }",
+                Err("Semantic: L2: / expected i32 but found i32 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1 + 5i32;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i64 but found i64 and i32"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1i32 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    if let Statement::Bind(box b) = bind_stm {
+                        assert_eq!(bind_stm.get_annotations().ty, expected_ty, "Test Case at L:{}", line);
+                        assert_eq!(b.get_rhs().get_type(), expected_ty, "Test Case at L:{}", line);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[1];
+                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty, "Test Case at L:{}", line);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_unary_ops() {
         for (text, expected) in vec![
             (
@@ -1439,7 +1553,7 @@ mod tests {
                     let k: bool := false;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i64 but found bool"),
+                Err("Semantic: L3: - expected i32 or i64 but found bool"),
             ),
             (
                 "fn main() -> bool {
@@ -1853,6 +1967,48 @@ mod tests {
             ),
             (
                 "fn main() -> i64 {
+                    let k: i64 := 5i64;
+                    return k;
+                }",
+                Ok(I64),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5i32;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 5i64;
+                    return k;
+                }",
+                Ok(I64),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5i32;
+                    return k;
+                }",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i32 := 5;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i32 but got i64"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 5i32;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i64 but got i32"),
+            ),
+            (
+                "fn main() -> i64 {
                     let k: bool := 5;
                     return k;
                 }",
@@ -1895,7 +2051,7 @@ mod tests {
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I64);
+                    assert_eq!(bind_stm.get_type(), expected_ty);
                     if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
@@ -2085,6 +2241,14 @@ mod tests {
                 Ok(I64),
             ),
             (
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return 5i32;}
+                ",
+                Ok(I32),
+            ),
+            (
                 // test recursion
                 "fn main() -> i64 {
                     return number();
@@ -2092,6 +2256,14 @@ mod tests {
                 fn number() -> i64 {return number();}
                 ",
                 Ok(I64),
+            ),
+            (
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Err("Semantic: L4: Return expected i32 but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -2116,6 +2288,30 @@ mod tests {
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Ok(I64),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1i32, 2i32);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Ok(I32),
+            ),
+            (
+                "fn main() -> i32 {
+                    return add(1, 2i32);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got i64"),
+            ),
+            (
+                "fn main() -> i64 {
+                    return add(1i32, 2i32);
+                }
+                fn add(a: i32, b: i32) -> i32 {return a + b;}
+                ",
+                Err("Semantic: L2: Return expected i64 but got i32"),
             ),
             (
                 "fn main() -> i64 {
@@ -2244,6 +2440,24 @@ mod tests {
                 ",
                 Err("Semantic: L2: Expected coroutine but number is a fn (i64) -> i64"),
             ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5i32);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Ok(Coroutine(Box::new(I32))),
+            ),
+            (
+                "fn main() {
+                    let c: co i32 := init number(5);
+                    return;
+                }
+                co number(i: i32) -> i32 {return i;}
+                ",
+                Err("Semantic: L2: One or more parameters have mismatching types for function number: parameter 1 expected i32 but got i64"),
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -2258,7 +2472,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Coroutine(Box::new(I64)));
+                    assert_eq!(bind_stm.get_type(), expected_ty);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {

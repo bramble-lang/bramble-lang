@@ -71,7 +71,7 @@ impl From<&str> for TargetOS {
 pub struct Compiler<'a> {
     scope: CompilerAnnotationStack<'a>,
     string_pool: StringPool,
-    struct_table: &'a ResolvedStructTable,
+    type_table: &'a ResolvedStructTable,
     root: &'a Module<CompilerAnnotation>,
     c_extern_functions: HashMap<String, String>,
     imported_functions: Vec<Path>,
@@ -99,7 +99,7 @@ impl<'a> Compiler<'a> {
             scope: CompilerAnnotationStack::new(),
             string_pool,
             root: &compiler_ast,
-            struct_table: &struct_table,
+            type_table: &struct_table,
             c_extern_functions,
             imported_functions,
         };
@@ -233,9 +233,9 @@ impl<'a> Compiler<'a> {
                     ; {format!("[{}]: The caller return address (for yield return)", COROUTINE_CALLER_RIP_STORE)}
                     ; {format!("[{}]: The coroutine RSP", COROUTINE_RSP_STORE)}
                     mov [%rsp+{COROUTINE_RIP_STORE}], %rax;
-                    mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0;
-                    mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0;
-                    mov [%rsp+{COROUTINE_CALLER_RIP_STORE}], 0;
+                    mov [%rsp+{COROUTINE_CALLER_RSP_STORE}], 0u64;
+                    mov [%rsp+{COROUTINE_CALLER_RBP_STORE}], 0u64;
+                    mov [%rsp+{COROUTINE_CALLER_RIP_STORE}], 0u64;
                     mov %rax, %rsp;
                     sub %rax, %rdi;
                     mov [%rsp+{COROUTINE_RSP_STORE}], %rax;
@@ -297,6 +297,16 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         use BinaryOperator::*;
 
+        let primary = left
+            .get_annotations()
+            .scale_reg(Reg64::Rax)
+            .expect("Register could not be found for expression");
+
+        let secondary = right
+            .get_annotations()
+            .scale_reg(Reg64::Rbx)
+            .expect("Register could not be found for expression");
+
         let mut left_code = vec![];
         self.traverse_expression(left, current_func, &mut left_code)?;
         let mut right_code = vec![];
@@ -308,7 +318,7 @@ impl<'a> Compiler<'a> {
             .expect("Must be an offset for the left operand");
         self.insert_comment_from_annotations(&mut left_code, &left.to_string(), la);
         assembly! {(left_code){
-            mov [%rbp-{l_offset}], %rax;
+            mov [%rbp-{l_offset}], %{primary};
         }};
 
         let ra = right.get_annotations();
@@ -317,31 +327,31 @@ impl<'a> Compiler<'a> {
             .expect("Must be an offset for the right operand");
         self.insert_comment_from_annotations(&mut right_code, &right.to_string(), ra);
         assembly! {(right_code){
-            mov [%rbp-{r_offset}], %rax;
+            mov [%rbp-{r_offset}], %{primary};
         }};
 
         let mut op_asm = vec![];
         match op {
             BinaryOperator::Add => {
-                assembly! {(op_asm) {add %rax, %rbx;}}
+                assembly! {(op_asm) {add %{primary}, %{secondary};}}
             }
             BinaryOperator::Sub => {
-                assembly! {(op_asm) {sub %rax, %rbx;}}
+                assembly! {(op_asm) {sub %{primary}, %{secondary};}}
             }
             BinaryOperator::Mul => {
-                assembly! {(op_asm) {imul %rax, %rbx;}}
+                assembly! {(op_asm) {imul %{primary}, %{secondary};}}
             }
             BinaryOperator::Div => {
                 assembly! {(op_asm) {
                     cdq;
-                    idiv %rbx;
+                    idiv %{secondary};
                 }}
             }
             BinaryOperator::BAnd => {
-                assembly! {(op_asm) {and %rax, %rbx;}}
+                assembly! {(op_asm) {and %{primary}, %{secondary};}}
             }
             BinaryOperator::BOr => {
-                assembly! {(op_asm) {or %rax, %rbx;}}
+                assembly! {(op_asm) {or %{primary}, %{secondary};}}
             }
             cond => {
                 let set = match cond {
@@ -354,7 +364,7 @@ impl<'a> Compiler<'a> {
                     _ => panic!("Invalid conditional operator: {}", cond),
                 };
                 assembly! {(op_asm){
-                    cmp %rax, %rbx;
+                    cmp %{primary}, %{secondary};
                     {{[set]}}
                     and %al, 1;
                     movzx %rax, %al;
@@ -366,8 +376,8 @@ impl<'a> Compiler<'a> {
         assembly! {(code){
             {{left_code}}
             {{right_code}}
-            mov %rax, [%rbp - {l_offset}];
-            mov %rbx, [%rbp - {r_offset}];
+            mov %{primary}, [%rbp - {l_offset}];
+            mov %{secondary}, [%rbp - {r_offset}];
             {{op_asm}}
         }}
 
@@ -394,8 +404,10 @@ impl<'a> Compiler<'a> {
         let co_param_registers = vec![Reg64::Rbx, Reg64::Rcx, Reg64::Rdx];
 
         self.push_scope(ast);
-
         match ast {
+            Expression::Integer32(_, i) => {
+                assembly! {(code) {mov %eax, {*i};}}
+            }
             Expression::Integer64(_, i) => {
                 assembly! {(code) {mov %rax, {*i};}}
             }
@@ -413,13 +425,17 @@ impl<'a> Compiler<'a> {
                 }
             }
             Expression::Identifier(m, id) => {
+                let reg = ast
+                    .get_annotations()
+                    .scale_reg(Reg64::Rax)
+                    .expect("Expect a register to be assigned to an identifier");
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
                     Type::Custom(_) => {
                         assembly! {(code) {lea %rax, [%rbp-{id_offset}];}}
                     }
                     _ => {
-                        assembly! {(code) {mov %rax, [%rbp-{id_offset}];}}
+                        assembly! {(code) {mov %{reg}, [%rbp-{id_offset}];}}
                     }
                 }
             }
@@ -430,8 +446,12 @@ impl<'a> Compiler<'a> {
                 self.traverse_expression(operand, current_func, code)?;
                 match op {
                     UnaryOperator::Minus => {
+                        let reg = ast
+                            .get_annotations()
+                            .scale_reg(Reg64::Rax)
+                            .unwrap_or(Reg::R64(Reg64::Rax));
                         assembly! {(code){
-                            neg %rax;
+                            neg %{reg};
                         }}
                     }
                     UnaryOperator::Not => {
@@ -525,7 +545,7 @@ impl<'a> Compiler<'a> {
                 let return_type = meta.ty();
                 if let Type::Custom(_) = return_type {
                     let st_sz = self
-                        .struct_table
+                        .type_table
                         .size_of(return_type)
                         .ok_or(format!("no size for {} found", return_type))?;
 
@@ -790,14 +810,15 @@ impl<'a> Compiler<'a> {
         src: &'a Expression<CompilerAnnotation>,
         member: &str,
     ) -> Result<(), String> {
-        let src_ty = src.get_annotations().ty();
+        let src_annotations = src.get_annotations();
+        let src_ty = src_annotations.ty();
         match src_ty {
             Type::Custom(struct_name) => {
                 code.push(Inst::Comment(format!("{}.{}", struct_name, member)));
 
                 self.traverse_expression(src, current_func, code)?;
 
-                let struct_def = self.struct_table.get(struct_name).ok_or(format!(
+                let struct_def = self.type_table.get(struct_name).ok_or(format!(
                     "Could not find struct definition for {}",
                     struct_name
                 ))?;
@@ -817,9 +838,14 @@ impl<'a> Compiler<'a> {
                             lea %rax, [%rax+{field_offset}];
                         }}
                     }
-                    _ => {
+                    ty => {
+                        let reg_sz = RegisterAssigner::register_size_for_type(ty, self.type_table)
+                            .expect("There must be a size for a struct field");
+                        let reg = Reg64::Rax
+                            .scale(reg_sz)
+                            .expect("Cannot scale a register to this field");
                         assembly! {(code) {
-                            mov %rax, [%rax+{field_offset}];
+                            mov %{reg}, [%rax+{field_offset}];
                         }}
                     }
                 }
@@ -843,7 +869,7 @@ impl<'a> Compiler<'a> {
         offset: i32,
         allocate: bool,
     ) -> Result<Vec<Inst>, String> {
-        let struct_def = self.struct_table.get(struct_name).expect(&format!(
+        let struct_def = self.type_table.get(struct_name).expect(&format!(
             "{}, used in {}, was not found",
             struct_name, current_func
         ));
@@ -923,8 +949,12 @@ impl<'a> Compiler<'a> {
                         }};
                     }
                     _ => {
+                        let reg = fvalue
+                            .get_annotations()
+                            .scale_reg(Reg64::Rax)
+                            .expect("Could not scale register");
                         assembly! {(code) {
-                            mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
+                            mov [%{Reg::R64(dst)}-{dst_offset}], %{reg};
                         }};
                     }
                 }
@@ -963,8 +993,13 @@ impl<'a> Compiler<'a> {
                 }
             }
             _ => {
+                let reg = value
+                    .get_annotations()
+                    .scale_reg(Reg64::Rax)
+                    .expect("Register size not assigned");
+
                 assembly! {(code) {
-                    mov [%{Reg::R64(dst)}-{dst_offset}], %rax;
+                    mov [%{Reg::R64(dst)}-{dst_offset}], %{reg};
                 }};
             }
         }
@@ -982,7 +1017,7 @@ impl<'a> Compiler<'a> {
         match meta.ty() {
             Type::Custom(struct_name) => {
                 let st = self
-                    .struct_table
+                    .type_table
                     .get(struct_name)
                     .ok_or(format!("no definition for {} found", struct_name))?;
                 let st_sz = st
@@ -1072,41 +1107,6 @@ impl<'a> Compiler<'a> {
         Ok(code)
     }
 
-    fn pop_struct_into(&self, struct_name: &Path, id_offset: u32) -> Result<Vec<Inst>, String> {
-        let mut code = vec![];
-        let ty_def = self
-            .struct_table
-            .get(struct_name)
-            .ok_or(format!("Could not find definition for {}", struct_name))?;
-        for FieldInfo {
-            name: field_name,
-            ty: field_ty,
-            ..
-        } in ty_def.get_fields().iter().rev()
-        {
-            let rel_field_offset = ty_def.get_offset_of(field_name).expect(&format!(
-                "CRITICAL: struct {} has member, {}, with no relative offset",
-                struct_name, field_name,
-            )) as u32;
-            let field_offset = id_offset - rel_field_offset;
-            match field_ty {
-                Type::Custom(name) => {
-                    assembly! {(code){
-                        {{self.pop_struct_into(name, field_offset)?}}
-                    }}
-                }
-                _ => {
-                    assembly! {(code) {
-                        pop %rax;
-                        mov [%rbp-{field_offset as i32}], %rax;
-                    }};
-                }
-            }
-        }
-
-        Ok(code)
-    }
-
     fn copy_struct_into(
         &self,
         struct_name: &Path,
@@ -1117,7 +1117,7 @@ impl<'a> Compiler<'a> {
     ) -> Result<Vec<Inst>, String> {
         let mut code = vec![];
         let ty_def = self
-            .struct_table
+            .type_table
             .get(struct_name)
             .expect(&format!("Could not find definition for {}", struct_name));
         let struct_sz = ty_def
@@ -1140,11 +1140,16 @@ impl<'a> Compiler<'a> {
                         {{self.copy_struct_into(name, dst_reg, dst_field_offset, src_reg, src_offset-(struct_sz - rel_field_offset))?}}
                     }}
                 }
-                _ => {
+                ty => {
+                    let reg_sz = RegisterAssigner::register_size_for_type(ty, self.type_table)
+                        .expect("There must be a size for a struct field");
+                    let reg = Reg64::Rdi
+                        .scale(reg_sz)
+                        .expect("Cannot scale a register to this field");
                     assembly! {(code) {
                         ; {format!("copy {}.{}", struct_name, field_name)}
-                        mov %rdi, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
-                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %rdi;
+                        mov %{reg}, [%{Reg::R64(src_reg)}-{src_offset - (struct_sz - rel_field_offset)}];
+                        mov [%{Reg::R64(dst_reg)}-{dst_field_offset}], %{reg};
                     }};
                 }
             }
@@ -1194,14 +1199,18 @@ impl<'a> Compiler<'a> {
                     }}
                 }
                 _ => {
+                    let param_reg = routine_sym_table.param_reg_size()[idx]
+                        .and_then(|sz| param_registers[idx].scale(sz))
+                        .expect("Expect a register size to be assigned for a parameter");
                     assembly! {(code){
-                        mov [%rbp-{param_offset}], %{Reg::R64(param_registers[idx])};
+                        mov [%rbp-{param_offset}], %{param_reg};
                     }};
                 }
             }
         }
         Ok(code)
     }
+
     fn insert_comment_from_annotations(
         &self,
         code: &mut Vec<Inst>,
@@ -1227,9 +1236,12 @@ impl<'a> Compiler<'a> {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.get_annotations();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
+            let reg = pa
+                .scale_reg(Reg64::Rax)
+                .expect("Register could not be found for function parameter");
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
                 assembly! {(code){
-                    mov [%rbp-{offset}], %rax;
+                    mov [%rbp-{offset}], %{reg};
                 }};
             }
         }
@@ -1254,9 +1266,11 @@ impl<'a> Compiler<'a> {
         for idx in 0..params.len() {
             let pa = params[idx].get_annotations();
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
-                let reg = param_registers[idx];
+                let reg = pa
+                    .scale_reg(param_registers[idx])
+                    .expect("Could not scale register");
                 assembly! {(code){
-                    mov %{Reg::R64(reg)}, [%rbp-{offset}];
+                    mov %{reg}, [%rbp-{offset}];
                 }};
             }
         }

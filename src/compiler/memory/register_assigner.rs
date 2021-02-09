@@ -23,10 +23,12 @@ macro_rules! trace {
         };
         if print_trace {
             println!(
-                "{} [{}]{} -> {:?} {:?}",
+                "{} L{}n{}: {}[{}] -> {:?} {:?}",
                 function_name!(),
+                $ts.get_annotations().line(),
                 $ts.get_annotations().id(),
                 $ts,
+                $ts.get_annotations().ty(),
                 $sz,
                 RegSize::assign($sz.unwrap_or(0) as usize)
             )
@@ -49,13 +51,25 @@ impl RegisterAssigner {
         RegisterAssigner { tracing }
     }
 
-    fn register_for_type(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
-        let sz = struct_table.size_of(ty);
-        sz.and_then(|sz| RegSize::assign(sz as usize))
+    /**
+     * Determine the size of register needed to store a value, based upon the number of bytes
+     * the type takes.
+     *
+     * Custom types are always represented using 64bit registers because they are currently
+     * always referred to via addresses.
+     */
+    pub fn register_size_for_type(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
+        match ty {
+            Type::Custom(_) => Some(RegSize::R64),
+            _ => {
+                let sz = struct_table.size_of(ty);
+                sz.and_then(|sz| RegSize::assign(sz as usize))
+            }
+        }
     }
 
     fn assign_register(a: &mut CompilerAnnotation, struct_table: &ResolvedStructTable) {
-        let reg = Self::register_for_type(a.ty(), struct_table);
+        let reg = Self::register_size_for_type(a.ty(), struct_table);
         a.set_reg_size(reg);
     }
 
@@ -114,15 +128,15 @@ impl RegisterAssigner {
         Self::assign_register(rd.get_annotations_mut(), struct_table);
 
         // loop through all the params
-        let mut param_annotations = vec![];
+        let mut param_reg_szs = vec![];
         for p in rd.get_params() {
-            let p_reg_sz = Self::register_for_type(&p.1, struct_table);
-            param_annotations.push(p_reg_sz);
+            let p_reg_sz = Self::register_size_for_type(&p.1, struct_table);
+            param_reg_szs.push(p_reg_sz);
         }
 
         rd.get_annotations_mut()
             .param_reg_size
-            .append(&mut param_annotations);
+            .append(&mut param_reg_szs);
 
         // loop through every statement and analyze the child nodes of the routine definition
         for e in rd.get_body_mut().iter_mut() {
@@ -220,6 +234,7 @@ impl RegisterAssigner {
         Self::assign_register(exp.get_annotations_mut(), struct_table);
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, struct_table),
+            Expression::Integer32(_m, _i) => {}
             Expression::Integer64(_m, _i) => {}
             Expression::Boolean(_m, _b) => {}
             Expression::StringLiteral(_m, _s) => {}

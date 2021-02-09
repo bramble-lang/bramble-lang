@@ -64,6 +64,7 @@ pub enum Reg8 {
     Bl,
     Cl,
     Dl,
+    Dil
 }
 
 impl Display for Reg8 {
@@ -74,6 +75,7 @@ impl Display for Reg8 {
             Bl => f.write_str("bl"),
             Cl => f.write_str("cl"),
             Dl => f.write_str("dl"),
+            Dil => f.write_str("dil"),
         }
     }
 }
@@ -84,6 +86,7 @@ pub enum Reg16 {
     Bx,
     Cx,
     Dx,
+    Di,
 }
 
 impl Display for Reg16 {
@@ -94,6 +97,7 @@ impl Display for Reg16 {
             Bx => f.write_str("bx"),
             Cx => f.write_str("cx"),
             Dx => f.write_str("dx"),
+            Di => f.write_str("di"),
         }
     }
 }
@@ -188,6 +192,12 @@ impl Reg64 {
                 RegSize::R16 => Reg::R16(Reg16::Dx),
                 RegSize::R32 => Reg::R32(Reg32::Edx),
                 RegSize::R64 => Reg::R64(Reg64::Rdx),
+            }),
+            Reg64::Rdi => Some(match sz {
+                RegSize::R8 => Reg::R8(Reg8::Dil),
+                RegSize::R16 => Reg::R16(Reg16::Di),
+                RegSize::R32 => Reg::R32(Reg32::Edi),
+                RegSize::R64 => Reg::R64(Reg64::Rdi),
             }),
             _ => None,
         }
@@ -295,15 +305,15 @@ impl Display for Operand {
         use Operand::*;
         match self {
             Direct(d) => f.write_fmt(format_args!("{}", d)),
-            Memory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
+            Memory(mem) => f.write_fmt(format_args!("[rel {}]", mem)),
             IPRelativeMemory(mem) => f.write_fmt(format_args!("QWORD [rel {}]", mem)),
             MemoryAddr(mem, d) => {
                 if *d < 0 {
-                    f.write_fmt(format_args!("QWORD [rel {}-{}]", mem, -d))
+                    f.write_fmt(format_args!("[rel {}-{}]", mem, -d))
                 } else if *d > 0 {
-                    f.write_fmt(format_args!("QWORD [rel {}+{}]", mem, d))
+                    f.write_fmt(format_args!("[rel {}+{}]", mem, d))
                 } else {
-                    f.write_fmt(format_args!("QWORD [rel {}]", mem))
+                    f.write_fmt(format_args!("[rel {}]", mem))
                 }
             }
         }
@@ -392,29 +402,20 @@ impl Display for Inst {
             Push(a) => f.write_fmt(format_args!("push {}", a)),
             Pop(a) => f.write_fmt(format_args!("pop {}", a)),
 
-            Mov(a, b) => f.write_fmt(format_args!(
-                "mov {}, {}",
-                a,
-                match b {
-                    Operand::Direct(DirectOperand::Integer64(_))
-                    | Operand::Memory(_)
-                    | Operand::MemoryAddr(_, _) => format!("{}", b),
-                    _ => format!("{}", b),
-                }
-            )),
-            Movzx(a, b) => f.write_fmt(format_args!("movzx {}, {}", a, format!("{}", b),)),
+            Mov(a, b) => f.write_str(&format_binary_op("mov", a, b)),
+            Movzx(a, b) => f.write_str(&format_binary_op("movzx", a, b)),
 
             Cdq => f.write_str("cdq"),
-            Lea(a, b) => f.write_fmt(format_args!("lea {}, {}", a, b)),
-            Add(a, b) => f.write_fmt(format_args!("add {}, {}", a, b)),
-            Sub(a, b) => f.write_fmt(format_args!("sub {}, {}", a, b)),
-            IMul(a, b) => f.write_fmt(format_args!("imul {}, {}", a, b)),
+            Lea(a, b) => f.write_str(&format_binary_op("lea", a, b)),
+            Add(a, b) => f.write_str(&format_binary_op("add", a, b)),
+            Sub(a, b) => f.write_str(&format_binary_op("sub", a, b)),
+            IMul(a, b) => f.write_str(&format_binary_op("imul", a, b)),
             IDiv(a) => f.write_fmt(format_args!("idiv {}", a)),
             Neg(a) => f.write_fmt(format_args!("neg {}", a)),
-            Cmp(a, b) => f.write_fmt(format_args!("cmp {}, {}", a, b)),
-            And(a, b) => f.write_fmt(format_args!("and {}, {}", a, b)),
-            Or(a, b) => f.write_fmt(format_args!("or {}, {}", a, b)),
-            Xor(a, b) => f.write_fmt(format_args!("xor {}, {}", a, b)),
+            Cmp(a, b) => f.write_str(&format_binary_op("cmp", a, b)),
+            And(a, b) => f.write_str(&format_binary_op("and", a, b)),
+            Or(a, b) => f.write_str(&format_binary_op("or", a, b)),
+            Xor(a, b) => f.write_str(&format_binary_op("xor", a, b)),
 
             Sete(a) => f.write_fmt(format_args!("sete {}", a)),
             Setne(a) => f.write_fmt(format_args!("setne {}", a)),
@@ -431,6 +432,17 @@ impl Display for Inst {
             NewLine => f.write_fmt(format_args!("NEWLINE")),
         }
     }
+}
+
+fn format_binary_op(op: &str, a: &Operand, b: &Operand) -> String {
+    let operands = match (a, b) {
+        (Operand::Direct(a), b) => format!("{}, {}", a, b),
+        (a, Operand::Direct(DirectOperand::Integer32(i))) => format!("DWORD {}, {}", a, i),
+        (a, Operand::Direct(DirectOperand::Integer64(i))) => format!("QWORD {}, {}", a, i),
+        (a, Operand::Direct(DirectOperand::UInteger64(i))) => format!("QWORD {}, {}", a, i),
+        (a, b) => format!("{}, {}", a, b),
+    };
+    format!("{} {}", op, operands)
 }
 
 #[macro_export]
@@ -530,6 +542,9 @@ macro_rules! reg32 {
 
 #[macro_export]
 macro_rules! register {
+    ({$reg:expr}) => {
+        $reg
+    };
     (rax) => {
         Reg::R64(Reg64::Rax)
     };

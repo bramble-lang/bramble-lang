@@ -58,6 +58,7 @@ impl StringPool {
                     Some(fe) => self.extract_from(fe),
                 }
             }
+            Integer32(..) => {}
             Integer64(..) => {}
             Boolean(..) => {}
             StringLiteral(_, s) => {
