@@ -1210,6 +1210,7 @@ impl<'a> Compiler<'a> {
         }
         Ok(code)
     }
+
     fn insert_comment_from_annotations(
         &self,
         code: &mut Vec<Inst>,

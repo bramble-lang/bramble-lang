@@ -117,6 +117,16 @@ impl RegisterAssigner {
     ) {
         trace!(self, sd, struct_table.size_of(sd.get_annotations().ty()));
         Self::assign_register(sd.get_annotations_mut(), struct_table);
+
+        // loop through all the fields and add there register size info to the
+        // params annotation field
+        let mut field_reg_szs = vec![];
+        for f in sd.get_fields() {
+            let reg_sz = Self::register_size_for_type(&f.1, struct_table);
+            field_reg_szs.push(reg_sz);
+        }
+
+        sd.get_annotations_mut().param_reg_size.append(&mut field_reg_szs);
     }
 
     fn for_routine(
