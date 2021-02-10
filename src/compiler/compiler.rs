@@ -1,4 +1,4 @@
-use crate::compiler::memory::register_assigner::RegisterAssigner;
+use crate::compiler::memory::register_assigner;
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to
@@ -91,9 +91,7 @@ impl<'a> Compiler<'a> {
         string_pool.extract_from_module(&compiler_ast);
 
         // assign register sizes
-        //let reg_assigner = RegisterAssigner::new(trace_reg_assigner);
-        //reg_assigner.for_module(&mut compiler_ast, &struct_table);
-        RegisterAssigner::use_traverse(trace_reg_assigner, &mut compiler_ast, &struct_table);
+        register_assigner::assign(trace_reg_assigner, &mut compiler_ast, &struct_table);
 
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 
@@ -841,7 +839,7 @@ impl<'a> Compiler<'a> {
                         }}
                     }
                     ty => {
-                        let reg_sz = RegisterAssigner::register_size_for_type(ty, self.type_table)
+                        let reg_sz = register_assigner::register_size_for_type(ty, self.type_table)
                             .expect("There must be a size for a struct field");
                         let reg = Reg64::Rax
                             .scale(reg_sz)
@@ -1143,7 +1141,7 @@ impl<'a> Compiler<'a> {
                     }}
                 }
                 ty => {
-                    let reg_sz = RegisterAssigner::register_size_for_type(ty, self.type_table)
+                    let reg_sz = register_assigner::register_size_for_type(ty, self.type_table)
                         .expect("There must be a size for a struct field");
                     let reg = Reg64::Rdi
                         .scale(reg_sz)
