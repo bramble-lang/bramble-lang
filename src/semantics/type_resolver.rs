@@ -191,7 +191,7 @@ impl<'a> TypeResolver<'a> {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if canon_path == self.main_fn {
-            Self::validate_main_fn(routine)?;
+            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", annotations.ln, e))?;
         }
 
         let mut meta = annotations.clone();
@@ -1369,6 +1369,45 @@ mod tests {
                 }
             } else {
                 panic!("Not a function")
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_my_main_signature() {
+        for (line, text, expected) in vec![
+            (
+                line!(),
+                "fn my_main() -> i64 {
+                    return 0;
+                }",
+                Ok(I64),
+            ),
+            (
+                line!(),
+                "fn my_main() -> i32 {
+                    return 0i32;
+                }",
+                Err("Semantic: L1: root::my_main must return an i64. It must be of type () -> i64"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    assert_eq!(fn_main.get_annotations().ty, expected_ty, "Test Case at L:{}", line);
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
+                }
             }
         }
     }
