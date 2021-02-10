@@ -137,16 +137,6 @@ impl SemanticAst {
         })
     }
 
-    fn from_parameters(
-        &mut self,
-        params: &Vec<Parameter<ParserInfo>>,
-    ) -> Vec<Parameter<SemanticAnnotations>> {
-        params
-            .iter()
-            .map(|p| p.map_annotation(|a| self.semantic_annotations_from(*a)))
-            .collect()
-    }
-
     fn from_structdef(
         &mut self,
         sd: &StructDef<ParserInfo>,
@@ -168,6 +158,16 @@ impl SemanticAst {
         );
 
         Ok(semantic)
+    }
+
+    fn from_parameters(
+        &mut self,
+        params: &Vec<Parameter<ParserInfo>>,
+    ) -> Vec<Parameter<SemanticAnnotations>> {
+        params
+            .iter()
+            .map(|p| p.map_annotation(|a| self.semantic_annotations_from(*a)))
+            .collect()
     }
 
     fn from_statement(

@@ -1516,11 +1516,7 @@ mod tests {
             if let Item::Routine(routinedef::RoutineDef { params, .. }) =
                 &result.get_coroutines()[0]
             {
-                if let Parameter {
-                    ty: Custom(ty_path),
-                    ..
-                } = &params[0]
-                {
+                if let Custom(ty_path) = &params[0].ty {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
