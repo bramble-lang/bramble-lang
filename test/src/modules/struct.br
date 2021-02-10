@@ -7,7 +7,7 @@ fn my_main() -> i64 {
 
     my_mod::test();
 
-    return;
+    return 0;
 }
 
 mod my_mod {

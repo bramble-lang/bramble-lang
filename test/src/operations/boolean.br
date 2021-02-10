@@ -3,5 +3,5 @@ fn my_main() -> i64 {
     let b:bool := !a;
     root::std::io::writeboolln(a);
     root::std::io::writeboolln(b);
-    return;
+    return 0;
 }

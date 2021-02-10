@@ -1,7 +1,7 @@
 fn my_main() -> i64 {
     let s: string := create_a_string();
     say_something("hello, ", s);
-    return;
+    return 0;
 }
 
 fn create_a_string() -> string {

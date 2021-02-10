@@ -1,7 +1,7 @@
 fn my_main() -> i64 {
     root::std::io::writei64ln(if_in_conditional(true));
     root::std::io::writei64ln(if_in_conditional(false));
-    return;
+    return 0;
 }
 
 fn if_in_conditional(b:bool) -> i64 {

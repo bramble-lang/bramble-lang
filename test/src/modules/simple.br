@@ -5,7 +5,7 @@ fn my_main() -> i64 {
     let b:bool := my_mod::my_bool();
     root::std::io::writeboolln(b);
 
-    return;
+    return 0;
 }
 
 mod my_mod {

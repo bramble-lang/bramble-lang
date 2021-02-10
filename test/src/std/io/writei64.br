@@ -6,5 +6,5 @@ fn my_main() -> i64 {
     root::std::io::writei64(-3);
     root::std::io::write("\n");
     
-    return;
+    return 0;
 }

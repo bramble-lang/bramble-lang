@@ -4,7 +4,7 @@ fn my_main() -> i64 {
 
     let b:bool := my_bool();
     root::std::io::writeboolln(b);
-    return;
+    return 0;
 }
 
 fn my_bool() -> bool {

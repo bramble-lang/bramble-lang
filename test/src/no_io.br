@@ -1,6 +1,6 @@
 fn my_main() -> i64 {
     let i: i64 := 2 + test(5);
-    return;
+    return 0;
 }
 
 fn test(a: i64) -> i64 {

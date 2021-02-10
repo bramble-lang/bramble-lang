@@ -7,5 +7,5 @@ fn my_main() -> i64 {
     root::std::io::write(s2);
     root::std::io::write(s3);
 
-    return;
+    return 0;
 }

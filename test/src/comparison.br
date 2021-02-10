@@ -17,7 +17,7 @@ fn my_main() -> i64 {
     let b5: bool := not_equal(3, 5);
     root::std::io::writeboolln(b5);
     
-    return;
+    return 0;
 }
 
 fn simple_eq(a: i64, b: i64) -> bool {

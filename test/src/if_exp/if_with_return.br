@@ -1,7 +1,7 @@
 fn my_main() -> i64 {
     root::std::io::writei64ln(test(0));
     root::std::io::writei64ln(test(20));
-    return;
+    return 0;
 }
 
 fn test(x: i64) -> i64 {

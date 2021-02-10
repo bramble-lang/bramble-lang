@@ -5,7 +5,7 @@ fn my_main() -> i64 {
     root::std::io::writeboolln((yield c));
     root::std::io::writeboolln(((yield c) == (yield c)));
 
-    return;
+    return 0;
 }
 
 co my_co (b: bool, x: i64, y: i64) -> bool {

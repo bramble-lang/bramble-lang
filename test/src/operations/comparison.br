@@ -67,7 +67,7 @@ fn my_main() -> i64 {
     test5(12342143144316);
     test5(-12342143144316);
 
-    return;
+    return 0;
 }
 
 fn test(a: i64) {

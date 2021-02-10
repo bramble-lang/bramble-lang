@@ -22,7 +22,7 @@ fn my_main() -> i64 {
 
     };
 
-    return;
+    return 0;
 }
 
 fn get_user_action() -> i64 {

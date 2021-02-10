@@ -15,7 +15,7 @@ fn my_main() -> i64 {
     root::std::io::writei64ln((yield c).a);
     root::std::io::writei64ln((yield c).a);
 
-    return;
+    return 0;
 }
 
 mod my_mod {

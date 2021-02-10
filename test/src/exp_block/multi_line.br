@@ -11,7 +11,7 @@ fn my_main() -> i64 {
         b && my_bool()
     };
     root::std::io::writeboolln(b);
-    return;
+    return 0;
 }
 
 fn my_bool() -> bool {

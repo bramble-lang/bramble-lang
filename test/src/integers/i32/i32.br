@@ -7,7 +7,7 @@ fn my_main() -> i64 {
     root::std::io::writei32ln(y);
     root::std::io::writei32ln(z);
     
-    return;
+    return 0;
 }
 
 fn test() -> i32 {

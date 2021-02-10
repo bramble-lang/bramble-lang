@@ -52,7 +52,7 @@ fn my_main() -> i64 {
     root::std::io::writei64ln(z.x00);
     root::std::io::writei64ln(z.x30);
 
-    return;
+    return 0;
 }
 
 struct MyStruct {

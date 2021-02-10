@@ -52,7 +52,7 @@ fn my_main() -> i64 {
     root::std::io::writei64ln(deep.a.a.a.a.a.a.b.ms2.ms.z);
     root::std::io::writei64ln(deep.a.a.a.a.a.a.y);
 
-    return;
+    return 0;
 }
 
 struct MyStruct {

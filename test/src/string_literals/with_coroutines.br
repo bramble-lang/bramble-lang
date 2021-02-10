@@ -4,7 +4,7 @@ fn my_main() -> i64 {
     root::std::io::write((yield c));
     root::std::io::write((yield c));
     root::std::io::write((yield c));
-    return;
+    return 0;
 }
 
 co my_co(a: string, b: string) -> string {

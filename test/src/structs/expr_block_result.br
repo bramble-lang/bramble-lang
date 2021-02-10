@@ -10,7 +10,7 @@ fn my_main() -> i64 {
     root::std::io::writei64ln(t.y);
     root::std::io::writeboolln(t.z);
     
-    return;
+    return 0;
 }
 
 struct MyStruct {

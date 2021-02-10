@@ -6,5 +6,5 @@ fn my_main() -> i64 {
         let y: i64 := 10;
         y
     };
-    return;
+    return 0;
 }

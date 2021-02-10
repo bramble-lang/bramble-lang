@@ -12,5 +12,5 @@ fn my_main() -> i64 {
     mut y := -y;
     root::std::io::writei64ln(x);
     root::std::io::writei64ln(y);
-    return;
+    return 0;
 }

@@ -1,4 +1,4 @@
-fn my_main( p: bool) {
+fn my_main( p: bool) -> i64 {
     let c: co i64 := init numbers();
     
     let ms:MyStruct := MyStruct {
@@ -17,7 +17,7 @@ fn my_main( p: bool) {
     let x2:i64 := takes_co(c2);
     root::std::io::writei64ln(x2);
 
-    return;
+    return 0;
 }
 
 fn takes_co(c: co i64) -> i64{

@@ -35,7 +35,7 @@ fn my_main() -> i64 {
         root::std::io::write("5 is less than 10\n");
     };
     
-    return;
+    return 0;
 }
 
 fn test() -> i32 {

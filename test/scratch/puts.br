@@ -3,5 +3,5 @@ fn my_main() -> i64 {
     root::std::io::writei64ln(5);
     root::std::io::writei64(10);
 
-    return;
+    return 0;
 }

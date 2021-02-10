@@ -5,5 +5,5 @@ fn my_main() -> i64 {
     } else {
         y
     };
-    return;
+    return 0;
 }
