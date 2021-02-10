@@ -49,4 +49,4 @@ jobs:
       - name: Run Braid Test Suite
         run: |
           cd test
-          bash ./test.sh
+          bash ./make.sh -i ./src/simple.br
