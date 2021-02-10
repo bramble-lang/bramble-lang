@@ -2,7 +2,7 @@ use std::fmt;
 
 use fmt::Debug;
 
-use crate::expression::Expression;
+use crate::{diagnostics::config::TracingConfig, expression::Expression};
 use crate::syntax::module::*;
 use crate::syntax::routinedef::*;
 use crate::syntax::statement::*;
@@ -16,7 +16,9 @@ use super::parameter::Parameter;
  * it to a register.
  */
 
-pub struct TraverserMut {}
+pub struct TraverserMut {
+    pub tracing: TracingConfig,
+}
 
 impl TraverserMut {
     /**

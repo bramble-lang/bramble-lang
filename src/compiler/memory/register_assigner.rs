@@ -51,8 +51,8 @@ impl RegisterAssigner {
         RegisterAssigner { tracing }
     }
 
-    pub fn use_traverse(m: &mut Module<CompilerAnnotation>, struct_table: &ResolvedStructTable) {
-        let tm = TraverserMut{};
+    pub fn use_traverse(tracing: TracingConfig, m: &mut Module<CompilerAnnotation>, struct_table: &ResolvedStructTable) {
+        let tm = TraverserMut{tracing};
         tm.for_module(m, |a| {
             Self::assign_register(a, struct_table);
         })
