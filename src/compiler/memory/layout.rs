@@ -96,10 +96,7 @@ mod compute {
     ) -> (StructDef<CompilerAnnotation>, LayoutData) {
         let (scope, layout) = CompilerAnnotation::structdef_from(sd.get_annotations());
         let (params, layout) = layout_for_parameters(sd.get_fields(), layout, struct_table);
-        (
-            StructDef::new(sd.get_name(), scope, params),
-            layout,
-        )
+        (StructDef::new(sd.get_name(), scope, params), layout)
     }
 
     fn layout_for_routine(
@@ -156,7 +153,12 @@ mod compute {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Vec<Parameter<CompilerAnnotation>>, LayoutData) {
-        let params = params.iter().map(|p| p.map_annotation(|a| CompilerAnnotation::local_from(&a, struct_table, layout).0)).collect();
+        let params = params
+            .iter()
+            .map(|p| {
+                p.map_annotation(|a| CompilerAnnotation::local_from(&a, struct_table, layout).0)
+            })
+            .collect();
         (params, layout)
     }
 

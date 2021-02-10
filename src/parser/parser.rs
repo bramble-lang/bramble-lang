@@ -9,8 +9,8 @@ use crate::{
     syntax::{
         expression::{Expression, RoutineCall},
         module::Module,
-        path::Path,
         parameter::Parameter,
+        path::Path,
         routinedef::{RoutineDef, RoutineDefType},
         statement::Statement,
         structdef::StructDef,
@@ -322,7 +322,6 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>>
     stream.next_must_be(&Lex::LParen)?;
     let params = parameter_list(stream)?;
     stream.next_must_be(&Lex::RParen)?;
-
 
     Ok(params)
 }
@@ -1336,7 +1335,10 @@ pub mod tests {
                 StructDef::new(
                     "MyStruct",
                     1,
-                    vec![Parameter::new(0, "x", &Type::I64), Parameter::new(0, "y", &Type::Bool)],
+                    vec![
+                        Parameter::new(0, "x", &Type::I64),
+                        Parameter::new(0, "y", &Type::Bool),
+                    ],
                 ),
             ),
         ] {

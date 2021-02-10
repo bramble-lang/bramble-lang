@@ -1,6 +1,5 @@
 use super::ty::Type;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
     pub annotation: M,
@@ -10,7 +9,7 @@ pub struct Parameter<M> {
 
 impl<M> Parameter<M> {
     pub fn new(a: M, name: &str, ty: &Type) -> Parameter<M> {
-        Parameter{
+        Parameter {
             annotation: a,
             name: name.into(),
             ty: ty.clone(),
@@ -26,11 +25,14 @@ impl<M> Parameter<M> {
     }
 
     pub fn root_str(&self) -> String {
-            format!("{}:{}", self.name, self.ty)
+        format!("{}:{}", self.name, self.ty)
     }
 
-    pub fn map_annotation<F,N>(&self, mut f: F) -> Parameter<N> where F: FnMut(&M) -> N {
-        Parameter{
+    pub fn map_annotation<F, N>(&self, mut f: F) -> Parameter<N>
+    where
+        F: FnMut(&M) -> N,
+    {
+        Parameter {
             annotation: f(&self.annotation),
             name: self.name.clone(),
             ty: self.ty.clone(),

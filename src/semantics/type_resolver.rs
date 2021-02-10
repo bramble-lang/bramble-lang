@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::syntax::{path::Path, parameter::Parameter, statement::{Bind, Mutate, Yield, YieldReturn}};
+use crate::syntax::{
+    parameter::Parameter,
+    path::Path,
+    statement::{Bind, Mutate, Yield, YieldReturn},
+};
 use crate::syntax::{
     statement::{Return, Statement},
     ty::Type,
@@ -226,7 +230,12 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<structdef::StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
-        for Parameter{name: field_name, ty: field_type, ..} in fields.iter() {
+        for Parameter {
+            name: field_name,
+            ty: field_type,
+            ..
+        } in fields.iter()
+        {
             if let Custom(ty_name) = field_type {
                 self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
                     format!(
@@ -906,7 +915,7 @@ impl<'a> TypeResolver<'a> {
         fields: &Vec<(String, Type)>,
     ) -> Result<Vec<(String, Type)>> {
         let mut canonical_fields = vec![];
-        for (n,t) in fields.iter() {
+        for (n, t) in fields.iter() {
             let t = self.type_to_canonical(sym, t)?;
             canonical_fields.push((n.clone(), t));
         }
@@ -1470,7 +1479,11 @@ mod tests {
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0]
             {
-                if let Parameter{ty: Custom(ty_path), ..} = &params[0] {
+                if let Parameter {
+                    ty: Custom(ty_path),
+                    ..
+                } = &params[0]
+                {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
@@ -1503,7 +1516,11 @@ mod tests {
             if let Item::Routine(routinedef::RoutineDef { params, .. }) =
                 &result.get_coroutines()[0]
             {
-                if let Parameter{ty: Custom(ty_path), ..} = &params[0] {
+                if let Parameter {
+                    ty: Custom(ty_path),
+                    ..
+                } = &params[0]
+                {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {

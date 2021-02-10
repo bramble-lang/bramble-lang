@@ -68,12 +68,12 @@ impl std::fmt::Display for CompilerAnnotationStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{expression::Expression, syntax::parameter::Parameter};
     use crate::syntax::ty::Type;
     use crate::{
         compiler::memory::scope::CompilerAnnotation,
         syntax::{module, routinedef::RoutineDef},
     };
+    use crate::{expression::Expression, syntax::parameter::Parameter};
 
     #[test]
     fn test_find_symbol_in_current_scope() {
