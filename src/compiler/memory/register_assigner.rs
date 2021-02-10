@@ -83,7 +83,7 @@ impl RegisterAssigner {
         a.set_reg_size(reg);
     }
 
-    pub fn for_module(
+    /*pub fn for_module(
         &self,
         m: &mut Module<CompilerAnnotation>,
         struct_table: &ResolvedStructTable,
@@ -424,5 +424,5 @@ impl RegisterAssigner {
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
         }
-    }
+    }*/
 }

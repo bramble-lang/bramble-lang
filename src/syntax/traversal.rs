@@ -1,6 +1,6 @@
 use std::fmt;
-
 use fmt::Debug;
+use stdext::function_name;
 
 use crate::{diagnostics::config::TracingConfig, expression::Expression};
 use crate::syntax::module::*;
@@ -9,6 +9,27 @@ use crate::syntax::statement::*;
 use crate::syntax::structdef::*;
 
 use super::parameter::Parameter;
+
+macro_rules! trace {
+    ($self:expr, $ts:expr, $sz:expr) => {
+        let line = 0 as usize;
+        let print_trace = match &$self.tracing {
+            &TracingConfig::Only(ln) => (line) == ln,
+            &TracingConfig::Before(ln) => (line) <= ln,
+            &TracingConfig::After(ln) => (line) >= ln,
+            &TracingConfig::Between(start, end) => (line) >= start && (line) <= end,
+            &TracingConfig::All => true,
+            &TracingConfig::Off => false,
+        };
+        if print_trace {
+            println!(
+                "{} L{}",
+                function_name!(),
+                line,
+            )
+        }
+    };
+}
 
 /**
  * This traverses the AST and determines what size register to
@@ -34,11 +55,13 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, m, struct_table.size_of(m.get_annotations().ty()));
         f(m.get_annotations_mut());
 
         for child_module in m.get_modules_mut().iter_mut() {
             self.for_module(child_module, f);
         }
+
         self.for_items(m.get_functions_mut(), f);
 
         self.for_items(m.get_coroutines_mut(), f);
@@ -52,6 +75,7 @@ impl TraverserMut {
         F: FnMut(&mut A) + Copy,
     {
         for i in items.iter_mut() {
+            trace!(self, i, struct_table.size_of(m.get_annotations().ty()));
             match i {
                 Item::Struct(sd) => {
                     self.for_structdef(sd, f);
@@ -68,6 +92,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, sd, struct_table.size_of(m.get_annotations().ty()));
         f(sd.get_annotations_mut());
         self.for_parameters(&mut sd.fields, f);
     }
@@ -77,6 +102,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, rd, struct_table.size_of(m.get_annotations().ty()));
         f(rd.get_annotations_mut());
         // loop through all the params
         self.for_parameters(&mut rd.params, f);
@@ -93,6 +119,7 @@ impl TraverserMut {
         F: FnMut(&mut A) + Copy,
     {
         for p in params {
+            trace!(self, p, struct_table.size_of(m.get_annotations().ty()));
             f(p.get_annotations_mut())
         }
     }
@@ -102,6 +129,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, statement, struct_table.size_of(m.get_annotations().ty()));
         match statement {
             Statement::Bind(b) => {
                 self.for_bind(b, f);
@@ -126,6 +154,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, bind, struct_table.size_of(m.get_annotations().ty()));
         f(bind.get_annotations_mut());
         self.for_expression(bind.get_rhs_mut(), f)
     }
@@ -135,6 +164,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, mutate, struct_table.size_of(m.get_annotations().ty()));
         f(mutate.get_annotations_mut());
         self.for_expression(mutate.get_rhs_mut(), f);
     }
@@ -144,6 +174,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, yr, struct_table.size_of(m.get_annotations().ty()));
         f(yr.get_annotations_mut());
         yr.get_value_mut()
             .as_mut()
@@ -155,6 +186,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, r, struct_table.size_of(m.get_annotations().ty()));
         f(r.get_annotations_mut());
         r.get_value_mut()
             .as_mut()
@@ -168,6 +200,7 @@ impl TraverserMut {
     {
         use Expression::*;
 
+        trace!(self, exp, struct_table.size_of(m.get_annotations().ty()));
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, f),
             Expression::Integer32(ref mut annotation, _i) => f(annotation),
@@ -193,6 +226,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, block, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) = block {
             f(annotation);
 
@@ -211,6 +245,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, access, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::MemberAccess(ref mut annotation, src, _member) = access {
             f(annotation);
             self.for_expression(src, f);
@@ -224,6 +259,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, un_op, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::UnaryOp(ref mut annotation, _op, operand) = un_op {
             f(annotation);
             self.for_expression(operand, f);
@@ -237,6 +273,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, bin_op, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::BinaryOp(ref mut annotation, _op, l, r) = bin_op {
             f(annotation);
             self.for_expression(l, f);
@@ -251,6 +288,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, if_exp, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::If {
             ref mut annotation,
             cond,
@@ -272,6 +310,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, rc, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::RoutineCall(ref mut annotation, _call, _name, params) = rc {
             f(annotation);
             for p in params {
@@ -287,6 +326,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, yield_exp, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::Yield(ref mut annotation, e) = yield_exp {
             f(annotation);
             self.for_expression(e, f);
@@ -300,6 +340,7 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
+        trace!(self, se, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::StructExpression(ref mut annotation, _struct_name, fields) = se {
             f(annotation);
             for (_, fe) in fields {
