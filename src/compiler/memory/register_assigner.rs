@@ -1,4 +1,4 @@
-use crate::compiler::arch::registers::RegSize;
+use crate::{compiler::arch::registers::RegSize, syntax::traversal::TraverserMut};
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::struct_table::ResolvedStructTable;
 use crate::expression::Expression;
@@ -49,6 +49,13 @@ pub struct RegisterAssigner {
 impl RegisterAssigner {
     pub fn new(tracing: TracingConfig) -> RegisterAssigner {
         RegisterAssigner { tracing }
+    }
+
+    pub fn use_traverse(m: &mut Module<CompilerAnnotation>, struct_table: &ResolvedStructTable) {
+        let tm = TraverserMut{};
+        tm.for_module(m, |a| {
+            Self::assign_register(a, struct_table);
+        })
     }
 
     /**

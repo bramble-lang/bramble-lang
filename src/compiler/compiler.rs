@@ -91,8 +91,9 @@ impl<'a> Compiler<'a> {
         string_pool.extract_from_module(&compiler_ast);
 
         // assign register sizes
-        let reg_assigner = RegisterAssigner::new(trace_reg_assigner);
-        reg_assigner.for_module(&mut compiler_ast, &struct_table);
+        //let reg_assigner = RegisterAssigner::new(trace_reg_assigner);
+        //reg_assigner.for_module(&mut compiler_ast, &struct_table);
+        RegisterAssigner::use_traverse(&mut compiler_ast, &struct_table);
 
         let c_extern_functions = Compiler::configure_c_extern_functions(target_os);
 
