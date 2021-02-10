@@ -107,3 +107,30 @@ impl std::fmt::Display for RoutineDefType {
         }
     }
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Parameter<I> {
+    annotation: I,
+    name: String,
+    ty: Type,
+}
+
+impl<I> Parameter<I> {
+    pub fn get_annotations(&self) -> &I {
+        &self.annotation
+    }
+
+    pub fn get_annotations_mut(&mut self) -> &mut I {
+        &mut self.annotation
+    }
+
+    pub fn root_str(&self) -> String {
+            format!("{}:{}", self.name, self.ty)
+    }
+}
+
+impl<I> std::fmt::Display for Parameter<I> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
+}

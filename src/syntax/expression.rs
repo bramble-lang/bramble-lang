@@ -1,33 +1,6 @@
 use super::{path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct IdentifierDeclare<I> {
-    annotation: I,
-    name: String,
-    ty: Type,
-}
-
-impl<I> IdentifierDeclare<I> {
-    pub fn get_annotations(&self) -> &I {
-        &self.annotation
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut I {
-        &mut self.annotation
-    }
-
-    pub fn root_str(&self) -> String {
-            format!("{}:{}", self.name, self.ty)
-    }
-}
-
-impl<I> std::fmt::Display for IdentifierDeclare<I> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        f.write_str(&self.root_str())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
     Integer32(I, i32),
     Integer64(I, i64),
@@ -124,22 +97,6 @@ impl<I> Expression<I> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
-        }
-    }
-
-    /// If a node is a function or a coroutine this will return its parameter vector.  If
-    /// the node is not a function or coroutine, this will return None.
-    pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
-        match self {
-            _ => None,
-        }
-    }
-
-    /// if a node is a routine type then return the return type of the routine
-    /// otherwise return None.
-    pub fn get_return_type(&self) -> Option<&Type> {
-        match self {
-            _ => None,
         }
     }
 }
