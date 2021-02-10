@@ -1,5 +1,5 @@
 
-fn my_main() {
+fn my_main() -> i64 {
     let ms: MyStruct := my_mod::g();
     return;
 }

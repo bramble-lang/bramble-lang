@@ -1,5 +1,5 @@
 
-fn my_main() {
+fn my_main() -> i64 {
     let mut x:i64 := 1;
     let mut y:i64 := 5;
     root::std::io::writei64ln(x);

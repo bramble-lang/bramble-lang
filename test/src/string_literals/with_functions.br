@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let s: string := create_a_string();
     say_something("hello, ", s);
     return;

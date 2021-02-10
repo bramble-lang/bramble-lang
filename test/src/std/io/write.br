@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     root::std::io::write("hello, world\n");
     return;
 }

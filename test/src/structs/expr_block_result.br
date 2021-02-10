@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let t: MyStruct := if (true) {
         let x:i64 := 5;
         let y:i64 := 1;

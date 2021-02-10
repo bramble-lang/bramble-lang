@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let s: string := "hello\n";
     root::std::io::writei64ln(5);
     root::std::io::writei64(10);

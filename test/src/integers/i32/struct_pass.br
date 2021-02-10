@@ -1,5 +1,5 @@
 
-fn my_main() {
+fn my_main() -> i64 {
     let m: Mixed := Mixed {
         a: 5i32,
         b: 13,

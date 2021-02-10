@@ -1,4 +1,4 @@
-fn my_main() -> i64 {
+fn my_main() -> i64 -> i64 {
     let a: i64 := 1;
     let b: i64 := 2;
     let c: i64 := a + b;

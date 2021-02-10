@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let i: i64 := 2 + test(5);
     return;
 }

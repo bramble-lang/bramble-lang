@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let b1:bool := my_bool(true, true);
     root::std::io::writeboolln(b1);
 

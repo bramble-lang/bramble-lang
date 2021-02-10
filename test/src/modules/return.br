@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x:my_mod::MyStruct := my_mod::add(3, 2);
     root::std::io::writei64ln(x.a);
 

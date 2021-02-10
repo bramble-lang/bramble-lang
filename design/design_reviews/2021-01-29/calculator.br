@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let choice: i64 := get_user_action();
     if (choice == 0) {
         root::std::io::write("Goodbye!\n");

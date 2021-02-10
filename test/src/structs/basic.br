@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let t: MyStruct := MyStruct{x: 5, y: 1, z: true};
     root::std::io::writei64ln(t.x);
     root::std::io::writei64ln(t.y);

@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let b0 :bool := simple_eq(5, 6);
     root::std::io::writeboolln(b0);
 

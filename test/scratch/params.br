@@ -1,5 +1,5 @@
 
-fn my_main() {
+fn my_main() -> i64 {
     let a: i64 := 1;
     let b: i64 := 2;
     test(a, a);

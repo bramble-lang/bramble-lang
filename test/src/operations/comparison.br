@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     test(2);
     test(5);
     test(10);

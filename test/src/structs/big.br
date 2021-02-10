@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let t: MyStruct := MyStruct{
         x00: 1,
         x01: 1,

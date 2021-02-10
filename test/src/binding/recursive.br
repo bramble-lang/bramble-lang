@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x:i64 := x * x;
     return;
 }

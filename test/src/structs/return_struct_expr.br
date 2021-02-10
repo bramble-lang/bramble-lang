@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     // Test to make sure that empty structs can be returned and do not mess up anything
     let e: EmptyStruct := return_empty();
 
