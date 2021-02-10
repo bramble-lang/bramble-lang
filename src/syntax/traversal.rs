@@ -8,6 +8,8 @@ use crate::syntax::routinedef::*;
 use crate::syntax::statement::*;
 use crate::syntax::structdef::*;
 
+use super::parameter::Parameter;
+
 /**
  * This traverses the AST and determines what size register to
  * assign to each node in the AST: if it makes sense to assign
@@ -53,7 +55,7 @@ impl TraverserMut {
                     self.for_structdef(sd, f);
                 }
                 Item::Routine(rd) => {
-                    self.for_routine(rd, f);
+                    self.for_routinedef(rd, f);
                 }
             };
         }
@@ -64,21 +66,32 @@ impl TraverserMut {
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
-        f(sd.get_annotations_mut())
+        f(sd.get_annotations_mut());
+        self.for_parameters(&mut sd.fields, f);
     }
 
-    fn for_routine<A, F>(&self, rd: &mut RoutineDef<A>, mut f: F)
+    fn for_routinedef<A, F>(&self, rd: &mut RoutineDef<A>, mut f: F)
     where
         A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         f(rd.get_annotations_mut());
         // loop through all the params
-        for _p in rd.get_params() {}
+        self.for_parameters(&mut rd.params, f);
 
         // loop through every statement and analyze the child nodes of the routine definition
         for e in rd.get_body_mut().iter_mut() {
             self.for_statement(e, f);
+        }
+    }
+
+    fn for_parameters<A, F>(&self, params: &mut Vec<Parameter<A>>, mut f: F)
+    where
+        A: Debug,
+        F: FnMut(&mut A) + Copy,
+    {
+        for p in params {
+            f(p.get_annotations_mut())
         }
     }
 
