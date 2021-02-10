@@ -191,17 +191,7 @@ impl<'a> TypeResolver<'a> {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if canon_path == self.main_fn {
-            if def != &RoutineDefType::Function {
-                return Err(format!("root::my_main must be a function of type () -> i64"));
-            }
-            
-            if params.len() > 0 {
-                return Err(format!("root::my_main must take no parameters. It must be of type () -> i64"));
-            }
-
-            if p != Type::I64 {
-                return Err(format!("root::my_main must return an i64. It must be of type () -> i64"));
-            }
+            Self::validate_main_fn(routine)?;
         }
 
         let mut meta = annotations.clone();
@@ -1051,6 +1041,32 @@ impl<'a> TypeResolver<'a> {
         } else {
             Ok(())
         }
+    }
+
+    fn validate_main_fn(
+        routine: &routinedef::RoutineDef<SemanticAnnotations>,
+    ) -> Result<()> {
+        let routinedef::RoutineDef {
+            def,
+            params,
+            ty: p,
+            ..
+        } = routine;
+
+        // If routine is root::my_main it must be a function type and have type () -> i64
+        if def != &RoutineDefType::Function {
+            return Err(format!("root::my_main must be a function of type () -> i64"));
+        }
+        
+        if params.len() > 0 {
+            return Err(format!("root::my_main must take no parameters. It must be of type () -> i64"));
+        }
+
+        if p != Type::I64 {
+            return Err(format!("root::my_main must return an i64. It must be of type () -> i64"));
+        }
+
+        Ok(())
     }
 
     fn trace(
