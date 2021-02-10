@@ -133,7 +133,7 @@ impl RegisterAssigner {
         // loop through all the params
         let mut param_reg_szs = vec![];
         for p in rd.get_params() {
-            let p_reg_sz = Self::register_size_for_type(&p.1, struct_table);
+            let p_reg_sz = Self::register_size_for_type(&p.ty, struct_table);
             param_reg_szs.push(p_reg_sz);
         }
 

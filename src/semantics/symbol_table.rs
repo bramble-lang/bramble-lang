@@ -1,4 +1,4 @@
-use crate::syntax::path::Path;
+use crate::syntax::{path::Path, routinedef::Parameter};
 use crate::syntax::{
     module::{Item, Module},
     routinedef::{RoutineDef, RoutineDefType},
@@ -126,10 +126,10 @@ impl SymbolTable {
         sym.sym.add(name, def, false)
     }
 
-    fn get_types_for_params(params: &Vec<(String, Type)>) -> Vec<Type> {
+    fn get_types_for_params(params: &Vec<Parameter<SemanticAnnotations>>) -> Vec<Type> {
         params
             .iter()
-            .map(|(_, ty)| ty.clone())
+            .map(|p| p.ty.clone())
             .collect::<Vec<Type>>()
     }
 

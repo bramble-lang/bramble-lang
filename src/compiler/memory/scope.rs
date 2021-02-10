@@ -12,7 +12,7 @@ use super::{
     symbol_table::{Symbol, SymbolTable},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LayoutData {
     pub(super) offset: i32,
 }

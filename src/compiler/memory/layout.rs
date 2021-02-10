@@ -33,7 +33,7 @@ pub fn compute_layout_for_program(
 
 mod compute {
     use super::*;
-    use crate::compiler::memory::symbol_table::Symbol;
+    use crate::{compiler::memory::symbol_table::Symbol, syntax::routinedef::Parameter};
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
@@ -118,10 +118,15 @@ mod compute {
             RoutineDefType::Function => 0,
             RoutineDefType::Coroutine => 40,
         };
+
         let (mut annotations, offset) =
             CompilerAnnotation::routine_from(annotations, def, struct_table, initial_frame_size);
+
+        let nlayout = LayoutData::new(offset);
+        // TODO: I can use the fact that parameters are not AST nodes to compute the stack frame space for parameters
+        let (params, mut nlayout) = layout_for_parameters(params, nlayout, struct_table);
+
         let mut nbody = vec![];
-        let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
             let (e, layout) = compute::layout_for_statement(e, nlayout, struct_table);
             nlayout = layout;
@@ -136,12 +141,21 @@ mod compute {
                 annotations,
                 def: *def,
                 name: name.clone(),
-                params: params.clone(),
+                params: params,
                 ty: ty.clone(),
                 body: nbody,
             },
             layout,
         )
+    }
+
+    fn layout_for_parameters(
+        params: &Vec<Parameter<SemanticAnnotations>>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Vec<Parameter<CompilerAnnotation>>, LayoutData) {
+        let params = params.iter().map(|p| p.map_annotation(|a| CompilerAnnotation::local_from(&a, struct_table, layout).0)).collect();
+        (params, layout)
     }
 
     fn layout_for_statement(

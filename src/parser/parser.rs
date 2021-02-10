@@ -3,19 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{
-    diagnostics::config::TracingConfig,
-    lexer::tokens::{Lex, Primitive, Token},
-    syntax::{
-        expression::{Expression, RoutineCall},
-        module::Module,
-        path::Path,
-        routinedef::{RoutineDef, RoutineDefType},
-        statement::Statement,
-        structdef::StructDef,
-        ty::Type,
-    },
-};
+use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{expression::{Expression, RoutineCall}, module::Module, path::Path, routinedef::{Parameter, RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef, ty::Type}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -316,11 +304,18 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     Ok(stmts)
 }
 
-fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
+fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
     let params = id_declaration_list(stream)?;
     stream.next_must_be(&Lex::RParen)?;
+
+    // Convert tuples into parameters
+    let params = params.iter().map(|(name, ty)| Parameter{
+        annotation: 0,
+        name: name.clone(),
+        ty: ty.clone(),
+    }).collect();
 
     Ok(params)
 }
@@ -870,7 +865,7 @@ pub mod tests {
             {
                 assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(0, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -915,7 +910,7 @@ pub mod tests {
             {
                 assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(0, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -979,7 +974,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I64)]);
+            assert_eq!(params, vec![Parameter::new(0, "x", &Type::I64)]);
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1012,7 +1007,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I64)]);
+            assert_eq!(params, vec![Parameter::new(0, "x", &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1098,7 +1093,7 @@ pub mod tests {
             })) = m.get_item("test")
             {
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(0, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -1190,7 +1185,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I64)]);
+            assert_eq!(params, vec![Parameter::new(0, "x", &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {

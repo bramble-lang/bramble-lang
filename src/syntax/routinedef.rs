@@ -5,7 +5,7 @@ pub struct RoutineDef<M> {
     pub annotations: M,
     pub def: RoutineDefType,
     pub name: String,
-    pub params: Vec<(String, Type)>,
+    pub params: Vec<Parameter<M>>,
     pub ty: Type,
     pub body: Vec<Statement<M>>,
 }
@@ -20,7 +20,7 @@ impl<M> RoutineDef<M> {
     pub fn new_function(
         name: &str,
         annotations: M,
-        params: Vec<(String, Type)>,
+        params: Vec<Parameter<M>>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
@@ -37,7 +37,7 @@ impl<M> RoutineDef<M> {
     pub fn new_coroutine(
         name: &str,
         annotations: M,
-        params: Vec<(String, Type)>,
+        params: Vec<Parameter<M>>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
@@ -63,11 +63,11 @@ impl<M> RoutineDef<M> {
         &self.name
     }
 
-    pub fn get_params(&self) -> &Vec<(String, Type)> {
+    pub fn get_params(&self) -> &Vec<Parameter<M>> {
         &self.params
     }
 
-    pub fn set_params(&mut self, params: Vec<(String, Type)>) {
+    pub fn set_params(&mut self, params: Vec<Parameter<M>>) {
         self.params = params;
     }
 
@@ -109,27 +109,43 @@ impl std::fmt::Display for RoutineDefType {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Parameter<I> {
-    annotation: I,
-    name: String,
-    ty: Type,
+pub struct Parameter<M> {
+    pub annotation: M,
+    pub name: String,
+    pub ty: Type,
 }
 
-impl<I> Parameter<I> {
-    pub fn get_annotations(&self) -> &I {
+impl<M> Parameter<M> {
+    pub fn new(a: M, name: &str, ty: &Type) -> Parameter<M> {
+        Parameter{
+            annotation: a,
+            name: name.into(),
+            ty: ty.clone(),
+        }
+    }
+
+    pub fn get_annotations(&self) -> &M {
         &self.annotation
     }
 
-    pub fn get_annotations_mut(&mut self) -> &mut I {
+    pub fn get_annotations_mut(&mut self) -> &mut M {
         &mut self.annotation
     }
 
     pub fn root_str(&self) -> String {
             format!("{}:{}", self.name, self.ty)
     }
+
+    pub fn map_annotation<F,N>(&self, mut f: F) -> Parameter<N> where F: FnMut(&M) -> N {
+        Parameter{
+            annotation: f(&self.annotation),
+            name: self.name.clone(),
+            ty: self.ty.clone(),
+        }
+    }
 }
 
-impl<I> std::fmt::Display for Parameter<I> {
+impl<M> std::fmt::Display for Parameter<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(&self.root_str())
     }
