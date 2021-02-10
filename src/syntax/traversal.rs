@@ -14,7 +14,8 @@ use crate::syntax::structdef::*;
  * it to a register.
  */
 
-pub struct TraverserMut {}
+pub struct TraverserMut {
+}
 
 impl TraverserMut {
     /**
