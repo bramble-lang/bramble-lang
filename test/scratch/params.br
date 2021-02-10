@@ -1,10 +1,10 @@
 
-fn my_main() {
+fn my_main() -> i64 {
     let a: i64 := 1;
     let b: i64 := 2;
     test(a, a);
 
-    return;
+    return 0;
 }
 
 fn test(a: i64, b: i64) {

@@ -1,5 +1,5 @@
 
-fn my_main() {
+fn my_main() -> i64 {
     let m: Mixed := Mixed {
         a: 5i32,
         b: 13,
@@ -22,7 +22,7 @@ fn my_main() {
     root::std::io::writei32ln(m4.a);
     root::std::io::writei64ln(m4.b);
 
-    return;
+    return 0;
 }
 
 fn test(m: Mixed) {

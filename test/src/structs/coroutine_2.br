@@ -1,4 +1,4 @@
-fn my_main( p: bool) {
+fn my_main() -> i64 {
     let ms:MyStruct := MyStruct {x: 5, y: 13, z: true};
     let ms2:MyStruct := MyStruct {x: 123, y: 456, z: false};
     
@@ -19,7 +19,7 @@ fn my_main( p: bool) {
     root::std::io::writei64ln(w3.y);
     root::std::io::writeboolln(w3.z);
     
-    return;
+    return 0;
 }
 
 co my_co (x: MyStruct, y: MyStruct) -> MyStruct {

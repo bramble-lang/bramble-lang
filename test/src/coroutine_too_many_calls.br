@@ -1,4 +1,4 @@
-fn my_main( p: bool) {
+fn my_main() -> i64 {
     let c: co i64 := init my_co(5, 13);
     let w : i64 := yield c;
     let x : i64 := 1;
@@ -8,7 +8,7 @@ fn my_main( p: bool) {
     root::std::io::writei64ln(z);
     let q : i64 := yield c;
     root::std::io::writei64ln(q);
-    return;
+    return 0;
 }
 
 co my_co (x: i64, y: i64) -> i64 {

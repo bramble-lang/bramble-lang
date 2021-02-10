@@ -1,9 +1,9 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x:i64 := test(2);
     let y:i64 := test(11);
     root::std::io::writei64ln(x);
     root::std::io::writei64ln(y);
-    return;
+    return 0;
 }
 
 fn test(a: i64) -> i64 {

@@ -26,6 +26,7 @@ use crate::{
     syntax::statement,
 };
 use braid_lang::result::Result;
+use routinedef::RoutineDefType;
 use Type::*;
 
 use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
@@ -65,6 +66,7 @@ pub struct TypeResolver<'a> {
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
+    main_fn: Path,
 }
 
 impl<'a> Tracing for TypeResolver<'a> {
@@ -81,6 +83,7 @@ impl<'a> TypeResolver<'a> {
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
+            main_fn: vec!["root", "my_main"].into(),
         }
     }
 
@@ -177,6 +180,20 @@ impl<'a> TypeResolver<'a> {
             ty: p,
             ..
         } = routine;
+        let canon_path = self
+            .stack
+            .to_path(sym)
+            .map(|mut p| {
+                p.push(name);
+                p
+            })
+            .expect("Failed to create canonical path for function");
+
+        // If routine is root::my_main it must be a function type and have type () -> i64
+        if canon_path == self.main_fn {
+            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", annotations.ln, e))?;
+        }
+
         let mut meta = annotations.clone();
         let canonical_params = self.params_to_canonical(sym, &params)?;
         for (pname, pty) in canonical_params.iter() {
@@ -194,14 +211,6 @@ impl<'a> TypeResolver<'a> {
 
         let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
 
-        let canon_path = self
-            .stack
-            .to_path(sym)
-            .map(|mut p| {
-                p.push(name);
-                p
-            })
-            .expect("Failed to create canonical path for function");
         meta.set_canonical_path(canon_path);
         Ok(routinedef::RoutineDef {
             annotations: meta.clone(),
@@ -802,7 +811,11 @@ impl<'a> TypeResolver<'a> {
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type() == I64 || l.get_type() == I32  {format!("{}", l.get_type())} else {"i64".into()};
+                    let expected = if l.get_type() == I64 || l.get_type() == I32 {
+                        format!("{}", l.get_type())
+                    } else {
+                        "i64".into()
+                    };
                     Err(format!(
                         "{} expected {} but found {} and {}",
                         op,
@@ -1032,6 +1045,33 @@ impl<'a> TypeResolver<'a> {
         } else {
             Ok(())
         }
+    }
+
+    fn validate_main_fn(routine: &routinedef::RoutineDef<SemanticAnnotations>) -> Result<()> {
+        let routinedef::RoutineDef {
+            def, params, ty: p, ..
+        } = routine;
+
+        // If routine is root::my_main it must be a function type and have type () -> i64
+        if def != &RoutineDefType::Function {
+            return Err(format!(
+                "root::my_main must be a function of type () -> i64"
+            ));
+        }
+
+        if params.len() > 0 {
+            return Err(format!(
+                "root::my_main must take no parameters. It must be of type () -> i64"
+            ));
+        }
+
+        if p != Type::I64 {
+            return Err(format!(
+                "root::my_main must return an i64. It must be of type () -> i64"
+            ));
+        }
+
+        Ok(())
     }
 
     fn trace(
@@ -1338,6 +1378,64 @@ mod tests {
         }
     }
 
+    #[test]
+    pub fn test_my_main_signature() {
+        for (line, text, expected) in vec![
+            (
+                line!(),
+                "fn my_main() -> i64 {
+                    return 0;
+                }",
+                Ok(I64),
+            ),
+            (
+                line!(),
+                "fn my_main() -> i32 {
+                    return 0i32;
+                }",
+                Err("Semantic: L1: root::my_main must return an i64. It must be of type () -> i64"),
+            ),
+            (
+                line!(),
+                "fn my_main(i: i32) -> i64 {
+                    return 0;
+                }",
+                Err("Semantic: L1: root::my_main must take no parameters. It must be of type () -> i64"),
+            ),
+            (
+                line!(),
+                "co my_main() -> i64 {
+                    return 0;
+                }",
+                Err("Semantic: L1: root::my_main must be a function of type () -> i64"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    assert_eq!(
+                        fn_main.get_annotations().ty,
+                        expected_ty,
+                        "Test Case at L:{}",
+                        line
+                    );
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
+                }
+            }
+        }
+    }
+
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_function_params_renamed_with_canonical_path() {
         for text in vec![
@@ -1516,8 +1614,18 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.get_annotations().ty, expected_ty, "Test Case at L:{}", line);
-                        assert_eq!(b.get_rhs().get_type(), expected_ty, "Test Case at L:{}", line);
+                        assert_eq!(
+                            bind_stm.get_annotations().ty,
+                            expected_ty,
+                            "Test Case at L:{}",
+                            line
+                        );
+                        assert_eq!(
+                            b.get_rhs().get_type(),
+                            expected_ty,
+                            "Test Case at L:{}",
+                            line
+                        );
                     } else {
                         panic!("Expected a bind statement");
                     }
@@ -1526,7 +1634,12 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty, "Test Case at L:{}", line);
+                        assert_eq!(
+                            r.get_value().clone().unwrap().get_type(),
+                            expected_ty,
+                            "Test Case at L:{}",
+                            line
+                        );
                     } else {
                         panic!("Expected a return statement")
                     }

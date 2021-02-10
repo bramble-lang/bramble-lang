@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let t: MyStruct := if (true) {
         let x:i64 := 5;
         let y:i64 := 1;
@@ -15,7 +15,7 @@ fn my_main() {
     root::std::io::writei64ln(t.y);
     root::std::io::writei64ln(t.z);
     
-    return;
+    return 0;
 }
 
 struct MyStruct {

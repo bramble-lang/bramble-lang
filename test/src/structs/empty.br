@@ -1,8 +1,8 @@
-fn my_main() {
+fn my_main() -> i64 {
     let t: MyStruct := MyStruct{};
     let y: MyStruct := test(t);
     root::std::io::writei64ln(2);
-    return;
+    return 0;
 }
 
 struct MyStruct {

@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let y: MyStruct := test();
     root::std::io::writei64ln(y.x);
     root::std::io::writei64ln(y.y);
@@ -16,7 +16,7 @@ fn my_main() {
     root::std::io::writei64ln(a.y);
     root::std::io::writei64ln(a.z);
 
-    return;
+    return 0;
 }
 
 struct MyStruct {

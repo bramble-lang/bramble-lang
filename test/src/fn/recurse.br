@@ -1,7 +1,7 @@
-fn my_main() {
+fn my_main() -> i64 {
 	let i:i64 := recurse(0);
 	root::std::io::writei64ln(i);
-	return;
+	return 0;
 }
 
 fn recurse(a: i64) -> i64 {

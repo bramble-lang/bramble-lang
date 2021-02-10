@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x:i64 := my_mod::inner::add(3, 2);
     root::std::io::writei64ln(x);
 
@@ -11,7 +11,7 @@ fn my_main() {
     let y:i64 := self::my_mod::inner::add(7, 2);
     root::std::io::writei64ln(y);
 
-    return;
+    return 0;
 }
 
 mod my_mod {

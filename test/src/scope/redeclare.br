@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x: i64 := if true {
         let y: i64 := 5;
         y
@@ -6,5 +6,5 @@ fn my_main() {
         let y: i64 := 10;
         y
     };
-    return;
+    return 0;
 }

@@ -64,7 +64,7 @@ pub enum Reg8 {
     Bl,
     Cl,
     Dl,
-    Dil
+    Dil,
 }
 
 impl Display for Reg8 {

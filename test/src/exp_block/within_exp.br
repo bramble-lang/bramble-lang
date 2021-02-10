@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x:i64 := {
         let x: i64 := 1;
         x + {
@@ -16,7 +16,7 @@ fn my_main() {
         }
     };
     root::std::io::writeboolln(b);
-    return;
+    return 0;
 }
 
 fn my_bool() -> bool {

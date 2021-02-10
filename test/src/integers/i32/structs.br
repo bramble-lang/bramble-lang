@@ -1,5 +1,5 @@
 
-fn my_main() {
+fn my_main() -> i64 {
     let x:i32 := 4i32;
     let y: i32 := 5i32;
 
@@ -25,7 +25,7 @@ fn my_main() {
     root::std::io::writei32ln(yield c);
     root::std::io::writei32ln(yield c);
 
-    return;
+    return 0;
 }
 
 fn test(m: Mixed) {

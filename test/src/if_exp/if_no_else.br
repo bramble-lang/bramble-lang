@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     test(2);
     test(11);
     test(5);
@@ -11,7 +11,7 @@ fn my_main() {
     test(65537);
     test(65551);
 
-    return;
+    return 0;
 }
 
 fn test(a: i64) {

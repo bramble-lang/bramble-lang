@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let a:bool := 5 < 6;
     let b:bool := 6 < 5 || 7 <= 5 + 1*2;
     let c:bool := 2 != 3 && 2 != 4;
@@ -11,5 +11,5 @@ fn my_main() {
     root::std::io::writeboolln(d);
     root::std::io::writeboolln(e);
     root::std::io::writeboolln(f);
-    return;
+    return 0;
 }

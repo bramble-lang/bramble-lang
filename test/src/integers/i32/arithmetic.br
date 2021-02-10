@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x:i32 := 5i32;
     let y:i32 := test();
     let z:i32 := test2(y);
@@ -35,7 +35,7 @@ fn my_main() {
         root::std::io::write("5 is less than 10\n");
     };
     
-    return;
+    return 0;
 }
 
 fn test() -> i32 {

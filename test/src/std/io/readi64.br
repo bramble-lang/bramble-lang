@@ -1,4 +1,4 @@
-fn my_main() {
+fn my_main() -> i64 {
     let x: i64 := root::std::io::readi64();
     root::std::io::writei64ln(x);
 
@@ -7,5 +7,5 @@ fn my_main() {
 
     let z: i64 := root::std::io::readi64();
     root::std::io::writei64ln(z);
-    return;
+    return 0;
 }

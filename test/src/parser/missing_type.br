@@ -1,6 +1,6 @@
-fn my_main() {
+fn my_main() -> i64 {
 
     
     let x := 1;
-    return;
+    return 0;
 }
