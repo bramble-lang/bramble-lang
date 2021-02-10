@@ -122,7 +122,6 @@ mod compute {
             CompilerAnnotation::routine_from(annotations, def, struct_table, initial_frame_size);
 
         let nlayout = LayoutData::new(offset);
-        // TODO: I can use the fact that parameters are not AST nodes to compute the stack frame space for parameters
         let (params, mut nlayout) = layout_for_parameters(params, nlayout, struct_table);
 
         let mut nbody = vec![];
@@ -153,10 +152,15 @@ mod compute {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (Vec<Parameter<CompilerAnnotation>>, LayoutData) {
+        let mut layout = layout;
         let params = params
             .iter()
             .map(|p| {
-                p.map_annotation(|a| CompilerAnnotation::local_from(&a, struct_table, layout).0)
+                p.map_annotation(|a| {
+                    let tmp = CompilerAnnotation::local_from(&a, struct_table, layout);
+                    layout = tmp.1;
+                    tmp.0
+                })
             })
             .collect();
         (params, layout)
