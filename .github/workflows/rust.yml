@@ -15,6 +15,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: rust-toolchain
+      uses: actions-rs/toolchian@v1.0.6
+      with:
+        toolchain: nightly
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --verbose
