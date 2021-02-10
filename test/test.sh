@@ -78,6 +78,9 @@ cargo build
 if [ $? -eq 0 ]
 then
     start_time=$SECONDS
+
+    mkdir -p ./target
+
     tests=`find ./src | grep "\.out" | sed 's/\.\/src\/\(.*\)\.out/\1/'`
     for test in ${tests[@]}; do
         ((num_tests=num_tests+1))
