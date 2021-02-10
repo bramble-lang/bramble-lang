@@ -1395,6 +1395,20 @@ mod tests {
                 }",
                 Err("Semantic: L1: root::my_main must return an i64. It must be of type () -> i64"),
             ),
+            (
+                line!(),
+                "fn my_main(i: i32) -> i64 {
+                    return 0;
+                }",
+                Err("Semantic: L1: root::my_main must take no parameters. It must be of type () -> i64"),
+            ),
+            (
+                line!(),
+                "co my_main() -> i64 {
+                    return 0;
+                }",
+                Err("Semantic: L1: root::my_main must be a function of type () -> i64"),
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
