@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, marker::PhantomData};
 use fmt::Debug;
 use stdext::function_name;
 
@@ -37,11 +37,13 @@ macro_rules! trace {
  * it to a register.
  */
 
-pub struct TraverserMut {
+pub struct TraverserMut<A, T> where A: Debug, T: Fn(A) {
     pub tracing: TracingConfig,
+    pub trace: T,
+    shit: PhantomData<A>,
 }
 
-impl TraverserMut {
+impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     /**
      * Determine the size of register needed to store a value, based upon the number of bytes
      * the type takes.
@@ -50,9 +52,8 @@ impl TraverserMut {
      * always referred to via addresses.
      */
 
-    pub fn for_module<A, F>(&self, m: &mut Module<A>, mut f: F)
+    pub fn for_module<F>(&self, m: &mut Module<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, m, struct_table.size_of(m.get_annotations().ty()));
@@ -69,9 +70,8 @@ impl TraverserMut {
         self.for_items(m.get_structs_mut(), f);
     }
 
-    fn for_items<A, F>(&self, items: &mut Vec<Item<A>>, f: F)
+    fn for_items<F>(&self, items: &mut Vec<Item<A>>, f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         for i in items.iter_mut() {
@@ -87,9 +87,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_structdef<A, F>(&self, sd: &mut StructDef<A>, mut f: F)
+    fn for_structdef<F>(&self, sd: &mut StructDef<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, sd, struct_table.size_of(m.get_annotations().ty()));
@@ -97,9 +96,8 @@ impl TraverserMut {
         self.for_parameters(&mut sd.fields, f);
     }
 
-    fn for_routinedef<A, F>(&self, rd: &mut RoutineDef<A>, mut f: F)
+    fn for_routinedef<F>(&self, rd: &mut RoutineDef<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, rd, struct_table.size_of(m.get_annotations().ty()));
@@ -113,9 +111,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_parameters<A, F>(&self, params: &mut Vec<Parameter<A>>, mut f: F)
+    fn for_parameters<F>(&self, params: &mut Vec<Parameter<A>>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         for p in params {
@@ -124,9 +121,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_statement<A, F>(&self, statement: &mut Statement<A>, f: F)
+    fn for_statement<F>(&self, statement: &mut Statement<A>, f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, statement, struct_table.size_of(m.get_annotations().ty()));
@@ -149,9 +145,8 @@ impl TraverserMut {
         };
     }
 
-    fn for_bind<A, F>(&self, bind: &mut Bind<A>, mut f: F)
+    fn for_bind<F>(&self, bind: &mut Bind<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, bind, struct_table.size_of(m.get_annotations().ty()));
@@ -159,9 +154,8 @@ impl TraverserMut {
         self.for_expression(bind.get_rhs_mut(), f)
     }
 
-    fn for_mutate<A, F>(&self, mutate: &mut Mutate<A>, mut f: F)
+    fn for_mutate<F>(&self, mutate: &mut Mutate<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, mutate, struct_table.size_of(m.get_annotations().ty()));
@@ -169,9 +163,8 @@ impl TraverserMut {
         self.for_expression(mutate.get_rhs_mut(), f);
     }
 
-    fn for_yieldreturn<A, F>(&self, yr: &mut YieldReturn<A>, mut f: F)
+    fn for_yieldreturn<F>(&self, yr: &mut YieldReturn<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, yr, struct_table.size_of(m.get_annotations().ty()));
@@ -181,9 +174,8 @@ impl TraverserMut {
             .map(|rv| self.for_expression(rv, f));
     }
 
-    fn for_return<A, F>(&self, r: &mut Return<A>, mut f: F)
+    fn for_return<F>(&self, r: &mut Return<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, r, struct_table.size_of(m.get_annotations().ty()));
@@ -193,9 +185,8 @@ impl TraverserMut {
             .map(|rv| self.for_expression(rv, f));
     }
 
-    fn for_expression<A, F>(&self, exp: &mut Expression<A>, mut f: F)
+    fn for_expression<F>(&self, exp: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         use Expression::*;
@@ -221,9 +212,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_expression_block<A, F>(&self, block: &mut Expression<A>, mut f: F)
+    fn for_expression_block<F>(&self, block: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, block, struct_table.size_of(m.get_annotations().ty()));
@@ -240,9 +230,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_member_access<A, F>(&self, access: &mut Expression<A>, mut f: F)
+    fn for_member_access<F>(&self, access: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, access, struct_table.size_of(m.get_annotations().ty()));
@@ -254,9 +243,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_unary_op<A, F>(&self, un_op: &mut Expression<A>, mut f: F)
+    fn for_unary_op<F>(&self, un_op: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, un_op, struct_table.size_of(m.get_annotations().ty()));
@@ -268,9 +256,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_binary_op<A, F>(&self, bin_op: &mut Expression<A>, mut f: F)
+    fn for_binary_op<F>(&self, bin_op: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, bin_op, struct_table.size_of(m.get_annotations().ty()));
@@ -283,9 +270,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_if<A, F>(&self, if_exp: &mut Expression<A>, mut f: F)
+    fn for_if<F>(&self, if_exp: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, if_exp, struct_table.size_of(m.get_annotations().ty()));
@@ -305,9 +291,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_routine_call<A, F>(&self, rc: &mut Expression<A>, mut f: F)
+    fn for_routine_call<F>(&self, rc: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, rc, struct_table.size_of(m.get_annotations().ty()));
@@ -321,9 +306,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_yield<A, F>(&self, yield_exp: &mut Expression<A>, mut f: F)
+    fn for_yield<F>(&self, yield_exp: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, yield_exp, struct_table.size_of(m.get_annotations().ty()));
@@ -335,9 +319,8 @@ impl TraverserMut {
         }
     }
 
-    fn for_struct_expression<A, F>(&self, se: &mut Expression<A>, mut f: F)
+    fn for_struct_expression<F>(&self, se: &mut Expression<A>, mut f: F)
     where
-        A: Debug,
         F: FnMut(&mut A) + Copy,
     {
         trace!(self, se, struct_table.size_of(m.get_annotations().ty()));
