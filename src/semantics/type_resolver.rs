@@ -27,6 +27,7 @@ use crate::{
 };
 use braid_lang::result::Result;
 use Type::*;
+use routinedef::RoutineDefType;
 
 use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
@@ -202,6 +203,18 @@ impl<'a> TypeResolver<'a> {
                 p
             })
             .expect("Failed to create canonical path for function");
+
+        // If routine is root::my_main it must be a function type and have a return of i64
+        if canon_path == vec!["root", "my_main"].into() {
+            if p != Type::I64 {
+                return Err(format!("root::my_main must return an i64"));
+            }
+
+            if def != &RoutineDefType::Function {
+                return Err(format!("root::my_main must be a function"));
+            }
+        }
+
         meta.set_canonical_path(canon_path);
         Ok(routinedef::RoutineDef {
             annotations: meta.clone(),
