@@ -48,6 +48,6 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Run Braid Test Suite
         run: |
-          ln -s bash /bin/sh.bash && mv /bin/sh.bash /bin/sh
+          sudo ln -s bash /bin/sh.bash && mv /bin/sh.bash /bin/sh
           cd test
           ./test.sh
