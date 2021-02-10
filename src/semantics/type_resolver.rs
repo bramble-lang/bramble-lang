@@ -26,8 +26,8 @@ use crate::{
     syntax::statement,
 };
 use braid_lang::result::Result;
-use Type::*;
 use routinedef::RoutineDefType;
+use Type::*;
 
 use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
@@ -811,7 +811,11 @@ impl<'a> TypeResolver<'a> {
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type() == I64 || l.get_type() == I32  {format!("{}", l.get_type())} else {"i64".into()};
+                    let expected = if l.get_type() == I64 || l.get_type() == I32 {
+                        format!("{}", l.get_type())
+                    } else {
+                        "i64".into()
+                    };
                     Err(format!(
                         "{} expected {} but found {} and {}",
                         op,
@@ -1043,27 +1047,28 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn validate_main_fn(
-        routine: &routinedef::RoutineDef<SemanticAnnotations>,
-    ) -> Result<()> {
+    fn validate_main_fn(routine: &routinedef::RoutineDef<SemanticAnnotations>) -> Result<()> {
         let routinedef::RoutineDef {
-            def,
-            params,
-            ty: p,
-            ..
+            def, params, ty: p, ..
         } = routine;
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if def != &RoutineDefType::Function {
-            return Err(format!("root::my_main must be a function of type () -> i64"));
+            return Err(format!(
+                "root::my_main must be a function of type () -> i64"
+            ));
         }
-        
+
         if params.len() > 0 {
-            return Err(format!("root::my_main must take no parameters. It must be of type () -> i64"));
+            return Err(format!(
+                "root::my_main must take no parameters. It must be of type () -> i64"
+            ));
         }
 
         if p != Type::I64 {
-            return Err(format!("root::my_main must return an i64. It must be of type () -> i64"));
+            return Err(format!(
+                "root::my_main must return an i64. It must be of type () -> i64"
+            ));
         }
 
         Ok(())
@@ -1403,7 +1408,12 @@ mod tests {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
-                    assert_eq!(fn_main.get_annotations().ty, expected_ty, "Test Case at L:{}", line);
+                    assert_eq!(
+                        fn_main.get_annotations().ty,
+                        expected_ty,
+                        "Test Case at L:{}",
+                        line
+                    );
                 }
                 Err(msg) => {
                     assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
@@ -1590,8 +1600,18 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.get_annotations().ty, expected_ty, "Test Case at L:{}", line);
-                        assert_eq!(b.get_rhs().get_type(), expected_ty, "Test Case at L:{}", line);
+                        assert_eq!(
+                            bind_stm.get_annotations().ty,
+                            expected_ty,
+                            "Test Case at L:{}",
+                            line
+                        );
+                        assert_eq!(
+                            b.get_rhs().get_type(),
+                            expected_ty,
+                            "Test Case at L:{}",
+                            line
+                        );
                     } else {
                         panic!("Expected a bind statement");
                     }
@@ -1600,7 +1620,12 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_annotations().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty, "Test Case at L:{}", line);
+                        assert_eq!(
+                            r.get_value().clone().unwrap().get_type(),
+                            expected_ty,
+                            "Test Case at L:{}",
+                            line
+                        );
                     } else {
                         panic!("Expected a return statement")
                     }

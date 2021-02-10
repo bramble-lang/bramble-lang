@@ -58,7 +58,10 @@ impl RegisterAssigner {
      * Custom types are always represented using 64bit registers because they are currently
      * always referred to via addresses.
      */
-    pub fn register_size_for_type(ty: &Type, struct_table: &ResolvedStructTable) -> Option<RegSize> {
+    pub fn register_size_for_type(
+        ty: &Type,
+        struct_table: &ResolvedStructTable,
+    ) -> Option<RegSize> {
         match ty {
             Type::Custom(_) => Some(RegSize::R64),
             _ => {
