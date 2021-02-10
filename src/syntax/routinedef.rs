@@ -1,11 +1,11 @@
-use super::{statement::Statement, ty::Type};
+use super::{parameter::Parameter, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
     pub annotations: M,
     pub def: RoutineDefType,
     pub name: String,
-    pub params: Vec<(String, Type)>,
+    pub params: Vec<Parameter<M>>,
     pub ty: Type,
     pub body: Vec<Statement<M>>,
 }
@@ -20,7 +20,7 @@ impl<M> RoutineDef<M> {
     pub fn new_function(
         name: &str,
         annotations: M,
-        params: Vec<(String, Type)>,
+        params: Vec<Parameter<M>>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
@@ -37,7 +37,7 @@ impl<M> RoutineDef<M> {
     pub fn new_coroutine(
         name: &str,
         annotations: M,
-        params: Vec<(String, Type)>,
+        params: Vec<Parameter<M>>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
@@ -63,11 +63,11 @@ impl<M> RoutineDef<M> {
         &self.name
     }
 
-    pub fn get_params(&self) -> &Vec<(String, Type)> {
+    pub fn get_params(&self) -> &Vec<Parameter<M>> {
         &self.params
     }
 
-    pub fn set_params(&mut self, params: Vec<(String, Type)>) {
+    pub fn set_params(&mut self, params: Vec<Parameter<M>>) {
         self.params = params;
     }
 

@@ -33,7 +33,7 @@ pub fn compute_layout_for_program(
 
 mod compute {
     use super::*;
-    use crate::compiler::memory::symbol_table::Symbol;
+    use crate::{compiler::memory::symbol_table::Symbol, syntax::parameter::Parameter};
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
@@ -75,7 +75,7 @@ mod compute {
         for item in items.iter() {
             let (c_ast_item, no) = match item {
                 Item::Struct(sd) => {
-                    let (sd2, ld) = layout_for_structdef(sd);
+                    let (sd2, ld) = layout_for_structdef(sd, struct_table);
                     (Item::Struct(sd2), ld)
                 }
                 Item::Routine(rd) => {
@@ -92,12 +92,11 @@ mod compute {
 
     fn layout_for_structdef(
         sd: &StructDef<SemanticAnnotations>,
+        struct_table: &ResolvedStructTable,
     ) -> (StructDef<CompilerAnnotation>, LayoutData) {
         let (scope, layout) = CompilerAnnotation::structdef_from(sd.get_annotations());
-        (
-            StructDef::new(sd.get_name(), scope, sd.get_fields().clone()),
-            layout,
-        )
+        let (params, layout) = layout_for_parameters(sd.get_fields(), layout, struct_table);
+        (StructDef::new(sd.get_name(), scope, params), layout)
     }
 
     fn layout_for_routine(
@@ -118,10 +117,14 @@ mod compute {
             RoutineDefType::Function => 0,
             RoutineDefType::Coroutine => 40,
         };
+
         let (mut annotations, offset) =
             CompilerAnnotation::routine_from(annotations, def, struct_table, initial_frame_size);
+
+        let nlayout = LayoutData::new(offset);
+        let (params, mut nlayout) = layout_for_parameters(params, nlayout, struct_table);
+
         let mut nbody = vec![];
-        let mut nlayout = LayoutData::new(offset);
         for e in body.iter() {
             let (e, layout) = compute::layout_for_statement(e, nlayout, struct_table);
             nlayout = layout;
@@ -136,12 +139,31 @@ mod compute {
                 annotations,
                 def: *def,
                 name: name.clone(),
-                params: params.clone(),
+                params: params,
                 ty: ty.clone(),
                 body: nbody,
             },
             layout,
         )
+    }
+
+    fn layout_for_parameters(
+        params: &Vec<Parameter<SemanticAnnotations>>,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> (Vec<Parameter<CompilerAnnotation>>, LayoutData) {
+        let mut layout = layout;
+        let params = params
+            .iter()
+            .map(|p| {
+                p.map_annotation(|a| {
+                    let tmp = CompilerAnnotation::local_from(&a, struct_table, layout);
+                    layout = tmp.1;
+                    tmp.0
+                })
+            })
+            .collect();
+        (params, layout)
     }
 
     fn layout_for_statement(

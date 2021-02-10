@@ -1,9 +1,9 @@
-use crate::syntax::path::Path;
 use crate::syntax::{
     module::{Item, Module},
     routinedef::{RoutineDef, RoutineDefType},
     ty::Type,
 };
+use crate::syntax::{parameter::Parameter, path::Path};
 use crate::{semantics::semanticnode::SemanticAnnotations, syntax::structdef::StructDef};
 use braid_lang::result::Result;
 
@@ -97,7 +97,13 @@ impl SymbolTable {
     ) -> Result<()> {
         sym.sym.add(
             structdef.get_name(),
-            Type::StructDef(structdef.get_fields().clone()),
+            Type::StructDef(
+                structdef
+                    .get_fields()
+                    .iter()
+                    .map(|f| (f.name.clone(), f.ty.clone()))
+                    .collect(),
+            ),
             false,
         )
     }
@@ -126,11 +132,8 @@ impl SymbolTable {
         sym.sym.add(name, def, false)
     }
 
-    fn get_types_for_params(params: &Vec<(String, Type)>) -> Vec<Type> {
-        params
-            .iter()
-            .map(|(_, ty)| ty.clone())
-            .collect::<Vec<Type>>()
+    fn get_types_for_params(params: &Vec<Parameter<SemanticAnnotations>>) -> Vec<Type> {
+        params.iter().map(|p| p.ty.clone()).collect::<Vec<Type>>()
     }
 
     pub(super) fn scope_type(&self) -> &ScopeType {

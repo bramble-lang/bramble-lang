@@ -68,12 +68,12 @@ impl std::fmt::Display for CompilerAnnotationStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expression::Expression;
     use crate::syntax::ty::Type;
     use crate::{
         compiler::memory::scope::CompilerAnnotation,
         syntax::{module, routinedef::RoutineDef},
     };
+    use crate::{expression::Expression, syntax::parameter::Parameter};
 
     #[test]
     fn test_find_symbol_in_current_scope() {
@@ -202,11 +202,12 @@ mod tests {
         );
         fun_scope.insert("y", 4, 0);
         fun_scope.insert("z", 4, 4);
+        let param_scope = CompilerAnnotation::new(1, Level::Local, vec!["root"].into(), Type::I64);
         let fun_node = RoutineDef {
             annotations: fun_scope,
             def: RoutineDefType::Function,
             name: "func".into(),
-            params: vec![("y".into(), Type::I64)],
+            params: vec![Parameter::new(param_scope, "y", &Type::I64)],
             ty: Type::I64,
             body: vec![],
         };
@@ -255,11 +256,14 @@ mod tests {
         );
         cor_scope.insert("y", 4, 20);
         cor_scope.insert("z", 4, 24);
+
+        let param_scope = CompilerAnnotation::new(1, Level::Local, vec!["root"].into(), Type::I64);
+
         let cor_node = RoutineDef {
             annotations: cor_scope,
             def: RoutineDefType::Coroutine,
             name: "cor".into(),
-            params: vec![("y".into(), Type::I64)],
+            params: vec![Parameter::new(param_scope, "y", &Type::I64)],
             ty: Type::I64,
             body: vec![],
         };

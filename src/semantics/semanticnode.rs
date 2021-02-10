@@ -1,4 +1,4 @@
-use crate::syntax::statement::Statement;
+use crate::syntax::{parameter::Parameter, statement::Statement};
 use crate::{
     diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };
@@ -131,7 +131,7 @@ impl SemanticAst {
             annotations: self.semantic_annotations_from(*ln),
             def: *def,
             name: fname.clone(),
-            params: params.clone(),
+            params: self.from_parameters(params),
             ty: ty.clone(),
             body: nbody,
         })
@@ -154,10 +154,20 @@ impl SemanticAst {
         let semantic = StructDef::new(
             sd.get_name().clone(),
             self.semantic_annotations_from(*sd.get_annotations()),
-            sd.get_fields().clone(),
+            self.from_parameters(sd.get_fields()),
         );
 
         Ok(semantic)
+    }
+
+    fn from_parameters(
+        &mut self,
+        params: &Vec<Parameter<ParserInfo>>,
+    ) -> Vec<Parameter<SemanticAnnotations>> {
+        params
+            .iter()
+            .map(|p| p.map_annotation(|a| self.semantic_annotations_from(*a)))
+            .collect()
     }
 
     fn from_statement(

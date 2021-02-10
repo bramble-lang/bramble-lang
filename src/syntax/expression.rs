@@ -99,22 +99,6 @@ impl<I> Expression<I> {
             StructExpression(m, ..) => m,
         }
     }
-
-    /// If a node is a function or a coroutine this will return its parameter vector.  If
-    /// the node is not a function or coroutine, this will return None.
-    pub fn get_params(&self) -> Option<&Vec<(String, Type)>> {
-        match self {
-            _ => None,
-        }
-    }
-
-    /// if a node is a routine type then return the return type of the routine
-    /// otherwise return None.
-    pub fn get_return_type(&self) -> Option<&Type> {
-        match self {
-            _ => None,
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

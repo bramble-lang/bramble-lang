@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::syntax::{
+    parameter::Parameter,
     path::Path,
     statement::{Bind, Mutate, Yield, YieldReturn},
 };
@@ -196,8 +197,8 @@ impl<'a> TypeResolver<'a> {
 
         let mut meta = annotations.clone();
         let canonical_params = self.params_to_canonical(sym, &params)?;
-        for (pname, pty) in canonical_params.iter() {
-            meta.sym.add(pname, pty.clone(), false)?;
+        for p in canonical_params.iter() {
+            meta.sym.add(&p.name, p.ty.clone(), false)?;
         }
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
@@ -229,7 +230,12 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<structdef::StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
-        for (field_name, field_type) in fields.iter() {
+        for Parameter {
+            name: field_name,
+            ty: field_type,
+            ..
+        } in fields.iter()
+        {
             if let Custom(ty_name) = field_type {
                 self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
                     format!(
@@ -243,7 +249,7 @@ impl<'a> TypeResolver<'a> {
         }
 
         // Update all fields so that their types use the full canonical path of the type
-        let canonical_fields = self.params_to_canonical(sym, &fields)?;
+        let canonical_fields = self.params_to_canonical(sym, fields)?;
 
         // Update the annotations with canonical path information and set the type to Unit
         let mut meta = struct_def.get_annotations().clone();
@@ -890,13 +896,30 @@ impl<'a> TypeResolver<'a> {
     fn params_to_canonical(
         &self,
         sym: &'a SymbolTable,
-        params: &Vec<(String, Type)>,
-    ) -> Result<Vec<(String, Type)>> {
+        params: &Vec<Parameter<SemanticAnnotations>>,
+    ) -> Result<Vec<Parameter<SemanticAnnotations>>> {
         let mut canonical_params = vec![];
-        for (name, ty) in params.iter() {
-            canonical_params.push((name.clone(), self.type_to_canonical(sym, ty)?));
+        for p in params.iter() {
+            let mut p2 = p.clone();
+            p2.ty = self.type_to_canonical(sym, &p.ty)?;
+            p2.get_annotations_mut().ty = p2.ty.clone();
+            canonical_params.push(p2);
         }
         Ok(canonical_params)
+    }
+
+    /// Convert any parameter that is a custom type, to its canonical form.
+    fn fields_to_canonical(
+        &self,
+        sym: &'a SymbolTable,
+        fields: &Vec<(String, Type)>,
+    ) -> Result<Vec<(String, Type)>> {
+        let mut canonical_fields = vec![];
+        for (n, t) in fields.iter() {
+            let t = self.type_to_canonical(sym, t)?;
+            canonical_fields.push((n.clone(), t));
+        }
+        Ok(canonical_fields)
     }
 
     fn lookup_symbol_by_path(
@@ -1456,7 +1479,11 @@ mod tests {
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0]
             {
-                if let (_, Custom(ty_path)) = &params[0] {
+                if let Parameter {
+                    ty: Custom(ty_path),
+                    ..
+                } = &params[0]
+                {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
@@ -1489,7 +1516,7 @@ mod tests {
             if let Item::Routine(routinedef::RoutineDef { params, .. }) =
                 &result.get_coroutines()[0]
             {
-                if let (_, Custom(ty_path)) = &params[0] {
+                if let Custom(ty_path) = &params[0].ty {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
@@ -1519,7 +1546,7 @@ mod tests {
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
-                if let (_, Custom(ty_path)) = &fields[0] {
+                if let Custom(ty_path) = &fields[0].ty {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {

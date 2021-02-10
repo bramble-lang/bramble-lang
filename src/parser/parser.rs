@@ -9,6 +9,7 @@ use crate::{
     syntax::{
         expression::{Expression, RoutineCall},
         module::Module,
+        parameter::Parameter,
         path::Path,
         routinedef::{RoutineDef, RoutineDefType},
         statement::Statement,
@@ -210,7 +211,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
         Some(token) => match stream.next_if_id() {
             Some((line, id)) => {
                 stream.next_must_be(&Lex::LBrace)?;
-                let fields = id_declaration_list(stream)?;
+                let fields = parameter_list(stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
                 Ok(Some(StructDef::new(&id, line, fields)))
             }
@@ -316,23 +317,39 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     Ok(stmts)
 }
 
-fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
+fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
-    let params = id_declaration_list(stream)?;
+    let params = parameter_list(stream)?;
     stream.next_must_be(&Lex::RParen)?;
 
     Ok(params)
 }
 
-pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(String, Type)>> {
+fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
+    let params = id_declaration_list(stream)?;
+
+    // Convert tuples into parameters
+    let params = params
+        .iter()
+        .map(|(line, name, ty)| Parameter {
+            annotation: *line,
+            name: name.clone(),
+            ty: ty.clone(),
+        })
+        .collect();
+
+    Ok(params)
+}
+
+pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(u32, String, Type)>> {
     trace!(stream);
     let mut decls = vec![];
 
     while let Some(token) = id_declaration(stream)? {
         match token {
-            Expression::IdentifierDeclare(_line, id, ty) => {
-                decls.push((id, ty));
+            Expression::IdentifierDeclare(line, id, ty) => {
+                decls.push((line, id, ty));
                 stream.next_if(&Lex::Comma);
             }
             _ => panic!("CRITICAL: IdDeclaration not returned by id_declaration"),
@@ -870,7 +887,7 @@ pub mod tests {
             {
                 assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -915,7 +932,7 @@ pub mod tests {
             {
                 assert_eq!(*annotations, 1);
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -951,7 +968,7 @@ pub mod tests {
             if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
                 assert_eq!(*sd.get_annotations(), 1);
                 assert_eq!(sd.get_name(), "my_struct");
-                assert_eq!(sd.get_fields(), &vec![("x".into(), Type::I64)]);
+                assert_eq!(sd.get_fields(), &vec![Parameter::new(1, "x", &Type::I64)]);
             }
         } else {
             panic!("No nodes returned by parser")
@@ -979,7 +996,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I64)]);
+            assert_eq!(params, vec![Parameter::new(1, "x", &Type::I64)]);
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1012,7 +1029,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I64)]);
+            assert_eq!(params, vec![Parameter::new(1, "x", &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1098,7 +1115,7 @@ pub mod tests {
             })) = m.get_item("test")
             {
                 assert_eq!(name, "test");
-                assert_eq!(params, &vec![("x".into(), Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -1190,7 +1207,7 @@ pub mod tests {
         {
             assert_eq!(l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![("x".into(), Type::I64)]);
+            assert_eq!(params, vec![Parameter::new(1, "x", &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1311,14 +1328,17 @@ pub mod tests {
             ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
             (
                 "struct MyStruct {x: i64}",
-                StructDef::new("MyStruct", 1, vec![("x".into(), Type::I64)]),
+                StructDef::new("MyStruct", 1, vec![Parameter::new(0, "x", &Type::I64)]),
             ),
             (
                 "struct MyStruct {x: i64, y: bool}",
                 StructDef::new(
                     "MyStruct",
                     1,
-                    vec![("x".into(), Type::I64), ("y".into(), Type::Bool)],
+                    vec![
+                        Parameter::new(0, "x", &Type::I64),
+                        Parameter::new(0, "y", &Type::Bool),
+                    ],
                 ),
             ),
         ] {
