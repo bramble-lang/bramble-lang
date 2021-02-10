@@ -1,4 +1,4 @@
-use crate::syntax::{path::Path, routinedef::Parameter};
+use crate::syntax::{path::Path, parameter::Parameter};
 use crate::syntax::{
     module::{Item, Module},
     routinedef::{RoutineDef, RoutineDefType},

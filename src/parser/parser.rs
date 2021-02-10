@@ -3,7 +3,20 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{expression::{Expression, RoutineCall}, module::Module, path::Path, routinedef::{Parameter, RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef, ty::Type}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+    syntax::{
+        expression::{Expression, RoutineCall},
+        module::Module,
+        path::Path,
+        parameter::Parameter,
+        routinedef::{RoutineDef, RoutineDefType},
+        statement::Statement,
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -311,11 +324,14 @@ fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>>
     stream.next_must_be(&Lex::RParen)?;
 
     // Convert tuples into parameters
-    let params = params.iter().map(|(name, ty)| Parameter{
-        annotation: 0,
-        name: name.clone(),
-        ty: ty.clone(),
-    }).collect();
+    let params = params
+        .iter()
+        .map(|(name, ty)| Parameter {
+            annotation: 0,
+            name: name.clone(),
+            ty: ty.clone(),
+        })
+        .collect();
 
     Ok(params)
 }

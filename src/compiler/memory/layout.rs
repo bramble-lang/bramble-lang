@@ -33,7 +33,7 @@ pub fn compute_layout_for_program(
 
 mod compute {
     use super::*;
-    use crate::{compiler::memory::symbol_table::Symbol, syntax::routinedef::Parameter};
+    use crate::{compiler::memory::symbol_table::Symbol, syntax::parameter::Parameter};
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,

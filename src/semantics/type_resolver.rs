@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::syntax::{path::Path, routinedef::Parameter, statement::{Bind, Mutate, Yield, YieldReturn}};
+use crate::syntax::{path::Path, parameter::Parameter, statement::{Bind, Mutate, Yield, YieldReturn}};
 use crate::syntax::{
     statement::{Return, Statement},
     ty::Type,

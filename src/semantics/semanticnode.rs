@@ -1,4 +1,4 @@
-use crate::syntax::{routinedef::Parameter, statement::Statement};
+use crate::syntax::{parameter::Parameter, statement::Statement};
 use crate::{
     diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };
