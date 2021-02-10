@@ -180,6 +180,30 @@ impl<'a> TypeResolver<'a> {
             ty: p,
             ..
         } = routine;
+        let canon_path = self
+            .stack
+            .to_path(sym)
+            .map(|mut p| {
+                p.push(name);
+                p
+            })
+            .expect("Failed to create canonical path for function");
+
+        // If routine is root::my_main it must be a function type and have type () -> i64
+        if canon_path == self.main_fn {
+            if def != &RoutineDefType::Function {
+                return Err(format!("root::my_main must be a function of type () -> i64"));
+            }
+            
+            if params.len() > 0 {
+                return Err(format!("root::my_main must take no parameters. It must be of type () -> i64"));
+            }
+
+            if p != Type::I64 {
+                return Err(format!("root::my_main must return an i64. It must be of type () -> i64"));
+            }
+        }
+
         let mut meta = annotations.clone();
         let canonical_params = self.params_to_canonical(sym, &params)?;
         for (pname, pty) in canonical_params.iter() {
@@ -196,30 +220,6 @@ impl<'a> TypeResolver<'a> {
         meta.ty = self.type_to_canonical(sym, p)?;
 
         let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
-
-        let canon_path = self
-            .stack
-            .to_path(sym)
-            .map(|mut p| {
-                p.push(name);
-                p
-            })
-            .expect("Failed to create canonical path for function");
-
-        // If routine is root::my_main it must be a function type and have a return of i64
-        if canon_path == self.main_fn {
-            if def != &RoutineDefType::Function {
-                return Err(format!("root::my_main must be a function of type () -> i64"));
-            }
-            
-            if params.len() > 0 {
-                return Err(format!("root::my_main must take no parameters. It must be of type () -> i64"));
-            }
-
-            if p != Type::I64 {
-                return Err(format!("root::my_main must return an i64. It must be of type () -> i64"));
-            }
-        }
 
         meta.set_canonical_path(canon_path);
         Ok(routinedef::RoutineDef {
