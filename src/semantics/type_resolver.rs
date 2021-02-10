@@ -226,7 +226,7 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<structdef::StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
-        for (field_name, field_type) in fields.iter() {
+        for Parameter{name: field_name, ty: field_type, ..} in fields.iter() {
             if let Custom(ty_name) = field_type {
                 self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
                     format!(
@@ -240,7 +240,7 @@ impl<'a> TypeResolver<'a> {
         }
 
         // Update all fields so that their types use the full canonical path of the type
-        let canonical_fields = self.fields_to_canonical(sym, fields)?;
+        let canonical_fields = self.params_to_canonical(sym, fields)?;
 
         // Update the annotations with canonical path information and set the type to Unit
         let mut meta = struct_def.get_annotations().clone();
@@ -1533,7 +1533,7 @@ mod tests {
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
-                if let (_, Custom(ty_path)) = &fields[0] {
+                if let Custom(ty_path) = &fields[0].ty {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {

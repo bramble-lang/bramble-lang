@@ -211,7 +211,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
         Some(token) => match stream.next_if_id() {
             Some((line, id)) => {
                 stream.next_must_be(&Lex::LBrace)?;
-                let fields = id_declaration_list(stream)?;
+                let fields = parameter_list(stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
                 Ok(Some(StructDef::new(&id, line, fields)))
             }
@@ -320,8 +320,15 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
 fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
-    let params = id_declaration_list(stream)?;
+    let params = parameter_list(stream)?;
     stream.next_must_be(&Lex::RParen)?;
+
+
+    Ok(params)
+}
+
+fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
+    let params = id_declaration_list(stream)?;
 
     // Convert tuples into parameters
     let params = params
@@ -962,7 +969,7 @@ pub mod tests {
             if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
                 assert_eq!(*sd.get_annotations(), 1);
                 assert_eq!(sd.get_name(), "my_struct");
-                assert_eq!(sd.get_fields(), &vec![("x".into(), Type::I64)]);
+                assert_eq!(sd.get_fields(), &vec![Parameter::new(0, "x", &Type::I64)]);
             }
         } else {
             panic!("No nodes returned by parser")
@@ -1322,14 +1329,14 @@ pub mod tests {
             ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
             (
                 "struct MyStruct {x: i64}",
-                StructDef::new("MyStruct", 1, vec![("x".into(), Type::I64)]),
+                StructDef::new("MyStruct", 1, vec![Parameter::new(0, "x", &Type::I64)]),
             ),
             (
                 "struct MyStruct {x: i64, y: bool}",
                 StructDef::new(
                     "MyStruct",
                     1,
-                    vec![("x".into(), Type::I64), ("y".into(), Type::Bool)],
+                    vec![Parameter::new(0, "x", &Type::I64), Parameter::new(0, "y", &Type::Bool)],
                 ),
             ),
         ] {

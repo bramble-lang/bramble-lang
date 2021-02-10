@@ -1,11 +1,11 @@
-use super::ty::Type;
+use super::{parameter::Parameter, ty::Type};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructDef<M> {
     annotations: M,
     name: String,
-    fields: Vec<(String, Type)>,
+    fields: Vec<Parameter<M>>,
 }
 
 impl<M> std::fmt::Display for StructDef<M> {
@@ -15,7 +15,7 @@ impl<M> std::fmt::Display for StructDef<M> {
 }
 
 impl<M> StructDef<M> {
-    pub fn new(name: &str, annotations: M, fields: Vec<(String, Type)>) -> StructDef<M> {
+    pub fn new(name: &str, annotations: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
         StructDef {
             annotations,
             name: name.into(),
@@ -35,17 +35,17 @@ impl<M> StructDef<M> {
         &mut self.annotations
     }
 
-    pub fn get_fields(&self) -> &Vec<(String, Type)> {
+    pub fn get_fields(&self) -> &Vec<Parameter<M>> {
         &self.fields
     }
 
     pub fn get_field(&self, field: &str) -> Option<&Type> {
-        self.fields.iter().find(|f| f.0 == field).map(|f| &f.1)
+        self.fields.iter().find(|f| f.name == field).map(|f| &f.ty)
     }
 
-    pub fn add_field(&mut self, field: &str, ty: Type) -> Result<()> {
-        if self.get_field(field).is_none() {
-            self.fields.push((field.into(), ty));
+    pub fn add_field(&mut self, field: Parameter<M>) -> Result<()> {
+        if self.get_field(&field.name).is_none() {
+            self.fields.push(field);
             Ok(())
         } else {
             Err(format!(

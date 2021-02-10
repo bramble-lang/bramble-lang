@@ -164,7 +164,7 @@ impl SemanticAst {
         let semantic = StructDef::new(
             sd.get_name().clone(),
             self.semantic_annotations_from(*sd.get_annotations()),
-            sd.get_fields().clone(),
+            self.from_parameters(sd.get_fields()),
         );
 
         Ok(semantic)

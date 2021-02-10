@@ -86,7 +86,14 @@ impl UnresolvedStructTable {
         struct_def: &StructDef<SemanticAnnotations>,
         table: &mut HashMap<String, StructDefinition>,
     ) -> Result<()> {
-        let def = StructDefinition::new(struct_def.get_name(), struct_def.get_fields().clone());
+        let def = StructDefinition::new(
+            struct_def.get_name(),
+            struct_def
+                .get_fields()
+                .iter()
+                .map(|f| (f.name.clone(), f.ty.clone()))
+                .collect(),
+        );
         Self::insert_struct(
             table,
             struct_def.get_annotations().get_canonical_path(),

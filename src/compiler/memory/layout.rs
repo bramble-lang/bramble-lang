@@ -75,7 +75,7 @@ mod compute {
         for item in items.iter() {
             let (c_ast_item, no) = match item {
                 Item::Struct(sd) => {
-                    let (sd2, ld) = layout_for_structdef(sd);
+                    let (sd2, ld) = layout_for_structdef(sd, struct_table);
                     (Item::Struct(sd2), ld)
                 }
                 Item::Routine(rd) => {
@@ -92,10 +92,12 @@ mod compute {
 
     fn layout_for_structdef(
         sd: &StructDef<SemanticAnnotations>,
+        struct_table: &ResolvedStructTable,
     ) -> (StructDef<CompilerAnnotation>, LayoutData) {
         let (scope, layout) = CompilerAnnotation::structdef_from(sd.get_annotations());
+        let (params, layout) = layout_for_parameters(sd.get_fields(), layout, struct_table);
         (
-            StructDef::new(sd.get_name(), scope, sd.get_fields().clone()),
+            StructDef::new(sd.get_name(), scope, params),
             layout,
         )
     }
