@@ -131,15 +131,14 @@ impl RegisterAssigner {
         Self::assign_register(rd.get_annotations_mut(), struct_table);
 
         // loop through all the params
-        let mut param_reg_szs = vec![];
-        for p in rd.get_params() {
-            let p_reg_sz = Self::register_size_for_type(&p.ty, struct_table);
-            param_reg_szs.push(p_reg_sz);
+        //let mut param_reg_szs = vec![];
+        for p in rd.get_params_mut() {
+            Self::assign_register(p.get_annotations_mut(), struct_table);
         }
 
-        rd.get_annotations_mut()
+        /*rd.get_annotations_mut()
             .param_reg_size
-            .append(&mut param_reg_szs);
+            .append(&mut param_reg_szs);*/
 
         // loop through every statement and analyze the child nodes of the routine definition
         for e in rd.get_body_mut().iter_mut() {
