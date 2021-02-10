@@ -1,6 +1,33 @@
 use super::{path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct IdentifierDeclare<I> {
+    annotation: I,
+    name: String,
+    ty: Type,
+}
+
+impl<I> IdentifierDeclare<I> {
+    pub fn get_annotations(&self) -> &I {
+        &self.annotation
+    }
+
+    pub fn get_annotations_mut(&mut self) -> &mut I {
+        &mut self.annotation
+    }
+
+    pub fn root_str(&self) -> String {
+            format!("{}:{}", self.name, self.ty)
+    }
+}
+
+impl<I> std::fmt::Display for IdentifierDeclare<I> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&self.root_str())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
     Integer32(I, i32),
     Integer64(I, i64),
