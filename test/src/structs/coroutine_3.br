@@ -1,4 +1,4 @@
-fn my_main( p: bool) -> i64 {
+fn my_main() -> i64 {
     let c: co i64 := init numbers();
     
     let ms:MyStruct := MyStruct {

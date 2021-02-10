@@ -1,4 +1,4 @@
-fn my_main( p: bool) -> i64 {
+fn my_main() -> i64 {
     let ms:MyStruct := MyStruct {x: 5, y: 13, z: true};
     let ms2:MyStruct := MyStruct {x: 123, y: 456, z: false};
     
