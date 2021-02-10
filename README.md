@@ -1,3 +1,5 @@
+![Rust](https://github.com/erichgess/braid-lang/workflows/Rust/badge.svg)
+
 # Braid Language
 A language I am creating as a learning tool.
 
