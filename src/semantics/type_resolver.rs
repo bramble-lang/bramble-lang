@@ -66,6 +66,7 @@ pub struct TypeResolver<'a> {
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
+    main_fn: Path,
 }
 
 impl<'a> Tracing for TypeResolver<'a> {
@@ -82,6 +83,7 @@ impl<'a> TypeResolver<'a> {
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
+            main_fn: vec!["root", "my_main"].into(),
         }
     }
 
@@ -205,7 +207,7 @@ impl<'a> TypeResolver<'a> {
             .expect("Failed to create canonical path for function");
 
         // If routine is root::my_main it must be a function type and have a return of i64
-        if canon_path == vec!["root", "my_main"].into() {
+        if canon_path == self.main_fn {
             if def != &RoutineDefType::Function {
                 return Err(format!("root::my_main must be a function of type () -> i64"));
             }
