@@ -90,4 +90,8 @@ then
     duration=$(($stop_time-$start_time))
     echo ""
     echo "${num_pass}/${num_tests} Tests Passed in ${duration}secs"
+
+    if [ ${num_pass} -ne ${num_tests} ]; then
+        exit 1
+    fi
 fi
