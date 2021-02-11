@@ -35,6 +35,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&m.get_annotations());
         f(m.get_annotations_mut());
 
         for child_module in m.get_modules_mut().iter_mut() {
@@ -53,6 +54,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
         F: FnMut(&mut A) + Copy,
     {
         for i in items.iter_mut() {
+            self.tracer(&i.get_annotations());
             match i {
                 Item::Struct(sd) => {
                     self.for_structdef(sd, f);
@@ -68,6 +70,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&sd.get_annotations());
         f(sd.get_annotations_mut());
         self.for_parameters(&mut sd.fields, f);
     }
@@ -76,6 +79,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&rd.get_annotations());
         f(rd.get_annotations_mut());
         // loop through all the params
         self.for_parameters(&mut rd.params, f);
@@ -91,6 +95,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
         F: FnMut(&mut A) + Copy,
     {
         for p in params {
+        self.tracer(&p.get_annotations());
             f(p.get_annotations_mut())
         }
     }
@@ -99,6 +104,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&statement.get_annotations());
         match statement {
             Statement::Bind(b) => {
                 self.for_bind(b, f);
@@ -122,6 +128,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&bind.get_annotations());
         f(bind.get_annotations_mut());
         self.for_expression(bind.get_rhs_mut(), f)
     }
@@ -130,6 +137,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&mutate.get_annotations());
         f(mutate.get_annotations_mut());
         self.for_expression(mutate.get_rhs_mut(), f);
     }
@@ -138,6 +146,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&yr.get_annotations());
         f(yr.get_annotations_mut());
         yr.get_value_mut()
             .as_mut()
@@ -148,6 +157,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&r.get_annotations());
         f(r.get_annotations_mut());
         r.get_value_mut()
             .as_mut()
@@ -160,6 +170,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     {
         use Expression::*;
 
+        self.tracer(&exp.get_annotations());
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, f),
             Expression::Integer32(ref mut annotation, _i) => f(annotation),
@@ -184,6 +195,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&block.get_annotations());
         if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) = block {
             f(annotation);
 
@@ -201,6 +213,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&access.get_annotations());
         if let Expression::MemberAccess(ref mut annotation, src, _member) = access {
             f(annotation);
             self.for_expression(src, f);
@@ -213,6 +226,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&un_op.get_annotations());
         if let Expression::UnaryOp(ref mut annotation, _op, operand) = un_op {
             f(annotation);
             self.for_expression(operand, f);
@@ -225,6 +239,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&bin_op.get_annotations());
         if let Expression::BinaryOp(ref mut annotation, _op, l, r) = bin_op {
             f(annotation);
             self.for_expression(l, f);
@@ -238,6 +253,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&if_exp.get_annotations());
         if let Expression::If {
             ref mut annotation,
             cond,
@@ -258,6 +274,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&rc.get_annotations());
         if let Expression::RoutineCall(ref mut annotation, _call, _name, params) = rc {
             f(annotation);
             for p in params {
@@ -272,6 +289,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&yield_exp.get_annotations());
         if let Expression::Yield(ref mut annotation, e) = yield_exp {
             f(annotation);
             self.for_expression(e, f);
@@ -284,6 +302,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
+        self.tracer(&se.get_annotations());
         if let Expression::StructExpression(ref mut annotation, _struct_name, fields) = se {
             f(annotation);
             for (_, fe) in fields {

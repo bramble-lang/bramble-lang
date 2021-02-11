@@ -20,11 +20,8 @@ pub fn assign(tracing: TracingConfig, m: &mut Module<CompilerAnnotation>, struct
     })
 }
 
-fn trace(ca: &CompilerAnnotation) -> String {
-    format!(
-        "L{}",
-        ca.line(),
-    )
+fn trace(_ca: &CompilerAnnotation) -> String {
+    "".into()
 }
 
 /**
