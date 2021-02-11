@@ -10,40 +10,19 @@ use crate::syntax::structdef::*;
 
 use super::parameter::Parameter;
 
-macro_rules! trace {
-    ($self:expr, $ts:expr, $sz:expr) => {
-        let line = 0 as usize;
-        let print_trace = match &$self.tracing {
-            &TracingConfig::Only(ln) => (line) == ln,
-            &TracingConfig::Before(ln) => (line) <= ln,
-            &TracingConfig::After(ln) => (line) >= ln,
-            &TracingConfig::Between(start, end) => (line) >= start && (line) <= end,
-            &TracingConfig::All => true,
-            &TracingConfig::Off => false,
-        };
-        if print_trace {
-            println!(
-                "{} L{}",
-                function_name!(),
-                line,
-            )
-        }
-    };
-}
-
 /**
  * This traverses the AST and determines what size register to
  * assign to each node in the AST: if it makes sense to assign
  * it to a register.
  */
 
-pub struct TraverserMut<A, T> where A: Debug, T: Fn(A) {
+pub struct TraverserMut<A, T> where A: Debug, T: Fn (&A) -> String {
     pub tracing: TracingConfig,
     pub trace: T,
-    shit: PhantomData<A>,
+    pub(crate) shit: PhantomData<A>,
 }
 
-impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
+impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(&A) -> String {
     /**
      * Determine the size of register needed to store a value, based upon the number of bytes
      * the type takes.
@@ -56,7 +35,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, m, struct_table.size_of(m.get_annotations().ty()));
         f(m.get_annotations_mut());
 
         for child_module in m.get_modules_mut().iter_mut() {
@@ -75,7 +53,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
         F: FnMut(&mut A) + Copy,
     {
         for i in items.iter_mut() {
-            trace!(self, i, struct_table.size_of(m.get_annotations().ty()));
             match i {
                 Item::Struct(sd) => {
                     self.for_structdef(sd, f);
@@ -91,7 +68,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, sd, struct_table.size_of(m.get_annotations().ty()));
         f(sd.get_annotations_mut());
         self.for_parameters(&mut sd.fields, f);
     }
@@ -100,7 +76,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, rd, struct_table.size_of(m.get_annotations().ty()));
         f(rd.get_annotations_mut());
         // loop through all the params
         self.for_parameters(&mut rd.params, f);
@@ -116,7 +91,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
         F: FnMut(&mut A) + Copy,
     {
         for p in params {
-            trace!(self, p, struct_table.size_of(m.get_annotations().ty()));
             f(p.get_annotations_mut())
         }
     }
@@ -125,7 +99,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, statement, struct_table.size_of(m.get_annotations().ty()));
         match statement {
             Statement::Bind(b) => {
                 self.for_bind(b, f);
@@ -149,7 +122,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, bind, struct_table.size_of(m.get_annotations().ty()));
         f(bind.get_annotations_mut());
         self.for_expression(bind.get_rhs_mut(), f)
     }
@@ -158,7 +130,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, mutate, struct_table.size_of(m.get_annotations().ty()));
         f(mutate.get_annotations_mut());
         self.for_expression(mutate.get_rhs_mut(), f);
     }
@@ -167,7 +138,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, yr, struct_table.size_of(m.get_annotations().ty()));
         f(yr.get_annotations_mut());
         yr.get_value_mut()
             .as_mut()
@@ -178,7 +148,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, r, struct_table.size_of(m.get_annotations().ty()));
         f(r.get_annotations_mut());
         r.get_value_mut()
             .as_mut()
@@ -191,7 +160,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     {
         use Expression::*;
 
-        trace!(self, exp, struct_table.size_of(m.get_annotations().ty()));
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, f),
             Expression::Integer32(ref mut annotation, _i) => f(annotation),
@@ -216,7 +184,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, block, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) = block {
             f(annotation);
 
@@ -234,7 +201,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, access, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::MemberAccess(ref mut annotation, src, _member) = access {
             f(annotation);
             self.for_expression(src, f);
@@ -247,7 +213,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, un_op, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::UnaryOp(ref mut annotation, _op, operand) = un_op {
             f(annotation);
             self.for_expression(operand, f);
@@ -260,7 +225,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, bin_op, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::BinaryOp(ref mut annotation, _op, l, r) = bin_op {
             f(annotation);
             self.for_expression(l, f);
@@ -274,7 +238,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, if_exp, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::If {
             ref mut annotation,
             cond,
@@ -295,7 +258,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, rc, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::RoutineCall(ref mut annotation, _call, _name, params) = rc {
             f(annotation);
             for p in params {
@@ -310,7 +272,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, yield_exp, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::Yield(ref mut annotation, e) = yield_exp {
             f(annotation);
             self.for_expression(e, f);
@@ -323,7 +284,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
     where
         F: FnMut(&mut A) + Copy,
     {
-        trace!(self, se, struct_table.size_of(m.get_annotations().ty()));
         if let Expression::StructExpression(ref mut annotation, _struct_name, fields) = se {
             f(annotation);
             for (_, fe) in fields {
@@ -331,6 +291,27 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(A) {
             }
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
+        }
+    }
+
+    fn tracer(&self, annotation: &A) {
+        let line = 0 as usize;
+        let print_trace = match &self.tracing {
+            &TracingConfig::Only(ln) => (line) == ln,
+            &TracingConfig::Before(ln) => (line) <= ln,
+            &TracingConfig::After(ln) => (line) >= ln,
+            &TracingConfig::Between(start, end) => (line) >= start && (line) <= end,
+            &TracingConfig::All => true,
+            &TracingConfig::Off => false,
+        };
+        let m = (self.trace)(annotation);
+        if print_trace {
+            println!(
+                "{} L{}: {}",
+                function_name!(),
+                line,
+                m,
+            )
         }
     }
 }
