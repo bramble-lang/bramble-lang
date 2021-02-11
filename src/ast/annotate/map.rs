@@ -1,4 +1,4 @@
-use fmt::{Debug, Display};
+use fmt::Debug;
 use std::{fmt, marker::PhantomData};
 
 use crate::ast::module::*;
@@ -18,7 +18,7 @@ use super::{super::node::Node, super::parameter::Parameter, Annotation};
 pub struct Map<A, B, F, T>
 where
     A: Debug + Annotation,
-    T: Fn(&A) -> String,
+    T: Fn(&dyn Node<A>) -> String,
 {
     pub name: String,
     pub tracing: TracingConfig,
@@ -32,7 +32,7 @@ impl<A, B, F, T> Map<A, B, F, T>
 where
     A: Debug + Annotation,
     F: FnMut(&A) -> B + Copy,
-    T: Fn(&A) -> String,
+    T: Fn(&dyn Node<A>) -> String,
 {
     pub fn new(name: &str, tracing: TracingConfig, format: T) -> Map<A, B, F, T> {
         Map {
@@ -74,14 +74,12 @@ where
                 Item::Struct(sd) => Item::Struct(self.for_structdef(sd, f)),
                 Item::Routine(rd) => Item::Routine(self.for_routinedef(rd, f)),
             });
-            self.tracer(i);
         }
         v
     }
 
     fn for_structdef(&self, sd: &StructDef<A>, mut f: F) -> StructDef<B> {
         let b = f(sd.annotation());
-        self.tracer(sd);
         let fields = self.for_parameters(&sd.fields, f);
         StructDef::new(sd.get_name(), b, fields)
     }
@@ -97,7 +95,6 @@ where
             body.push(self.for_statement(e, f));
         }
 
-        self.tracer(rd);
         RoutineDef {
             name: rd.name.clone(),
             def: rd.def,
@@ -113,7 +110,6 @@ where
         for p in params {
             let b = f(p.annotation());
             nparams.push(Parameter::new(b, &p.name, &p.ty));
-            self.tracer(p);
         }
         nparams
     }
@@ -126,7 +122,6 @@ where
             Statement::YieldReturn(yr) => Statement::YieldReturn(box self.for_yieldreturn(yr, f)),
             Statement::Expression(e) => Statement::Expression(box self.for_expression(e, f)),
         };
-        self.tracer(statement);
         s
     }
 
@@ -288,27 +283,6 @@ where
             Expression::StructExpression(b, struct_name.clone(), nfields)
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
-        }
-    }
-
-    fn tracer<N>(&self, node: &N)
-    where
-        N: Node<A> + Display,
-    {
-        let annotation = node.annotation();
-        let line = annotation.line() as usize;
-
-        let print_trace = match &self.tracing {
-            &TracingConfig::Only(ln) => (line) == ln,
-            &TracingConfig::Before(ln) => (line) <= ln,
-            &TracingConfig::After(ln) => (line) >= ln,
-            &TracingConfig::Between(start, end) => (line) >= start && (line) <= end,
-            &TracingConfig::All => true,
-            &TracingConfig::Off => false,
-        };
-        let msg = (self.format)(annotation);
-        if print_trace {
-            println!("L{}n{}[{}]: {}", line, annotation.id(), node, msg,)
         }
     }
 }
