@@ -50,12 +50,15 @@ pub struct CompilerAnnotation {
     pub(super) symbols: SymbolTable,
     pub(super) canon_path: Path,
     pub(super) reg_size: Option<RegSize>,
-    //pub(super) param_reg_size: Vec<Option<RegSize>>,
 }
 
 impl Annotation for CompilerAnnotation{
     fn line(&self) -> u32 {
         self.line
+    }
+
+    fn id(&self) -> u32 {
+        self.id
     }
 }
 
@@ -69,7 +72,6 @@ impl CompilerAnnotation {
             symbols: SymbolTable::new(),
             canon_path,
             reg_size: None,
-            //param_reg_size: vec![],
         }
     }
 
@@ -154,10 +156,6 @@ impl CompilerAnnotation {
     pub fn set_reg_size(&mut self, r: Option<RegSize>) {
         self.reg_size = r;
     }
-
-    /*pub fn param_reg_size(&self) -> &Vec<Option<RegSize>> {
-        &self.param_reg_size
-    }*/
 
     pub(super) fn local_from(
         m: &SemanticAnnotations,

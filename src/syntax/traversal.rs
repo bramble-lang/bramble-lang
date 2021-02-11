@@ -1,12 +1,12 @@
-use std::{fmt, marker::PhantomData};
 use fmt::Debug;
+use std::{fmt, marker::PhantomData};
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, expression::Expression};
 use crate::syntax::module::*;
 use crate::syntax::routinedef::*;
 use crate::syntax::statement::*;
 use crate::syntax::structdef::*;
+use crate::{diagnostics::config::TracingConfig, expression::Expression};
 
 use super::{annotation::Annotation, parameter::Parameter};
 
@@ -16,13 +16,21 @@ use super::{annotation::Annotation, parameter::Parameter};
  * it to a register.
  */
 
-pub struct TraverserMut<A, T> where A: Debug + Annotation, T: Fn (&A) -> String {
+pub struct TraverserMut<A, T>
+where
+    A: Debug + Annotation,
+    T: Fn(&A) -> String,
+{
     pub tracing: TracingConfig,
     pub trace: T,
     pub(crate) shit: PhantomData<A>,
 }
 
-impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
+impl<A, T> TraverserMut<A, T>
+where
+    A: Debug + Annotation,
+    T: Fn(&A) -> String,
+{
     /**
      * Determine the size of register needed to store a value, based upon the number of bytes
      * the type takes.
@@ -35,7 +43,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&m.get_annotations());
         f(m.get_annotations_mut());
 
         for child_module in m.get_modules_mut().iter_mut() {
@@ -47,6 +54,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
         self.for_items(m.get_coroutines_mut(), f);
 
         self.for_items(m.get_structs_mut(), f);
+        self.tracer(&m.get_annotations());
     }
 
     fn for_items<F>(&self, items: &mut Vec<Item<A>>, f: F)
@@ -54,7 +62,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
         F: FnMut(&mut A) + Copy,
     {
         for i in items.iter_mut() {
-            self.tracer(&i.get_annotations());
             match i {
                 Item::Struct(sd) => {
                     self.for_structdef(sd, f);
@@ -63,6 +70,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
                     self.for_routinedef(rd, f);
                 }
             };
+            self.tracer(&i.get_annotations());
         }
     }
 
@@ -70,8 +78,8 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&sd.get_annotations());
         f(sd.get_annotations_mut());
+        self.tracer(&sd.get_annotations());
         self.for_parameters(&mut sd.fields, f);
     }
 
@@ -79,8 +87,8 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&rd.get_annotations());
         f(rd.get_annotations_mut());
+        self.tracer(&rd.get_annotations());
         // loop through all the params
         self.for_parameters(&mut rd.params, f);
 
@@ -95,8 +103,8 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
         F: FnMut(&mut A) + Copy,
     {
         for p in params {
-        self.tracer(&p.get_annotations());
-            f(p.get_annotations_mut())
+            f(p.get_annotations_mut());
+            self.tracer(&p.get_annotations());
         }
     }
 
@@ -104,7 +112,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&statement.get_annotations());
         match statement {
             Statement::Bind(b) => {
                 self.for_bind(b, f);
@@ -122,14 +129,15 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
                 self.for_expression(e, f);
             }
         };
+        self.tracer(&statement.get_annotations());
     }
 
     fn for_bind<F>(&self, bind: &mut Bind<A>, mut f: F)
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&bind.get_annotations());
         f(bind.get_annotations_mut());
+        self.tracer(&bind.get_annotations());
         self.for_expression(bind.get_rhs_mut(), f)
     }
 
@@ -137,8 +145,8 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&mutate.get_annotations());
         f(mutate.get_annotations_mut());
+        self.tracer(&mutate.get_annotations());
         self.for_expression(mutate.get_rhs_mut(), f);
     }
 
@@ -146,8 +154,8 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&yr.get_annotations());
         f(yr.get_annotations_mut());
+        self.tracer(&yr.get_annotations());
         yr.get_value_mut()
             .as_mut()
             .map(|rv| self.for_expression(rv, f));
@@ -157,8 +165,8 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&r.get_annotations());
         f(r.get_annotations_mut());
+        self.tracer(&r.get_annotations());
         r.get_value_mut()
             .as_mut()
             .map(|rv| self.for_expression(rv, f));
@@ -170,7 +178,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     {
         use Expression::*;
 
-        self.tracer(&exp.get_annotations());
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, f),
             Expression::Integer32(ref mut annotation, _i) => f(annotation),
@@ -189,15 +196,18 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
             RoutineCall(..) => self.for_routine_call(exp, f),
             StructExpression(..) => self.for_struct_expression(exp, f),
         }
+        self.tracer(&exp.get_annotations());
     }
 
     fn for_expression_block<F>(&self, block: &mut Expression<A>, mut f: F)
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&block.get_annotations());
-        if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) = block {
+        if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) =
+            block
+        {
             f(annotation);
+            self.tracer(annotation);
 
             for e in body.iter_mut() {
                 self.for_statement(e, f);
@@ -213,9 +223,9 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&access.get_annotations());
         if let Expression::MemberAccess(ref mut annotation, src, _member) = access {
             f(annotation);
+            self.tracer(annotation);
             self.for_expression(src, f);
         } else {
             panic!("Expected MemberAccess, but got {:?}", access)
@@ -226,9 +236,9 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&un_op.get_annotations());
         if let Expression::UnaryOp(ref mut annotation, _op, operand) = un_op {
             f(annotation);
+            self.tracer(annotation);
             self.for_expression(operand, f);
         } else {
             panic!("Expected UnaryOp, but got {:?}", un_op)
@@ -239,9 +249,9 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&bin_op.get_annotations());
         if let Expression::BinaryOp(ref mut annotation, _op, l, r) = bin_op {
             f(annotation);
+            self.tracer(annotation);
             self.for_expression(l, f);
             self.for_expression(r, f);
         } else {
@@ -253,7 +263,6 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&if_exp.get_annotations());
         if let Expression::If {
             ref mut annotation,
             cond,
@@ -262,6 +271,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
         } = if_exp
         {
             f(annotation);
+            self.tracer(annotation);
             self.for_expression(cond, f);
             self.for_expression(if_arm, f);
             else_arm.as_mut().map(|ea| self.for_expression(ea, f));
@@ -274,9 +284,9 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&rc.get_annotations());
         if let Expression::RoutineCall(ref mut annotation, _call, _name, params) = rc {
             f(annotation);
+            self.tracer(annotation);
             for p in params {
                 self.for_expression(p, f);
             }
@@ -289,9 +299,9 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&yield_exp.get_annotations());
         if let Expression::Yield(ref mut annotation, e) = yield_exp {
             f(annotation);
+            self.tracer(annotation);
             self.for_expression(e, f);
         } else {
             panic!("Expected Yield, but got {:?}", yield_exp)
@@ -302,9 +312,9 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     where
         F: FnMut(&mut A) + Copy,
     {
-        self.tracer(&se.get_annotations());
         if let Expression::StructExpression(ref mut annotation, _struct_name, fields) = se {
             f(annotation);
+            self.tracer(annotation);
             for (_, fe) in fields {
                 self.for_expression(fe, f);
             }
@@ -326,12 +336,7 @@ impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
         };
         let m = (self.trace)(annotation);
         if print_trace {
-            println!(
-                "{} L{}: {}",
-                function_name!(),
-                line,
-                m,
-            )
+            println!("{} L{}: {}", function_name!(), line, m,)
         }
     }
 }

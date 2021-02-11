@@ -20,8 +20,11 @@ pub fn assign(tracing: TracingConfig, m: &mut Module<CompilerAnnotation>, struct
     })
 }
 
-fn trace(_ca: &CompilerAnnotation) -> String {
-    "".into()
+fn trace(ca: &CompilerAnnotation) -> String {
+    match ca.reg_size {
+        Some(rs) => format!("{}", rs),
+        None => "Unassigned".into()
+    }
 }
 
 /**
