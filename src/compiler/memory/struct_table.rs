@@ -2,14 +2,14 @@ use braid_lang::result::Result;
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
-    semantics::semanticnode::SemanticAnnotations,
-    syntax::path::Path,
-    syntax::{
+    ast::path::Path,
+    ast::{
         module::{Item, Module},
         node::Node,
         structdef::StructDef,
         ty::Type,
     },
+    semantics::semanticnode::SemanticAnnotations,
 };
 
 use super::struct_definition::{FieldInfo, StructDefinition};

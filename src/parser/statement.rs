@@ -6,12 +6,12 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use crate::{
-    lexer::tokens::{Lex, Token},
-    syntax::{
+    ast::{
         expression::{Expression, RoutineCall},
         node::Node,
         statement::*,
     },
+    lexer::tokens::{Lex, Token},
     trace,
 };
 

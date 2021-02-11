@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use module::Module;
 
-use crate::syntax::{
+use crate::ast::{
     module::{self, Item},
     routinedef::RoutineDef,
     statement::{Bind, Mutate, Return, Statement, Yield, YieldReturn},

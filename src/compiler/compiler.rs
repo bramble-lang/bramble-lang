@@ -1,9 +1,10 @@
-use crate::{compiler::memory::register_assigner, syntax::node::Node};
+use crate::{ast::node::Node, compiler::memory::register_assigner};
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::ast::routinedef::RoutineDefType;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::scope::Level::Routine;
@@ -12,28 +13,27 @@ use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::register;
-use crate::syntax::routinedef::RoutineDefType;
 use crate::unary_op;
 use crate::unit_op;
 use crate::TracingConfig;
-use crate::{assembly, syntax::path::Path};
+use crate::{assembly, ast::path::Path};
 use crate::{
     assembly2,
-    syntax::{
+    ast::{
         module::{Item, Module},
         routinedef::RoutineDef,
     },
 };
+use crate::{ast::statement::Statement, expression::RoutineCall};
 use crate::{
+    ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
     binary_op,
-    syntax::statement::{Bind, Mutate, Return, Yield, YieldReturn},
+};
+use crate::{
+    ast::ty::Type,
+    expression::{BinaryOperator, UnaryOperator},
 };
 use crate::{expression::Expression, semantics::semanticnode::SemanticAnnotations};
-use crate::{expression::RoutineCall, syntax::statement::Statement};
-use crate::{
-    expression::{BinaryOperator, UnaryOperator},
-    syntax::ty::Type,
-};
 
 use super::memory::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 

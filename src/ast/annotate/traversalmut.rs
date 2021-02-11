@@ -1,13 +1,13 @@
 use fmt::{Debug, Display};
 use std::{fmt, marker::PhantomData};
 
-use crate::syntax::module::*;
-use crate::syntax::routinedef::*;
-use crate::syntax::statement::*;
-use crate::syntax::structdef::*;
+use crate::ast::module::*;
+use crate::ast::routinedef::*;
+use crate::ast::statement::*;
+use crate::ast::structdef::*;
 use crate::{diagnostics::config::TracingConfig, expression::Expression};
 
-use super::{annotation::Annotation, node::Node, parameter::Parameter};
+use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
 /**
  * This traverses the AST and determines what size register to

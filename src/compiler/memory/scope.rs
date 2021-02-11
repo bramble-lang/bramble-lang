@@ -1,10 +1,10 @@
 use crate::compiler::x86::assembly::Reg;
 use crate::compiler::x86::assembly::Reg64;
-use crate::{compiler::arch::registers::RegSize, syntax::annotation::Annotation};
+use crate::{ast::annotate::Annotation, compiler::arch::registers::RegSize};
 use crate::{
+    ast::path::Path,
+    ast::{routinedef::RoutineDefType, ty::Type},
     semantics::semanticnode::SemanticAnnotations,
-    syntax::path::Path,
-    syntax::{routinedef::RoutineDefType, ty::Type},
 };
 
 use super::{

@@ -1,31 +1,31 @@
 use std::collections::HashMap;
 
-use crate::syntax::{
+use crate::ast::{
     node::Node,
     parameter::Parameter,
     path::Path,
     statement::{Bind, Mutate, Yield, YieldReturn},
 };
-use crate::syntax::{
+use crate::ast::{
     statement::{Return, Statement},
     ty::Type,
 };
 use crate::{
-    diagnostics::config::{Tracing, TracingConfig},
-    expression,
+    ast::module::Module,
+    ast::statement,
+    semantics::semanticnode::{SemanticAst, SemanticNode},
 };
+use crate::{ast::structdef, parser::parser::ParserInfo, semantics::symbol_table::*};
 use crate::{
-    expression::{BinaryOperator, Expression, UnaryOperator},
-    syntax::{
+    ast::{
         module::{self, Item},
         routinedef,
     },
+    expression::{BinaryOperator, Expression, UnaryOperator},
 };
-use crate::{parser::parser::ParserInfo, semantics::symbol_table::*, syntax::structdef};
 use crate::{
-    semantics::semanticnode::{SemanticAst, SemanticNode},
-    syntax::module::Module,
-    syntax::statement,
+    diagnostics::config::{Tracing, TracingConfig},
+    expression,
 };
 use braid_lang::result::Result;
 use routinedef::RoutineDefType;
@@ -1011,14 +1011,14 @@ impl<'a> TypeResolver<'a> {
             Symbol {
                 ty: Type::FunctionDef(pty, rty),
                 ..
-            } if *call == crate::syntax::expression::RoutineCall::Function => (
+            } if *call == crate::ast::expression::RoutineCall::Function => (
                 pty,
                 Self::type_to_canonical_with_path(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..
-            } if *call == crate::syntax::expression::RoutineCall::CoroutineInit => (
+            } if *call == crate::ast::expression::RoutineCall::CoroutineInit => (
                 pty,
                 Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
                     &routine_path_parent,
@@ -1148,11 +1148,11 @@ impl<'a> TypeResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::{module::Item, routinedef};
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
-    use crate::syntax::{module::Item, routinedef};
-    use crate::{expression::Expression, syntax::statement::Statement};
+    use crate::{ast::statement::Statement, expression::Expression};
 
     #[test]
     pub fn test_identifiers() {
