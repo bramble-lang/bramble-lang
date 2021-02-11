@@ -3,7 +3,22 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{annotation::Annotation, expression::{Expression, RoutineCall}, module::Module, node::Node, parameter::Parameter, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef, ty::Type}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+    syntax::{
+        annotation::Annotation,
+        expression::{Expression, RoutineCall},
+        module::Module,
+        node::Node,
+        parameter::Parameter,
+        path::Path,
+        routinedef::{RoutineDef, RoutineDefType},
+        statement::Statement,
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -490,7 +505,14 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{lexer::lexer::Lexer, syntax::{expression::{BinaryOperator, UnaryOperator}, module::Item, node::Node}};
+    use crate::{
+        lexer::lexer::Lexer,
+        syntax::{
+            expression::{BinaryOperator, UnaryOperator},
+            module::Item,
+            node::Node,
+        },
+    };
 
     #[test]
     fn parse_unary_operators() {

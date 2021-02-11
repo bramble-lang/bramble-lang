@@ -1,4 +1,9 @@
-use crate::syntax::{module::{Item, Module}, node::Node, routinedef::{RoutineDef, RoutineDefType}, ty::Type};
+use crate::syntax::{
+    module::{Item, Module},
+    node::Node,
+    routinedef::{RoutineDef, RoutineDefType},
+    ty::Type,
+};
 use crate::syntax::{parameter::Parameter, path::Path};
 use crate::{semantics::semanticnode::SemanticAnnotations, syntax::structdef::StructDef};
 use braid_lang::result::Result;

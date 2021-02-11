@@ -6,7 +6,14 @@ use super::{
     parser::{block, path, routine_call_params, ParserInfo, ParserResult},
     tokenstream::TokenStream,
 };
-use crate::{lexer::tokens::{Lex, Token}, syntax::{expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator}, node::Node}, trace};
+use crate::{
+    lexer::tokens::{Lex, Token},
+    syntax::{
+        expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator},
+        node::Node,
+    },
+    trace,
+};
 
 impl ParserCombinator<ParserResult<Expression<ParserInfo>>>
     for ParserResult<Expression<ParserInfo>>

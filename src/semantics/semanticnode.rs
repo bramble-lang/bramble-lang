@@ -1,4 +1,6 @@
-use crate::syntax::{annotation::Annotation, node::Node, parameter::Parameter, statement::Statement};
+use crate::syntax::{
+    annotation::Annotation, node::Node, parameter::Parameter, statement::Statement,
+};
 use crate::{
     diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };

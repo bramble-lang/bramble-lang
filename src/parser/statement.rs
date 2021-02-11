@@ -5,7 +5,15 @@ use super::{
 use std::sync::atomic::Ordering;
 use stdext::function_name;
 
-use crate::{lexer::tokens::{Lex, Token}, syntax::{expression::{Expression, RoutineCall}, node::Node, statement::*}, trace};
+use crate::{
+    lexer::tokens::{Lex, Token},
+    syntax::{
+        expression::{Expression, RoutineCall},
+        node::Node,
+        statement::*,
+    },
+    trace,
+};
 
 use super::{
     parser::{ParserInfo, ParserResult},

@@ -33,19 +33,18 @@ pub fn compute_layout_for_program(
 
 mod compute {
     use super::*;
-    use crate::{compiler::memory::symbol_table::Symbol, syntax::{node::Node, parameter::Parameter}};
+    use crate::{
+        compiler::memory::symbol_table::Symbol,
+        syntax::{node::Node, parameter::Parameter},
+    };
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (module::Module<CompilerAnnotation>, LayoutData) {
-        let (annotations, mut layout) = CompilerAnnotation::module_from(
-            m.annotation(),
-            m.get_name(),
-            struct_table,
-            layout,
-        );
+        let (annotations, mut layout) =
+            CompilerAnnotation::module_from(m.annotation(), m.get_name(), struct_table, layout);
 
         let mut nmodule = module::Module::new(m.get_name(), annotations);
         for child_module in m.get_modules().iter() {

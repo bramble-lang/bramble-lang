@@ -1,7 +1,16 @@
 use braid_lang::result::Result;
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{semantics::semanticnode::SemanticAnnotations, syntax::path::Path, syntax::{module::{Item, Module}, node::Node, structdef::StructDef, ty::Type}};
+use crate::{
+    semantics::semanticnode::SemanticAnnotations,
+    syntax::path::Path,
+    syntax::{
+        module::{Item, Module},
+        node::Node,
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 
 use super::struct_definition::{FieldInfo, StructDefinition};
 
@@ -86,11 +95,7 @@ impl UnresolvedStructTable {
                 .map(|f| (f.name.clone(), f.ty.clone()))
                 .collect(),
         );
-        Self::insert_struct(
-            table,
-            struct_def.annotation().get_canonical_path(),
-            def,
-        )?;
+        Self::insert_struct(table, struct_def.annotation().get_canonical_path(), def)?;
         Ok(())
     }
 
