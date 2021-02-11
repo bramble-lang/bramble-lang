@@ -3,7 +3,7 @@ use crate::compiler::memory::struct_table::ResolvedStructTable;
 use crate::syntax::module::*;
 use crate::syntax::ty::Type;
 use crate::TracingConfig;
-use crate::{compiler::arch::registers::RegSize, syntax::annotate::traversal::TraverserMut};
+use crate::{compiler::arch::registers::RegSize, syntax::annotate::traversalmut::TraverserMut};
 
 /**
  * This traverses the AST and determines what size register to
