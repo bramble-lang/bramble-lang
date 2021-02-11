@@ -1,4 +1,4 @@
-use super::{node::Node, parameter::Parameter, ty::Type};
+use super::{node::{Node, NodeType}, parameter::Parameter, ty::Type};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -15,6 +15,10 @@ impl<M> Node<M> for StructDef<M> {
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::StructDef
     }
 }
 

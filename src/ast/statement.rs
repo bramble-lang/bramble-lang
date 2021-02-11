@@ -1,4 +1,4 @@
-use super::{expression::Expression, node::Node, ty::Type};
+use super::{expression::Expression, node::{Node, NodeType}, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
@@ -34,6 +34,10 @@ impl<M> Node<M> for Statement<M> {
             Bind(b) => b.annotation_mut(),
             Mutate(m) => m.annotation_mut(),
         }
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
     }
 }
 
@@ -79,6 +83,10 @@ impl<M> Node<M> for Bind<M> {
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
     }
 }
 
@@ -139,6 +147,10 @@ impl<M> Node<M> for Mutate<M> {
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
 }
 
 impl<M> std::fmt::Display for Mutate<M> {
@@ -187,6 +199,10 @@ impl<M> Node<M> for Yield<M> {
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
 }
 
 impl<M> Yield<M> {
@@ -216,6 +232,10 @@ impl<M> Node<M> for YieldReturn<M> {
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
     }
 }
 
@@ -256,6 +276,10 @@ impl<M> Node<M> for Return<M> {
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
     }
 }
 

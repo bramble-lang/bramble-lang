@@ -1,9 +1,4 @@
-use super::{
-    node::Node,
-    path::Path,
-    routinedef::{RoutineDef, RoutineDefType},
-    structdef::StructDef,
-};
+use super::{node::{Node, NodeType}, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -23,6 +18,10 @@ impl<M> Node<M> for Module<M> {
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Module
     }
 }
 
@@ -437,6 +436,13 @@ impl<M> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.annotation_mut(),
             Item::Struct(s) => s.annotation_mut(),
+        }
+    }
+
+    fn node_type(&self) -> NodeType {
+        match self {
+            Item::Routine(r) => r.node_type(),
+            Item::Struct(s) => s.node_type(),
         }
     }
 }

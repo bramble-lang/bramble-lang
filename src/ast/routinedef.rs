@@ -1,4 +1,4 @@
-use super::{node::Node, parameter::Parameter, statement::Statement, ty::Type};
+use super::{node::{Node, NodeType}, parameter::Parameter, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
@@ -17,6 +17,13 @@ impl<M> Node<M> for RoutineDef<M> {
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        match self.def {
+            RoutineDefType::Function => NodeType::FnDef,
+            RoutineDefType::Coroutine => NodeType::CoroutineDef,
+        }
     }
 }
 
