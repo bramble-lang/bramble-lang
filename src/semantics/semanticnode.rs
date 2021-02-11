@@ -1,21 +1,19 @@
-use crate::ast::{
-    annotate::Annotation, node::Node, parameter::Parameter, statement::Statement,
-};
+use crate::ast::{annotate::Annotation, node::Node, parameter::Parameter, statement::Statement};
 use crate::{
-    diagnostics::config::TracingConfig, parser::parser::ParserInfo, ast::structdef::StructDef,
-};
-use crate::{
-    expression::*,
     ast::path::Path,
     ast::{
         module::{self, Item},
         routinedef::RoutineDef,
         ty::Type,
     },
+    expression::*,
 };
 use crate::{
-    semantics::symbol_table::*,
     ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
+    semantics::symbol_table::*,
+};
+use crate::{
+    ast::structdef::StructDef, diagnostics::config::TracingConfig, parser::parser::ParserInfo,
 };
 use braid_lang::result::Result;
 

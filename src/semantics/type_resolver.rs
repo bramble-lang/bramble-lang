@@ -11,21 +11,21 @@ use crate::ast::{
     ty::Type,
 };
 use crate::{
-    diagnostics::config::{Tracing, TracingConfig},
-    expression,
+    ast::module::Module,
+    ast::statement,
+    semantics::semanticnode::{SemanticAst, SemanticNode},
 };
+use crate::{ast::structdef, parser::parser::ParserInfo, semantics::symbol_table::*};
 use crate::{
-    expression::{BinaryOperator, Expression, UnaryOperator},
     ast::{
         module::{self, Item},
         routinedef,
     },
+    expression::{BinaryOperator, Expression, UnaryOperator},
 };
-use crate::{parser::parser::ParserInfo, semantics::symbol_table::*, ast::structdef};
 use crate::{
-    semantics::semanticnode::{SemanticAst, SemanticNode},
-    ast::module::Module,
-    ast::statement,
+    diagnostics::config::{Tracing, TracingConfig},
+    expression,
 };
 use braid_lang::result::Result;
 use routinedef::RoutineDefType;
@@ -1148,11 +1148,11 @@ impl<'a> TypeResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::{module::Item, routinedef};
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
-    use crate::ast::{module::Item, routinedef};
-    use crate::{expression::Expression, ast::statement::Statement};
+    use crate::{ast::statement::Statement, expression::Expression};
 
     #[test]
     pub fn test_identifiers() {

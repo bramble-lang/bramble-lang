@@ -1,5 +1,5 @@
-use crate::compiler::memory::scope::Level;
 use crate::ast::routinedef::RoutineDefType;
+use crate::compiler::memory::scope::Level;
 
 use super::{scope::CompilerAnnotation, symbol_table::Symbol};
 
@@ -69,11 +69,11 @@ impl std::fmt::Display for CompilerAnnotationStack<'_> {
 mod tests {
     use super::*;
     use crate::ast::{node::Node, ty::Type};
+    use crate::{ast::parameter::Parameter, expression::Expression};
     use crate::{
-        compiler::memory::scope::CompilerAnnotation,
         ast::{module, routinedef::RoutineDef},
+        compiler::memory::scope::CompilerAnnotation,
     };
-    use crate::{expression::Expression, ast::parameter::Parameter};
 
     #[test]
     fn test_find_symbol_in_current_scope() {

@@ -5,7 +5,7 @@ use crate::ast::{
     ty::Type,
 };
 use crate::ast::{parameter::Parameter, path::Path};
-use crate::{semantics::semanticnode::SemanticAnnotations, ast::structdef::StructDef};
+use crate::{ast::structdef::StructDef, semantics::semanticnode::SemanticAnnotations};
 use braid_lang::result::Result;
 
 /**

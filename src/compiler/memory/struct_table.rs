@@ -2,7 +2,6 @@ use braid_lang::result::Result;
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
-    semantics::semanticnode::SemanticAnnotations,
     ast::path::Path,
     ast::{
         module::{Item, Module},
@@ -10,6 +9,7 @@ use crate::{
         structdef::StructDef,
         ty::Type,
     },
+    semantics::semanticnode::SemanticAnnotations,
 };
 
 use super::struct_definition::{FieldInfo, StructDefinition};

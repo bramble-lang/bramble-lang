@@ -1,20 +1,20 @@
 #![allow(dead_code)]
 #![feature(box_syntax, box_patterns)]
 
+mod ast;
 mod compiler;
 mod diagnostics;
 mod lexer;
 mod parser;
 mod semantics;
-mod ast;
 
 use crate::ast::path::Path;
+use ast::{expression, ty::Type};
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
 use lexer::tokens::Token;
 use semantics::type_resolver::*;
-use ast::{expression, ty::Type};
 
 fn main() {
     let config = configure_cli().get_matches();

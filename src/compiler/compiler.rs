@@ -1,9 +1,10 @@
-use crate::{compiler::memory::register_assigner, ast::node::Node};
+use crate::{ast::node::Node, compiler::memory::register_assigner};
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::ast::routinedef::RoutineDefType;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::scope::Level::Routine;
@@ -12,7 +13,6 @@ use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::register;
-use crate::ast::routinedef::RoutineDefType;
 use crate::unary_op;
 use crate::unit_op;
 use crate::TracingConfig;
@@ -24,16 +24,16 @@ use crate::{
         routinedef::RoutineDef,
     },
 };
+use crate::{ast::statement::Statement, expression::RoutineCall};
 use crate::{
-    binary_op,
     ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
+    binary_op,
+};
+use crate::{
+    ast::ty::Type,
+    expression::{BinaryOperator, UnaryOperator},
 };
 use crate::{expression::Expression, semantics::semanticnode::SemanticAnnotations};
-use crate::{expression::RoutineCall, ast::statement::Statement};
-use crate::{
-    expression::{BinaryOperator, UnaryOperator},
-    ast::ty::Type,
-};
 
 use super::memory::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
