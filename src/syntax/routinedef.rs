@@ -67,6 +67,10 @@ impl<M> RoutineDef<M> {
         &self.params
     }
 
+    pub fn get_params_mut(&mut self) -> &mut Vec<Parameter<M>> {
+        &mut self.params
+    }
+
     pub fn set_params(&mut self, params: Vec<Parameter<M>>) {
         self.params = params;
     }

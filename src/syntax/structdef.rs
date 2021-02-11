@@ -5,7 +5,7 @@ use braid_lang::result::Result;
 pub struct StructDef<M> {
     annotations: M,
     name: String,
-    fields: Vec<Parameter<M>>,
+    pub(super) fields: Vec<Parameter<M>>,
 }
 
 impl<M> std::fmt::Display for StructDef<M> {

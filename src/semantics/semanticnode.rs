@@ -1,4 +1,4 @@
-use crate::syntax::{parameter::Parameter, statement::Statement};
+use crate::syntax::{annotation::Annotation, parameter::Parameter, statement::Statement};
 use crate::{
     diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };
@@ -24,6 +24,16 @@ pub struct SemanticAnnotations {
     pub ty: Type,
     pub sym: SymbolTable,
     pub canonical_path: Path,
+}
+
+impl Annotation for SemanticAnnotations {
+    fn id(&self) -> u32 {
+        self.id
+    }
+
+    fn line(&self) -> u32 {
+        self.ln
+    }
 }
 
 pub type SemanticNode = Expression<SemanticAnnotations>;
