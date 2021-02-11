@@ -95,7 +95,7 @@ impl<I> Expression<I> {
             BinaryOp(_, op, _, _) => format!("{}", op),
             UnaryOp(_, op, _) => format!("{}", op),
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
-            RoutineCall(_, call, name, ..) => format!("{} of {}", call, name),
+            RoutineCall(_, call, name, ..) => format!("{} {}", call, name),
             If { .. } => "if".into(),
             ExpressionBlock(..) => "expression block".into(),
             Yield(_, _) => "yield".into(),
@@ -209,8 +209,8 @@ impl std::fmt::Display for RoutineCall {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         use RoutineCall::*;
         match self {
-            CoroutineInit => f.write_str("co init"),
-            Function => f.write_str("fn call"),
+            CoroutineInit => f.write_str("init"),
+            Function => f.write_str("call"),
         }
     }
 }

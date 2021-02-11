@@ -1,6 +1,5 @@
 use fmt::{Debug, Display};
 use std::{fmt, marker::PhantomData};
-use stdext::function_name;
 
 use crate::syntax::module::*;
 use crate::syntax::routinedef::*;
@@ -337,7 +336,7 @@ where
         };
         let m = (self.trace)(annotation);
         if print_trace {
-            println!("{} | L{}[{}]: {}", function_name!(), line, node, m,)
+            println!("L{}[{}]: {}", line, node, m,)
         }
     }
 }
