@@ -1,4 +1,4 @@
-use super::{node::Node, ty::Type};
+use super::{node::{Node, NodeType}, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
@@ -14,6 +14,10 @@ impl<M> Node<M> for Parameter<M> {
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotation
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Parameter
     }
 }
 

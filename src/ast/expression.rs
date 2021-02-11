@@ -1,4 +1,4 @@
-use super::{node::Node, path::Path, statement::Statement, ty::Type};
+use super::{node::{Node, NodeType}, path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
@@ -70,6 +70,10 @@ impl<M> Node<M> for Expression<M> {
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
         }
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Expression
     }
 }
 
