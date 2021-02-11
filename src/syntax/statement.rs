@@ -16,11 +16,11 @@ impl<M> Node<M> for Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) => x.get_annotations(),
-            YieldReturn(x) => x.get_annotations(),
-            Expression(e) => e.get_annotations(),
-            Bind(b) => b.get_annotations(),
-            Mutate(m) => m.get_annotations(),
+            Return(x) => x.annotation(),
+            YieldReturn(x) => x.annotation(),
+            Expression(e) => e.annotation(),
+            Bind(b) => b.annotation(),
+            Mutate(m) => m.annotation(),
         }
     }
 
@@ -28,11 +28,11 @@ impl<M> Node<M> for Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) => x.get_annotations_mut(),
-            YieldReturn(x) => x.get_annotations_mut(),
-            Expression(e) => e.get_annotations_mut(),
-            Bind(b) => b.get_annotations_mut(),
-            Mutate(m) => m.get_annotations_mut(),
+            Return(x) => x.annotation_mut(),
+            YieldReturn(x) => x.annotation_mut(),
+            Expression(e) => e.annotation_mut(),
+            Bind(b) => b.annotation_mut(),
+            Mutate(m) => m.annotation_mut(),
         }
     }
 }
@@ -48,11 +48,11 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) => x.get_annotations(),
-            YieldReturn(x) => x.get_annotations(),
-            Expression(e) => e.get_annotations(),
-            Bind(b) => b.get_annotations(),
-            Mutate(m) => m.get_annotations(),
+            Return(x) => x.annotation(),
+            YieldReturn(x) => x.annotation(),
+            Expression(e) => e.annotation(),
+            Bind(b) => b.annotation(),
+            Mutate(m) => m.annotation(),
         }
     }
 
@@ -66,11 +66,11 @@ impl<M> Statement<M> {
         use Statement::*;
 
         match self {
-            Return(x) => x.get_annotations_mut(),
-            YieldReturn(x) => x.get_annotations_mut(),
-            Expression(e) => e.get_annotations_mut(),
-            Bind(b) => b.get_annotations_mut(),
-            Mutate(m) => m.get_annotations_mut(),
+            Return(x) => x.annotation_mut(),
+            YieldReturn(x) => x.annotation_mut(),
+            Expression(e) => e.annotation_mut(),
+            Bind(b) => b.annotation_mut(),
+            Mutate(m) => m.annotation_mut(),
         }
     }
 

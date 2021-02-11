@@ -5,14 +5,7 @@ use super::{
 use std::sync::atomic::Ordering;
 use stdext::function_name;
 
-use crate::{
-    lexer::tokens::{Lex, Token},
-    syntax::{
-        expression::{Expression, RoutineCall},
-        statement::*,
-    },
-    trace,
-};
+use crate::{lexer::tokens::{Lex, Token}, syntax::{expression::{Expression, RoutineCall}, node::Node, statement::*}, trace};
 
 use super::{
     parser::{ParserInfo, ParserResult},
@@ -51,7 +44,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
             Some(Token { s: _, .. }) => Ok(Some(stm)),
             _ => {
                 if must_have_semicolon {
-                    let line = *stm.get_annotations();
+                    let line = *stm.annotation();
                     Err(format!(
                         "L{}: Expected ;, but found {}",
                         line,

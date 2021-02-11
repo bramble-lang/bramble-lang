@@ -248,7 +248,7 @@ impl<'a> TypeResolver<'a> {
         let canonical_fields = self.params_to_canonical(sym, fields)?;
 
         // Update the annotations with canonical path information and set the type to Unit
-        let mut meta = struct_def.get_annotations().clone();
+        let mut meta = struct_def.annotation().clone();
         meta.ty = Unit;
         meta.set_canonical_path(
             self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
@@ -287,7 +287,7 @@ impl<'a> TypeResolver<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<Bind<SemanticAnnotations>> {
-        let meta = bind.get_annotations();
+        let meta = bind.annotation();
         let rhs = bind.get_rhs();
         let result = match current_func {
             Some(_) => {
@@ -318,7 +318,7 @@ impl<'a> TypeResolver<'a> {
                 bind.get_id()
             )),
         };
-        result.map_err(|e| format!("L{}: {}", bind.get_annotations().ln, e))
+        result.map_err(|e| format!("L{}: {}", bind.annotation().ln, e))
     }
 
     fn analyze_mutate(
@@ -329,7 +329,7 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<Mutate<SemanticAnnotations>> {
         let result = match current_func {
             Some(_) => {
-                let mut meta = mutate.get_annotations().clone();
+                let mut meta = mutate.annotation().clone();
                 let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
                 match self.lookup_var(sym, mutate.get_id()) {
                     Ok(symbol) => {
@@ -357,7 +357,7 @@ impl<'a> TypeResolver<'a> {
                 mutate.get_id()
             )),
         };
-        result.map_err(|e| format!("L{}: {}", mutate.get_annotations().ln, e))
+        result.map_err(|e| format!("L{}: {}", mutate.annotation().ln, e))
     }
 
     fn analyze_yieldreturn(
@@ -369,7 +369,7 @@ impl<'a> TypeResolver<'a> {
         let result = match current_func {
             None => Err(format!("yret appears outside of function")),
             Some(cf) => {
-                let mut meta = yr.get_annotations().clone();
+                let mut meta = yr.annotation().clone();
                 match yr.get_value() {
                     None => {
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
@@ -398,7 +398,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
         };
-        result.map_err(|e| format!("L{}: {}", yr.get_annotations().ln, e))
+        result.map_err(|e| format!("L{}: {}", yr.annotation().ln, e))
     }
 
     fn analyze_return(
@@ -410,7 +410,7 @@ impl<'a> TypeResolver<'a> {
         let result = match current_func {
             None => Err(format!("return appears outside of function")),
             Some(cf) => {
-                let mut meta = r.get_annotations().clone();
+                let mut meta = r.annotation().clone();
                 match r.get_value() {
                     None => {
                         let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
@@ -439,7 +439,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
         };
-        result.map_err(|e| format!("L{}: {}", r.get_annotations().ln, e))
+        result.map_err(|e| format!("L{}: {}", r.annotation().ln, e))
     }
 
     fn traverse(
@@ -452,7 +452,7 @@ impl<'a> TypeResolver<'a> {
         self.analyze_expression(ast, current_func, sym)
             .map_err(|e| {
                 if !e.starts_with("L") {
-                    format!("L{}: {}", ast.get_annotations().ln, e)
+                    format!("L{}: {}", ast.annotation().ln, e)
                 } else {
                     e
                 }
@@ -745,7 +745,7 @@ impl<'a> TypeResolver<'a> {
         match current_func {
             None => Err(format!("yield appears outside of function")),
             Some(_) => {
-                let mut meta = y.get_annotations().clone();
+                let mut meta = y.annotation().clone();
                 let exp = self.traverse(y.get_value(), current_func, sym)?;
                 meta.ty = match exp.get_type() {
                     Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
@@ -898,7 +898,7 @@ impl<'a> TypeResolver<'a> {
         for p in params.iter() {
             let mut p2 = p.clone();
             p2.ty = self.type_to_canonical(sym, &p.ty)?;
-            p2.get_annotations_mut().ty = p2.ty.clone();
+            p2.annotation_mut().ty = p2.ty.clone();
             canonical_params.push(p2);
         }
         Ok(canonical_params)
@@ -1099,7 +1099,7 @@ impl<'a> TypeResolver<'a> {
         current_func: &Option<String>,
         current_scope: &SymbolTable,
     ) {
-        let md = node.get_annotations();
+        let md = node.annotation();
         let line = md.ln as usize;
         let print_trace = match self.tracing {
             TracingConfig::All => true,
@@ -1200,7 +1200,7 @@ mod tests {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1442,7 +1442,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     assert_eq!(
-                        fn_main.get_annotations().ty,
+                        fn_main.annotation().ty,
                         expected_ty,
                         "Test Case at L:{}",
                         line
@@ -1638,7 +1638,7 @@ mod tests {
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(
-                            bind_stm.get_annotations().ty,
+                            bind_stm.annotation().ty,
                             expected_ty,
                             "Test Case at L:{}",
                             line
@@ -1655,7 +1655,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(
                             r.get_value().clone().unwrap().get_type(),
@@ -1718,7 +1718,7 @@ mod tests {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1779,7 +1779,7 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.get_annotations().ty, I64);
+                        assert_eq!(bind_stm.annotation().ty, I64);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1787,7 +1787,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1846,7 +1846,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_annotations().ty, I64);
+                    assert_eq!(bind_stm.annotation().ty, I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1857,7 +1857,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1916,7 +1916,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_annotations().ty, Bool);
+                    assert_eq!(bind_stm.annotation().ty, Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1927,7 +1927,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1986,7 +1986,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_annotations().ty, Bool);
+                    assert_eq!(bind_stm.annotation().ty, Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1997,7 +1997,7 @@ mod tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_annotations().ty, expected_ty);
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {

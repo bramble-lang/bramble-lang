@@ -298,12 +298,12 @@ impl<'a> Compiler<'a> {
         use BinaryOperator::*;
 
         let primary = left
-            .get_annotations()
+            .annotation()
             .scale_reg(Reg64::Rax)
             .expect("Register could not be found for expression");
 
         let secondary = right
-            .get_annotations()
+            .annotation()
             .scale_reg(Reg64::Rbx)
             .expect("Register could not be found for expression");
 
@@ -312,7 +312,7 @@ impl<'a> Compiler<'a> {
         let mut right_code = vec![];
         self.traverse_expression(right, current_func, &mut right_code)?;
 
-        let la = left.get_annotations();
+        let la = left.annotation();
         let l_offset = self
             .get_expression_offset(la)
             .expect("Must be an offset for the left operand");
@@ -321,7 +321,7 @@ impl<'a> Compiler<'a> {
             mov [%rbp-{l_offset}], %{primary};
         }};
 
-        let ra = right.get_annotations();
+        let ra = right.annotation();
         let r_offset = self
             .get_expression_offset(ra)
             .expect("Must be an offset for the right operand");
@@ -385,7 +385,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn push_scope(&mut self, ast: &'a Expression<CompilerAnnotation>) {
-        self.scope.push(ast.get_annotations())
+        self.scope.push(ast.annotation())
     }
 
     fn pop(&mut self) {
@@ -426,7 +426,7 @@ impl<'a> Compiler<'a> {
             }
             Expression::Identifier(m, id) => {
                 let reg = ast
-                    .get_annotations()
+                    .annotation()
                     .scale_reg(Reg64::Rax)
                     .expect("Expect a register to be assigned to an identifier");
                 let id_offset = self.scope.find(id).unwrap().offset;
@@ -447,7 +447,7 @@ impl<'a> Compiler<'a> {
                 match op {
                     UnaryOperator::Minus => {
                         let reg = ast
-                            .get_annotations()
+                            .annotation()
                             .scale_reg(Reg64::Rax)
                             .unwrap_or(Reg::R64(Reg64::Rax));
                         assembly! {(code){
@@ -515,7 +515,7 @@ impl<'a> Compiler<'a> {
                     .to_routine()
                     .expect("Expected a routine");
                 let total_offset = co_def
-                    .get_annotations()
+                    .annotation()
                     .stackframe_allocation()
                     .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
 
@@ -619,7 +619,7 @@ impl<'a> Compiler<'a> {
         item: &'a Item<CompilerAnnotation>,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.scope.push(item.get_annotations());
+        self.scope.push(item.annotation());
         let result = match item {
             Item::Struct(_) => {
                 panic!("StructDefs should have been pruned from the AST before the compiler layer")
@@ -695,8 +695,8 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            @{routine.get_annotations().canon_path().to_label()}:
-            ; {{format!("Define {}", routine.get_annotations().canon_path())}}
+            @{routine.annotation().canon_path().to_label()}:
+            ; {{format!("Define {}", routine.annotation().canon_path())}}
         }};
 
         // Prepare stack frame for this function
@@ -774,7 +774,7 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            {{self.yield_exp(y.get_annotations(), y.get_value(), current_func)?}}
+            {{self.yield_exp(y.annotation(), y.get_value(), current_func)?}}
         }}
         Ok(())
     }
@@ -786,7 +786,7 @@ impl<'a> Compiler<'a> {
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
         assembly! {(code) {
-            {{self.yield_return(yr.get_annotations(), yr.get_value(), current_func)?}}
+            {{self.yield_return(yr.annotation(), yr.get_value(), current_func)?}}
         }}
         Ok(())
     }
@@ -810,7 +810,7 @@ impl<'a> Compiler<'a> {
         src: &'a Expression<CompilerAnnotation>,
         member: &str,
     ) -> Result<(), String> {
-        let src_annotations = src.get_annotations();
+        let src_annotations = src.annotation();
         let src_ty = src_annotations.ty();
         match src_ty {
             Type::Custom(struct_name) => {
@@ -940,7 +940,7 @@ impl<'a> Compiler<'a> {
             }
             _ => {
                 self.traverse_expression(fvalue, current_func, &mut code)?;
-                match fvalue.get_annotations().ty() {
+                match fvalue.annotation().ty() {
                     Type::Custom(struct_name) => {
                         let asm =
                             self.copy_struct_into(struct_name, dst, dst_offset, Reg64::Rax, 0)?;
@@ -950,7 +950,7 @@ impl<'a> Compiler<'a> {
                     }
                     _ => {
                         let reg = fvalue
-                            .get_annotations()
+                            .annotation()
                             .scale_reg(Reg64::Rax)
                             .expect("Could not scale register");
                         assembly! {(code) {
@@ -973,7 +973,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         self.traverse_expression(value, current_func, &mut code)?;
 
-        match value.get_annotations().ty() {
+        match value.annotation().ty() {
             Type::Custom(name) => {
                 match value {
                     Expression::Identifier(..) => {
@@ -994,7 +994,7 @@ impl<'a> Compiler<'a> {
             }
             _ => {
                 let reg = value
-                    .get_annotations()
+                    .annotation()
                     .scale_reg(Reg64::Rax)
                     .expect("Register size not assigned");
 
@@ -1046,7 +1046,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         if let Some(exp) = exp {
             self.traverse_expression(exp, current_func, &mut code)?;
-            match exp.get_annotations().ty() {
+            match exp.annotation().ty() {
                 Type::Custom(struct_name) => {
                     // Copy the structure into the stack frame of the calling function
                     let asm = self.copy_struct_into(struct_name, Reg64::Rsi, 0, Reg64::Rax, 0)?;
@@ -1079,7 +1079,7 @@ impl<'a> Compiler<'a> {
                 self.traverse_expression(e, current_func, &mut code)?;
                 // If the expression is a custom type then copy the value into the stack frame
                 // of the caller (or the yielder in the case of coroutines)
-                match e.get_annotations().ty() {
+                match e.annotation().ty() {
                     Type::Custom(struct_name) => {
                         // Copy the structure into the stack frame of the calling function
                         let asm =
@@ -1172,7 +1172,7 @@ impl<'a> Compiler<'a> {
         }
 
         let mut code = vec![];
-        let routine_sym_table = routine.get_annotations();
+        let routine_sym_table = routine.annotation();
         for idx in 0..params.len() {
             let param_symbol = routine_sym_table.get(&params[idx].name).ok_or(format!(
                 "Critical: could not find parameter {} in symbol table for {}",
@@ -1200,7 +1200,7 @@ impl<'a> Compiler<'a> {
                 }
                 _ => {
                     let param_reg = params[idx]
-                        .get_annotations()
+                        .annotation()
                         .reg_size()
                         .and_then(|sz| param_registers[idx].scale(sz))
                         .expect("Expect a register size to be assigned for a parameter");
@@ -1236,7 +1236,7 @@ impl<'a> Compiler<'a> {
         let mut code = vec![];
         for param in params.iter() {
             self.traverse_expression(param, current_func, &mut code)?;
-            let pa = param.get_annotations();
+            let pa = param.annotation();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
             let reg = pa
                 .scale_reg(Reg64::Rax)
@@ -1266,7 +1266,7 @@ impl<'a> Compiler<'a> {
 
         let mut code = vec![];
         for idx in 0..params.len() {
-            let pa = params[idx].get_annotations();
+            let pa = params[idx].annotation();
             if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
                 let reg = pa
                     .scale_reg(param_registers[idx])

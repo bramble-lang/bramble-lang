@@ -83,7 +83,7 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(sd.get_annotations_mut());
+        f(sd.annotation_mut());
         self.tracer(sd);
         self.for_parameters(&mut sd.fields, f);
     }
@@ -92,7 +92,7 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(rd.get_annotations_mut());
+        f(rd.annotation_mut());
         self.tracer(rd);
         // loop through all the params
         self.for_parameters(&mut rd.params, f);
@@ -108,7 +108,7 @@ where
         F: FnMut(&mut A) + Copy,
     {
         for p in params {
-            f(p.get_annotations_mut());
+            f(p.annotation_mut());
             self.tracer(p);
         }
     }
@@ -141,7 +141,7 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(bind.get_annotations_mut());
+        f(bind.annotation_mut());
         self.tracer(bind);
         self.for_expression(bind.get_rhs_mut(), f)
     }
@@ -150,7 +150,7 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(mutate.get_annotations_mut());
+        f(mutate.annotation_mut());
         self.tracer(mutate);
         self.for_expression(mutate.get_rhs_mut(), f);
     }
@@ -159,7 +159,7 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(yr.get_annotations_mut());
+        f(yr.annotation_mut());
         self.tracer(yr);
         yr.get_value_mut()
             .as_mut()
@@ -170,7 +170,7 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(r.get_annotations_mut());
+        f(r.annotation_mut());
         self.tracer(r);
         r.get_value_mut()
             .as_mut()

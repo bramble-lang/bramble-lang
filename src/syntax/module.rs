@@ -428,15 +428,15 @@ pub enum Item<M> {
 impl<M> Node<M> for Item<M> {
     fn annotation(&self) -> &M {
         match self {
-            Item::Routine(r) => r.get_annotations(),
-            Item::Struct(s) => s.get_annotations(),
+            Item::Routine(r) => r.annotation(),
+            Item::Struct(s) => s.annotation(),
         }
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         match self {
-            Item::Routine(r) => r.get_annotations_mut(),
-            Item::Struct(s) => s.get_annotations_mut(),
+            Item::Routine(r) => r.annotation_mut(),
+            Item::Struct(s) => s.annotation_mut(),
         }
     }
 }
@@ -464,15 +464,15 @@ impl<M> Item<M> {
 
     pub fn get_annotations(&self) -> &M {
         match self {
-            Item::Routine(r) => r.get_annotations(),
-            Item::Struct(s) => s.get_annotations(),
+            Item::Routine(r) => r.annotation(),
+            Item::Struct(s) => s.annotation(),
         }
     }
 
     pub fn get_annotations_mut(&mut self) -> &mut M {
         match self {
-            Item::Routine(r) => r.get_annotations_mut(),
-            Item::Struct(s) => s.get_annotations_mut(),
+            Item::Routine(r) => r.annotation_mut(),
+            Item::Struct(s) => s.annotation_mut(),
         }
     }
 
