@@ -1,4 +1,4 @@
-use fmt::Debug;
+use fmt::{Debug, Display};
 use std::{fmt, marker::PhantomData};
 use stdext::function_name;
 
@@ -323,7 +323,7 @@ where
         self.tracer(se);
     }
 
-    fn tracer<N>(&self, node: &N) where N: Node<A>{
+    fn tracer<N>(&self, node: &N) where N: Node<A> + Display{
         let annotation = node.get_annotation();
         let line = annotation.line() as usize;
 
@@ -337,7 +337,7 @@ where
         };
         let m = (self.trace)(annotation);
         if print_trace {
-            println!("{} L{}: {}", function_name!(), line, m,)
+            println!("{} | L{}[{}]: {}", function_name!(), line, node, m,)
         }
     }
 }
