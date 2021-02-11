@@ -18,7 +18,7 @@ use super::{super::node::Node, super::parameter::Parameter, Annotation};
 pub struct Map<A, B, F>
 where
     A: Debug + Annotation,
-    F: FnMut(&A) -> B + Copy,
+    F: FnMut(&dyn Node<A>) -> B + Copy,
 {
     pub name: String,
     pub tracing: TracingConfig,
@@ -30,7 +30,8 @@ where
 impl<A, B, F> Map<A, B, F>
 where
     A: Debug + Annotation,
-    F: FnMut(&A) -> B + Copy,
+    B: Debug + Annotation,
+    F: FnMut(&dyn Node<A>) -> B + Copy,
 {
     pub fn new(name: &str, tracing: TracingConfig, f: F) -> Map<A, B, F> {
         Map {
@@ -47,7 +48,7 @@ where
             println!("{}", self.name);
         }
 
-        let b = f(m.annotation());
+        let b = f(m);
         let mut m2 = Module::new(m.get_name(), b);
 
         for child_module in m.get_modules().iter() {
@@ -76,13 +77,13 @@ where
     }
 
     fn for_structdef(&self, sd: &StructDef<A>, mut f: F) -> StructDef<B> {
-        let b = f(sd.annotation());
+        let b = f(sd);
         let fields = self.for_parameters(&sd.fields, f);
         StructDef::new(sd.get_name(), b, fields)
     }
 
     fn for_routinedef(&self, rd: &RoutineDef<A>, mut f: F) -> RoutineDef<B> {
-        let b = f(rd.annotation());
+        let b = f(rd);
         // loop through all the params
         let params = self.for_parameters(&rd.params, f);
 
@@ -105,7 +106,7 @@ where
     fn for_parameters(&self, params: &Vec<Parameter<A>>, mut f: F) -> Vec<Parameter<B>> {
         let mut nparams = vec![];
         for p in params {
-            let b = f(p.annotation());
+            let b = f(p);
             nparams.push(Parameter::new(b, &p.name, &p.ty));
         }
         nparams
@@ -123,7 +124,7 @@ where
     }
 
     fn for_bind(&self, bind: &Bind<A>, mut f: F) -> Bind<B> {
-        let b = f(bind.annotation());
+        let b = f(bind);
         let rhs = self.for_expression(bind.get_rhs(), f);
         Bind::new(
             b,
@@ -135,19 +136,19 @@ where
     }
 
     fn for_mutate(&self, mutate: &Mutate<A>, mut f: F) -> Mutate<B> {
-        let b = f(mutate.annotation());
+        let b = f(mutate);
         let rhs = self.for_expression(mutate.get_rhs(), f);
         Mutate::new(b, mutate.get_id(), rhs)
     }
 
     fn for_yieldreturn(&self, yr: &YieldReturn<A>, mut f: F) -> YieldReturn<B> {
-        let b = f(yr.annotation());
+        let b = f(yr);
         let value = yr.get_value().as_ref().map(|rv| self.for_expression(rv, f));
         YieldReturn::new(b, value)
     }
 
     fn for_return(&self, r: &Return<A>, mut f: F) -> Return<B> {
-        let b = f(r.annotation());
+        let b = f(r);
         let value = r.get_value().as_ref().map(|rv| self.for_expression(rv, f));
         Return::new(b, value)
     }
@@ -156,15 +157,15 @@ where
         use Expression::*;
 
         match exp {
-            Expression::Integer32(annotation, i) => Integer32(f(annotation), *i),
-            Expression::Integer64(annotation, i) => Integer64(f(annotation), *i),
-            Expression::Boolean(annotation, b) => Boolean(f(annotation), *b),
-            Expression::StringLiteral(annotation, s) => StringLiteral(f(annotation), s.clone()),
-            Expression::CustomType(annotation, name) => CustomType(f(annotation), name.clone()),
-            Expression::Identifier(annotation, id) => Identifier(f(annotation), id.clone()),
-            Path(annotation, path) => Path(f(annotation), path.clone()),
-            Expression::IdentifierDeclare(annotation, id, p) => {
-                IdentifierDeclare(f(annotation), id.clone(), p.clone())
+            Expression::Integer32(_, i) => Integer32(f(exp), *i),
+            Expression::Integer64(_, i) => Integer64(f(exp), *i),
+            Expression::Boolean(_, b) => Boolean(f(exp), *b),
+            Expression::StringLiteral(_, s) => StringLiteral(f(exp), s.clone()),
+            Expression::CustomType(_, name) => CustomType(f(exp), name.clone()),
+            Expression::Identifier(_, id) => Identifier(f(exp), id.clone()),
+            Path(_, path) => Path(f(exp), path.clone()),
+            Expression::IdentifierDeclare(_, id, p) => {
+                IdentifierDeclare(f(exp), id.clone(), p.clone())
             }
             MemberAccess(..) => self.for_member_access(exp, f),
             UnaryOp(..) => self.for_unary_op(exp, f),
@@ -178,8 +179,8 @@ where
     }
 
     fn for_expression_block(&self, block: &Expression<A>, mut f: F) -> Expression<B> {
-        if let Expression::ExpressionBlock(annotation, body, final_exp) = block {
-            let b = f(annotation);
+        if let Expression::ExpressionBlock(_, body, final_exp) = block {
+            let b = f(block);
 
             let mut nbody = vec![];
             for e in body.iter() {
@@ -194,8 +195,8 @@ where
     }
 
     fn for_member_access(&self, access: &Expression<A>, mut f: F) -> Expression<B> {
-        if let Expression::MemberAccess(annotation, src, member) = access {
-            let b = f(annotation);
+        if let Expression::MemberAccess(_, src, member) = access {
+            let b = f(access);
             let src = self.for_expression(src, f);
             Expression::MemberAccess(b, box src, member.clone())
         } else {
@@ -204,8 +205,8 @@ where
     }
 
     fn for_unary_op(&self, un_op: &Expression<A>, mut f: F) -> Expression<B> {
-        if let Expression::UnaryOp(annotation, op, operand) = un_op {
-            let b = f(annotation);
+        if let Expression::UnaryOp(_, op, operand) = un_op {
+            let b = f(un_op);
             let operand = self.for_expression(operand, f);
             Expression::UnaryOp(b, *op, box operand)
         } else {
@@ -214,8 +215,8 @@ where
     }
 
     fn for_binary_op(&self, bin_op: &Expression<A>, mut f: F) -> Expression<B> {
-        if let Expression::BinaryOp(annotation, op, l, r) = bin_op {
-            let b = f(annotation);
+        if let Expression::BinaryOp(_, op, l, r) = bin_op {
+            let b = f(bin_op);
             let l = self.for_expression(l, f);
             let r = self.for_expression(r, f);
             Expression::BinaryOp(b, *op, box l, box r)
@@ -226,13 +227,13 @@ where
 
     fn for_if(&self, if_exp: &Expression<A>, mut f: F) -> Expression<B> {
         if let Expression::If {
-            annotation,
             cond,
             if_arm,
             else_arm,
+            ..
         } = if_exp
         {
-            let b = f(annotation);
+            let b = f(if_exp);
             let cond = self.for_expression(cond, f);
             let if_arm = self.for_expression(if_arm, f);
             let else_arm = else_arm.as_ref().map(|ea| box self.for_expression(ea, f));
@@ -248,8 +249,8 @@ where
     }
 
     fn for_routine_call(&self, rc: &Expression<A>, mut f: F) -> Expression<B> {
-        if let Expression::RoutineCall(annotation, call, name, params) = rc {
-            let b = f(annotation);
+        if let Expression::RoutineCall(_, call, name, params) = rc {
+            let b = f(rc);
             let mut nparams = vec![];
             for p in params {
                 nparams.push(self.for_expression(p, f));
@@ -261,8 +262,8 @@ where
     }
 
     fn for_yield(&self, yield_exp: &Expression<A>, mut f: F) -> Expression<B> {
-        if let Expression::Yield(annotation, e) = yield_exp {
-            let b = f(annotation);
+        if let Expression::Yield(_, e) = yield_exp {
+            let b = f(yield_exp);
             let e = self.for_expression(e, f);
             Expression::Yield(b, box e)
         } else {
@@ -271,8 +272,8 @@ where
     }
 
     fn for_struct_expression(&self, se: &Expression<A>, mut f: F) -> Expression<B> {
-        if let Expression::StructExpression(annotation, struct_name, fields) = se {
-            let b = f(annotation);
+        if let Expression::StructExpression(_, struct_name, fields) = se {
+            let b = f(se);
             let mut nfields = vec![];
             for (fname, fe) in fields {
                 nfields.push((fname.clone(), self.for_expression(fe, f)));
@@ -281,5 +282,42 @@ where
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::ast::module::Module;
+
+    impl Annotation for i32 {
+        fn id(&self) -> u32 {
+            0
+        }
+
+        fn line(&self) -> u32 {
+            0
+        }
+    }
+
+    impl Annotation for i64 {
+        fn id(&self) -> u32 {
+            0
+        }
+
+        fn line(&self) -> u32 {
+            0
+        }
+    }
+
+    #[test]
+    fn test() {
+        let module1 = Module::new("m", 1i32);
+        fn convert(n: &dyn Node<i32>) -> i64 {
+            let i = n.annotation();
+            *i as i64
+        }
+        let mut f = |n| convert(n);
+        let mp = Map::new("test", TracingConfig::Off, f);
     }
 }
