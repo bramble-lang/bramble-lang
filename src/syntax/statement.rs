@@ -24,7 +24,7 @@ impl<M> Node<M> for Statement<M> {
         }
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         use Statement::*;
 
         match self {
@@ -101,7 +101,7 @@ impl<M> Node<M> for Bind<M> {
         &self.annotations
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
 }
@@ -168,7 +168,7 @@ impl<M> Node<M> for Mutate<M> {
         &self.annotations
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
 }
@@ -224,7 +224,7 @@ impl<M> Node<M> for Yield<M> {
         &self.annotations
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
 }
@@ -262,7 +262,7 @@ impl<M> Node<M> for YieldReturn<M> {
         &self.annotations
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
 }
@@ -310,7 +310,7 @@ impl<M> Node<M> for Return<M> {
         &self.annotations
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
 }

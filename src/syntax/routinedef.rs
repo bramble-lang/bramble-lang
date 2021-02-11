@@ -15,7 +15,7 @@ impl<M> Node<M> for RoutineDef<M> {
         &self.annotations
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
 }

@@ -50,7 +50,7 @@ impl<M> Node<M> for Expression<M> {
         }
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
             Integer32(m, ..)

@@ -12,7 +12,7 @@ impl<M> Node<M> for Parameter<M> {
         &self.annotation
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotation
     }
 }

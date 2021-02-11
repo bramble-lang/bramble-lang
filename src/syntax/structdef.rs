@@ -13,7 +13,7 @@ impl<M> Node<M> for StructDef<M> {
         &self.annotations
     }
 
-    fn annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
     }
 }

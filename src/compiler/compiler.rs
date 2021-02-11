@@ -1199,7 +1199,9 @@ impl<'a> Compiler<'a> {
                     }}
                 }
                 _ => {
-                    let param_reg = params[idx].get_annotations().reg_size()
+                    let param_reg = params[idx]
+                        .get_annotations()
+                        .reg_size()
                         .and_then(|sz| param_registers[idx].scale(sz))
                         .expect("Expect a register size to be assigned for a parameter");
                     assembly! {(code){
