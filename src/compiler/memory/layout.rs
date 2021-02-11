@@ -1,7 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{ast::{annotate::map::Map, expression::Expression}, diagnostics::config::TracingConfig, semantics::semanticnode::SemanticNode};
+use crate::{ast::{annotate::map::Map, expression::Expression, node::Node}, diagnostics::config::TracingConfig, semantics::semanticnode::SemanticNode};
 use crate::{
     ast::{
         module::{self, Item, Module},
@@ -29,15 +29,6 @@ pub fn compute_layout_for_program(
     let struct_table = unresolved_struct_table.resolve()?;
     let (compiler_ast, _) = compute::layouts_for_module(ast, LayoutData::new(0), &struct_table);
     Ok((compiler_ast, struct_table))
-}
-
-pub fn new_way(ast: &Module<SemanticAnnotations>) {
-    let m = Map::new("layout", TracingConfig::Off, map);
-    m.for_module(ast, map);
-}
-
-fn map(s: &SemanticAnnotations) -> CompilerAnnotation {
-    todo!()
 }
 
 mod compute {
