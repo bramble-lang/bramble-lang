@@ -12,7 +12,7 @@ pub enum Statement<M> {
 }
 
 impl<M> Node<M> for Statement<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         use Statement::*;
 
         match self {
@@ -24,7 +24,7 @@ impl<M> Node<M> for Statement<M> {
         }
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         use Statement::*;
 
         match self {
@@ -97,11 +97,11 @@ pub struct Bind<M> {
 }
 
 impl<M> Node<M> for Bind<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }
@@ -164,11 +164,11 @@ pub struct Mutate<M> {
 }
 
 impl<M> Node<M> for Mutate<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }
@@ -220,11 +220,11 @@ pub struct Yield<M> {
 }
 
 impl<M> Node<M> for Yield<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }
@@ -258,11 +258,11 @@ pub struct YieldReturn<M> {
 }
 
 impl<M> Node<M> for YieldReturn<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }
@@ -306,11 +306,11 @@ pub struct Return<M> {
 }
 
 impl<M> Node<M> for Return<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }

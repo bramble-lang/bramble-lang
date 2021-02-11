@@ -9,11 +9,11 @@ pub struct StructDef<M> {
 }
 
 impl<M> Node<M> for StructDef<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }

@@ -8,11 +8,11 @@ pub struct Parameter<M> {
 }
 
 impl<M> Node<M> for Parameter<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotation
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotation
     }
 }

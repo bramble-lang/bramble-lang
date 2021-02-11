@@ -28,7 +28,7 @@ pub enum Expression<I> {
 }
 
 impl<M> Node<M> for Expression<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         use Expression::*;
         match self {
             Integer32(m, ..)
@@ -50,7 +50,7 @@ impl<M> Node<M> for Expression<M> {
         }
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         use Expression::*;
         match self {
             Integer32(m, ..)

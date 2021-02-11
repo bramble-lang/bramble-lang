@@ -12,11 +12,11 @@ pub struct Module<M> {
 }
 
 impl<M> Node<M> for Module<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }
@@ -429,14 +429,14 @@ pub enum Item<M> {
 }
 
 impl<M> Node<M> for Item<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         match self {
             Item::Routine(r) => r.get_annotations(),
             Item::Struct(s) => s.get_annotations(),
         }
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         match self {
             Item::Routine(r) => r.get_annotations_mut(),
             Item::Struct(s) => s.get_annotations_mut(),

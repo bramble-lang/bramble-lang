@@ -11,11 +11,11 @@ pub struct RoutineDef<M> {
 }
 
 impl<M> Node<M> for RoutineDef<M> {
-    fn get_annotation(&self) -> &M {
+    fn annotation(&self) -> &M {
         &self.annotations
     }
 
-    fn get_annotation_mut(&mut self) -> & mut M {
+    fn annotation_mut(&mut self) -> & mut M {
         &mut self.annotations
     }
 }

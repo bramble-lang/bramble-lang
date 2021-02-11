@@ -332,7 +332,7 @@ where
     where
         N: Node<A> + Display,
     {
-        let annotation = node.get_annotation();
+        let annotation = node.annotation();
         let line = annotation.line() as usize;
 
         let print_trace = match &self.tracing {
