@@ -83,9 +83,9 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
-            Integer32(_, v) => format!("{}", v),
-            Integer64(_, v) => format!("{}", v),
-            Boolean(_, v) => format!("{}", v),
+            Integer32(_, v) => format!("i32({})", v),
+            Integer64(_, v) => format!("i64({})", v),
+            Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
