@@ -15,30 +15,27 @@ use super::{super::node::Node, super::parameter::Parameter, Annotation};
  * it to a register.
  */
 
-pub struct Map<A, B, F, T>
+pub struct Map<A, B, F>
 where
     A: Debug + Annotation,
-    T: Fn(&dyn Node<A>) -> String,
+    F: FnMut(&A) -> B + Copy,
 {
     pub name: String,
     pub tracing: TracingConfig,
-    pub format: T,
     ph: PhantomData<A>,
     ph2: PhantomData<B>,
     ph3: PhantomData<F>,
 }
 
-impl<A, B, F, T> Map<A, B, F, T>
+impl<A, B, F> Map<A, B, F>
 where
     A: Debug + Annotation,
     F: FnMut(&A) -> B + Copy,
-    T: Fn(&dyn Node<A>) -> String,
 {
-    pub fn new(name: &str, tracing: TracingConfig, format: T) -> Map<A, B, F, T> {
+    pub fn new(name: &str, tracing: TracingConfig, f: F) -> Map<A, B, F> {
         Map {
             name: name.into(),
             tracing,
-            format,
             ph: PhantomData,
             ph2: PhantomData,
             ph3: PhantomData,
