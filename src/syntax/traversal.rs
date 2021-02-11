@@ -22,7 +22,7 @@ where
 {
     pub name: String,
     pub tracing: TracingConfig,
-    pub trace: T,
+    pub format: T,
     pub(crate) shit: PhantomData<A>,
 }
 
@@ -31,11 +31,11 @@ where
     A: Debug + Annotation,
     T: Fn(&A) -> String,
 {
-    pub fn new(name: &str, tracing: TracingConfig, trace: T) -> TraverserMut<A, T> {
+    pub fn new(name: &str, tracing: TracingConfig, format: T) -> TraverserMut<A, T> {
         TraverserMut {
             name: name.into(),
             tracing,
-            trace,
+            format,
             shit: PhantomData,
         }
     }
@@ -343,9 +343,9 @@ where
             &TracingConfig::All => true,
             &TracingConfig::Off => false,
         };
-        let m = (self.trace)(annotation);
+        let msg = (self.format)(annotation);
         if print_trace {
-            println!("L{}[{}]: {}", line, node, m,)
+            println!("L{}n{}[{}]: {}", line, annotation.id(), node, msg,)
         }
     }
 }
