@@ -44,33 +44,9 @@ impl<M> std::fmt::Display for Statement<M> {
 }
 
 impl<M> Statement<M> {
-    pub fn get_annotations(&self) -> &M {
-        use Statement::*;
-
-        match self {
-            Return(x) => x.annotation(),
-            YieldReturn(x) => x.annotation(),
-            Expression(e) => e.annotation(),
-            Bind(b) => b.annotation(),
-            Mutate(m) => m.annotation(),
-        }
-    }
-
     pub fn from_ast(ast: Expression<M>) -> Option<Statement<M>> {
         match ast {
             _ => Some(Statement::Expression(Box::new(ast))),
-        }
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        use Statement::*;
-
-        match self {
-            Return(x) => x.annotation_mut(),
-            YieldReturn(x) => x.annotation_mut(),
-            Expression(e) => e.annotation_mut(),
-            Bind(b) => b.annotation_mut(),
-            Mutate(m) => m.annotation_mut(),
         }
     }
 
@@ -125,14 +101,6 @@ impl<M> Bind<M> {
 
     pub fn get_id(&self) -> &str {
         &self.id
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
     }
 
     pub fn is_mutable(&self) -> bool {
@@ -192,14 +160,6 @@ impl<M> Mutate<M> {
         &self.id
     }
 
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
     pub fn get_rhs(&self) -> &Expression<M> {
         &self.rhs
     }
@@ -232,14 +192,6 @@ impl<M> Node<M> for Yield<M> {
 impl<M> Yield<M> {
     pub fn new(annotations: M, value: Expression<M>) -> Self {
         Self { annotations, value }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Expression<M> {
@@ -276,14 +228,6 @@ impl<M> std::fmt::Display for YieldReturn<M> {
 impl<M> YieldReturn<M> {
     pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
         Self { annotations, value }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {
@@ -324,14 +268,6 @@ impl<M> std::fmt::Display for Return<M> {
 impl<M> Return<M> {
     pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
         Self { annotations, value }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {

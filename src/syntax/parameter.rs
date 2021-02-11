@@ -26,14 +26,6 @@ impl<M> Parameter<M> {
         }
     }
 
-    pub fn get_annotations(&self) -> &M {
-        &self.annotation
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotation
-    }
-
     pub fn root_str(&self) -> String {
         format!("{}:{}", self.name, self.ty)
     }

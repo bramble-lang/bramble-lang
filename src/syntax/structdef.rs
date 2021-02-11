@@ -37,14 +37,6 @@ impl<M> StructDef<M> {
         &self.name
     }
 
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
     pub fn get_fields(&self) -> &Vec<Parameter<M>> {
         &self.fields
     }

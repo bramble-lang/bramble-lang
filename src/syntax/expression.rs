@@ -101,50 +101,6 @@ impl<I> Expression<I> {
             Yield(_, _) => "yield".into(),
         }
     }
-
-    pub fn get_annotations(&self) -> &I {
-        use Expression::*;
-        match self {
-            Integer32(m, ..)
-            | Integer64(m, ..)
-            | Boolean(m, ..)
-            | StringLiteral(m, ..)
-            | CustomType(m, ..)
-            | Identifier(m, ..)
-            | IdentifierDeclare(m, ..)
-            | Path(m, ..)
-            | MemberAccess(m, ..)
-            | BinaryOp(m, ..)
-            | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | ExpressionBlock(m, ..)
-            | Yield(m, ..)
-            | RoutineCall(m, ..) => m,
-            StructExpression(m, ..) => m,
-        }
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut I {
-        use Expression::*;
-        match self {
-            Integer32(m, ..)
-            | Integer64(m, ..)
-            | Boolean(m, ..)
-            | StringLiteral(m, ..)
-            | CustomType(m, ..)
-            | Identifier(m, ..)
-            | IdentifierDeclare(m, ..)
-            | Path(m, ..)
-            | MemberAccess(m, ..)
-            | BinaryOp(m, ..)
-            | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | ExpressionBlock(m, ..)
-            | Yield(m, ..)
-            | RoutineCall(m, ..) => m,
-            StructExpression(m, ..) => m,
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
