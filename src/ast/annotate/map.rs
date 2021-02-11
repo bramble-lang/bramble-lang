@@ -21,7 +21,6 @@ where
     F: FnMut(&dyn Node<A>) -> B + Copy,
 {
     pub name: String,
-    pub tracing: TracingConfig,
     ph: PhantomData<A>,
     ph2: PhantomData<B>,
     ph3: PhantomData<F>,
@@ -33,10 +32,9 @@ where
     B: Debug + Annotation,
     F: FnMut(&dyn Node<A>) -> B + Copy,
 {
-    pub fn new(name: &str, tracing: TracingConfig, f: F) -> Map<A, B, F> {
+    pub fn new(name: &str, f: F) -> Map<A, B, F> {
         Map {
             name: name.into(),
-            tracing,
             ph: PhantomData,
             ph2: PhantomData,
             ph3: PhantomData,
@@ -44,10 +42,6 @@ where
     }
 
     pub fn for_module(&self, m: &Module<A>, mut f: F) -> Module<B> {
-        if self.tracing != TracingConfig::Off {
-            println!("{}", self.name);
-        }
-
         let b = f(m);
         let mut m2 = Module::new(m.get_name(), b);
 
@@ -310,14 +304,19 @@ mod test {
         }
     }
 
+    fn convert(n: &dyn Node<i32>) -> i64 {
+        let i = n.annotation();
+        2*(*i as i64)
+    }
+
     #[test]
-    fn test() {
+    fn empty_module() {
         let module1 = Module::new("m", 1i32);
-        fn convert(n: &dyn Node<i32>) -> i64 {
-            let i = n.annotation();
-            *i as i64
-        }
-        let mut f = |n| convert(n);
-        let mp = Map::new("test", TracingConfig::Off, f);
+        let f = |n: &dyn Node<i32>| convert(n);
+
+        let mp = Map::new("test", f);
+        let module2 = mp.for_module(&module1, f);
+
+        assert_eq!(*module2.annotation(), 2i64);
     }
 }
