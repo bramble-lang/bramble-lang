@@ -1,11 +1,11 @@
-use crate::syntax::{
+use crate::ast::{
     module::{Item, Module},
     node::Node,
     routinedef::{RoutineDef, RoutineDefType},
     ty::Type,
 };
-use crate::syntax::{parameter::Parameter, path::Path};
-use crate::{semantics::semanticnode::SemanticAnnotations, syntax::structdef::StructDef};
+use crate::ast::{parameter::Parameter, path::Path};
+use crate::{semantics::semanticnode::SemanticAnnotations, ast::structdef::StructDef};
 use braid_lang::result::Result;
 
 /**

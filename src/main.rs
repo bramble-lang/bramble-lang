@@ -6,15 +6,15 @@ mod diagnostics;
 mod lexer;
 mod parser;
 mod semantics;
-mod syntax;
+mod ast;
 
-use crate::syntax::path::Path;
+use crate::ast::path::Path;
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
 use lexer::tokens::Token;
 use semantics::type_resolver::*;
-use syntax::{expression, ty::Type};
+use ast::{expression, ty::Type};
 
 fn main() {
     let config = configure_cli().get_matches();

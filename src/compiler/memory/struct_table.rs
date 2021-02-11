@@ -3,8 +3,8 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
     semantics::semanticnode::SemanticAnnotations,
-    syntax::path::Path,
-    syntax::{
+    ast::path::Path,
+    ast::{
         module::{Item, Module},
         node::Node,
         structdef::StructDef,

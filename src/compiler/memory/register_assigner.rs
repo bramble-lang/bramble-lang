@@ -1,9 +1,9 @@
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::struct_table::ResolvedStructTable;
-use crate::syntax::module::*;
-use crate::syntax::ty::Type;
+use crate::ast::module::*;
+use crate::ast::ty::Type;
 use crate::TracingConfig;
-use crate::{compiler::arch::registers::RegSize, syntax::annotate::traversalmut::TraverserMut};
+use crate::{compiler::arch::registers::RegSize, ast::annotate::traversalmut::TraverserMut};
 
 /**
  * This traverses the AST and determines what size register to

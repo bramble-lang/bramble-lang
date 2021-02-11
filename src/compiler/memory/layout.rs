@@ -4,14 +4,14 @@ use struct_table::ResolvedStructTable;
 use crate::{
     compiler::memory::scope::{CompilerAnnotation, LayoutData},
     semantics::semanticnode::SemanticAnnotations,
-    syntax::{
+    ast::{
         module::{self, Item, Module},
         routinedef::{RoutineDef, RoutineDefType},
         statement::{Bind, Mutate, Return, Statement, YieldReturn},
         structdef::StructDef,
     },
 };
-use crate::{semantics::semanticnode::SemanticNode, syntax::expression::Expression};
+use crate::{semantics::semanticnode::SemanticNode, ast::expression::Expression};
 use braid_lang::result::Result;
 
 /**
@@ -35,7 +35,7 @@ mod compute {
     use super::*;
     use crate::{
         compiler::memory::symbol_table::Symbol,
-        syntax::{node::Node, parameter::Parameter},
+        ast::{node::Node, parameter::Parameter},
     };
 
     pub(super) fn layouts_for_module(
@@ -554,12 +554,12 @@ mod compute {
         use module::Module;
 
         use super::*;
-        use crate::syntax::routinedef::RoutineDefType;
-        use crate::syntax::ty::Type;
-        use crate::{compiler::memory::scope, syntax::path::Path};
+        use crate::ast::routinedef::RoutineDefType;
+        use crate::ast::ty::Type;
+        use crate::{compiler::memory::scope, ast::path::Path};
         use crate::{
             compiler::memory::scope::Level,
-            syntax::{expression::BinaryOperator, routinedef::RoutineDef},
+            ast::{expression::BinaryOperator, routinedef::RoutineDef},
         };
         use crate::{
             compiler::memory::struct_table::UnresolvedStructTable, semantics::symbol_table,

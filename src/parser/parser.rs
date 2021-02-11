@@ -6,7 +6,7 @@ use stdext::function_name;
 use crate::{
     diagnostics::config::TracingConfig,
     lexer::tokens::{Lex, Primitive, Token},
-    syntax::{
+    ast::{
         annotate::Annotation,
         expression::{Expression, RoutineCall},
         module::Module,
@@ -507,7 +507,7 @@ pub mod tests {
     use super::*;
     use crate::{
         lexer::lexer::Lexer,
-        syntax::{
+        ast::{
             expression::{BinaryOperator, UnaryOperator},
             module::Item,
             node::Node,

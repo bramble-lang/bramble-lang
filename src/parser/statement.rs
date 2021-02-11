@@ -7,7 +7,7 @@ use stdext::function_name;
 
 use crate::{
     lexer::tokens::{Lex, Token},
-    syntax::{
+    ast::{
         expression::{Expression, RoutineCall},
         node::Node,
         statement::*,

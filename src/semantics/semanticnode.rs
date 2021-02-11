@@ -1,13 +1,13 @@
-use crate::syntax::{
+use crate::ast::{
     annotate::Annotation, node::Node, parameter::Parameter, statement::Statement,
 };
 use crate::{
-    diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
+    diagnostics::config::TracingConfig, parser::parser::ParserInfo, ast::structdef::StructDef,
 };
 use crate::{
     expression::*,
-    syntax::path::Path,
-    syntax::{
+    ast::path::Path,
+    ast::{
         module::{self, Item},
         routinedef::RoutineDef,
         ty::Type,
@@ -15,7 +15,7 @@ use crate::{
 };
 use crate::{
     semantics::symbol_table::*,
-    syntax::statement::{Bind, Mutate, Return, Yield, YieldReturn},
+    ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
 };
 use braid_lang::result::Result;
 

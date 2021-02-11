@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use crate::syntax::{
+use crate::ast::{
     node::Node,
     parameter::Parameter,
     path::Path,
     statement::{Bind, Mutate, Yield, YieldReturn},
 };
-use crate::syntax::{
+use crate::ast::{
     statement::{Return, Statement},
     ty::Type,
 };
@@ -16,16 +16,16 @@ use crate::{
 };
 use crate::{
     expression::{BinaryOperator, Expression, UnaryOperator},
-    syntax::{
+    ast::{
         module::{self, Item},
         routinedef,
     },
 };
-use crate::{parser::parser::ParserInfo, semantics::symbol_table::*, syntax::structdef};
+use crate::{parser::parser::ParserInfo, semantics::symbol_table::*, ast::structdef};
 use crate::{
     semantics::semanticnode::{SemanticAst, SemanticNode},
-    syntax::module::Module,
-    syntax::statement,
+    ast::module::Module,
+    ast::statement,
 };
 use braid_lang::result::Result;
 use routinedef::RoutineDefType;
@@ -1011,14 +1011,14 @@ impl<'a> TypeResolver<'a> {
             Symbol {
                 ty: Type::FunctionDef(pty, rty),
                 ..
-            } if *call == crate::syntax::expression::RoutineCall::Function => (
+            } if *call == crate::ast::expression::RoutineCall::Function => (
                 pty,
                 Self::type_to_canonical_with_path(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..
-            } if *call == crate::syntax::expression::RoutineCall::CoroutineInit => (
+            } if *call == crate::ast::expression::RoutineCall::CoroutineInit => (
                 pty,
                 Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
                     &routine_path_parent,
@@ -1151,8 +1151,8 @@ mod tests {
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
-    use crate::syntax::{module::Item, routinedef};
-    use crate::{expression::Expression, syntax::statement::Statement};
+    use crate::ast::{module::Item, routinedef};
+    use crate::{expression::Expression, ast::statement::Statement};
 
     #[test]
     pub fn test_identifiers() {

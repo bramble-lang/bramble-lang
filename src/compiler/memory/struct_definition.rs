@@ -1,4 +1,4 @@
-use crate::syntax::ty::Type;
+use crate::ast::ty::Type;
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
