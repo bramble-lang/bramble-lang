@@ -58,11 +58,9 @@ where
         }
 
         m2.get_functions_mut().append(&mut self.for_items(m.get_functions(), f));
+        m2.get_coroutines_mut().append(&mut self.for_items(m.get_coroutines(), f));
+        m2.get_structs_mut().append(&mut self.for_items(m.get_structs(), f));
 
-        /*self.for_items(m.get_coroutines_mut(), f);
-
-        self.for_items(m.get_structs_mut(), f);
-        self.tracer(m);*/
         m2
     }
 
