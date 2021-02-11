@@ -1,4 +1,3 @@
-pub mod annotation;
 pub mod expression;
 pub mod module;
 pub mod node;
@@ -9,3 +8,4 @@ pub mod statement;
 pub mod structdef;
 pub mod traversal;
 pub mod ty;
+pub mod annotate;

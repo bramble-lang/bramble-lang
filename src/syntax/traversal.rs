@@ -7,7 +7,7 @@ use crate::syntax::statement::*;
 use crate::syntax::structdef::*;
 use crate::{diagnostics::config::TracingConfig, expression::Expression};
 
-use super::{annotation::Annotation, node::Node, parameter::Parameter};
+use super::{annotate::Annotation, node::Node, parameter::Parameter};
 
 /**
  * This traverses the AST and determines what size register to

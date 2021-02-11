@@ -7,7 +7,7 @@ use crate::{
     diagnostics::config::TracingConfig,
     lexer::tokens::{Lex, Primitive, Token},
     syntax::{
-        annotation::Annotation,
+        annotate::Annotation,
         expression::{Expression, RoutineCall},
         module::Module,
         node::Node,

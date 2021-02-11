@@ -1,6 +1,6 @@
 use crate::compiler::x86::assembly::Reg;
 use crate::compiler::x86::assembly::Reg64;
-use crate::{compiler::arch::registers::RegSize, syntax::annotation::Annotation};
+use crate::{compiler::arch::registers::RegSize, syntax::annotate::Annotation};
 use crate::{
     semantics::semanticnode::SemanticAnnotations,
     syntax::path::Path,
