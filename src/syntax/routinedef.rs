@@ -1,4 +1,4 @@
-use super::{parameter::Parameter, statement::Statement, ty::Type};
+use super::{node::Node, parameter::Parameter, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
@@ -8,6 +8,16 @@ pub struct RoutineDef<M> {
     pub params: Vec<Parameter<M>>,
     pub ty: Type,
     pub body: Vec<Statement<M>>,
+}
+
+impl<M> Node<M> for RoutineDef<M> {
+    fn get_annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        &mut self.annotations
+    }
 }
 
 impl<M> std::fmt::Display for RoutineDef<M> {

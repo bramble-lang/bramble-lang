@@ -1,8 +1,4 @@
-use super::{
-    path::Path,
-    routinedef::{RoutineDef, RoutineDefType},
-    structdef::StructDef,
-};
+use super::{node::Node, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -13,6 +9,16 @@ pub struct Module<M> {
     functions: Vec<Item<M>>,
     coroutines: Vec<Item<M>>,
     structs: Vec<Item<M>>,
+}
+
+impl<M> Node<M> for Module<M> {
+    fn get_annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        &mut self.annotations
+    }
 }
 
 impl<M> std::fmt::Display for Module<M> {
@@ -420,6 +426,22 @@ mod test {
 pub enum Item<M> {
     Routine(RoutineDef<M>),
     Struct(StructDef<M>),
+}
+
+impl<M> Node<M> for Item<M> {
+    fn get_annotation(&self) -> &M {
+        match self {
+            Item::Routine(r) => r.get_annotations(),
+            Item::Struct(s) => s.get_annotations(),
+        }
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        match self {
+            Item::Routine(r) => r.get_annotations_mut(),
+            Item::Struct(s) => s.get_annotations_mut(),
+        }
+    }
 }
 
 impl<M> std::fmt::Display for Item<M> {

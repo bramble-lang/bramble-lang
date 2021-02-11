@@ -1,4 +1,4 @@
-use super::{expression::Expression, ty::Type};
+use super::{expression::Expression, node::Node, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
@@ -9,6 +9,32 @@ pub enum Statement<M> {
     Expression(Box<Expression<M>>),
 
     Return(Box<Return<M>>),
+}
+
+impl<M> Node<M> for Statement<M> {
+    fn get_annotation(&self) -> &M {
+        use Statement::*;
+
+        match self {
+            Return(x) => x.get_annotations(),
+            YieldReturn(x) => x.get_annotations(),
+            Expression(e) => e.get_annotations(),
+            Bind(b) => b.get_annotations(),
+            Mutate(m) => m.get_annotations(),
+        }
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        use Statement::*;
+
+        match self {
+            Return(x) => x.get_annotations_mut(),
+            YieldReturn(x) => x.get_annotations_mut(),
+            Expression(e) => e.get_annotations_mut(),
+            Bind(b) => b.get_annotations_mut(),
+            Mutate(m) => m.get_annotations_mut(),
+        }
+    }
 }
 
 impl<M> std::fmt::Display for Statement<M> {
@@ -70,6 +96,16 @@ pub struct Bind<M> {
     rhs: Expression<M>,
 }
 
+impl<M> Node<M> for Bind<M> {
+    fn get_annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        &mut self.annotations
+    }
+}
+
 impl<M> std::fmt::Display for Bind<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(&self.root_str())
@@ -127,6 +163,16 @@ pub struct Mutate<M> {
     rhs: Expression<M>,
 }
 
+impl<M> Node<M> for Mutate<M> {
+    fn get_annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        &mut self.annotations
+    }
+}
+
 impl<M> std::fmt::Display for Mutate<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(&self.root_str())
@@ -173,6 +219,16 @@ pub struct Yield<M> {
     value: Expression<M>,
 }
 
+impl<M> Node<M> for Yield<M> {
+    fn get_annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        &mut self.annotations
+    }
+}
+
 impl<M> Yield<M> {
     pub fn new(annotations: M, value: Expression<M>) -> Self {
         Self { annotations, value }
@@ -199,6 +255,16 @@ impl<M> Yield<M> {
 pub struct YieldReturn<M> {
     annotations: M,
     value: Option<Expression<M>>,
+}
+
+impl<M> Node<M> for YieldReturn<M> {
+    fn get_annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        &mut self.annotations
+    }
 }
 
 impl<M> std::fmt::Display for YieldReturn<M> {
@@ -237,6 +303,16 @@ impl<M> YieldReturn<M> {
 pub struct Return<M> {
     annotations: M,
     value: Option<Expression<M>>,
+}
+
+impl<M> Node<M> for Return<M> {
+    fn get_annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        &mut self.annotations
+    }
 }
 
 impl<M> std::fmt::Display for Return<M> {

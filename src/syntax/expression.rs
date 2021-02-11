@@ -1,4 +1,4 @@
-use super::{path::Path, statement::Statement, ty::Type};
+use super::{node::Node, path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
@@ -25,6 +25,52 @@ pub enum Expression<I> {
     UnaryOp(I, UnaryOperator, Box<Expression<I>>),
 
     Yield(I, Box<Expression<I>>),
+}
+
+impl<M> Node<M> for Expression<M> {
+    fn get_annotation(&self) -> &M {
+        use Expression::*;
+        match self {
+            Integer32(m, ..)
+            | Integer64(m, ..)
+            | Boolean(m, ..)
+            | StringLiteral(m, ..)
+            | CustomType(m, ..)
+            | Identifier(m, ..)
+            | IdentifierDeclare(m, ..)
+            | Path(m, ..)
+            | MemberAccess(m, ..)
+            | BinaryOp(m, ..)
+            | UnaryOp(m, ..)
+            | If { annotation: m, .. }
+            | ExpressionBlock(m, ..)
+            | Yield(m, ..)
+            | RoutineCall(m, ..) => m,
+            StructExpression(m, ..) => m,
+        }
+    }
+
+    fn get_annotation_mut(&mut self) -> & mut M {
+        use Expression::*;
+        match self {
+            Integer32(m, ..)
+            | Integer64(m, ..)
+            | Boolean(m, ..)
+            | StringLiteral(m, ..)
+            | CustomType(m, ..)
+            | Identifier(m, ..)
+            | IdentifierDeclare(m, ..)
+            | Path(m, ..)
+            | MemberAccess(m, ..)
+            | BinaryOp(m, ..)
+            | UnaryOp(m, ..)
+            | If { annotation: m, .. }
+            | ExpressionBlock(m, ..)
+            | Yield(m, ..)
+            | RoutineCall(m, ..) => m,
+            StructExpression(m, ..) => m,
+        }
+    }
 }
 
 impl<M> std::fmt::Display for Expression<M> {
