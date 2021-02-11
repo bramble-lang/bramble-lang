@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::{compiler::arch::registers::RegSize, syntax::traversal::TraverserMut};
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::struct_table::ResolvedStructTable;
@@ -14,7 +12,7 @@ use crate::TracingConfig;
  */
 
 pub fn assign(tracing: TracingConfig, m: &mut Module<CompilerAnnotation>, struct_table: &ResolvedStructTable) {
-    let tm = TraverserMut{tracing, trace, shit: PhantomData};
+    let tm = TraverserMut::new("Register Assigner", tracing, trace);
     tm.for_module(m, |a| {
         assign_register(a, struct_table);
     })

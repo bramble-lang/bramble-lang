@@ -20,6 +20,7 @@ where
     A: Debug + Annotation,
     T: Fn(&A) -> String,
 {
+    pub name: String,
     pub tracing: TracingConfig,
     pub trace: T,
     pub(crate) shit: PhantomData<A>,
@@ -30,18 +31,23 @@ where
     A: Debug + Annotation,
     T: Fn(&A) -> String,
 {
-    /**
-     * Determine the size of register needed to store a value, based upon the number of bytes
-     * the type takes.
-     *
-     * Custom types are always represented using 64bit registers because they are currently
-     * always referred to via addresses.
-     */
+    pub fn new(name: &str, tracing: TracingConfig, trace: T) -> TraverserMut<A, T> {
+        TraverserMut {
+            name: name.into(),
+            tracing,
+            trace,
+            shit: PhantomData,
+        }
+    }
 
     pub fn for_module<F>(&self, m: &mut Module<A>, mut f: F)
     where
         F: FnMut(&mut A) + Copy,
     {
+        if self.tracing != TracingConfig::Off {
+            println!("{}", self.name);
+        }
+
         f(m.get_annotations_mut());
 
         for child_module in m.get_modules_mut().iter_mut() {
@@ -322,7 +328,10 @@ where
         self.tracer(se);
     }
 
-    fn tracer<N>(&self, node: &N) where N: Node<A> + Display{
+    fn tracer<N>(&self, node: &N)
+    where
+        N: Node<A> + Display,
+    {
         let annotation = node.get_annotation();
         let line = annotation.line() as usize;
 
