@@ -33,19 +33,18 @@ pub fn compute_layout_for_program(
 
 mod compute {
     use super::*;
-    use crate::{compiler::memory::symbol_table::Symbol, syntax::parameter::Parameter};
+    use crate::{
+        compiler::memory::symbol_table::Symbol,
+        syntax::{node::Node, parameter::Parameter},
+    };
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (module::Module<CompilerAnnotation>, LayoutData) {
-        let (annotations, mut layout) = CompilerAnnotation::module_from(
-            m.get_annotations(),
-            m.get_name(),
-            struct_table,
-            layout,
-        );
+        let (annotations, mut layout) =
+            CompilerAnnotation::module_from(m.annotation(), m.get_name(), struct_table, layout);
 
         let mut nmodule = module::Module::new(m.get_name(), annotations);
         for child_module in m.get_modules().iter() {
@@ -94,7 +93,7 @@ mod compute {
         sd: &StructDef<SemanticAnnotations>,
         struct_table: &ResolvedStructTable,
     ) -> (StructDef<CompilerAnnotation>, LayoutData) {
-        let (scope, layout) = CompilerAnnotation::structdef_from(sd.get_annotations());
+        let (scope, layout) = CompilerAnnotation::structdef_from(sd.annotation());
         let (params, layout) = layout_for_parameters(sd.get_fields(), layout, struct_table);
         (StructDef::new(sd.get_name(), scope, params), layout)
     }
@@ -202,7 +201,7 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (Bind<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            CompilerAnnotation::local_from(bind.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(bind.annotation(), struct_table, layout);
         let (rhs, layout) = compute::layout_for_expression(bind.get_rhs(), layout, struct_table);
         (
             Bind::new(
@@ -222,7 +221,7 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (Mutate<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            CompilerAnnotation::local_from(mutate.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(mutate.annotation(), struct_table, layout);
         let (rhs, layout) = compute::layout_for_expression(mutate.get_rhs(), layout, struct_table);
         (Mutate::new(annotations, mutate.get_id(), rhs), layout)
     }
@@ -233,7 +232,7 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (YieldReturn<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            CompilerAnnotation::local_from(yr.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(yr.annotation(), struct_table, layout);
         match yr.get_value() {
             None => (YieldReturn::new(annotations, None), layout),
             Some(val) => {
@@ -249,7 +248,7 @@ mod compute {
         struct_table: &ResolvedStructTable,
     ) -> (Return<CompilerAnnotation>, LayoutData) {
         let (annotations, layout) =
-            CompilerAnnotation::local_from(r.get_annotations(), struct_table, layout);
+            CompilerAnnotation::local_from(r.annotation(), struct_table, layout);
         match r.get_value() {
             None => (Return::new(annotations, None), layout),
             Some(val) => {
@@ -388,13 +387,13 @@ mod compute {
             let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
             let layout = allocate_into_stackframe(
                 &mut annotations,
-                l.get_annotations_mut(),
+                l.annotation_mut(),
                 layout,
                 struct_table,
             );
             let layout = allocate_into_stackframe(
                 &mut annotations,
-                r.get_annotations_mut(),
+                r.annotation_mut(),
                 layout,
                 struct_table,
             );
@@ -458,7 +457,7 @@ mod compute {
 
                 nlayout = allocate_into_stackframe(
                     &mut annotations,
-                    np.get_annotations_mut(),
+                    np.annotation_mut(),
                     playout,
                     struct_table,
                 );

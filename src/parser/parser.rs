@@ -3,7 +3,22 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{diagnostics::config::TracingConfig, lexer::tokens::{Lex, Primitive, Token}, syntax::{annotation::Annotation, expression::{Expression, RoutineCall}, module::Module, parameter::Parameter, path::Path, routinedef::{RoutineDef, RoutineDefType}, statement::Statement, structdef::StructDef, ty::Type}};
+use crate::{
+    diagnostics::config::TracingConfig,
+    lexer::tokens::{Lex, Primitive, Token},
+    syntax::{
+        annotation::Annotation,
+        expression::{Expression, RoutineCall},
+        module::Module,
+        node::Node,
+        parameter::Parameter,
+        path::Path,
+        routinedef::{RoutineDef, RoutineDefType},
+        statement::Statement,
+        structdef::StructDef,
+        ty::Type,
+    },
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -243,7 +258,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Function must end with a return statement, got {:?}",
-                stmts.last().map_or(fn_line, |s| *s.get_annotations()),
+                stmts.last().map_or(fn_line, |s| *s.annotation()),
                 stream.peek(),
             ))
         }
@@ -283,7 +298,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Coroutine must end with a return statement",
-                stmts.last().map_or(co_line, |s| *s.get_annotations()),
+                stmts.last().map_or(co_line, |s| *s.annotation()),
             ))
         }
     }
@@ -495,6 +510,7 @@ pub mod tests {
         syntax::{
             expression::{BinaryOperator, UnaryOperator},
             module::Item,
+            node::Node,
         },
     };
 
@@ -840,7 +856,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_mod");
         } else {
             panic!("No nodes returned by parser")
@@ -857,7 +873,7 @@ pub mod tests {
             .unwrap();
 
         if let Some(m) = parse(tokens).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "root");
 
             assert_eq!(m.get_modules().len(), 1);
@@ -866,7 +882,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             let m = &m.get_modules()[0];
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_fn_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -910,7 +926,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_co_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -955,7 +971,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_struct_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -964,7 +980,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 1);
 
             if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
-                assert_eq!(*sd.get_annotations(), 1);
+                assert_eq!(*sd.annotation(), 1);
                 assert_eq!(sd.get_name(), "my_struct");
                 assert_eq!(sd.get_fields(), &vec![Parameter::new(1, "x", &Type::I64)]);
             }
@@ -1102,7 +1118,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         if let Some(m) = parse(tokens).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
                 name,

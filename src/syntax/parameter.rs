@@ -1,10 +1,20 @@
-use super::ty::Type;
+use super::{node::Node, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
     pub annotation: M,
     pub name: String,
     pub ty: Type,
+}
+
+impl<M> Node<M> for Parameter<M> {
+    fn annotation(&self) -> &M {
+        &self.annotation
+    }
+
+    fn annotation_mut(&mut self) -> &mut M {
+        &mut self.annotation
+    }
 }
 
 impl<M> Parameter<M> {
@@ -14,14 +24,6 @@ impl<M> Parameter<M> {
             name: name.into(),
             ty: ty.clone(),
         }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotation
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotation
     }
 
     pub fn root_str(&self) -> String {

@@ -8,7 +8,10 @@ use super::{
 };
 use crate::{
     lexer::tokens::{Lex, Token},
-    syntax::expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator},
+    syntax::{
+        expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator},
+        node::Node,
+    },
     trace,
 };
 
@@ -368,7 +371,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
             let line = token.l;
             match expression(stream)? {
                 Some(coroutine) => {
-                    Expression::new_yield(*coroutine.get_annotations(), Box::new(coroutine))
+                    Expression::new_yield(*coroutine.annotation(), Box::new(coroutine))
                 }
                 None => Err(format!("L{}: expected an identifier after yield", line)),
             }

@@ -1,4 +1,6 @@
-use crate::syntax::{annotation::Annotation, parameter::Parameter, statement::Statement};
+use crate::syntax::{
+    annotation::Annotation, node::Node, parameter::Parameter, statement::Statement,
+};
 use crate::{
     diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };
@@ -40,14 +42,14 @@ pub type SemanticNode = Expression<SemanticAnnotations>;
 
 impl SemanticNode {
     pub fn get_type(&self) -> &Type {
-        let meta = self.get_annotations();
+        let meta = self.annotation();
         &meta.ty
     }
 }
 
 impl Statement<SemanticAnnotations> {
     pub fn get_type(&self) -> &Type {
-        let m = self.get_annotations();
+        let m = self.annotation();
         &m.ty
     }
 }
@@ -93,7 +95,7 @@ impl SemanticAst {
         &mut self,
         m: &module::Module<u32>,
     ) -> Result<module::Module<SemanticAnnotations>> {
-        let meta = self.module_semantic_annotations_from(*m.get_annotations(), m.get_name());
+        let meta = self.module_semantic_annotations_from(*m.annotation(), m.get_name());
 
         let mut nmodule = module::Module::new(m.get_name(), meta);
         for module in m.get_modules().iter() {
@@ -157,13 +159,13 @@ impl SemanticAst {
             ));
         }
 
-        if *sd.get_annotations() == 0 {
+        if *sd.annotation() == 0 {
             return Err("Source code line must be greater than 0".into());
         }
 
         let semantic = StructDef::new(
             sd.get_name().clone(),
-            self.semantic_annotations_from(*sd.get_annotations()),
+            self.semantic_annotations_from(*sd.annotation()),
             self.from_parameters(sd.get_fields()),
         );
 
@@ -199,7 +201,7 @@ impl SemanticAst {
 
     fn from_bind(&mut self, bind: &Bind<ParserInfo>) -> Result<Bind<SemanticAnnotations>> {
         Ok(Bind::new(
-            self.semantic_annotations_from(*bind.get_annotations()),
+            self.semantic_annotations_from(*bind.annotation()),
             bind.get_id(),
             bind.get_type().clone(),
             bind.is_mutable(),
@@ -209,7 +211,7 @@ impl SemanticAst {
 
     fn from_mutate(&mut self, mutate: &Mutate<ParserInfo>) -> Result<Mutate<SemanticAnnotations>> {
         Ok(Mutate::new(
-            self.semantic_annotations_from(*mutate.get_annotations()),
+            self.semantic_annotations_from(*mutate.annotation()),
             mutate.get_id(),
             *self.from_expression(mutate.get_rhs())?,
         ))
@@ -221,11 +223,11 @@ impl SemanticAst {
     ) -> Result<YieldReturn<SemanticAnnotations>> {
         match yr.get_value() {
             None => Ok(YieldReturn::new(
-                self.semantic_annotations_from(*yr.get_annotations()),
+                self.semantic_annotations_from(*yr.annotation()),
                 None,
             )),
             Some(val) => Ok(YieldReturn::new(
-                self.semantic_annotations_from(*yr.get_annotations()),
+                self.semantic_annotations_from(*yr.annotation()),
                 Some(*self.from_expression(val)?),
             )),
         }
@@ -234,11 +236,11 @@ impl SemanticAst {
     fn from_return(&mut self, r: &Return<ParserInfo>) -> Result<Return<SemanticAnnotations>> {
         match r.get_value() {
             None => Ok(Return::new(
-                self.semantic_annotations_from(*r.get_annotations()),
+                self.semantic_annotations_from(*r.annotation()),
                 None,
             )),
             Some(val) => Ok(Return::new(
-                self.semantic_annotations_from(*r.get_annotations()),
+                self.semantic_annotations_from(*r.annotation()),
                 Some(*self.from_expression(val)?),
             )),
         }
@@ -366,7 +368,7 @@ impl SemanticAst {
 
     fn from_yield(&mut self, y: &Yield<ParserInfo>) -> Result<Yield<SemanticAnnotations>> {
         Ok(Yield::new(
-            self.semantic_annotations_from(*y.get_annotations()),
+            self.semantic_annotations_from(*y.annotation()),
             *self.from_expression(y.get_value())?,
         ))
     }

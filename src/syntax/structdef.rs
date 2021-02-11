@@ -1,4 +1,4 @@
-use super::{parameter::Parameter, ty::Type};
+use super::{node::Node, parameter::Parameter, ty::Type};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -6,6 +6,16 @@ pub struct StructDef<M> {
     annotations: M,
     name: String,
     pub(super) fields: Vec<Parameter<M>>,
+}
+
+impl<M> Node<M> for StructDef<M> {
+    fn annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn annotation_mut(&mut self) -> &mut M {
+        &mut self.annotations
+    }
 }
 
 impl<M> std::fmt::Display for StructDef<M> {
@@ -25,14 +35,6 @@ impl<M> StructDef<M> {
 
     pub fn get_name(&self) -> &str {
         &self.name
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
     }
 
     pub fn get_fields(&self) -> &Vec<Parameter<M>> {

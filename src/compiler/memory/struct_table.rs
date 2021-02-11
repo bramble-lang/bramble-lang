@@ -6,6 +6,7 @@ use crate::{
     syntax::path::Path,
     syntax::{
         module::{Item, Module},
+        node::Node,
         structdef::StructDef,
         ty::Type,
     },
@@ -94,11 +95,7 @@ impl UnresolvedStructTable {
                 .map(|f| (f.name.clone(), f.ty.clone()))
                 .collect(),
         );
-        Self::insert_struct(
-            table,
-            struct_def.get_annotations().get_canonical_path(),
-            def,
-        )?;
+        Self::insert_struct(table, struct_def.annotation().get_canonical_path(), def)?;
         Ok(())
     }
 

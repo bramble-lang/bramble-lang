@@ -1,4 +1,5 @@
 use super::{
+    node::Node,
     path::Path,
     routinedef::{RoutineDef, RoutineDefType},
     structdef::StructDef,
@@ -13,6 +14,16 @@ pub struct Module<M> {
     functions: Vec<Item<M>>,
     coroutines: Vec<Item<M>>,
     structs: Vec<Item<M>>,
+}
+
+impl<M> Node<M> for Module<M> {
+    fn annotation(&self) -> &M {
+        &self.annotations
+    }
+
+    fn annotation_mut(&mut self) -> &mut M {
+        &mut self.annotations
+    }
 }
 
 impl<M> std::fmt::Display for Module<M> {
@@ -82,14 +93,6 @@ impl<M> Module<M> {
 
     pub fn get_name(&self) -> &str {
         &self.name
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
     }
 
     pub fn get_modules(&self) -> &Vec<Module<M>> {
@@ -200,7 +203,7 @@ mod test {
     pub fn test_new_module() {
         let module = Module::new("test", 1);
         assert_eq!(module.get_name(), "test");
-        assert_eq!(*module.get_annotations(), 1);
+        assert_eq!(*module.annotation(), 1);
     }
 
     #[test]
@@ -422,6 +425,22 @@ pub enum Item<M> {
     Struct(StructDef<M>),
 }
 
+impl<M> Node<M> for Item<M> {
+    fn annotation(&self) -> &M {
+        match self {
+            Item::Routine(r) => r.annotation(),
+            Item::Struct(s) => s.annotation(),
+        }
+    }
+
+    fn annotation_mut(&mut self) -> &mut M {
+        match self {
+            Item::Routine(r) => r.annotation_mut(),
+            Item::Struct(s) => s.annotation_mut(),
+        }
+    }
+}
+
 impl<M> std::fmt::Display for Item<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(self.get_name())
@@ -440,20 +459,6 @@ impl<M> Item<M> {
         match self {
             Item::Routine(r) => Some(r),
             Item::Struct(_) => None,
-        }
-    }
-
-    pub fn get_annotations(&self) -> &M {
-        match self {
-            Item::Routine(r) => r.get_annotations(),
-            Item::Struct(s) => s.get_annotations(),
-        }
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        match self {
-            Item::Routine(r) => r.get_annotations_mut(),
-            Item::Struct(s) => s.get_annotations_mut(),
         }
     }
 

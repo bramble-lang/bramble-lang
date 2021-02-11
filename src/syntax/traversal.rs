@@ -1,6 +1,5 @@
-use fmt::Debug;
+use fmt::{Debug, Display};
 use std::{fmt, marker::PhantomData};
-use stdext::function_name;
 
 use crate::syntax::module::*;
 use crate::syntax::routinedef::*;
@@ -8,7 +7,7 @@ use crate::syntax::statement::*;
 use crate::syntax::structdef::*;
 use crate::{diagnostics::config::TracingConfig, expression::Expression};
 
-use super::{annotation::Annotation, parameter::Parameter};
+use super::{annotation::Annotation, node::Node, parameter::Parameter};
 
 /**
  * This traverses the AST and determines what size register to
@@ -21,9 +20,10 @@ where
     A: Debug + Annotation,
     T: Fn(&A) -> String,
 {
+    pub name: String,
     pub tracing: TracingConfig,
-    pub trace: T,
-    pub(crate) shit: PhantomData<A>,
+    pub format: T,
+    ph: PhantomData<A>,
 }
 
 impl<A, T> TraverserMut<A, T>
@@ -31,19 +31,24 @@ where
     A: Debug + Annotation,
     T: Fn(&A) -> String,
 {
-    /**
-     * Determine the size of register needed to store a value, based upon the number of bytes
-     * the type takes.
-     *
-     * Custom types are always represented using 64bit registers because they are currently
-     * always referred to via addresses.
-     */
+    pub fn new(name: &str, tracing: TracingConfig, format: T) -> TraverserMut<A, T> {
+        TraverserMut {
+            name: name.into(),
+            tracing,
+            format,
+            ph: PhantomData,
+        }
+    }
 
     pub fn for_module<F>(&self, m: &mut Module<A>, mut f: F)
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(m.get_annotations_mut());
+        if self.tracing != TracingConfig::Off {
+            println!("{}", self.name);
+        }
+
+        f(m.annotation_mut());
 
         for child_module in m.get_modules_mut().iter_mut() {
             self.for_module(child_module, f);
@@ -54,7 +59,7 @@ where
         self.for_items(m.get_coroutines_mut(), f);
 
         self.for_items(m.get_structs_mut(), f);
-        self.tracer(&m.get_annotations());
+        self.tracer(m);
     }
 
     fn for_items<F>(&self, items: &mut Vec<Item<A>>, f: F)
@@ -70,7 +75,7 @@ where
                     self.for_routinedef(rd, f);
                 }
             };
-            self.tracer(&i.get_annotations());
+            self.tracer(i);
         }
     }
 
@@ -78,8 +83,8 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(sd.get_annotations_mut());
-        self.tracer(&sd.get_annotations());
+        f(sd.annotation_mut());
+        self.tracer(sd);
         self.for_parameters(&mut sd.fields, f);
     }
 
@@ -87,8 +92,8 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(rd.get_annotations_mut());
-        self.tracer(&rd.get_annotations());
+        f(rd.annotation_mut());
+        self.tracer(rd);
         // loop through all the params
         self.for_parameters(&mut rd.params, f);
 
@@ -103,8 +108,8 @@ where
         F: FnMut(&mut A) + Copy,
     {
         for p in params {
-            f(p.get_annotations_mut());
-            self.tracer(&p.get_annotations());
+            f(p.annotation_mut());
+            self.tracer(p);
         }
     }
 
@@ -129,15 +134,15 @@ where
                 self.for_expression(e, f);
             }
         };
-        self.tracer(&statement.get_annotations());
+        self.tracer(statement);
     }
 
     fn for_bind<F>(&self, bind: &mut Bind<A>, mut f: F)
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(bind.get_annotations_mut());
-        self.tracer(&bind.get_annotations());
+        f(bind.annotation_mut());
+        self.tracer(bind);
         self.for_expression(bind.get_rhs_mut(), f)
     }
 
@@ -145,8 +150,8 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(mutate.get_annotations_mut());
-        self.tracer(&mutate.get_annotations());
+        f(mutate.annotation_mut());
+        self.tracer(mutate);
         self.for_expression(mutate.get_rhs_mut(), f);
     }
 
@@ -154,8 +159,8 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(yr.get_annotations_mut());
-        self.tracer(&yr.get_annotations());
+        f(yr.annotation_mut());
+        self.tracer(yr);
         yr.get_value_mut()
             .as_mut()
             .map(|rv| self.for_expression(rv, f));
@@ -165,8 +170,8 @@ where
     where
         F: FnMut(&mut A) + Copy,
     {
-        f(r.get_annotations_mut());
-        self.tracer(&r.get_annotations());
+        f(r.annotation_mut());
+        self.tracer(r);
         r.get_value_mut()
             .as_mut()
             .map(|rv| self.for_expression(rv, f));
@@ -196,7 +201,7 @@ where
             RoutineCall(..) => self.for_routine_call(exp, f),
             StructExpression(..) => self.for_struct_expression(exp, f),
         }
-        self.tracer(&exp.get_annotations());
+        self.tracer(exp);
     }
 
     fn for_expression_block<F>(&self, block: &mut Expression<A>, mut f: F)
@@ -207,7 +212,6 @@ where
             block
         {
             f(annotation);
-            self.tracer(annotation);
 
             for e in body.iter_mut() {
                 self.for_statement(e, f);
@@ -217,6 +221,7 @@ where
         } else {
             panic!("Expected ExpressionBlock, but got {:?}", block)
         }
+        self.tracer(block);
     }
 
     fn for_member_access<F>(&self, access: &mut Expression<A>, mut f: F)
@@ -225,11 +230,11 @@ where
     {
         if let Expression::MemberAccess(ref mut annotation, src, _member) = access {
             f(annotation);
-            self.tracer(annotation);
             self.for_expression(src, f);
         } else {
             panic!("Expected MemberAccess, but got {:?}", access)
         }
+        self.tracer(access);
     }
 
     fn for_unary_op<F>(&self, un_op: &mut Expression<A>, mut f: F)
@@ -238,11 +243,11 @@ where
     {
         if let Expression::UnaryOp(ref mut annotation, _op, operand) = un_op {
             f(annotation);
-            self.tracer(annotation);
             self.for_expression(operand, f);
         } else {
             panic!("Expected UnaryOp, but got {:?}", un_op)
         }
+        self.tracer(un_op);
     }
 
     fn for_binary_op<F>(&self, bin_op: &mut Expression<A>, mut f: F)
@@ -251,12 +256,12 @@ where
     {
         if let Expression::BinaryOp(ref mut annotation, _op, l, r) = bin_op {
             f(annotation);
-            self.tracer(annotation);
             self.for_expression(l, f);
             self.for_expression(r, f);
         } else {
             panic!("Expected BinaryOp, but got {:?}", bin_op)
         }
+        self.tracer(bin_op);
     }
 
     fn for_if<F>(&self, if_exp: &mut Expression<A>, mut f: F)
@@ -271,13 +276,13 @@ where
         } = if_exp
         {
             f(annotation);
-            self.tracer(annotation);
             self.for_expression(cond, f);
             self.for_expression(if_arm, f);
             else_arm.as_mut().map(|ea| self.for_expression(ea, f));
         } else {
             panic!("Expected IfExpression, but got {:?}", if_exp)
         }
+        self.tracer(if_exp);
     }
 
     fn for_routine_call<F>(&self, rc: &mut Expression<A>, mut f: F)
@@ -286,13 +291,13 @@ where
     {
         if let Expression::RoutineCall(ref mut annotation, _call, _name, params) = rc {
             f(annotation);
-            self.tracer(annotation);
             for p in params {
                 self.for_expression(p, f);
             }
         } else {
             panic!("Expected RoutineCall, but got {:?}", rc)
         }
+        self.tracer(rc);
     }
 
     fn for_yield<F>(&self, yield_exp: &mut Expression<A>, mut f: F)
@@ -301,11 +306,11 @@ where
     {
         if let Expression::Yield(ref mut annotation, e) = yield_exp {
             f(annotation);
-            self.tracer(annotation);
             self.for_expression(e, f);
         } else {
             panic!("Expected Yield, but got {:?}", yield_exp)
         }
+        self.tracer(yield_exp);
     }
 
     fn for_struct_expression<F>(&self, se: &mut Expression<A>, mut f: F)
@@ -314,16 +319,20 @@ where
     {
         if let Expression::StructExpression(ref mut annotation, _struct_name, fields) = se {
             f(annotation);
-            self.tracer(annotation);
             for (_, fe) in fields {
                 self.for_expression(fe, f);
             }
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
         }
+        self.tracer(se);
     }
 
-    fn tracer(&self, annotation: &A) {
+    fn tracer<N>(&self, node: &N)
+    where
+        N: Node<A> + Display,
+    {
+        let annotation = node.annotation();
         let line = annotation.line() as usize;
 
         let print_trace = match &self.tracing {
@@ -334,9 +343,9 @@ where
             &TracingConfig::All => true,
             &TracingConfig::Off => false,
         };
-        let m = (self.trace)(annotation);
+        let msg = (self.format)(annotation);
         if print_trace {
-            println!("{} L{}: {}", function_name!(), line, m,)
+            println!("L{}n{}[{}]: {}", line, annotation.id(), node, msg,)
         }
     }
 }

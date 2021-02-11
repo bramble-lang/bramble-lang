@@ -1,6 +1,6 @@
-use crate::{compiler::arch::registers::RegSize, syntax::annotation::Annotation};
 use crate::compiler::x86::assembly::Reg;
 use crate::compiler::x86::assembly::Reg64;
+use crate::{compiler::arch::registers::RegSize, syntax::annotation::Annotation};
 use crate::{
     semantics::semanticnode::SemanticAnnotations,
     syntax::path::Path,
@@ -52,7 +52,7 @@ pub struct CompilerAnnotation {
     pub(super) reg_size: Option<RegSize>,
 }
 
-impl Annotation for CompilerAnnotation{
+impl Annotation for CompilerAnnotation {
     fn line(&self) -> u32 {
         self.line
     }

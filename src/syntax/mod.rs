@@ -1,6 +1,7 @@
 pub mod annotation;
 pub mod expression;
 pub mod module;
+pub mod node;
 pub mod parameter;
 pub mod path;
 pub mod routinedef;

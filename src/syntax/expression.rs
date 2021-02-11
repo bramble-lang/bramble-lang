@@ -1,4 +1,4 @@
-use super::{path::Path, statement::Statement, ty::Type};
+use super::{node::Node, path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
@@ -27,6 +27,52 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
+impl<M> Node<M> for Expression<M> {
+    fn annotation(&self) -> &M {
+        use Expression::*;
+        match self {
+            Integer32(m, ..)
+            | Integer64(m, ..)
+            | Boolean(m, ..)
+            | StringLiteral(m, ..)
+            | CustomType(m, ..)
+            | Identifier(m, ..)
+            | IdentifierDeclare(m, ..)
+            | Path(m, ..)
+            | MemberAccess(m, ..)
+            | BinaryOp(m, ..)
+            | UnaryOp(m, ..)
+            | If { annotation: m, .. }
+            | ExpressionBlock(m, ..)
+            | Yield(m, ..)
+            | RoutineCall(m, ..) => m,
+            StructExpression(m, ..) => m,
+        }
+    }
+
+    fn annotation_mut(&mut self) -> &mut M {
+        use Expression::*;
+        match self {
+            Integer32(m, ..)
+            | Integer64(m, ..)
+            | Boolean(m, ..)
+            | StringLiteral(m, ..)
+            | CustomType(m, ..)
+            | Identifier(m, ..)
+            | IdentifierDeclare(m, ..)
+            | Path(m, ..)
+            | MemberAccess(m, ..)
+            | BinaryOp(m, ..)
+            | UnaryOp(m, ..)
+            | If { annotation: m, .. }
+            | ExpressionBlock(m, ..)
+            | Yield(m, ..)
+            | RoutineCall(m, ..) => m,
+            StructExpression(m, ..) => m,
+        }
+    }
+}
+
 impl<M> std::fmt::Display for Expression<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(&self.root_str())
@@ -37,9 +83,9 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
-            Integer32(_, v) => format!("{}", v),
-            Integer64(_, v) => format!("{}", v),
-            Boolean(_, v) => format!("{}", v),
+            Integer32(_, v) => format!("i32({})", v),
+            Integer64(_, v) => format!("i64({})", v),
+            Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
@@ -49,54 +95,10 @@ impl<I> Expression<I> {
             BinaryOp(_, op, _, _) => format!("{}", op),
             UnaryOp(_, op, _) => format!("{}", op),
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
-            RoutineCall(_, call, name, ..) => format!("{} of {:?}", call, name),
+            RoutineCall(_, call, name, ..) => format!("{} {}", call, name),
             If { .. } => "if".into(),
             ExpressionBlock(..) => "expression block".into(),
             Yield(_, _) => "yield".into(),
-        }
-    }
-
-    pub fn get_annotations(&self) -> &I {
-        use Expression::*;
-        match self {
-            Integer32(m, ..)
-            | Integer64(m, ..)
-            | Boolean(m, ..)
-            | StringLiteral(m, ..)
-            | CustomType(m, ..)
-            | Identifier(m, ..)
-            | IdentifierDeclare(m, ..)
-            | Path(m, ..)
-            | MemberAccess(m, ..)
-            | BinaryOp(m, ..)
-            | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | ExpressionBlock(m, ..)
-            | Yield(m, ..)
-            | RoutineCall(m, ..) => m,
-            StructExpression(m, ..) => m,
-        }
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut I {
-        use Expression::*;
-        match self {
-            Integer32(m, ..)
-            | Integer64(m, ..)
-            | Boolean(m, ..)
-            | StringLiteral(m, ..)
-            | CustomType(m, ..)
-            | Identifier(m, ..)
-            | IdentifierDeclare(m, ..)
-            | Path(m, ..)
-            | MemberAccess(m, ..)
-            | BinaryOp(m, ..)
-            | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | ExpressionBlock(m, ..)
-            | Yield(m, ..)
-            | RoutineCall(m, ..) => m,
-            StructExpression(m, ..) => m,
         }
     }
 }
@@ -163,8 +165,8 @@ impl std::fmt::Display for RoutineCall {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         use RoutineCall::*;
         match self {
-            CoroutineInit => f.write_str("coroutine init"),
-            Function => f.write_str("function call"),
+            CoroutineInit => f.write_str("init"),
+            Function => f.write_str("call"),
         }
     }
 }
