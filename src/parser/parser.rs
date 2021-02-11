@@ -504,13 +504,7 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{
-        lexer::lexer::Lexer,
-        syntax::{
-            expression::{BinaryOperator, UnaryOperator},
-            module::Item,
-        },
-    };
+    use crate::{lexer::lexer::Lexer, syntax::{expression::{BinaryOperator, UnaryOperator}, module::Item, node::Node}};
 
     #[test]
     fn parse_unary_operators() {
@@ -854,7 +848,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_mod");
         } else {
             panic!("No nodes returned by parser")
@@ -871,7 +865,7 @@ pub mod tests {
             .unwrap();
 
         if let Some(m) = parse(tokens).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "root");
 
             assert_eq!(m.get_modules().len(), 1);
@@ -880,7 +874,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             let m = &m.get_modules()[0];
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_fn_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -924,7 +918,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_co_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -969,7 +963,7 @@ pub mod tests {
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(m) = module(&mut iter).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_struct_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -1116,7 +1110,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         if let Some(m) = parse(tokens).unwrap() {
-            assert_eq!(*m.get_annotations(), 1);
+            assert_eq!(*m.annotation(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
                 name,

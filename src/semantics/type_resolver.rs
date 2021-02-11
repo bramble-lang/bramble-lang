@@ -1,10 +1,6 @@
 use std::collections::HashMap;
 
-use crate::syntax::{
-    parameter::Parameter,
-    path::Path,
-    statement::{Bind, Mutate, Yield, YieldReturn},
-};
+use crate::syntax::{node::Node, parameter::Parameter, path::Path, statement::{Bind, Mutate, Yield, YieldReturn}};
 use crate::syntax::{
     statement::{Return, Statement},
     ty::Type,
@@ -122,8 +118,8 @@ impl<'a> TypeResolver<'a> {
         m: &module::Module<SemanticAnnotations>,
         sym: &mut SymbolTable,
     ) -> Result<module::Module<SemanticAnnotations>> {
-        let mut nmodule = module::Module::new(m.get_name(), m.get_annotations().clone());
-        let mut meta = nmodule.get_annotations_mut().clone();
+        let mut nmodule = module::Module::new(m.get_name(), m.annotation().clone());
+        let mut meta = nmodule.annotation_mut().clone();
 
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
@@ -152,7 +148,7 @@ impl<'a> TypeResolver<'a> {
         self.stack.pop();
 
         meta.ty = Unit;
-        *nmodule.get_annotations_mut() = meta;
+        *nmodule.annotation_mut() = meta;
         Ok(nmodule)
     }
 
@@ -940,7 +936,7 @@ impl<'a> TypeResolver<'a> {
             let project_symbol = self
                 .root
                 .go_to_module(&canon_path.parent())
-                .map(|module| module.get_annotations().sym.get(&item))
+                .map(|module| module.annotation().sym.get(&item))
                 .flatten();
 
             // look in any imported symbols

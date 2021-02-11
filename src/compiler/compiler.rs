@@ -1,4 +1,4 @@
-use crate::compiler::memory::register_assigner;
+use crate::{compiler::memory::register_assigner, syntax::node::Node};
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to
@@ -599,7 +599,7 @@ impl<'a> Compiler<'a> {
         current_func: &String,
         code: &mut Vec<Inst>,
     ) -> Result<(), String> {
-        self.scope.push(module.get_annotations());
+        self.scope.push(module.annotation());
         for f in module.get_functions().iter() {
             self.traverse_item(f, code)?;
         }

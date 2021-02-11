@@ -48,7 +48,7 @@ where
             println!("{}", self.name);
         }
 
-        f(m.get_annotations_mut());
+        f(m.annotation_mut());
 
         for child_module in m.get_modules_mut().iter_mut() {
             self.for_module(child_module, f);

@@ -95,14 +95,6 @@ impl<M> Module<M> {
         &self.name
     }
 
-    pub fn get_annotations(&self) -> &M {
-        &self.annotations
-    }
-
-    pub fn get_annotations_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
     pub fn get_modules(&self) -> &Vec<Module<M>> {
         &self.modules
     }
@@ -211,7 +203,7 @@ mod test {
     pub fn test_new_module() {
         let module = Module::new("test", 1);
         assert_eq!(module.get_name(), "test");
-        assert_eq!(*module.get_annotations(), 1);
+        assert_eq!(*module.annotation(), 1);
     }
 
     #[test]

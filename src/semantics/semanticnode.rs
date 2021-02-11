@@ -1,4 +1,4 @@
-use crate::syntax::{annotation::Annotation, parameter::Parameter, statement::Statement};
+use crate::syntax::{annotation::Annotation, node::Node, parameter::Parameter, statement::Statement};
 use crate::{
     diagnostics::config::TracingConfig, parser::parser::ParserInfo, syntax::structdef::StructDef,
 };
@@ -93,7 +93,7 @@ impl SemanticAst {
         &mut self,
         m: &module::Module<u32>,
     ) -> Result<module::Module<SemanticAnnotations>> {
-        let meta = self.module_semantic_annotations_from(*m.get_annotations(), m.get_name());
+        let meta = self.module_semantic_annotations_from(*m.annotation(), m.get_name());
 
         let mut nmodule = module::Module::new(m.get_name(), meta);
         for module in m.get_modules().iter() {

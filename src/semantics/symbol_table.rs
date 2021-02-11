@@ -1,8 +1,4 @@
-use crate::syntax::{
-    module::{Item, Module},
-    routinedef::{RoutineDef, RoutineDefType},
-    ty::Type,
-};
+use crate::syntax::{module::{Item, Module}, node::Node, routinedef::{RoutineDef, RoutineDefType}, ty::Type};
 use crate::syntax::{parameter::Parameter, path::Path};
 use crate::{semantics::semanticnode::SemanticAnnotations, syntax::structdef::StructDef};
 use braid_lang::result::Result;
@@ -60,7 +56,7 @@ impl SymbolTable {
      * This function is recursively applied to child modules.
      */
     pub fn add_item_defs_to_table(module: &mut Module<SemanticAnnotations>) -> Result<()> {
-        let mut annotations = module.get_annotations().clone();
+        let mut annotations = module.annotation().clone();
 
         let fm = module.get_functions_mut();
         for f in fm.iter_mut() {
@@ -79,7 +75,7 @@ impl SymbolTable {
             SymbolTable::add_item_defs_to_table(m)?;
         }
 
-        *module.get_annotations_mut() = annotations;
+        *module.annotation_mut() = annotations;
 
         Ok(())
     }

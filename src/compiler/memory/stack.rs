@@ -68,7 +68,7 @@ impl std::fmt::Display for CompilerAnnotationStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::syntax::ty::Type;
+    use crate::syntax::{node::Node, ty::Type};
     use crate::{
         compiler::memory::scope::CompilerAnnotation,
         syntax::{module, routinedef::RoutineDef},
@@ -217,7 +217,7 @@ mod tests {
         module_scope.insert("func", 0, 0);
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_function(fun_node).unwrap();
-        stack.push(&module_node.get_annotations());
+        stack.push(&module_node.annotation());
 
         let fun2_scope = CompilerAnnotation::new(
             0,
@@ -274,7 +274,7 @@ mod tests {
 
         let mut module_node = module::Module::new("test", module_scope);
         module_node.add_coroutine(cor_node).unwrap();
-        stack.push(&module_node.get_annotations());
+        stack.push(&module_node.annotation());
 
         let fun2_scope = CompilerAnnotation::new(
             0,
