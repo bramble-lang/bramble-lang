@@ -8,7 +8,7 @@ use crate::syntax::routinedef::*;
 use crate::syntax::statement::*;
 use crate::syntax::structdef::*;
 
-use super::parameter::Parameter;
+use super::{annotation::Annotation, parameter::Parameter};
 
 /**
  * This traverses the AST and determines what size register to
@@ -16,13 +16,13 @@ use super::parameter::Parameter;
  * it to a register.
  */
 
-pub struct TraverserMut<A, T> where A: Debug, T: Fn (&A) -> String {
+pub struct TraverserMut<A, T> where A: Debug + Annotation, T: Fn (&A) -> String {
     pub tracing: TracingConfig,
     pub trace: T,
     pub(crate) shit: PhantomData<A>,
 }
 
-impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(&A) -> String {
+impl<A, T> TraverserMut<A, T> where A: Debug + Annotation, T: Fn(&A) -> String {
     /**
      * Determine the size of register needed to store a value, based upon the number of bytes
      * the type takes.
@@ -295,7 +295,8 @@ impl<A, T> TraverserMut<A, T> where A: Debug, T: Fn(&A) -> String {
     }
 
     fn tracer(&self, annotation: &A) {
-        let line = 0 as usize;
+        let line = annotation.line() as usize;
+
         let print_trace = match &self.tracing {
             &TracingConfig::Only(ln) => (line) == ln,
             &TracingConfig::Before(ln) => (line) <= ln,

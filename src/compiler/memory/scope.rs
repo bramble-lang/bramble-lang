@@ -1,4 +1,4 @@
-use crate::compiler::arch::registers::RegSize;
+use crate::{compiler::arch::registers::RegSize, syntax::annotation::Annotation};
 use crate::compiler::x86::assembly::Reg;
 use crate::compiler::x86::assembly::Reg64;
 use crate::{
@@ -51,6 +51,12 @@ pub struct CompilerAnnotation {
     pub(super) canon_path: Path,
     pub(super) reg_size: Option<RegSize>,
     //pub(super) param_reg_size: Vec<Option<RegSize>>,
+}
+
+impl Annotation for CompilerAnnotation{
+    fn line(&self) -> u32 {
+        self.line
+    }
 }
 
 impl CompilerAnnotation {
