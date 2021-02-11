@@ -23,7 +23,7 @@ where
     pub name: String,
     pub tracing: TracingConfig,
     pub format: T,
-    pub(crate) shit: PhantomData<A>,
+    ph: PhantomData<A>,
 }
 
 impl<A, T> TraverserMut<A, T>
@@ -36,7 +36,7 @@ where
             name: name.into(),
             tracing,
             format,
-            shit: PhantomData,
+            ph: PhantomData,
         }
     }
 
