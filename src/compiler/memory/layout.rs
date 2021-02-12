@@ -1,7 +1,7 @@
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{ast::{annotate::map::Map, expression::Expression, node::Node}, diagnostics::config::TracingConfig, semantics::semanticnode::SemanticNode};
+use crate::{ast::expression::Expression, semantics::semanticnode::SemanticNode};
 use crate::{
     ast::{
         module::{self, Item, Module},

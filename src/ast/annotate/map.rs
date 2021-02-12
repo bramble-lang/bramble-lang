@@ -5,7 +5,7 @@ use crate::ast::module::*;
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
-use crate::{diagnostics::config::TracingConfig, expression::Expression};
+use crate::expression::Expression;
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
@@ -18,30 +18,30 @@ use super::{super::node::Node, super::parameter::Parameter, Annotation};
 pub struct Map<A, B, F>
 where
     A: Debug + Annotation,
-    F: FnMut(&dyn Node<A>) -> B + Copy,
+    F: FnMut(&dyn Node<A>) -> B,
 {
     pub name: String,
+    f: PhantomData<F>,
     ph: PhantomData<A>,
     ph2: PhantomData<B>,
-    ph3: PhantomData<F>,
 }
 
 impl<A, B, F> Map<A, B, F>
 where
     A: Debug + Annotation,
     B: Debug + Annotation,
-    F: FnMut(&dyn Node<A>) -> B + Copy,
+    F: FnMut(&dyn Node<A>) -> B,
 {
-    pub fn new(name: &str, f: F) -> Map<A, B, F> {
+    pub fn new(name: &str) -> Map<A, B, F> {
         Map {
             name: name.into(),
+            f: PhantomData,
             ph: PhantomData,
             ph2: PhantomData,
-            ph3: PhantomData,
         }
     }
 
-    pub fn for_module(&self, m: &Module<A>, mut f: F) -> Module<B> {
+    pub fn for_module(&self, m: &Module<A>, f: &mut F) -> Module<B> {
         let b = f(m);
         let mut m2 = Module::new(m.get_name(), b);
 
@@ -59,7 +59,7 @@ where
         m2
     }
 
-    fn for_items(&self, items: &Vec<Item<A>>, f: F) -> Vec<Item<B>> {
+    fn for_items(&self, items: &Vec<Item<A>>, f: &mut F) -> Vec<Item<B>> {
         let mut v = vec![];
         for i in items.iter() {
             v.push(match i {
@@ -70,13 +70,13 @@ where
         v
     }
 
-    fn for_structdef(&self, sd: &StructDef<A>, mut f: F) -> StructDef<B> {
+    fn for_structdef(&self, sd: &StructDef<A>, f: &mut F) -> StructDef<B> {
         let b = f(sd);
         let fields = self.for_parameters(&sd.fields, f);
         StructDef::new(sd.get_name(), b, fields)
     }
 
-    fn for_routinedef(&self, rd: &RoutineDef<A>, mut f: F) -> RoutineDef<B> {
+    fn for_routinedef(&self, rd: &RoutineDef<A>, f: &mut F) -> RoutineDef<B> {
         let b = f(rd);
         // loop through all the params
         let params = self.for_parameters(&rd.params, f);
@@ -97,7 +97,7 @@ where
         }
     }
 
-    fn for_parameters(&self, params: &Vec<Parameter<A>>, mut f: F) -> Vec<Parameter<B>> {
+    fn for_parameters(&self, params: &Vec<Parameter<A>>, f: &mut F) -> Vec<Parameter<B>> {
         let mut nparams = vec![];
         for p in params {
             let b = f(p);
@@ -106,7 +106,7 @@ where
         nparams
     }
 
-    fn for_statement(&self, statement: &Statement<A>, f: F) -> Statement<B> {
+    fn for_statement(&self, statement: &Statement<A>, f: &mut F) -> Statement<B> {
         let s = match statement {
             Statement::Bind(b) => Statement::Bind(box self.for_bind(b, f)),
             Statement::Mutate(m) => Statement::Mutate(box self.for_mutate(m, f)),
@@ -117,7 +117,7 @@ where
         s
     }
 
-    fn for_bind(&self, bind: &Bind<A>, mut f: F) -> Bind<B> {
+    fn for_bind(&self, bind: &Bind<A>, f: &mut F) -> Bind<B> {
         let b = f(bind);
         let rhs = self.for_expression(bind.get_rhs(), f);
         Bind::new(
@@ -129,25 +129,25 @@ where
         )
     }
 
-    fn for_mutate(&self, mutate: &Mutate<A>, mut f: F) -> Mutate<B> {
+    fn for_mutate(&self, mutate: &Mutate<A>, f: &mut F) -> Mutate<B> {
         let b = f(mutate);
         let rhs = self.for_expression(mutate.get_rhs(), f);
         Mutate::new(b, mutate.get_id(), rhs)
     }
 
-    fn for_yieldreturn(&self, yr: &YieldReturn<A>, mut f: F) -> YieldReturn<B> {
+    fn for_yieldreturn(&self, yr: &YieldReturn<A>, f: &mut F) -> YieldReturn<B> {
         let b = f(yr);
         let value = yr.get_value().as_ref().map(|rv| self.for_expression(rv, f));
         YieldReturn::new(b, value)
     }
 
-    fn for_return(&self, r: &Return<A>, mut f: F) -> Return<B> {
+    fn for_return(&self, r: &Return<A>, f: &mut F) -> Return<B> {
         let b = f(r);
         let value = r.get_value().as_ref().map(|rv| self.for_expression(rv, f));
         Return::new(b, value)
     }
 
-    fn for_expression(&self, exp: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_expression(&self, exp: &Expression<A>, f: &mut F) -> Expression<B> {
         use Expression::*;
 
         match exp {
@@ -172,7 +172,7 @@ where
         }
     }
 
-    fn for_expression_block(&self, block: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_expression_block(&self, block: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::ExpressionBlock(_, body, final_exp) = block {
             let b = f(block);
 
@@ -188,7 +188,7 @@ where
         }
     }
 
-    fn for_member_access(&self, access: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_member_access(&self, access: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::MemberAccess(_, src, member) = access {
             let b = f(access);
             let src = self.for_expression(src, f);
@@ -198,7 +198,7 @@ where
         }
     }
 
-    fn for_unary_op(&self, un_op: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_unary_op(&self, un_op: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::UnaryOp(_, op, operand) = un_op {
             let b = f(un_op);
             let operand = self.for_expression(operand, f);
@@ -208,7 +208,7 @@ where
         }
     }
 
-    fn for_binary_op(&self, bin_op: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_binary_op(&self, bin_op: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::BinaryOp(_, op, l, r) = bin_op {
             let b = f(bin_op);
             let l = self.for_expression(l, f);
@@ -219,7 +219,7 @@ where
         }
     }
 
-    fn for_if(&self, if_exp: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_if(&self, if_exp: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::If {
             cond,
             if_arm,
@@ -242,7 +242,7 @@ where
         }
     }
 
-    fn for_routine_call(&self, rc: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_routine_call(&self, rc: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::RoutineCall(_, call, name, params) = rc {
             let b = f(rc);
             let mut nparams = vec![];
@@ -255,7 +255,7 @@ where
         }
     }
 
-    fn for_yield(&self, yield_exp: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_yield(&self, yield_exp: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::Yield(_, e) = yield_exp {
             let b = f(yield_exp);
             let e = self.for_expression(e, f);
@@ -265,7 +265,7 @@ where
         }
     }
 
-    fn for_struct_expression(&self, se: &Expression<A>, mut f: F) -> Expression<B> {
+    fn for_struct_expression(&self, se: &Expression<A>, f: &mut F) -> Expression<B> {
         if let Expression::StructExpression(_, struct_name, fields) = se {
             let b = f(se);
             let mut nfields = vec![];
@@ -312,11 +312,35 @@ mod test {
     #[test]
     fn empty_module() {
         let module1 = Module::new("m", 1i32);
-        let f = |n: &dyn Node<i32>| convert(n);
+        let mut count: i32 = 0;
+        let mut f = |n: &dyn Node<i32>| {
+            count += 1;
+            convert(n)
+        };
 
-        let mp = Map::new("test", f);
-        let module2 = mp.for_module(&module1, f);
+        let mp = Map::new("test");
+        let module2 = mp.for_module(&module1, &mut f);
 
         assert_eq!(*module2.annotation(), 2i64);
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn nested_module() {
+        let mut module1 = Module::new("m", 1i32);
+        module1.add_module(Module::new("m2", 2i32));
+
+        let mut count: i32 = 0;
+        let mut f = |n: &dyn Node<i32>| {
+            count += 1;
+            convert(n)
+        };
+
+        let mp = Map::new("test");
+        let module2 = mp.for_module(&module1, &mut f);
+
+        assert_eq!(*module2.annotation(), 2i64);
+        assert_eq!(*module2.get_module("m2").unwrap().annotation(), 4i64);
+        assert_eq!(count, 2);
     }
 }
