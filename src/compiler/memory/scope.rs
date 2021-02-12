@@ -75,29 +75,35 @@ impl CompilerAnnotation {
         }
     }
 
+    pub fn from(a: &SemanticAnnotations, level: Level) -> CompilerAnnotation {
+        CompilerAnnotation {
+            id: a.id.clone(),
+            line: a.line(),
+            level,
+            ty: a.ty.clone(),
+            symbols: SymbolTable::new(),
+            canon_path: a.canonical_path.clone(),
+            reg_size: None,
+        }
+    }
+
     pub fn new_routine(
-        id: u32,
-        canon_path: &Path,
+        a: &SemanticAnnotations,
         routine_type: RoutineDefType,
-        ret_ty: &Type,
     ) -> CompilerAnnotation {
-        CompilerAnnotation::new(
-            id,
+        CompilerAnnotation::from(
+            a,
             Level::Routine {
                 allocation: 0,
                 routine_type,
             },
-            canon_path.clone(),
-            ret_ty.clone(),
         )
     }
 
-    pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &Type) -> CompilerAnnotation {
-        CompilerAnnotation::new(
-            id,
+    pub fn new_module(a: &SemanticAnnotations, name: &str) -> CompilerAnnotation {
+        CompilerAnnotation::from(
+            a,
             Level::Module { name: name.into() },
-            canon_path.clone(),
-            ty.clone(),
         )
     }
 
@@ -177,11 +183,9 @@ impl CompilerAnnotation {
         current_layout: LayoutData,
     ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = CompilerAnnotation::new(
-            m.id,
+        let mut scope = CompilerAnnotation::from(
+            m,
             Level::Local,
-            m.get_canonical_path().clone(),
-            m.ty.clone(),
         );
         scope.line = m.ln;
         layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
@@ -195,7 +199,7 @@ impl CompilerAnnotation {
         current_offset: i32,
     ) -> (CompilerAnnotation, i32) {
         let mut scope =
-            CompilerAnnotation::new_routine(m.id, m.get_canonical_path(), *routine_type, &m.ty);
+            CompilerAnnotation::new_routine( m, *routine_type);
         scope.line = m.ln;
 
         let current_offset = scope.merge(&m.sym, current_offset, struct_table);
@@ -216,7 +220,7 @@ impl CompilerAnnotation {
         current_layout: LayoutData,
     ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = CompilerAnnotation::new_module(m.id, &name, m.get_canonical_path(), &m.ty);
+        let mut scope = CompilerAnnotation::new_module(m, name);
         scope.line = m.ln;
 
         layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
@@ -225,11 +229,9 @@ impl CompilerAnnotation {
     }
 
     pub(super) fn structdef_from(m: &SemanticAnnotations) -> (CompilerAnnotation, LayoutData) {
-        let mut scope = CompilerAnnotation::new(
-            m.id,
+        let mut scope = CompilerAnnotation::from(
+            m,
             Level::Local,
-            m.get_canonical_path().clone(),
-            m.ty.clone(),
         );
         scope.line = m.ln;
         let layout = LayoutData::new(0);
