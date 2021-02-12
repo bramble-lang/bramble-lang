@@ -218,13 +218,13 @@ impl CompilerAnnotation {
         m: &SemanticAnnotations,
         name: &str,
         struct_table: &ResolvedStructTable,
-    ) -> CompilerAnnotation {
+    ) -> (CompilerAnnotation, LayoutData) {
         let mut scope = CompilerAnnotation::new_module(m, name);
 
         let layout = LayoutData::new(0);
         scope.merge(&m.sym, layout.offset, struct_table);
 
-        scope
+        (scope, layout)
     }
 
     pub(super) fn structdef_from(m: &SemanticAnnotations) -> (CompilerAnnotation, LayoutData) {

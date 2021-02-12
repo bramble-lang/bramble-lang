@@ -37,6 +37,10 @@ impl<M> Node<M> for Module<M> {
         }
         v
     }
+
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
 }
 
 impl<M> std::fmt::Display for Module<M> {
@@ -464,6 +468,13 @@ impl<M> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.children(),
             Item::Struct(s) => s.children(),
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        match self {
+            Item::Routine(r) => r.name(),
+            Item::Struct(s) => s.name(),
         }
     }
 }

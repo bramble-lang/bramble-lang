@@ -1,7 +1,9 @@
+use std::thread::current;
+
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{ast::{annotate::map::MapPreOrder, expression::Expression, node::Node}, semantics::semanticnode::SemanticNode};
+use crate::{ast::{annotate::map::MapPreOrder, expression::Expression, node::Node, routinedef::RoutineDefType}, semantics::semanticnode::SemanticNode};
 use crate::{
     ast::{
         module::{self, Item, Module},
@@ -27,19 +29,30 @@ pub fn compute_layout_for_program(
     let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
     let struct_table = unresolved_struct_table.resolve()?;
     let compiler_ast = compute::layouts_for_module(ast, &struct_table);
+
+    //let compiler_ast = test(ast, &struct_table);
     Ok((compiler_ast, struct_table))
 }
 
-pub fn test(ast: &Module<SemanticAnnotations>, struct_table: &ResolvedStructTable) {
+pub fn test(ast: &Module<SemanticAnnotations>, struct_table: &ResolvedStructTable) -> Module<CompilerAnnotation> {
     let mut current_layout = LayoutData::new(0);
     let mut f = |n: &dyn Node<SemanticAnnotations>| {
-        let (a, lo) = CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout);
-        current_layout = lo;
-        a
+        let (annotation, layout) = match n.node_type() {
+            crate::ast::node::NodeType::Module => CompilerAnnotation::module_from(n.annotation(), n.name().expect("Modules must have a name"), struct_table),
+            crate::ast::node::NodeType::FnDef => CompilerAnnotation::routine_from(n.annotation(), &RoutineDefType::Function, struct_table),
+            crate::ast::node::NodeType::CoroutineDef => CompilerAnnotation::routine_from(n.annotation(), &RoutineDefType::Coroutine, struct_table),
+            crate::ast::node::NodeType::StructDef => CompilerAnnotation::structdef_from(n.annotation()),
+            crate::ast::node::NodeType::Parameter => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
+            crate::ast::node::NodeType::Expression => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
+            crate::ast::node::NodeType::Statement => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
+        };
+        current_layout = layout;
+        println!("{}", annotation);
+        annotation
     };
 
     let mapper = MapPreOrder::new("layout");
-    mapper.for_module(ast, &mut f);
+    mapper.for_module(ast, &mut f)
 }
 
 mod compute {
@@ -53,7 +66,7 @@ mod compute {
         m: &module::Module<SemanticAnnotations>,
         struct_table: &ResolvedStructTable,
     ) -> module::Module<CompilerAnnotation> {
-        let annotations =
+        let (annotations, _) =
             CompilerAnnotation::module_from(m.annotation(), m.get_name(), struct_table);
 
         let mut nmodule = module::Module::new(m.get_name(), annotations);
@@ -95,7 +108,7 @@ mod compute {
         compiler_ast_items
     }
 
-    fn layout_for_structdef(
+    pub(super) fn layout_for_structdef(
         sd: &StructDef<SemanticAnnotations>,
         struct_table: &ResolvedStructTable,
     ) -> StructDef<CompilerAnnotation> {
@@ -104,7 +117,7 @@ mod compute {
         StructDef::new(sd.get_name(), scope, params)
     }
 
-    fn layout_for_routine(
+    pub(super) fn layout_for_routine(
         rd: &RoutineDef<SemanticAnnotations>,
         struct_table: &ResolvedStructTable,
     ) -> RoutineDef<CompilerAnnotation> {
@@ -138,7 +151,7 @@ mod compute {
         }
     }
 
-    fn layout_for_parameters(
+    pub(super) fn layout_for_parameters(
         params: &Vec<Parameter<SemanticAnnotations>>,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,

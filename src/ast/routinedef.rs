@@ -37,6 +37,10 @@ impl<M> Node<M> for RoutineDef<M> {
         
         v
     }
+
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
 }
 
 impl<M> std::fmt::Display for RoutineDef<M> {

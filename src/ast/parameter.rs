@@ -23,6 +23,10 @@ impl<M> Node<M> for Parameter<M> {
     fn children(&self) -> Vec<&dyn Node<M>> {
         vec![]
     }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
 }
 
 impl<M> Parameter<M> {

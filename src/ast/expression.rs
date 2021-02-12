@@ -125,6 +125,10 @@ impl<M> Node<M> for Expression<M> {
                 => vec![],
         }
     }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
 }
 
 impl<M> std::fmt::Display for Expression<M> {

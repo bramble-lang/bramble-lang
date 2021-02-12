@@ -51,6 +51,18 @@ impl<M> Node<M> for Statement<M> {
             Mutate(m) => m.children(),
         }
     }
+
+    fn name(&self) -> Option<&str> {
+        use Statement::*;
+
+        match self {
+            Return(x) => x.name(),
+            YieldReturn(x) => x.name(),
+            Expression(e) => e.name(),
+            Bind(b) => b.name(),
+            Mutate(m) => m.name(),
+        }
+    }
 }
 
 impl<M> std::fmt::Display for Statement<M> {
@@ -103,6 +115,10 @@ impl<M> Node<M> for Bind<M> {
 
     fn children(&self) -> Vec<&dyn Node<M>> {
         vec![&self.rhs]
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
     }
 }
 
@@ -171,6 +187,10 @@ impl<M> Node<M> for Mutate<M> {
     fn children(&self) -> Vec<&dyn Node<M>> {
         vec![&self.rhs]
     }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
 }
 
 impl<M> std::fmt::Display for Mutate<M> {
@@ -227,6 +247,10 @@ impl<M> Node<M> for Yield<M> {
     fn children(&self) -> Vec<&dyn Node<M>> {
         vec![&self.value]
     }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
 }
 
 impl<M> Yield<M> {
@@ -267,6 +291,10 @@ impl<M> Node<M> for YieldReturn<M> {
             Some(v) => vec![v],
             None => vec![],
         }
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
     }
 }
 
@@ -318,6 +346,10 @@ impl<M> Node<M> for Return<M> {
             Some(v) => vec![v],
             None => vec![],
         }
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
     }
 }
 

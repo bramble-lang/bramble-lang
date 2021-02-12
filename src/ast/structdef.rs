@@ -28,6 +28,10 @@ impl<M> Node<M> for StructDef<M> {
         }
         v
     }
+
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
 }
 
 impl<M> std::fmt::Display for StructDef<M> {
