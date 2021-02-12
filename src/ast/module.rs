@@ -25,7 +25,17 @@ impl<M> Node<M> for Module<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        let mut v:Vec<&dyn Node<M>> = vec![];
+        for m in self.modules.iter() {
+            v.push(m);
+        }
+        for f in self.functions.iter() {
+            v.push(f);
+        }
+        for c in self.coroutines.iter() {
+            v.push(c);
+        }
+        v
     }
 }
 

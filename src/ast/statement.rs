@@ -102,7 +102,7 @@ impl<M> Node<M> for Bind<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        vec![&self.rhs]
     }
 }
 
@@ -169,7 +169,7 @@ impl<M> Node<M> for Mutate<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        vec![&self.rhs]
     }
 }
 
@@ -225,7 +225,7 @@ impl<M> Node<M> for Yield<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        vec![&self.value]
     }
 }
 
@@ -263,7 +263,10 @@ impl<M> Node<M> for YieldReturn<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        match &self.value {
+            Some(v) => vec![v],
+            None => vec![],
+        }
     }
 }
 
@@ -311,7 +314,10 @@ impl<M> Node<M> for Return<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        match &self.value {
+            Some(v) => vec![v],
+            None => vec![],
+        }
     }
 }
 

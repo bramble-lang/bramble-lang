@@ -27,7 +27,15 @@ impl<M> Node<M> for RoutineDef<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        let mut v:Vec<&dyn Node<M>> = vec![];
+        for f in self.params.iter() {
+            v.push(f);
+        }
+        for b in self.body.iter() {
+            v.push(b);
+        }
+        
+        v
     }
 }
 

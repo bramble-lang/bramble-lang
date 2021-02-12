@@ -79,7 +79,42 @@ impl<M> Node<M> for Expression<M> {
     fn children(&self) -> Vec<&dyn Node<M>> {
         use Expression::*;
         match self {
-            Integer32(..)
+            | StructExpression(.., se) => {
+                let mut o: Vec<&dyn Node<M>> = vec![];
+                for (_, e) in se.into_iter() {
+                    o.push(e);
+                }
+                o
+            },
+            | MemberAccess(_, src, _) => vec![src.as_ref()],
+            | BinaryOp(.., l, r) => vec![l.as_ref(), r.as_ref()],
+            | UnaryOp(.., r) => vec![r.as_ref()],
+            | If { cond, if_arm, else_arm, ..} => {
+                let mut o: Vec<&dyn Node<M>> = vec![cond.as_ref(), if_arm.as_ref(), ];
+                if let Some(e) = else_arm {
+                    o.push(e.as_ref());
+                }
+                o
+            }
+            | ExpressionBlock(_, stms, exp) => {
+                let mut o: Vec<&dyn Node<M>> = vec![];
+                for s in stms.into_iter() {
+                    o.push(s);
+                }
+                if let Some(e) = exp {
+                    o.push(e.as_ref());
+                }
+                o
+            }
+            | Yield(_, e) => vec![e.as_ref()],
+            | RoutineCall(.., exps) => {
+                let mut o: Vec<&dyn Node<M>> = vec![];
+                for e in exps.into_iter() {
+                    o.push(e);
+                }
+                o
+            }
+            | Integer32(..)
             | Integer64(..)
             | Boolean(..)
             | StringLiteral(..)
@@ -87,14 +122,7 @@ impl<M> Node<M> for Expression<M> {
             | Identifier(..)
             | IdentifierDeclare(..)
             | Path(..)
-            | MemberAccess(..)
-            | BinaryOp(..)
-            | UnaryOp(..)
-            | If { .. }
-            | ExpressionBlock(..)
-            | Yield(..)
-            | RoutineCall(..)
-            | StructExpression(..) => vec![],
+                => vec![],
         }
     }
 }
