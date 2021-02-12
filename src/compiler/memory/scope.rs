@@ -1,4 +1,4 @@
-use crate::compiler::x86::assembly::Reg;
+use crate::{compiler::x86::assembly::Reg, semantics};
 use crate::compiler::x86::assembly::Reg64;
 use crate::{ast::annotate::Annotation, compiler::arch::registers::RegSize};
 use crate::{
@@ -124,6 +124,20 @@ impl CompilerAnnotation {
         offset + size
     }
 
+    pub fn merge(&mut self, symbols: &semantics::symbol_table::SymbolTable, mut current_offset: i32, struct_table: &ResolvedStructTable) -> i32 {
+        for s in symbols.table().iter() {
+            current_offset = self.insert(
+                &s.name,
+                struct_table.size_of(&s.ty).expect(&format!(
+                    "Cannot get size for {}\nStruct Table:\n{}\n",
+                    s.ty, struct_table
+                )),
+                current_offset,
+            );
+        }
+        current_offset
+    }
+
     pub fn get(&self, name: &str) -> Option<&Symbol> {
         self.symbols.table.get(name)
     }
@@ -170,10 +184,7 @@ impl CompilerAnnotation {
             m.ty.clone(),
         );
         scope.line = m.ln;
-        for s in m.sym.table().iter() {
-            layout.offset =
-                scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
-        }
+        layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
         (scope, layout)
     }
 
@@ -186,17 +197,9 @@ impl CompilerAnnotation {
         let mut scope =
             CompilerAnnotation::new_routine(m.id, m.get_canonical_path(), *routine_type, &m.ty);
         scope.line = m.ln;
-        let mut current_offset = current_offset;
-        for s in m.sym.table().iter() {
-            current_offset = scope.insert(
-                &s.name,
-                struct_table.size_of(&s.ty).expect(&format!(
-                    "Cannot get size for {}\nStruct Table:\n{}\n",
-                    s.ty, struct_table
-                )),
-                current_offset,
-            );
-        }
+
+        let current_offset = scope.merge(&m.sym, current_offset, struct_table);
+
         match scope.level {
             Level::Routine {
                 ref mut allocation, ..
@@ -215,10 +218,9 @@ impl CompilerAnnotation {
         let mut layout = current_layout;
         let mut scope = CompilerAnnotation::new_module(m.id, &name, m.get_canonical_path(), &m.ty);
         scope.line = m.ln;
-        for s in m.sym.table().iter() {
-            layout.offset =
-                scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
-        }
+
+        layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
+
         (scope, layout)
     }
 
