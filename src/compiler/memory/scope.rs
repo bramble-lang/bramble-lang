@@ -1,4 +1,3 @@
-use crate::compiler::x86::assembly::Reg;
 use crate::compiler::x86::assembly::Reg64;
 use crate::{ast::annotate::Annotation, compiler::arch::registers::RegSize};
 use crate::{
@@ -6,6 +5,7 @@ use crate::{
     ast::{routinedef::RoutineDefType, ty::Type},
     semantics::semanticnode::SemanticAnnotations,
 };
+use crate::{compiler::x86::assembly::Reg, semantics};
 
 use super::{
     struct_table::ResolvedStructTable,
@@ -75,30 +75,33 @@ impl CompilerAnnotation {
         }
     }
 
+    pub fn from(a: &SemanticAnnotations, level: Level) -> CompilerAnnotation {
+        CompilerAnnotation {
+            id: a.id.clone(),
+            line: a.line(),
+            level,
+            ty: a.ty.clone(),
+            symbols: SymbolTable::new(),
+            canon_path: a.canonical_path.clone(),
+            reg_size: None,
+        }
+    }
+
     pub fn new_routine(
-        id: u32,
-        canon_path: &Path,
+        a: &SemanticAnnotations,
         routine_type: RoutineDefType,
-        ret_ty: &Type,
     ) -> CompilerAnnotation {
-        CompilerAnnotation::new(
-            id,
+        CompilerAnnotation::from(
+            a,
             Level::Routine {
                 allocation: 0,
                 routine_type,
             },
-            canon_path.clone(),
-            ret_ty.clone(),
         )
     }
 
-    pub fn new_module(id: u32, name: &str, canon_path: &Path, ty: &Type) -> CompilerAnnotation {
-        CompilerAnnotation::new(
-            id,
-            Level::Module { name: name.into() },
-            canon_path.clone(),
-            ty.clone(),
-        )
+    pub fn new_module(a: &SemanticAnnotations, name: &str) -> CompilerAnnotation {
+        CompilerAnnotation::from(a, Level::Module { name: name.into() })
     }
 
     pub fn id(&self) -> u32 {
@@ -122,6 +125,25 @@ impl CompilerAnnotation {
             .table
             .insert(name.into(), Symbol::new(name, size, offset + size));
         offset + size
+    }
+
+    pub fn merge(
+        &mut self,
+        symbols: &semantics::symbol_table::SymbolTable,
+        mut current_offset: i32,
+        struct_table: &ResolvedStructTable,
+    ) -> i32 {
+        for s in symbols.table().iter() {
+            current_offset = self.insert(
+                &s.name,
+                struct_table.size_of(&s.ty).expect(&format!(
+                    "Cannot get size for {}\nStruct Table:\n{}\n",
+                    s.ty, struct_table
+                )),
+                current_offset,
+            );
+        }
+        current_offset
     }
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
@@ -163,17 +185,9 @@ impl CompilerAnnotation {
         current_layout: LayoutData,
     ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = CompilerAnnotation::new(
-            m.id,
-            Level::Local,
-            m.get_canonical_path().clone(),
-            m.ty.clone(),
-        );
+        let mut scope = CompilerAnnotation::from(m, Level::Local);
         scope.line = m.ln;
-        for s in m.sym.table().iter() {
-            layout.offset =
-                scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
-        }
+        layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
         (scope, layout)
     }
 
@@ -181,54 +195,40 @@ impl CompilerAnnotation {
         m: &SemanticAnnotations,
         routine_type: &RoutineDefType,
         struct_table: &ResolvedStructTable,
-        current_offset: i32,
-    ) -> (CompilerAnnotation, i32) {
-        let mut scope =
-            CompilerAnnotation::new_routine(m.id, m.get_canonical_path(), *routine_type, &m.ty);
-        scope.line = m.ln;
-        let mut current_offset = current_offset;
-        for s in m.sym.table().iter() {
-            current_offset = scope.insert(
-                &s.name,
-                struct_table.size_of(&s.ty).expect(&format!(
-                    "Cannot get size for {}\nStruct Table:\n{}\n",
-                    s.ty, struct_table
-                )),
-                current_offset,
-            );
-        }
+    ) -> (CompilerAnnotation, LayoutData) {
+        let mut layout = LayoutData::new(match routine_type {
+            RoutineDefType::Function => 0,
+            RoutineDefType::Coroutine => 40,
+        });
+
+        let mut scope = CompilerAnnotation::new_routine(m, *routine_type);
+
+        layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
+
         match scope.level {
             Level::Routine {
                 ref mut allocation, ..
-            } => *allocation = current_offset,
+            } => *allocation = layout.offset,
             _ => (),
         };
-        (scope, current_offset)
+        (scope, layout)
     }
 
     pub(super) fn module_from(
         m: &SemanticAnnotations,
         name: &str,
         struct_table: &ResolvedStructTable,
-        current_layout: LayoutData,
-    ) -> (CompilerAnnotation, LayoutData) {
-        let mut layout = current_layout;
-        let mut scope = CompilerAnnotation::new_module(m.id, &name, m.get_canonical_path(), &m.ty);
-        scope.line = m.ln;
-        for s in m.sym.table().iter() {
-            layout.offset =
-                scope.insert(&s.name, struct_table.size_of(&s.ty).unwrap(), layout.offset);
-        }
-        (scope, layout)
+    ) -> CompilerAnnotation {
+        let mut scope = CompilerAnnotation::new_module(m, name);
+
+        let layout = LayoutData::new(0);
+        scope.merge(&m.sym, layout.offset, struct_table);
+
+        scope
     }
 
     pub(super) fn structdef_from(m: &SemanticAnnotations) -> (CompilerAnnotation, LayoutData) {
-        let mut scope = CompilerAnnotation::new(
-            m.id,
-            Level::Local,
-            m.get_canonical_path().clone(),
-            m.ty.clone(),
-        );
+        let mut scope = CompilerAnnotation::from(m, Level::Local);
         scope.line = m.ln;
         let layout = LayoutData::new(0);
         (scope, layout)

@@ -5,7 +5,7 @@ use crate::{ast::expression::Expression, semantics::semanticnode::SemanticNode};
 use crate::{
     ast::{
         module::{self, Item, Module},
-        routinedef::{RoutineDef, RoutineDefType},
+        routinedef::RoutineDef,
         statement::{Bind, Mutate, Return, Statement, YieldReturn},
         structdef::StructDef,
     },
@@ -21,13 +21,12 @@ use braid_lang::result::Result;
  * it computes how large the structure is and what the relative offset of every field
  * in the structure is.
  */
-
 pub fn compute_layout_for_program(
     ast: &Module<SemanticAnnotations>,
 ) -> Result<(Module<CompilerAnnotation>, ResolvedStructTable)> {
     let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
     let struct_table = unresolved_struct_table.resolve()?;
-    let (compiler_ast, _) = compute::layouts_for_module(ast, LayoutData::new(0), &struct_table);
+    let compiler_ast = compute::layouts_for_module(ast, &struct_table);
     Ok((compiler_ast, struct_table))
 }
 
@@ -40,110 +39,91 @@ mod compute {
 
     pub(super) fn layouts_for_module(
         m: &module::Module<SemanticAnnotations>,
-        layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (module::Module<CompilerAnnotation>, LayoutData) {
-        let (annotations, mut layout) =
-            CompilerAnnotation::module_from(m.annotation(), m.get_name(), struct_table, layout);
+    ) -> module::Module<CompilerAnnotation> {
+        let annotations =
+            CompilerAnnotation::module_from(m.annotation(), m.get_name(), struct_table);
 
         let mut nmodule = module::Module::new(m.get_name(), annotations);
         for child_module in m.get_modules().iter() {
-            let (nchild_module, nlayout) = layouts_for_module(child_module, layout, struct_table);
-            layout = nlayout;
+            let nchild_module = layouts_for_module(child_module, struct_table);
             nmodule.add_module(nchild_module);
         }
-        let (functions, layout) = layouts_for_items(m.get_functions(), layout, struct_table);
+        let functions = layouts_for_items(m.get_functions(), struct_table);
         *nmodule.get_functions_mut() = functions;
 
-        let (coroutines, layout) = layouts_for_items(m.get_coroutines(), layout, struct_table);
+        let coroutines = layouts_for_items(m.get_coroutines(), struct_table);
         *nmodule.get_coroutines_mut() = coroutines;
 
-        let (structs, layout) = layouts_for_items(m.get_structs(), layout, struct_table);
+        let structs = layouts_for_items(m.get_structs(), struct_table);
         *nmodule.get_structs_mut() = structs;
 
-        (nmodule, layout)
+        nmodule
     }
 
     fn layouts_for_items(
         items: &Vec<Item<SemanticAnnotations>>,
-        layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (Vec<Item<CompilerAnnotation>>, LayoutData) {
+    ) -> Vec<Item<CompilerAnnotation>> {
         let mut compiler_ast_items = vec![];
-        let mut layout = layout;
         for item in items.iter() {
-            let (c_ast_item, no) = match item {
+            let c_ast_item = match item {
                 Item::Struct(sd) => {
-                    let (sd2, ld) = layout_for_structdef(sd, struct_table);
-                    (Item::Struct(sd2), ld)
+                    let sd2 = layout_for_structdef(sd, struct_table);
+                    Item::Struct(sd2)
                 }
                 Item::Routine(rd) => {
-                    let (rd2, ld) = layout_for_routine(&rd, layout, struct_table);
-                    (Item::Routine(rd2), ld)
+                    let rd2 = layout_for_routine(&rd, struct_table);
+                    Item::Routine(rd2)
                 }
             };
-            layout = no;
             compiler_ast_items.push(c_ast_item);
         }
 
-        (compiler_ast_items, layout)
+        compiler_ast_items
     }
 
     fn layout_for_structdef(
         sd: &StructDef<SemanticAnnotations>,
         struct_table: &ResolvedStructTable,
-    ) -> (StructDef<CompilerAnnotation>, LayoutData) {
+    ) -> StructDef<CompilerAnnotation> {
         let (scope, layout) = CompilerAnnotation::structdef_from(sd.annotation());
-        let (params, layout) = layout_for_parameters(sd.get_fields(), layout, struct_table);
-        (StructDef::new(sd.get_name(), scope, params), layout)
+        let (params, _) = layout_for_parameters(sd.get_fields(), layout, struct_table);
+        StructDef::new(sd.get_name(), scope, params)
     }
 
     fn layout_for_routine(
         rd: &RoutineDef<SemanticAnnotations>,
-        layout: LayoutData,
         struct_table: &ResolvedStructTable,
-    ) -> (RoutineDef<CompilerAnnotation>, LayoutData) {
-        let RoutineDef {
-            annotations,
-            def,
-            name,
-            body,
-            params,
-            ty,
-            ..
-        } = rd;
-        let initial_frame_size = match def {
-            RoutineDefType::Function => 0,
-            RoutineDefType::Coroutine => 40,
-        };
+    ) -> RoutineDef<CompilerAnnotation> {
+        let (mut annotations, layout) =
+            CompilerAnnotation::routine_from(&rd.annotations, &rd.def, struct_table);
 
-        let (mut annotations, offset) =
-            CompilerAnnotation::routine_from(annotations, def, struct_table, initial_frame_size);
+        let (params, mut layout) = layout_for_parameters(&rd.params, layout, struct_table);
 
-        let nlayout = LayoutData::new(offset);
-        let (params, mut nlayout) = layout_for_parameters(params, nlayout, struct_table);
+        let body = rd
+            .body
+            .iter()
+            .map(|e| {
+                let (e, nl) = compute::layout_for_statement(e, layout, struct_table);
+                layout = nl;
+                e
+            })
+            .collect();
 
-        let mut nbody = vec![];
-        for e in body.iter() {
-            let (e, layout) = compute::layout_for_statement(e, nlayout, struct_table);
-            nlayout = layout;
-            nbody.push(e);
-        }
         annotations.level = Level::Routine {
-            allocation: nlayout.offset,
-            routine_type: *def,
+            allocation: layout.offset,
+            routine_type: rd.def,
         };
-        (
-            RoutineDef {
-                annotations,
-                def: *def,
-                name: name.clone(),
-                params: params,
-                ty: ty.clone(),
-                body: nbody,
-            },
-            layout,
-        )
+
+        RoutineDef {
+            annotations,
+            def: rd.def,
+            name: rd.name.clone(),
+            params,
+            ty: rd.ty.clone(),
+            body,
+        }
     }
 
     fn layout_for_parameters(
@@ -156,9 +136,9 @@ mod compute {
             .iter()
             .map(|p| {
                 p.map_annotation(|a| {
-                    let tmp = CompilerAnnotation::local_from(&a, struct_table, layout);
-                    layout = tmp.1;
-                    tmp.0
+                    let (an, lo) = CompilerAnnotation::local_from(&a, struct_table, layout);
+                    layout = lo;
+                    an
                 })
             })
             .collect();
@@ -810,9 +790,8 @@ mod compute {
             let mut module = Module::new("root", SemanticAnnotations::new(1, 1, Type::Unit));
             module.add_function(sn).unwrap();
             let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layouts_for_module(&module, LayoutData::new(0), &empty_struct_table);
-            assert_eq!(cn.1.offset, 0);
-            let module = cn.0;
+            let cn = compute::layouts_for_module(&module, &empty_struct_table);
+            let module = cn;
             match module.get_item("func") {
                 Some(Item::Routine(RoutineDef {
                     annotations,
@@ -938,9 +917,8 @@ mod compute {
                 body: vec![],
             };
             let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layout_for_routine(&sn, LayoutData::new(0), &empty_struct_table);
-            assert_eq!(cn.1.offset, 0);
-            match cn.0 {
+            let cn = compute::layout_for_routine(&sn, &empty_struct_table);
+            match cn {
                 RoutineDef {
                     annotations,
                     def: RoutineDefType::Coroutine,
