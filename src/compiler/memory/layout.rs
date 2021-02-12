@@ -116,12 +116,12 @@ mod compute {
 
         let (params, mut layout) = layout_for_parameters(params, layout, struct_table);
 
-        let mut nbody = vec![];
-        for e in body.iter() {
-            let (e, nlayout) = compute::layout_for_statement(e, layout, struct_table);
-            layout = nlayout;
-            nbody.push(e);
-        }
+        let body = body.iter().map(|e| {
+            let (e, nl) = compute::layout_for_statement(e, layout, struct_table);
+            layout = nl;
+            e
+        }).collect();
+
         annotations.level = Level::Routine {
             allocation: layout.offset,
             routine_type: *def,
@@ -130,9 +130,9 @@ mod compute {
                 annotations,
                 def: *def,
                 name: name.clone(),
-                params: params,
+                params,
                 ty: ty.clone(),
-                body: nbody,
+                body,
             }
     }
 
