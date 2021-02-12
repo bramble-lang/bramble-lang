@@ -1,4 +1,3 @@
-use crate::{compiler::x86::assembly::Reg, semantics};
 use crate::compiler::x86::assembly::Reg64;
 use crate::{ast::annotate::Annotation, compiler::arch::registers::RegSize};
 use crate::{
@@ -6,6 +5,7 @@ use crate::{
     ast::{routinedef::RoutineDefType, ty::Type},
     semantics::semanticnode::SemanticAnnotations,
 };
+use crate::{compiler::x86::assembly::Reg, semantics};
 
 use super::{
     struct_table::ResolvedStructTable,
@@ -101,10 +101,7 @@ impl CompilerAnnotation {
     }
 
     pub fn new_module(a: &SemanticAnnotations, name: &str) -> CompilerAnnotation {
-        CompilerAnnotation::from(
-            a,
-            Level::Module { name: name.into() },
-        )
+        CompilerAnnotation::from(a, Level::Module { name: name.into() })
     }
 
     pub fn id(&self) -> u32 {
@@ -130,7 +127,12 @@ impl CompilerAnnotation {
         offset + size
     }
 
-    pub fn merge(&mut self, symbols: &semantics::symbol_table::SymbolTable, mut current_offset: i32, struct_table: &ResolvedStructTable) -> i32 {
+    pub fn merge(
+        &mut self,
+        symbols: &semantics::symbol_table::SymbolTable,
+        mut current_offset: i32,
+        struct_table: &ResolvedStructTable,
+    ) -> i32 {
         for s in symbols.table().iter() {
             current_offset = self.insert(
                 &s.name,
@@ -183,10 +185,7 @@ impl CompilerAnnotation {
         current_layout: LayoutData,
     ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = current_layout;
-        let mut scope = CompilerAnnotation::from(
-            m,
-            Level::Local,
-        );
+        let mut scope = CompilerAnnotation::from(m, Level::Local);
         scope.line = m.ln;
         layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
         (scope, layout)
@@ -196,21 +195,20 @@ impl CompilerAnnotation {
         m: &SemanticAnnotations,
         routine_type: &RoutineDefType,
         struct_table: &ResolvedStructTable,
-        current_offset: i32,
-    ) -> (CompilerAnnotation, i32) {
-        let mut scope =
-            CompilerAnnotation::new_routine( m, *routine_type);
+        mut current_layout: LayoutData,
+    ) -> (CompilerAnnotation, LayoutData) {
+        let mut scope = CompilerAnnotation::new_routine(m, *routine_type);
         scope.line = m.ln;
 
-        let current_offset = scope.merge(&m.sym, current_offset, struct_table);
+        current_layout.offset = scope.merge(&m.sym, current_layout.offset, struct_table);
 
         match scope.level {
             Level::Routine {
                 ref mut allocation, ..
-            } => *allocation = current_offset,
+            } => *allocation = current_layout.offset,
             _ => (),
         };
-        (scope, current_offset)
+        (scope, current_layout)
     }
 
     pub(super) fn module_from(
@@ -229,10 +227,7 @@ impl CompilerAnnotation {
     }
 
     pub(super) fn structdef_from(m: &SemanticAnnotations) -> (CompilerAnnotation, LayoutData) {
-        let mut scope = CompilerAnnotation::from(
-            m,
-            Level::Local,
-        );
+        let mut scope = CompilerAnnotation::from(m, Level::Local);
         scope.line = m.ln;
         let layout = LayoutData::new(0);
         (scope, layout)

@@ -103,6 +103,7 @@ mod compute {
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> (RoutineDef<CompilerAnnotation>, LayoutData) {
+        let previous_layout = layout;
         let RoutineDef {
             annotations,
             def,
@@ -112,25 +113,24 @@ mod compute {
             ty,
             ..
         } = rd;
-        let initial_frame_size = match def {
+        let initial_frame_size = LayoutData::new(match def {
             RoutineDefType::Function => 0,
             RoutineDefType::Coroutine => 40,
-        };
+        });
 
-        let (mut annotations, offset) =
+        let (mut annotations, layout) =
             CompilerAnnotation::routine_from(annotations, def, struct_table, initial_frame_size);
 
-        let nlayout = LayoutData::new(offset);
-        let (params, mut nlayout) = layout_for_parameters(params, nlayout, struct_table);
+        let (params, mut layout) = layout_for_parameters(params, layout, struct_table);
 
         let mut nbody = vec![];
         for e in body.iter() {
-            let (e, layout) = compute::layout_for_statement(e, nlayout, struct_table);
-            nlayout = layout;
+            let (e, nlayout) = compute::layout_for_statement(e, layout, struct_table);
+            layout = nlayout;
             nbody.push(e);
         }
         annotations.level = Level::Routine {
-            allocation: nlayout.offset,
+            allocation: layout.offset,
             routine_type: *def,
         };
         (
@@ -142,7 +142,7 @@ mod compute {
                 ty: ty.clone(),
                 body: nbody,
             },
-            layout,
+            previous_layout,
         )
     }
 
