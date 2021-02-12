@@ -1,4 +1,4 @@
-use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, ty::Type};
+use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
@@ -30,6 +30,10 @@ impl<M: Annotation> Node<M> for Parameter<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

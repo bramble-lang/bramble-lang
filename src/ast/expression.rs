@@ -1,4 +1,4 @@
-use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, path::Path, statement::Statement, ty::Type};
+use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
@@ -132,6 +132,10 @@ impl<M: Annotation> Node<M> for Expression<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

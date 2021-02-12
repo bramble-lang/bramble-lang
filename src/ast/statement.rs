@@ -1,4 +1,4 @@
-use super::{annotate::{Annotation, iter::PostOrderIter}, expression::Expression, node::{Node, NodeType}, ty::Type};
+use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, expression::Expression, node::{Node, NodeType}, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
@@ -67,6 +67,10 @@ impl<M: Annotation> Node<M> for Statement<M> {
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
+    }
 }
 
 impl<M> std::fmt::Display for Statement<M> {
@@ -127,6 +131,10 @@ impl<M: Annotation> Node<M> for Bind<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -203,6 +211,10 @@ impl<M: Annotation> Node<M> for Mutate<M> {
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
+    }
 }
 
 impl<M> std::fmt::Display for Mutate<M> {
@@ -267,6 +279,10 @@ impl<M: Annotation> Node<M> for Yield<M> {
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
+    }
 }
 
 impl<M> Yield<M> {
@@ -315,6 +331,10 @@ impl<M: Annotation> Node<M> for YieldReturn<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -374,6 +394,10 @@ impl<M: Annotation> Node<M> for Return<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

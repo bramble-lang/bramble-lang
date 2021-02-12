@@ -1,4 +1,4 @@
-use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
+use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -44,6 +44,10 @@ impl<M: Annotation> Node<M> for Module<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -484,6 +488,10 @@ impl<M: Annotation> Node<M> for Item<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

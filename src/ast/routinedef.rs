@@ -1,4 +1,4 @@
-use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, parameter::Parameter, statement::Statement, ty::Type};
+use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, parameter::Parameter, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
@@ -44,6 +44,10 @@ impl<M: Annotation> Node<M> for RoutineDef<M> {
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

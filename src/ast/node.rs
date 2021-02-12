@@ -1,4 +1,4 @@
-use super::annotate::{Annotation, iter::PostOrderIter};
+use super::annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}};
 
 pub trait Node<M: Annotation> {
     fn node_type(&self) -> NodeType;
@@ -8,6 +8,7 @@ pub trait Node<M: Annotation> {
     fn name(&self) -> Option<&str>;
 
     fn iter_postorder(&self) -> PostOrderIter<M>;
+    fn iter_preorder(&self) -> PreOrderIter<M>;
 }
 
 pub enum NodeType {
