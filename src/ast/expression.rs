@@ -75,6 +75,28 @@ impl<M> Node<M> for Expression<M> {
     fn node_type(&self) -> NodeType {
         NodeType::Expression
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        use Expression::*;
+        match self {
+            Integer32(..)
+            | Integer64(..)
+            | Boolean(..)
+            | StringLiteral(..)
+            | CustomType(..)
+            | Identifier(..)
+            | IdentifierDeclare(..)
+            | Path(..)
+            | MemberAccess(..)
+            | BinaryOp(..)
+            | UnaryOp(..)
+            | If { .. }
+            | ExpressionBlock(..)
+            | Yield(..)
+            | RoutineCall(..)
+            | StructExpression(..) => vec![],
+        }
+    }
 }
 
 impl<M> std::fmt::Display for Expression<M> {

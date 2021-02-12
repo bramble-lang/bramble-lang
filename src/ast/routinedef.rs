@@ -25,6 +25,10 @@ impl<M> Node<M> for RoutineDef<M> {
             RoutineDefType::Coroutine => NodeType::CoroutineDef,
         }
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
+    }
 }
 
 impl<M> std::fmt::Display for RoutineDef<M> {

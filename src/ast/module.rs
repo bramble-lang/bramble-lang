@@ -23,6 +23,10 @@ impl<M> Node<M> for Module<M> {
     fn node_type(&self) -> NodeType {
         NodeType::Module
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
+    }
 }
 
 impl<M> std::fmt::Display for Module<M> {
@@ -443,6 +447,13 @@ impl<M> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.node_type(),
             Item::Struct(s) => s.node_type(),
+        }
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        match self {
+            Item::Routine(r) => r.children(),
+            Item::Struct(s) => s.children(),
         }
     }
 }
