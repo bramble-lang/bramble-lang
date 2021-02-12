@@ -42,7 +42,7 @@ impl<M: Annotation> Node<M> for Module<M> {
         Some(&self.name)
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }
@@ -482,7 +482,7 @@ impl<M: Annotation> Node<M> for Item<M> {
         }
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }

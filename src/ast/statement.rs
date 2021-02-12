@@ -64,7 +64,7 @@ impl<M: Annotation> Node<M> for Statement<M> {
         }
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }
@@ -125,7 +125,7 @@ impl<M: Annotation> Node<M> for Bind<M> {
         None
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }
@@ -200,7 +200,7 @@ impl<M: Annotation> Node<M> for Mutate<M> {
         None
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }
@@ -264,7 +264,7 @@ impl<M: Annotation> Node<M> for Yield<M> {
         None
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }
@@ -313,7 +313,7 @@ impl<M: Annotation> Node<M> for YieldReturn<M> {
         None
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }
@@ -372,7 +372,7 @@ impl<M: Annotation> Node<M> for Return<M> {
         None
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }

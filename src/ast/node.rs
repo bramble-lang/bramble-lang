@@ -7,7 +7,7 @@ pub trait Node<M: Annotation> {
     fn children(&self) -> Vec<&dyn Node<M>>;
     fn name(&self) -> Option<&str>;
 
-    fn iter(&self) -> PostOrderIter<M>;
+    fn iter_postorder(&self) -> PostOrderIter<M>;
 }
 
 pub enum NodeType {

@@ -42,7 +42,7 @@ impl<M: Annotation> Node<M> for RoutineDef<M> {
         Some(&self.name)
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }

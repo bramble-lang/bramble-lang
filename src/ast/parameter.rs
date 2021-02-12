@@ -28,7 +28,7 @@ impl<M: Annotation> Node<M> for Parameter<M> {
         None
     }
 
-    fn iter(&self) -> PostOrderIter<M> {
+    fn iter_postorder(&self) -> PostOrderIter<M> {
         PostOrderIter::new(self)
     }
 }
