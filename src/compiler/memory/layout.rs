@@ -21,7 +21,6 @@ use braid_lang::result::Result;
  * it computes how large the structure is and what the relative offset of every field
  * in the structure is.
  */
-
 pub fn compute_layout_for_program(
     ast: &Module<SemanticAnnotations>,
 ) -> Result<(Module<CompilerAnnotation>, ResolvedStructTable)> {
@@ -97,13 +96,13 @@ mod compute {
         rd: &RoutineDef<SemanticAnnotations>,
         struct_table: &ResolvedStructTable,
     ) -> RoutineDef<CompilerAnnotation> {
-
         let (mut annotations, layout) =
             CompilerAnnotation::routine_from(&rd.annotations, &rd.def, struct_table);
 
         let (params, mut layout) = layout_for_parameters(&rd.params, layout, struct_table);
 
-        let body = rd.body
+        let body = rd
+            .body
             .iter()
             .map(|e| {
                 let (e, nl) = compute::layout_for_statement(e, layout, struct_table);
@@ -137,9 +136,9 @@ mod compute {
             .iter()
             .map(|p| {
                 p.map_annotation(|a| {
-                    let tmp = CompilerAnnotation::local_from(&a, struct_table, layout);
-                    layout = tmp.1;
-                    tmp.0
+                    let (an, lo) = CompilerAnnotation::local_from(&a, struct_table, layout);
+                    layout = lo;
+                    an
                 })
             })
             .collect();
