@@ -4,7 +4,7 @@ use super::Annotation;
 
 pub struct PostOrderIter<'a, A>
 where
-    A: std::fmt::Debug + Annotation,
+    A: Annotation,
 {
     out: Vec<&'a dyn Node<A>>,
 }
@@ -16,7 +16,7 @@ TODO: This will do the full traversal when `new` is called, this can be
 improved to amortize time while reducing storage costs by lazily populating
 `out`
 */
-impl<'a, A> PostOrderIter<'a, A> where A: std::fmt::Debug + Annotation {
+impl<'a, A> PostOrderIter<'a, A> where A: Annotation {
     pub fn new(node: &'a dyn Node<A>) -> PostOrderIter<'a, A> {
         let mut stack = vec![node];
         let mut out = vec![];

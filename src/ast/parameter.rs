@@ -1,4 +1,4 @@
-use super::{node::{Node, NodeType}, ty::Type};
+use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
@@ -7,7 +7,7 @@ pub struct Parameter<M> {
     pub ty: Type,
 }
 
-impl<M> Node<M> for Parameter<M> {
+impl<M: Annotation> Node<M> for Parameter<M> {
     fn annotation(&self) -> &M {
         &self.annotation
     }
@@ -26,6 +26,10 @@ impl<M> Node<M> for Parameter<M> {
 
     fn name(&self) -> Option<&str> {
         None
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 

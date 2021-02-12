@@ -1,4 +1,4 @@
-use super::{node::{Node, NodeType}, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
+use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -11,7 +11,7 @@ pub struct Module<M> {
     structs: Vec<Item<M>>,
 }
 
-impl<M> Node<M> for Module<M> {
+impl<M: Annotation> Node<M> for Module<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -40,6 +40,10 @@ impl<M> Node<M> for Module<M> {
 
     fn name(&self) -> Option<&str> {
         Some(&self.name)
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 
@@ -442,7 +446,7 @@ pub enum Item<M> {
     Struct(StructDef<M>),
 }
 
-impl<M> Node<M> for Item<M> {
+impl<M: Annotation> Node<M> for Item<M> {
     fn annotation(&self) -> &M {
         match self {
             Item::Routine(r) => r.annotation(),
@@ -476,6 +480,10 @@ impl<M> Node<M> for Item<M> {
             Item::Routine(r) => r.name(),
             Item::Struct(s) => s.name(),
         }
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 

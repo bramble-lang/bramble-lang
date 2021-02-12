@@ -1,4 +1,4 @@
-use super::{node::{Node, NodeType}, parameter::Parameter, statement::Statement, ty::Type};
+use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, parameter::Parameter, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
@@ -10,7 +10,7 @@ pub struct RoutineDef<M> {
     pub body: Vec<Statement<M>>,
 }
 
-impl<M> Node<M> for RoutineDef<M> {
+impl<M: Annotation> Node<M> for RoutineDef<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -40,6 +40,10 @@ impl<M> Node<M> for RoutineDef<M> {
 
     fn name(&self) -> Option<&str> {
         Some(&self.name)
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 

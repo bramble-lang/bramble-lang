@@ -1,4 +1,4 @@
-use super::{expression::Expression, node::{Node, NodeType}, ty::Type};
+use super::{annotate::{Annotation, iter::PostOrderIter}, expression::Expression, node::{Node, NodeType}, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
@@ -11,7 +11,7 @@ pub enum Statement<M> {
     Return(Box<Return<M>>),
 }
 
-impl<M> Node<M> for Statement<M> {
+impl<M: Annotation> Node<M> for Statement<M> {
     fn annotation(&self) -> &M {
         use Statement::*;
 
@@ -63,6 +63,10 @@ impl<M> Node<M> for Statement<M> {
             Mutate(m) => m.name(),
         }
     }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
 }
 
 impl<M> std::fmt::Display for Statement<M> {
@@ -100,7 +104,7 @@ pub struct Bind<M> {
     rhs: Expression<M>,
 }
 
-impl<M> Node<M> for Bind<M> {
+impl<M: Annotation> Node<M> for Bind<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -119,6 +123,10 @@ impl<M> Node<M> for Bind<M> {
 
     fn name(&self) -> Option<&str> {
         None
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 
@@ -171,7 +179,7 @@ pub struct Mutate<M> {
     rhs: Expression<M>,
 }
 
-impl<M> Node<M> for Mutate<M> {
+impl<M: Annotation> Node<M> for Mutate<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -190,6 +198,10 @@ impl<M> Node<M> for Mutate<M> {
 
     fn name(&self) -> Option<&str> {
         None
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 
@@ -231,7 +243,7 @@ pub struct Yield<M> {
     value: Expression<M>,
 }
 
-impl<M> Node<M> for Yield<M> {
+impl<M: Annotation> Node<M> for Yield<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -250,6 +262,10 @@ impl<M> Node<M> for Yield<M> {
 
     fn name(&self) -> Option<&str> {
         None
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 
@@ -273,7 +289,7 @@ pub struct YieldReturn<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M> Node<M> for YieldReturn<M> {
+impl<M: Annotation> Node<M> for YieldReturn<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -295,6 +311,10 @@ impl<M> Node<M> for YieldReturn<M> {
 
     fn name(&self) -> Option<&str> {
         None
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 
@@ -328,7 +348,7 @@ pub struct Return<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M> Node<M> for Return<M> {
+impl<M: Annotation> Node<M> for Return<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -350,6 +370,10 @@ impl<M> Node<M> for Return<M> {
 
     fn name(&self) -> Option<&str> {
         None
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 

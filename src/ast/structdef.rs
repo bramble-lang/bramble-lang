@@ -1,4 +1,4 @@
-use super::{node::{Node, NodeType}, parameter::Parameter, ty::Type};
+use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, parameter::Parameter, ty::Type};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -8,7 +8,7 @@ pub struct StructDef<M> {
     pub(super) fields: Vec<Parameter<M>>,
 }
 
-impl<M> Node<M> for StructDef<M> {
+impl<M: Annotation> Node<M> for StructDef<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -31,6 +31,10 @@ impl<M> Node<M> for StructDef<M> {
 
     fn name(&self) -> Option<&str> {
         Some(&self.name)
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 

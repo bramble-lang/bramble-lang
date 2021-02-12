@@ -30,6 +30,10 @@ pub fn compute_layout_for_program(
     let struct_table = unresolved_struct_table.resolve()?;
     let compiler_ast = compute::layouts_for_module(ast, &struct_table);
 
+    for n in compiler_ast.iter() {
+        println!("{}", n.annotation());
+    }
+
     //let compiler_ast = test(ast, &struct_table);
     Ok((compiler_ast, struct_table))
 }

@@ -1,4 +1,4 @@
-use super::{node::{Node, NodeType}, path::Path, statement::Statement, ty::Type};
+use super::{annotate::{Annotation, iter::PostOrderIter}, node::{Node, NodeType}, path::Path, statement::Statement, ty::Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
@@ -27,7 +27,7 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
-impl<M> Node<M> for Expression<M> {
+impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation(&self) -> &M {
         use Expression::*;
         match self {
@@ -128,6 +128,10 @@ impl<M> Node<M> for Expression<M> {
 
     fn name(&self) -> Option<&str> {
         None
+    }
+
+    fn iter(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
     }
 }
 
