@@ -195,20 +195,23 @@ impl CompilerAnnotation {
         m: &SemanticAnnotations,
         routine_type: &RoutineDefType,
         struct_table: &ResolvedStructTable,
-        mut current_layout: LayoutData,
     ) -> (CompilerAnnotation, LayoutData) {
-        let mut scope = CompilerAnnotation::new_routine(m, *routine_type);
-        scope.line = m.ln;
+        let mut layout = LayoutData::new(match routine_type {
+            RoutineDefType::Function => 0,
+            RoutineDefType::Coroutine => 40,
+        });
 
-        current_layout.offset = scope.merge(&m.sym, current_layout.offset, struct_table);
+        let mut scope = CompilerAnnotation::new_routine(m, *routine_type);
+
+        layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
 
         match scope.level {
             Level::Routine {
                 ref mut allocation, ..
-            } => *allocation = current_layout.offset,
+            } => *allocation = layout.offset,
             _ => (),
         };
-        (scope, current_layout)
+        (scope, layout)
     }
 
     pub(super) fn module_from(

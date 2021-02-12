@@ -5,7 +5,7 @@ use crate::{ast::expression::Expression, semantics::semanticnode::SemanticNode};
 use crate::{
     ast::{
         module::{self, Item, Module},
-        routinedef::{RoutineDef, RoutineDefType},
+        routinedef::RoutineDef,
         statement::{Bind, Mutate, Return, Statement, YieldReturn},
         structdef::StructDef,
     },
@@ -97,26 +97,13 @@ mod compute {
         rd: &RoutineDef<SemanticAnnotations>,
         struct_table: &ResolvedStructTable,
     ) -> RoutineDef<CompilerAnnotation> {
-        let RoutineDef {
-            annotations,
-            def,
-            name,
-            body,
-            params,
-            ty,
-            ..
-        } = rd;
-        let initial_frame_size = LayoutData::new(match def {
-            RoutineDefType::Function => 0,
-            RoutineDefType::Coroutine => 40,
-        });
 
         let (mut annotations, layout) =
-            CompilerAnnotation::routine_from(annotations, def, struct_table, initial_frame_size);
+            CompilerAnnotation::routine_from(&rd.annotations, &rd.def, struct_table);
 
-        let (params, mut layout) = layout_for_parameters(params, layout, struct_table);
+        let (params, mut layout) = layout_for_parameters(&rd.params, layout, struct_table);
 
-        let body = body
+        let body = rd.body
             .iter()
             .map(|e| {
                 let (e, nl) = compute::layout_for_statement(e, layout, struct_table);
@@ -127,14 +114,15 @@ mod compute {
 
         annotations.level = Level::Routine {
             allocation: layout.offset,
-            routine_type: *def,
+            routine_type: rd.def,
         };
+
         RoutineDef {
             annotations,
-            def: *def,
-            name: name.clone(),
+            def: rd.def,
+            name: rd.name.clone(),
             params,
-            ty: ty.clone(),
+            ty: rd.ty.clone(),
             body,
         }
     }
