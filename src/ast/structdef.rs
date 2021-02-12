@@ -22,7 +22,11 @@ impl<M> Node<M> for StructDef<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![]
+        let mut v:Vec<&dyn Node<M>> = vec![];
+        for f in self.fields.iter() {
+            v.push(f);
+        }
+        v
     }
 }
 
