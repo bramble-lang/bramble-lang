@@ -15,7 +15,7 @@ use super::{super::node::Node, super::parameter::Parameter, Annotation};
  * it to a register.
  */
 
-pub struct Map<A, B, F>
+pub struct MapPreOrder<A, B, F>
 where
     A: Debug + Annotation,
     F: FnMut(&dyn Node<A>) -> B,
@@ -26,14 +26,14 @@ where
     ph2: PhantomData<B>,
 }
 
-impl<A, B, F> Map<A, B, F>
+impl<A, B, F> MapPreOrder<A, B, F>
 where
     A: Debug + Annotation,
     B: Debug + Annotation,
     F: FnMut(&dyn Node<A>) -> B,
 {
-    pub fn new(name: &str) -> Map<A, B, F> {
-        Map {
+    pub fn new(name: &str) -> MapPreOrder<A, B, F> {
+        MapPreOrder {
             name: name.into(),
             f: PhantomData,
             ph: PhantomData,
@@ -318,7 +318,7 @@ mod test {
             convert(n)
         };
 
-        let mp = Map::new("test");
+        let mp = MapPreOrder::new("test");
         let module2 = mp.for_module(&module1, &mut f);
 
         assert_eq!(*module2.annotation(), 2i64);
@@ -336,7 +336,7 @@ mod test {
             convert(n)
         };
 
-        let mp = Map::new("test");
+        let mp = MapPreOrder::new("test");
         let module2 = mp.for_module(&module1, &mut f);
 
         assert_eq!(*module2.annotation(), 2i64);
