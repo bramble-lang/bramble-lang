@@ -39,6 +39,18 @@ impl<M> Node<M> for Statement<M> {
     fn node_type(&self) -> NodeType {
         NodeType::Statement
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        use Statement::*;
+
+        match self {
+            Return(x) => x.children(),
+            YieldReturn(x) => x.children(),
+            Expression(e) => e.children(),
+            Bind(b) => b.children(),
+            Mutate(m) => m.children(),
+        }
+    }
 }
 
 impl<M> std::fmt::Display for Statement<M> {
@@ -87,6 +99,10 @@ impl<M> Node<M> for Bind<M> {
 
     fn node_type(&self) -> NodeType {
         NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
     }
 }
 
@@ -151,6 +167,10 @@ impl<M> Node<M> for Mutate<M> {
     fn node_type(&self) -> NodeType {
         NodeType::Statement
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
+    }
 }
 
 impl<M> std::fmt::Display for Mutate<M> {
@@ -203,6 +223,10 @@ impl<M> Node<M> for Yield<M> {
     fn node_type(&self) -> NodeType {
         NodeType::Statement
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
+    }
 }
 
 impl<M> Yield<M> {
@@ -236,6 +260,10 @@ impl<M> Node<M> for YieldReturn<M> {
 
     fn node_type(&self) -> NodeType {
         NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
     }
 }
 
@@ -280,6 +308,10 @@ impl<M> Node<M> for Return<M> {
 
     fn node_type(&self) -> NodeType {
         NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
     }
 }
 

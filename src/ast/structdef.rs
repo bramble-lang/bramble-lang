@@ -20,6 +20,10 @@ impl<M> Node<M> for StructDef<M> {
     fn node_type(&self) -> NodeType {
         NodeType::StructDef
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
+    }
 }
 
 impl<M> std::fmt::Display for StructDef<M> {

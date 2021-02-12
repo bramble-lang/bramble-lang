@@ -19,6 +19,10 @@ impl<M> Node<M> for Parameter<M> {
     fn node_type(&self) -> NodeType {
         NodeType::Parameter
     }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
+    }
 }
 
 impl<M> Parameter<M> {
