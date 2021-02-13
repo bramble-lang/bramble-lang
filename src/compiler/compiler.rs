@@ -1338,3 +1338,22 @@ impl<'a> Compiler<'a> {
         extern_functions
     }
 }
+
+impl<CompilerAnnotation> RoutineDef<CompilerAnnotation> {
+    pub fn validate_parameters(
+        &self,
+        params: &Vec<Expression<CompilerAnnotation>>,
+    ) -> braid_lang::result::Result<()> {
+        let expected_params = self.get_params();
+        if params.len() == expected_params.len() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Critical: expected {} but got {} parameters for {}",
+                expected_params.len(),
+                params.len(),
+                self.root_str()
+            ))
+        }
+    }
+}
