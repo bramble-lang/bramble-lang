@@ -249,6 +249,51 @@ mod tests {
                 vec![("x", 4, 44)],
                 44,
             ),
+            (
+                line!(),
+                "
+                co test(x: i32) {
+                    let y: i64 := 50;
+                    return;
+                }
+                    ",
+                vec![("x", 4, 44), ("y", 8, 52)],
+                52,
+            ),
+            (
+                line!(),
+                "
+                co test() -> i32 {
+                    return 5i32;
+                }
+                    ",
+                vec![],
+                40,
+            ),
+            (
+                line!(),
+                "
+                co test() -> i64 {
+                    return 5 + 6;
+                }
+                    ",
+                vec![("!_3", 8, 48), ("!_4", 8, 56)],
+                56,
+            ),
+            (
+                line!(),
+                "
+                co test() {
+                    let x: i64 := 1;
+                    let y: i64 := 2;
+                    fake(x, y);
+                    return;
+                }
+                fn fake(i: i64, j: i64) {return;}
+                    ",
+                vec![("x", 8, 48), ("y", 8, 56), ("!_9", 8, 64), ("!_10", 8, 72)],
+                72,
+            ),
         ] {
             println!("Running test: {}", ln);
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -303,11 +348,11 @@ mod tests {
                 if s.offset != eo {
                     return Err(format!(
                         "{} expected offset is {} but got {}",
-                        en, eo, s.size
+                        en, eo, s.offset
                     ));
                 }
             } else {
-                return Err(format!("Does not contain {}", en));
+                return Err(format!("Does not contain {}: \n\n Test: {}", en, test));
             }
         }
         Ok(())
