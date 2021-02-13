@@ -3,7 +3,7 @@ use std::thread::current;
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
-use crate::{ast::{annotate::map::MapPreOrder, expression::Expression, node::Node, routinedef::RoutineDefType}, semantics::semanticnode::SemanticNode};
+use crate::{ast::{annotate::map::MapPreOrder, expression::Expression, node::{Node, NodeType}, routinedef::RoutineDefType}, semantics::semanticnode::SemanticNode};
 use crate::{
     ast::{
         module::{self, Item, Module},
@@ -45,14 +45,14 @@ pub fn test(ast: &Module<SemanticAnnotations>, struct_table: &ResolvedStructTabl
     let mut current_layout = LayoutData::new(0);
     let mut f = |n: &dyn Node<SemanticAnnotations>| {
         let (annotation, layout) = match n.node_type() {
-            crate::ast::node::NodeType::Module => CompilerAnnotation::module_from(n.annotation(), n.name().expect("Modules must have a name"), struct_table),
-            crate::ast::node::NodeType::FnDef => CompilerAnnotation::routine_from(n.annotation(), &RoutineDefType::Function, struct_table),
-            crate::ast::node::NodeType::CoroutineDef => CompilerAnnotation::routine_from(n.annotation(), &RoutineDefType::Coroutine, struct_table),
-            crate::ast::node::NodeType::StructDef => CompilerAnnotation::structdef_from(n.annotation()),
-            crate::ast::node::NodeType::Parameter => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
-            crate::ast::node::NodeType::Expression => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
-            crate::ast::node::NodeType::Statement => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
-            crate::ast::node::NodeType::RoutineCall | crate::ast::node::NodeType::BinOp=> {
+            NodeType::Module => CompilerAnnotation::module_from(n.annotation(), n.name().expect("Modules must have a name"), struct_table),
+            NodeType::FnDef => CompilerAnnotation::routine_from(n.annotation(), &RoutineDefType::Function, struct_table),
+            NodeType::CoroutineDef => CompilerAnnotation::routine_from(n.annotation(), &RoutineDefType::Coroutine, struct_table),
+            NodeType::StructDef => CompilerAnnotation::structdef_from(n.annotation()),
+            NodeType::Parameter => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
+            NodeType::Expression => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
+            NodeType::Statement => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
+            NodeType::RoutineCall | NodeType::BinOp=> {
                 let (mut a, layout) = CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout);
                 current_layout = layout;
 
