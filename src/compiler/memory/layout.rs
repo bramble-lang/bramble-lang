@@ -1,15 +1,18 @@
 use super::{struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
-use crate::ast::{
-    annotate::map::MapPreOrder,
-    node::{Node, NodeType},
-    routinedef::RoutineDefType,
-};
 use crate::{
     ast::module::Module,
     compiler::memory::scope::{CompilerAnnotation, LayoutData},
     semantics::semanticnode::SemanticAnnotations,
+};
+use crate::{
+    ast::{
+        annotate::map::MapPreOrder,
+        node::{Node, NodeType},
+        routinedef::{self, RoutineDef, RoutineDefType},
+    },
+    compiler::compiler::Compiler,
 };
 use braid_lang::result::Result;
 
@@ -88,6 +91,17 @@ fn generate_stackframe_layout(
 
     let mapper = MapPreOrder::new("layout");
     mapper.for_module(ast, &mut f)
+}
+
+impl RoutineDef<CompilerAnnotation> {
+    pub fn total_allocation(&self) -> i32 {
+        self.iter_preorder().fold(0, |acc, n| {
+            n.annotation()
+                .symbols()
+                .iter()
+                .fold(acc, |acc, s| acc + s.1.size)
+        })
+    }
 }
 
 fn allocate_into_stackframe(
@@ -202,7 +216,10 @@ mod tests {
 
             let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
             if let Some(Item::Routine(func)) = compiler_ast.get_item("test") {
-                assert_eq!(func.annotation().stackframe_allocation().unwrap(), allocation);
+                assert_eq!(
+                    func.total_allocation(),
+                    allocation
+                );
                 check_symbols(func, expected).unwrap();
             } else {
                 panic!("Could not find function test");
