@@ -1,5 +1,3 @@
-use std::thread::current;
-
 use super::{scope::Level, struct_table};
 use struct_table::ResolvedStructTable;
 
@@ -28,20 +26,13 @@ pub fn compute_layout_for_program(
 ) -> Result<(Module<CompilerAnnotation>, ResolvedStructTable)> {
     let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
     let struct_table = unresolved_struct_table.resolve()?;
-    //let compiler_ast = compute::layouts_for_module(ast, &struct_table);
 
-
-    let compiler_ast = test(ast, &struct_table);
-
-    /*println!("\n\n====");
-    for n in compiler_ast.iter_preorder() {
-        println!("{}: {}", n.node_type(), n.annotation());
-    }*/
+    let compiler_ast = generate_stackframe_layout(ast, &struct_table);
 
     Ok((compiler_ast, struct_table))
 }
 
-pub fn test(ast: &Module<SemanticAnnotations>, struct_table: &ResolvedStructTable) -> Module<CompilerAnnotation> {
+pub fn generate_stackframe_layout(ast: &Module<SemanticAnnotations>, struct_table: &ResolvedStructTable) -> Module<CompilerAnnotation> {
     let mut current_layout = LayoutData::new(0);
     let mut f = |n: &dyn Node<SemanticAnnotations>| {
         let (annotation, layout) = match n.node_type() {
