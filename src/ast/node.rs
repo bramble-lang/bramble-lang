@@ -21,6 +21,8 @@ pub enum NodeType {
     Parameter,
     Expression,
     Statement,
+    RoutineCall,
+    BinOp,
 }
 
 impl Display for NodeType {
@@ -33,6 +35,8 @@ impl Display for NodeType {
             NodeType::Parameter => f.write_str("parameter"),
             NodeType::Expression => f.write_str("exp"),
             NodeType::Statement => f.write_str("stm"),
+            NodeType::RoutineCall => f.write_str("call"),
+            NodeType::BinOp => f.write_str("bin op")
         }
     }
 }

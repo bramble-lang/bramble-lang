@@ -28,15 +28,15 @@ pub fn compute_layout_for_program(
 ) -> Result<(Module<CompilerAnnotation>, ResolvedStructTable)> {
     let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
     let struct_table = unresolved_struct_table.resolve()?;
-    let compiler_ast = compute::layouts_for_module(ast, &struct_table);
+    //let compiler_ast = compute::layouts_for_module(ast, &struct_table);
 
 
-    //let compiler_ast = test(ast, &struct_table);
+    let compiler_ast = test(ast, &struct_table);
 
-    println!("\n\n====");
+    /*println!("\n\n====");
     for n in compiler_ast.iter_preorder() {
         println!("{}: {}", n.node_type(), n.annotation());
-    }
+    }*/
 
     Ok((compiler_ast, struct_table))
 }
@@ -52,6 +52,23 @@ pub fn test(ast: &Module<SemanticAnnotations>, struct_table: &ResolvedStructTabl
             crate::ast::node::NodeType::Parameter => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
             crate::ast::node::NodeType::Expression => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
             crate::ast::node::NodeType::Statement => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
+            crate::ast::node::NodeType::RoutineCall | crate::ast::node::NodeType::BinOp=> {
+                let (mut a, layout) = CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout);
+                current_layout = layout;
+
+                // Allocate space on the stack for these intermediate results to be stored
+                // so that we can use two registers for all expression evalutation. In the
+                // future, this wil lbe updated to more efficiently use registers.
+                for c in  n.children() {
+                    current_layout = compute::allocate_into_stackframe2(
+                        &mut a,
+                        c.annotation(),
+                        current_layout,
+                        struct_table,
+                    );
+                }
+                (a, current_layout)
+            }
         };
         current_layout = layout;
         annotation
@@ -521,9 +538,28 @@ mod compute {
         }
     }
 
-    fn allocate_into_stackframe(
+    pub(super) fn allocate_into_stackframe(
         current: &mut CompilerAnnotation,
-        child: &mut CompilerAnnotation,
+        child: &CompilerAnnotation,
+        layout: LayoutData,
+        struct_table: &ResolvedStructTable,
+    ) -> LayoutData {
+        let anonymous_name = child.anonymous_name();
+        let sz = struct_table
+            .size_of(child.ty())
+            .expect("Expected a size for an expression");
+
+        let layout = LayoutData::new(layout.offset + sz);
+        current.symbols.table.insert(
+            anonymous_name.clone(),
+            Symbol::new(&anonymous_name, sz, layout.offset),
+        );
+        layout
+    }
+
+    pub(super) fn allocate_into_stackframe2(
+        current: &mut CompilerAnnotation,
+        child: &SemanticAnnotations,
         layout: LayoutData,
         struct_table: &ResolvedStructTable,
     ) -> LayoutData {

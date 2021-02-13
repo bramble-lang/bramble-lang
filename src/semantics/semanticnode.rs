@@ -36,6 +36,16 @@ impl Annotation for SemanticAnnotations {
     }
 }
 
+impl SemanticAnnotations {
+    pub fn anonymous_name(&self) -> String {
+        format!("!{}_{}", self.canonical_path, self.id)
+    }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
+}
+
 pub type SemanticNode = Expression<SemanticAnnotations>;
 
 impl SemanticNode {
