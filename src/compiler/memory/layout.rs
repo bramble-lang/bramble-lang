@@ -31,7 +31,7 @@ pub fn compute_layout_for_program(
     Ok((compiler_ast, struct_table))
 }
 
-pub fn generate_stackframe_layout(
+fn generate_stackframe_layout(
     ast: &Module<SemanticAnnotations>,
     struct_table: &ResolvedStructTable,
 ) -> Module<CompilerAnnotation> {
