@@ -514,10 +514,7 @@ impl<'a> Compiler<'a> {
                     .expect("Could not find coroutine")
                     .to_routine()
                     .expect("Expected a routine");
-                let total_offset = co_def
-                    .annotation()
-                    .stackframe_allocation()
-                    .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
+                let total_offset = co_def.total_allocation();
 
                 co_def.validate_parameters(params)?;
 

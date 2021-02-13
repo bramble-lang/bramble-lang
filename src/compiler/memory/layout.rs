@@ -95,11 +95,12 @@ fn generate_stackframe_layout(
 
 impl RoutineDef<CompilerAnnotation> {
     pub fn total_allocation(&self) -> i32 {
-        self.iter_preorder().fold(0, |acc, n| {
+        let init = if self.def == RoutineDefType::Coroutine {40} else {0};
+        self.iter_preorder().fold(init, |acc, n| {
             n.annotation()
                 .symbols()
                 .iter()
-                .fold(acc, |acc, s| acc + s.1.size)
+                .fold(acc, |acc, s| acc.max(s.1.offset))
         })
     }
 }
@@ -203,6 +204,52 @@ mod tests {
                     ",
                 vec![("x", 8, 8), ("y", 8, 16), ("!_5", 8, 24), ("!_6", 8, 32)],
                 32,
+            ),
+        ] {
+            println!("Running test: {}", ln);
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+
+            let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
+            if let Some(Item::Routine(func)) = compiler_ast.get_item("test") {
+                assert_eq!(
+                    func.total_allocation(),
+                    allocation
+                );
+                check_symbols(func, expected).unwrap();
+            } else {
+                panic!("Could not find function test");
+            }
+        }
+    }
+
+    #[test]
+    fn coroutine_symbol() {
+        for (ln, text, expected, allocation) in vec![
+            (
+                line!(),
+                "
+                co test() {
+                    return;
+                }
+                    ",
+                vec![],
+                40,
+            ),
+            (
+                line!(),
+                "
+                co test(x: i32) {
+                    return;
+                }
+                    ",
+                vec![("x", 4, 44)],
+                44,
             ),
         ] {
             println!("Running test: {}", ln);
