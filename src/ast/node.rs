@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
-use super::annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}};
+use super::annotate::{
+    iter::{PostOrderIter, PreOrderIter},
+    Annotation,
+};
 
 pub trait Node<M: Annotation> {
     fn node_type(&self) -> NodeType;
@@ -36,7 +39,7 @@ impl Display for NodeType {
             NodeType::Expression => f.write_str("exp"),
             NodeType::Statement => f.write_str("stm"),
             NodeType::RoutineCall => f.write_str("call"),
-            NodeType::BinOp => f.write_str("bin op")
+            NodeType::BinOp => f.write_str("bin op"),
         }
     }
 }

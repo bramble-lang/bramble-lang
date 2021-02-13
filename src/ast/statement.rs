@@ -1,4 +1,12 @@
-use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, expression::Expression, node::{Node, NodeType}, ty::Type};
+use super::{
+    annotate::{
+        iter::{PostOrderIter, PreOrderIter},
+        Annotation,
+    },
+    expression::Expression,
+    node::{Node, NodeType},
+    ty::Type,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {

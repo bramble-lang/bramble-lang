@@ -1238,10 +1238,16 @@ impl<'a> Compiler<'a> {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.annotation();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
-            let reg = pa
-                .scale_reg(Reg64::Rax)
-                .expect(&format!("Register could not be found for function parameter: L{}: {}", pa.line(), param));
-            if let Some(offset) = self.get_expression_result_location(pa).expect(&format!("Could not find stack frame location for: L{}: {}", pa.line(), param)) {
+            let reg = pa.scale_reg(Reg64::Rax).expect(&format!(
+                "Register could not be found for function parameter: L{}: {}",
+                pa.line(),
+                param
+            ));
+            if let Some(offset) = self.get_expression_result_location(pa).expect(&format!(
+                "Could not find stack frame location for: L{}: {}",
+                pa.line(),
+                param
+            )) {
                 assembly! {(code){
                     mov [%rbp-{offset}], %{reg};
                 }};

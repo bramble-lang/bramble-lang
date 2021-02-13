@@ -1,4 +1,13 @@
-use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, path::Path, routinedef::{RoutineDef, RoutineDefType}, structdef::StructDef};
+use super::{
+    annotate::{
+        iter::{PostOrderIter, PreOrderIter},
+        Annotation,
+    },
+    node::{Node, NodeType},
+    path::Path,
+    routinedef::{RoutineDef, RoutineDefType},
+    structdef::StructDef,
+};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -25,7 +34,7 @@ impl<M: Annotation> Node<M> for Module<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        let mut v:Vec<&dyn Node<M>> = vec![];
+        let mut v: Vec<&dyn Node<M>> = vec![];
         for m in self.modules.iter() {
             v.push(m);
         }

@@ -1,4 +1,11 @@
-use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, ty::Type};
+use super::{
+    annotate::{
+        iter::{PostOrderIter, PreOrderIter},
+        Annotation,
+    },
+    node::{Node, NodeType},
+    ty::Type,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {

@@ -3,6 +3,6 @@ pub trait Annotation {
     fn line(&self) -> u32;
 }
 
-pub mod traversalmut;
-pub mod map;
 pub mod iter;
+pub mod map;
+pub mod traversalmut;

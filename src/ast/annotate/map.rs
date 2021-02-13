@@ -306,7 +306,7 @@ mod test {
 
     fn convert(n: &dyn Node<i32>) -> i64 {
         let i = n.annotation();
-        2*(*i as i64)
+        2 * (*i as i64)
     }
 
     #[test]

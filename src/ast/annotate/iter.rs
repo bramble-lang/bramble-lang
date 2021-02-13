@@ -16,7 +16,10 @@ TODO: This will do the full traversal when `new` is called, this can be
 improved to amortize time while reducing storage costs by lazily populating
 `out`
 */
-impl<'a, A> PostOrderIter<'a, A> where A: Annotation {
+impl<'a, A> PostOrderIter<'a, A>
+where
+    A: Annotation,
+{
     pub fn new(node: &'a dyn Node<A>) -> PostOrderIter<'a, A> {
         let mut stack = vec![node];
         let mut out = vec![];
@@ -30,13 +33,14 @@ impl<'a, A> PostOrderIter<'a, A> where A: Annotation {
             }
         }
 
-        PostOrderIter {
-            out,
-        }
+        PostOrderIter { out }
     }
 }
 
-impl<'a, A> Iterator for PostOrderIter<'a, A> where A: std::fmt::Debug + Annotation {
+impl<'a, A> Iterator for PostOrderIter<'a, A>
+where
+    A: std::fmt::Debug + Annotation,
+{
     type Item = &'a dyn Node<A>;
     fn next(&mut self) -> Option<Self::Item> {
         self.out.pop()
@@ -57,7 +61,10 @@ TODO: This will do the full traversal when `new` is called, this can be
 improved to amortize time while reducing storage costs by lazily populating
 `out`
 */
-impl<'a, A> PreOrderIter<'a, A> where A: Annotation {
+impl<'a, A> PreOrderIter<'a, A>
+where
+    A: Annotation,
+{
     pub fn new(node: &'a dyn Node<A>) -> PreOrderIter<'a, A> {
         let mut stack = vec![node];
         let mut out = vec![];
@@ -73,13 +80,14 @@ impl<'a, A> PreOrderIter<'a, A> where A: Annotation {
 
         out.reverse();
 
-        PreOrderIter {
-            out,
-        }
+        PreOrderIter { out }
     }
 }
 
-impl<'a, A> Iterator for PreOrderIter<'a, A> where A: std::fmt::Debug + Annotation {
+impl<'a, A> Iterator for PreOrderIter<'a, A>
+where
+    A: std::fmt::Debug + Annotation,
+{
     type Item = &'a dyn Node<A>;
     fn next(&mut self) -> Option<Self::Item> {
         self.out.pop()

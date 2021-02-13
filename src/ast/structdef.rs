@@ -1,4 +1,12 @@
-use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, parameter::Parameter, ty::Type};
+use super::{
+    annotate::{
+        iter::{PostOrderIter, PreOrderIter},
+        Annotation,
+    },
+    node::{Node, NodeType},
+    parameter::Parameter,
+    ty::Type,
+};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -22,7 +30,7 @@ impl<M: Annotation> Node<M> for StructDef<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        let mut v:Vec<&dyn Node<M>> = vec![];
+        let mut v: Vec<&dyn Node<M>> = vec![];
         for f in self.fields.iter() {
             v.push(f);
         }

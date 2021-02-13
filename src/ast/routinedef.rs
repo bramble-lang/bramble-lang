@@ -1,4 +1,13 @@
-use super::{annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}}, node::{Node, NodeType}, parameter::Parameter, statement::Statement, ty::Type};
+use super::{
+    annotate::{
+        iter::{PostOrderIter, PreOrderIter},
+        Annotation,
+    },
+    node::{Node, NodeType},
+    parameter::Parameter,
+    statement::Statement,
+    ty::Type,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
@@ -27,14 +36,14 @@ impl<M: Annotation> Node<M> for RoutineDef<M> {
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
-        let mut v:Vec<&dyn Node<M>> = vec![];
+        let mut v: Vec<&dyn Node<M>> = vec![];
         for f in self.params.iter() {
             v.push(f);
         }
         for b in self.body.iter() {
             v.push(b);
         }
-        
+
         v
     }
 
