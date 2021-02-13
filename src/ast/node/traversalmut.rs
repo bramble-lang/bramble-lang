@@ -9,7 +9,7 @@ use crate::{diagnostics::config::TracingConfig, expression::Expression};
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
-pub struct TraverserMut<A, T>
+pub struct ForEachPreOrderMut<A, T>
 where
     A: Debug + Annotation,
     T: Fn(&A) -> String,
@@ -20,13 +20,13 @@ where
     ph: PhantomData<A>,
 }
 
-impl<A, T> TraverserMut<A, T>
+impl<A, T> ForEachPreOrderMut<A, T>
 where
     A: Debug + Annotation,
     T: Fn(&A) -> String,
 {
-    pub fn new(name: &str, tracing: TracingConfig, format: T) -> TraverserMut<A, T> {
-        TraverserMut {
+    pub fn new(name: &str, tracing: TracingConfig, format: T) -> ForEachPreOrderMut<A, T> {
+        ForEachPreOrderMut {
             name: name.into(),
             tracing,
             format,
