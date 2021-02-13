@@ -1,7 +1,9 @@
 use std::fmt::Display;
 
 pub mod iter;
-use super::annotate::Annotation;
+pub mod map;
+pub mod traversalmut;
+
 use iter::{PostOrderIter, PreOrderIter};
 
 pub trait Node<M: Annotation> {
@@ -41,4 +43,9 @@ impl Display for NodeType {
             NodeType::BinOp => f.write_str("bin op"),
         }
     }
+}
+
+pub trait Annotation {
+    fn id(&self) -> u32;
+    fn line(&self) -> u32;
 }

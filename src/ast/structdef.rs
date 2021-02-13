@@ -1,6 +1,6 @@
 use super::{
-    annotate::Annotation,
     node::{
+        Annotation,
         iter::{PostOrderIter, PreOrderIter},
         Node, NodeType,
     },

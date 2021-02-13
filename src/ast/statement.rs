@@ -1,7 +1,7 @@
 use super::{
-    annotate::Annotation,
     expression::Expression,
     node::{
+        Annotation,
         iter::{PostOrderIter, PreOrderIter},
         Node, NodeType,
     },

@@ -5,7 +5,7 @@ use stdext::function_name;
 
 use crate::{
     ast::{
-        annotate::Annotation,
+        node::Annotation,
         expression::{Expression, RoutineCall},
         module::Module,
         node::Node,

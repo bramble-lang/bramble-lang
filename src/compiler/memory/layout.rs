@@ -2,8 +2,9 @@ use super::{struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
 use crate::ast::{
-    annotate::map::MapPreOrder,
-    node::{Node, NodeType},
+    node::{Node, NodeType,
+    map::MapPreOrder,
+    },
     routinedef::{RoutineDef, RoutineDefType},
 };
 use crate::{
