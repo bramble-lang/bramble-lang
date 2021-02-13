@@ -108,3 +108,149 @@ fn allocate_into_stackframe(
     );
     layout
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        ast::{module::Item, routinedef::RoutineDef},
+        compiler::memory::symbol_table::SymbolTable,
+        diagnostics::config::TracingConfig,
+        lexer::{lexer::Lexer, tokens::Token},
+        parser::parser,
+        semantics::type_resolver::resolve_types,
+    };
+    use braid_lang::result::Result;
+
+    #[test]
+    fn function_symbols() {
+        for (ln, text, expected, allocation) in vec![
+            (
+                line!(),
+                "
+                fn test() {
+                    return;
+                }
+                    ",
+                vec![],
+                0,
+            ),
+            (
+                line!(),
+                "
+                fn test(x: i32) {
+                    return;
+                }
+                    ",
+                vec![("x", 4, 4)],
+                4,
+            ),
+            (
+                line!(),
+                "
+                fn test(x: i32) {
+                    let y: i64 := 50;
+                    return;
+                }
+                    ",
+                vec![("x", 4, 4), ("y", 8, 12)],
+                12,
+            ),
+            (
+                line!(),
+                "
+                fn test() -> i32 {
+                    return 5i32;
+                }
+                    ",
+                vec![],
+                0,
+            ),
+            (
+                line!(),
+                "
+                fn test() -> i64 {
+                    return 5 + 6;
+                }
+                    ",
+                vec![("!_3", 8, 8), ("!_4", 8, 16)],
+                16,
+            ),
+            (
+                line!(),
+                "
+                fn test() {
+                    let x: i64 := 1;
+                    let y: i64 := 2;
+                    fake(x, y);
+                    return;
+                }
+                fn fake(i: i64, j: i64) {return;}
+                    ",
+                vec![("x", 8, 8), ("y", 8, 16), ("!_5", 8, 24), ("!_6", 8, 32)],
+                32,
+            ),
+        ] {
+            println!("Running test: {}", ln);
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+
+            let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
+            if let Some(Item::Routine(func)) = compiler_ast.get_item("test") {
+                assert_eq!(func.annotation().stackframe_allocation().unwrap(), allocation);
+                check_symbols(func, expected).unwrap();
+            } else {
+                panic!("Could not find function test");
+            }
+        }
+    }
+
+    fn find_all_symbols(rd: &RoutineDef<CompilerAnnotation>) -> SymbolTable {
+        let mut symbols = SymbolTable::new();
+        for n in rd.iter_preorder() {
+            for (name, sym) in n.annotation().symbols().iter() {
+                symbols.table.insert(name.into(), sym.clone());
+            }
+        }
+        symbols
+    }
+
+    fn check_symbols(
+        rd: &RoutineDef<CompilerAnnotation>,
+        expected: Vec<(&str, i32, i32)>,
+    ) -> Result<()> {
+        let test = find_all_symbols(rd);
+        if test.table.len() != expected.len() {
+            return Err(format!(
+                "Expected table size to be {} but got {}\n\nTest:\n{}",
+                expected.len(),
+                test.table.len(),
+                test,
+            ));
+        }
+        for (en, esz, eo) in expected {
+            if let Some(s) = test.table.get(en) {
+                if s.size != esz {
+                    return Err(format!(
+                        "{} expected size is {} but got {}",
+                        en, esz, s.size
+                    ));
+                }
+                if s.offset != eo {
+                    return Err(format!(
+                        "{} expected offset is {} but got {}",
+                        en, eo, s.size
+                    ));
+                }
+            } else {
+                return Err(format!("Does not contain {}", en));
+            }
+        }
+        Ok(())
+    }
+}
