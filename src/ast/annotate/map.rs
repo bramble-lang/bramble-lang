@@ -9,12 +9,6 @@ use crate::expression::Expression;
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
-/**
- * This traverses the AST and determines what size register to
- * assign to each node in the AST: if it makes sense to assign
- * it to a register.
- */
-
 pub struct MapPreOrder<A, B, F>
 where
     A: Debug + Annotation,
