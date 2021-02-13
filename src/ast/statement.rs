@@ -1,10 +1,10 @@
 use super::{
-    annotate::{
-        iter::{PostOrderIter, PreOrderIter},
-        Annotation,
-    },
+    annotate::Annotation,
     expression::Expression,
-    node::{Node, NodeType},
+    node::{
+        iter::{PostOrderIter, PreOrderIter},
+        Node, NodeType,
+    },
     ty::Type,
 };
 

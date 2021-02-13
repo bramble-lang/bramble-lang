@@ -1,9 +1,9 @@
 use super::{
-    annotate::{
+    annotate::Annotation,
+    node::{
         iter::{PostOrderIter, PreOrderIter},
-        Annotation,
+        Node, NodeType,
     },
-    node::{Node, NodeType},
     path::Path,
     statement::Statement,
     ty::Type,

@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
-use super::annotate::{
-    iter::{PostOrderIter, PreOrderIter},
-    Annotation,
-};
+pub mod iter;
+use super::annotate::Annotation;
+use iter::{PostOrderIter, PreOrderIter};
 
 pub trait Node<M: Annotation> {
     fn node_type(&self) -> NodeType;
