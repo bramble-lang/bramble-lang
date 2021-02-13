@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use crate::ast::routinedef::RoutineDefType;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::CompilerAnnotation;
-use crate::compiler::memory::scope::Level::Routine;
 use crate::compiler::memory::stack::CompilerAnnotationStack;
 use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;

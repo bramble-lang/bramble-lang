@@ -94,7 +94,6 @@ impl CompilerAnnotation {
         CompilerAnnotation::from(
             a,
             Level::Routine {
-                allocation: 0,
                 routine_type,
             },
         )
@@ -110,10 +109,6 @@ impl CompilerAnnotation {
 
     pub fn level(&self) -> &Level {
         &self.level
-    }
-
-    pub fn stackframe_allocation(&self) -> Option<i32> {
-        self.level().allocation()
     }
 
     pub fn symbols(&self) -> &SymbolTable {
@@ -205,12 +200,6 @@ impl CompilerAnnotation {
 
         layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
 
-        match scope.level {
-            Level::Routine {
-                ref mut allocation, ..
-            } => *allocation = layout.offset,
-            _ => (),
-        };
         (scope, layout)
     }
 
@@ -253,7 +242,6 @@ impl std::fmt::Display for CompilerAnnotation {
 pub enum Level {
     Local,
     Routine {
-        allocation: i32,
         routine_type: RoutineDefType,
     },
     Module {
@@ -261,25 +249,15 @@ pub enum Level {
     },
 }
 
-impl Level {
-    pub fn allocation(&self) -> Option<i32> {
-        match self {
-            Level::Local | Level::Module { .. } => None,
-            Level::Routine { allocation, .. } => Some(*allocation),
-        }
-    }
-}
-
 impl std::fmt::Display for Level {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Level::Local => f.write_str("Local"),
             Level::Routine {
-                allocation,
                 routine_type,
             } => f.write_fmt(format_args!(
-                "Routine: [Type: {}, Allocation: {}]",
-                routine_type, allocation
+                "Routine: [Type: {}]",
+                routine_type
             )),
             Level::Module { name } => f.write_fmt(format_args!("Module: {}", name)),
         }

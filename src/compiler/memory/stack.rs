@@ -158,7 +158,6 @@ mod tests {
         let mut fun_scope = CompilerAnnotation::new(
             0,
             Level::Routine {
-                allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
             vec!["root"].into(),
@@ -194,7 +193,6 @@ mod tests {
         let mut fun_scope = CompilerAnnotation::new(
             0,
             Level::Routine {
-                allocation: 8,
                 routine_type: RoutineDefType::Function,
             },
             vec!["root"].into(),
@@ -222,7 +220,6 @@ mod tests {
         let fun2_scope = CompilerAnnotation::new(
             0,
             Level::Routine {
-                allocation: 0,
                 routine_type: RoutineDefType::Function,
             },
             vec!["root"].into(),
@@ -248,7 +245,6 @@ mod tests {
         let mut cor_scope = CompilerAnnotation::new(
             0,
             Level::Routine {
-                allocation: 8,
                 routine_type: RoutineDefType::Coroutine,
             },
             vec!["root"].into(),
@@ -279,7 +275,6 @@ mod tests {
         let fun2_scope = CompilerAnnotation::new(
             0,
             Level::Routine {
-                allocation: 0,
                 routine_type: RoutineDefType::Coroutine,
             },
             vec!["root"].into(),

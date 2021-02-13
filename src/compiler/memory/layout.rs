@@ -10,9 +10,8 @@ use crate::{
     ast::{
         annotate::map::MapPreOrder,
         node::{Node, NodeType},
-        routinedef::{self, RoutineDef, RoutineDefType},
+        routinedef::{RoutineDef, RoutineDefType},
     },
-    compiler::compiler::Compiler,
 };
 use braid_lang::result::Result;
 
