@@ -656,10 +656,7 @@ impl<'a> Compiler<'a> {
             ..
         } = routine
         {
-            let total_offset = match scope.level() {
-                Routine { allocation, .. } => allocation,
-                _ => panic!("Invalid scope for function definition"),
-            };
+            let total_offset = routine.total_allocation();
 
             assembly! {(code) {
             @{scope.canon_path().to_label()}:
@@ -667,7 +664,7 @@ impl<'a> Compiler<'a> {
                 ;"Prepare stack frame for this function"
                 push %rbp;
                 mov %rbp, %rsp;
-                sub %rsp, {*total_offset as i64};
+                sub %rsp, {total_offset as i64};
                 ; "Move function parameters from registers into the stack frame"
                 {{self.move_params_into_stackframe(routine, &fn_param_registers)?}}
                 ; "Done moving function parameters from registers into the stack frame"
