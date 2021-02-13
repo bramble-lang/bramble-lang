@@ -91,12 +91,7 @@ impl CompilerAnnotation {
         a: &SemanticAnnotations,
         routine_type: RoutineDefType,
     ) -> CompilerAnnotation {
-        CompilerAnnotation::from(
-            a,
-            Level::Routine {
-                routine_type,
-            },
-        )
+        CompilerAnnotation::from(a, Level::Routine { routine_type })
     }
 
     pub fn new_module(a: &SemanticAnnotations, name: &str) -> CompilerAnnotation {
@@ -241,24 +236,17 @@ impl std::fmt::Display for CompilerAnnotation {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Level {
     Local,
-    Routine {
-        routine_type: RoutineDefType,
-    },
-    Module {
-        name: String,
-    },
+    Routine { routine_type: RoutineDefType },
+    Module { name: String },
 }
 
 impl std::fmt::Display for Level {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Level::Local => f.write_str("Local"),
-            Level::Routine {
-                routine_type,
-            } => f.write_fmt(format_args!(
-                "Routine: [Type: {}]",
-                routine_type
-            )),
+            Level::Routine { routine_type } => {
+                f.write_fmt(format_args!("Routine: [Type: {}]", routine_type))
+            }
             Level::Module { name } => f.write_fmt(format_args!("Module: {}", name)),
         }
     }
