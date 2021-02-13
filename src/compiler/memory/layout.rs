@@ -1,4 +1,4 @@
-use super::{scope::Level, struct_table};
+use super::{scope::Level, struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
 use crate::{ast::{annotate::map::MapPreOrder, expression::Expression, node::{Node, NodeType}, routinedef::RoutineDefType}, semantics::semanticnode::SemanticNode};
@@ -51,7 +51,7 @@ pub fn generate_stackframe_layout(ast: &Module<SemanticAnnotations>, struct_tabl
                 // so that we can use two registers for all expression evalutation. In the
                 // future, this wil lbe updated to more efficiently use registers.
                 for c in  n.children() {
-                    current_layout = compute::allocate_into_stackframe2(
+                    current_layout = allocate_into_stackframe(
                         &mut a,
                         c.annotation(),
                         current_layout,
@@ -67,6 +67,25 @@ pub fn generate_stackframe_layout(ast: &Module<SemanticAnnotations>, struct_tabl
 
     let mapper = MapPreOrder::new("layout");
     mapper.for_module(ast, &mut f)
+}
+
+fn allocate_into_stackframe(
+    current: &mut CompilerAnnotation,
+    child: &SemanticAnnotations,
+    layout: LayoutData,
+    struct_table: &ResolvedStructTable,
+) -> LayoutData {
+    let anonymous_name = child.anonymous_name();
+    let sz = struct_table
+        .size_of(child.ty())
+        .expect("Expected a size for an expression");
+
+    let layout = LayoutData::new(layout.offset + sz);
+    current.symbols.table.insert(
+        anonymous_name.clone(),
+        Symbol::new(&anonymous_name, sz, layout.offset),
+    );
+    layout
 }
 
 mod compute {
