@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::annotate::{Annotation, iter::{PostOrderIter, PreOrderIter}};
 
 pub trait Node<M: Annotation> {
@@ -19,4 +21,18 @@ pub enum NodeType {
     Parameter,
     Expression,
     Statement,
+}
+
+impl Display for NodeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NodeType::Module => f.write_str("module"),
+            NodeType::FnDef => f.write_str("fn"),
+            NodeType::CoroutineDef => f.write_str("co"),
+            NodeType::StructDef => f.write_str("struct"),
+            NodeType::Parameter => f.write_str("parameter"),
+            NodeType::Expression => f.write_str("exp"),
+            NodeType::Statement => f.write_str("stm"),
+        }
+    }
 }

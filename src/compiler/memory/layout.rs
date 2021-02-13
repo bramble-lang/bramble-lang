@@ -30,11 +30,14 @@ pub fn compute_layout_for_program(
     let struct_table = unresolved_struct_table.resolve()?;
     let compiler_ast = compute::layouts_for_module(ast, &struct_table);
 
-    for n in compiler_ast.iter_preorder() {
-        println!("{}", n.annotation());
-    }
 
     //let compiler_ast = test(ast, &struct_table);
+
+    println!("\n\n====");
+    for n in compiler_ast.iter_preorder() {
+        println!("{}: {}", n.node_type(), n.annotation());
+    }
+
     Ok((compiler_ast, struct_table))
 }
 
@@ -51,7 +54,6 @@ pub fn test(ast: &Module<SemanticAnnotations>, struct_table: &ResolvedStructTabl
             crate::ast::node::NodeType::Statement => CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout),
         };
         current_layout = layout;
-        println!("{}", annotation);
         annotation
     };
 

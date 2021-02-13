@@ -65,7 +65,7 @@ impl<'a, A> PreOrderIter<'a, A> where A: Annotation {
         // Build a Post Ordered vector of references to Nodes
         while let Some(n) = stack.pop() {
             out.push(n);
-            let children = n.children();
+            let children = n.children().into_iter().rev();
             for c in children {
                 stack.push(c);
             }
