@@ -95,6 +95,20 @@ impl SemanticAst {
         }
     }
 
+    pub fn test(&mut self, m: &Module<u32>) -> Module<SemanticAnnotations> {
+        let f = |n: &dyn Node<u32>| {
+            match n.node_type() {
+                NodeType::Module => {
+                    let name = n.name().unwrap();
+                    self.module_semantic_annotations_from(*n.annotation(), name)
+                },
+                _ => self.semantic_annotations_from(*n.annotation()),
+            }
+        };
+        let mut mapper = MapPreOrder::new("parser-to-semantic", f);
+        mapper.apply(m)
+    }
+
     pub fn from_module(&mut self, m: &Module<u32>) -> Result<Module<SemanticAnnotations>> {
         let meta = self.module_semantic_annotations_from(*m.annotation(), m.get_name());
 

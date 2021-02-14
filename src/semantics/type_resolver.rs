@@ -23,7 +23,8 @@ pub fn resolve_types_with_imports(
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
-    let mut sm_ast = sa.from_module(&ast)?;
+    //let mut sm_ast = sa.from_module(&ast)?;
+    let mut sm_ast = sa.test(&ast);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
     let mut semantic = TypeResolver::new(&sm_ast);
