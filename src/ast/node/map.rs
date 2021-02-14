@@ -9,6 +9,18 @@ use crate::expression::Expression;
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
+/**
+Traverses an AST in using a PreOrder Depth First Search and transforms the AST by
+applying a function, `f` to each node. This construct allows a user to transform
+the value and type of the Annotation on an AST while preserving the AST topology.
+
+Only Annotation data will be transformed.
+
+Each instance of a construct is given a name so that diagnostic and investigative
+data which is collected (to aid a developer with debugging the Braid compiler and
+to aid users with debugging their Braid code) can be identified in the Braid
+Compiler UI.
+*/
 pub struct MapPreOrder<A, B, F>
 where
     A: Debug + Annotation,

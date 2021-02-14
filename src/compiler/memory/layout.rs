@@ -2,9 +2,7 @@ use super::{struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
 use crate::ast::{
-    node::{Node, NodeType,
-    map::MapPreOrder,
-    },
+    node::{MapPreOrder, Node, NodeType},
     routinedef::{RoutineDef, RoutineDefType},
 };
 use crate::{

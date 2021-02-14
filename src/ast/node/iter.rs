@@ -10,11 +10,13 @@ where
 }
 
 /**
-Performs a Post Order DFS traversal over all the nodes in an AST.
+Performs a Post Order traversal of an AST and applies the given function,
+`f`, on each node.  This construct exists to allow a user to easily traverse
+through an AST using `for` loops and print out diagnostic or debugging
+information. Using this iterator will transform the AST into an ordered
+list of nodes and does not preserve the AST topology
 
-TODO: This will do the full traversal when `new` is called, this can be
-improved to amortize time while reducing storage costs by lazily populating
-`out`
+For Compiler transformations, use the `MapPostOrder` construct.
 */
 impl<'a, A> PostOrderIter<'a, A>
 where
@@ -47,6 +49,15 @@ where
     }
 }
 
+/**
+Performs a Pre Order traversal of an AST and applies the given function,
+`f`, on each node.  This construct exists to allow a user to easily traverse
+through an AST using `for` loops and print out diagnostic or debugging
+information. Using this iterator will transform the AST into an ordered
+list of nodes and does not preserve the AST topology.
+
+For Compiler transformations, use the `MapPostOrder` construct.
+*/
 pub struct PreOrderIter<'a, A>
 where
     A: Annotation,
@@ -54,13 +65,6 @@ where
     out: Vec<&'a dyn Node<A>>,
 }
 
-/**
-Performs a Pre Order DFS traversal over all the nodes in an AST.
-
-TODO: This will do the full traversal when `new` is called, this can be
-improved to amortize time while reducing storage costs by lazily populating
-`out`
-*/
 impl<'a, A> PreOrderIter<'a, A>
 where
     A: Annotation,

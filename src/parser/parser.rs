@@ -5,9 +5,9 @@ use stdext::function_name;
 
 use crate::{
     ast::{
-        node::Annotation,
         expression::{Expression, RoutineCall},
         module::Module,
+        node::Annotation,
         node::Node,
         parameter::Parameter,
         path::Path,
