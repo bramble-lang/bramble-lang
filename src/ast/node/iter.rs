@@ -102,11 +102,11 @@ where
 mod test_preorder {
     use super::*;
     use crate::ast::{
-        expression::Expression,
+        expression::{Expression, UnaryOperator},
         module::Module,
         parameter::Parameter,
         routinedef::RoutineDef,
-        statement::{Bind, Statement},
+        statement::{Bind, Statement, YieldReturn},
         structdef::StructDef,
         ty::Type,
     };
@@ -192,8 +192,28 @@ mod test_preorder {
                 else_arm: Some(box Expression::StringLiteral(8, "h".into())),
             },
         )));
+        f.body.push(Statement::YieldReturn(box YieldReturn::new(
+            9,
+            Some(Expression::UnaryOp(
+                10,
+                UnaryOperator::Minus,
+                box Expression::ExpressionBlock(
+                    11,
+                    vec![Statement::Expression(box Expression::Yield(
+                        12,
+                        box Expression::Identifier(13, "c".into()),
+                    ))],
+                    Some(box Expression::RoutineCall(
+                        14,
+                        crate::ast::expression::RoutineCall::Function,
+                        vec!["test"].into(),
+                        vec![Expression::Identifier(15, "p".into())],
+                    )),
+                ),
+            )),
+        )));
 
-        let expected = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let test: Vec<i64> = f.iter_preorder().map(|n| *n.annotation()).collect();
         assert_eq!(test, expected);
     }
@@ -203,11 +223,11 @@ mod test_preorder {
 mod test_postorder {
     use super::*;
     use crate::ast::{
-        expression::Expression,
+        expression::{Expression, UnaryOperator},
         module::Module,
         parameter::Parameter,
         routinedef::RoutineDef,
-        statement::{Bind, Statement},
+        statement::{Bind, Statement, YieldReturn},
         structdef::StructDef,
         ty::Type,
     };
@@ -293,8 +313,28 @@ mod test_postorder {
                 else_arm: Some(box Expression::StringLiteral(8, "h".into())),
             },
         )));
+        f.body.push(Statement::YieldReturn(box YieldReturn::new(
+            9,
+            Some(Expression::UnaryOp(
+                10,
+                UnaryOperator::Minus,
+                box Expression::ExpressionBlock(
+                    11,
+                    vec![Statement::Expression(box Expression::Yield(
+                        12,
+                        box Expression::Identifier(13, "c".into()),
+                    ))],
+                    Some(box Expression::RoutineCall(
+                        14,
+                        crate::ast::expression::RoutineCall::Function,
+                        vec!["test"].into(),
+                        vec![Expression::Identifier(15, "p".into())],
+                    )),
+                ),
+            )),
+        )));
 
-        let expected = vec![5, 6, 4, 7, 8, 3, 2, 1];
+        let expected = vec![5, 6, 4, 7, 8, 3, 2, 13, 12, 15, 14, 11, 10, 9, 1];
         let test: Vec<i64> = f.iter_postorder().map(|n| *n.annotation()).collect();
         assert_eq!(test, expected);
     }
