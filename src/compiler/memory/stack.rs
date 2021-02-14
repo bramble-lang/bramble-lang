@@ -1,4 +1,4 @@
-use crate::ast::routinedef::RoutineDefType;
+use crate::ast::*;
 use crate::compiler::memory::scope::Level;
 
 use super::{scope::CompilerAnnotation, symbol_table::Symbol};
@@ -68,12 +68,7 @@ impl std::fmt::Display for CompilerAnnotationStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{node::Node, ty::Type};
-    use crate::{ast::parameter::Parameter, expression::Expression};
-    use crate::{
-        ast::{module, routinedef::RoutineDef},
-        compiler::memory::scope::CompilerAnnotation,
-    };
+    use crate::compiler::memory::scope::CompilerAnnotation;
 
     #[test]
     fn test_find_symbol_in_current_scope() {
@@ -213,7 +208,7 @@ mod tests {
         let mut module_scope =
             CompilerAnnotation::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("func", 0, 0);
-        let mut module_node = module::Module::new("test", module_scope);
+        let mut module_node = Module::new("test", module_scope);
         module_node.add_function(fun_node).unwrap();
         stack.push(&module_node.annotation());
 
@@ -268,7 +263,7 @@ mod tests {
             CompilerAnnotation::new(0, Level::Local, vec!["root"].into(), Type::Unit);
         module_scope.insert("cor", 0, 0);
 
-        let mut module_node = module::Module::new("test", module_scope);
+        let mut module_node = Module::new("test", module_scope);
         module_node.add_coroutine(cor_node).unwrap();
         stack.push(&module_node.annotation());
 

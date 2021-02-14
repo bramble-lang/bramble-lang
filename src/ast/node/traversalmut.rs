@@ -5,7 +5,8 @@ use crate::ast::module::*;
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
-use crate::{diagnostics::config::TracingConfig, expression::Expression};
+use crate::ast::Expression;
+use crate::diagnostics::config::TracingConfig;
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 

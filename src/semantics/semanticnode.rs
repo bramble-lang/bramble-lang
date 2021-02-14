@@ -1,20 +1,6 @@
-use crate::ast::{node::Annotation, node::Node, parameter::Parameter, statement::Statement};
-use crate::{
-    ast::path::Path,
-    ast::{
-        module::{self, Item},
-        routinedef::RoutineDef,
-        ty::Type,
-    },
-    expression::*,
-};
-use crate::{
-    ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
-    semantics::symbol_table::*,
-};
-use crate::{
-    ast::structdef::StructDef, diagnostics::config::TracingConfig, parser::parser::ParserInfo,
-};
+use crate::ast::*;
+use crate::semantics::symbol_table::*;
+use crate::{diagnostics::config::TracingConfig, parser::parser::ParserInfo};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -99,13 +85,10 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_module(
-        &mut self,
-        m: &module::Module<u32>,
-    ) -> Result<module::Module<SemanticAnnotations>> {
+    pub fn from_module(&mut self, m: &Module<u32>) -> Result<Module<SemanticAnnotations>> {
         let meta = self.module_semantic_annotations_from(*m.annotation(), m.get_name());
 
-        let mut nmodule = module::Module::new(m.get_name(), meta);
+        let mut nmodule = Module::new(m.get_name(), meta);
         for module in m.get_modules().iter() {
             nmodule.add_module(self.from_module(module)?);
         }
@@ -121,7 +104,7 @@ impl SemanticAst {
         Ok(nmodule)
     }
 
-    fn from_item(&mut self, m: &Item<u32>) -> Result<module::Item<SemanticAnnotations>> {
+    fn from_item(&mut self, m: &Item<u32>) -> Result<Item<SemanticAnnotations>> {
         match m {
             Item::Struct(s) => self.from_structdef(s).map(|s| Item::Struct(s)),
             Item::Routine(rd) => self.from_routinedef(rd).map(|r| Item::Routine(r)),
@@ -402,6 +385,8 @@ impl SemanticAst {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::BinaryOperator;
+
     use super::*;
 
     #[test]

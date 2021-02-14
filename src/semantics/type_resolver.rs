@@ -1,52 +1,27 @@
 use std::collections::HashMap;
 
-use crate::ast::{
-    node::Node,
-    parameter::Parameter,
-    path::Path,
-    statement::{Bind, Mutate, Yield, YieldReturn},
-};
-use crate::ast::{
-    statement::{Return, Statement},
-    ty::Type,
-};
-use crate::{
-    ast::module::Module,
-    ast::statement,
-    semantics::semanticnode::{SemanticAst, SemanticNode},
-};
-use crate::{ast::structdef, parser::parser::ParserInfo, semantics::symbol_table::*};
-use crate::{
-    ast::{
-        module::{self, Item},
-        routinedef,
-    },
-    expression::{BinaryOperator, Expression, UnaryOperator},
-};
-use crate::{
-    diagnostics::config::{Tracing, TracingConfig},
-    expression,
-};
+use crate::ast::*;
+use crate::diagnostics::config::{Tracing, TracingConfig};
+use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
+use crate::{parser::parser::ParserInfo, semantics::symbol_table::*};
 use braid_lang::result::Result;
-use routinedef::RoutineDefType;
-use Type::*;
 
 use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
 pub fn resolve_types(
-    ast: &module::Module<ParserInfo>,
+    ast: &Module<ParserInfo>,
     trace: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<module::Module<SemanticAnnotations>> {
+) -> Result<Module<SemanticAnnotations>> {
     resolve_types_with_imports(ast, &vec![], trace, trace_path)
 }
 
 pub fn resolve_types_with_imports(
-    ast: &module::Module<ParserInfo>,
+    ast: &Module<ParserInfo>,
     imported_functions: &Vec<(Path, Vec<Type>, Type)>,
     trace: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<module::Module<SemanticAnnotations>> {
+) -> Result<Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(&ast)?;
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
@@ -108,7 +83,7 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    pub fn resolve_types(&mut self) -> Result<module::Module<SemanticAnnotations>> {
+    pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
         let mut empty_table = SymbolTable::new();
         self.analyze_module(self.root, &mut empty_table)
             .map_err(|e| format!("Semantic: {}", e))
@@ -120,10 +95,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_module(
         &mut self,
-        m: &module::Module<SemanticAnnotations>,
+        m: &Module<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Module<SemanticAnnotations>> {
-        let mut nmodule = module::Module::new(m.get_name(), m.annotation().clone());
+    ) -> Result<Module<SemanticAnnotations>> {
+        let mut nmodule = Module::new(m.get_name(), m.annotation().clone());
         let mut meta = nmodule.annotation_mut().clone();
 
         let tmp_sym = sym.clone();
@@ -133,35 +108,35 @@ impl<'a> TypeResolver<'a> {
             .get_modules()
             .iter()
             .map(|m| self.analyze_module(m, &mut meta.sym))
-            .collect::<Result<Vec<module::Module<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Module<SemanticAnnotations>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
             .map(|f| self.analyze_item(f, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
             .map(|s| self.analyze_item(s, &mut meta.sym))
-            .collect::<Result<Vec<module::Item<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
 
         self.stack.pop();
 
-        meta.ty = Unit;
+        meta.ty = Type::Unit;
         *nmodule.annotation_mut() = meta;
         Ok(nmodule)
     }
 
     fn analyze_item(
         &mut self,
-        i: &module::Item<SemanticAnnotations>,
+        i: &Item<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<module::Item<SemanticAnnotations>> {
+    ) -> Result<Item<SemanticAnnotations>> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s, sym).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
@@ -170,10 +145,10 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_routine(
         &mut self,
-        routine: &routinedef::RoutineDef<SemanticAnnotations>,
+        routine: &RoutineDef<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<routinedef::RoutineDef<SemanticAnnotations>> {
-        let routinedef::RoutineDef {
+    ) -> Result<RoutineDef<SemanticAnnotations>> {
+        let RoutineDef {
             annotations,
             name,
             def,
@@ -214,7 +189,7 @@ impl<'a> TypeResolver<'a> {
         let canonical_ret_ty = self.type_to_canonical(sym, &meta.ty)?;
 
         meta.set_canonical_path(canon_path);
-        Ok(routinedef::RoutineDef {
+        Ok(RoutineDef {
             annotations: meta.clone(),
             def: def.clone(),
             name: name.clone(),
@@ -226,9 +201,9 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_structdef(
         &mut self,
-        struct_def: &structdef::StructDef<SemanticAnnotations>,
+        struct_def: &StructDef<SemanticAnnotations>,
         sym: &mut SymbolTable,
-    ) -> Result<structdef::StructDef<SemanticAnnotations>> {
+    ) -> Result<StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
         for Parameter {
@@ -237,7 +212,7 @@ impl<'a> TypeResolver<'a> {
             ..
         } in fields.iter()
         {
-            if let Custom(ty_name) = field_type {
+            if let Type::Custom(ty_name) = field_type {
                 self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
                     format!(
                         "member {}.{} invalid: {}",
@@ -252,14 +227,14 @@ impl<'a> TypeResolver<'a> {
         // Update all fields so that their types use the full canonical path of the type
         let canonical_fields = self.params_to_canonical(sym, fields)?;
 
-        // Update the annotations with canonical path information and set the type to Unit
+        // Update the annotations with canonical path information and set the type to Type::Unit
         let mut meta = struct_def.annotation().clone();
-        meta.ty = Unit;
+        meta.ty = Type::Unit;
         meta.set_canonical_path(
             self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
         );
 
-        Ok(structdef::StructDef::new(
+        Ok(StructDef::new(
             struct_def.get_name().clone(),
             meta.clone(),
             canonical_fields,
@@ -272,7 +247,7 @@ impl<'a> TypeResolver<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<Statement<SemanticAnnotations>> {
-        use statement::Statement::*;
+        use Statement::*;
         let inner = match stmt {
             Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
             Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
@@ -378,8 +353,8 @@ impl<'a> TypeResolver<'a> {
                 match yr.get_value() {
                     None => {
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
-                        if *ret_ty == Unit {
-                            meta.ty = Unit;
+                        if *ret_ty == Type::Unit {
+                            meta.ty = Type::Unit;
                             Ok(YieldReturn::new(meta, None))
                         } else {
                             Err(format!("Yield return expected {} but got unit", ret_ty))
@@ -419,8 +394,8 @@ impl<'a> TypeResolver<'a> {
                 match r.get_value() {
                     None => {
                         let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
-                        if *ret_ty == Unit {
-                            meta.ty = Unit;
+                        if *ret_ty == Type::Unit {
+                            meta.ty = Type::Unit;
                             Ok(Return::new(meta, None))
                         } else {
                             Err(format!("Return expected {} but got unit", ret_ty))
@@ -473,17 +448,17 @@ impl<'a> TypeResolver<'a> {
         match &ast {
             &Expression::Integer32(meta, v) => {
                 let mut meta = meta.clone();
-                meta.ty = I32;
+                meta.ty = Type::I32;
                 Ok(Expression::Integer32(meta, *v))
             }
             &Expression::Integer64(meta, v) => {
                 let mut meta = meta.clone();
-                meta.ty = I64;
+                meta.ty = Type::I64;
                 Ok(Expression::Integer64(meta, *v))
             }
             Expression::Boolean(meta, v) => {
                 let mut meta = meta.clone();
-                meta.ty = Bool;
+                meta.ty = Type::Bool;
                 Ok(Expression::Boolean(meta.clone(), *v))
             }
             Expression::StringLiteral(meta, v) => {
@@ -493,7 +468,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::CustomType(meta, name) => {
                 let mut meta = meta.clone();
-                meta.ty = Custom(name.clone());
+                meta.ty = Type::Custom(name.clone());
                 Ok(Expression::CustomType(meta.clone(), name.clone()))
             }
             Expression::IdentifierDeclare(meta, name, p) => {
@@ -525,7 +500,7 @@ impl<'a> TypeResolver<'a> {
                 // if it exists, if it does not exist then return an error
                 let src = self.traverse(&src, current_func, sym)?;
                 match src.get_type() {
-                    Custom(struct_name) => {
+                    Type::Custom(struct_name) => {
                         let (struct_def, canonical_path) =
                             self.lookup_symbol_by_path(sym, &struct_name)?;
                         let member_ty = struct_def
@@ -569,7 +544,7 @@ impl<'a> TypeResolver<'a> {
             } => {
                 let mut meta = meta.clone();
                 let cond = self.traverse(&cond, current_func, sym)?;
-                if cond.get_type() == Bool {
+                if cond.get_type() == Type::Bool {
                     let if_arm = self.traverse(&if_arm, current_func, sym)?;
 
                     let else_arm = else_arm
@@ -610,7 +585,7 @@ impl<'a> TypeResolver<'a> {
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     meta.ty = match exp.get_type() {
-                        Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
+                        Type::Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
                         _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                     };
                     Ok(Expression::Yield(meta, Box::new(exp)))
@@ -676,7 +651,7 @@ impl<'a> TypeResolver<'a> {
                 }
 
                 let (final_exp, block_ty) = match final_exp {
-                    None => (None, Unit),
+                    None => (None, Type::Unit),
                     Some(fe) => {
                         let fe = self.traverse(fe, current_func, &mut meta.sym)?;
                         let ty = fe.get_type().clone();
@@ -730,7 +705,7 @@ impl<'a> TypeResolver<'a> {
                 }
 
                 let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
-                meta.ty = Custom(canonical_path.clone());
+                meta.ty = Type::Custom(canonical_path.clone());
                 sym.add(&anonymouse_name, meta.ty.clone(), false)?;
                 Ok(Expression::StructExpression(
                     meta.clone(),
@@ -753,7 +728,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = y.annotation().clone();
                 let exp = self.traverse(y.get_value(), current_func, sym)?;
                 meta.ty = match exp.get_type() {
-                    Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
+                    Type::Coroutine(ret_ty) => self.type_to_canonical(sym, ret_ty)?,
                     _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                 };
                 Ok(Yield::new(meta, exp))
@@ -774,7 +749,7 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Minus => {
-                if operand.get_type() == I32 || operand.get_type() == I64 {
+                if operand.get_type() == Type::I32 || operand.get_type() == Type::I64 {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(format!(
@@ -785,8 +760,8 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             Not => {
-                if operand.get_type() == Bool {
-                    Ok((Bool, operand))
+                if operand.get_type() == Type::Bool {
+                    Ok((Type::Bool, operand))
                 } else {
                     Err(format!(
                         "{} expected bool but found {}",
@@ -813,12 +788,12 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if (l.get_type() == I64 && r.get_type() == I64)
-                    || (l.get_type() == I32 && r.get_type() == I32)
+                if (l.get_type() == Type::I64 && r.get_type() == Type::I64)
+                    || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type() == I64 || l.get_type() == I32 {
+                    let expected = if l.get_type() == Type::I64 || l.get_type() == Type::I32 {
                         format!("{}", l.get_type())
                     } else {
                         "i64".into()
@@ -833,8 +808,8 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             BAnd | BOr => {
-                if l.get_type() == Bool && r.get_type() == Bool {
-                    Ok((Bool, l, r))
+                if l.get_type() == Type::Bool && r.get_type() == Type::Bool {
+                    Ok((Type::Bool, l, r))
                 } else {
                     Err(format!(
                         "{} expected bool but found {} and {}",
@@ -846,7 +821,7 @@ impl<'a> TypeResolver<'a> {
             }
             Eq | NEq | Ls | LsEq | Gr | GrEq => {
                 if l.get_type() == r.get_type() {
-                    Ok((Bool, l, r))
+                    Ok((Type::Bool, l, r))
                 } else {
                     Err(format!(
                         "{} expected {} but found {} and {}",
@@ -875,8 +850,10 @@ impl<'a> TypeResolver<'a> {
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
     fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
         match ty {
-            Custom(path) => Ok(Custom(path.to_canonical(&self.get_current_path(sym)?)?)),
-            Coroutine(ty) => Ok(Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
+            Type::Custom(path) => Ok(Type::Custom(
+                path.to_canonical(&self.get_current_path(sym)?)?,
+            )),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
             _ => Ok(ty.clone()),
         }
     }
@@ -884,11 +861,10 @@ impl<'a> TypeResolver<'a> {
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
     fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type> {
         match ty {
-            Custom(path) => Ok(Custom(path.to_canonical(parent_path)?)),
-            Coroutine(ty) => Ok(Coroutine(Box::new(Self::type_to_canonical_with_path(
-                parent_path,
-                &ty,
-            )?))),
+            Type::Custom(path) => Ok(Type::Custom(path.to_canonical(parent_path)?)),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
+                Self::type_to_canonical_with_path(parent_path, &ty)?,
+            ))),
             _ => Ok(ty.clone()),
         }
     }
@@ -994,16 +970,23 @@ impl<'a> TypeResolver<'a> {
     fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
         let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
         match symbol.ty {
-            FunctionDef(..) | CoroutineDef(..) | StructDef { .. } | Unknown => {
-                return Err(format!("{} is not a variable", id))
-            }
-            Custom(..) | Coroutine(_) | I32 | I64 | Bool | StringLiteral | Unit => Ok(symbol),
+            Type::FunctionDef(..)
+            | Type::CoroutineDef(..)
+            | Type::StructDef { .. }
+            | Type::Unknown => return Err(format!("{} is not a variable", id)),
+            Type::Custom(..)
+            | Type::Coroutine(_)
+            | Type::I32
+            | Type::I64
+            | Type::Bool
+            | Type::StringLiteral
+            | Type::Unit => Ok(symbol),
         }
     }
 
     fn extract_routine_type_info<'b>(
         symbol: &'b Symbol,
-        call: &expression::RoutineCall,
+        call: &RoutineCall,
         routine_path: &Path,
     ) -> Result<(&'b Vec<Type>, Type)> {
         let routine_path_parent = routine_path.parent();
@@ -1011,14 +994,14 @@ impl<'a> TypeResolver<'a> {
             Symbol {
                 ty: Type::FunctionDef(pty, rty),
                 ..
-            } if *call == crate::ast::expression::RoutineCall::Function => (
+            } if *call == RoutineCall::Function => (
                 pty,
                 Self::type_to_canonical_with_path(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..
-            } if *call == crate::ast::expression::RoutineCall::CoroutineInit => (
+            } if *call == RoutineCall::CoroutineInit => (
                 pty,
                 Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
                     &routine_path_parent,
@@ -1027,8 +1010,8 @@ impl<'a> TypeResolver<'a> {
             ),
             _ => {
                 let expected = match call {
-                    expression::RoutineCall::Function => "function",
-                    expression::RoutineCall::CoroutineInit => "coroutine",
+                    RoutineCall::Function => "function",
+                    RoutineCall::CoroutineInit => "coroutine",
                 };
                 return Err(format!(
                     "Expected {0} but {1} is a {2}",
@@ -1071,8 +1054,8 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn validate_main_fn(routine: &routinedef::RoutineDef<SemanticAnnotations>) -> Result<()> {
-        let routinedef::RoutineDef {
+    fn validate_main_fn(routine: &RoutineDef<SemanticAnnotations>) -> Result<()> {
+        let RoutineDef {
             def, params, ty: p, ..
         } = routine;
 
@@ -1148,11 +1131,9 @@ impl<'a> TypeResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{module::Item, routinedef};
     use crate::lexer::lexer::Lexer;
     use crate::lexer::tokens::Token;
     use crate::parser::parser;
-    use crate::{ast::statement::Statement, expression::Expression};
 
     #[test]
     pub fn test_identifiers() {
@@ -1162,14 +1143,14 @@ mod tests {
                     let k: i64 := 5;
                     return k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := false;
                     return k;
                 }",
-                Ok(Bool),
+                Ok(Type::Bool),
             ),
             (
                 "fn main() -> string {
@@ -1385,7 +1366,7 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Item::Routine(routinedef::RoutineDef { body, .. }) = &result.get_functions()[0] {
+            if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
                         let expected: Path = vec!["root", "test"].into();
@@ -1410,7 +1391,7 @@ mod tests {
                 "fn my_main() -> i64 {
                     return 0;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 line!(),
@@ -1478,10 +1459,9 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Item::Routine(routinedef::RoutineDef { params, .. }) = &result.get_functions()[0]
-            {
+            if let Item::Routine(RoutineDef { params, .. }) = &result.get_functions()[0] {
                 if let Parameter {
-                    ty: Custom(ty_path),
+                    ty: Type::Custom(ty_path),
                     ..
                 } = &params[0]
                 {
@@ -1514,10 +1494,8 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Item::Routine(routinedef::RoutineDef { params, .. }) =
-                &result.get_coroutines()[0]
-            {
-                if let Custom(ty_path) = &params[0].ty {
+            if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
+                if let Type::Custom(ty_path) = &params[0].ty {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
@@ -1547,7 +1525,7 @@ mod tests {
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
-                if let Custom(ty_path) = &fields[0].ty {
+                if let Type::Custom(ty_path) = &fields[0].ty {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
@@ -1568,7 +1546,7 @@ mod tests {
                     let k: i64 := 1 + 5;
                     return k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 line!(),
@@ -1576,7 +1554,7 @@ mod tests {
                     let k: i64 := (1 + 5i64) * (3 - 4/(2 + 3));
                     return k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 line!(),
@@ -1584,7 +1562,7 @@ mod tests {
                     let k: i32 := 1i32 + 5i32;
                     return k;
                 }",
-                Ok(I32),
+                Ok(Type::I32),
             ),
             (
                 line!(),
@@ -1592,7 +1570,7 @@ mod tests {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3i32));
                     return k;
                 }",
-                Ok(I32),
+                Ok(Type::I32),
             ),
             (
                 line!(),
@@ -1687,7 +1665,7 @@ mod tests {
                     let k: i64 := 5;
                     return -k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> bool {
@@ -1701,7 +1679,7 @@ mod tests {
                     let k: bool := false;
                     return !k;
                 }",
-                Ok(Bool),
+                Ok(Type::Bool),
             ),
             (
                 "fn main() -> i64 {
@@ -1745,7 +1723,7 @@ mod tests {
                     let k: i64 := 1 + 5;
                     return k + 3;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> bool {
@@ -1784,7 +1762,7 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.annotation().ty, I64);
+                        assert_eq!(bind_stm.annotation().ty, Type::I64);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1814,7 +1792,7 @@ mod tests {
                     let k: i64 := 1 * 5;
                     return k * 3;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> bool {
@@ -1851,7 +1829,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.annotation().ty, I64);
+                    assert_eq!(bind_stm.annotation().ty, Type::I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1884,7 +1862,7 @@ mod tests {
                     let k: bool := true && false;
                     return k && true;
                 }",
-                Ok(Bool),
+                Ok(Type::Bool),
             ),
             (
                 "fn main() -> bool {
@@ -1921,7 +1899,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.annotation().ty, Bool);
+                    assert_eq!(bind_stm.annotation().ty, Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1954,7 +1932,7 @@ mod tests {
                     let k: bool := true || false;
                     return k || true;
                 }",
-                Ok(Bool),
+                Ok(Type::Bool),
             ),
             (
                 "fn main() -> bool {
@@ -1991,7 +1969,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.annotation().ty, Bool);
+                    assert_eq!(bind_stm.annotation().ty, Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2028,7 +2006,7 @@ mod tests {
                         }}",
                         op
                     )),
-                    Ok(Bool),
+                    Ok(Type::Bool),
                 ),
                 (
                     String::from(&format!(
@@ -2070,7 +2048,7 @@ mod tests {
                         let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                         let bind_stm = &fn_main.get_body()[0];
-                        assert_eq!(bind_stm.get_type(), Bool);
+                        assert_eq!(bind_stm.get_type(), Type::Bool);
 
                         // validate that the RHS of the bind is the correct type
                         if let Statement::Bind(box b) = bind_stm {
@@ -2104,35 +2082,35 @@ mod tests {
                     let k: i64 := 5;
                     return k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> i64 {
                     let k: i64 := 5i64;
                     return k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> i32 {
                     let k: i32 := 5i32;
                     return k;
                 }",
-                Ok(I32),
+                Ok(Type::I32),
             ),
             (
                 "fn main() -> i64 {
                     let k: i64 := 5i64;
                     return k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> i32 {
                     let k: i32 := 5i32;
                     return k;
                 }",
-                Ok(I32),
+                Ok(Type::I32),
             ),
             (
                 "fn main() -> i64 {
@@ -2224,7 +2202,7 @@ mod tests {
                     mut k := 3;
                     return k;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> i64 {
@@ -2272,7 +2250,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), I64);
+                    assert_eq!(bind_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2283,7 +2261,7 @@ mod tests {
 
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
-                    assert_eq!(mut_stm.get_type(), I64);
+                    assert_eq!(mut_stm.get_type(), Type::I64);
                     if let Statement::Mutate(box m) = mut_stm {
                         assert_eq!(m.get_rhs().get_type(), expected_ty);
                     } else {
@@ -2304,13 +2282,13 @@ mod tests {
                 "fn main() -> i64 {
                     return 5;
                 }",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> bool {
                     return false;
                 }",
-                Ok(Bool),
+                Ok(Type::Bool),
             ),
             (
                 "fn main() -> string {
@@ -2357,7 +2335,7 @@ mod tests {
                             .get_value()
                             .clone()
                             .map(|v| v.get_type().clone())
-                            .unwrap_or(Unit);
+                            .unwrap_or(Type::Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2379,7 +2357,7 @@ mod tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> i32 {
@@ -2387,7 +2365,7 @@ mod tests {
                 }
                 fn number() -> i32 {return 5i32;}
                 ",
-                Ok(I32),
+                Ok(Type::I32),
             ),
             (
                 // test recursion
@@ -2396,7 +2374,7 @@ mod tests {
                 }
                 fn number() -> i64 {return number();}
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> i32 {
@@ -2428,7 +2406,7 @@ mod tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() -> i32 {
@@ -2436,7 +2414,7 @@ mod tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Ok(I32),
+                Ok(Type::I32),
             ),
             (
                 "fn main() -> i32 {
@@ -2511,7 +2489,7 @@ mod tests {
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
-                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Unit);
+                        let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Type::Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2534,7 +2512,7 @@ mod tests {
                 }
                 co number() -> i64 {return 5;}
                 ",
-                Ok(Coroutine(Box::new(I64))),
+                Ok(Type::Coroutine(Box::new(Type::I64))),
             ),
             (
                 "fn main() {
@@ -2552,7 +2530,7 @@ mod tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Ok(Coroutine(Box::new(I64))),
+                Ok(Type::Coroutine(Box::new(Type::I64))),
             ),
             (
                 "fn main() {
@@ -2588,7 +2566,7 @@ mod tests {
                 }
                 co number(i: i32) -> i32 {return i;}
                 ",
-                Ok(Coroutine(Box::new(I32))),
+                Ok(Type::Coroutine(Box::new(Type::I32))),
             ),
             (
                 "fn main() {
@@ -2642,7 +2620,7 @@ mod tests {
                     return 5;
                 }
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() {
@@ -2696,7 +2674,7 @@ mod tests {
                     let co_number = module.get_coroutines()[0].to_routine().unwrap();
 
                     let yret_stm = &co_number.get_body()[0];
-                    assert_eq!(yret_stm.get_type(), I64);
+                    assert_eq!(yret_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the yield return is the correct type
                     if let Statement::YieldReturn(box yr) = yret_stm {
@@ -2729,7 +2707,7 @@ mod tests {
                     return 5;
                 }
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() {
@@ -2771,7 +2749,7 @@ mod tests {
                     let co_number = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &co_number.get_body()[1];
-                    assert_eq!(bind_stm.get_type(), I64);
+                    assert_eq!(bind_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2795,7 +2773,7 @@ mod tests {
                     return i;
                 }
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main(b: bool) -> i64 {
@@ -2839,7 +2817,7 @@ mod tests {
                             .get_value()
                             .clone()
                             .map(|v| v.get_type().clone())
-                            .unwrap_or(Unit);
+                            .unwrap_or(Type::Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2860,7 +2838,7 @@ mod tests {
                     return i;
                 }
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "co main(b: bool) -> i64 {
@@ -2904,7 +2882,7 @@ mod tests {
                             .get_value()
                             .clone()
                             .map(|v| v.get_type().clone())
-                            .unwrap_or(Unit);
+                            .unwrap_or(Type::Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2926,7 +2904,7 @@ mod tests {
                     return;
                 }
                 ",
-                Ok(I64),
+                Ok(Type::I64),
             ),
             (
                 "fn main() {
@@ -2974,7 +2952,7 @@ mod tests {
                     return;
                 }
                 ",
-                Ok(Unit),
+                Ok(Type::Unit),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2993,7 +2971,7 @@ mod tests {
                     assert_eq!(bind_stm.get_type(), expected_ty);
 
                     // Check the return value
-                    if expected_ty != Unit {
+                    if expected_ty != Type::Unit {
                         if let Statement::Bind(box b) = bind_stm {
                             let rhs_ty = b.get_rhs().get_type();
                             assert_eq!(rhs_ty, expected_ty);

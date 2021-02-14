@@ -1,12 +1,8 @@
 use super::{struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
-use crate::ast::{
-    node::{MapPreOrder, Node, NodeType},
-    routinedef::{RoutineDef, RoutineDefType},
-};
+use crate::ast::*;
 use crate::{
-    ast::module::Module,
     compiler::memory::scope::{CompilerAnnotation, LayoutData},
     semantics::semanticnode::SemanticAnnotations,
 };
@@ -121,7 +117,6 @@ fn allocate_into_stackframe(
 mod tests {
     use super::*;
     use crate::{
-        ast::{module::Item, routinedef::RoutineDef},
         compiler::memory::symbol_table::SymbolTable,
         diagnostics::config::TracingConfig,
         lexer::{lexer::Lexer, tokens::Token},

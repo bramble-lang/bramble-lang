@@ -1,9 +1,8 @@
-use crate::ast::module::*;
-use crate::ast::ty::Type;
+use crate::ast::*;
+use crate::compiler::arch::registers::RegSize;
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::struct_table::ResolvedStructTable;
 use crate::TracingConfig;
-use crate::{ast::node::ForEachPreOrderMut, compiler::arch::registers::RegSize};
 
 /**
  * This traverses the AST and determines what size register to

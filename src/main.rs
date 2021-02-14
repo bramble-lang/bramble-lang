@@ -8,8 +8,8 @@ mod lexer;
 mod parser;
 mod semantics;
 
-use crate::ast::path::Path;
-use ast::{expression, ty::Type};
+use crate::ast::Path;
+use ast::Type;
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
