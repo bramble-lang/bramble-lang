@@ -42,6 +42,9 @@ impl<M: Annotation> Node<M> for Module<M> {
         for c in self.coroutines.iter() {
             v.push(c);
         }
+        for s in self.structs.iter() {
+            v.push(s);
+        }
         v
     }
 
