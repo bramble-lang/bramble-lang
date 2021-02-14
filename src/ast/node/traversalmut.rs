@@ -9,6 +9,19 @@ use crate::{diagnostics::config::TracingConfig, expression::Expression};
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
+/**
+Traverse through each node, in pre-order DFS, and apply a function to mutate the
+annotation on that node.
+
+This does not mutate or alter the topology of the AST nor does it mutate the
+AST node or its immediate value, only the Annotation on the visted nodes may
+be mutated. The Annotation type can also not be changed.
+
+This is for use with intermediate and smaller steps within a larger compiler
+AST transformation; when specific fields within an Annotation need to be updated
+with new values. This avoids the need to generate an entirely new AST with a
+new Annotation type.
+*/
 pub struct ForEachPreOrderMut<A, T>
 where
     A: Debug + Annotation,
@@ -340,6 +353,53 @@ where
         let msg = (self.format)(annotation);
         if print_trace {
             println!("L{}n{}[{}]: {}", line, annotation.id(), node, msg,)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ast::{module::Module, ty::Type};
+
+    #[test]
+    fn empty_module() {
+        let mut m = Module::new("m", 1);
+
+        let t = ForEachPreOrderMut::new("test", TracingConfig::Off, |_| "test".into());
+        t.for_module(&mut m, |n| *n = 2);
+
+        assert_eq!(*m.annotation(), 2);
+    }
+
+    #[test]
+    fn module_with_items() {
+        let mut m = Module::new("m", 1);
+        m.add_function(RoutineDef::new_coroutine(
+            "cor",
+            1,
+            vec![],
+            Type::Unit,
+            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+        )).unwrap();
+        m.add_function(RoutineDef::new_function(
+            "func",
+            1,
+            vec![Parameter {
+                annotation: 1,
+                name: "p".into(),
+                ty: Type::Bool,
+            }],
+            Type::Unit,
+            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+        )).unwrap();
+        m.add_module(Module::new("m2", 1));
+
+        let t = ForEachPreOrderMut::new("test", TracingConfig::Off, |_| "test".into());
+        t.for_module(&mut m, |n| *n = 2);
+
+        for n in m.iter_preorder() {
+            assert_eq!(*n.annotation(), 2);
         }
     }
 }
