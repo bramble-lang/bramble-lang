@@ -68,8 +68,7 @@ impl std::fmt::Display for CompilerAnnotationStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{node::Node, ty::Type};
-    use crate::{ast::parameter::Parameter, expression::Expression};
+    use crate::ast::{Expression, Parameter, node::Node, ty::Type};
     use crate::{
         ast::{module, routinedef::RoutineDef},
         compiler::memory::scope::CompilerAnnotation,

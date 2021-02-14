@@ -5,7 +5,7 @@ use stdext::function_name;
 
 use crate::{
     ast::{
-        expression::{Expression, RoutineCall},
+        Expression, RoutineCall,
         module::Module,
         node::Annotation,
         node::Node,
@@ -507,7 +507,7 @@ pub mod tests {
     use super::*;
     use crate::{
         ast::{
-            expression::{BinaryOperator, UnaryOperator},
+            {BinaryOperator, UnaryOperator},
             module::Item,
             node::Node,
         },

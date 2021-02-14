@@ -1,4 +1,4 @@
-use crate::expression::Expression;
+use crate::ast::Expression;
 use std::collections::HashMap;
 
 use module::Module;
@@ -46,7 +46,7 @@ impl StringPool {
     /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
     pub fn extract_from(&mut self, ast: &Expression<CompilerAnnotation>) {
-        use crate::expression::Expression::*;
+        use crate::ast::Expression::*;
 
         match ast {
             ExpressionBlock(_, body, final_exp) => {

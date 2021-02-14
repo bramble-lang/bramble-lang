@@ -1,4 +1,4 @@
-use crate::ast::{node::Annotation, node::Node, parameter::Parameter, statement::Statement};
+use crate::ast::{Expression, node::Annotation, node::Node, parameter::Parameter, statement::Statement};
 use crate::{
     ast::path::Path,
     ast::{
@@ -6,7 +6,6 @@ use crate::{
         routinedef::RoutineDef,
         ty::Type,
     },
-    expression::*,
 };
 use crate::{
     ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
@@ -402,6 +401,8 @@ impl SemanticAst {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::BinaryOperator;
+
     use super::*;
 
     #[test]

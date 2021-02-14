@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     ast::{
-        expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator},
+        BinaryOperator, Expression, RoutineCall, UnaryOperator,
         node::Node,
     },
     lexer::tokens::{Lex, Token},

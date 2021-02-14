@@ -5,7 +5,7 @@ use crate::ast::module::*;
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
-use crate::expression::Expression;
+use crate::ast::Expression;
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 

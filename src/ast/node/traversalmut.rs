@@ -1,11 +1,12 @@
 use fmt::{Debug, Display};
 use std::{fmt, marker::PhantomData};
 
+use crate::ast::Expression;
 use crate::ast::module::*;
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
-use crate::{diagnostics::config::TracingConfig, expression::Expression};
+use crate::diagnostics::config::TracingConfig;
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 

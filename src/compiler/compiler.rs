@@ -23,16 +23,15 @@ use crate::{
         routinedef::RoutineDef,
     },
 };
-use crate::{ast::statement::Statement, expression::RoutineCall};
+use crate::{ast::statement::Statement};
 use crate::{
     ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
     binary_op,
 };
 use crate::{
     ast::ty::Type,
-    expression::{BinaryOperator, UnaryOperator},
 };
-use crate::{expression::Expression, semantics::semanticnode::SemanticAnnotations};
+use crate::{ast::*, semantics::semanticnode::SemanticAnnotations};
 
 use super::memory::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
@@ -294,8 +293,6 @@ impl<'a> Compiler<'a> {
         right: &'a Expression<CompilerAnnotation>,
         current_func: &String,
     ) -> Result<Vec<Inst>, String> {
-        use BinaryOperator::*;
-
         let primary = left
             .annotation()
             .scale_reg(Reg64::Rax)
@@ -354,12 +351,12 @@ impl<'a> Compiler<'a> {
             }
             cond => {
                 let set = match cond {
-                    Eq => Inst::Sete(Reg8::Al),
-                    NEq => Inst::Setne(Reg8::Al),
-                    Ls => Inst::Setl(Reg8::Al),
-                    LsEq => Inst::Setle(Reg8::Al),
-                    Gr => Inst::Setg(Reg8::Al),
-                    GrEq => Inst::Setge(Reg8::Al),
+                    BinaryOperator::Eq => Inst::Sete(Reg8::Al),
+                    BinaryOperator::NEq => Inst::Setne(Reg8::Al),
+                    BinaryOperator::Ls => Inst::Setl(Reg8::Al),
+                    BinaryOperator::LsEq => Inst::Setle(Reg8::Al),
+                    BinaryOperator::Gr => Inst::Setg(Reg8::Al),
+                    BinaryOperator::GrEq => Inst::Setge(Reg8::Al),
                     _ => panic!("Invalid conditional operator: {}", cond),
                 };
                 assembly! {(op_asm){
