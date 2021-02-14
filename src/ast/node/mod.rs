@@ -2,10 +2,11 @@ use std::fmt::Display;
 
 mod iter;
 mod map;
-pub mod traversalmut;
+mod traversalmut;
 
 pub use self::iter::{PostOrderIter, PreOrderIter};
 pub use self::map::MapPreOrder;
+pub use self::traversalmut::ForEachPreOrderMut;
 
 pub trait Node<M: Annotation> {
     fn node_type(&self) -> NodeType;
