@@ -4,18 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use stdext::function_name;
 
 use crate::{
-    ast::{
-        Expression, RoutineCall,
-        module::Module,
-        node::Annotation,
-        node::Node,
-        parameter::Parameter,
-        path::Path,
-        routinedef::{RoutineDef, RoutineDefType},
-        statement::Statement,
-        structdef::StructDef,
-        ty::Type,
-    },
+    ast::*,
     diagnostics::config::TracingConfig,
     lexer::tokens::{Lex, Primitive, Token},
 };
@@ -506,11 +495,6 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
 pub mod tests {
     use super::*;
     use crate::{
-        ast::{
-            {BinaryOperator, UnaryOperator},
-            module::Item,
-            node::Node,
-        },
         lexer::lexer::Lexer,
     };
 

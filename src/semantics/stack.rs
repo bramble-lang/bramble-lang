@@ -1,4 +1,4 @@
-use crate::ast::path::Path;
+use crate::ast::Path;
 
 use super::symbol_table::{ScopeType, Symbol, SymbolTable};
 

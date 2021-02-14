@@ -1,10 +1,9 @@
-use crate::{ast::node::Node, compiler::memory::register_assigner};
+use crate::{assembly2, ast::*};
 use std::collections::HashMap;
 
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
-use crate::ast::routinedef::RoutineDefType;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::stack::CompilerAnnotationStack;
@@ -15,25 +14,13 @@ use crate::register;
 use crate::unary_op;
 use crate::unit_op;
 use crate::TracingConfig;
-use crate::{assembly, ast::path::Path};
+use crate::{assembly};
 use crate::{
-    assembly2,
-    ast::{
-        module::{Item, Module},
-        routinedef::RoutineDef,
-    },
-};
-use crate::{ast::statement::Statement};
-use crate::{
-    ast::statement::{Bind, Mutate, Return, Yield, YieldReturn},
     binary_op,
 };
-use crate::{
-    ast::ty::Type,
-};
-use crate::{ast::*, semantics::semanticnode::SemanticAnnotations};
+use crate::{semantics::semanticnode::SemanticAnnotations};
 
-use super::memory::{struct_definition::FieldInfo, struct_table::ResolvedStructTable};
+use super::memory::{register_assigner, struct_definition::FieldInfo, struct_table::ResolvedStructTable};
 
 // Coroutine entry/return annotations: offsets relative to the coroutine's RBP
 // These live within the stack frame of the coroutine

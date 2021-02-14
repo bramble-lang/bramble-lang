@@ -2,13 +2,7 @@ use braid_lang::result::Result;
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
-    ast::path::Path,
-    ast::{
-        module::{Item, Module},
-        node::Node,
-        structdef::StructDef,
-        ty::Type,
-    },
+    ast::*,
     semantics::semanticnode::SemanticAnnotations,
 };
 

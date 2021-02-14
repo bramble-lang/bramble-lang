@@ -7,10 +7,7 @@ use super::{
     tokenstream::TokenStream,
 };
 use crate::{
-    ast::{
-        BinaryOperator, Expression, RoutineCall, UnaryOperator,
-        node::Node,
-    },
+    ast::*,
     lexer::tokens::{Lex, Token},
     trace,
 };
@@ -453,7 +450,7 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserInf
 mod test {
     use super::*;
     use crate::{
-        ast::{statement::Statement, ty::Type},
+        ast::{Statement, Type},
         lexer::lexer::Lexer,
     };
     use braid_lang::result::Result;

@@ -1,8 +1,6 @@
 use crate::compiler::x86::assembly::Reg64;
-use crate::{ast::node::Annotation, compiler::arch::registers::RegSize};
+use crate::{ast::*, compiler::arch::registers::RegSize};
 use crate::{
-    ast::path::Path,
-    ast::{routinedef::RoutineDefType, ty::Type},
     semantics::semanticnode::SemanticAnnotations,
 };
 use crate::{compiler::x86::assembly::Reg, semantics};
