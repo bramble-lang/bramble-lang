@@ -22,6 +22,10 @@ impl<'a, A> PostOrderIter<'a, A>
 where
     A: Annotation,
 {
+    /**
+    Create a new Iterator which will perform a PostOrder DFS traversal of an AST
+    starting at the given node as its root.
+    */
     pub fn new(node: &'a dyn Node<A>) -> PostOrderIter<'a, A> {
         let mut stack = vec![node];
         let mut out = vec![];
@@ -44,6 +48,7 @@ where
     A: std::fmt::Debug + Annotation,
 {
     type Item = &'a dyn Node<A>;
+
     fn next(&mut self) -> Option<Self::Item> {
         self.out.pop()
     }
@@ -69,6 +74,10 @@ impl<'a, A> PreOrderIter<'a, A>
 where
     A: Annotation,
 {
+    /**
+    Create a new Iterator which will perform a PreOrder DFS traversal of an AST
+    starting at the given node as its root.
+    */
     pub fn new(node: &'a dyn Node<A>) -> PreOrderIter<'a, A> {
         let mut stack = vec![node];
         let mut out = vec![];
@@ -93,6 +102,7 @@ where
     A: std::fmt::Debug + Annotation,
 {
     type Item = &'a dyn Node<A>;
+
     fn next(&mut self) -> Option<Self::Item> {
         self.out.pop()
     }
