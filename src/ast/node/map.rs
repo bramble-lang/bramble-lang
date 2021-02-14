@@ -35,7 +35,6 @@ where
 impl<A, B, F> MapPreOrder<A, B, F>
 where
     A: Debug + Annotation,
-    B: Debug + Annotation,
     F: FnMut(&dyn Node<A>) -> B,
 {
     pub fn new(name: &str) -> MapPreOrder<A, B, F> {
@@ -164,9 +163,7 @@ where
             CustomType(_, name) => CustomType(f(exp), name.clone()),
             Identifier(_, id) => Identifier(f(exp), id.clone()),
             Path(_, path) => Path(f(exp), path.clone()),
-            IdentifierDeclare(_, id, p) => {
-                IdentifierDeclare(f(exp), id.clone(), p.clone())
-            }
+            IdentifierDeclare(_, id, p) => IdentifierDeclare(f(exp), id.clone(), p.clone()),
             MemberAccess(..) => self.for_member_access(exp, f),
             UnaryOp(..) => self.for_unary_op(exp, f),
             BinaryOp(..) => self.for_binary_op(exp, f),
@@ -288,7 +285,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::module::Module;
+    use crate::ast::{module::Module, ty::Type};
 
     impl Annotation for i32 {
         fn id(&self) -> u32 {
@@ -301,6 +298,16 @@ mod test {
     }
 
     impl Annotation for i64 {
+        fn id(&self) -> u32 {
+            0
+        }
+
+        fn line(&self) -> u32 {
+            0
+        }
+    }
+
+    impl Annotation for String {
         fn id(&self) -> u32 {
             0
         }
@@ -348,5 +355,45 @@ mod test {
         assert_eq!(*module2.annotation(), 2i64);
         assert_eq!(*module2.get_module("m2").unwrap().annotation(), 4i64);
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn module_with_items() {
+        let mut m = Module::new("m", 1);
+        m.add_function(RoutineDef::new_coroutine(
+            "cor",
+            1,
+            vec![],
+            Type::Unit,
+            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+        ))
+        .unwrap();
+        m.add_function(RoutineDef::new_function(
+            "func",
+            1,
+            vec![Parameter {
+                annotation: 1,
+                name: "p".into(),
+                ty: Type::Bool,
+            }],
+            Type::Unit,
+            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+        ))
+        .unwrap();
+        m.add_module(Module::new("m2", 1));
+        m.add_struct(StructDef::new("sd", 1, vec![])).unwrap();
+
+        // test
+        let mapper = MapPreOrder::new("test");
+        let mut count = 0;
+        let m_prime = mapper.for_module(&m, &mut |n: &dyn Node<i64>| {
+            count += 1;
+            format!("{}", n.annotation())
+        });
+
+        for n in m_prime.iter_preorder() {
+            assert_eq!(*n.annotation(), "1");
+        }
+        assert_eq!(count, 8);
     }
 }
