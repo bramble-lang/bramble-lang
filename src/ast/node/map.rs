@@ -27,7 +27,7 @@ where
     F: FnMut(&dyn Node<A>) -> B,
 {
     pub name: String,
-    f: PhantomData<F>,
+    f: F,
     ph: PhantomData<A>,
     ph2: PhantomData<B>,
 }
@@ -37,59 +37,59 @@ where
     A: Debug + Annotation,
     F: FnMut(&dyn Node<A>) -> B,
 {
-    pub fn new(name: &str) -> MapPreOrder<A, B, F> {
+    pub fn new(name: &str, f: F) -> MapPreOrder<A, B, F> {
         MapPreOrder {
             name: name.into(),
-            f: PhantomData,
+            f,
             ph: PhantomData,
             ph2: PhantomData,
         }
     }
 
-    pub fn for_module(&self, m: &Module<A>, f: &mut F) -> Module<B> {
-        let b = f(m);
+    pub fn for_module(&mut self, m: &Module<A>) -> Module<B> {
+        let b = (self.f)(m);
         let mut m2 = Module::new(m.get_name(), b);
 
         for child_module in m.get_modules().iter() {
-            m2.add_module(self.for_module(child_module, f));
+            m2.add_module(self.for_module(child_module));
         }
 
         m2.get_functions_mut()
-            .append(&mut self.for_items(m.get_functions(), f));
+            .append(&mut self.for_items(m.get_functions()));
         m2.get_coroutines_mut()
-            .append(&mut self.for_items(m.get_coroutines(), f));
+            .append(&mut self.for_items(m.get_coroutines()));
         m2.get_structs_mut()
-            .append(&mut self.for_items(m.get_structs(), f));
+            .append(&mut self.for_items(m.get_structs()));
 
         m2
     }
 
-    fn for_items(&self, items: &Vec<Item<A>>, f: &mut F) -> Vec<Item<B>> {
+    fn for_items(&mut self, items: &Vec<Item<A>>) -> Vec<Item<B>> {
         let mut v = vec![];
         for i in items.iter() {
             v.push(match i {
-                Item::Struct(sd) => Item::Struct(self.for_structdef(sd, f)),
-                Item::Routine(rd) => Item::Routine(self.for_routinedef(rd, f)),
+                Item::Struct(sd) => Item::Struct(self.for_structdef(sd)),
+                Item::Routine(rd) => Item::Routine(self.for_routinedef(rd)),
             });
         }
         v
     }
 
-    fn for_structdef(&self, sd: &StructDef<A>, f: &mut F) -> StructDef<B> {
-        let b = f(sd);
-        let fields = self.for_parameters(&sd.fields, f);
+    fn for_structdef(&mut self, sd: &StructDef<A>) -> StructDef<B> {
+        let b = (self.f)(sd);
+        let fields = self.for_parameters(&sd.fields);
         StructDef::new(sd.get_name(), b, fields)
     }
 
-    fn for_routinedef(&self, rd: &RoutineDef<A>, f: &mut F) -> RoutineDef<B> {
-        let b = f(rd);
+    fn for_routinedef(&mut self, rd: &RoutineDef<A>) -> RoutineDef<B> {
+        let b = (self.f)(rd);
         // loop through all the params
-        let params = self.for_parameters(&rd.params, f);
+        let params = self.for_parameters(&rd.params);
 
         // loop through every statement and analyze the child nodes of the routine definition
         let mut body = vec![];
         for e in rd.get_body().iter() {
-            body.push(self.for_statement(e, f));
+            body.push(self.for_statement(e));
         }
 
         RoutineDef {
@@ -102,29 +102,29 @@ where
         }
     }
 
-    fn for_parameters(&self, params: &Vec<Parameter<A>>, f: &mut F) -> Vec<Parameter<B>> {
+    fn for_parameters(&mut self, params: &Vec<Parameter<A>>) -> Vec<Parameter<B>> {
         let mut nparams = vec![];
         for p in params {
-            let b = f(p);
+            let b = (self.f)(p);
             nparams.push(Parameter::new(b, &p.name, &p.ty));
         }
         nparams
     }
 
-    fn for_statement(&self, statement: &Statement<A>, f: &mut F) -> Statement<B> {
+    fn for_statement(&mut self, statement: &Statement<A>) -> Statement<B> {
         let s = match statement {
-            Statement::Bind(b) => Statement::Bind(box self.for_bind(b, f)),
-            Statement::Mutate(m) => Statement::Mutate(box self.for_mutate(m, f)),
-            Statement::Return(r) => Statement::Return(box self.for_return(r, f)),
-            Statement::YieldReturn(yr) => Statement::YieldReturn(box self.for_yieldreturn(yr, f)),
-            Statement::Expression(e) => Statement::Expression(box self.for_expression(e, f)),
+            Statement::Bind(b) => Statement::Bind(box self.for_bind(b)),
+            Statement::Mutate(m) => Statement::Mutate(box self.for_mutate(m)),
+            Statement::Return(r) => Statement::Return(box self.for_return(r)),
+            Statement::YieldReturn(yr) => Statement::YieldReturn(box self.for_yieldreturn(yr)),
+            Statement::Expression(e) => Statement::Expression(box self.for_expression(e)),
         };
         s
     }
 
-    fn for_bind(&self, bind: &Bind<A>, f: &mut F) -> Bind<B> {
-        let b = f(bind);
-        let rhs = self.for_expression(bind.get_rhs(), f);
+    fn for_bind(&mut self, bind: &Bind<A>) -> Bind<B> {
+        let b = (self.f)(bind);
+        let rhs = self.for_expression(bind.get_rhs());
         Bind::new(
             b,
             bind.get_id(),
@@ -134,95 +134,95 @@ where
         )
     }
 
-    fn for_mutate(&self, mutate: &Mutate<A>, f: &mut F) -> Mutate<B> {
-        let b = f(mutate);
-        let rhs = self.for_expression(mutate.get_rhs(), f);
+    fn for_mutate(&mut self, mutate: &Mutate<A>) -> Mutate<B> {
+        let b = (self.f)(mutate);
+        let rhs = self.for_expression(mutate.get_rhs());
         Mutate::new(b, mutate.get_id(), rhs)
     }
 
-    fn for_yieldreturn(&self, yr: &YieldReturn<A>, f: &mut F) -> YieldReturn<B> {
-        let b = f(yr);
-        let value = yr.get_value().as_ref().map(|rv| self.for_expression(rv, f));
+    fn for_yieldreturn(&mut self, yr: &YieldReturn<A>) -> YieldReturn<B> {
+        let b = (self.f)(yr);
+        let value = yr.get_value().as_ref().map(|rv| self.for_expression(rv));
         YieldReturn::new(b, value)
     }
 
-    fn for_return(&self, r: &Return<A>, f: &mut F) -> Return<B> {
-        let b = f(r);
-        let value = r.get_value().as_ref().map(|rv| self.for_expression(rv, f));
+    fn for_return(&mut self, r: &Return<A>) -> Return<B> {
+        let b = (self.f)(r);
+        let value = r.get_value().as_ref().map(|rv| self.for_expression(rv));
         Return::new(b, value)
     }
 
-    fn for_expression(&self, exp: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_expression(&mut self, exp: &Expression<A>) -> Expression<B> {
         use Expression::*;
 
         match exp {
-            Integer32(_, i) => Integer32(f(exp), *i),
-            Integer64(_, i) => Integer64(f(exp), *i),
-            Boolean(_, b) => Boolean(f(exp), *b),
-            StringLiteral(_, s) => StringLiteral(f(exp), s.clone()),
-            CustomType(_, name) => CustomType(f(exp), name.clone()),
-            Identifier(_, id) => Identifier(f(exp), id.clone()),
-            Path(_, path) => Path(f(exp), path.clone()),
-            IdentifierDeclare(_, id, p) => IdentifierDeclare(f(exp), id.clone(), p.clone()),
-            MemberAccess(..) => self.for_member_access(exp, f),
-            UnaryOp(..) => self.for_unary_op(exp, f),
-            BinaryOp(..) => self.for_binary_op(exp, f),
-            If { .. } => self.for_if(exp, f),
-            Yield(..) => self.for_yield(exp, f),
-            RoutineCall(..) => self.for_routine_call(exp, f),
-            StructExpression(..) => self.for_struct_expression(exp, f),
-            ExpressionBlock(..) => self.for_expression_block(exp, f),
+            Integer32(_, i) => Integer32((self.f)(exp), *i),
+            Integer64(_, i) => Integer64((self.f)(exp), *i),
+            Boolean(_, b) => Boolean((self.f)(exp), *b),
+            StringLiteral(_, s) => StringLiteral((self.f)(exp), s.clone()),
+            CustomType(_, name) => CustomType((self.f)(exp), name.clone()),
+            Identifier(_, id) => Identifier((self.f)(exp), id.clone()),
+            Path(_, path) => Path((self.f)(exp), path.clone()),
+            IdentifierDeclare(_, id, p) => IdentifierDeclare((self.f)(exp), id.clone(), p.clone()),
+            MemberAccess(..) => self.for_member_access(exp),
+            UnaryOp(..) => self.for_unary_op(exp),
+            BinaryOp(..) => self.for_binary_op(exp),
+            If { .. } => self.for_if(exp),
+            Yield(..) => self.for_yield(exp),
+            RoutineCall(..) => self.for_routine_call(exp),
+            StructExpression(..) => self.for_struct_expression(exp),
+            ExpressionBlock(..) => self.for_expression_block(exp),
         }
     }
 
-    fn for_expression_block(&self, block: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_expression_block(&mut self, block: &Expression<A>) -> Expression<B> {
         if let Expression::ExpressionBlock(_, body, final_exp) = block {
-            let b = f(block);
+            let b = (self.f)(block);
 
             let mut nbody = vec![];
             for e in body.iter() {
-                nbody.push(self.for_statement(e, f));
+                nbody.push(self.for_statement(e));
             }
 
-            let final_exp = final_exp.as_ref().map(|fe| box self.for_expression(fe, f));
+            let final_exp = final_exp.as_ref().map(|fe| box self.for_expression(fe));
             Expression::ExpressionBlock(b, nbody, final_exp)
         } else {
             panic!("Expected ExpressionBlock, but got {:?}", block)
         }
     }
 
-    fn for_member_access(&self, access: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_member_access(&mut self, access: &Expression<A>) -> Expression<B> {
         if let Expression::MemberAccess(_, src, member) = access {
-            let b = f(access);
-            let src = self.for_expression(src, f);
+            let b = (self.f)(access);
+            let src = self.for_expression(src);
             Expression::MemberAccess(b, box src, member.clone())
         } else {
             panic!("Expected MemberAccess, but got {:?}", access)
         }
     }
 
-    fn for_unary_op(&self, un_op: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_unary_op(&mut self, un_op: &Expression<A>) -> Expression<B> {
         if let Expression::UnaryOp(_, op, operand) = un_op {
-            let b = f(un_op);
-            let operand = self.for_expression(operand, f);
+            let b = (self.f)(un_op);
+            let operand = self.for_expression(operand);
             Expression::UnaryOp(b, *op, box operand)
         } else {
             panic!("Expected UnaryOp, but got {:?}", un_op)
         }
     }
 
-    fn for_binary_op(&self, bin_op: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_binary_op(&mut self, bin_op: &Expression<A>) -> Expression<B> {
         if let Expression::BinaryOp(_, op, l, r) = bin_op {
-            let b = f(bin_op);
-            let l = self.for_expression(l, f);
-            let r = self.for_expression(r, f);
+            let b = (self.f)(bin_op);
+            let l = self.for_expression(l);
+            let r = self.for_expression(r);
             Expression::BinaryOp(b, *op, box l, box r)
         } else {
             panic!("Expected BinaryOp, but got {:?}", bin_op)
         }
     }
 
-    fn for_if(&self, if_exp: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_if(&mut self, if_exp: &Expression<A>) -> Expression<B> {
         if let Expression::If {
             cond,
             if_arm,
@@ -230,10 +230,10 @@ where
             ..
         } = if_exp
         {
-            let b = f(if_exp);
-            let cond = self.for_expression(cond, f);
-            let if_arm = self.for_expression(if_arm, f);
-            let else_arm = else_arm.as_ref().map(|ea| box self.for_expression(ea, f));
+            let b = (self.f)(if_exp);
+            let cond = self.for_expression(cond);
+            let if_arm = self.for_expression(if_arm);
+            let else_arm = else_arm.as_ref().map(|ea| box self.for_expression(ea));
             Expression::If {
                 annotation: b,
                 cond: box cond,
@@ -245,12 +245,12 @@ where
         }
     }
 
-    fn for_routine_call(&self, rc: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_routine_call(&mut self, rc: &Expression<A>) -> Expression<B> {
         if let Expression::RoutineCall(_, call, name, params) = rc {
-            let b = f(rc);
+            let b = (self.f)(rc);
             let mut nparams = vec![];
             for p in params {
-                nparams.push(self.for_expression(p, f));
+                nparams.push(self.for_expression(p));
             }
             Expression::RoutineCall(b, *call, name.clone(), nparams)
         } else {
@@ -258,22 +258,22 @@ where
         }
     }
 
-    fn for_yield(&self, yield_exp: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_yield(&mut self, yield_exp: &Expression<A>) -> Expression<B> {
         if let Expression::Yield(_, e) = yield_exp {
-            let b = f(yield_exp);
-            let e = self.for_expression(e, f);
+            let b = (self.f)(yield_exp);
+            let e = self.for_expression(e);
             Expression::Yield(b, box e)
         } else {
             panic!("Expected Yield, but got {:?}", yield_exp)
         }
     }
 
-    fn for_struct_expression(&self, se: &Expression<A>, f: &mut F) -> Expression<B> {
+    fn for_struct_expression(&mut self, se: &Expression<A>) -> Expression<B> {
         if let Expression::StructExpression(_, struct_name, fields) = se {
-            let b = f(se);
+            let b = (self.f)(se);
             let mut nfields = vec![];
             for (fname, fe) in fields {
-                nfields.push((fname.clone(), self.for_expression(fe, f)));
+                nfields.push((fname.clone(), self.for_expression(fe)));
             }
             Expression::StructExpression(b, struct_name.clone(), nfields)
         } else {
@@ -326,13 +326,13 @@ mod test {
     fn empty_module() {
         let module1 = Module::new("m", 1i32);
         let mut count: i32 = 0;
-        let mut f = |n: &dyn Node<i32>| {
+        let f = |n: &dyn Node<i32>| {
             count += 1;
             convert(n)
         };
 
-        let mp = MapPreOrder::new("test");
-        let module2 = mp.for_module(&module1, &mut f);
+        let mut mp = MapPreOrder::new("test", f);
+        let module2 = mp.for_module(&module1);
 
         assert_eq!(*module2.annotation(), 2i64);
         assert_eq!(count, 1);
@@ -344,13 +344,13 @@ mod test {
         module1.add_module(Module::new("m2", 2i32));
 
         let mut count: i32 = 0;
-        let mut f = |n: &dyn Node<i32>| {
+        let f = |n: &dyn Node<i32>| {
             count += 1;
             convert(n)
         };
 
-        let mp = MapPreOrder::new("test");
-        let module2 = mp.for_module(&module1, &mut f);
+        let mut mp = MapPreOrder::new("test", f);
+        let module2 = mp.for_module(&module1);
 
         assert_eq!(*module2.annotation(), 2i64);
         assert_eq!(*module2.get_module("m2").unwrap().annotation(), 4i64);
@@ -384,12 +384,14 @@ mod test {
         m.add_struct(StructDef::new("sd", 1, vec![])).unwrap();
 
         // test
-        let mapper = MapPreOrder::new("test");
         let mut count = 0;
-        let m_prime = mapper.for_module(&m, &mut |n: &dyn Node<i64>| {
+        let f = |n: &dyn Node<i64>| {
             count += 1;
             format!("{}", n.annotation())
-        });
+        };
+        let mut mapper = MapPreOrder::new("test", f);
+
+        let m_prime = mapper.for_module(&m);
 
         for n in m_prime.iter_preorder() {
             assert_eq!(*n.annotation(), "1");

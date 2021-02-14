@@ -35,7 +35,7 @@ fn generate_stackframe_layout(
     struct_table: &ResolvedStructTable,
 ) -> Module<CompilerAnnotation> {
     let mut current_layout = LayoutData::new(0);
-    let mut f = |n: &dyn Node<SemanticAnnotations>| {
+    let f = |n: &dyn Node<SemanticAnnotations>| {
         let (annotation, layout) = match n.node_type() {
             NodeType::Module => CompilerAnnotation::module_from(
                 n.annotation(),
@@ -78,8 +78,8 @@ fn generate_stackframe_layout(
         annotation
     };
 
-    let mapper = MapPreOrder::new("layout");
-    mapper.for_module(ast, &mut f)
+    let mut mapper = MapPreOrder::new("layout", f);
+    mapper.for_module(ast)
 }
 
 impl RoutineDef<CompilerAnnotation> {
