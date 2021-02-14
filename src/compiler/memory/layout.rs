@@ -44,7 +44,7 @@ fn generate_stackframe_layout(
             ),
             NodeType::RoutineDef(rty) => CompilerAnnotation::routine_from(
                 n.annotation(),
-                &rty,
+                rty,
                 struct_table,
             ),
             NodeType::StructDef => CompilerAnnotation::structdef_from(n.annotation()),

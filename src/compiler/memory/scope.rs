@@ -183,7 +183,7 @@ impl CompilerAnnotation {
 
     pub(super) fn routine_from(
         m: &SemanticAnnotations,
-        routine_type: &RoutineDefType,
+        routine_type: RoutineDefType,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = LayoutData::new(match routine_type {
@@ -191,7 +191,7 @@ impl CompilerAnnotation {
             RoutineDefType::Coroutine => 40,
         });
 
-        let mut scope = CompilerAnnotation::new_routine(m, *routine_type);
+        let mut scope = CompilerAnnotation::new_routine(m, routine_type);
 
         layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
 
