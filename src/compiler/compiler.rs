@@ -4,6 +4,8 @@ use std::collections::HashMap;
 // ASM - types capturing the different assembly instructions along with functions to
 // convert to text so that a compiled program can be saves as a file of assembly
 // instructions
+use crate::assembly;
+use crate::binary_op;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::stack::CompilerAnnotationStack;
@@ -11,16 +13,14 @@ use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
 use crate::operand;
 use crate::register;
+use crate::semantics::semanticnode::SemanticAnnotations;
 use crate::unary_op;
 use crate::unit_op;
 use crate::TracingConfig;
-use crate::{assembly};
-use crate::{
-    binary_op,
-};
-use crate::{semantics::semanticnode::SemanticAnnotations};
 
-use super::memory::{register_assigner, struct_definition::FieldInfo, struct_table::ResolvedStructTable};
+use super::memory::{
+    register_assigner, struct_definition::FieldInfo, struct_table::ResolvedStructTable,
+};
 
 // Coroutine entry/return annotations: offsets relative to the coroutine's RBP
 // These live within the stack frame of the coroutine

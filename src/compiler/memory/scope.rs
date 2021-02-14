@@ -1,8 +1,6 @@
 use crate::compiler::x86::assembly::Reg64;
+use crate::semantics::semanticnode::SemanticAnnotations;
 use crate::{ast::*, compiler::arch::registers::RegSize};
-use crate::{
-    semantics::semanticnode::SemanticAnnotations,
-};
 use crate::{compiler::x86::assembly::Reg, semantics};
 
 use super::{

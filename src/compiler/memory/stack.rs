@@ -68,9 +68,7 @@ impl std::fmt::Display for CompilerAnnotationStack<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        compiler::memory::scope::CompilerAnnotation,
-    };
+    use crate::compiler::memory::scope::CompilerAnnotation;
 
     #[test]
     fn test_find_symbol_in_current_scope() {

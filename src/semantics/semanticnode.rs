@@ -1,12 +1,6 @@
-use crate::{
-    ast::*,
-};
-use crate::{
-    semantics::symbol_table::*,
-};
-use crate::{
-    diagnostics::config::TracingConfig, parser::parser::ParserInfo,
-};
+use crate::ast::*;
+use crate::semantics::symbol_table::*;
+use crate::{diagnostics::config::TracingConfig, parser::parser::ParserInfo};
 use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -91,10 +85,7 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_module(
-        &mut self,
-        m: &Module<u32>,
-    ) -> Result<Module<SemanticAnnotations>> {
+    pub fn from_module(&mut self, m: &Module<u32>) -> Result<Module<SemanticAnnotations>> {
         let meta = self.module_semantic_annotations_from(*m.annotation(), m.get_name());
 
         let mut nmodule = Module::new(m.get_name(), meta);

@@ -494,9 +494,7 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{
-        lexer::lexer::Lexer,
-    };
+    use crate::lexer::lexer::Lexer;
 
     #[test]
     fn parse_unary_operators() {

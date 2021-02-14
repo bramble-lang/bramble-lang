@@ -1,9 +1,7 @@
 use crate::ast::Expression;
 use std::collections::HashMap;
 
-use crate::ast::{
-    *,
-};
+use crate::ast::*;
 
 use super::scope::CompilerAnnotation;
 

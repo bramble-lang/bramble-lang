@@ -9,7 +9,7 @@ mod parser;
 mod semantics;
 
 use crate::ast::Path;
-use ast::{Type};
+use ast::Type;
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;

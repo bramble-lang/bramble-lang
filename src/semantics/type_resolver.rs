@@ -1,13 +1,9 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::{
-    semantics::semanticnode::{SemanticAst, SemanticNode},
-};
+use crate::diagnostics::config::{Tracing, TracingConfig};
+use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::{parser::parser::ParserInfo, semantics::symbol_table::*};
-use crate::{
-    diagnostics::config::{Tracing, TracingConfig},
-};
 use braid_lang::result::Result;
 
 use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
@@ -452,7 +448,7 @@ impl<'a> TypeResolver<'a> {
         match &ast {
             &Expression::Integer32(meta, v) => {
                 let mut meta = meta.clone();
-                meta.ty =Type::I32;
+                meta.ty = Type::I32;
                 Ok(Expression::Integer32(meta, *v))
             }
             &Expression::Integer64(meta, v) => {
@@ -753,7 +749,7 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Minus => {
-                if operand.get_type() ==Type::I32 || operand.get_type() == Type::I64 {
+                if operand.get_type() == Type::I32 || operand.get_type() == Type::I64 {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(format!(
@@ -792,12 +788,12 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if (l.get_type() ==Type::I64 && r.get_type() ==Type::I64)
-                    || (l.get_type() ==Type::I32 && r.get_type() ==Type::I32)
+                if (l.get_type() == Type::I64 && r.get_type() == Type::I64)
+                    || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type() ==Type::I64 || l.get_type() ==Type::I32 {
+                    let expected = if l.get_type() == Type::I64 || l.get_type() == Type::I32 {
                         format!("{}", l.get_type())
                     } else {
                         "i64".into()
@@ -812,7 +808,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             BAnd | BOr => {
-                if l.get_type() ==Type::Bool && r.get_type() ==Type::Bool {
+                if l.get_type() == Type::Bool && r.get_type() == Type::Bool {
                     Ok((Type::Bool, l, r))
                 } else {
                     Err(format!(
@@ -854,7 +850,9 @@ impl<'a> TypeResolver<'a> {
     /// Convert any custom type to its canonical form by merging with the current AST ancestors
     fn type_to_canonical(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
         match ty {
-            Type::Custom(path) => Ok(Type::Custom(path.to_canonical(&self.get_current_path(sym)?)?)),
+            Type::Custom(path) => Ok(Type::Custom(
+                path.to_canonical(&self.get_current_path(sym)?)?,
+            )),
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.type_to_canonical(sym, &ty)?))),
             _ => Ok(ty.clone()),
         }
@@ -864,10 +862,9 @@ impl<'a> TypeResolver<'a> {
     fn type_to_canonical_with_path(parent_path: &Path, ty: &Type) -> Result<Type> {
         match ty {
             Type::Custom(path) => Ok(Type::Custom(path.to_canonical(parent_path)?)),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(Self::type_to_canonical_with_path(
-                parent_path,
-                &ty,
-            )?))),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
+                Self::type_to_canonical_with_path(parent_path, &ty)?,
+            ))),
             _ => Ok(ty.clone()),
         }
     }
@@ -973,10 +970,17 @@ impl<'a> TypeResolver<'a> {
     fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
         let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
         match symbol.ty {
-            Type::FunctionDef(..) | Type::CoroutineDef(..) | Type::StructDef { .. } | Type::Unknown => {
-                return Err(format!("{} is not a variable", id))
-            }
-            Type::Custom(..) | Type::Coroutine(_) |Type::I32 |Type::I64 |Type::Bool | Type::StringLiteral | Type::Unit => Ok(symbol),
+            Type::FunctionDef(..)
+            | Type::CoroutineDef(..)
+            | Type::StructDef { .. }
+            | Type::Unknown => return Err(format!("{} is not a variable", id)),
+            Type::Custom(..)
+            | Type::Coroutine(_)
+            | Type::I32
+            | Type::I64
+            | Type::Bool
+            | Type::StringLiteral
+            | Type::Unit => Ok(symbol),
         }
     }
 
@@ -1455,8 +1459,7 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Item::Routine(RoutineDef { params, .. }) = &result.get_functions()[0]
-            {
+            if let Item::Routine(RoutineDef { params, .. }) = &result.get_functions()[0] {
                 if let Parameter {
                     ty: Type::Custom(ty_path),
                     ..
@@ -1491,9 +1494,7 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
-            if let Item::Routine(RoutineDef { params, .. }) =
-                &result.get_coroutines()[0]
-            {
+            if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
                     let expected: Path = vec!["root", "test"].into();
                     assert_eq!(ty_path, &expected)
@@ -1761,7 +1762,7 @@ mod tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.annotation().ty,Type::I64);
+                        assert_eq!(bind_stm.annotation().ty, Type::I64);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1828,7 +1829,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.annotation().ty,Type::I64);
+                    assert_eq!(bind_stm.annotation().ty, Type::I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1898,7 +1899,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.annotation().ty,Type::Bool);
+                    assert_eq!(bind_stm.annotation().ty, Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1968,7 +1969,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.annotation().ty,Type::Bool);
+                    assert_eq!(bind_stm.annotation().ty, Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2047,7 +2048,7 @@ mod tests {
                         let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                         let bind_stm = &fn_main.get_body()[0];
-                        assert_eq!(bind_stm.get_type(),Type::Bool);
+                        assert_eq!(bind_stm.get_type(), Type::Bool);
 
                         // validate that the RHS of the bind is the correct type
                         if let Statement::Bind(box b) = bind_stm {
@@ -2249,7 +2250,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(),Type::I64);
+                    assert_eq!(bind_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -2260,7 +2261,7 @@ mod tests {
 
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
-                    assert_eq!(mut_stm.get_type(),Type::I64);
+                    assert_eq!(mut_stm.get_type(), Type::I64);
                     if let Statement::Mutate(box m) = mut_stm {
                         assert_eq!(m.get_rhs().get_type(), expected_ty);
                     } else {
@@ -2673,7 +2674,7 @@ mod tests {
                     let co_number = module.get_coroutines()[0].to_routine().unwrap();
 
                     let yret_stm = &co_number.get_body()[0];
-                    assert_eq!(yret_stm.get_type(),Type::I64);
+                    assert_eq!(yret_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the yield return is the correct type
                     if let Statement::YieldReturn(box yr) = yret_stm {
@@ -2748,7 +2749,7 @@ mod tests {
                     let co_number = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &co_number.get_body()[1];
-                    assert_eq!(bind_stm.get_type(),Type::I64);
+                    assert_eq!(bind_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
