@@ -394,6 +394,7 @@ mod tests {
             vec![Statement::Expression(box Expression::Integer64(1, 2))],
         )).unwrap();
         m.add_module(Module::new("m2", 1));
+        m.add_struct(StructDef::new("sd", 1, vec![])).unwrap();
 
         let t = ForEachPreOrderMut::new("test", TracingConfig::Off, |_| "test".into());
         t.for_module(&mut m, |n| *n = 2);
