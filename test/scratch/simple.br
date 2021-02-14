@@ -1,0 +1,6 @@
+fn my_main() -> i64 {
+    //let x:i64 := 5;
+    root::std::io::writei64ln(2+5);
+
+    return 0;
+}

@@ -1,4 +1,9 @@
-use super::{node::Node, ty::Type};
+use super::{
+    node::{
+        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+    },
+    ty::Type,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
@@ -7,13 +12,33 @@ pub struct Parameter<M> {
     pub ty: Type,
 }
 
-impl<M> Node<M> for Parameter<M> {
+impl<M: Annotation> Node<M> for Parameter<M> {
     fn annotation(&self) -> &M {
         &self.annotation
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotation
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Parameter
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![]
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

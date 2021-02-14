@@ -1,4 +1,4 @@
-use crate::ast::{annotate::Annotation, node::Node, parameter::Parameter, statement::Statement};
+use crate::ast::{node::Annotation, node::Node, parameter::Parameter, statement::Statement};
 use crate::{
     ast::path::Path,
     ast::{
@@ -33,6 +33,16 @@ impl Annotation for SemanticAnnotations {
 
     fn line(&self) -> u32 {
         self.ln
+    }
+}
+
+impl SemanticAnnotations {
+    pub fn anonymous_name(&self) -> String {
+        format!("!{}_{}", self.canonical_path, self.id)
+    }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
     }
 }
 

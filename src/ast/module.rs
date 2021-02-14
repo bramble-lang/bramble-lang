@@ -1,5 +1,7 @@
 use super::{
-    node::Node,
+    node::{
+        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+    },
     path::Path,
     routinedef::{RoutineDef, RoutineDefType},
     structdef::StructDef,
@@ -16,13 +18,46 @@ pub struct Module<M> {
     structs: Vec<Item<M>>,
 }
 
-impl<M> Node<M> for Module<M> {
+impl<M: Annotation> Node<M> for Module<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Module
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        let mut v: Vec<&dyn Node<M>> = vec![];
+        for m in self.modules.iter() {
+            v.push(m);
+        }
+        for f in self.functions.iter() {
+            v.push(f);
+        }
+        for c in self.coroutines.iter() {
+            v.push(c);
+        }
+        for s in self.structs.iter() {
+            v.push(s);
+        }
+        v
+    }
+
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -425,7 +460,7 @@ pub enum Item<M> {
     Struct(StructDef<M>),
 }
 
-impl<M> Node<M> for Item<M> {
+impl<M: Annotation> Node<M> for Item<M> {
     fn annotation(&self) -> &M {
         match self {
             Item::Routine(r) => r.annotation(),
@@ -438,6 +473,35 @@ impl<M> Node<M> for Item<M> {
             Item::Routine(r) => r.annotation_mut(),
             Item::Struct(s) => s.annotation_mut(),
         }
+    }
+
+    fn node_type(&self) -> NodeType {
+        match self {
+            Item::Routine(r) => r.node_type(),
+            Item::Struct(s) => s.node_type(),
+        }
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        match self {
+            Item::Routine(r) => r.children(),
+            Item::Struct(s) => s.children(),
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        match self {
+            Item::Routine(r) => r.name(),
+            Item::Struct(s) => s.name(),
+        }
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

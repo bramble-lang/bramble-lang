@@ -1,5 +1,5 @@
 use crate::compiler::x86::assembly::Reg64;
-use crate::{ast::annotate::Annotation, compiler::arch::registers::RegSize};
+use crate::{ast::node::Annotation, compiler::arch::registers::RegSize};
 use crate::{
     ast::path::Path,
     ast::{routinedef::RoutineDefType, ty::Type},
@@ -91,13 +91,7 @@ impl CompilerAnnotation {
         a: &SemanticAnnotations,
         routine_type: RoutineDefType,
     ) -> CompilerAnnotation {
-        CompilerAnnotation::from(
-            a,
-            Level::Routine {
-                allocation: 0,
-                routine_type,
-            },
-        )
+        CompilerAnnotation::from(a, Level::Routine { routine_type })
     }
 
     pub fn new_module(a: &SemanticAnnotations, name: &str) -> CompilerAnnotation {
@@ -110,10 +104,6 @@ impl CompilerAnnotation {
 
     pub fn level(&self) -> &Level {
         &self.level
-    }
-
-    pub fn stackframe_allocation(&self) -> Option<i32> {
-        self.level().allocation()
     }
 
     pub fn symbols(&self) -> &SymbolTable {
@@ -193,7 +183,7 @@ impl CompilerAnnotation {
 
     pub(super) fn routine_from(
         m: &SemanticAnnotations,
-        routine_type: &RoutineDefType,
+        routine_type: RoutineDefType,
         struct_table: &ResolvedStructTable,
     ) -> (CompilerAnnotation, LayoutData) {
         let mut layout = LayoutData::new(match routine_type {
@@ -201,16 +191,10 @@ impl CompilerAnnotation {
             RoutineDefType::Coroutine => 40,
         });
 
-        let mut scope = CompilerAnnotation::new_routine(m, *routine_type);
+        let mut scope = CompilerAnnotation::new_routine(m, routine_type);
 
         layout.offset = scope.merge(&m.sym, layout.offset, struct_table);
 
-        match scope.level {
-            Level::Routine {
-                ref mut allocation, ..
-            } => *allocation = layout.offset,
-            _ => (),
-        };
         (scope, layout)
     }
 
@@ -218,13 +202,13 @@ impl CompilerAnnotation {
         m: &SemanticAnnotations,
         name: &str,
         struct_table: &ResolvedStructTable,
-    ) -> CompilerAnnotation {
+    ) -> (CompilerAnnotation, LayoutData) {
         let mut scope = CompilerAnnotation::new_module(m, name);
 
         let layout = LayoutData::new(0);
         scope.merge(&m.sym, layout.offset, struct_table);
 
-        scope
+        (scope, layout)
     }
 
     pub(super) fn structdef_from(m: &SemanticAnnotations) -> (CompilerAnnotation, LayoutData) {
@@ -237,6 +221,7 @@ impl CompilerAnnotation {
 
 impl std::fmt::Display for CompilerAnnotation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("ID: {} | ", self.id))?;
         f.write_fmt(format_args!("Level: {} | ", self.level))?;
         f.write_fmt(format_args!("Type: {}\n", self.ty))?;
         f.write_fmt(format_args!(
@@ -251,35 +236,17 @@ impl std::fmt::Display for CompilerAnnotation {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Level {
     Local,
-    Routine {
-        allocation: i32,
-        routine_type: RoutineDefType,
-    },
-    Module {
-        name: String,
-    },
-}
-
-impl Level {
-    pub fn allocation(&self) -> Option<i32> {
-        match self {
-            Level::Local | Level::Module { .. } => None,
-            Level::Routine { allocation, .. } => Some(*allocation),
-        }
-    }
+    Routine { routine_type: RoutineDefType },
+    Module { name: String },
 }
 
 impl std::fmt::Display for Level {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Level::Local => f.write_str("Local"),
-            Level::Routine {
-                allocation,
-                routine_type,
-            } => f.write_fmt(format_args!(
-                "Routine: [Type: {}, Allocation: {}]",
-                routine_type, allocation
-            )),
+            Level::Routine { routine_type } => {
+                f.write_fmt(format_args!("Routine: [Type: {}]", routine_type))
+            }
             Level::Module { name } => f.write_fmt(format_args!("Module: {}", name)),
         }
     }

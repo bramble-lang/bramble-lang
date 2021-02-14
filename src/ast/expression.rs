@@ -1,4 +1,11 @@
-use super::{node::Node, path::Path, statement::Statement, ty::Type};
+use super::{
+    node::{
+        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+    },
+    path::Path,
+    statement::Statement,
+    ty::Type,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
@@ -27,7 +34,7 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
-impl<M> Node<M> for Expression<M> {
+impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation(&self) -> &M {
         use Expression::*;
         match self {
@@ -70,6 +77,80 @@ impl<M> Node<M> for Expression<M> {
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
         }
+    }
+
+    fn node_type(&self) -> NodeType {
+        match self {
+            Expression::RoutineCall(..) => NodeType::RoutineCall,
+            Expression::BinaryOp(..) => NodeType::BinOp,
+            _ => NodeType::Expression,
+        }
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        use Expression::*;
+        match self {
+            StructExpression(.., se) => {
+                let mut o: Vec<&dyn Node<M>> = vec![];
+                for (_, e) in se.into_iter() {
+                    o.push(e);
+                }
+                o
+            }
+            MemberAccess(_, src, _) => vec![src.as_ref()],
+            BinaryOp(.., l, r) => vec![l.as_ref(), r.as_ref()],
+            UnaryOp(.., r) => vec![r.as_ref()],
+            If {
+                cond,
+                if_arm,
+                else_arm,
+                ..
+            } => {
+                let mut o: Vec<&dyn Node<M>> = vec![cond.as_ref(), if_arm.as_ref()];
+                if let Some(e) = else_arm {
+                    o.push(e.as_ref());
+                }
+                o
+            }
+            ExpressionBlock(_, stms, exp) => {
+                let mut o: Vec<&dyn Node<M>> = vec![];
+                for s in stms.into_iter() {
+                    o.push(s);
+                }
+                if let Some(e) = exp {
+                    o.push(e.as_ref());
+                }
+                o
+            }
+            Yield(_, e) => vec![e.as_ref()],
+            RoutineCall(.., exps) => {
+                let mut o: Vec<&dyn Node<M>> = vec![];
+                for e in exps.into_iter() {
+                    o.push(e);
+                }
+                o
+            }
+            Integer32(..)
+            | Integer64(..)
+            | Boolean(..)
+            | StringLiteral(..)
+            | CustomType(..)
+            | Identifier(..)
+            | IdentifierDeclare(..)
+            | Path(..) => vec![],
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

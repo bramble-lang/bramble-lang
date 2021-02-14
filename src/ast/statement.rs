@@ -1,4 +1,10 @@
-use super::{expression::Expression, node::Node, ty::Type};
+use super::{
+    expression::Expression,
+    node::{
+        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+    },
+    ty::Type,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement<M> {
@@ -11,7 +17,7 @@ pub enum Statement<M> {
     Return(Box<Return<M>>),
 }
 
-impl<M> Node<M> for Statement<M> {
+impl<M: Annotation> Node<M> for Statement<M> {
     fn annotation(&self) -> &M {
         use Statement::*;
 
@@ -34,6 +40,42 @@ impl<M> Node<M> for Statement<M> {
             Bind(b) => b.annotation_mut(),
             Mutate(m) => m.annotation_mut(),
         }
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        use Statement::*;
+
+        match self {
+            Return(x) => x.children(),
+            YieldReturn(x) => x.children(),
+            Expression(e) => e.children(),
+            Bind(b) => b.children(),
+            Mutate(m) => m.children(),
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        use Statement::*;
+
+        match self {
+            Return(x) => x.name(),
+            YieldReturn(x) => x.name(),
+            Expression(e) => e.name(),
+            Bind(b) => b.name(),
+            Mutate(m) => m.name(),
+        }
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -72,13 +114,33 @@ pub struct Bind<M> {
     rhs: Expression<M>,
 }
 
-impl<M> Node<M> for Bind<M> {
+impl<M: Annotation> Node<M> for Bind<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![&self.rhs]
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -131,13 +193,33 @@ pub struct Mutate<M> {
     rhs: Expression<M>,
 }
 
-impl<M> Node<M> for Mutate<M> {
+impl<M: Annotation> Node<M> for Mutate<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![&self.rhs]
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -179,13 +261,33 @@ pub struct Yield<M> {
     value: Expression<M>,
 }
 
-impl<M> Node<M> for Yield<M> {
+impl<M: Annotation> Node<M> for Yield<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        vec![&self.value]
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -209,13 +311,36 @@ pub struct YieldReturn<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M> Node<M> for YieldReturn<M> {
+impl<M: Annotation> Node<M> for YieldReturn<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        match &self.value {
+            Some(v) => vec![v],
+            None => vec![],
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
@@ -249,13 +374,36 @@ pub struct Return<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M> Node<M> for Return<M> {
+impl<M: Annotation> Node<M> for Return<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Statement
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        match &self.value {
+            Some(v) => vec![v],
+            None => vec![],
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        None
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 

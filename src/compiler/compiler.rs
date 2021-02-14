@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use crate::ast::routinedef::RoutineDefType;
 use crate::compiler::memory::layout::compute_layout_for_program;
 use crate::compiler::memory::scope::CompilerAnnotation;
-use crate::compiler::memory::scope::Level::Routine;
 use crate::compiler::memory::stack::CompilerAnnotationStack;
 use crate::compiler::memory::stringpool::StringPool;
 use crate::compiler::x86::assembly::*;
@@ -514,10 +513,7 @@ impl<'a> Compiler<'a> {
                     .expect("Could not find coroutine")
                     .to_routine()
                     .expect("Expected a routine");
-                let total_offset = co_def
-                    .annotation()
-                    .stackframe_allocation()
-                    .ok_or(format!("Coroutine {} has no allocation size", co_path))?;
+                let total_offset = co_def.total_allocation();
 
                 co_def.validate_parameters(params)?;
 
@@ -656,10 +652,7 @@ impl<'a> Compiler<'a> {
             ..
         } = routine
         {
-            let total_offset = match scope.level() {
-                Routine { allocation, .. } => allocation,
-                _ => panic!("Invalid scope for function definition"),
-            };
+            let total_offset = routine.total_allocation();
 
             assembly! {(code) {
             @{scope.canon_path().to_label()}:
@@ -667,7 +660,7 @@ impl<'a> Compiler<'a> {
                 ;"Prepare stack frame for this function"
                 push %rbp;
                 mov %rbp, %rsp;
-                sub %rsp, {*total_offset as i64};
+                sub %rsp, {total_offset as i64};
                 ; "Move function parameters from registers into the stack frame"
                 {{self.move_params_into_stackframe(routine, &fn_param_registers)?}}
                 ; "Done moving function parameters from registers into the stack frame"
@@ -1238,10 +1231,16 @@ impl<'a> Compiler<'a> {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.annotation();
             self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
-            let reg = pa
-                .scale_reg(Reg64::Rax)
-                .expect("Register could not be found for function parameter");
-            if let Some(offset) = self.get_expression_result_location(pa).unwrap() {
+            let reg = pa.scale_reg(Reg64::Rax).expect(&format!(
+                "Register could not be found for function parameter: L{}: {}",
+                pa.line(),
+                param
+            ));
+            if let Some(offset) = self.get_expression_result_location(pa).expect(&format!(
+                "Could not find stack frame location for: L{}: {}",
+                pa.line(),
+                param
+            )) {
                 assembly! {(code){
                     mov [%rbp-{offset}], %{reg};
                 }};
@@ -1336,5 +1335,24 @@ impl<'a> Compiler<'a> {
         }
 
         extern_functions
+    }
+}
+
+impl<CompilerAnnotation> RoutineDef<CompilerAnnotation> {
+    pub fn validate_parameters(
+        &self,
+        params: &Vec<Expression<CompilerAnnotation>>,
+    ) -> braid_lang::result::Result<()> {
+        let expected_params = self.get_params();
+        if params.len() == expected_params.len() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Critical: expected {} but got {} parameters for {}",
+                expected_params.len(),
+                params.len(),
+                self.root_str()
+            ))
+        }
     }
 }

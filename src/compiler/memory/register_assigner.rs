@@ -3,7 +3,7 @@ use crate::ast::ty::Type;
 use crate::compiler::memory::scope::CompilerAnnotation;
 use crate::compiler::memory::struct_table::ResolvedStructTable;
 use crate::TracingConfig;
-use crate::{ast::annotate::traversalmut::TraverserMut, compiler::arch::registers::RegSize};
+use crate::{ast::node::ForEachPreOrderMut, compiler::arch::registers::RegSize};
 
 /**
  * This traverses the AST and determines what size register to
@@ -16,7 +16,7 @@ pub fn assign(
     m: &mut Module<CompilerAnnotation>,
     struct_table: &ResolvedStructTable,
 ) {
-    let tm = TraverserMut::new("Register Assigner", tracing, trace);
+    let tm = ForEachPreOrderMut::new("Register Assigner", tracing, trace);
     tm.for_module(m, |a| {
         assign_register(a, struct_table);
     })

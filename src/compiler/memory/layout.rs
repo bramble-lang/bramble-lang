@@ -1,14 +1,12 @@
-use super::{scope::Level, struct_table};
+use super::{struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
-use crate::{ast::expression::Expression, semantics::semanticnode::SemanticNode};
+use crate::ast::{
+    node::{MapPreOrder, Node, NodeType},
+    routinedef::{RoutineDef, RoutineDefType},
+};
 use crate::{
-    ast::{
-        module::{self, Item, Module},
-        routinedef::RoutineDef,
-        statement::{Bind, Mutate, Return, Statement, YieldReturn},
-        structdef::StructDef,
-    },
+    ast::module::Module,
     compiler::memory::scope::{CompilerAnnotation, LayoutData},
     semantics::semanticnode::SemanticAnnotations,
 };
@@ -26,919 +24,329 @@ pub fn compute_layout_for_program(
 ) -> Result<(Module<CompilerAnnotation>, ResolvedStructTable)> {
     let unresolved_struct_table = struct_table::UnresolvedStructTable::from_module(ast)?;
     let struct_table = unresolved_struct_table.resolve()?;
-    let compiler_ast = compute::layouts_for_module(ast, &struct_table);
+
+    let compiler_ast = generate_stackframe_layout(ast, &struct_table);
+
     Ok((compiler_ast, struct_table))
 }
 
-mod compute {
-    use super::*;
-    use crate::{
-        ast::{node::Node, parameter::Parameter},
-        compiler::memory::symbol_table::Symbol,
+fn generate_stackframe_layout(
+    ast: &Module<SemanticAnnotations>,
+    struct_table: &ResolvedStructTable,
+) -> Module<CompilerAnnotation> {
+    let mut current_layout = LayoutData::new(0);
+    let f = |n: &dyn Node<SemanticAnnotations>| {
+        let (annotation, layout) = match n.node_type() {
+            NodeType::Module => CompilerAnnotation::module_from(
+                n.annotation(),
+                n.name().expect("Modules must have a name"),
+                struct_table,
+            ),
+            NodeType::RoutineDef(rty) => {
+                CompilerAnnotation::routine_from(n.annotation(), rty, struct_table)
+            }
+            NodeType::StructDef => CompilerAnnotation::structdef_from(n.annotation()),
+            NodeType::Parameter => {
+                CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout)
+            }
+            NodeType::Expression => {
+                CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout)
+            }
+            NodeType::Statement => {
+                CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout)
+            }
+            NodeType::RoutineCall | NodeType::BinOp => {
+                let (mut a, layout) =
+                    CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout);
+                current_layout = layout;
+
+                // Allocate space on the stack for these intermediate results to be stored
+                // so that we can use two registers for all expression evalutation. In the
+                // future, this wil lbe updated to more efficiently use registers.
+                for c in n.children() {
+                    current_layout = allocate_into_stackframe(
+                        &mut a,
+                        c.annotation(),
+                        current_layout,
+                        struct_table,
+                    );
+                }
+                (a, current_layout)
+            }
+        };
+        current_layout = layout;
+        annotation
     };
 
-    pub(super) fn layouts_for_module(
-        m: &module::Module<SemanticAnnotations>,
-        struct_table: &ResolvedStructTable,
-    ) -> module::Module<CompilerAnnotation> {
-        let annotations =
-            CompilerAnnotation::module_from(m.annotation(), m.get_name(), struct_table);
+    let mut mapper = MapPreOrder::new("layout", f);
+    mapper.apply(ast)
+}
 
-        let mut nmodule = module::Module::new(m.get_name(), annotations);
-        for child_module in m.get_modules().iter() {
-            let nchild_module = layouts_for_module(child_module, struct_table);
-            nmodule.add_module(nchild_module);
-        }
-        let functions = layouts_for_items(m.get_functions(), struct_table);
-        *nmodule.get_functions_mut() = functions;
-
-        let coroutines = layouts_for_items(m.get_coroutines(), struct_table);
-        *nmodule.get_coroutines_mut() = coroutines;
-
-        let structs = layouts_for_items(m.get_structs(), struct_table);
-        *nmodule.get_structs_mut() = structs;
-
-        nmodule
-    }
-
-    fn layouts_for_items(
-        items: &Vec<Item<SemanticAnnotations>>,
-        struct_table: &ResolvedStructTable,
-    ) -> Vec<Item<CompilerAnnotation>> {
-        let mut compiler_ast_items = vec![];
-        for item in items.iter() {
-            let c_ast_item = match item {
-                Item::Struct(sd) => {
-                    let sd2 = layout_for_structdef(sd, struct_table);
-                    Item::Struct(sd2)
-                }
-                Item::Routine(rd) => {
-                    let rd2 = layout_for_routine(&rd, struct_table);
-                    Item::Routine(rd2)
-                }
-            };
-            compiler_ast_items.push(c_ast_item);
-        }
-
-        compiler_ast_items
-    }
-
-    fn layout_for_structdef(
-        sd: &StructDef<SemanticAnnotations>,
-        struct_table: &ResolvedStructTable,
-    ) -> StructDef<CompilerAnnotation> {
-        let (scope, layout) = CompilerAnnotation::structdef_from(sd.annotation());
-        let (params, _) = layout_for_parameters(sd.get_fields(), layout, struct_table);
-        StructDef::new(sd.get_name(), scope, params)
-    }
-
-    fn layout_for_routine(
-        rd: &RoutineDef<SemanticAnnotations>,
-        struct_table: &ResolvedStructTable,
-    ) -> RoutineDef<CompilerAnnotation> {
-        let (mut annotations, layout) =
-            CompilerAnnotation::routine_from(&rd.annotations, &rd.def, struct_table);
-
-        let (params, mut layout) = layout_for_parameters(&rd.params, layout, struct_table);
-
-        let body = rd
-            .body
-            .iter()
-            .map(|e| {
-                let (e, nl) = compute::layout_for_statement(e, layout, struct_table);
-                layout = nl;
-                e
-            })
-            .collect();
-
-        annotations.level = Level::Routine {
-            allocation: layout.offset,
-            routine_type: rd.def,
+impl RoutineDef<CompilerAnnotation> {
+    pub fn total_allocation(&self) -> i32 {
+        let init = if self.def == RoutineDefType::Coroutine {
+            40
+        } else {
+            0
         };
-
-        RoutineDef {
-            annotations,
-            def: rd.def,
-            name: rd.name.clone(),
-            params,
-            ty: rd.ty.clone(),
-            body,
-        }
+        self.iter_preorder().fold(init, |acc, n| {
+            n.annotation()
+                .symbols()
+                .iter()
+                .fold(acc, |acc, s| acc.max(s.1.offset))
+        })
     }
+}
 
-    fn layout_for_parameters(
-        params: &Vec<Parameter<SemanticAnnotations>>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Vec<Parameter<CompilerAnnotation>>, LayoutData) {
-        let mut layout = layout;
-        let params = params
-            .iter()
-            .map(|p| {
-                p.map_annotation(|a| {
-                    let (an, lo) = CompilerAnnotation::local_from(&a, struct_table, layout);
-                    layout = lo;
-                    an
-                })
-            })
-            .collect();
-        (params, layout)
-    }
+fn allocate_into_stackframe(
+    current: &mut CompilerAnnotation,
+    child: &SemanticAnnotations,
+    layout: LayoutData,
+    struct_table: &ResolvedStructTable,
+) -> LayoutData {
+    let anonymous_name = child.anonymous_name();
+    let sz = struct_table
+        .size_of(child.ty())
+        .expect("Expected a size for an expression");
 
-    fn layout_for_statement(
-        statement: &Statement<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Statement<CompilerAnnotation>, LayoutData) {
-        let (e, l) = match statement {
-            Statement::Bind(b) => {
-                let (e, l) = layout_for_bind(b, layout, struct_table);
-                (Statement::Bind(Box::new(e)), l)
-            }
-            Statement::Mutate(m) => {
-                let (e, l) = layout_for_mutate(m, layout, struct_table);
-                (Statement::Mutate(Box::new(e)), l)
-            }
-            Statement::Return(r) => {
-                let (e, l) = layout_for_return(r, layout, struct_table);
-                (Statement::Return(Box::new(e)), l)
-            }
-            Statement::YieldReturn(yr) => {
-                let (e, l) = layout_for_yieldreturn(yr, layout, struct_table);
-                (Statement::YieldReturn(Box::new(e)), l)
-            }
-            Statement::Expression(e) => {
-                let (e, l) = layout_for_expression(e, layout, struct_table);
-                (Statement::Expression(Box::new(e)), l)
-            }
-        };
-        (e, l)
-    }
+    let layout = LayoutData::new(layout.offset + sz);
+    current.symbols.table.insert(
+        anonymous_name.clone(),
+        Symbol::new(&anonymous_name, sz, layout.offset),
+    );
+    layout
+}
 
-    fn layout_for_bind(
-        bind: &Bind<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Bind<CompilerAnnotation>, LayoutData) {
-        let (annotations, layout) =
-            CompilerAnnotation::local_from(bind.annotation(), struct_table, layout);
-        let (rhs, layout) = compute::layout_for_expression(bind.get_rhs(), layout, struct_table);
-        (
-            Bind::new(
-                annotations,
-                bind.get_id(),
-                bind.get_type().clone(),
-                bind.is_mutable(),
-                rhs,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        ast::{module::Item, routinedef::RoutineDef},
+        compiler::memory::symbol_table::SymbolTable,
+        diagnostics::config::TracingConfig,
+        lexer::{lexer::Lexer, tokens::Token},
+        parser::parser,
+        semantics::type_resolver::resolve_types,
+    };
+    use braid_lang::result::Result;
+
+    #[test]
+    fn function_symbols() {
+        for (ln, text, expected, allocation) in vec![
+            (
+                line!(),
+                "
+                fn test() {
+                    return;
+                }
+                    ",
+                vec![],
+                0,
             ),
-            layout,
-        )
-    }
-
-    fn layout_for_mutate(
-        mutate: &Mutate<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Mutate<CompilerAnnotation>, LayoutData) {
-        let (annotations, layout) =
-            CompilerAnnotation::local_from(mutate.annotation(), struct_table, layout);
-        let (rhs, layout) = compute::layout_for_expression(mutate.get_rhs(), layout, struct_table);
-        (Mutate::new(annotations, mutate.get_id(), rhs), layout)
-    }
-
-    fn layout_for_yieldreturn(
-        yr: &YieldReturn<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (YieldReturn<CompilerAnnotation>, LayoutData) {
-        let (annotations, layout) =
-            CompilerAnnotation::local_from(yr.annotation(), struct_table, layout);
-        match yr.get_value() {
-            None => (YieldReturn::new(annotations, None), layout),
-            Some(val) => {
-                let (value, layout) = compute::layout_for_expression(val, layout, struct_table);
-                (YieldReturn::new(annotations, Some(value)), layout)
-            }
-        }
-    }
-
-    fn layout_for_return(
-        r: &Return<SemanticAnnotations>,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Return<CompilerAnnotation>, LayoutData) {
-        let (annotations, layout) =
-            CompilerAnnotation::local_from(r.annotation(), struct_table, layout);
-        match r.get_value() {
-            None => (Return::new(annotations, None), layout),
-            Some(val) => {
-                let (value, layout) = compute::layout_for_expression(val, layout, struct_table);
-                (Return::new(annotations, Some(value)), layout)
-            }
-        }
-    }
-
-    fn layout_for_expression(
-        ast: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        use Expression::*;
-        match ast {
-            ExpressionBlock(..) => layout_for_expression_block(ast, layout, struct_table),
-            Expression::Integer32(m, i) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (Expression::Integer32(annotations, *i), layout)
-            }
-            Expression::Integer64(m, i) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (Expression::Integer64(annotations, *i), layout)
-            }
-            Expression::Boolean(m, b) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (Expression::Boolean(annotations, *b), layout)
-            }
-            Expression::StringLiteral(m, s) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (Expression::StringLiteral(annotations, s.clone()), layout)
-            }
-            Expression::CustomType(m, name) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (Expression::CustomType(annotations, name.clone()), layout)
-            }
-            Expression::Identifier(m, id) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (Expression::Identifier(annotations, id.clone()), layout)
-            }
-            Path(m, path) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (Expression::Path(annotations, path.clone()), layout)
-            }
-            Expression::IdentifierDeclare(m, id, p) => {
-                let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-                (
-                    Expression::IdentifierDeclare(annotations, id.clone(), p.clone()),
-                    layout,
-                )
-            }
-            MemberAccess(..) => layout_for_member_access(ast, layout, struct_table),
-            UnaryOp(..) => layout_for_unary_op(ast, layout, struct_table),
-            BinaryOp(..) => layout_for_binary_op(ast, layout, struct_table),
-            If { .. } => layout_for_if(ast, layout, struct_table),
-            Yield(..) => layout_for_yield(ast, layout, struct_table),
-            RoutineCall(..) => layout_for_routine_call(ast, layout, struct_table),
-            StructExpression(..) => layout_for_struct_expression(ast, layout, struct_table),
-        }
-    }
-
-    fn layout_for_expression_block(
-        block: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let Expression::ExpressionBlock(m, body, final_exp) = block {
-            let (annotations, mut nlayout) =
-                CompilerAnnotation::local_from(m, struct_table, layout);
-            let mut nbody = vec![];
-            for e in body.iter() {
-                let (e, layout) = layout_for_statement(e, nlayout, struct_table);
-                nlayout = layout;
-                nbody.push(e);
-            }
-            let (final_exp, nlayout) = match final_exp {
-                None => (None, nlayout),
-                Some(fe) => {
-                    let (fe, ld) = layout_for_expression(fe, nlayout, struct_table);
-                    (Some(Box::new(fe)), ld)
+            (
+                line!(),
+                "
+                fn test(x: i32) {
+                    return;
                 }
-            };
+                    ",
+                vec![("x", 4, 4)],
+                4,
+            ),
             (
-                Expression::ExpressionBlock(annotations, nbody, final_exp),
-                nlayout,
-            )
-        } else {
-            panic!("Expected ExpressionBlock, but got {:?}", block)
-        }
-    }
-
-    fn layout_for_member_access(
-        access: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let Expression::MemberAccess(m, src, member) = access {
-            let (src, layout) = layout_for_expression(src, layout, struct_table);
-            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-
-            (
-                Expression::MemberAccess(annotations, Box::new(src), member.clone()),
-                layout,
-            )
-        } else {
-            panic!("Expected MemberAccess, but got {:?}", access)
-        }
-    }
-
-    fn layout_for_unary_op(
-        un_op: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let Expression::UnaryOp(m, op, operand) = un_op {
-            let (operand, layout) = layout_for_expression(operand, layout, struct_table);
-            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-            (
-                Expression::UnaryOp(annotations, *op, Box::new(operand)),
-                layout,
-            )
-        } else {
-            panic!("Expected UnaryOp, but got {:?}", un_op)
-        }
-    }
-
-    fn layout_for_binary_op(
-        bin_op: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let Expression::BinaryOp(m, op, l, r) = bin_op {
-            let (mut l, layout) = compute::layout_for_expression(l, layout, struct_table);
-            let (mut r, layout) = compute::layout_for_expression(r, layout, struct_table);
-            let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-            let layout = allocate_into_stackframe(
-                &mut annotations,
-                l.annotation_mut(),
-                layout,
-                struct_table,
-            );
-            let layout = allocate_into_stackframe(
-                &mut annotations,
-                r.annotation_mut(),
-                layout,
-                struct_table,
-            );
-            (
-                Expression::BinaryOp(annotations, *op, Box::new(l), Box::new(r)),
-                layout,
-            )
-        } else {
-            panic!("Expected BinaryOp, but got {:?}", bin_op)
-        }
-    }
-
-    fn layout_for_if(
-        if_exp: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let SemanticNode::If {
-            annotation: m,
-            cond,
-            if_arm,
-            else_arm,
-        } = if_exp
-        {
-            let (annotation, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-            let (cond, layout) = compute::layout_for_expression(cond, layout, struct_table);
-            let (if_arm, layout) = compute::layout_for_expression(if_arm, layout, struct_table);
-            let (else_arm, layout) = match else_arm {
-                Some(fb) => {
-                    let (else_arm, layout) =
-                        compute::layout_for_expression(&fb, layout, struct_table);
-                    (Some(box else_arm), layout)
+                line!(),
+                "
+                fn test(x: i32) {
+                    let y: i64 := 50;
+                    return;
                 }
-                None => (None, layout),
-            };
+                    ",
+                vec![("x", 4, 4), ("y", 8, 12)],
+                12,
+            ),
             (
-                Expression::If {
-                    annotation,
-                    cond: box cond,
-                    if_arm: box if_arm,
-                    else_arm,
-                },
-                layout,
-            )
-        } else {
-            panic!("Expected IfExpression, but got {:?}", if_exp)
-        }
-    }
-
-    fn layout_for_routine_call(
-        rc: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let Expression::RoutineCall(m, call, name, params) = rc {
-            let (mut annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-            let mut nlayout = layout;
-            let mut nparams = vec![];
-            for p in params.iter() {
-                let (mut np, playout) = layout_for_expression(p, nlayout, struct_table);
-
-                nlayout = allocate_into_stackframe(
-                    &mut annotations,
-                    np.annotation_mut(),
-                    playout,
-                    struct_table,
-                );
-
-                nparams.push(np);
-            }
+                line!(),
+                "
+                fn test() -> i32 {
+                    return 5i32;
+                }
+                    ",
+                vec![],
+                0,
+            ),
             (
-                Expression::RoutineCall(annotations, *call, name.clone(), nparams),
-                nlayout,
-            )
-        } else {
-            panic!("Expected RoutineCall, but got {:?}", rc)
-        }
-    }
-
-    fn layout_for_yield(
-        yield_exp: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let Expression::Yield(m, e) = yield_exp {
-            let (annotations, layout) = CompilerAnnotation::local_from(m, struct_table, layout);
-            let (e, layout) = layout_for_expression(e, layout, struct_table);
-            (Expression::Yield(annotations, Box::new(e)), layout)
-        } else {
-            panic!("Expected Yield, but got {:?}", yield_exp)
-        }
-    }
-
-    fn layout_for_struct_expression(
-        se: &SemanticNode,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> (Expression<CompilerAnnotation>, LayoutData) {
-        if let SemanticNode::StructExpression(annotations, struct_name, fields) = se {
-            let (annotations, mut nlayout) =
-                CompilerAnnotation::local_from(annotations, struct_table, layout);
-            let mut nfields = vec![];
-            for (fname, fvalue) in fields.iter() {
-                let (nfv, no) = layout_for_expression(fvalue, nlayout, struct_table);
-                nlayout = no;
-                nfields.push((fname.clone(), nfv));
-            }
+                line!(),
+                "
+                fn test() -> i64 {
+                    return 5 + 6;
+                }
+                    ",
+                vec![("!_3", 8, 8), ("!_4", 8, 16)],
+                16,
+            ),
             (
-                Expression::StructExpression(annotations, struct_name.clone(), nfields),
-                nlayout,
-            )
-        } else {
-            panic!("Expected StructExpression, but got {:?}", se)
-        }
-    }
+                line!(),
+                "
+                fn test() {
+                    let x: i64 := 1;
+                    let y: i64 := 2;
+                    fake(x, y);
+                    return;
+                }
+                fn fake(i: i64, j: i64) {return;}
+                    ",
+                vec![("x", 8, 8), ("y", 8, 16), ("!_5", 8, 24), ("!_6", 8, 32)],
+                32,
+            ),
+        ] {
+            println!("Running test: {}", ln);
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
 
-    fn allocate_into_stackframe(
-        current: &mut CompilerAnnotation,
-        child: &mut CompilerAnnotation,
-        layout: LayoutData,
-        struct_table: &ResolvedStructTable,
-    ) -> LayoutData {
-        let anonymous_name = child.anonymous_name();
-        let sz = struct_table
-            .size_of(child.ty())
-            .expect("Expected a size for an expression");
-
-        let layout = LayoutData::new(layout.offset + sz);
-        current.symbols.table.insert(
-            anonymous_name.clone(),
-            Symbol::new(&anonymous_name, sz, layout.offset),
-        );
-        layout
-    }
-
-    impl<CompilerAnnotation> RoutineDef<CompilerAnnotation> {
-        pub fn validate_parameters(
-            &self,
-            params: &Vec<Expression<CompilerAnnotation>>,
-        ) -> Result<()> {
-            let expected_params = self.get_params();
-            if params.len() == expected_params.len() {
-                Ok(())
+            let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
+            if let Some(Item::Routine(func)) = compiler_ast.get_item("test") {
+                assert_eq!(func.total_allocation(), allocation);
+                check_symbols(func, expected).unwrap();
             } else {
-                Err(format!(
-                    "Critical: expected {} but got {} parameters for {}",
-                    expected_params.len(),
-                    params.len(),
-                    self.root_str()
-                ))
+                panic!("Could not find function test");
             }
         }
     }
 
-    #[cfg(test)]
-    mod ast_tests {
-        use crate::compiler::memory::symbol_table::SymbolTable;
-        use module::Module;
-
-        use super::*;
-        use crate::ast::routinedef::RoutineDefType;
-        use crate::ast::ty::Type;
-        use crate::{ast::path::Path, compiler::memory::scope};
-        use crate::{
-            ast::{expression::BinaryOperator, routinedef::RoutineDef},
-            compiler::memory::scope::Level,
-        };
-        use crate::{
-            compiler::memory::struct_table::UnresolvedStructTable, semantics::symbol_table,
-        };
-        use crate::{
-            semantics::semanticnode::SemanticAnnotations, semantics::semanticnode::SemanticNode,
-        };
-
-        #[test]
-        pub fn test_node_id_is_copied() {
-            let sn = SemanticNode::Integer64(
-                SemanticAnnotations {
-                    id: 3,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: symbol_table::SymbolTable::new(),
-                    canonical_path: vec!["root"].into(),
-                },
-                0,
-            );
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layout_for_expression(&sn, LayoutData::new(8), &empty_struct_table);
-            match cn.0 {
-                Expression::Integer64(m, _) => {
-                    assert_eq!(
-                        m,
-                        CompilerAnnotation::new(
-                            3,
-                            scope::Level::Local,
-                            vec!["root"].into(),
-                            m.ty.clone()
-                        )
-                    );
+    #[test]
+    fn coroutine_symbol() {
+        for (ln, text, expected, allocation) in vec![
+            (
+                line!(),
+                "
+                co test() {
+                    return;
                 }
-                _ => assert_eq!(true, false),
-            }
-        }
-
-        #[test]
-        pub fn test_integer() {
-            let sn = SemanticNode::Integer64(
-                SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: symbol_table::SymbolTable::new(),
-                    canonical_path: vec!["root"].into(),
-                },
-                0,
-            );
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layout_for_expression(&sn, LayoutData::new(8), &empty_struct_table);
-            assert_eq!(cn.1.offset, 8);
-            match cn.0 {
-                Expression::Integer64(m, v) => {
-                    assert_eq!(v, 0);
-                    assert_eq!(
-                        m,
-                        CompilerAnnotation::new(
-                            0,
-                            scope::Level::Local,
-                            vec!["root"].into(),
-                            m.ty.clone()
-                        )
-                    );
-                }
-                _ => assert_eq!(true, false),
-            }
-        }
-
-        #[test]
-        pub fn test_operator() {
-            let sn1 = SemanticNode::Integer64(
-                SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: symbol_table::SymbolTable::new(),
-                    canonical_path: vec!["root"].into(),
-                },
-                1,
-            );
-            let sn2 = SemanticNode::Integer64(
-                SemanticAnnotations {
-                    id: 1,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: symbol_table::SymbolTable::new(),
-                    canonical_path: vec!["root"].into(),
-                },
-                2,
-            );
-            let snmul = SemanticNode::BinaryOp(
-                SemanticAnnotations {
-                    id: 2,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: symbol_table::SymbolTable::new(),
-                    canonical_path: vec!["root"].into(),
-                },
-                BinaryOperator::Mul,
-                Box::new(sn1),
-                Box::new(sn2),
-            );
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn =
-                compute::layout_for_expression(&snmul, LayoutData::new(8), &empty_struct_table);
-            assert_eq!(cn.1.offset, 24); // Will add 16 bytes because of the BinaryOp storing two i64s into the stack frame
-            match cn.0 {
-                Expression::BinaryOp(m, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(m.id, 2);
-                    assert_eq!(m.level, Level::Local);
-                    assert_eq!(m.ty, Type::I64);
-                    assert_eq!(m.canon_path, vec!["root"].into());
-
-                    let mut sym = SymbolTable::new();
-                    sym.table
-                        .insert("!root_1".into(), Symbol::new("!root_1", 8, 24));
-                    sym.table
-                        .insert("!root_0".into(), Symbol::new("!root_0", 8, 16));
-                    assert_eq!(m.symbols, sym);
-
-                    match *l {
-                        Expression::Integer64(m, v) => {
-                            assert_eq!(m.id, 0);
-                            assert_eq!(v, 1);
-                        }
-                        _ => assert!(false),
-                    }
-                    match *r {
-                        Expression::Integer64(m, v) => {
-                            assert_eq!(m.id, 1);
-                            assert_eq!(v, 2);
-                        }
-                        _ => assert!(false),
-                    }
-                }
-                _ => assert!(false),
-            }
-        }
-
-        #[test]
-        pub fn test_expression_block() {
-            let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I64, false).unwrap();
-            semantic_table.add("y", Type::I64, false).unwrap();
-            let sn = SemanticNode::ExpressionBlock(
-                SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: semantic_table,
-                    canonical_path: Path::new(),
-                },
+                    ",
                 vec![],
-                None,
-            );
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layout_for_expression(&sn, LayoutData::new(0), &empty_struct_table);
-            assert_eq!(cn.1.offset, 16);
-            match cn.0 {
-                Expression::ExpressionBlock(m, _, _) => {
-                    assert_eq!(m.symbols.table.len(), 2);
-                    assert_eq!(m.symbols.table["x"].size, 8);
-                    assert_eq!(m.symbols.table["x"].offset, 8);
-                    assert_eq!(m.symbols.table["y"].size, 8);
-                    assert_eq!(m.symbols.table["y"].offset, 16);
+                40,
+            ),
+            (
+                line!(),
+                "
+                co test(x: i32) {
+                    return;
                 }
-                _ => assert!(false),
-            }
-        }
-
-        #[test]
-        pub fn test_nested_expression_block() {
-            let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I64, false).unwrap();
-            semantic_table.add("y", Type::I64, false).unwrap();
-            let sn = SemanticNode::ExpressionBlock(
-                SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: semantic_table,
-                    canonical_path: Path::new(),
-                },
+                    ",
+                vec![("x", 4, 44)],
+                44,
+            ),
+            (
+                line!(),
+                "
+                co test(x: i32) {
+                    let y: i64 := 50;
+                    return;
+                }
+                    ",
+                vec![("x", 4, 44), ("y", 8, 52)],
+                52,
+            ),
+            (
+                line!(),
+                "
+                co test() -> i32 {
+                    return 5i32;
+                }
+                    ",
                 vec![],
-                None,
-            );
-
-            let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I64, false).unwrap();
-            semantic_table.add("y", Type::I64, false).unwrap();
-            let sn = SemanticNode::ExpressionBlock(
-                SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: semantic_table,
-                    canonical_path: Path::new(),
-                },
-                vec![],
-                Some(Box::new(sn)),
-            );
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layout_for_expression(&sn, LayoutData::new(0), &empty_struct_table);
-            assert_eq!(cn.1.offset, 32);
-            match cn.0 {
-                Expression::ExpressionBlock(m, _b, fe) => {
-                    assert_eq!(m.symbols.table.len(), 2);
-                    assert_eq!(m.symbols.table["x"].size, 8);
-                    assert_eq!(m.symbols.table["x"].offset, 8);
-                    assert_eq!(m.symbols.table["y"].size, 8);
-                    assert_eq!(m.symbols.table["y"].offset, 16);
-                    match fe {
-                        Some(box Expression::ExpressionBlock(m, _, _)) => {
-                            assert_eq!(m.symbols.table.len(), 2);
-                            assert_eq!(m.symbols.table["x"].size, 8);
-                            assert_eq!(m.symbols.table["x"].offset, 24);
-                            assert_eq!(m.symbols.table["y"].size, 8);
-                            assert_eq!(m.symbols.table["y"].offset, 32);
-                        }
-                        _ => assert!(false),
-                    }
+                40,
+            ),
+            (
+                line!(),
+                "
+                co test() -> i64 {
+                    return 5 + 6;
                 }
-                _ => assert!(false),
+                    ",
+                vec![("!_3", 8, 48), ("!_4", 8, 56)],
+                56,
+            ),
+            (
+                line!(),
+                "
+                co test() {
+                    let x: i64 := 1;
+                    let y: i64 := 2;
+                    fake(x, y);
+                    return;
+                }
+                fn fake(i: i64, j: i64) {return;}
+                    ",
+                vec![("x", 8, 48), ("y", 8, 56), ("!_9", 8, 64), ("!_10", 8, 72)],
+                72,
+            ),
+        ] {
+            println!("Running test: {}", ln);
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+
+            let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
+            if let Some(Item::Routine(func)) = compiler_ast.get_item("test") {
+                assert_eq!(func.total_allocation(), allocation);
+                check_symbols(func, expected).unwrap();
+            } else {
+                panic!("Could not find function test");
             }
         }
+    }
 
-        #[test]
-        pub fn test_function() {
-            let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I64, false).unwrap();
-            semantic_table.add("y", Type::I64, false).unwrap();
-            let sn = RoutineDef {
-                annotations: SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: semantic_table,
-                    canonical_path: Path::new(),
-                },
-                def: RoutineDefType::Function,
-                name: "func".into(),
-                params: vec![],
-                ty: Type::I64,
-                body: vec![],
-            };
-            let mut module = Module::new("root", SemanticAnnotations::new(1, 1, Type::Unit));
-            module.add_function(sn).unwrap();
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layouts_for_module(&module, &empty_struct_table);
-            let module = cn;
-            match module.get_item("func") {
-                Some(Item::Routine(RoutineDef {
-                    annotations,
-                    def: RoutineDefType::Function,
-                    name,
-                    ..
-                })) => {
-                    assert_eq!(name, "func");
-                    assert_eq!(annotations.symbols.table.len(), 2);
-                    assert_eq!(annotations.symbols.table["x"].size, 8);
-                    assert_eq!(annotations.symbols.table["x"].offset, 8);
-                    assert_eq!(annotations.symbols.table["y"].size, 8);
-                    assert_eq!(annotations.symbols.table["y"].offset, 16);
-
-                    match annotations.level {
-                        scope::Level::Routine {
-                            allocation,
-                            routine_type,
-                        } => {
-                            assert_eq!(allocation, 16);
-                            assert_eq!(routine_type, RoutineDefType::Function);
-                        }
-                        _ => assert!(false),
-                    }
-                }
-                _ => assert!(false),
+    fn find_all_symbols(rd: &RoutineDef<CompilerAnnotation>) -> SymbolTable {
+        let mut symbols = SymbolTable::new();
+        for n in rd.iter_preorder() {
+            for (name, sym) in n.annotation().symbols().iter() {
+                symbols.table.insert(name.into(), sym.clone());
             }
         }
+        symbols
+    }
 
-        /*
-        Current design does not support functions defined in functions
-
-        #[test]
-        pub fn test_nested_function() {
-            let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I32, false).unwrap();
-            semantic_table.add("y", Type::I32, false).unwrap();
-            let sn = RoutineDef {
-                annotations: SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I32,
-                    sym: semantic_table,
-                    canonical_path: Path::new(),
-                },
-                def: RoutineDefType::Function,
-                name: "func".into(),
-                params: vec![],
-                ty: Type::I32,
-                body: vec![],
-            };
-
-            let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I32, false).unwrap();
-            semantic_table.add("y", Type::I32, false).unwrap();
-            let sn = RoutineDef {
-                annotations: SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I32,
-                    sym: semantic_table,
-                    canonical_path: Path::new(),
-                },
-                def: RoutineDefType::Function,
-                name: "outer_func".into(),
-                params: vec![],
-                ty: Type::I32,
-                body: vec![sn],
-            };
-
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::compute_offsets(&sn, LayoutData::new(0), &empty_struct_table);
-            assert_eq!(cn.1.offset, 0);
-            match cn.0 {
-                compute::RoutineDef {
-                    annotations,
-                    def: RoutineDefType::Function,
-                    body,
-                    ..
-                } => {
-                    assert_eq!(annotations.symbols.table.len(), 2);
-                    assert_eq!(annotations.symbols.table["x"].size, 4);
-                    assert_eq!(annotations.symbols.table["x"].offset, 4);
-                    assert_eq!(annotations.symbols.table["y"].size, 4);
-                    assert_eq!(annotations.symbols.table["y"].offset, 8);
-
-                    match body.iter().nth(0) {
-                        Some(compute::RoutineDef {
-                            annotations,
-                            def: RoutineDefType::Function,
-                            ..
-                        }) => {
-                            assert_eq!(annotations.symbols.table.len(), 2);
-                            assert_eq!(annotations.symbols.table["x"].size, 4);
-                            assert_eq!(annotations.symbols.table["x"].offset, 4);
-                            assert_eq!(annotations.symbols.table["y"].size, 4);
-                            assert_eq!(annotations.symbols.table["y"].offset, 8);
-                        }
-                        _ => assert!(false),
-                    }
+    fn check_symbols(
+        rd: &RoutineDef<CompilerAnnotation>,
+        expected: Vec<(&str, i32, i32)>,
+    ) -> Result<()> {
+        let test = find_all_symbols(rd);
+        if test.table.len() != expected.len() {
+            return Err(format!(
+                "Expected table size to be {} but got {}\n\nTest:\n{}",
+                expected.len(),
+                test.table.len(),
+                test,
+            ));
+        }
+        for (en, esz, eo) in expected {
+            if let Some(s) = test.table.get(en) {
+                if s.size != esz {
+                    return Err(format!(
+                        "{} expected size is {} but got {}",
+                        en, esz, s.size
+                    ));
                 }
-                _ => assert!(false),
-            }
-        }*/
-
-        #[test]
-        pub fn test_coroutine() {
-            let mut semantic_table = symbol_table::SymbolTable::new();
-            semantic_table.add("x", Type::I64, false).unwrap();
-            semantic_table.add("y", Type::I64, false).unwrap();
-            let sn = RoutineDef {
-                annotations: SemanticAnnotations {
-                    id: 0,
-                    ln: 0,
-                    ty: Type::I64,
-                    sym: semantic_table,
-                    canonical_path: Path::new(),
-                },
-                def: RoutineDefType::Coroutine,
-                name: "coroutine".into(),
-                params: vec![],
-                ty: Type::I64,
-                body: vec![],
-            };
-            let empty_struct_table = UnresolvedStructTable::new().resolve().unwrap();
-            let cn = compute::layout_for_routine(&sn, &empty_struct_table);
-            match cn {
-                RoutineDef {
-                    annotations,
-                    def: RoutineDefType::Coroutine,
-                    name,
-                    ..
-                } => {
-                    assert_eq!(name, "coroutine");
-                    assert_eq!(annotations.symbols.table.len(), 2);
-                    assert_eq!(annotations.symbols.table["x"].size, 8);
-                    assert_eq!(annotations.symbols.table["x"].offset, 48);
-                    assert_eq!(annotations.symbols.table["y"].size, 8);
-                    assert_eq!(annotations.symbols.table["y"].offset, 56);
-
-                    match annotations.level {
-                        scope::Level::Routine { allocation, .. } => assert_eq!(allocation, 56),
-                        _ => assert!(false),
-                    }
+                if s.offset != eo {
+                    return Err(format!(
+                        "{} expected offset is {} but got {}",
+                        en, eo, s.offset
+                    ));
                 }
-                _ => assert!(false),
+            } else {
+                return Err(format!("Does not contain {}: \n\n Test: {}", en, test));
             }
         }
+        Ok(())
     }
 }

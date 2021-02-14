@@ -1,4 +1,11 @@
-use super::{node::Node, parameter::Parameter, statement::Statement, ty::Type};
+use super::{
+    node::{
+        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+    },
+    parameter::Parameter,
+    statement::Statement,
+    ty::Type,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
@@ -10,13 +17,41 @@ pub struct RoutineDef<M> {
     pub body: Vec<Statement<M>>,
 }
 
-impl<M> Node<M> for RoutineDef<M> {
+impl<M: Annotation> Node<M> for RoutineDef<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
 
     fn annotation_mut(&mut self) -> &mut M {
         &mut self.annotations
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::RoutineDef(self.def)
+    }
+
+    fn children(&self) -> Vec<&dyn Node<M>> {
+        let mut v: Vec<&dyn Node<M>> = vec![];
+        for f in self.params.iter() {
+            v.push(f);
+        }
+        for b in self.body.iter() {
+            v.push(b);
+        }
+
+        v
+    }
+
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
+
+    fn iter_postorder(&self) -> PostOrderIter<M> {
+        PostOrderIter::new(self)
+    }
+
+    fn iter_preorder(&self) -> PreOrderIter<M> {
+        PreOrderIter::new(self)
     }
 }
 
