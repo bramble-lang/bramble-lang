@@ -46,7 +46,11 @@ where
         }
     }
 
-    pub fn for_module(&mut self, m: &Module<A>) -> Module<B> {
+    pub fn apply(&mut self, m: &Module<A>) -> Module<B> {
+        self.for_module(m)
+    }
+
+    fn for_module(&mut self, m: &Module<A>) -> Module<B> {
         let b = (self.f)(m);
         let mut m2 = Module::new(m.get_name(), b);
 
@@ -332,7 +336,7 @@ mod test {
         };
 
         let mut mp = MapPreOrder::new("test", f);
-        let module2 = mp.for_module(&module1);
+        let module2 = mp.apply(&module1);
 
         assert_eq!(*module2.annotation(), 2i64);
         assert_eq!(count, 1);
@@ -350,7 +354,7 @@ mod test {
         };
 
         let mut mp = MapPreOrder::new("test", f);
-        let module2 = mp.for_module(&module1);
+        let module2 = mp.apply(&module1);
 
         assert_eq!(*module2.annotation(), 2i64);
         assert_eq!(*module2.get_module("m2").unwrap().annotation(), 4i64);
@@ -391,7 +395,7 @@ mod test {
         };
         let mut mapper = MapPreOrder::new("test", f);
 
-        let m_prime = mapper.for_module(&m);
+        let m_prime = mapper.apply(&m);
 
         for n in m_prime.iter_preorder() {
             assert_eq!(*n.annotation(), "1");

@@ -79,7 +79,7 @@ fn generate_stackframe_layout(
     };
 
     let mut mapper = MapPreOrder::new("layout", f);
-    mapper.for_module(ast)
+    mapper.apply(ast)
 }
 
 impl RoutineDef<CompilerAnnotation> {
