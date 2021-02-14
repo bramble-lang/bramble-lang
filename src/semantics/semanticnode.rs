@@ -58,6 +58,16 @@ impl SemanticAnnotations {
             canonical_path: Path::new(),
         }
     }
+    
+    pub fn new_module(id: u32, ln: u32, name: &str, ty: Type) -> SemanticAnnotations {
+        SemanticAnnotations {
+            id,
+            ln,
+            ty,
+            sym: SymbolTable::new_module(name),
+            canonical_path: Path::new(),
+        }
+    }
 
     pub fn get_canonical_path(&self) -> &Path {
         &self.canonical_path
@@ -364,20 +374,14 @@ impl SemanticAst {
         ))
     }
 
-    fn semantic_annotations_from(&mut self, l: u32) -> SemanticAnnotations {
-        let sm_data = SemanticAnnotations::new(self.next_id, l, Type::Unknown);
+    fn semantic_annotations_from(&mut self, ln: u32) -> SemanticAnnotations {
+        let sm_data = SemanticAnnotations::new(self.next_id, ln, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
     fn module_semantic_annotations_from(&mut self, ln: u32, name: &str) -> SemanticAnnotations {
-        let sm_data = SemanticAnnotations {
-            id: self.next_id,
-            ln,
-            ty: Type::Unknown,
-            sym: SymbolTable::new_module(name),
-            canonical_path: Path::new(),
-        };
+        let sm_data = SemanticAnnotations::new_module(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
