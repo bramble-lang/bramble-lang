@@ -24,7 +24,7 @@ pub fn resolve_types_with_imports(
 ) -> Result<Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
     //let mut sm_ast = sa.from_module(&ast)?;
-    let mut sm_ast = sa.test(&ast);
+    let mut sm_ast = sa.from_module(&ast);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
     let mut semantic = TypeResolver::new(&sm_ast);
@@ -3318,7 +3318,7 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let mut sa = SemanticAst::new();
-            let mut sm_ast = sa.from_module(&ast).unwrap();
+            let mut sm_ast = sa.from_module(&ast);
             SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
 
             let mut semantic = TypeResolver::new(&sm_ast);
