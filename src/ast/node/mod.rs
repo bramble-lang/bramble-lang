@@ -8,6 +8,8 @@ pub use self::iter::{PostOrderIter, PreOrderIter};
 pub use self::map::MapPreOrder;
 pub use self::traversalmut::ForEachPreOrderMut;
 
+use super::routinedef::RoutineDefType;
+
 pub trait Node<M: Annotation> {
     fn node_type(&self) -> NodeType;
     fn annotation(&self) -> &M;
@@ -21,8 +23,7 @@ pub trait Node<M: Annotation> {
 
 pub enum NodeType {
     Module,
-    FnDef,
-    CoroutineDef,
+    RoutineDef(RoutineDefType),
     StructDef,
     Parameter,
     Expression,
@@ -35,8 +36,8 @@ impl Display for NodeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             NodeType::Module => f.write_str("module"),
-            NodeType::FnDef => f.write_str("fn"),
-            NodeType::CoroutineDef => f.write_str("co"),
+            NodeType::RoutineDef(RoutineDefType::Function) => f.write_str("fn"),
+            NodeType::RoutineDef(RoutineDefType::Coroutine) => f.write_str("co"),
             NodeType::StructDef => f.write_str("struct"),
             NodeType::Parameter => f.write_str("parameter"),
             NodeType::Expression => f.write_str("exp"),

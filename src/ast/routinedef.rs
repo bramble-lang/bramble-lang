@@ -27,10 +27,7 @@ impl<M: Annotation> Node<M> for RoutineDef<M> {
     }
 
     fn node_type(&self) -> NodeType {
-        match self.def {
-            RoutineDefType::Function => NodeType::FnDef,
-            RoutineDefType::Coroutine => NodeType::CoroutineDef,
-        }
+        NodeType::RoutineDef(self.def)
     }
 
     fn children(&self) -> Vec<&dyn Node<M>> {
