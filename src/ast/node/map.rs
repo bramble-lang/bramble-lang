@@ -157,14 +157,14 @@ where
         use Expression::*;
 
         match exp {
-            Expression::Integer32(_, i) => Integer32(f(exp), *i),
-            Expression::Integer64(_, i) => Integer64(f(exp), *i),
-            Expression::Boolean(_, b) => Boolean(f(exp), *b),
-            Expression::StringLiteral(_, s) => StringLiteral(f(exp), s.clone()),
-            Expression::CustomType(_, name) => CustomType(f(exp), name.clone()),
-            Expression::Identifier(_, id) => Identifier(f(exp), id.clone()),
+            Integer32(_, i) => Integer32(f(exp), *i),
+            Integer64(_, i) => Integer64(f(exp), *i),
+            Boolean(_, b) => Boolean(f(exp), *b),
+            StringLiteral(_, s) => StringLiteral(f(exp), s.clone()),
+            CustomType(_, name) => CustomType(f(exp), name.clone()),
+            Identifier(_, id) => Identifier(f(exp), id.clone()),
             Path(_, path) => Path(f(exp), path.clone()),
-            Expression::IdentifierDeclare(_, id, p) => {
+            IdentifierDeclare(_, id, p) => {
                 IdentifierDeclare(f(exp), id.clone(), p.clone())
             }
             MemberAccess(..) => self.for_member_access(exp, f),
