@@ -101,7 +101,15 @@ where
 #[cfg(test)]
 mod test_preorder {
     use super::*;
-    use crate::ast::{expression::Expression, module::Module, parameter::Parameter, routinedef::RoutineDef, statement::{Bind, Statement}, structdef::StructDef, ty::Type};
+    use crate::ast::{
+        expression::Expression,
+        module::Module,
+        parameter::Parameter,
+        routinedef::RoutineDef,
+        statement::{Bind, Statement},
+        structdef::StructDef,
+        ty::Type,
+    };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
         let i = n.annotation();
@@ -158,7 +166,7 @@ mod test_preorder {
         .unwrap();
         m.add_module(Module::new("m2", 7));
         m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
-        
+
         let expected = vec![1, 7, 4, 5, 6, 2, 3, 8];
         let test: Vec<i64> = m.iter_preorder().map(|n| *n.annotation()).collect();
         assert_eq!(test, expected);
@@ -167,18 +175,23 @@ mod test_preorder {
     #[test]
     fn function() {
         let mut f = RoutineDef::new_function("func", 1, vec![], Type::Unit, vec![]);
-        f.body.push(Statement::Bind(box Bind::new(2, "x", Type::I32, false, 
-            Expression::If{
+        f.body.push(Statement::Bind(box Bind::new(
+            2,
+            "x",
+            Type::I32,
+            false,
+            Expression::If {
                 annotation: 3,
                 cond: box Expression::BinaryOp(
-                    4, 
+                    4,
                     crate::ast::expression::BinaryOperator::Eq,
                     box Expression::Integer64(5, 1),
-                    box Expression::Integer64(6, 1)),
+                    box Expression::Integer64(6, 1),
+                ),
                 if_arm: box Expression::Identifier(7, "y".into()),
                 else_arm: Some(box Expression::StringLiteral(8, "h".into())),
-            }
-        ))); 
+            },
+        )));
 
         let expected = vec![1, 2, 3, 4, 5, 6, 7, 8];
         let test: Vec<i64> = f.iter_preorder().map(|n| *n.annotation()).collect();
@@ -186,11 +199,18 @@ mod test_preorder {
     }
 }
 
-
 #[cfg(test)]
 mod test_postorder {
     use super::*;
-    use crate::ast::{expression::Expression, module::Module, parameter::Parameter, routinedef::RoutineDef, statement::{Bind, Statement}, structdef::StructDef, ty::Type};
+    use crate::ast::{
+        expression::Expression,
+        module::Module,
+        parameter::Parameter,
+        routinedef::RoutineDef,
+        statement::{Bind, Statement},
+        structdef::StructDef,
+        ty::Type,
+    };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
         let i = n.annotation();
@@ -247,7 +267,7 @@ mod test_postorder {
         .unwrap();
         m.add_module(Module::new("m2", 7));
         m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
-        
+
         let expected = vec![7, 5, 6, 4, 3, 2, 8, 1];
         let test: Vec<i64> = m.iter_postorder().map(|n| *n.annotation()).collect();
         assert_eq!(test, expected);
@@ -256,18 +276,23 @@ mod test_postorder {
     #[test]
     fn function() {
         let mut f = RoutineDef::new_function("func", 1, vec![], Type::Unit, vec![]);
-        f.body.push(Statement::Bind(box Bind::new(2, "x", Type::I32, false, 
-            Expression::If{
+        f.body.push(Statement::Bind(box Bind::new(
+            2,
+            "x",
+            Type::I32,
+            false,
+            Expression::If {
                 annotation: 3,
                 cond: box Expression::BinaryOp(
-                    4, 
+                    4,
                     crate::ast::expression::BinaryOperator::Eq,
                     box Expression::Integer64(5, 1),
-                    box Expression::Integer64(6, 1)),
+                    box Expression::Integer64(6, 1),
+                ),
                 if_arm: box Expression::Identifier(7, "y".into()),
                 else_arm: Some(box Expression::StringLiteral(8, "h".into())),
-            }
-        ))); 
+            },
+        )));
 
         let expected = vec![5, 6, 4, 7, 8, 3, 2, 1];
         let test: Vec<i64> = f.iter_postorder().map(|n| *n.annotation()).collect();

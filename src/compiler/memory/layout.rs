@@ -42,11 +42,9 @@ fn generate_stackframe_layout(
                 n.name().expect("Modules must have a name"),
                 struct_table,
             ),
-            NodeType::RoutineDef(rty) => CompilerAnnotation::routine_from(
-                n.annotation(),
-                rty,
-                struct_table,
-            ),
+            NodeType::RoutineDef(rty) => {
+                CompilerAnnotation::routine_from(n.annotation(), rty, struct_table)
+            }
             NodeType::StructDef => CompilerAnnotation::structdef_from(n.annotation()),
             NodeType::Parameter => {
                 CompilerAnnotation::local_from(n.annotation(), struct_table, current_layout)
