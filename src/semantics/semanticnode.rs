@@ -57,7 +57,7 @@ impl SemanticAnnotations {
             canonical_path: Path::new(),
         }
     }
-    
+
     pub fn new_module(id: u32, ln: u32, name: &str, ty: Type) -> SemanticAnnotations {
         SemanticAnnotations {
             id,
@@ -95,14 +95,12 @@ impl SemanticAst {
     }
 
     pub fn from_module(&mut self, m: &Module<ParserInfo>) -> Module<SemanticAnnotations> {
-        let f = |n: &dyn Node<u32>| {
-            match n.node_type() {
-                NodeType::Module => {
-                    let name = n.name().unwrap();
-                    self.module_semantic_annotations_from(*n.annotation(), name)
-                },
-                _ => self.semantic_annotations_from(*n.annotation()),
+        let f = |n: &dyn Node<u32>| match n.node_type() {
+            NodeType::Module => {
+                let name = n.name().unwrap();
+                self.module_semantic_annotations_from(*n.annotation(), name)
             }
+            _ => self.semantic_annotations_from(*n.annotation()),
         };
         let mut mapper = MapPreOrder::new("parser-to-semantic", f);
         mapper.apply(m)
