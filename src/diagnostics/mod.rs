@@ -1,25 +1,73 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 pub mod config;
 
+pub struct DiagRecorder<A, B, F1, F2>
+where
+    F1: Fn(A) -> DiagData,
+    F2: Fn(B) -> DiagData,
+{
+    src: String,
+    begin_f: F1,
+    end_f: F2,
+    ph_a: PhantomData<A>,
+    ph_b: PhantomData<B>,
+}
+
+impl<A, B, F1, F2> DiagRecorder<A, B, F1, F2>
+where
+    F1: Fn(A) -> DiagData,
+    F2: Fn(B) -> DiagData,
+{
+    pub fn new(src: &str, begin_f: F1, end_f: F2) -> DiagRecorder<A, B, F1, F2> {
+        DiagRecorder{
+            src: src.into(),
+            begin_f,
+            end_f,
+            ph_a: PhantomData,
+            ph_b: PhantomData,
+        }
+    }
+
+    /**
+    Begins a new unit of diagnostic recording.  Run this with the value of the current
+    node immediately before the Transformation is applied to the node and its Annotation.
+    Then immediately after the transformation, run `end` on the result. This will print
+    diagnostic output to the screen.
+     */
+    pub fn begin(&self, annotation: A) {
+        let d = (self.begin_f)(annotation);
+        print!("{:?} => ", d);
+    }
+
+    /**
+    Completes a diagnostic unit.
+     */
+    pub fn end(&self, annotation: B) {
+        let d = (self.end_f)(annotation);
+        println!("{:?}", d);
+    }
+}
+
 /**
-Records state information about a single Node in an AST and its associated 
+Records state information about a single Node in an AST and its associated
 Annotation.  Used by traversal operators to generate diagnostic and historical
 data about every Compiler Transform that is applied to the AST.
  */
+#[derive(Debug)]
 pub struct DiagData {
     ln: u32,
     node_id: u32,
-    data: HashMap<String,Vec<String>>,
+    data: HashMap<String, Vec<String>>,
 }
 
 impl DiagData {
     /**
-    Create a new unit of DiagData. Each unit of DiagData is associated with 
+    Create a new unit of DiagData. Each unit of DiagData is associated with
     the annotation on a single node of the AST.
      */
     pub fn new(ln: u32, node_id: u32) -> DiagData {
-        DiagData{
+        DiagData {
             ln,
             node_id,
             data: HashMap::new(),
