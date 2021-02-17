@@ -244,8 +244,13 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module =
-                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             //let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
@@ -280,8 +285,13 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module =
-                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             //let semantic_ast = Ast::Module(semantic_module);
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
@@ -319,8 +329,13 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module =
-                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             assert_eq!(unrealized_st.table.len(), 2);
             assert_eq!(
@@ -454,8 +469,13 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module =
-                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -562,8 +582,13 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module =
-                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved_st = unrealized_st.resolve().unwrap();
 
@@ -596,8 +621,13 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let semantic_module =
-                resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let semantic_module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             let unrealized_st = UnresolvedStructTable::from_module(&semantic_module).unwrap();
             let resolved = unrealized_st.resolve();
 

@@ -60,14 +60,19 @@ fn main() {
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
     let imported = configure_imported_functions();
 
-    let semantic_ast =
-        match resolve_types_with_imports(&ast, &imported, trace_semantic_node, trace_type_resolver, trace_path) {
-            Ok(ast) => ast,
-            Err(msg) => {
-                println!("Error: {}", msg);
-                std::process::exit(ERR_TYPE_CHECK);
-            }
-        };
+    let semantic_ast = match resolve_types_with_imports(
+        &ast,
+        &imported,
+        trace_semantic_node,
+        trace_type_resolver,
+        trace_path,
+    ) {
+        Ok(ast) => ast,
+        Err(msg) => {
+            println!("Error: {}", msg);
+            std::process::exit(ERR_TYPE_CHECK);
+        }
+    };
 
     // Configure the compiler
     let target_platform = config

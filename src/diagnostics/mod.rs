@@ -21,7 +21,7 @@ where
     B: Diag,
 {
     pub fn new(src: &str, config: TracingConfig) -> DiagRecorder<A, B> {
-        DiagRecorder{
+        DiagRecorder {
             src: src.into(),
             config,
             ph_a: PhantomData,
@@ -106,7 +106,7 @@ impl DiagData {
 impl std::fmt::Display for DiagData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("L{}n{}: ", self.ln, self.node_id))?;
-        for (k,values) in self.data.iter() {
+        for (k, values) in self.data.iter() {
             f.write_fmt(format_args!("{{{}: [", k))?;
             for val in values {
                 f.write_fmt(format_args!("{}, ", val))?;

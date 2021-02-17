@@ -201,7 +201,9 @@ where
             Expression::CustomType(ref mut annotation, _name) => self.transform(annotation, f),
             Expression::Identifier(ref mut annotation, _id) => self.transform(annotation, f),
             Path(ref mut annotation, _path) => self.transform(annotation, f),
-            Expression::IdentifierDeclare(ref mut annotation, _id, _p) => self.transform(annotation, f),
+            Expression::IdentifierDeclare(ref mut annotation, _id, _p) => {
+                self.transform(annotation, f)
+            }
             MemberAccess(..) => self.for_member_access(exp, f),
             UnaryOp(..) => self.for_unary_op(exp, f),
             BinaryOp(..) => self.for_binary_op(exp, f),

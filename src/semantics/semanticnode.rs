@@ -1,5 +1,8 @@
-use crate::{ast::*, diagnostics::{Diag, DiagData}};
 use crate::semantics::symbol_table::*;
+use crate::{
+    ast::*,
+    diagnostics::{Diag, DiagData},
+};
 use crate::{diagnostics::config::TracingConfig, parser::parser::ParserInfo};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -102,7 +105,11 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_module(&mut self, m: &Module<ParserInfo>, tracing: TracingConfig) -> Module<SemanticAnnotations> {
+    pub fn from_module(
+        &mut self,
+        m: &Module<ParserInfo>,
+        tracing: TracingConfig,
+    ) -> Module<SemanticAnnotations> {
         let f = |n: &dyn Node<u32>| match n.node_type() {
             NodeType::Module => {
                 let name = n.name().unwrap();

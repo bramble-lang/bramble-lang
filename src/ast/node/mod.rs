@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
+mod foreach_mut;
 mod iter;
 mod map;
-mod foreach_mut;
 
+pub use self::foreach_mut::ForEachPreOrderMut;
 pub use self::iter::{PostOrderIter, PreOrderIter};
 pub use self::map::MapPreOrder;
-pub use self::foreach_mut::ForEachPreOrderMut;
 
 use super::routinedef::RoutineDefType;
 

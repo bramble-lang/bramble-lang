@@ -1,7 +1,10 @@
-use crate::{compiler::x86::assembly::Reg64, diagnostics::{Diag, DiagData}};
 use crate::semantics::semanticnode::SemanticAnnotations;
 use crate::{ast::*, compiler::arch::registers::RegSize};
 use crate::{compiler::x86::assembly::Reg, semantics};
+use crate::{
+    compiler::x86::assembly::Reg64,
+    diagnostics::{Diag, DiagData},
+};
 
 use super::{
     struct_table::ResolvedStructTable,

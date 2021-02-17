@@ -1,11 +1,14 @@
 use fmt::Debug;
 use std::{fmt, marker::PhantomData};
 
-use crate::{ast::module::*, diagnostics::{Diag, DiagRecorder, config::TracingConfig}};
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
 use crate::ast::Expression;
+use crate::{
+    ast::module::*,
+    diagnostics::{config::TracingConfig, Diag, DiagRecorder},
+};
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
@@ -37,7 +40,8 @@ where
 impl<A, B, F> MapPreOrder<A, B, F>
 where
     A: Debug + Annotation + Diag,
-    F: FnMut(&dyn Node<A>) -> B, B: Diag
+    F: FnMut(&dyn Node<A>) -> B,
+    B: Diag,
 {
     pub fn new(name: &str, f: F, config: TracingConfig) -> MapPreOrder<A, B, F> {
         MapPreOrder {
@@ -183,7 +187,9 @@ where
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
             Path(_, path) => Path(self.transform(exp), path.clone()),
-            IdentifierDeclare(_, id, p) => IdentifierDeclare(self.transform(exp), id.clone(), p.clone()),
+            IdentifierDeclare(_, id, p) => {
+                IdentifierDeclare(self.transform(exp), id.clone(), p.clone())
+            }
             MemberAccess(..) => self.for_member_access(exp),
             UnaryOp(..) => self.for_unary_op(exp),
             BinaryOp(..) => self.for_binary_op(exp),
@@ -305,7 +311,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{ast::{module::Module, ty::Type}, diagnostics::DiagData};
+    use crate::{
+        ast::{module::Module, ty::Type},
+        diagnostics::DiagData,
+    };
 
     impl Annotation for i32 {
         fn id(&self) -> u32 {

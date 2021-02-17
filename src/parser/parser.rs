@@ -3,7 +3,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{ast::*, diagnostics::{Diag, DiagData, config::TracingConfig}, lexer::tokens::{Lex, Primitive, Token}};
+use crate::{
+    ast::*,
+    diagnostics::{config::TracingConfig, Diag, DiagData},
+    lexer::tokens::{Lex, Primitive, Token},
+};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -30,7 +34,7 @@ impl Annotation for ParserInfo {
 
 impl Diag for ParserInfo {
     fn diag(&self) -> DiagData {
-        DiagData::new(*self, 0)   
+        DiagData::new(*self, 0)
     }
 }
 

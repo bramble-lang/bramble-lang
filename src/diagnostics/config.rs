@@ -9,7 +9,7 @@ pub enum TracingConfig {
 }
 
 impl TracingConfig {
-    pub fn trace(&self, ln: usize) -> bool{
+    pub fn trace(&self, ln: usize) -> bool {
         match self {
             TracingConfig::All => true,
             TracingConfig::Off => false,
