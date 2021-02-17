@@ -1,7 +1,7 @@
 use fmt::Debug;
 use std::{fmt, marker::PhantomData};
 
-use crate::{ast::module::*, diagnostics::{Diag, DiagRecorder}};
+use crate::{ast::module::*, diagnostics::{Diag, DiagRecorder, config::TracingConfig}};
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
@@ -39,11 +39,11 @@ where
     A: Debug + Annotation + Diag,
     F: FnMut(&dyn Node<A>) -> B, B: Diag
 {
-    pub fn new(name: &str, f: F) -> MapPreOrder<A, B, F> {
+    pub fn new(name: &str, f: F, config: TracingConfig) -> MapPreOrder<A, B, F> {
         MapPreOrder {
             name: name.into(),
             f,
-            diag: DiagRecorder::new(name),
+            diag: DiagRecorder::new(name, config),
             ph: PhantomData,
             ph2: PhantomData,
         }
@@ -375,7 +375,7 @@ mod test {
             convert(n)
         };
 
-        let mut mp = MapPreOrder::new("test", f);
+        let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
         let module2 = mp.apply(&module1);
 
         assert_eq!(*module2.annotation(), 2i64);
@@ -393,7 +393,7 @@ mod test {
             convert(n)
         };
 
-        let mut mp = MapPreOrder::new("test", f);
+        let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
         let module2 = mp.apply(&module1);
 
         assert_eq!(*module2.annotation(), 2i64);
@@ -433,7 +433,7 @@ mod test {
             count += 1;
             format!("{}", n.annotation())
         };
-        let mut mapper = MapPreOrder::new("test", f);
+        let mut mapper = MapPreOrder::new("test", f, TracingConfig::Off);
 
         let m_prime = mapper.apply(&m);
 

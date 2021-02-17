@@ -1,5 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData};
 
+use config::TracingConfig;
+
 pub mod config;
 
 pub struct DiagRecorder<A, B>
@@ -8,6 +10,7 @@ where
     B: Diag,
 {
     src: String,
+    config: TracingConfig,
     ph_a: PhantomData<A>,
     ph_b: PhantomData<B>,
 }
@@ -17,9 +20,10 @@ where
     A: Diag,
     B: Diag,
 {
-    pub fn new(src: &str) -> DiagRecorder<A, B> {
+    pub fn new(src: &str, config: TracingConfig) -> DiagRecorder<A, B> {
         DiagRecorder{
             src: src.into(),
+            config,
             ph_a: PhantomData,
             ph_b: PhantomData,
         }
@@ -33,7 +37,9 @@ where
      */
     pub fn begin(&self, annotation: &A) {
         let d = annotation.diag();
-        print!("{:?} => ", d);
+        if self.config.trace(d.ln as usize) {
+            print!("{:?} => ", d);
+        }
     }
 
     /**
@@ -41,7 +47,9 @@ where
      */
     pub fn end(&self, annotation: &B) {
         let d = annotation.diag();
-        println!("{:?}", d);
+        if self.config.trace(d.ln as usize) {
+            println!("{:?}", d);
+        }
     }
 }
 

@@ -112,7 +112,7 @@ impl SemanticAst {
             }
             _ => self.semantic_annotations_from(*n.annotation()),
         };
-        let mut mapper = MapPreOrder::new("parser-to-semantic", f);
+        let mut mapper = MapPreOrder::new("parser-to-semantic", f, TracingConfig::Off);
         mapper.apply(m)
     }
 

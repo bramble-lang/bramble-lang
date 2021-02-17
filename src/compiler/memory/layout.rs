@@ -1,7 +1,7 @@
 use super::{struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
-use crate::ast::*;
+use crate::{ast::*, diagnostics::config::TracingConfig};
 use crate::{
     compiler::memory::scope::{CompilerAnnotation, LayoutData},
     semantics::semanticnode::SemanticAnnotations,
@@ -74,7 +74,7 @@ fn generate_stackframe_layout(
         annotation
     };
 
-    let mut mapper = MapPreOrder::new("layout", f);
+    let mut mapper = MapPreOrder::new("layout", f, TracingConfig::Off);
     mapper.apply(ast)
 }
 
