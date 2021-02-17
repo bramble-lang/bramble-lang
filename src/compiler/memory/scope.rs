@@ -1,4 +1,4 @@
-use crate::compiler::x86::assembly::Reg64;
+use crate::{compiler::x86::assembly::Reg64, diagnostics::Diag};
 use crate::semantics::semanticnode::SemanticAnnotations;
 use crate::{ast::*, compiler::arch::registers::RegSize};
 use crate::{compiler::x86::assembly::Reg, semantics};
@@ -55,6 +55,12 @@ impl Annotation for CompilerAnnotation {
 
     fn id(&self) -> u32 {
         self.id
+    }
+}
+
+impl Diag for CompilerAnnotation {
+    fn diag(&self) -> crate::diagnostics::DiagData {
+        todo!()
     }
 }
 

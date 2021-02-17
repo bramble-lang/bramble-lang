@@ -1,4 +1,4 @@
-use crate::ast::*;
+use crate::{ast::*, diagnostics::Diag};
 use crate::semantics::symbol_table::*;
 use crate::{diagnostics::config::TracingConfig, parser::parser::ParserInfo};
 
@@ -18,6 +18,12 @@ impl Annotation for SemanticAnnotations {
 
     fn line(&self) -> u32 {
         self.ln
+    }
+}
+
+impl Diag for SemanticAnnotations {
+    fn diag(&self) -> crate::diagnostics::DiagData {
+        todo!()
     }
 }
 

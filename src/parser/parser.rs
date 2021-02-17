@@ -3,11 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::{
-    ast::*,
-    diagnostics::config::TracingConfig,
-    lexer::tokens::{Lex, Primitive, Token},
-};
+use crate::{ast::*, diagnostics::{Diag, config::TracingConfig}, lexer::tokens::{Lex, Primitive, Token}};
 use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -29,6 +25,12 @@ impl Annotation for ParserInfo {
 
     fn line(&self) -> u32 {
         *self
+    }
+}
+
+impl Diag for ParserInfo {
+    fn diag(&self) -> crate::diagnostics::DiagData {
+        todo!()
     }
 }
 

@@ -1,7 +1,7 @@
 use fmt::Debug;
 use std::{fmt, marker::PhantomData};
 
-use crate::ast::module::*;
+use crate::{ast::module::*, diagnostics::{Diag, DiagRecorder}};
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
@@ -23,24 +23,27 @@ Compiler UI.
 */
 pub struct MapPreOrder<A, B, F>
 where
-    A: Debug + Annotation,
+    A: Debug + Annotation + Diag,
+    B: Diag,
     F: FnMut(&dyn Node<A>) -> B,
 {
     pub name: String,
     f: F,
+    diag: DiagRecorder<A, B>,
     ph: PhantomData<A>,
     ph2: PhantomData<B>,
 }
 
 impl<A, B, F> MapPreOrder<A, B, F>
 where
-    A: Debug + Annotation,
-    F: FnMut(&dyn Node<A>) -> B,
+    A: Debug + Annotation + Diag,
+    F: FnMut(&dyn Node<A>) -> B, B: Diag
 {
     pub fn new(name: &str, f: F) -> MapPreOrder<A, B, F> {
         MapPreOrder {
             name: name.into(),
             f,
+            diag: DiagRecorder::new(name),
             ph: PhantomData,
             ph2: PhantomData,
         }
@@ -295,7 +298,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::{module::Module, ty::Type};
+    use crate::{ast::{module::Module, ty::Type}, diagnostics::DiagData};
 
     impl Annotation for i32 {
         fn id(&self) -> u32 {
@@ -304,6 +307,14 @@ mod test {
 
         fn line(&self) -> u32 {
             0
+        }
+    }
+
+    impl Diag for i32 {
+        fn diag(&self) -> DiagData {
+            let mut d = DiagData::new(0, 0);
+            d.add("i32", "0");
+            d
         }
     }
 
@@ -317,6 +328,14 @@ mod test {
         }
     }
 
+    impl Diag for i64 {
+        fn diag(&self) -> DiagData {
+            let mut d = DiagData::new(0, 0);
+            d.add("i32", "0");
+            d
+        }
+    }
+
     impl Annotation for String {
         fn id(&self) -> u32 {
             0
@@ -324,6 +343,14 @@ mod test {
 
         fn line(&self) -> u32 {
             0
+        }
+    }
+
+    impl Diag for String {
+        fn diag(&self) -> DiagData {
+            let mut d = DiagData::new(0, 0);
+            d.add("i32", "0");
+            d
         }
     }
 
