@@ -1,7 +1,6 @@
-use fmt::{Debug, Display};
-use std::{fmt, marker::PhantomData};
+use std::fmt::{Debug, Display};
 
-use crate::ast::module::*;
+use crate::{ast::module::*, diagnostics::{Diag, DiagRecorder}};
 use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
@@ -25,18 +24,18 @@ new Annotation type.
 */
 pub struct ForEachPreOrderMut<A, T>
 where
-    A: Debug + Annotation,
+    A: Debug + Annotation + Diag,
     T: Fn(&A) -> String,
 {
     pub name: String,
     pub tracing: TracingConfig,
     pub format: T,
-    ph: PhantomData<A>,
+    diag: DiagRecorder<A, A>,
 }
 
 impl<A, T> ForEachPreOrderMut<A, T>
 where
-    A: Debug + Annotation,
+    A: Debug + Annotation + Diag,
     T: Fn(&A) -> String,
 {
     pub fn new(name: &str, tracing: TracingConfig, format: T) -> ForEachPreOrderMut<A, T> {
@@ -44,7 +43,7 @@ where
             name: name.into(),
             tracing,
             format,
-            ph: PhantomData,
+            diag: DiagRecorder::new(name, tracing),
         }
     }
 
