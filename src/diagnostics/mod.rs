@@ -30,6 +30,24 @@ where
     }
 
     /**
+    Marks the beginning of a unit of compilation.
+     */
+    pub fn start_trace(&self) {
+        if self.config != TracingConfig::Off {
+            println!("Starting {}", self.src);
+        }
+    }
+
+    /**
+    Marks the end of a unit of compilation.
+     */
+    pub fn end_trace(&self) {
+        if self.config != TracingConfig::Off {
+            println!("Complete {}", self.src);
+        }
+    }
+
+    /**
     Begins a new unit of diagnostic recording.  Run this with the value of the current
     node immediately before the Transformation is applied to the node and its Annotation.
     Then immediately after the transformation, run `end` on the result. This will print

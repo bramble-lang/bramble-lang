@@ -67,7 +67,10 @@ where
     of the new nodes.
     */
     pub fn apply(&mut self, m: &Module<A>) -> Module<B> {
-        self.for_module(m)
+        self.diag.start_trace();
+        let m = self.for_module(m);
+        self.diag.end_trace();
+        m
     }
 
     fn for_module(&mut self, m: &Module<A>) -> Module<B> {
