@@ -1,4 +1,4 @@
-use crate::{compiler::x86::assembly::Reg64, diagnostics::Diag};
+use crate::{compiler::x86::assembly::Reg64, diagnostics::{Diag, DiagData}};
 use crate::semantics::semanticnode::SemanticAnnotations;
 use crate::{ast::*, compiler::arch::registers::RegSize};
 use crate::{compiler::x86::assembly::Reg, semantics};
@@ -59,8 +59,14 @@ impl Annotation for CompilerAnnotation {
 }
 
 impl Diag for CompilerAnnotation {
-    fn diag(&self) -> crate::diagnostics::DiagData {
-        todo!()
+    fn diag(&self) -> DiagData {
+        let mut dd = DiagData::new(self.line, self.id);
+        dd.add("ty", &format!("{}", self.ty));
+        dd.add("symbols", &format!("{}", self.symbols));
+        dd.add("path", &format!("{}", self.canon_path));
+        dd.add("level", &format!("{}", self.level));
+        dd.add("reg_size", &format!("{:?}", self.reg_size));
+        dd
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{ast::*, diagnostics::Diag};
+use crate::{ast::*, diagnostics::{Diag, DiagData}};
 use crate::semantics::symbol_table::*;
 use crate::{diagnostics::config::TracingConfig, parser::parser::ParserInfo};
 
@@ -22,8 +22,12 @@ impl Annotation for SemanticAnnotations {
 }
 
 impl Diag for SemanticAnnotations {
-    fn diag(&self) -> crate::diagnostics::DiagData {
-        todo!()
+    fn diag(&self) -> DiagData {
+        let mut dd = DiagData::new(self.ln, self.id);
+        dd.add("ty", &format!("{}", self.ty));
+        dd.add("symbols", &format!("{}", self.sym));
+        dd.add("path", &format!("{}", self.canonical_path));
+        dd
     }
 }
 
