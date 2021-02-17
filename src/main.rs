@@ -55,12 +55,13 @@ fn main() {
     };
 
     // Type Check
-    let trace_semantic_analysis = TracingConfig::parse(config.value_of("trace-symbol-table"));
+    let trace_symbol_table = TracingConfig::parse(config.value_of("trace-symbol-table"));
+    let trace_type_resolver = TracingConfig::parse(config.value_of("trace-type-resolver"));
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
     let imported = configure_imported_functions();
 
     let semantic_ast =
-        match resolve_types_with_imports(&ast, &imported, trace_semantic_analysis, trace_path) {
+        match resolve_types_with_imports(&ast, &imported, trace_symbol_table, trace_type_resolver, trace_path) {
             Ok(ast) => ast,
             Err(msg) => {
                 println!("Error: {}", msg);
@@ -149,6 +150,12 @@ fn configure_cli() -> clap::App<'static, 'static> {
                 .long("trace-symbol-table")
                 .takes_value(true)
                 .help("Prints out a trace of the value of the symbol table at each node in the AST.  You can specify specify to only trace specific lines in the source code file.")
+        )
+        .arg(
+            Arg::with_name("trace-type-resolver")
+                .long("trace-type-resolver")
+                .takes_value(true)
+                .help("Traces the type resolution unit")
         )
         .arg(
             Arg::with_name("trace-path")

@@ -62,9 +62,6 @@ impl Diag for CompilerAnnotation {
     fn diag(&self) -> DiagData {
         let mut dd = DiagData::new(self.line, self.id);
         dd.add("ty", &format!("{}", self.ty));
-        dd.add("symbols", &format!("{}", self.symbols));
-        dd.add("path", &format!("{}", self.canon_path));
-        dd.add("level", &format!("{}", self.level));
         dd.add("reg_size", &format!("{:?}", self.reg_size));
         dd
     }

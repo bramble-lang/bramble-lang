@@ -25,7 +25,6 @@ impl Diag for SemanticAnnotations {
     fn diag(&self) -> DiagData {
         let mut dd = DiagData::new(self.ln, self.id);
         dd.add("ty", &format!("{}", self.ty));
-        dd.add("symbols", &format!("{}", self.sym));
         dd.add("path", &format!("{}", self.canonical_path));
         dd
     }
@@ -104,7 +103,7 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_module(&mut self, m: &Module<ParserInfo>) -> Module<SemanticAnnotations> {
+    pub fn from_module(&mut self, m: &Module<ParserInfo>, tracing: TracingConfig) -> Module<SemanticAnnotations> {
         let f = |n: &dyn Node<u32>| match n.node_type() {
             NodeType::Module => {
                 let name = n.name().unwrap();
@@ -112,7 +111,7 @@ impl SemanticAst {
             }
             _ => self.semantic_annotations_from(*n.annotation()),
         };
-        let mut mapper = MapPreOrder::new("parser-to-semantic", f, TracingConfig::Off);
+        let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);
         mapper.apply(m)
     }
 
