@@ -430,7 +430,6 @@ impl<'a> TypeResolver<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
-        self.trace(ast, current_func, sym);
         self.analyze_expression(ast, current_func, sym)
             .map_err(|e| {
                 if !e.starts_with("L") {
@@ -1081,52 +1080,6 @@ impl<'a> TypeResolver<'a> {
         }
 
         Ok(())
-    }
-
-    fn trace(
-        &self,
-        node: &SemanticNode,
-        current_func: &Option<String>,
-        current_scope: &SymbolTable,
-    ) {
-        let md = node.annotation();
-        let line = md.ln as usize;
-        let print_trace = match self.tracing {
-            TracingConfig::All => true,
-            TracingConfig::After(start) if start <= line => true,
-            TracingConfig::Before(end) if line <= end => true,
-            TracingConfig::Between(start, end) if start <= line && line <= end => true,
-            TracingConfig::Only(only) if line == only => true,
-            _ => false,
-        };
-        let print_path = match self.path_tracing {
-            TracingConfig::All => true,
-            TracingConfig::After(start) if start <= line => true,
-            TracingConfig::Before(end) if line <= end => true,
-            TracingConfig::Between(start, end) if start <= line && line <= end => true,
-            TracingConfig::Only(only) if line == only => true,
-            _ => false,
-        };
-
-        if print_trace {
-            let func = match current_func {
-                Some(f) => format!("{}: ", f),
-                None => "".into(),
-            };
-            println!("L{}: {}{}\n{}", line, func, node, self.stack);
-        }
-
-        if print_path {
-            let func = match current_func {
-                Some(f) => format!("{}: ", f),
-                None => "".into(),
-            };
-            let path = self
-                .stack
-                .to_path(current_scope)
-                .map_or("[]".into(), |p| format!("{}", p));
-            println!("L{}: {}{} <- {}", line, func, node, path);
-        }
     }
 }
 
