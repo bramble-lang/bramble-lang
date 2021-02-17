@@ -38,7 +38,7 @@ where
     pub fn begin(&self, annotation: &A) {
         let d = annotation.diag();
         if self.config.trace(d.ln as usize) {
-            print!("{:?} => ", d);
+            print!("{} => ", d);
         }
     }
 
@@ -48,7 +48,7 @@ where
     pub fn end(&self, annotation: &B) {
         let d = annotation.diag();
         if self.config.trace(d.ln as usize) {
-            println!("{:?}", d);
+            println!("{}", d);
         }
     }
 }
@@ -100,5 +100,19 @@ impl DiagData {
                 history.len()
             }
         }
+    }
+}
+
+impl std::fmt::Display for DiagData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("L{}n{}: ", self.ln, self.node_id))?;
+        for (k,values) in self.data.iter() {
+            f.write_fmt(format_args!("{{{}: [", k))?;
+            for val in values {
+                f.write_fmt(format_args!("{}, ", val))?;
+            }
+            f.write_str("]}, ")?;
+        }
+        Ok(())
     }
 }
