@@ -31,7 +31,7 @@ where
     Then immediately after the transformation, run `end` on the result. This will print
     diagnostic output to the screen.
      */
-    pub fn begin(&self, annotation: A) {
+    pub fn begin(&self, annotation: &A) {
         let d = annotation.diag();
         print!("{:?} => ", d);
     }
@@ -39,7 +39,7 @@ where
     /**
     Completes a diagnostic unit.
      */
-    pub fn end(&self, annotation: B) {
+    pub fn end(&self, annotation: &B) {
         let d = annotation.diag();
         println!("{:?}", d);
     }
