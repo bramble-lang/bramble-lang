@@ -11,21 +11,21 @@ use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 pub fn resolve_types(
     ast: &Module<ParserInfo>,
     trace: TracingConfig,
-    trace_symbol_table: TracingConfig,
+    trace_semantic_node: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
-    resolve_types_with_imports(ast, &vec![], trace_symbol_table, trace, trace_path)
+    resolve_types_with_imports(ast, &vec![], trace_semantic_node, trace, trace_path)
 }
 
 pub fn resolve_types_with_imports(
     ast: &Module<ParserInfo>,
     imported_functions: &Vec<(Path, Vec<Type>, Type)>,
-    trace_symbol_table: TracingConfig,
+    trace_semantic_node: TracingConfig,
     trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
-    let mut sm_ast = sa.from_module(&ast, trace_symbol_table);
+    let mut sm_ast = sa.from_module(&ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
     let mut semantic = TypeResolver::new(&sm_ast);

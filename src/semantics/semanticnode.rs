@@ -24,8 +24,7 @@ impl Annotation for SemanticAnnotations {
 impl Diag for SemanticAnnotations {
     fn diag(&self) -> DiagData {
         let mut dd = DiagData::new(self.ln, self.id);
-        dd.add("ty", &format!("{}", self.ty));
-        dd.add("path", &format!("{}", self.canonical_path));
+        dd.add("sym", &format!("{}", self.sym));
         dd
     }
 }
