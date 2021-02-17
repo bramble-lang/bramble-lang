@@ -1,12 +1,8 @@
 use std::fmt::Debug;
 
-use crate::ast::routinedef::*;
-use crate::ast::statement::*;
-use crate::ast::structdef::*;
-use crate::ast::Expression;
 use crate::diagnostics::config::TracingConfig;
 use crate::{
-    ast::module::*,
+    ast::{module::*, routinedef::*, statement::*, structdef::*, Expression},
     diagnostics::{Diag, DiagRecorder},
 };
 
