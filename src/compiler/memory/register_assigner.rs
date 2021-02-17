@@ -16,7 +16,7 @@ pub fn assign(
     struct_table: &ResolvedStructTable,
 ) {
     let tm = ForEachPreOrderMut::new("Register Assigner", tracing, trace);
-    tm.for_module(m, |a| {
+    tm.for_each(m, |a| {
         assign_register(a, struct_table);
     })
 }

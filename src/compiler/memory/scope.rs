@@ -1,7 +1,10 @@
-use crate::compiler::x86::assembly::Reg64;
 use crate::semantics::semanticnode::SemanticAnnotations;
 use crate::{ast::*, compiler::arch::registers::RegSize};
 use crate::{compiler::x86::assembly::Reg, semantics};
+use crate::{
+    compiler::x86::assembly::Reg64,
+    diagnostics::{Diag, DiagData},
+};
 
 use super::{
     struct_table::ResolvedStructTable,
@@ -55,6 +58,15 @@ impl Annotation for CompilerAnnotation {
 
     fn id(&self) -> u32 {
         self.id
+    }
+}
+
+impl Diag for CompilerAnnotation {
+    fn diag(&self) -> DiagData {
+        let mut dd = DiagData::new(self.line, self.id);
+        dd.add("ty", &format!("{}", self.ty));
+        dd.add("reg_size", &format!("{:?}", self.reg_size));
+        dd
     }
 }
 

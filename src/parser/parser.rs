@@ -5,7 +5,7 @@ use stdext::function_name;
 
 use crate::{
     ast::*,
-    diagnostics::config::TracingConfig,
+    diagnostics::{config::TracingConfig, Diag, DiagData},
     lexer::tokens::{Lex, Primitive, Token},
 };
 use braid_lang::result::Result;
@@ -29,6 +29,12 @@ impl Annotation for ParserInfo {
 
     fn line(&self) -> u32 {
         *self
+    }
+}
+
+impl Diag for ParserInfo {
+    fn diag(&self) -> DiagData {
+        DiagData::new(*self, 0)
     }
 }
 

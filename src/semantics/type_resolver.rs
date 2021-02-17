@@ -11,20 +11,21 @@ use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 pub fn resolve_types(
     ast: &Module<ParserInfo>,
     trace: TracingConfig,
+    trace_semantic_node: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
-    resolve_types_with_imports(ast, &vec![], trace, trace_path)
+    resolve_types_with_imports(ast, &vec![], trace_semantic_node, trace, trace_path)
 }
 
 pub fn resolve_types_with_imports(
     ast: &Module<ParserInfo>,
     imported_functions: &Vec<(Path, Vec<Type>, Type)>,
-    trace: TracingConfig,
+    trace_semantic_node: TracingConfig,
+    trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
-    //let mut sm_ast = sa.from_module(&ast)?;
-    let mut sm_ast = sa.from_module(&ast);
+    let mut sm_ast = sa.from_module(&ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
     let mut semantic = TypeResolver::new(&sm_ast);
@@ -33,7 +34,7 @@ pub fn resolve_types_with_imports(
         semantic.import_function(name.clone(), params.clone(), ret_ty.clone());
     }
 
-    semantic.set_tracing(trace);
+    semantic.set_tracing(trace_type_resolver);
     semantic.path_tracing = trace_path;
     semantic.resolve_types()
 }
@@ -429,7 +430,6 @@ impl<'a> TypeResolver<'a> {
         current_func: &Option<String>,
         sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
-        self.trace(ast, current_func, sym);
         self.analyze_expression(ast, current_func, sym)
             .map_err(|e| {
                 if !e.starts_with("L") {
@@ -1081,52 +1081,6 @@ impl<'a> TypeResolver<'a> {
 
         Ok(())
     }
-
-    fn trace(
-        &self,
-        node: &SemanticNode,
-        current_func: &Option<String>,
-        current_scope: &SymbolTable,
-    ) {
-        let md = node.annotation();
-        let line = md.ln as usize;
-        let print_trace = match self.tracing {
-            TracingConfig::All => true,
-            TracingConfig::After(start) if start <= line => true,
-            TracingConfig::Before(end) if line <= end => true,
-            TracingConfig::Between(start, end) if start <= line && line <= end => true,
-            TracingConfig::Only(only) if line == only => true,
-            _ => false,
-        };
-        let print_path = match self.path_tracing {
-            TracingConfig::All => true,
-            TracingConfig::After(start) if start <= line => true,
-            TracingConfig::Before(end) if line <= end => true,
-            TracingConfig::Between(start, end) if start <= line && line <= end => true,
-            TracingConfig::Only(only) if line == only => true,
-            _ => false,
-        };
-
-        if print_trace {
-            let func = match current_func {
-                Some(f) => format!("{}: ", f),
-                None => "".into(),
-            };
-            println!("L{}: {}{}\n{}", line, func, node, self.stack);
-        }
-
-        if print_path {
-            let func = match current_func {
-                Some(f) => format!("{}: ", f),
-                None => "".into(),
-            };
-            let path = self
-                .stack
-                .to_path(current_scope)
-                .map_or("[]".into(), |p| format!("{}", p));
-            println!("L{}: {}{} <- {}", line, func, node, path);
-        }
-    }
 }
 
 #[cfg(test)]
@@ -1181,7 +1135,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1235,7 +1194,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
@@ -1286,7 +1250,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             assert!(result.is_ok());
         }
     }
@@ -1324,7 +1293,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
@@ -1366,7 +1340,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
@@ -1422,7 +1402,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1459,7 +1439,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_functions()[0] {
                 if let Parameter {
                     ty: Type::Custom(ty_path),
@@ -1494,7 +1480,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
                     let expected: Path = vec!["root", "test"].into();
@@ -1523,7 +1515,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let result = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
@@ -1612,7 +1610,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1696,7 +1699,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1754,7 +1762,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1823,7 +1836,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1893,7 +1911,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1963,7 +1986,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2042,7 +2070,12 @@ mod tests {
                     .collect::<Result<_>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+                let module = resolve_types(
+                    &ast,
+                    TracingConfig::Off,
+                    TracingConfig::Off,
+                    TracingConfig::Off,
+                );
                 match expected {
                     Ok(expected_ty) => {
                         let module = module.unwrap();
@@ -2163,7 +2196,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2244,7 +2282,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2322,7 +2365,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2480,7 +2528,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2585,7 +2633,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2668,7 +2716,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2743,7 +2796,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2804,7 +2862,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2869,7 +2932,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2962,7 +3030,12 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -3181,7 +3254,7 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -3215,7 +3288,7 @@ mod tests {
                     .collect::<Result<_>>()
                     .unwrap();
                 let ast = parser::parse(tokens).unwrap().unwrap();
-                let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off);
+                let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -3318,7 +3391,7 @@ mod tests {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let mut sa = SemanticAst::new();
-            let mut sm_ast = sa.from_module(&ast);
+            let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
             SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
 
             let mut semantic = TypeResolver::new(&sm_ast);

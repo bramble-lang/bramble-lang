@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TracingConfig {
     All,
     Between(usize, usize),
@@ -9,6 +9,17 @@ pub enum TracingConfig {
 }
 
 impl TracingConfig {
+    pub fn trace(&self, ln: usize) -> bool {
+        match self {
+            TracingConfig::All => true,
+            TracingConfig::Off => false,
+            TracingConfig::Between(start, stop) => *start <= ln && ln <= *stop,
+            TracingConfig::Before(stop) => ln <= *stop,
+            TracingConfig::After(start) => *start <= ln,
+            TracingConfig::Only(l) => ln == *l,
+        }
+    }
+
     pub fn parse(v: Option<&str>) -> TracingConfig {
         match v.map(|v| v.to_lowercase()) {
             Some(s) if s == "all" => TracingConfig::All,

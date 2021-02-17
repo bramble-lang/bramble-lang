@@ -1,7 +1,7 @@
 use super::{struct_table, symbol_table::Symbol};
 use struct_table::ResolvedStructTable;
 
-use crate::ast::*;
+use crate::{ast::*, diagnostics::config::TracingConfig};
 use crate::{
     compiler::memory::scope::{CompilerAnnotation, LayoutData},
     semantics::semanticnode::SemanticAnnotations,
@@ -74,7 +74,7 @@ fn generate_stackframe_layout(
         annotation
     };
 
-    let mut mapper = MapPreOrder::new("layout", f);
+    let mut mapper = MapPreOrder::new("layout", f, TracingConfig::Off);
     mapper.apply(ast)
 }
 
@@ -201,7 +201,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
 
             let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
             if let Some(Item::Routine(func)) = compiler_ast.get_item("test") {
@@ -289,7 +295,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off).unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            )
+            .unwrap();
 
             let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
             if let Some(Item::Routine(func)) = compiler_ast.get_item("test") {
