@@ -59,7 +59,16 @@ where
         self.diag.end(a);
     }
 
-    pub fn for_module<F>(&self, m: &mut Module<A>, f: F)
+    pub fn for_each<F>(&self, m: &mut Module<A>, f: F)
+    where
+        F: FnMut(&mut A) + Copy,
+    {
+        self.diag.start_trace();
+        self.for_module(m, f);
+        self.diag.end_trace();
+    }
+
+    fn for_module<F>(&self, m: &mut Module<A>, f: F)
     where
         F: FnMut(&mut A) + Copy,
     {
