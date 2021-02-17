@@ -2,28 +2,24 @@ use std::{collections::HashMap, marker::PhantomData};
 
 pub mod config;
 
-pub struct DiagRecorder<A, B, F1, F2>
+pub struct DiagRecorder<A, B>
 where
-    F1: Fn(A) -> DiagData,
-    F2: Fn(B) -> DiagData,
+    A: Diag,
+    B: Diag,
 {
     src: String,
-    begin_f: F1,
-    end_f: F2,
     ph_a: PhantomData<A>,
     ph_b: PhantomData<B>,
 }
 
-impl<A, B, F1, F2> DiagRecorder<A, B, F1, F2>
+impl<A, B> DiagRecorder<A, B>
 where
-    F1: Fn(A) -> DiagData,
-    F2: Fn(B) -> DiagData,
+    A: Diag,
+    B: Diag,
 {
-    pub fn new(src: &str, begin_f: F1, end_f: F2) -> DiagRecorder<A, B, F1, F2> {
+    pub fn new(src: &str) -> DiagRecorder<A, B> {
         DiagRecorder{
             src: src.into(),
-            begin_f,
-            end_f,
             ph_a: PhantomData,
             ph_b: PhantomData,
         }
@@ -36,7 +32,7 @@ where
     diagnostic output to the screen.
      */
     pub fn begin(&self, annotation: A) {
-        let d = (self.begin_f)(annotation);
+        let d = annotation.diag();
         print!("{:?} => ", d);
     }
 
@@ -44,9 +40,13 @@ where
     Completes a diagnostic unit.
      */
     pub fn end(&self, annotation: B) {
-        let d = (self.end_f)(annotation);
+        let d = annotation.diag();
         println!("{:?}", d);
     }
+}
+
+pub trait Diag {
+    fn diag(&self) -> DiagData;
 }
 
 /**
