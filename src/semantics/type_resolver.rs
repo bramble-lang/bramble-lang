@@ -174,25 +174,31 @@ impl<'a> TypeResolver<'a> {
         }
 
         let mut meta = annotations.clone();
+
+        // canonize routine parameter types
         let canonical_params = self.params_to_canonical(sym, &params)?;
+        meta.ty = self.canonize_local_type_ref(sym, p)?;
+        meta.set_canonical_path(canon_path);
+
+
         for p in canonical_params.iter() {
             meta.sym.add(&p.name, p.ty.clone(), false)?;
         }
+
         let tmp_sym = sym.clone();
         self.stack.push(tmp_sym);
+
         let mut resolved_body = vec![];
         for stmt in body.iter() {
             let exp = self.analyze_statement(stmt, &Some(name.clone()), &mut meta.sym)?;
             resolved_body.push(exp);
         }
+
         self.stack.pop();
-        meta.ty = self.canonize_local_type_ref(sym, p)?;
 
-        let canonical_ret_ty = self.canonize_local_type_ref(sym, &meta.ty)?;
-
-        meta.set_canonical_path(canon_path);
+        let canonical_ret_ty = meta.ty.clone();
         Ok(RoutineDef {
-            annotations: meta.clone(),
+            annotations: meta,
             def: def.clone(),
             name: name.clone(),
             params: canonical_params,
