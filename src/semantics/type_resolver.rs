@@ -650,8 +650,10 @@ impl<'a> TypeResolver<'a> {
             Expression::ExpressionBlock(meta, body, final_exp) => {
                 let mut meta = meta.clone();
                 let mut resolved_body = vec![];
+
                 let tmp_sym = sym.clone();
                 self.stack.push(tmp_sym);
+
                 for stmt in body.iter() {
                     let exp = self.analyze_statement(stmt, current_func, &mut meta.sym)?;
                     resolved_body.push(exp);
@@ -665,7 +667,9 @@ impl<'a> TypeResolver<'a> {
                         (Some(Box::new(fe)), ty)
                     }
                 };
+
                 self.stack.pop();
+
                 meta.ty = block_ty;
                 Ok(Expression::ExpressionBlock(
                     meta.clone(),
