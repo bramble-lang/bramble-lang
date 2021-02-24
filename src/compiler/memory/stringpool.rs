@@ -142,10 +142,6 @@ impl StringPool {
         self.extract_from(mutate.get_rhs())
     }
 
-    pub fn extract_from_yield(&mut self, y: &Yield<CompilerAnnotation>) {
-        self.extract_from(y.get_value())
-    }
-
     pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<CompilerAnnotation>) {
         match yr.get_value() {
             None => (),

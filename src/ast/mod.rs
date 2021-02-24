@@ -16,6 +16,6 @@ pub use self::node::{
 pub use self::parameter::Parameter;
 pub use self::path::Path;
 pub use self::routinedef::{RoutineDef, RoutineDefType};
-pub use self::statement::{Bind, Mutate, Return, Statement, Yield, YieldReturn};
+pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;
 pub use self::ty::Type;

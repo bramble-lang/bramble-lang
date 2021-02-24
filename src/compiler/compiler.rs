@@ -744,18 +744,6 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn traverse_yield(
-        &mut self,
-        y: &'a Yield<CompilerAnnotation>,
-        current_func: &String,
-        code: &mut Vec<Inst>,
-    ) -> Result<(), String> {
-        assembly! {(code) {
-            {{self.yield_exp(y.annotation(), y.get_value(), current_func)?}}
-        }}
-        Ok(())
-    }
-
     fn traverse_yieldreturn(
         &mut self,
         yr: &'a YieldReturn<CompilerAnnotation>,
