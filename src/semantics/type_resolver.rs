@@ -175,7 +175,7 @@ impl<'a> TypeResolver<'a> {
 
         // canonize routine parameter types
         let canonical_params = self.params_to_canonical(sym, &params)?;
-        meta.ty = self.canonize_local_type_ref(sym, p)?;
+        meta.ty = self.stack.canonize_local_type_ref(sym, p)?;
         meta.set_canonical_path(canon_path);
 
 
@@ -277,7 +277,7 @@ impl<'a> TypeResolver<'a> {
         let result = match current_func {
             Some(_) => {
                 let mut meta = meta.clone();
-                meta.ty = self.canonize_local_type_ref(sym, bind.get_type())?;
+                meta.ty = self.stack.canonize_local_type_ref(sym, bind.get_type())?;
                 let rhs = self.traverse(rhs, current_func, sym)?;
                 if meta.ty == rhs.get_type() {
                     match sym.add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
@@ -368,7 +368,7 @@ impl<'a> TypeResolver<'a> {
                     Some(val) => {
                         let exp = self.traverse(val, current_func, sym)?;
                         let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
-                        let ret_ty = self.canonize_local_type_ref(sym, ret_ty)?;
+                        let ret_ty = self.stack.canonize_local_type_ref(sym, ret_ty)?;
                         if ret_ty == exp.get_type() {
                             meta.ty = ret_ty;
                             Ok(YieldReturn::new(meta, Some(exp)))
@@ -409,7 +409,7 @@ impl<'a> TypeResolver<'a> {
                     Some(val) => {
                         let exp = self.traverse(val, current_func, sym)?;
                         let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
-                        let ret_ty = self.canonize_local_type_ref(sym, ret_ty)?;
+                        let ret_ty = self.stack.canonize_local_type_ref(sym, ret_ty)?;
                         if ret_ty == exp.get_type() {
                             meta.ty = ret_ty;
                             Ok(Return::new(meta, Some(exp)))
@@ -489,7 +489,7 @@ impl<'a> TypeResolver<'a> {
                 Some(_) => {
                     let mut meta = meta.clone();
                     match self.lookup_var(sym, &id)? {
-                        Symbol { ty: p, .. } => meta.ty = self.canonize_local_type_ref(sym, p)?,
+                        Symbol { ty: p, .. } => meta.ty = self.stack.canonize_local_type_ref(sym, p)?,
                     };
                     Ok(Expression::Identifier(meta.clone(), id.clone()))
                 }
@@ -589,7 +589,7 @@ impl<'a> TypeResolver<'a> {
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func, sym)?;
                     meta.ty = match exp.get_type() {
-                        Type::Coroutine(ret_ty) => self.canonize_local_type_ref(sym, ret_ty)?,
+                        Type::Coroutine(ret_ty) => self.stack.canonize_local_type_ref(sym, ret_ty)?,
                         _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                     };
                     Ok(Expression::Yield(meta, Box::new(exp)))
@@ -633,7 +633,7 @@ impl<'a> TypeResolver<'a> {
                     ) {
                         Err(msg) => Err(msg),
                         Ok(()) => {
-                            meta.ty = self.canonize_local_type_ref(sym, &ret_ty)?;
+                            meta.ty = self.stack.canonize_local_type_ref(sym, &ret_ty)?;
                             Ok(Expression::RoutineCall(
                                 meta.clone(),
                                 *call,
@@ -735,7 +735,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = y.annotation().clone();
                 let exp = self.traverse(y.get_value(), current_func, sym)?;
                 meta.ty = match exp.get_type() {
-                    Type::Coroutine(ret_ty) => self.canonize_local_type_ref(sym, ret_ty)?,
+                    Type::Coroutine(ret_ty) => self.stack.canonize_local_type_ref(sym, ret_ty)?,
                     _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                 };
                 Ok(Yield::new(meta, exp))
@@ -849,24 +849,6 @@ impl<'a> TypeResolver<'a> {
     }
 
     /**
-    Given a type reference that appears in the current node, will convert that type reference
-    to a canonical path from a relative path.  If the type reference is already an absolute
-    path then no change is made.
-
-    For example, the path `super::MyStruct` would be converted to `root::my_module::MyStruct`
-    if the current node were in a module contained within `my_module`.
-     */
-    fn canonize_local_type_ref(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
-        match ty {
-            Type::Custom(path) => Ok(Type::Custom(
-                path.to_canonical(&self.get_current_path(sym)?)?,
-            )),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.canonize_local_type_ref(sym, &ty)?))),
-            _ => Ok(ty.clone()),
-        }
-    }
-
-    /**
     Given a type reference that appears in a node that is not the curren node, will convert 
     that type reference to a canonical path from a relative path.  If the type reference is 
     already an absolute path then no change is made.  This is used for indirect type reference
@@ -894,7 +876,7 @@ impl<'a> TypeResolver<'a> {
         let mut canonical_params = vec![];
         for p in params.iter() {
             let mut p2 = p.clone();
-            p2.ty = self.canonize_local_type_ref(sym, &p.ty)?;
+            p2.ty = self.stack.canonize_local_type_ref(sym, &p.ty)?;
             p2.annotation_mut().ty = p2.ty.clone();
             canonical_params.push(p2);
         }
@@ -909,7 +891,7 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<Vec<(String, Type)>> {
         let mut canonical_fields = vec![];
         for (n, t) in fields.iter() {
-            let t = self.canonize_local_type_ref(sym, t)?;
+            let t = self.stack.canonize_local_type_ref(sym, t)?;
             canonical_fields.push((n.clone(), t));
         }
         Ok(canonical_fields)

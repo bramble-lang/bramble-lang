@@ -1,5 +1,5 @@
 use braid_lang::result::Result;
-use crate::ast::{Module, Path};
+use crate::ast::{Module, Path, Type};
 
 use super::{semanticnode::SemanticAnnotations, symbol_table::{ScopeType, Symbol, SymbolTable}};
 
@@ -47,9 +47,26 @@ impl<'a> SymbolTableScopeStack<'a> {
         None
     }
 
-    /// Converts the stack of symbol table scopes into an absolute path
-    /// from the root scope down to the current scope (represented by 
-    /// `sym`)
+    /**
+    Given a type reference that appears in the current node, will convert that type reference
+    to a canonical path from a relative path.  If the type reference is already an absolute
+    path then no change is made.
+
+    For example, the path `super::MyStruct` would be converted to `root::my_module::MyStruct`
+    if the current node were in a module contained within `my_module`.
+     */
+    pub fn canonize_local_type_ref(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
+        match ty {
+            Type::Custom(path) => Ok(Type::Custom(
+                self.to_canonical(sym, path)?
+            )),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.canonize_local_type_ref(sym, &ty)?))),
+            _ => Ok(ty.clone()),
+        }
+    }
+
+    /// Converts a relative path, `path`, into a canonical path by merging it with
+    /// the path to the current node, as represented by the stack.
     pub fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path> {
         let current_path = self.to_path(sym).ok_or("A valid path is expected")?;
         path.to_canonical(&current_path)
