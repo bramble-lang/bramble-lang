@@ -40,8 +40,8 @@ pub fn resolve_types_with_imports(
 }
 
 pub struct TypeResolver<'a> {
-    root: &'a Module<SemanticAnnotations>,
-    stack: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
+    //root: &'a Module<SemanticAnnotations>,
+    stack: SymbolTableScopeStack<'a>, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
@@ -57,8 +57,7 @@ impl<'a> Tracing for TypeResolver<'a> {
 impl<'a> TypeResolver<'a> {
     pub fn new(root: &'a Module<SemanticAnnotations>) -> TypeResolver {
         TypeResolver {
-            root,
-            stack: SymbolTableScopeStack::new(),
+            stack: SymbolTableScopeStack::new(root),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
@@ -87,7 +86,7 @@ impl<'a> TypeResolver<'a> {
 
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
         let mut empty_table = SymbolTable::new();
-        self.analyze_module(self.root, &mut empty_table)
+        self.analyze_module(self.stack.root, &mut empty_table)
             .map_err(|e| format!("Semantic: {}", e))
     }
 
@@ -941,7 +940,7 @@ impl<'a> TypeResolver<'a> {
 
             // Look in the project being compiled
             let project_symbol = self
-                .root
+                .stack.root()
                 .go_to_module(&canon_path.parent())
                 .map(|module| module.annotation().sym.get(&item))
                 .flatten();

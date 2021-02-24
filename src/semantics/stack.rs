@@ -1,13 +1,14 @@
-use crate::ast::Path;
+use crate::ast::{Module, Path};
 
-use super::symbol_table::{ScopeType, Symbol, SymbolTable};
+use super::{semanticnode::SemanticAnnotations, symbol_table::{ScopeType, Symbol, SymbolTable}};
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SymbolTableScopeStack {
+pub struct SymbolTableScopeStack<'a> {
     stack: Vec<SymbolTable>,
+    pub(super) root: &'a Module<SemanticAnnotations>,
 }
 
-impl std::fmt::Display for SymbolTableScopeStack {
+impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut i = 0;
         for scope in self.stack.iter() {
@@ -18,9 +19,9 @@ impl std::fmt::Display for SymbolTableScopeStack {
     }
 }
 
-impl SymbolTableScopeStack {
-    pub fn new() -> SymbolTableScopeStack {
-        SymbolTableScopeStack { stack: vec![] }
+impl<'a> SymbolTableScopeStack<'a> {
+    pub fn new(root: &'a Module<SemanticAnnotations>) -> SymbolTableScopeStack {
+        SymbolTableScopeStack { stack: vec![], root }
     }
 
     pub fn push(&mut self, sym: SymbolTable) {
@@ -29,6 +30,10 @@ impl SymbolTableScopeStack {
 
     pub fn pop(&mut self) {
         self.stack.pop();
+    }
+
+    pub fn root(&self) -> &Module<SemanticAnnotations> {
+        self.root
     }
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
@@ -69,7 +74,7 @@ impl SymbolTableScopeStack {
     }
 }
 
-#[cfg(test)]
+/*#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -131,3 +136,4 @@ mod tests {
         assert_eq!(path, expected);
     }
 }
+*/
