@@ -76,6 +76,9 @@ impl<'a> SymbolTableScopeStack<'a> {
         None
     }
 
+    /// Finds the given variable in the current symbol table or in the symbol table history
+    /// Follows scoping rules, so when a boundary scope is reached (e.g. a Routine) it will
+    /// stop searching
     pub fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
         let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
         match symbol.ty {
@@ -93,7 +96,14 @@ impl<'a> SymbolTableScopeStack<'a> {
         }
     }
 
-    pub fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
+    /// Specifically looks for a routine (function or coroutine) with the given ID.  Will search upward through the scope
+    /// hierarchy until a symbol is found that matches `id`. If that symbol is a routine it is returned
+    /// if the symbol is not a routine `Err` is returned.  If no symbol is found `Err` is returned.
+    pub fn lookup_func_or_cor(
+        &'a self,
+        sym: &'a SymbolTable,
+        id: &str,
+    ) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -107,7 +117,14 @@ impl<'a> SymbolTableScopeStack<'a> {
         }
     }
 
-    pub fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
+    /// Specifically looks for a coroutine with the given ID.  Will search upward through the scope
+    /// hierarchy until a symbol is found that matches `id`. If that symbol is a coroutine it is returned
+    /// if the symbol is not a coroutine `Err` is returned.  If no symbol is found `Err` is returned.
+    pub fn lookup_coroutine(
+        &'a self,
+        sym: &'a SymbolTable,
+        id: &str,
+    ) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
