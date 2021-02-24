@@ -10,9 +10,10 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTableScopeStack<'a> {
+    pub(super) root: &'a Module<SemanticAnnotations>,
+
     stack: Vec<SymbolTable>,
     head: SymbolTable,
-    pub(super) root: &'a Module<SemanticAnnotations>,
     imported_symbols: HashMap<String, Symbol>,
 }
 
