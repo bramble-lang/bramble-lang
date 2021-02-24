@@ -11,6 +11,7 @@ use super::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTableScopeStack<'a> {
     stack: Vec<SymbolTable>,
+    head: SymbolTable,
     pub(super) root: &'a Module<SemanticAnnotations>,
     imported_symbols: HashMap<String, Symbol>,
 }
@@ -18,9 +19,10 @@ pub struct SymbolTableScopeStack<'a> {
 impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut i = 0;
+        f.write_fmt(format_args!("{}: {}\n", i, self.head))?;
         for scope in self.stack.iter() {
-            f.write_fmt(format_args!("{}: {}\n", i, scope))?;
             i += 1;
+            f.write_fmt(format_args!("{}: {}\n", i, scope))?;
         }
         Ok(())
     }
@@ -30,6 +32,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     pub fn new(root: &'a Module<SemanticAnnotations>) -> SymbolTableScopeStack {
         SymbolTableScopeStack {
             stack: vec![],
+            head: SymbolTable::new(),
             root,
             imported_symbols: HashMap::new(),
         }
@@ -55,11 +58,24 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 
     pub fn push(&mut self, sym: &SymbolTable) {
-        self.stack.push(sym.clone());
+        self.stack.push(self.head.clone());
+        self.head = sym.clone();
     }
 
     pub fn pop(&mut self) {
-        self.stack.pop();
+        self.head = self.stack.pop().unwrap();
+    }
+
+    pub fn head(&self) -> &SymbolTable {
+        &self.head
+    }
+
+    pub fn head_mut(&mut self) -> &mut SymbolTable {
+        &mut self.head
+    }
+
+    pub fn set_head(&mut self, h: SymbolTable) {
+        self.head = h;
     }
 
     pub fn root(&self) -> &Module<SemanticAnnotations> {
@@ -67,11 +83,16 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
-        for scope in self.stack.iter().rev() {
-            match scope.get(name) {
-                Some(v) => return Some(v),
-                None => {}
-            };
+        match self.head.get(name) {
+            Some(v) => return Some(v),
+            None => {
+                for scope in self.stack.iter().rev() {
+                    match scope.get(name) {
+                        Some(v) => return Some(v),
+                        None => {}
+                    };
+                }
+            }
         }
         None
     }
@@ -246,6 +267,11 @@ impl<'a> SymbolTableScopeStack<'a> {
             }
         }
 
+        match self.head.scope_type() {
+            ScopeType::Module { name } => steps.push(name.clone()),
+            _ => (),
+        }
+
         match current.scope_type() {
             ScopeType::Module { name } => steps.push(name.clone()),
             _ => (),
@@ -265,7 +291,10 @@ mod tests {
 
     #[test]
     fn test_empty_stack_to_path() {
-        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
         let stack = SymbolTableScopeStack::new(&m);
         let local = SymbolTable::new();
         let path = stack.to_path(&local);
@@ -274,7 +303,10 @@ mod tests {
 
     #[test]
     fn test_one_module_stack_to_path() {
-        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("root");
         stack.push(&sym);
@@ -286,7 +318,10 @@ mod tests {
 
     #[test]
     fn test_one_module_stack_module_current_to_path() {
-        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("root");
         stack.push(&sym);
@@ -298,7 +333,10 @@ mod tests {
 
     #[test]
     fn test_local_then_one_module_stack_to_path() {
-        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
         let mut stack = SymbolTableScopeStack::new(&m);
         let module = SymbolTable::new_module("root");
         stack.push(&module);
@@ -312,7 +350,10 @@ mod tests {
 
     #[test]
     fn test_local_then_two_module_stack_to_path() {
-        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
         let mut stack = SymbolTableScopeStack::new(&m);
         let module = SymbolTable::new_module("first");
         stack.push(&module);
