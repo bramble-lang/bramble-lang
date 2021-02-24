@@ -62,8 +62,10 @@ impl<'a> SymbolTableScopeStack<'a> {
         self.head = sym.clone();
     }
 
-    pub fn pop(&mut self) {
+    pub fn pop(&mut self) -> SymbolTable {
+        let tmp = self.head.clone();
         self.head = self.stack.pop().unwrap();
+        tmp
     }
 
     pub fn head(&self) -> &SymbolTable {
