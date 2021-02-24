@@ -236,7 +236,7 @@ impl<'a> TypeResolver<'a> {
         let mut meta = struct_def.annotation().clone();
         meta.ty = Type::Unit;
         meta.set_canonical_path(
-            self.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
+            self.stack.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
         );
 
         Ok(StructDef::new(
@@ -848,12 +848,6 @@ impl<'a> TypeResolver<'a> {
             .ok_or("A valid path is expected".into())
     }
 
-    /// Convert a path to its canonical form by merging with the ancestors in the AST.
-    fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path> {
-        let current_path = self.stack.to_path(sym).ok_or("A valid path is expected")?;
-        path.to_canonical(&current_path)
-    }
-
     /**
     Given a type reference that appears in the current node, will convert that type reference
     to a canonical path from a relative path.  If the type reference is already an absolute
@@ -926,7 +920,7 @@ impl<'a> TypeResolver<'a> {
         sym: &'a SymbolTable,
         path: &Path,
     ) -> Result<(&'a Symbol, Path)> {
-        let canon_path = self.to_canonical(sym, path)?;
+        let canon_path = self.stack.to_canonical(sym, path)?;
 
         if path.len() > 1 {
             // If the path contains more than just the item's name then

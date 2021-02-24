@@ -1,3 +1,4 @@
+use braid_lang::result::Result;
 use crate::ast::{Module, Path};
 
 use super::{semanticnode::SemanticAnnotations, symbol_table::{ScopeType, Symbol, SymbolTable}};
@@ -44,6 +45,14 @@ impl<'a> SymbolTableScopeStack<'a> {
             };
         }
         None
+    }
+
+    /// Converts the stack of symbol table scopes into an absolute path
+    /// from the root scope down to the current scope (represented by 
+    /// `sym`)
+    pub fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path> {
+        let current_path = self.to_path(sym).ok_or("A valid path is expected")?;
+        path.to_canonical(&current_path)
     }
 
     /// Starting from the bottom of the stack this builds a path
