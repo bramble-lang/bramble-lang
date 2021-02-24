@@ -259,13 +259,14 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_empty_stack_to_path() {
-        let stack = SymbolTableScopeStack::new();
+        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let stack = SymbolTableScopeStack::new(&m);
         let local = SymbolTable::new();
         let path = stack.to_path(&local);
         assert_eq!(path, None);
@@ -273,9 +274,10 @@ mod tests {
 
     #[test]
     fn test_one_module_stack_to_path() {
-        let mut stack = SymbolTableScopeStack::new();
+        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("root");
-        stack.push(sym);
+        stack.push(&sym);
         let local = SymbolTable::new();
         let path = stack.to_path(&local).unwrap();
         let expected = vec!["root"].into();
@@ -284,9 +286,10 @@ mod tests {
 
     #[test]
     fn test_one_module_stack_module_current_to_path() {
-        let mut stack = SymbolTableScopeStack::new();
+        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("root");
-        stack.push(sym);
+        stack.push(&sym);
         let current = SymbolTable::new_module("inner");
         let path = stack.to_path(&current).unwrap();
         let expected = vec!["root", "inner"].into();
@@ -295,11 +298,12 @@ mod tests {
 
     #[test]
     fn test_local_then_one_module_stack_to_path() {
-        let mut stack = SymbolTableScopeStack::new();
+        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let mut stack = SymbolTableScopeStack::new(&m);
         let module = SymbolTable::new_module("root");
-        stack.push(module);
+        stack.push(&module);
         let local = SymbolTable::new();
-        stack.push(local);
+        stack.push(&local);
         let local2 = SymbolTable::new();
         let path = stack.to_path(&local2).unwrap();
         let expected = vec!["root"].into();
@@ -308,17 +312,17 @@ mod tests {
 
     #[test]
     fn test_local_then_two_module_stack_to_path() {
-        let mut stack = SymbolTableScopeStack::new();
+        let m = Module::new("test", SemanticAnnotations::new_module(1, 1, "test", Type::Unit));
+        let mut stack = SymbolTableScopeStack::new(&m);
         let module = SymbolTable::new_module("first");
-        stack.push(module);
+        stack.push(&module);
         let module2 = SymbolTable::new_module("second");
-        stack.push(module2);
+        stack.push(&module2);
         let local = SymbolTable::new();
-        stack.push(local);
+        stack.push(&local);
         let local2 = SymbolTable::new();
         let path = stack.to_path(&local2).unwrap();
         let expected = vec!["first", "second"].into();
         assert_eq!(path, expected);
     }
 }
-*/
