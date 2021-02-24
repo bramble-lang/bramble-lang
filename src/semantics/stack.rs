@@ -1,12 +1,18 @@
-use braid_lang::result::Result;
-use crate::ast::{Module, Path, Type};
+use std::collections::HashMap;
 
-use super::{semanticnode::SemanticAnnotations, symbol_table::{ScopeType, Symbol, SymbolTable}};
+use crate::ast::{Module, Node, Path, Type};
+use braid_lang::result::Result;
+
+use super::{
+    semanticnode::SemanticAnnotations,
+    symbol_table::{ScopeType, Symbol, SymbolTable},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTableScopeStack<'a> {
     stack: Vec<SymbolTable>,
     pub(super) root: &'a Module<SemanticAnnotations>,
+    imported_symbols: HashMap<String, Symbol>,
 }
 
 impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
@@ -22,7 +28,30 @@ impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
 
 impl<'a> SymbolTableScopeStack<'a> {
     pub fn new(root: &'a Module<SemanticAnnotations>) -> SymbolTableScopeStack {
-        SymbolTableScopeStack { stack: vec![], root }
+        SymbolTableScopeStack {
+            stack: vec![],
+            root,
+            imported_symbols: HashMap::new(),
+        }
+    }
+
+    pub fn import_function(
+        &mut self,
+        canonical_name: Path,
+        params: Vec<Type>,
+        return_ty: Type,
+    ) -> Option<Symbol> {
+        match canonical_name.item() {
+            Some(item) => self.imported_symbols.insert(
+                canonical_name.to_string(),
+                Symbol {
+                    name: item.into(),
+                    ty: Type::FunctionDef(params, Box::new(return_ty)),
+                    mutable: false,
+                },
+            ),
+            None => None,
+        }
     }
 
     pub fn push(&mut self, sym: &SymbolTable) {
@@ -47,9 +76,57 @@ impl<'a> SymbolTableScopeStack<'a> {
         None
     }
 
+    pub fn lookup_symbol_by_path(
+        &'a self,
+        sym: &'a SymbolTable,
+        path: &Path,
+    ) -> Result<(&'a Symbol, Path)> {
+        let canon_path = self.to_canonical(sym, path)?;
+
+        if path.len() > 1 {
+            // If the path contains more than just the item's name then
+            // traverse the parent path to find the specified item
+            let item = canon_path
+                .item()
+                .expect("Expected a canonical path with at least one step in it");
+
+            // Look in the project being compiled
+            let project_symbol = self
+                .root
+                .go_to_module(&canon_path.parent())
+                .map(|module| module.annotation().sym.get(&item))
+                .flatten();
+
+            // look in any imported symbols
+            let imported_symbol = self.get_imported_symbol(&canon_path);
+
+            // Make sure that there is no ambiguity about what is being referenced
+            match (project_symbol, imported_symbol) {
+                (Some(ps), None) => Ok((ps, canon_path)),
+                (None, Some(is)) => Ok((is, canon_path)),
+                (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
+                (None, None) => Err(format!("Could not find item with the given path: {}", path)),
+            }
+        } else if path.len() == 1 {
+            // If the path has just the item name, then check the local scope and
+            // the parent scopes for the given symbol
+            let item = &path[0];
+            sym.get(item)
+                .or_else(|| self.get(item))
+                .map(|i| (i, canon_path))
+                .ok_or(format!("{} is not defined", item))
+        } else {
+            Err("empty path passed to lookup_path".into())
+        }
+    }
+
+    fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
+        self.imported_symbols.get(&canonical_name.to_string())
+    }
+
     /**
-    Given a type reference that appears in a node that is not the curren node, will convert 
-    that type reference to a canonical path from a relative path.  If the type reference is 
+    Given a type reference that appears in a node that is not the curren node, will convert
+    that type reference to a canonical path from a relative path.  If the type reference is
     already an absolute path then no change is made.  This is used for indirect type reference
     look ups: for example, if the current node is a routine call and the routine definition is
     looked up to validate the parameter types in the definition agains the parameters in the
@@ -76,10 +153,10 @@ impl<'a> SymbolTableScopeStack<'a> {
      */
     pub fn canonize_local_type_ref(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
         match ty {
-            Type::Custom(path) => Ok(Type::Custom(
-                self.to_canonical(sym, path)?
-            )),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.canonize_local_type_ref(sym, &ty)?))),
+            Type::Custom(path) => Ok(Type::Custom(self.to_canonical(sym, path)?)),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
+                self.canonize_local_type_ref(sym, &ty)?,
+            ))),
             _ => Ok(ty.clone()),
         }
     }

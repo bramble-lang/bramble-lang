@@ -71,27 +71,13 @@ impl<'a> TypeResolver<'a> {
         params: Vec<Type>,
         return_ty: Type,
     ) -> Option<Symbol> {
-        match canonical_name.item() {
-            Some(item) => self.imported_symbols.insert(
-                canonical_name.to_string(),
-                Symbol {
-                    name: item.into(),
-                    ty: Type::FunctionDef(params, Box::new(return_ty)),
-                    mutable: false,
-                },
-            ),
-            None => None,
-        }
+        self.stack.import_function(canonical_name, params, return_ty)
     }
 
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
         let mut empty_table = SymbolTable::new();
         self.analyze_module(self.stack.root, &mut empty_table)
             .map_err(|e| format!("Semantic: {}", e))
-    }
-
-    fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
-        self.imported_symbols.get(&canonical_name.to_string())
     }
 
     fn analyze_module(
@@ -218,7 +204,7 @@ impl<'a> TypeResolver<'a> {
         } in fields.iter()
         {
             if let Type::Custom(ty_name) = field_type {
-                self.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
+                self.stack.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
                     format!(
                         "member {}.{} invalid: {}",
                         struct_def.get_name(),
@@ -506,7 +492,7 @@ impl<'a> TypeResolver<'a> {
                 match src.get_type() {
                     Type::Custom(struct_name) => {
                         let (struct_def, canonical_path) =
-                            self.lookup_symbol_by_path(sym, &struct_name)?;
+                            self.stack.lookup_symbol_by_path(sym, &struct_name)?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
@@ -607,7 +593,7 @@ impl<'a> TypeResolver<'a> {
                 }
 
                 // Check that the function being called exists
-                let (symbol, routine_canon_path) = self.lookup_symbol_by_path(sym, routine_path)?;
+                let (symbol, routine_canon_path) = self.stack.lookup_symbol_by_path(sym, routine_path)?;
 
                 let (expected_param_tys, ret_ty) =
                     self.extract_routine_type_info(symbol, call, &routine_path)?;
@@ -677,7 +663,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
-                let (struct_def, canonical_path) = self.lookup_symbol_by_path(sym, &struct_name)?;
+                let (struct_def, canonical_path) = self.stack.lookup_symbol_by_path(sym, &struct_name)?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
@@ -878,52 +864,8 @@ impl<'a> TypeResolver<'a> {
         Ok(canonical_fields)
     }
 
-    fn lookup_symbol_by_path(
-        &'a self,
-        sym: &'a SymbolTable,
-        path: &Path,
-    ) -> Result<(&'a Symbol, Path)> {
-        let canon_path = self.stack.to_canonical(sym, path)?;
-
-        if path.len() > 1 {
-            // If the path contains more than just the item's name then
-            // traverse the parent path to find the specified item
-            let item = canon_path
-                .item()
-                .expect("Expected a canonical path with at least one step in it");
-
-            // Look in the project being compiled
-            let project_symbol = self
-                .stack.root()
-                .go_to_module(&canon_path.parent())
-                .map(|module| module.annotation().sym.get(&item))
-                .flatten();
-
-            // look in any imported symbols
-            let imported_symbol = self.get_imported_symbol(&canon_path);
-
-            // Make sure that there is no ambiguity about what is being referenced
-            match (project_symbol, imported_symbol) {
-                (Some(ps), None) => Ok((ps, canon_path)),
-                (None, Some(is)) => Ok((is, canon_path)),
-                (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
-                (None, None) => Err(format!("Could not find item with the given path: {}", path)),
-            }
-        } else if path.len() == 1 {
-            // If the path has just the item name, then check the local scope and
-            // the parent scopes for the given symbol
-            let item = &path[0];
-            sym.get(item)
-                .or_else(|| self.stack.get(item))
-                .map(|i| (i, canon_path))
-                .ok_or(format!("{} is not defined", item))
-        } else {
-            Err("empty path passed to lookup_path".into())
-        }
-    }
-
     fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
+        match self.stack.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -937,7 +879,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
+        match self.stack.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -947,7 +889,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
-        let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
+        let (symbol, _) = &self.stack.lookup_symbol_by_path(sym, &vec![id].into())?;
         match symbol.ty {
             Type::FunctionDef(..)
             | Type::CoroutineDef(..)
