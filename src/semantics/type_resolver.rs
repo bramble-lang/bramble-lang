@@ -75,64 +75,63 @@ impl<'a> TypeResolver<'a> {
     }
 
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
-        let mut empty_table = SymbolTable::new();
-        self.analyze_module(self.stack.root, &mut empty_table)
+        self.analyze_module(self.stack.root)
             .map_err(|e| format!("Semantic: {}", e))
     }
 
     fn analyze_module(
         &mut self,
         m: &Module<SemanticAnnotations>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<Module<SemanticAnnotations>> {
         let mut nmodule = Module::new(m.get_name(), m.annotation().clone());
-        let mut meta = nmodule.annotation_mut().clone();
+        //let mut meta = nmodule.annotation_mut().clone();
 
-        self.stack.push(sym);
+        self.stack.push(&nmodule.annotation().sym);
 
         *nmodule.get_modules_mut() = m
             .get_modules()
             .iter()
-            .map(|m| self.analyze_module(m, &mut meta.sym))
+            .map(|m| self.analyze_module(m))
             .collect::<Result<Vec<Module<SemanticAnnotations>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
-            .map(|f| self.analyze_item(f, &mut meta.sym))
+            .map(|f| self.analyze_item(f))
             .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
-            .map(|c| self.analyze_item(c, &mut meta.sym))
+            .map(|c| self.analyze_item(c))
             .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
-            .map(|s| self.analyze_item(s, &mut meta.sym))
+            .map(|s| self.analyze_item(s))
             .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
 
-        self.stack.pop();
-
+        let mut meta = nmodule.annotation_mut();
         meta.ty = Type::Unit;
-        *nmodule.annotation_mut() = meta;
+        meta.sym = self.stack.pop();
+
         Ok(nmodule)
     }
 
     fn analyze_item(
         &mut self,
         i: &Item<SemanticAnnotations>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<Item<SemanticAnnotations>> {
         match i {
-            Item::Struct(s) => self.analyze_structdef(s, sym).map(|s2| Item::Struct(s2)),
-            Item::Routine(r) => self.analyze_routine(r, sym).map(|r2| Item::Routine(r2)),
+            Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
+            Item::Routine(r) => self.analyze_routine(r).map(|r2| Item::Routine(r2)),
         }
     }
 
     fn analyze_routine(
         &mut self,
         routine: &RoutineDef<SemanticAnnotations>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<RoutineDef<SemanticAnnotations>> {
         let RoutineDef {
             annotations,
@@ -145,7 +144,7 @@ impl<'a> TypeResolver<'a> {
         } = routine;
         let canon_path = self
             .stack
-            .to_path(sym)
+            .to_path()
             .map(|mut p| {
                 p.push(name);
                 p
@@ -160,8 +159,8 @@ impl<'a> TypeResolver<'a> {
         let mut meta = annotations.clone();
 
         // canonize routine parameter types
-        let canonical_params = self.params_to_canonical(sym, &params)?;
-        meta.ty = self.stack.canonize_local_type_ref(sym, p)?;
+        let canonical_params = self.params_to_canonical(&params)?;
+        meta.ty = self.stack.canonize_local_type_ref(p)?;
         meta.set_canonical_path(canon_path);
 
 
@@ -169,15 +168,15 @@ impl<'a> TypeResolver<'a> {
             meta.sym.add(&p.name, p.ty.clone(), false)?;
         }
 
-        self.stack.push(sym);
+        self.stack.push(&meta.sym);
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
-            let exp = self.analyze_statement(stmt, &Some(name.clone()), &mut meta.sym)?;
+            let exp = self.analyze_statement(stmt, &Some(name.clone()))?;
             resolved_body.push(exp);
         }
 
-        self.stack.pop();
+        meta.sym = self.stack.pop();
 
         let canonical_ret_ty = meta.ty.clone();
         Ok(RoutineDef {
@@ -193,7 +192,7 @@ impl<'a> TypeResolver<'a> {
     fn analyze_structdef(
         &mut self,
         struct_def: &StructDef<SemanticAnnotations>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
@@ -204,7 +203,7 @@ impl<'a> TypeResolver<'a> {
         } in fields.iter()
         {
             if let Type::Custom(ty_name) = field_type {
-                self.stack.lookup_symbol_by_path(sym, ty_name).map_err(|e| {
+                self.stack.lookup_symbol_by_path(ty_name).map_err(|e| {
                     format!(
                         "member {}.{} invalid: {}",
                         struct_def.get_name(),
@@ -216,13 +215,13 @@ impl<'a> TypeResolver<'a> {
         }
 
         // Update all fields so that their types use the full canonical path of the type
-        let canonical_fields = self.params_to_canonical(sym, fields)?;
+        let canonical_fields = self.params_to_canonical(fields)?;
 
         // Update the annotations with canonical path information and set the type to Type::Unit
         let mut meta = struct_def.annotation().clone();
         meta.ty = Type::Unit;
         meta.set_canonical_path(
-            self.stack.to_canonical(sym, &vec![struct_def.get_name().clone()].into())?,
+            self.stack.to_canonical(&vec![struct_def.get_name().clone()].into())?,
         );
 
         Ok(StructDef::new(
@@ -236,17 +235,17 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         stmt: &Statement<SemanticAnnotations>,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<Statement<SemanticAnnotations>> {
         use Statement::*;
         let inner = match stmt {
-            Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func, sym)?)),
-            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func, sym)?)),
-            Return(box x) => Return(Box::new(self.analyze_return(x, current_func, sym)?)),
+            Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func)?)),
+            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func)?)),
+            Return(box x) => Return(Box::new(self.analyze_return(x, current_func)?)),
             YieldReturn(box x) => {
-                YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func, sym)?))
+                YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func)?))
             }
-            Expression(box e) => Expression(Box::new(self.traverse(e, current_func, sym)?)),
+            Expression(box e) => Expression(Box::new(self.traverse(e, current_func)?)),
         };
 
         Ok(inner)
@@ -256,17 +255,17 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         bind: &Bind<SemanticAnnotations>,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<Bind<SemanticAnnotations>> {
         let meta = bind.annotation();
         let rhs = bind.get_rhs();
         let result = match current_func {
             Some(_) => {
                 let mut meta = meta.clone();
-                meta.ty = self.stack.canonize_local_type_ref(sym, bind.get_type())?;
-                let rhs = self.traverse(rhs, current_func, sym)?;
+                meta.ty = self.stack.canonize_local_type_ref(bind.get_type())?;
+                let rhs = self.traverse(rhs, current_func)?;
                 if meta.ty == rhs.get_type() {
-                    match sym.add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
+                    match self.stack.head_mut().add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
                         Ok(()) => Ok(Bind::new(
                             meta,
                             bind.get_id(),
@@ -296,13 +295,13 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         mutate: &Mutate<SemanticAnnotations>,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<Mutate<SemanticAnnotations>> {
         let result = match current_func {
             Some(_) => {
                 let mut meta = mutate.annotation().clone();
-                let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
-                match self.stack.lookup_var(sym, mutate.get_id()) {
+                let rhs = self.traverse(mutate.get_rhs(), current_func)?;
+                match self.stack.lookup_var(mutate.get_id()) {
                     Ok(symbol) => {
                         if symbol.mutable {
                             if symbol.ty == rhs.get_type() {
@@ -335,7 +334,7 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         yr: &YieldReturn<SemanticAnnotations>,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<YieldReturn<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("yret appears outside of function")),
@@ -343,7 +342,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = yr.annotation().clone();
                 match yr.get_value() {
                     None => {
-                        let (_, ret_ty) = self.stack.lookup_coroutine(sym, cf)?;
+                        let (_, ret_ty) = self.stack.lookup_coroutine(cf)?;
                         if *ret_ty == Type::Unit {
                             meta.ty = Type::Unit;
                             Ok(YieldReturn::new(meta, None))
@@ -352,9 +351,9 @@ impl<'a> TypeResolver<'a> {
                         }
                     }
                     Some(val) => {
-                        let exp = self.traverse(val, current_func, sym)?;
-                        let (_, ret_ty) = self.stack.lookup_coroutine(sym, cf)?;
-                        let ret_ty = self.stack.canonize_local_type_ref(sym, ret_ty)?;
+                        let exp = self.traverse(val, current_func)?;
+                        let (_, ret_ty) = self.stack.lookup_coroutine(cf)?;
+                        let ret_ty = self.stack.canonize_local_type_ref(ret_ty)?;
                         if ret_ty == exp.get_type() {
                             meta.ty = ret_ty;
                             Ok(YieldReturn::new(meta, Some(exp)))
@@ -376,7 +375,7 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         r: &Return<SemanticAnnotations>,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<Return<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("return appears outside of function")),
@@ -384,7 +383,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = r.annotation().clone();
                 match r.get_value() {
                     None => {
-                        let (_, ret_ty) = self.stack.lookup_func_or_cor(sym, cf)?;
+                        let (_, ret_ty) = self.stack.lookup_func_or_cor(cf)?;
                         if *ret_ty == Type::Unit {
                             meta.ty = Type::Unit;
                             Ok(Return::new(meta, None))
@@ -393,9 +392,9 @@ impl<'a> TypeResolver<'a> {
                         }
                     }
                     Some(val) => {
-                        let exp = self.traverse(val, current_func, sym)?;
-                        let (_, ret_ty) = self.stack.lookup_func_or_cor(sym, cf)?;
-                        let ret_ty = self.stack.canonize_local_type_ref(sym, ret_ty)?;
+                        let exp = self.traverse(val, current_func)?;
+                        let (_, ret_ty) = self.stack.lookup_func_or_cor(cf)?;
+                        let ret_ty = self.stack.canonize_local_type_ref(ret_ty)?;
                         if ret_ty == exp.get_type() {
                             meta.ty = ret_ty;
                             Ok(Return::new(meta, Some(exp)))
@@ -417,9 +416,9 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         ast: &SemanticNode,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
-        self.analyze_expression(ast, current_func, sym)
+        self.analyze_expression(ast, current_func)
             .map_err(|e| {
                 if !e.starts_with("L") {
                     format!("L{}: {}", ast.annotation().ln, e)
@@ -433,7 +432,7 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         ast: &SemanticNode,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         match &ast {
             &Expression::Integer32(meta, v) => {
@@ -474,8 +473,8 @@ impl<'a> TypeResolver<'a> {
                 None => Err(format!("Variable {} appears outside of function", id)),
                 Some(_) => {
                     let mut meta = meta.clone();
-                    match self.stack.lookup_var(sym, &id)? {
-                        Symbol { ty: p, .. } => meta.ty = self.stack.canonize_local_type_ref(sym, p)?,
+                    match self.stack.lookup_var(&id)? {
+                        Symbol { ty: p, .. } => meta.ty = self.stack.canonize_local_type_ref(p)?,
                     };
                     Ok(Expression::Identifier(meta.clone(), id.clone()))
                 }
@@ -488,11 +487,11 @@ impl<'a> TypeResolver<'a> {
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
                 // if it exists, if it does not exist then return an error
-                let src = self.traverse(&src, current_func, sym)?;
+                let src = self.traverse(&src, current_func)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
                         let (struct_def, canonical_path) =
-                            self.stack.lookup_symbol_by_path(sym, &struct_name)?;
+                            self.stack.lookup_symbol_by_path(&struct_name)?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
@@ -511,7 +510,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::BinaryOp(meta, op, l, r) => {
                 let mut meta = meta.clone();
-                let (ty, l, r) = self.binary_op(*op, &l, &r, current_func, sym)?;
+                let (ty, l, r) = self.binary_op(*op, &l, &r, current_func)?;
                 meta.ty = ty;
                 Ok(Expression::BinaryOp(
                     meta.clone(),
@@ -522,7 +521,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::UnaryOp(meta, op, operand) => {
                 let mut meta = meta.clone();
-                let (ty, operand) = self.unary_op(*op, &operand, current_func, sym)?;
+                let (ty, operand) = self.unary_op(*op, &operand, current_func)?;
                 meta.ty = ty;
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
@@ -533,13 +532,13 @@ impl<'a> TypeResolver<'a> {
                 else_arm,
             } => {
                 let mut meta = meta.clone();
-                let cond = self.traverse(&cond, current_func, sym)?;
+                let cond = self.traverse(&cond, current_func)?;
                 if cond.get_type() == Type::Bool {
-                    let if_arm = self.traverse(&if_arm, current_func, sym)?;
+                    let if_arm = self.traverse(&if_arm, current_func)?;
 
                     let else_arm = else_arm
                         .as_ref()
-                        .map(|e| self.traverse(&e, current_func, sym))
+                        .map(|e| self.traverse(&e, current_func))
                         .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
 
                     let else_arm_ty = else_arm
@@ -573,9 +572,9 @@ impl<'a> TypeResolver<'a> {
                 None => Err(format!("Yield appears outside of function")),
                 Some(_) => {
                     let mut meta = meta.clone();
-                    let exp = self.traverse(&exp, current_func, sym)?;
+                    let exp = self.traverse(&exp, current_func)?;
                     meta.ty = match exp.get_type() {
-                        Type::Coroutine(ret_ty) => self.stack.canonize_local_type_ref(sym, ret_ty)?,
+                        Type::Coroutine(ret_ty) => self.stack.canonize_local_type_ref(ret_ty)?,
                         _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                     };
                     Ok(Expression::Yield(meta, Box::new(exp)))
@@ -587,13 +586,13 @@ impl<'a> TypeResolver<'a> {
                 // parameter types
                 let mut resolved_params = vec![];
                 for param in params.iter() {
-                    let ty = self.traverse(param, current_func, sym)?;
+                    let ty = self.traverse(param, current_func)?;
 
                     resolved_params.push(ty);
                 }
 
                 // Check that the function being called exists
-                let (symbol, routine_canon_path) = self.stack.lookup_symbol_by_path(sym, routine_path)?;
+                let (symbol, routine_canon_path) = self.stack.lookup_symbol_by_path(routine_path)?;
 
                 let (expected_param_tys, ret_ty) =
                     self.extract_routine_type_info(symbol, call, &routine_path)?;
@@ -619,7 +618,7 @@ impl<'a> TypeResolver<'a> {
                     ) {
                         Err(msg) => Err(msg),
                         Ok(()) => {
-                            meta.ty = self.stack.canonize_local_type_ref(sym, &ret_ty)?;
+                            meta.ty = self.stack.canonize_local_type_ref(&ret_ty)?;
                             Ok(Expression::RoutineCall(
                                 meta.clone(),
                                 *call,
@@ -631,26 +630,26 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             Expression::ExpressionBlock(meta, body, final_exp) => {
-                let mut meta = meta.clone();
                 let mut resolved_body = vec![];
 
-                self.stack.push(sym);
+                self.stack.push(&meta.sym);
 
                 for stmt in body.iter() {
-                    let exp = self.analyze_statement(stmt, current_func, &mut meta.sym)?;
+                    let exp = self.analyze_statement(stmt, current_func)?;
                     resolved_body.push(exp);
                 }
 
                 let (final_exp, block_ty) = match final_exp {
                     None => (None, Type::Unit),
                     Some(fe) => {
-                        let fe = self.traverse(fe, current_func, &mut meta.sym)?;
+                        let fe = self.traverse(fe, current_func)?;
                         let ty = fe.get_type().clone();
                         (Some(Box::new(fe)), ty)
                     }
                 };
 
-                self.stack.pop();
+                let mut meta = meta.clone();
+                meta.sym = self.stack.pop();
 
                 meta.ty = block_ty;
                 Ok(Expression::ExpressionBlock(
@@ -663,7 +662,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
-                let (struct_def, canonical_path) = self.stack.lookup_symbol_by_path(sym, &struct_name)?;
+                let (struct_def, canonical_path) = self.stack.lookup_symbol_by_path(&struct_name)?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
@@ -684,7 +683,7 @@ impl<'a> TypeResolver<'a> {
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
                     let member_ty_canon =
                         self.stack.canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
-                    let param = self.traverse(pv, current_func, sym)?;
+                    let param = self.traverse(pv, current_func)?;
                     if param.get_type() != member_ty_canon {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
@@ -699,7 +698,7 @@ impl<'a> TypeResolver<'a> {
 
                 let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
                 meta.ty = Type::Custom(canonical_path.clone());
-                sym.add(&anonymouse_name, meta.ty.clone(), false)?;
+                self.stack.head_mut().add(&anonymouse_name, meta.ty.clone(), false)?;
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
@@ -713,15 +712,15 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         y: &Yield<SemanticAnnotations>,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<Yield<SemanticAnnotations>> {
         match current_func {
             None => Err(format!("yield appears outside of function")),
             Some(_) => {
                 let mut meta = y.annotation().clone();
-                let exp = self.traverse(y.get_value(), current_func, sym)?;
+                let exp = self.traverse(y.get_value(), current_func)?;
                 meta.ty = match exp.get_type() {
-                    Type::Coroutine(ret_ty) => self.stack.canonize_local_type_ref(sym, ret_ty)?,
+                    Type::Coroutine(ret_ty) => self.stack.canonize_local_type_ref(ret_ty)?,
                     _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                 };
                 Ok(Yield::new(meta, exp))
@@ -734,11 +733,11 @@ impl<'a> TypeResolver<'a> {
         op: UnaryOperator,
         operand: &SemanticNode,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
-        let operand = self.traverse(operand, current_func, sym)?;
+        let operand = self.traverse(operand, current_func)?;
 
         match op {
             Minus => {
@@ -772,12 +771,12 @@ impl<'a> TypeResolver<'a> {
         l: &SemanticNode,
         r: &SemanticNode,
         current_func: &Option<String>,
-        sym: &mut SymbolTable,
+        //sym: &mut SymbolTable,
     ) -> Result<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
-        let l = self.traverse(l, current_func, sym)?;
-        let r = self.traverse(r, current_func, sym)?;
+        let l = self.traverse(l, current_func)?;
+        let r = self.traverse(r, current_func)?;
 
         match op {
             Add | Sub | Mul | Div => {
@@ -828,40 +827,26 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn get_current_path(&self, sym: &'a SymbolTable) -> Result<Path> {
+    fn get_current_path(&self) -> Result<Path> {
         self.stack
-            .to_path(sym)
+            .to_path()
             .ok_or("A valid path is expected".into())
     }
 
     /// Convert any parameter that is a custom type, to its canonical form.
     fn params_to_canonical(
         &self,
-        sym: &'a SymbolTable,
+        //sym: &'a SymbolTable,
         params: &Vec<Parameter<SemanticAnnotations>>,
     ) -> Result<Vec<Parameter<SemanticAnnotations>>> {
         let mut canonical_params = vec![];
         for p in params.iter() {
             let mut p2 = p.clone();
-            p2.ty = self.stack.canonize_local_type_ref(sym, &p.ty)?;
+            p2.ty = self.stack.canonize_local_type_ref(&p.ty)?;
             p2.annotation_mut().ty = p2.ty.clone();
             canonical_params.push(p2);
         }
         Ok(canonical_params)
-    }
-
-    /// Convert any parameter that is a custom type, to its canonical form.
-    fn fields_to_canonical(
-        &self,
-        sym: &'a SymbolTable,
-        fields: &Vec<(String, Type)>,
-    ) -> Result<Vec<(String, Type)>> {
-        let mut canonical_fields = vec![];
-        for (n, t) in fields.iter() {
-            let t = self.stack.canonize_local_type_ref(sym, t)?;
-            canonical_fields.push((n.clone(), t));
-        }
-        Ok(canonical_fields)
     }
 
     fn extract_routine_type_info<'b>(

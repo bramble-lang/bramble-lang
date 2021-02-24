@@ -102,8 +102,8 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// Finds the given variable in the current symbol table or in the symbol table history
     /// Follows scoping rules, so when a boundary scope is reached (e.g. a Routine) it will
     /// stop searching
-    pub fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
-        let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
+    pub fn lookup_var(&'a self, id: &str) -> Result<&'a Symbol> {
+        let (symbol, _) = &self.lookup_symbol_by_path(&vec![id].into())?;
         match symbol.ty {
             Type::FunctionDef(..)
             | Type::CoroutineDef(..)
@@ -124,10 +124,10 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// if the symbol is not a routine `Err` is returned.  If no symbol is found `Err` is returned.
     pub fn lookup_func_or_cor(
         &'a self,
-        sym: &'a SymbolTable,
+        //sym: &'a SymbolTable,
         id: &str,
     ) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
+        match self.lookup_symbol_by_path(&vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -145,10 +145,10 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// if the symbol is not a coroutine `Err` is returned.  If no symbol is found `Err` is returned.
     pub fn lookup_coroutine(
         &'a self,
-        sym: &'a SymbolTable,
+        //sym: &'a SymbolTable,
         id: &str,
     ) -> Result<(&Vec<Type>, &Type)> {
-        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
+        match self.lookup_symbol_by_path(&vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
@@ -164,10 +164,9 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(
         &'a self,
-        sym: &'a SymbolTable,
         path: &Path,
     ) -> Result<(&'a Symbol, Path)> {
-        let canon_path = self.to_canonical(sym, path)?;
+        let canon_path = self.to_canonical(path)?;
 
         if path.len() > 1 {
             // If the path contains more than just the item's name then
@@ -197,7 +196,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
             let item = &path[0];
-            sym.get(item)
+            self.head.get(item)
                 .or_else(|| self.get(item))
                 .map(|i| (i, canon_path))
                 .ok_or(format!("{} is not defined", item))
@@ -237,11 +236,11 @@ impl<'a> SymbolTableScopeStack<'a> {
     For example, the path `super::MyStruct` would be converted to `root::my_module::MyStruct`
     if the current node were in a module contained within `my_module`.
      */
-    pub fn canonize_local_type_ref(&self, sym: &'a SymbolTable, ty: &Type) -> Result<Type> {
+    pub fn canonize_local_type_ref(&self, ty: &Type) -> Result<Type> {
         match ty {
-            Type::Custom(path) => Ok(Type::Custom(self.to_canonical(sym, path)?)),
+            Type::Custom(path) => Ok(Type::Custom(self.to_canonical(path)?)),
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
-                self.canonize_local_type_ref(sym, &ty)?,
+                self.canonize_local_type_ref(&ty)?,
             ))),
             _ => Ok(ty.clone()),
         }
@@ -249,15 +248,15 @@ impl<'a> SymbolTableScopeStack<'a> {
 
     /// Converts a relative path, `path`, into a canonical path by merging it with
     /// the path to the current node, as represented by the stack.
-    pub fn to_canonical(&self, sym: &'a SymbolTable, path: &Path) -> Result<Path> {
-        let current_path = self.to_path(sym).ok_or("A valid path is expected")?;
+    pub fn to_canonical(&self, path: &Path) -> Result<Path> {
+        let current_path = self.to_path().ok_or("A valid path is expected")?;
         path.to_canonical(&current_path)
     }
 
     /// Starting from the bottom of the stack this builds a path
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
-    pub fn to_path(&self, current: &SymbolTable) -> Option<Path> {
+    pub fn to_path(&self) -> Option<Path> {
         let mut steps = vec![];
 
         for node in self.stack.iter() {
@@ -270,11 +269,6 @@ impl<'a> SymbolTableScopeStack<'a> {
         }
 
         match self.head.scope_type() {
-            ScopeType::Module { name } => steps.push(name.clone()),
-            _ => (),
-        }
-
-        match current.scope_type() {
             ScopeType::Module { name } => steps.push(name.clone()),
             _ => (),
         }
@@ -297,9 +291,10 @@ mod tests {
             "test",
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
-        let stack = SymbolTableScopeStack::new(&m);
+        let mut stack = SymbolTableScopeStack::new(&m);
         let local = SymbolTable::new();
-        let path = stack.to_path(&local);
+        stack.push(&local);
+        let path = stack.to_path();
         assert_eq!(path, None);
     }
 
@@ -313,7 +308,8 @@ mod tests {
         let sym = SymbolTable::new_module("root");
         stack.push(&sym);
         let local = SymbolTable::new();
-        let path = stack.to_path(&local).unwrap();
+        stack.push(&local);
+        let path = stack.to_path().unwrap();
         let expected = vec!["root"].into();
         assert_eq!(path, expected);
     }
@@ -328,7 +324,8 @@ mod tests {
         let sym = SymbolTable::new_module("root");
         stack.push(&sym);
         let current = SymbolTable::new_module("inner");
-        let path = stack.to_path(&current).unwrap();
+        stack.push(&current);
+        let path = stack.to_path().unwrap();
         let expected = vec!["root", "inner"].into();
         assert_eq!(path, expected);
     }
@@ -345,7 +342,8 @@ mod tests {
         let local = SymbolTable::new();
         stack.push(&local);
         let local2 = SymbolTable::new();
-        let path = stack.to_path(&local2).unwrap();
+        stack.push(&local2);
+        let path = stack.to_path().unwrap();
         let expected = vec!["root"].into();
         assert_eq!(path, expected);
     }
@@ -364,7 +362,8 @@ mod tests {
         let local = SymbolTable::new();
         stack.push(&local);
         let local2 = SymbolTable::new();
-        let path = stack.to_path(&local2).unwrap();
+        stack.push(&local2);
+        let path = stack.to_path().unwrap();
         let expected = vec!["first", "second"].into();
         assert_eq!(path, expected);
     }
