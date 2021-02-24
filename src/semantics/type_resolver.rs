@@ -512,7 +512,7 @@ impl<'a> TypeResolver<'a> {
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
                         meta.ty =
-                            Self::canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
+                            self.stack.canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
                         meta.set_canonical_path(canonical_path);
                         Ok(Expression::MemberAccess(
                             meta,
@@ -610,10 +610,10 @@ impl<'a> TypeResolver<'a> {
                 let (symbol, routine_canon_path) = self.lookup_symbol_by_path(sym, routine_path)?;
 
                 let (expected_param_tys, ret_ty) =
-                    Self::extract_routine_type_info(symbol, call, &routine_path)?;
+                    self.extract_routine_type_info(symbol, call, &routine_path)?;
                 let expected_param_tys = expected_param_tys
                     .iter()
-                    .map(|pty| Self::canonize_nonlocal_type_ref(&routine_canon_path.parent(), pty))
+                    .map(|pty| self.stack.canonize_nonlocal_type_ref(&routine_canon_path.parent(), pty))
                     .collect::<Result<Vec<Type>>>()?;
 
                 // Check that parameters are correct and if so, return the node annotated with
@@ -697,7 +697,7 @@ impl<'a> TypeResolver<'a> {
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
                     let member_ty_canon =
-                        Self::canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
+                        self.stack.canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
                     let param = self.traverse(pv, current_func, sym)?;
                     if param.get_type() != member_ty_canon {
                         return Err(format!(
@@ -848,25 +848,6 @@ impl<'a> TypeResolver<'a> {
             .ok_or("A valid path is expected".into())
     }
 
-    /**
-    Given a type reference that appears in a node that is not the curren node, will convert 
-    that type reference to a canonical path from a relative path.  If the type reference is 
-    already an absolute path then no change is made.  This is used for indirect type reference
-    look ups: for example, if the current node is a routine call and the routine definition is
-    looked up to validate the parameter types in the definition agains the parameters in the
-    call, to canonize the routine definition's parameter types, this function would be used: as
-    they are in the RoutineDef node not the RoutineCall node.
-     */
-    fn canonize_nonlocal_type_ref(parent_path: &Path, ty: &Type) -> Result<Type> {
-        match ty {
-            Type::Custom(path) => Ok(Type::Custom(path.to_canonical(parent_path)?)),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
-                Self::canonize_nonlocal_type_ref(parent_path, &ty)?,
-            ))),
-            _ => Ok(ty.clone()),
-        }
-    }
-
     /// Convert any parameter that is a custom type, to its canonical form.
     fn params_to_canonical(
         &self,
@@ -983,6 +964,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn extract_routine_type_info<'b>(
+        &self,
         symbol: &'b Symbol,
         call: &RoutineCall,
         routine_path: &Path,
@@ -994,14 +976,14 @@ impl<'a> TypeResolver<'a> {
                 ..
             } if *call == RoutineCall::Function => (
                 pty,
-                Self::canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
+                self.stack.canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..
             } if *call == RoutineCall::CoroutineInit => (
                 pty,
-                Type::Coroutine(Box::new(Self::canonize_nonlocal_type_ref(
+                Type::Coroutine(Box::new(self.stack.canonize_nonlocal_type_ref(
                     &routine_path_parent,
                     rty,
                 )?)),

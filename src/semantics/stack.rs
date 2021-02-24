@@ -48,6 +48,25 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 
     /**
+    Given a type reference that appears in a node that is not the curren node, will convert 
+    that type reference to a canonical path from a relative path.  If the type reference is 
+    already an absolute path then no change is made.  This is used for indirect type reference
+    look ups: for example, if the current node is a routine call and the routine definition is
+    looked up to validate the parameter types in the definition agains the parameters in the
+    call, to canonize the routine definition's parameter types, this function would be used: as
+    they are in the RoutineDef node not the RoutineCall node.
+     */
+    pub fn canonize_nonlocal_type_ref(&self, parent_path: &Path, ty: &Type) -> Result<Type> {
+        match ty {
+            Type::Custom(path) => Ok(Type::Custom(path.to_canonical(parent_path)?)),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
+                self.canonize_nonlocal_type_ref(parent_path, &ty)?,
+            ))),
+            _ => Ok(ty.clone()),
+        }
+    }
+
+    /**
     Given a type reference that appears in the current node, will convert that type reference
     to a canonical path from a relative path.  If the type reference is already an absolute
     path then no change is made.
