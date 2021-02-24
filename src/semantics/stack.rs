@@ -71,17 +71,11 @@ impl<'a> SymbolTableScopeStack<'a> {
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
         match self.head.get(name) {
-            Some(v) => return Some(v),
+            Some(v) => Some(v),
             None => {
-                for scope in self.stack.iter().rev() {
-                    match scope.get(name) {
-                        Some(v) => return Some(v),
-                        None => {}
-                    };
-                }
+                self.stack.iter().rev().find_map(|scope| scope.get(name))
             }
         }
-        None
     }
 
     pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
