@@ -65,17 +65,17 @@ impl<'a> SymbolTableScopeStack<'a> {
 
     pub fn pop(&mut self) -> SymbolTable {
         let tmp = self.head.clone();
-        self.head = self.stack.pop().expect("SymbolTable stack should never be empty on a pop");
+        self.head = self
+            .stack
+            .pop()
+            .expect("SymbolTable stack should never be empty on a pop");
         tmp
     }
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
-        match self.head.get(name) {
-            Some(v) => Some(v),
-            None => {
-                self.stack.iter().rev().find_map(|scope| scope.get(name))
-            }
-        }
+        self.head
+            .get(name)
+            .or_else(|| self.stack.iter().rev().find_map(|scope| scope.get(name)))
     }
 
     pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
