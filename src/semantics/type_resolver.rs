@@ -40,7 +40,6 @@ pub fn resolve_types_with_imports(
 }
 
 pub struct TypeResolver<'a> {
-    //root: &'a Module<SemanticAnnotations>,
     stack: SymbolTableScopeStack<'a>, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
     tracing: TracingConfig,
     path_tracing: TracingConfig,
@@ -82,10 +81,8 @@ impl<'a> TypeResolver<'a> {
     fn analyze_module(
         &mut self,
         m: &Module<SemanticAnnotations>,
-        //sym: &mut SymbolTable,
     ) -> Result<Module<SemanticAnnotations>> {
         let mut nmodule = Module::new(m.get_name(), m.annotation().clone());
-        //let mut meta = nmodule.annotation_mut().clone();
 
         self.stack.push(&nmodule.annotation().sym);
 
@@ -120,7 +117,6 @@ impl<'a> TypeResolver<'a> {
     fn analyze_item(
         &mut self,
         i: &Item<SemanticAnnotations>,
-        //sym: &mut SymbolTable,
     ) -> Result<Item<SemanticAnnotations>> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
@@ -131,7 +127,6 @@ impl<'a> TypeResolver<'a> {
     fn analyze_routine(
         &mut self,
         routine: &RoutineDef<SemanticAnnotations>,
-        //sym: &mut SymbolTable,
     ) -> Result<RoutineDef<SemanticAnnotations>> {
         let RoutineDef {
             annotations,
@@ -192,7 +187,6 @@ impl<'a> TypeResolver<'a> {
     fn analyze_structdef(
         &mut self,
         struct_def: &StructDef<SemanticAnnotations>,
-        //sym: &mut SymbolTable,
     ) -> Result<StructDef<SemanticAnnotations>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
@@ -235,7 +229,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         stmt: &Statement<SemanticAnnotations>,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<Statement<SemanticAnnotations>> {
         use Statement::*;
         let inner = match stmt {
@@ -255,7 +248,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         bind: &Bind<SemanticAnnotations>,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<Bind<SemanticAnnotations>> {
         let meta = bind.annotation();
         let rhs = bind.get_rhs();
@@ -295,7 +287,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         mutate: &Mutate<SemanticAnnotations>,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<Mutate<SemanticAnnotations>> {
         let result = match current_func {
             Some(_) => {
@@ -334,7 +325,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         yr: &YieldReturn<SemanticAnnotations>,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<YieldReturn<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("yret appears outside of function")),
@@ -375,7 +365,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         r: &Return<SemanticAnnotations>,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<Return<SemanticAnnotations>> {
         let result = match current_func {
             None => Err(format!("return appears outside of function")),
@@ -416,7 +405,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         ast: &SemanticNode,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         self.analyze_expression(ast, current_func)
             .map_err(|e| {
@@ -432,7 +420,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         ast: &SemanticNode,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<SemanticNode> {
         match &ast {
             &Expression::Integer32(meta, v) => {
@@ -712,7 +699,6 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         y: &Yield<SemanticAnnotations>,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<Yield<SemanticAnnotations>> {
         match current_func {
             None => Err(format!("yield appears outside of function")),
@@ -733,7 +719,6 @@ impl<'a> TypeResolver<'a> {
         op: UnaryOperator,
         operand: &SemanticNode,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
@@ -771,7 +756,6 @@ impl<'a> TypeResolver<'a> {
         l: &SemanticNode,
         r: &SemanticNode,
         current_func: &Option<String>,
-        //sym: &mut SymbolTable,
     ) -> Result<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
@@ -836,7 +820,6 @@ impl<'a> TypeResolver<'a> {
     /// Convert any parameter that is a custom type, to its canonical form.
     fn params_to_canonical(
         &self,
-        //sym: &'a SymbolTable,
         params: &Vec<Parameter<SemanticAnnotations>>,
     ) -> Result<Vec<Parameter<SemanticAnnotations>>> {
         let mut canonical_params = vec![];

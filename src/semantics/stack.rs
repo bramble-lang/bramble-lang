@@ -76,10 +76,6 @@ impl<'a> SymbolTableScopeStack<'a> {
         &mut self.head
     }
 
-    pub fn set_head(&mut self, h: SymbolTable) {
-        self.head = h;
-    }
-
     pub fn root(&self) -> &Module<SemanticAnnotations> {
         self.root
     }
@@ -124,7 +120,6 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// if the symbol is not a routine `Err` is returned.  If no symbol is found `Err` is returned.
     pub fn lookup_func_or_cor(
         &'a self,
-        //sym: &'a SymbolTable,
         id: &str,
     ) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup_symbol_by_path(&vec![id].into())?.0 {
@@ -145,7 +140,6 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// if the symbol is not a coroutine `Err` is returned.  If no symbol is found `Err` is returned.
     pub fn lookup_coroutine(
         &'a self,
-        //sym: &'a SymbolTable,
         id: &str,
     ) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup_symbol_by_path(&vec![id].into())?.0 {
