@@ -134,6 +134,11 @@ impl<'a> SymbolTableScopeStack<'a> {
         }
     }
 
+    /// Uses the given path to navigate through the Symbol table hierarchy to locate
+    /// a specific symbol.  If the path is invalid (contains modules which do not exist)
+    /// or the item identified by the path does not exist, then an error is returned.
+    ///
+    /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
