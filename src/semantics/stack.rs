@@ -24,8 +24,8 @@ impl<'a> SymbolTableScopeStack<'a> {
         SymbolTableScopeStack { stack: vec![], root }
     }
 
-    pub fn push(&mut self, sym: SymbolTable) {
-        self.stack.push(sym);
+    pub fn push(&mut self, sym: &SymbolTable) {
+        self.stack.push(sym.clone());
     }
 
     pub fn pop(&mut self) {

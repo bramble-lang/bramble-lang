@@ -102,8 +102,7 @@ impl<'a> TypeResolver<'a> {
         let mut nmodule = Module::new(m.get_name(), m.annotation().clone());
         let mut meta = nmodule.annotation_mut().clone();
 
-        let tmp_sym = sym.clone();
-        self.stack.push(tmp_sym);
+        self.stack.push(sym);
 
         *nmodule.get_modules_mut() = m
             .get_modules()
@@ -184,8 +183,7 @@ impl<'a> TypeResolver<'a> {
             meta.sym.add(&p.name, p.ty.clone(), false)?;
         }
 
-        let tmp_sym = sym.clone();
-        self.stack.push(tmp_sym);
+        self.stack.push(sym);
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
@@ -650,8 +648,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = meta.clone();
                 let mut resolved_body = vec![];
 
-                let tmp_sym = sym.clone();
-                self.stack.push(tmp_sym);
+                self.stack.push(sym);
 
                 for stmt in body.iter() {
                     let exp = self.analyze_statement(stmt, current_func, &mut meta.sym)?;
