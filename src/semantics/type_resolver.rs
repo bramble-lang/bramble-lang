@@ -671,20 +671,6 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    fn analyze_yield(
-        &mut self,
-        y: &Yield<SemanticAnnotations>,
-        current_func: &str,
-    ) -> Result<Yield<SemanticAnnotations>> {
-        let mut meta = y.annotation().clone();
-        let exp = self.traverse(y.get_value(), current_func)?;
-        meta.ty = match exp.get_type() {
-            Type::Coroutine(ret_ty) => self.symbols.canonize_local_type_ref(ret_ty)?,
-            _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
-        };
-        Ok(Yield::new(meta, exp))
-    }
-
     fn unary_op(
         &mut self,
         op: UnaryOperator,

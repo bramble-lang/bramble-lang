@@ -256,56 +256,6 @@ impl<M> Mutate<M> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Yield<M> {
-    annotations: M,
-    value: Expression<M>,
-}
-
-impl<M: Annotation> Node<M> for Yield<M> {
-    fn annotation(&self) -> &M {
-        &self.annotations
-    }
-
-    fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
-    }
-
-    fn node_type(&self) -> NodeType {
-        NodeType::Statement
-    }
-
-    fn children(&self) -> Vec<&dyn Node<M>> {
-        vec![&self.value]
-    }
-
-    fn name(&self) -> Option<&str> {
-        None
-    }
-
-    fn iter_postorder(&self) -> PostOrderIter<M> {
-        PostOrderIter::new(self)
-    }
-
-    fn iter_preorder(&self) -> PreOrderIter<M> {
-        PreOrderIter::new(self)
-    }
-}
-
-impl<M> Yield<M> {
-    pub fn new(annotations: M, value: Expression<M>) -> Self {
-        Self { annotations, value }
-    }
-
-    pub fn get_value(&self) -> &Expression<M> {
-        &self.value
-    }
-
-    pub fn root_str(&self) -> String {
-        format!("yield")
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct YieldReturn<M> {
     annotations: M,
     value: Option<Expression<M>>,
