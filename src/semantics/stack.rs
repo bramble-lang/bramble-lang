@@ -39,6 +39,8 @@ impl<'a> SymbolTableScopeStack<'a> {
         }
     }
 
+    /// Add a function from another module to this symbol table
+    /// So that calls to external functions can be type checked.
     pub fn import_function(
         &mut self,
         canonical_name: Path,
@@ -58,12 +60,16 @@ impl<'a> SymbolTableScopeStack<'a> {
         }
     }
 
-    pub fn push(&mut self, sym: &SymbolTable) {
+    fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
+        self.imported_symbols.get(&canonical_name.to_string())
+    }
+
+    pub fn enter_scope(&mut self, sym: &SymbolTable) {
         self.stack.push(self.head.clone());
         self.head = sym.clone();
     }
 
-    pub fn pop(&mut self) -> SymbolTable {
+    pub fn leave_scope(&mut self) -> SymbolTable {
         let tmp = self.head.clone();
         self.head = self
             .stack
@@ -184,10 +190,6 @@ impl<'a> SymbolTableScopeStack<'a> {
         }
     }
 
-    fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
-        self.imported_symbols.get(&canonical_name.to_string())
-    }
-
     /**
     Given a type reference that appears in a node that is not the curren node, will convert
     that type reference to a canonical path from a relative path.  If the type reference is
@@ -272,7 +274,7 @@ mod tests {
         );
         let mut stack = SymbolTableScopeStack::new(&m);
         let local = SymbolTable::new();
-        stack.push(&local);
+        stack.enter_scope(&local);
         let path = stack.to_path();
         assert_eq!(path, None);
     }
@@ -285,9 +287,9 @@ mod tests {
         );
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("root");
-        stack.push(&sym);
+        stack.enter_scope(&sym);
         let local = SymbolTable::new();
-        stack.push(&local);
+        stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
         let expected = vec!["root"].into();
         assert_eq!(path, expected);
@@ -301,9 +303,9 @@ mod tests {
         );
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("root");
-        stack.push(&sym);
+        stack.enter_scope(&sym);
         let current = SymbolTable::new_module("inner");
-        stack.push(&current);
+        stack.enter_scope(&current);
         let path = stack.to_path().unwrap();
         let expected = vec!["root", "inner"].into();
         assert_eq!(path, expected);
@@ -317,11 +319,11 @@ mod tests {
         );
         let mut stack = SymbolTableScopeStack::new(&m);
         let module = SymbolTable::new_module("root");
-        stack.push(&module);
+        stack.enter_scope(&module);
         let local = SymbolTable::new();
-        stack.push(&local);
+        stack.enter_scope(&local);
         let local2 = SymbolTable::new();
-        stack.push(&local2);
+        stack.enter_scope(&local2);
         let path = stack.to_path().unwrap();
         let expected = vec!["root"].into();
         assert_eq!(path, expected);
@@ -335,13 +337,13 @@ mod tests {
         );
         let mut stack = SymbolTableScopeStack::new(&m);
         let module = SymbolTable::new_module("first");
-        stack.push(&module);
+        stack.enter_scope(&module);
         let module2 = SymbolTable::new_module("second");
-        stack.push(&module2);
+        stack.enter_scope(&module2);
         let local = SymbolTable::new();
-        stack.push(&local);
+        stack.enter_scope(&local);
         let local2 = SymbolTable::new();
-        stack.push(&local2);
+        stack.enter_scope(&local2);
         let path = stack.to_path().unwrap();
         let expected = vec!["first", "second"].into();
         assert_eq!(path, expected);

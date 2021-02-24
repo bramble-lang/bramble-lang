@@ -85,7 +85,7 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<Module<SemanticAnnotations>> {
         let mut nmodule = Module::new(m.get_name(), m.annotation().clone());
 
-        self.symbols.push(&nmodule.annotation().sym);
+        self.symbols.enter_scope(&nmodule.annotation().sym);
 
         *nmodule.get_modules_mut() = m
             .get_modules()
@@ -110,7 +110,7 @@ impl<'a> TypeResolver<'a> {
 
         let mut meta = nmodule.annotation_mut();
         meta.ty = Type::Unit;
-        meta.sym = self.symbols.pop();
+        meta.sym = self.symbols.leave_scope();
 
         Ok(nmodule)
     }
@@ -161,7 +161,7 @@ impl<'a> TypeResolver<'a> {
             meta.sym.add(&p.name, p.ty.clone(), false)?;
         }
 
-        self.symbols.push(&meta.sym);
+        self.symbols.enter_scope(&meta.sym);
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
@@ -169,7 +169,7 @@ impl<'a> TypeResolver<'a> {
             resolved_body.push(exp);
         }
 
-        meta.sym = self.symbols.pop();
+        meta.sym = self.symbols.leave_scope();
 
         let canonical_ret_ty = meta.ty.clone();
         Ok(RoutineDef {
@@ -593,7 +593,7 @@ impl<'a> TypeResolver<'a> {
             Expression::ExpressionBlock(meta, body, final_exp) => {
                 let mut resolved_body = vec![];
 
-                self.symbols.push(&meta.sym);
+                self.symbols.enter_scope(&meta.sym);
 
                 for stmt in body.iter() {
                     let exp = self.analyze_statement(stmt, current_func)?;
@@ -610,7 +610,7 @@ impl<'a> TypeResolver<'a> {
                 };
 
                 let mut meta = meta.clone();
-                meta.sym = self.symbols.pop();
+                meta.sym = self.symbols.leave_scope();
 
                 meta.ty = block_ty;
                 Ok(Expression::ExpressionBlock(
