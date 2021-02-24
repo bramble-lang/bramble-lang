@@ -156,6 +156,7 @@ impl<'a> TypeResolver<'a> {
         meta.ty = self.symbols.canonize_local_type_ref(p)?;
         meta.set_canonical_path(canon_path);
 
+        // Add parameters to symbol table
         for p in canonical_params.iter() {
             meta.sym.add(&p.name, p.ty.clone(), false)?;
         }
@@ -164,7 +165,7 @@ impl<'a> TypeResolver<'a> {
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
-            let exp = self.analyze_statement(stmt, &Some(name.clone()))?;
+            let exp = self.analyze_statement(stmt, &name)?;
             resolved_body.push(exp);
         }
 
@@ -226,7 +227,7 @@ impl<'a> TypeResolver<'a> {
     fn analyze_statement(
         &mut self,
         stmt: &Statement<SemanticAnnotations>,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<Statement<SemanticAnnotations>> {
         use Statement::*;
         let inner = match stmt {
@@ -243,41 +244,35 @@ impl<'a> TypeResolver<'a> {
     fn analyze_bind(
         &mut self,
         bind: &Bind<SemanticAnnotations>,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<Bind<SemanticAnnotations>> {
         let meta = bind.annotation();
         let rhs = bind.get_rhs();
-        let result = match current_func {
-            Some(_) => {
-                let mut meta = meta.clone();
-                meta.ty = self.symbols.canonize_local_type_ref(bind.get_type())?;
-                let rhs = self.traverse(rhs, current_func)?;
-                if meta.ty == rhs.get_type() {
-                    match self
-                        .symbols
-                        .add(bind.get_id(), meta.ty.clone(), bind.is_mutable())
-                    {
-                        Ok(()) => Ok(Bind::new(
-                            meta,
-                            bind.get_id(),
-                            bind.get_type().clone(),
-                            bind.is_mutable(),
-                            rhs,
-                        )),
-                        Err(e) => Err(e),
-                    }
-                } else {
-                    Err(format!(
-                        "Bind expected {} but got {}",
-                        meta.ty,
-                        rhs.get_type()
-                    ))
+        let result = {
+            let mut meta = meta.clone();
+            meta.ty = self.symbols.canonize_local_type_ref(bind.get_type())?;
+            let rhs = self.traverse(rhs, current_func)?;
+            if meta.ty == rhs.get_type() {
+                match self
+                    .symbols
+                    .add(bind.get_id(), meta.ty.clone(), bind.is_mutable())
+                {
+                    Ok(()) => Ok(Bind::new(
+                        meta,
+                        bind.get_id(),
+                        bind.get_type().clone(),
+                        bind.is_mutable(),
+                        rhs,
+                    )),
+                    Err(e) => Err(e),
                 }
+            } else {
+                Err(format!(
+                    "Bind expected {} but got {}",
+                    meta.ty,
+                    rhs.get_type()
+                ))
             }
-            None => Err(format!(
-                "Attempting to bind variable {} outside of function",
-                bind.get_id()
-            )),
         };
         result.map_err(|e| format!("L{}: {}", bind.annotation().ln, e))
     }
@@ -285,37 +280,29 @@ impl<'a> TypeResolver<'a> {
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticAnnotations>,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<Mutate<SemanticAnnotations>> {
-        let result = match current_func {
-            Some(_) => {
-                let mut meta = mutate.annotation().clone();
-                let rhs = self.traverse(mutate.get_rhs(), current_func)?;
-                match self.symbols.lookup_var(mutate.get_id()) {
-                    Ok(symbol) => {
-                        if symbol.mutable {
-                            if symbol.ty == rhs.get_type() {
-                                meta.ty = rhs.get_type().clone();
-                                Ok(Mutate::new(meta, mutate.get_id(), rhs))
-                            } else {
-                                Err(format!(
-                                    "{} is of type {} but is assigned {}",
-                                    mutate.get_id(),
-                                    symbol.ty,
-                                    rhs.get_type()
-                                ))
-                            }
-                        } else {
-                            Err(format!("Variable {} is not mutable", mutate.get_id()))
-                        }
+        let mut meta = mutate.annotation().clone();
+        let rhs = self.traverse(mutate.get_rhs(), current_func)?;
+        let result = match self.symbols.lookup_var(mutate.get_id()) {
+            Ok(symbol) => {
+                if symbol.mutable {
+                    if symbol.ty == rhs.get_type() {
+                        meta.ty = rhs.get_type().clone();
+                        Ok(Mutate::new(meta, mutate.get_id(), rhs))
+                    } else {
+                        Err(format!(
+                            "{} is of type {} but is assigned {}",
+                            mutate.get_id(),
+                            symbol.ty,
+                            rhs.get_type()
+                        ))
                     }
-                    Err(e) => Err(e),
+                } else {
+                    Err(format!("Variable {} is not mutable", mutate.get_id()))
                 }
             }
-            None => Err(format!(
-                "Attempting to mutate a variable {} outside of function",
-                mutate.get_id()
-            )),
+            Err(e) => Err(e),
         };
         result.map_err(|e| format!("L{}: {}", mutate.annotation().ln, e))
     }
@@ -323,36 +310,33 @@ impl<'a> TypeResolver<'a> {
     fn analyze_yieldreturn(
         &mut self,
         yr: &YieldReturn<SemanticAnnotations>,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<YieldReturn<SemanticAnnotations>> {
-        let result = match current_func {
-            None => Err(format!("yret appears outside of function")),
-            Some(cf) => {
-                let mut meta = yr.annotation().clone();
-                match yr.get_value() {
-                    None => {
-                        let (_, ret_ty) = self.symbols.lookup_coroutine(cf)?;
-                        if *ret_ty == Type::Unit {
-                            meta.ty = Type::Unit;
-                            Ok(YieldReturn::new(meta, None))
-                        } else {
-                            Err(format!("Yield return expected {} but got unit", ret_ty))
-                        }
+        let result = {
+            let mut meta = yr.annotation().clone();
+            match yr.get_value() {
+                None => {
+                    let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
+                    if *ret_ty == Type::Unit {
+                        meta.ty = Type::Unit;
+                        Ok(YieldReturn::new(meta, None))
+                    } else {
+                        Err(format!("Yield return expected {} but got unit", ret_ty))
                     }
-                    Some(val) => {
-                        let exp = self.traverse(val, current_func)?;
-                        let (_, ret_ty) = self.symbols.lookup_coroutine(cf)?;
-                        let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
-                        if ret_ty == exp.get_type() {
-                            meta.ty = ret_ty;
-                            Ok(YieldReturn::new(meta, Some(exp)))
-                        } else {
-                            Err(format!(
-                                "Yield return expected {} but got {}",
-                                ret_ty,
-                                exp.get_type()
-                            ))
-                        }
+                }
+                Some(val) => {
+                    let exp = self.traverse(val, current_func)?;
+                    let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
+                    let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
+                    if ret_ty == exp.get_type() {
+                        meta.ty = ret_ty;
+                        Ok(YieldReturn::new(meta, Some(exp)))
+                    } else {
+                        Err(format!(
+                            "Yield return expected {} but got {}",
+                            ret_ty,
+                            exp.get_type()
+                        ))
                     }
                 }
             }
@@ -363,36 +347,33 @@ impl<'a> TypeResolver<'a> {
     fn analyze_return(
         &mut self,
         r: &Return<SemanticAnnotations>,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<Return<SemanticAnnotations>> {
-        let result = match current_func {
-            None => Err(format!("return appears outside of function")),
-            Some(cf) => {
-                let mut meta = r.annotation().clone();
-                match r.get_value() {
-                    None => {
-                        let (_, ret_ty) = self.symbols.lookup_func_or_cor(cf)?;
-                        if *ret_ty == Type::Unit {
-                            meta.ty = Type::Unit;
-                            Ok(Return::new(meta, None))
-                        } else {
-                            Err(format!("Return expected {} but got unit", ret_ty))
-                        }
+        let result = {
+            let mut meta = r.annotation().clone();
+            match r.get_value() {
+                None => {
+                    let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
+                    if *ret_ty == Type::Unit {
+                        meta.ty = Type::Unit;
+                        Ok(Return::new(meta, None))
+                    } else {
+                        Err(format!("Return expected {} but got unit", ret_ty))
                     }
-                    Some(val) => {
-                        let exp = self.traverse(val, current_func)?;
-                        let (_, ret_ty) = self.symbols.lookup_func_or_cor(cf)?;
-                        let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
-                        if ret_ty == exp.get_type() {
-                            meta.ty = ret_ty;
-                            Ok(Return::new(meta, Some(exp)))
-                        } else {
-                            Err(format!(
-                                "Return expected {} but got {}",
-                                ret_ty,
-                                exp.get_type()
-                            ))
-                        }
+                }
+                Some(val) => {
+                    let exp = self.traverse(val, current_func)?;
+                    let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
+                    let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
+                    if ret_ty == exp.get_type() {
+                        meta.ty = ret_ty;
+                        Ok(Return::new(meta, Some(exp)))
+                    } else {
+                        Err(format!(
+                            "Return expected {} but got {}",
+                            ret_ty,
+                            exp.get_type()
+                        ))
                     }
                 }
             }
@@ -400,11 +381,7 @@ impl<'a> TypeResolver<'a> {
         result.map_err(|e| format!("L{}: {}", r.annotation().ln, e))
     }
 
-    fn traverse(
-        &mut self,
-        ast: &SemanticNode,
-        current_func: &Option<String>,
-    ) -> Result<SemanticNode> {
+    fn traverse(&mut self, ast: &SemanticNode, current_func: &str) -> Result<SemanticNode> {
         self.analyze_expression(ast, current_func).map_err(|e| {
             if !e.starts_with("L") {
                 format!("L{}: {}", ast.annotation().ln, e)
@@ -417,7 +394,7 @@ impl<'a> TypeResolver<'a> {
     fn analyze_expression(
         &mut self,
         ast: &SemanticNode,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<SemanticNode> {
         match &ast {
             &Expression::Integer32(meta, v) => {
@@ -454,15 +431,14 @@ impl<'a> TypeResolver<'a> {
                     p.clone(),
                 ))
             }
-            Expression::Identifier(meta, id) => match current_func {
-                None => Err(format!("Variable {} appears outside of function", id)),
-                Some(_) => {
+            Expression::Identifier(meta, id) => {
                     let mut meta = meta.clone();
                     match self.symbols.lookup_var(&id)? {
-                        Symbol { ty: p, .. } => meta.ty = self.symbols.canonize_local_type_ref(p)?,
+                        Symbol { ty: p, .. } => {
+                            meta.ty = self.symbols.canonize_local_type_ref(p)?
+                        }
                     };
                     Ok(Expression::Identifier(meta.clone(), id.clone()))
-                }
             },
             Expression::Path(..) => {
                 todo!("Check to make sure that each identifier in the path is a valid module or a item in that module");
@@ -554,9 +530,7 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
-            Expression::Yield(meta, exp) => match current_func {
-                None => Err(format!("Yield appears outside of function")),
-                Some(_) => {
+            Expression::Yield(meta, exp) => {
                     let mut meta = meta.clone();
                     let exp = self.traverse(&exp, current_func)?;
                     meta.ty = match exp.get_type() {
@@ -564,7 +538,6 @@ impl<'a> TypeResolver<'a> {
                         _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                     };
                     Ok(Expression::Yield(meta, Box::new(exp)))
-                }
             },
             Expression::RoutineCall(meta, call, routine_path, params) => {
                 let mut meta = meta.clone();
@@ -703,11 +676,8 @@ impl<'a> TypeResolver<'a> {
     fn analyze_yield(
         &mut self,
         y: &Yield<SemanticAnnotations>,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<Yield<SemanticAnnotations>> {
-        match current_func {
-            None => Err(format!("yield appears outside of function")),
-            Some(_) => {
                 let mut meta = y.annotation().clone();
                 let exp = self.traverse(y.get_value(), current_func)?;
                 meta.ty = match exp.get_type() {
@@ -715,15 +685,13 @@ impl<'a> TypeResolver<'a> {
                     _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                 };
                 Ok(Yield::new(meta, exp))
-            }
-        }
     }
 
     fn unary_op(
         &mut self,
         op: UnaryOperator,
         operand: &SemanticNode,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
@@ -760,7 +728,7 @@ impl<'a> TypeResolver<'a> {
         op: BinaryOperator,
         l: &SemanticNode,
         r: &SemanticNode,
-        current_func: &Option<String>,
+        current_func: &str,
     ) -> Result<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
