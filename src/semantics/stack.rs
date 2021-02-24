@@ -72,12 +72,18 @@ impl<'a> SymbolTableScopeStack<'a> {
         tmp
     }
 
-    pub fn get(&self, name: &str) -> Option<&Symbol> {
+    /// Searches SymbolStack, starting at the top of the stack and moving down,
+    /// for a symbol that matches `name`.
+    ///
+    /// Returns the first match.  Returns `None` if no matching symbol was found.
+    fn get_symbol(&self, name: &str) -> Option<&Symbol> {
         self.head
             .get(name)
             .or_else(|| self.stack.iter().rev().find_map(|scope| scope.get(name)))
     }
 
+    /// Add a new symbol to the current symbol table (the SymbolTable that is at the
+    /// top of the stack).
     pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
         self.head.add(name, ty, mutable)
     }
@@ -170,7 +176,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             let item = &path[0];
             self.head
                 .get(item)
-                .or_else(|| self.get(item))
+                .or_else(|| self.get_symbol(item))
                 .map(|i| (i, canon_path))
                 .ok_or(format!("{} is not defined", item))
         } else {
