@@ -111,10 +111,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// Specifically looks for a routine (function or coroutine) with the given ID.  Will search upward through the scope
     /// hierarchy until a symbol is found that matches `id`. If that symbol is a routine it is returned
     /// if the symbol is not a routine `Err` is returned.  If no symbol is found `Err` is returned.
-    pub fn lookup_func_or_cor(
-        &'a self,
-        id: &str,
-    ) -> Result<(&Vec<Type>, &Type)> {
+    pub fn lookup_func_or_cor(&'a self, id: &str) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup_symbol_by_path(&vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -131,10 +128,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// Specifically looks for a coroutine with the given ID.  Will search upward through the scope
     /// hierarchy until a symbol is found that matches `id`. If that symbol is a coroutine it is returned
     /// if the symbol is not a coroutine `Err` is returned.  If no symbol is found `Err` is returned.
-    pub fn lookup_coroutine(
-        &'a self,
-        id: &str,
-    ) -> Result<(&Vec<Type>, &Type)> {
+    pub fn lookup_coroutine(&'a self, id: &str) -> Result<(&Vec<Type>, &Type)> {
         match self.lookup_symbol_by_path(&vec![id].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -149,10 +143,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// or the item identified by the path does not exist, then an error is returned.
     ///
     /// This function will work with relative and canonical paths.
-    pub fn lookup_symbol_by_path(
-        &'a self,
-        path: &Path,
-    ) -> Result<(&'a Symbol, Path)> {
+    pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
         let canon_path = self.to_canonical(path)?;
 
         if path.len() > 1 {
@@ -183,7 +174,8 @@ impl<'a> SymbolTableScopeStack<'a> {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
             let item = &path[0];
-            self.head.get(item)
+            self.head
+                .get(item)
                 .or_else(|| self.get(item))
                 .map(|i| (i, canon_path))
                 .ok_or(format!("{} is not defined", item))
