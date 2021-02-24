@@ -65,7 +65,7 @@ impl<'a> SymbolTableScopeStack<'a> {
 
     pub fn pop(&mut self) -> SymbolTable {
         let tmp = self.head.clone();
-        self.head = self.stack.pop().unwrap();
+        self.head = self.stack.pop().expect("SymbolTable stack should never be empty on a pop");
         tmp
     }
 
