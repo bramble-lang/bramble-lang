@@ -68,18 +68,6 @@ impl<'a> SymbolTableScopeStack<'a> {
         tmp
     }
 
-    pub fn head(&self) -> &SymbolTable {
-        &self.head
-    }
-
-    pub fn head_mut(&mut self) -> &mut SymbolTable {
-        &mut self.head
-    }
-
-    pub fn root(&self) -> &Module<SemanticAnnotations> {
-        self.root
-    }
-
     pub fn get(&self, name: &str) -> Option<&Symbol> {
         match self.head.get(name) {
             Some(v) => return Some(v),
@@ -93,6 +81,10 @@ impl<'a> SymbolTableScopeStack<'a> {
             }
         }
         None
+    }
+
+    pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
+        self.head.add(name, ty, mutable)
     }
 
     /// Finds the given variable in the current symbol table or in the symbol table history

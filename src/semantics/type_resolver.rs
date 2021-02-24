@@ -257,7 +257,7 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = self.stack.canonize_local_type_ref(bind.get_type())?;
                 let rhs = self.traverse(rhs, current_func)?;
                 if meta.ty == rhs.get_type() {
-                    match self.stack.head_mut().add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
+                    match self.stack.add(bind.get_id(), meta.ty.clone(), bind.is_mutable()) {
                         Ok(()) => Ok(Bind::new(
                             meta,
                             bind.get_id(),
@@ -685,7 +685,7 @@ impl<'a> TypeResolver<'a> {
 
                 let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
                 meta.ty = Type::Custom(canonical_path.clone());
-                self.stack.head_mut().add(&anonymouse_name, meta.ty.clone(), false)?;
+                self.stack.add(&anonymouse_name, meta.ty.clone(), false)?;
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
