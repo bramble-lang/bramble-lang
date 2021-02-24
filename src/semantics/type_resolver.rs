@@ -302,7 +302,7 @@ impl<'a> TypeResolver<'a> {
             Some(_) => {
                 let mut meta = mutate.annotation().clone();
                 let rhs = self.traverse(mutate.get_rhs(), current_func, sym)?;
-                match self.lookup_var(sym, mutate.get_id()) {
+                match self.stack.lookup_var(sym, mutate.get_id()) {
                     Ok(symbol) => {
                         if symbol.mutable {
                             if symbol.ty == rhs.get_type() {
@@ -343,7 +343,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = yr.annotation().clone();
                 match yr.get_value() {
                     None => {
-                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        let (_, ret_ty) = self.stack.lookup_coroutine(sym, cf)?;
                         if *ret_ty == Type::Unit {
                             meta.ty = Type::Unit;
                             Ok(YieldReturn::new(meta, None))
@@ -353,7 +353,7 @@ impl<'a> TypeResolver<'a> {
                     }
                     Some(val) => {
                         let exp = self.traverse(val, current_func, sym)?;
-                        let (_, ret_ty) = self.lookup_coroutine(sym, cf)?;
+                        let (_, ret_ty) = self.stack.lookup_coroutine(sym, cf)?;
                         let ret_ty = self.stack.canonize_local_type_ref(sym, ret_ty)?;
                         if ret_ty == exp.get_type() {
                             meta.ty = ret_ty;
@@ -384,7 +384,7 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = r.annotation().clone();
                 match r.get_value() {
                     None => {
-                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
+                        let (_, ret_ty) = self.stack.lookup_func_or_cor(sym, cf)?;
                         if *ret_ty == Type::Unit {
                             meta.ty = Type::Unit;
                             Ok(Return::new(meta, None))
@@ -394,7 +394,7 @@ impl<'a> TypeResolver<'a> {
                     }
                     Some(val) => {
                         let exp = self.traverse(val, current_func, sym)?;
-                        let (_, ret_ty) = self.lookup_func_or_cor(sym, cf)?;
+                        let (_, ret_ty) = self.stack.lookup_func_or_cor(sym, cf)?;
                         let ret_ty = self.stack.canonize_local_type_ref(sym, ret_ty)?;
                         if ret_ty == exp.get_type() {
                             meta.ty = ret_ty;
@@ -474,7 +474,7 @@ impl<'a> TypeResolver<'a> {
                 None => Err(format!("Variable {} appears outside of function", id)),
                 Some(_) => {
                     let mut meta = meta.clone();
-                    match self.lookup_var(sym, &id)? {
+                    match self.stack.lookup_var(sym, &id)? {
                         Symbol { ty: p, .. } => meta.ty = self.stack.canonize_local_type_ref(sym, p)?,
                     };
                     Ok(Expression::Identifier(meta.clone(), id.clone()))
@@ -862,47 +862,6 @@ impl<'a> TypeResolver<'a> {
             canonical_fields.push((n.clone(), t));
         }
         Ok(canonical_fields)
-    }
-
-    fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.stack.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
-            Symbol {
-                ty: Type::CoroutineDef(params, p),
-                ..
-            }
-            | Symbol {
-                ty: Type::FunctionDef(params, p),
-                ..
-            } => Ok((params, p)),
-            _ => return Err(format!("{} is not a coroutine or function", id)),
-        }
-    }
-
-    fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
-        match self.stack.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
-            Symbol {
-                ty: Type::CoroutineDef(params, p),
-                ..
-            } => Ok((params, p)),
-            _ => return Err(format!("{} is not a coroutine", id)),
-        }
-    }
-
-    fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
-        let (symbol, _) = &self.stack.lookup_symbol_by_path(sym, &vec![id].into())?;
-        match symbol.ty {
-            Type::FunctionDef(..)
-            | Type::CoroutineDef(..)
-            | Type::StructDef { .. }
-            | Type::Unknown => return Err(format!("{} is not a variable", id)),
-            Type::Custom(..)
-            | Type::Coroutine(_)
-            | Type::I32
-            | Type::I64
-            | Type::Bool
-            | Type::StringLiteral
-            | Type::Unit => Ok(symbol),
-        }
     }
 
     fn extract_routine_type_info<'b>(

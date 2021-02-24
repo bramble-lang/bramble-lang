@@ -76,6 +76,47 @@ impl<'a> SymbolTableScopeStack<'a> {
         None
     }
 
+    pub fn lookup_var(&'a self, sym: &'a SymbolTable, id: &str) -> Result<&'a Symbol> {
+        let (symbol, _) = &self.lookup_symbol_by_path(sym, &vec![id].into())?;
+        match symbol.ty {
+            Type::FunctionDef(..)
+            | Type::CoroutineDef(..)
+            | Type::StructDef { .. }
+            | Type::Unknown => return Err(format!("{} is not a variable", id)),
+            Type::Custom(..)
+            | Type::Coroutine(_)
+            | Type::I32
+            | Type::I64
+            | Type::Bool
+            | Type::StringLiteral
+            | Type::Unit => Ok(symbol),
+        }
+    }
+
+    pub fn lookup_func_or_cor(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
+        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
+            Symbol {
+                ty: Type::CoroutineDef(params, p),
+                ..
+            }
+            | Symbol {
+                ty: Type::FunctionDef(params, p),
+                ..
+            } => Ok((params, p)),
+            _ => return Err(format!("{} is not a coroutine or function", id)),
+        }
+    }
+
+    pub fn lookup_coroutine(&'a self, sym: &'a SymbolTable, id: &str) -> Result<(&Vec<Type>, &Type)> {
+        match self.lookup_symbol_by_path(sym, &vec![id].into())?.0 {
+            Symbol {
+                ty: Type::CoroutineDef(params, p),
+                ..
+            } => Ok((params, p)),
+            _ => return Err(format!("{} is not a coroutine", id)),
+        }
+    }
+
     pub fn lookup_symbol_by_path(
         &'a self,
         sym: &'a SymbolTable,
