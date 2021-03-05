@@ -13,6 +13,7 @@ use ast::Type;
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
+use inkwell::context::Context;
 use lexer::tokens::Token;
 use semantics::type_resolver::*;
 
@@ -81,6 +82,11 @@ fn main() {
         .into();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
     let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
+
+    let context = Context::create();
+    let llvm = compiler::llvm::IrGen::new(&context, "test");
+    llvm.construct_fn_decls(&semantic_ast);
+    llvm.print();
 
     // Compile
     let program = Compiler::compile(

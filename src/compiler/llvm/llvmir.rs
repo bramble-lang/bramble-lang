@@ -36,8 +36,12 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
+    pub fn print(&self) {
+        self.module.print_to_stderr()
+    }
+
     /// Take the given AST
-    fn construct_fn_decls<A>(&self, m: &crate::ast::Module<A>) {
+    pub fn construct_fn_decls<A>(&self, m: &crate::ast::Module<A>) {
         for f in m.get_functions() {
             if let crate::ast::Item::Routine(rd) = f {
                 self.add_fn_decl(rd);
