@@ -86,7 +86,7 @@ fn main() {
     {
         let context = Context::create();
         let llvm = compiler::llvm::IrGen::new(&context, "test");
-        llvm.construct_fn_decls(&semantic_ast);
+        llvm.compile(&semantic_ast);
         llvm.print();
     }
 

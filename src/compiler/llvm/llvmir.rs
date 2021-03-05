@@ -46,8 +46,18 @@ impl<'ctx> IrGen<'ctx> {
         self.module.print_to_stderr()
     }
 
-    /// Take the given AST
-    pub fn construct_fn_decls<A>(&self, m: &'ctx crate::ast::Module<A>) {
+    pub fn compile<A>(&self, m: &'ctx crate::ast::Module<A>) {
+        self.construct_fn_decls(m);
+        match m.to_llvm_ir(self) {
+            None => (),
+            Some(_) => panic!("Expected None when compiling a Module"),
+        }
+    }
+
+    /// Take the given AST and add declarations for every function to the
+    /// LLVM module. This is required so that the FunctionValue can be looked
+    /// up when generating code for function calls.
+    fn construct_fn_decls<A>(&self, m: &'ctx crate::ast::Module<A>) {
         for f in m.get_functions() {
             if let crate::ast::Item::Routine(rd) = f {
                 self.add_fn_decl(rd);
@@ -117,16 +127,15 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::RoutineDef<A> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
-        let i64_type = llvm.context.i64_type();
-        let fn_type = i64_type.fn_type(&[i64_type.into(), i64_type.into(), i64_type.into()], false);
-        Some(llvm.module.add_function(&self.name, fn_type, None))
-    }
-}
+        let fn_value = llvm
+            .module
+            .get_function(&self.name)
+            .expect("Could not find function");
+        let entry_bb = llvm.context.append_basic_block(fn_value, "entry");
+        llvm.builder.position_at_end(entry_bb);
 
-/// Support method which generates the declaration for a routine
-impl<A> crate::ast::RoutineDef<A> {
-    fn get_decl<'ctx>(&self, context: &'ctx Context) -> FunctionValue {
-        let unit_ty = context.void_type();
-        todo!()
+        llvm.builder.build_return(None);
+
+        Some(fn_value)
     }
 }
