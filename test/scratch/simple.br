@@ -1,5 +1,5 @@
 fn my_main() -> i64 {
-    return 10;
+    return -10 + 5;
 }
 
 fn test() -> bool {

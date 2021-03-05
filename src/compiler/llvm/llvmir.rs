@@ -186,6 +186,15 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Expression<A> {
                 let bt = llvm.context.bool_type();
                 Some(bt.const_int(*b as u64, false))
             }
+            crate::ast::Expression::UnaryOp(_, crate::ast::UnaryOperator::Minus, exp) => {
+                let v = exp.to_llvm_ir(llvm).expect("Expected a value");
+                Some(llvm.builder.build_int_neg(v, ""))
+            }
+            crate::ast::Expression::BinaryOp(_, crate::ast::BinaryOperator::Add, l, r) => {
+                let lv = l.to_llvm_ir(llvm).expect("Expected a value");
+                let rv = r.to_llvm_ir(llvm).expect("Expected a value");
+                Some(llvm.builder.build_int_add(lv, rv, ""))
+            }
             _ => todo!(),
         }
     }
