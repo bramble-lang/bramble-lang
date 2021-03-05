@@ -8,12 +8,18 @@
 /// into native assembly or into a JIT.
 use std::{collections::HashMap, error::Error};
 
-use inkwell::execution_engine::{ExecutionEngine, JitFunction};
-use inkwell::module::Module;
-use inkwell::targets::{InitializationConfig, Target};
-use inkwell::OptimizationLevel;
 use inkwell::{builder::Builder, values::FunctionValue};
 use inkwell::{context::Context, values::AnyValue};
+use inkwell::{
+    execution_engine::{ExecutionEngine, JitFunction},
+    types::AnyType,
+};
+use inkwell::{module::Module, types::AnyTypeEnum};
+use inkwell::{
+    targets::{InitializationConfig, Target},
+    types::IntType,
+};
+use inkwell::{types::BasicTypeEnum, OptimizationLevel};
 
 use crate::ast::{Annotation, RoutineDef};
 
@@ -41,7 +47,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Take the given AST
-    pub fn construct_fn_decls<A>(&self, m: &crate::ast::Module<A>) {
+    pub fn construct_fn_decls<A>(&self, m: &'ctx crate::ast::Module<A>) {
         for f in m.get_functions() {
             if let crate::ast::Item::Routine(rd) = f {
                 self.add_fn_decl(rd);
@@ -58,11 +64,31 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_decl<A>(&self, rd: &RoutineDef<A>) {
-        let ty = self.context.void_type();
-        let params = vec![];
+    fn add_fn_decl<A>(&self, rd: &'ctx RoutineDef<A>) {
+        let ty = match rd.ty {
+            crate::ast::Type::I64 => self.context.i64_type(),
+            crate::ast::Type::Bool => self.context.bool_type(),
+            _ => panic!("Can't convert type to LLVM: {}", rd.ty),
+        };
+        let mut params = vec![];
+        for p in rd.get_params() {
+            let ty = match p.ty {
+                crate::ast::Type::I64 => self.context.i64_type(),
+                crate::ast::Type::Bool => self.context.bool_type(),
+                _ => panic!("Can't convert type to LLVM: {}", p.ty),
+            };
+            params.push(ty.into())
+        }
         let fn_type = ty.fn_type(&params, false);
         self.module.add_function(rd.get_name(), fn_type, None);
+    }
+
+    fn ty_to_llvm(&self, ty: crate::ast::Type) -> IntType {
+        match ty {
+            crate::ast::Type::I64 => self.context.i64_type(),
+            crate::ast::Type::Bool => self.context.bool_type(),
+            _ => panic!("Can't convert type to LLVM: {}", ty),
+        }
     }
 }
 
