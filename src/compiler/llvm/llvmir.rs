@@ -43,6 +43,10 @@ impl<'ctx> IrGen<'ctx> {
                 self.add_fn_decl(rd);
             }
         }
+
+        for m in m.get_modules() {
+            self.construct_fn_decls(m);
+        }
     }
 
     /// Takes a RoutineDef and adds its declaration to the
