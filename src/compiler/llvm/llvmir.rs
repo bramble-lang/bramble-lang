@@ -65,27 +65,19 @@ impl<'ctx> IrGen<'ctx> {
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
     fn add_fn_decl<A>(&self, rd: &'ctx RoutineDef<A>) {
-        let ty = Self::type_to_llvm(self.context, &rd.ty);
+        let ty = self.type_to_llvm(&rd.ty);
         let mut params = vec![];
         for p in rd.get_params() {
-            params.push(Self::type_to_llvm(self.context, &p.ty).into())
+            params.push(self.type_to_llvm(&p.ty).into())
         }
         let fn_type = ty.fn_type(&params, false);
         self.module.add_function(rd.get_name(), fn_type, None);
     }
 
-    fn ty_to_llvm(&self, ty: crate::ast::Type) -> IntType {
-        match ty {
+    fn type_to_llvm(&self, ty: &crate::ast::Type) -> IntType<'ctx> {
+        let ty = match ty {
             crate::ast::Type::I64 => self.context.i64_type(),
             crate::ast::Type::Bool => self.context.bool_type(),
-            _ => panic!("Can't convert type to LLVM: {}", ty),
-        }
-    }
-
-    fn type_to_llvm(context: &'ctx Context, ty: &crate::ast::Type) -> IntType<'ctx> {
-        let ty = match ty {
-            crate::ast::Type::I64 => context.i64_type(),
-            crate::ast::Type::Bool => context.bool_type(),
             _ => panic!("Can't convert type to LLVM: {}", ty),
         };
         ty
