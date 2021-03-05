@@ -177,7 +177,16 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Expression<A> {
     type Value = IntValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
-        let i64t = llvm.context.i64_type();
-        Some(i64t.const_int(50, false))
+        match self {
+            crate::ast::Expression::Integer64(_, i) => {
+                let i64t = llvm.context.i64_type();
+                Some(i64t.const_int(*i as u64, true))
+            }
+            crate::ast::Expression::Boolean(_, b) => {
+                let bt = llvm.context.bool_type();
+                Some(bt.const_int(*b as u64, false))
+            }
+            _ => todo!(),
+        }
     }
 }
