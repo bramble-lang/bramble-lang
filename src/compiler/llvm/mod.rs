@@ -1,3 +1,4 @@
 /**
-    Translate Braid into LLVM IR.
- */
+   Translate Braid into LLVM IR.
+*/
+mod llvmir;
