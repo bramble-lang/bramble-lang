@@ -1,4 +1,4 @@
-#![allow(unused_imports)]
+#![allow(unused_imports, unused_variables)]
 
 /// The compiler traverses the Braid AST and constructs and constructs
 /// an LLVM Module through LLVM IR.
@@ -15,7 +15,7 @@ use inkwell::OptimizationLevel;
 use inkwell::{builder::Builder, values::FunctionValue};
 use inkwell::{context::Context, values::AnyValue};
 
-use crate::ast::Annotation;
+use crate::ast::{Annotation, RoutineDef};
 
 /// A LLVM IR generator which can be used to generate all the code
 /// for a single LLVM Module.
@@ -37,10 +37,24 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Take the given AST
-    fn construct_fn_decls<A: Annotation + std::fmt::Debug>(&mut self, m: &crate::ast::Module<A>) {
-        let iter = crate::ast::PreOrderIter::new(m);
+    fn construct_fn_decls<A>(&mut self, m: &crate::ast::Module<A>) {
+        for f in m.get_functions() {
+            if let crate::ast::Item::Routine(rd) = f {
+                self.add_fn_decl(rd);
+            }
+        }
+    }
 
-        for n in iter {}
+    /// Takes a RoutineDef and adds its declaration to the
+    /// LLVM Module. This function declaration can then be
+    /// looked up through `self.module` for function calls
+    /// and to add the definition to the function when
+    /// compiling the AST to LLVM.
+    fn add_fn_decl<A>(&self, rd: &RoutineDef<A>) {
+        let ty = self.context.void_type();
+        let params = vec![];
+        let fn_type = ty.fn_type(&params, false);
+        self.module.add_function(rd.get_name(), fn_type, None);
     }
 }
 
@@ -80,5 +94,13 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::RoutineDef<A> {
         let i64_type = llvm.context.i64_type();
         let fn_type = i64_type.fn_type(&[i64_type.into(), i64_type.into(), i64_type.into()], false);
         Some(llvm.module.add_function(&self.name, fn_type, None))
+    }
+}
+
+/// Support method which generates the declaration for a routine
+impl<A> crate::ast::RoutineDef<A> {
+    fn get_decl<'ctx>(&self, context: &'ctx Context) -> FunctionValue {
+        let unit_ty = context.void_type();
+        todo!()
     }
 }
