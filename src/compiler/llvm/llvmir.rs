@@ -8,7 +8,10 @@
 /// into native assembly or into a JIT.
 use std::{collections::HashMap, error::Error};
 
-use inkwell::{builder::Builder, values::FunctionValue};
+use inkwell::{
+    builder::Builder,
+    values::{FunctionValue, InstructionValue, IntValue},
+};
 use inkwell::{context::Context, values::AnyValue};
 use inkwell::{
     execution_engine::{ExecutionEngine, JitFunction},
@@ -97,12 +100,12 @@ impl<'ctx> IrGen<'ctx> {
 trait ToLlvmIr<'ctx> {
     type Value: inkwell::values::AnyValue<'ctx>;
 
-    // Some things (Modules) don't have a value so amke this an option
-    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value>; // I think this is a good place for an associated type, if I can specify it must implement the AnyValue trait
+    /// Compile a Language unit to LLVM and return the appropriate LLVM Value
+    /// if it has one (Modules don't have LLVM Values so those will return None)
+    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value>;
 }
 
 impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Module<A> {
-    /// DEFINITELY NOT WHAT i WANT, BUT JUST PUTTING HERE TO GET TO COMPILE
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
@@ -134,8 +137,47 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::RoutineDef<A> {
         let entry_bb = llvm.context.append_basic_block(fn_value, "entry");
         llvm.builder.position_at_end(entry_bb);
 
-        llvm.builder.build_return(None);
+        // Compile the body to LLVM
+        for stm in &self.body {
+            let value = stm.to_llvm_ir(llvm);
+        }
 
         Some(fn_value)
+    }
+}
+
+impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Statement<A> {
+    type Value = InstructionValue<'ctx>;
+
+    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+        match self {
+            crate::ast::Statement::Return(ret) => ret.to_llvm_ir(llvm),
+            _ => None,
+        }
+    }
+}
+
+impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Return<A> {
+    type Value = InstructionValue<'ctx>;
+
+    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+        Some(match self.get_value() {
+            None => llvm.builder.build_return(None),
+            Some(val) => {
+                let val = val
+                    .to_llvm_ir(llvm)
+                    .expect("Return expression did not compile to an LLVM value");
+                llvm.builder.build_return(Some(&val))
+            }
+        })
+    }
+}
+
+impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Expression<A> {
+    type Value = IntValue<'ctx>;
+
+    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+        let i64t = llvm.context.i64_type();
+        Some(i64t.const_int(50, false))
     }
 }
