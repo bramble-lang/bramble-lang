@@ -45,8 +45,9 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
-    pub fn print(&self) {
-        self.module.print_to_stderr()
+    pub fn print(&self, path: &std::path::Path) {
+        self.module.print_to_stderr();
+        self.module.print_to_file(path).unwrap()
     }
 
     pub fn compile<A>(&self, m: &'ctx crate::ast::Module<A>) {

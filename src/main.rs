@@ -8,7 +8,8 @@ mod lexer;
 mod parser;
 mod semantics;
 
-use crate::ast::Path;
+use std::path::Path;
+
 use ast::Type;
 use clap::{App, Arg};
 use compiler::compiler::*;
@@ -87,7 +88,7 @@ fn main() {
         let context = Context::create();
         let llvm = compiler::llvm::IrGen::new(&context, "test");
         llvm.compile(&semantic_ast);
-        llvm.print();
+        llvm.print(Path::new("./target/output.ll"));
     }
 
     // Compile
@@ -179,7 +180,7 @@ fn configure_cli() -> clap::App<'static, 'static> {
     app
 }
 
-fn configure_imported_functions() -> Vec<(Path, Vec<Type>, Type)> {
+fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
     vec![
         (
             vec!["root", "std", "io", "write"].into(),
