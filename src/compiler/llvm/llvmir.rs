@@ -10,6 +10,7 @@ use std::{collections::HashMap, error::Error};
 
 use inkwell::{
     builder::Builder,
+    types::FunctionType,
     values::{AnyValueEnum, BasicValueEnum, FunctionValue, InstructionValue, IntValue},
 };
 use inkwell::{context::Context, values::AnyValue};
@@ -37,15 +38,21 @@ pub struct IrGen<'ctx> {
     module: Module<'ctx>,
     builder: Builder<'ctx>,
     functions: HashMap<String, FunctionValue<'ctx>>,
+    externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
 }
 
 impl<'ctx> IrGen<'ctx> {
-    pub fn new(ctx: &'ctx Context, module: &str) -> IrGen<'ctx> {
+    pub fn new(
+        ctx: &'ctx Context,
+        module: &str,
+        externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
+    ) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
             functions: HashMap::new(),
+            externs,
         }
     }
 
@@ -55,10 +62,20 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     pub fn compile(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+        self.add_externs();
         self.construct_fn_decls(m);
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
+        }
+    }
+
+    /// Add the list of external function declarations to the function table
+    /// in the LLVM module
+    fn add_externs(&self) {
+        for (path, params, ty) in self.externs {
+            println!("{}", path);
+            self.add_extern_decl(&path.to_label(), params, ty)
         }
     }
 
@@ -86,20 +103,58 @@ impl<'ctx> IrGen<'ctx> {
         let ty = self.type_to_llvm(&rd.ty);
         let mut params = vec![];
         for p in rd.get_params() {
-            params.push(self.type_to_llvm(&p.ty).into())
+            params.push(Self::anytype_to_basictype(&self.type_to_llvm(&p.ty)).unwrap())
         }
-        let fn_type = ty.fn_type(&params, false);
+
+        let fn_type = match ty {
+            AnyTypeEnum::IntType(ity) => ity.fn_type(&params, false),
+            AnyTypeEnum::VoidType(vty) => vty.fn_type(&params, false),
+            _ => panic!(),
+        };
         let fn_name = rd.annotations.get_canonical_path().to_label();
         self.module.add_function(&fn_name, fn_type, None);
     }
 
-    fn type_to_llvm(&self, ty: &crate::ast::Type) -> IntType<'ctx> {
+    /// Takes a tuple describing the signature of an extern and adds its declaration to the
+    /// LLVM Module. This function declaration can then be
+    /// looked up through `self.module` for function calls
+    /// and to add the definition to the function when
+    /// compiling the AST to LLVM.
+    fn add_extern_decl(
+        &self,
+        name: &str,
+        params: &Vec<crate::ast::Type>,
+        ret_ty: &crate::ast::Type,
+    ) {
+        let llvm_ty = self.type_to_llvm(ret_ty);
+        let mut llvm_params = vec![];
+        for p in params {
+            llvm_params.push(Self::anytype_to_basictype(&self.type_to_llvm(&p)).unwrap())
+        }
+        let fn_type = match llvm_ty {
+            AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
+            AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
+            _ => panic!(),
+        };
+        self.module.add_function(name, fn_type, None);
+    }
+
+    fn type_to_llvm(&self, ty: &crate::ast::Type) -> AnyTypeEnum<'ctx> {
         let ty = match ty {
-            crate::ast::Type::I64 => self.context.i64_type(),
-            crate::ast::Type::Bool => self.context.bool_type(),
+            crate::ast::Type::I32 => self.context.i32_type().into(),
+            crate::ast::Type::I64 => self.context.i64_type().into(),
+            crate::ast::Type::Bool => self.context.bool_type().into(),
+            crate::ast::Type::Unit => self.context.custom_width_int_type(1).into(),
             _ => panic!("Can't convert type to LLVM: {}", ty),
         };
         ty
+    }
+
+    fn anytype_to_basictype(ty: &AnyTypeEnum<'ctx>) -> Option<BasicTypeEnum<'ctx>> {
+        match ty {
+            AnyTypeEnum::IntType(ity) => Some(ity.clone().into()),
+            _ => None,
+        }
     }
 }
 
@@ -186,6 +241,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
         match self {
             crate::ast::Expression::Integer64(_, i) => {
+                let vt = llvm.context.void_type();
                 let i64t = llvm.context.i64_type();
                 Some(i64t.const_int(*i as u64, true).into())
             }
