@@ -1,4 +1,5 @@
 fn my_main() -> i64 {
+	test();
     return -10 + 5;
 }
 

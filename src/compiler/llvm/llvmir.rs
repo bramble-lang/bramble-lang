@@ -10,7 +10,7 @@ use std::{collections::HashMap, error::Error};
 
 use inkwell::{
     builder::Builder,
-    values::{FunctionValue, InstructionValue, IntValue},
+    values::{AnyValueEnum, BasicValueEnum, FunctionValue, InstructionValue, IntValue},
 };
 use inkwell::{context::Context, values::AnyValue};
 use inkwell::{
@@ -24,7 +24,11 @@ use inkwell::{
 };
 use inkwell::{types::BasicTypeEnum, OptimizationLevel};
 
-use crate::ast::{Annotation, RoutineDef};
+use crate::{
+    ast::{Annotation, RoutineDef},
+    compiler::memory::scope::CompilerAnnotation,
+    semantics::semanticnode::SemanticAnnotations,
+};
 
 /// A LLVM IR generator which can be used to generate all the code
 /// for a single LLVM Module.
@@ -50,7 +54,7 @@ impl<'ctx> IrGen<'ctx> {
         self.module.print_to_file(path).unwrap()
     }
 
-    pub fn compile<A>(&self, m: &'ctx crate::ast::Module<A>) {
+    pub fn compile(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
         self.construct_fn_decls(m);
         match m.to_llvm_ir(self) {
             None => (),
@@ -61,7 +65,7 @@ impl<'ctx> IrGen<'ctx> {
     /// Take the given AST and add declarations for every function to the
     /// LLVM module. This is required so that the FunctionValue can be looked
     /// up when generating code for function calls.
-    fn construct_fn_decls<A>(&self, m: &'ctx crate::ast::Module<A>) {
+    fn construct_fn_decls(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
         for f in m.get_functions() {
             if let crate::ast::Item::Routine(rd) = f {
                 self.add_fn_decl(rd);
@@ -78,14 +82,15 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_decl<A>(&self, rd: &'ctx RoutineDef<A>) {
+    fn add_fn_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
         let ty = self.type_to_llvm(&rd.ty);
         let mut params = vec![];
         for p in rd.get_params() {
             params.push(self.type_to_llvm(&p.ty).into())
         }
         let fn_type = ty.fn_type(&params, false);
-        self.module.add_function(rd.get_name(), fn_type, None);
+        let fn_name = rd.annotations.get_canonical_path().to_label();
+        self.module.add_function(&fn_name, fn_type, None);
     }
 
     fn type_to_llvm(&self, ty: &crate::ast::Type) -> IntType<'ctx> {
@@ -106,7 +111,7 @@ trait ToLlvmIr<'ctx> {
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value>;
 }
 
-impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Module<A> {
+impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Module<SemanticAnnotations> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
@@ -127,13 +132,13 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Module<A> {
     }
 }
 
-impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::RoutineDef<A> {
+impl<'ctx> ToLlvmIr<'ctx> for crate::ast::RoutineDef<SemanticAnnotations> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
         let fn_value = llvm
             .module
-            .get_function(&self.name)
+            .get_function(&self.annotations.get_canonical_path().to_label())
             .expect("Could not find function");
         let entry_bb = llvm.context.append_basic_block(fn_value, "entry");
         llvm.builder.position_at_end(entry_bb);
@@ -147,18 +152,19 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::RoutineDef<A> {
     }
 }
 
-impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Statement<A> {
-    type Value = InstructionValue<'ctx>;
+impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Statement<SemanticAnnotations> {
+    type Value = AnyValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
         match self {
-            crate::ast::Statement::Return(ret) => ret.to_llvm_ir(llvm),
+            crate::ast::Statement::Return(ret) => ret.to_llvm_ir(llvm).map(|i| i.into()),
+            crate::ast::Statement::Expression(exp) => exp.to_llvm_ir(llvm).map(|v| v.into()),
             _ => None,
         }
     }
 }
 
-impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Return<A> {
+impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Return<SemanticAnnotations> {
     type Value = InstructionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
@@ -174,27 +180,42 @@ impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Return<A> {
     }
 }
 
-impl<'ctx, A> ToLlvmIr<'ctx> for crate::ast::Expression<A> {
-    type Value = IntValue<'ctx>;
+impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
+    type Value = BasicValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
         match self {
             crate::ast::Expression::Integer64(_, i) => {
                 let i64t = llvm.context.i64_type();
-                Some(i64t.const_int(*i as u64, true))
+                Some(i64t.const_int(*i as u64, true).into())
             }
             crate::ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
-                Some(bt.const_int(*b as u64, false))
+                Some(bt.const_int(*b as u64, false).into())
             }
             crate::ast::Expression::UnaryOp(_, crate::ast::UnaryOperator::Minus, exp) => {
-                let v = exp.to_llvm_ir(llvm).expect("Expected a value");
-                Some(llvm.builder.build_int_neg(v, ""))
+                let v = exp
+                    .to_llvm_ir(llvm)
+                    .expect("Expected a value")
+                    .into_int_value();
+                Some(llvm.builder.build_int_neg(v, "").into())
             }
             crate::ast::Expression::BinaryOp(_, crate::ast::BinaryOperator::Add, l, r) => {
-                let lv = l.to_llvm_ir(llvm).expect("Expected a value");
-                let rv = r.to_llvm_ir(llvm).expect("Expected a value");
-                Some(llvm.builder.build_int_add(lv, rv, ""))
+                let lv = l
+                    .to_llvm_ir(llvm)
+                    .expect("Expected a value")
+                    .into_int_value();
+                let rv = r
+                    .to_llvm_ir(llvm)
+                    .expect("Expected a value")
+                    .into_int_value();
+                Some(llvm.builder.build_int_add(lv, rv, "").into())
+            }
+            crate::ast::Expression::RoutineCall(_, call, name, params) => {
+                let call = llvm.module.get_function(&name.to_label()).unwrap();
+                let result = llvm.builder.build_call(call, &[], "result");
+                let result = result.try_as_basic_value().left().unwrap();
+                Some(result)
             }
             _ => todo!(),
         }
