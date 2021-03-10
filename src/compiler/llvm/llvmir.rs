@@ -48,14 +48,12 @@ impl<'ctx> IrGen<'ctx> {
         module: &str,
         externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
     ) -> IrGen<'ctx> {
-        let mut sp = StringPool::new();
-        sp.pool.insert("Hello".into(), 0);
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
             externs,
-            string_pool: sp,
+            string_pool: StringPool::new(),
         }
     }
 
@@ -64,7 +62,7 @@ impl<'ctx> IrGen<'ctx> {
         self.module.print_to_file(path).unwrap()
     }
 
-    pub fn compile(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+    pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
         self.compile_string_pool(m);
         self.add_externs();
         self.construct_fn_decls(m);
@@ -145,8 +143,8 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Add all string literals to the data section of the assemby output
-    fn compile_string_pool(&self, m: &crate::ast::Module<SemanticAnnotations>) {
-        //pool.extract_from_module(m);
+    fn compile_string_pool(&mut self, m: &crate::ast::Module<SemanticAnnotations>) {
+        self.string_pool.extract_from_module(m);
 
         for (s, id) in self.string_pool.pool.iter() {
             let len_w_null = s.len() + 1;
