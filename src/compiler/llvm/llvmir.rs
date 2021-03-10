@@ -111,6 +111,7 @@ impl<'ctx> IrGen<'ctx> {
         let fn_type = match ty {
             AnyTypeEnum::IntType(ity) => ity.fn_type(&params, false),
             AnyTypeEnum::VoidType(vty) => vty.fn_type(&params, false),
+            AnyTypeEnum::PointerType(pty) => pty.fn_type(&params, false),
             _ => panic!(),
         };
         let fn_name = rd.annotations.get_canonical_path().to_label();

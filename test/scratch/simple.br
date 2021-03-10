@@ -9,3 +9,7 @@ fn my_main() -> i64 {
 fn test() -> bool {
     return false;
 }
+
+fn get_string() -> string {
+	return "hello\n";
+}
