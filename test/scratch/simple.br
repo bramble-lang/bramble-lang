@@ -1,5 +1,6 @@
 fn my_main() -> i64 {
 	test();
+	root::std::io::write("hello");
 	root::std::io::writebool(true);
     return -10 + 5;
 }

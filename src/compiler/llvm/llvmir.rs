@@ -12,6 +12,7 @@ use inkwell::{
     builder::Builder,
     types::FunctionType,
     values::{AnyValueEnum, BasicValueEnum, FunctionValue, InstructionValue, IntValue},
+    AddressSpace,
 };
 use inkwell::{context::Context, values::AnyValue};
 use inkwell::{
@@ -129,6 +130,7 @@ impl<'ctx> IrGen<'ctx> {
         let llvm_ty = self.type_to_llvm(ret_ty);
         let mut llvm_params = vec![];
         for p in params {
+            println!("{}", p);
             llvm_params.push(Self::anytype_to_basictype(&self.type_to_llvm(&p)).unwrap())
         }
         let fn_type = match llvm_ty {
@@ -145,6 +147,12 @@ impl<'ctx> IrGen<'ctx> {
             crate::ast::Type::I64 => self.context.i64_type().into(),
             crate::ast::Type::Bool => self.context.bool_type().into(),
             crate::ast::Type::Unit => self.context.custom_width_int_type(1).into(),
+            crate::ast::Type::StringLiteral => self
+                .context
+                .i8_type()
+                .array_type(0)
+                .ptr_type(AddressSpace::Generic)
+                .into(),
             _ => panic!("Can't convert type to LLVM: {}", ty),
         };
         ty
@@ -153,6 +161,7 @@ impl<'ctx> IrGen<'ctx> {
     fn anytype_to_basictype(ty: &AnyTypeEnum<'ctx>) -> Option<BasicTypeEnum<'ctx>> {
         match ty {
             AnyTypeEnum::IntType(ity) => Some(ity.clone().into()),
+            AnyTypeEnum::PointerType(pty) => Some(pty.clone().into()),
             _ => None,
         }
     }
@@ -248,6 +257,18 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
             crate::ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
                 Some(bt.const_int(*b as u64, false).into())
+            }
+            crate::ast::Expression::StringLiteral(_, s) => {
+                let val = llvm.context.const_string(s.as_bytes(), true);
+                let val_ptr = llvm.builder.build_bitcast(
+                    val,
+                    llvm.context
+                        .i8_type()
+                        .array_type(0)
+                        .ptr_type(AddressSpace::Generic),
+                    "sptr",
+                );
+                Some(val_ptr.into())
             }
             crate::ast::Expression::UnaryOp(_, crate::ast::UnaryOperator::Minus, exp) => {
                 let v = exp

@@ -182,11 +182,11 @@ fn configure_cli() -> clap::App<'static, 'static> {
 
 fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
     vec![
-        /*(
+        (
             vec!["root", "std", "io", "write"].into(),
             vec![Type::StringLiteral],
             Type::Unit,
-        ), */
+        ),
         (
             vec!["root", "std", "io", "readi64"].into(),
             vec![],
