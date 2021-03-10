@@ -275,7 +275,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 let result_bv = result.try_as_basic_value().left().unwrap();
                 Some(result_bv)
             }
-            _ => todo!(),
+            _ => todo!("{} not implemented yet", self),
         }
     }
 }
