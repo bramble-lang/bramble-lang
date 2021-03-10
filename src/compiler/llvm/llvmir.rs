@@ -268,10 +268,12 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 Some(llvm.builder.build_int_add(lv, rv, "").into())
             }
             crate::ast::Expression::RoutineCall(_, call, name, params) => {
+                let llvm_params: Vec<BasicValueEnum<'ctx>> =
+                    params.iter().map(|p| p.to_llvm_ir(llvm).unwrap()).collect();
                 let call = llvm.module.get_function(&name.to_label()).unwrap();
-                let result = llvm.builder.build_call(call, &[], "result");
-                let result = result.try_as_basic_value().left().unwrap();
-                Some(result)
+                let result = llvm.builder.build_call(call, &llvm_params, "result");
+                let result_bv = result.try_as_basic_value().left().unwrap();
+                Some(result_bv)
             }
             _ => todo!(),
         }
