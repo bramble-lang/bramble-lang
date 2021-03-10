@@ -28,7 +28,7 @@ use inkwell::{types::BasicTypeEnum, OptimizationLevel};
 
 use crate::{
     ast::{Annotation, RoutineDef},
-    compiler::memory::scope::CompilerAnnotation,
+    compiler::memory::{scope::CompilerAnnotation, stringpool::StringPool},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -38,8 +38,8 @@ pub struct IrGen<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
-    functions: HashMap<String, FunctionValue<'ctx>>,
     externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
+    string_pool: StringPool,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -48,12 +48,14 @@ impl<'ctx> IrGen<'ctx> {
         module: &str,
         externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
     ) -> IrGen<'ctx> {
+        let mut sp = StringPool::new();
+        sp.pool.insert("Hello".into(), 0);
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
-            functions: HashMap::new(),
             externs,
+            string_pool: sp,
         }
     }
 
@@ -63,6 +65,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     pub fn compile(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+        self.compile_string_pool(m);
         self.add_externs();
         self.construct_fn_decls(m);
         match m.to_llvm_ir(self) {
@@ -139,6 +142,21 @@ impl<'ctx> IrGen<'ctx> {
             _ => panic!(),
         };
         self.module.add_function(name, fn_type, None);
+    }
+
+    /// Add all string literals to the data section of the assemby output
+    fn compile_string_pool(&self, m: &crate::ast::Module<SemanticAnnotations>) {
+        //pool.extract_from_module(m);
+
+        for (s, id) in self.string_pool.pool.iter() {
+            let len_w_null = s.len() + 1;
+            let g = self.module.add_global(
+                self.context.i8_type().array_type(len_w_null as u32),
+                None,
+                &format!("str_{}", id),
+            );
+            g.set_initializer(&self.context.const_string(s.as_bytes(), true));
+        }
     }
 
     fn type_to_llvm(&self, ty: &crate::ast::Type) -> AnyTypeEnum<'ctx> {
@@ -259,16 +277,17 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 Some(bt.const_int(*b as u64, false).into())
             }
             crate::ast::Expression::StringLiteral(_, s) => {
-                let val = llvm.context.const_string(s.as_bytes(), true);
-                let val_ptr = llvm.builder.build_bitcast(
-                    val,
+                let val = llvm.module.get_global("str_0").unwrap();
+                let val_ptr = val.as_pointer_value();
+                let bitcast = llvm.builder.build_bitcast(
+                    val_ptr,
                     llvm.context
                         .i8_type()
                         .array_type(0)
                         .ptr_type(AddressSpace::Generic),
                     "sptr",
                 );
-                Some(val_ptr.into())
+                Some(bitcast.into())
             }
             crate::ast::Expression::UnaryOp(_, crate::ast::UnaryOperator::Minus, exp) => {
                 let v = exp
