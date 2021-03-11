@@ -13,3 +13,7 @@ fn test() -> bool {
 fn get_string() -> string {
 	return "hello\n";
 }
+
+fn print_string(s: string) {
+	return;
+}
