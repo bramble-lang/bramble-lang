@@ -72,10 +72,21 @@ impl<'ctx> IrGen<'ctx> {
         self.compile_string_pool(m);
         self.add_externs();
         self.construct_fn_decls(m);
+        self.create_main();
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
         }
+    }
+
+    fn create_main(&self) {
+        let main_type = self.context.void_type().fn_type(&[], false);
+        let main = self.module.add_function("main", main_type, None);
+        let entry_bb = self.context.append_basic_block(main, "entry");
+        self.builder.position_at_end(entry_bb);
+        let user_main = self.module.get_function("root_my_main").unwrap();
+        self.builder.build_call(user_main, &[], "user_main");
+        self.builder.build_return(None);
     }
 
     /// Add the list of external function declarations to the function table
