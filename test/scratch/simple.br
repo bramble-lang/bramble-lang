@@ -14,9 +14,9 @@ fn get_string() -> string {
 	return "hello\n";
 }
 
-/*fn print_string(s: string) -> string {
+fn print_string(s: string) -> string {
 	return s;
-}*/
+}
 
 fn add(a: i64, b: i64) -> i64 {
 	let x: i64 := 2;

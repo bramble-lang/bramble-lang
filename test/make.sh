@@ -13,6 +13,7 @@ run() {
         echo ""
         echo "Assembling"
         nasm -g -f elf64 ../braid/linux/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
+        nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
         nasm -g -f elf64 ./target/output.asm -l ./target/output.lst -o ./target/output.obj >> assembler.log
         gcc -no-pie -fno-pie -w ./target/std_io.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
         built=1
