@@ -80,13 +80,18 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     fn create_main(&self) {
-        let main_type = self.context.void_type().fn_type(&[], false);
+        let main_type = self.context.i64_type().fn_type(&[], false);
         let main = self.module.add_function("main", main_type, None);
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
         let user_main = self.module.get_function("root_my_main").unwrap();
-        self.builder.build_call(user_main, &[], "user_main");
-        self.builder.build_return(None);
+        let status = self
+            .builder
+            .build_call(user_main, &[], "user_main")
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+        self.builder.build_return(Some(&status));
     }
 
     /// Add the list of external function declarations to the function table
