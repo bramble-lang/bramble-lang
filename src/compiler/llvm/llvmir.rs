@@ -11,7 +11,9 @@ use std::{collections::HashMap, error::Error};
 use inkwell::{
     builder::Builder,
     types::FunctionType,
-    values::{AnyValueEnum, BasicValueEnum, FunctionValue, InstructionValue, IntValue},
+    values::{
+        AnyValueEnum, BasicValueEnum, FunctionValue, InstructionValue, IntValue, PointerValue,
+    },
     AddressSpace,
 };
 use inkwell::{context::Context, values::AnyValue};
@@ -106,16 +108,15 @@ impl<'ctx> IrGen<'ctx> {
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
     fn add_fn_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
-        let ty = self.type_to_llvm(&rd.ty);
+        let ty = rd.ty.to_llvm(self);
         let mut params = vec![];
         for p in rd.get_params() {
-            params.push(Self::anytype_to_basictype(&self.type_to_llvm(&p.ty)).unwrap())
+            params.push(p.ty.to_llvm(self))
         }
 
         let fn_type = match ty {
-            AnyTypeEnum::IntType(ity) => ity.fn_type(&params, false),
-            AnyTypeEnum::VoidType(vty) => vty.fn_type(&params, false),
-            AnyTypeEnum::PointerType(pty) => pty.fn_type(&params, false),
+            BasicTypeEnum::IntType(ity) => ity.fn_type(&params, false),
+            BasicTypeEnum::PointerType(pty) => pty.fn_type(&params, false),
             _ => panic!(),
         };
         let fn_name = rd.annotations.get_canonical_path().to_label();
@@ -133,15 +134,14 @@ impl<'ctx> IrGen<'ctx> {
         params: &Vec<crate::ast::Type>,
         ret_ty: &crate::ast::Type,
     ) {
-        let llvm_ty = self.type_to_llvm(ret_ty);
+        let llvm_ty = ret_ty.to_llvm(self);
         let mut llvm_params = vec![];
         for p in params {
             println!("{}", p);
-            llvm_params.push(Self::anytype_to_basictype(&self.type_to_llvm(&p)).unwrap())
+            llvm_params.push(p.to_llvm(self))
         }
         let fn_type = match llvm_ty {
-            AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
-            AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
+            BasicTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
             _ => panic!(),
         };
         self.module.add_function(name, fn_type, None);
@@ -159,31 +159,6 @@ impl<'ctx> IrGen<'ctx> {
                 &format!("str_{}", id),
             );
             g.set_initializer(&self.context.const_string(s.as_bytes(), true));
-        }
-    }
-
-    fn type_to_llvm(&self, ty: &crate::ast::Type) -> AnyTypeEnum<'ctx> {
-        let ty = match ty {
-            crate::ast::Type::I32 => self.context.i32_type().into(),
-            crate::ast::Type::I64 => self.context.i64_type().into(),
-            crate::ast::Type::Bool => self.context.bool_type().into(),
-            crate::ast::Type::Unit => self.context.custom_width_int_type(1).into(),
-            crate::ast::Type::StringLiteral => self
-                .context
-                .i8_type()
-                .array_type(0)
-                .ptr_type(AddressSpace::Generic)
-                .into(),
-            _ => panic!("Can't convert type to LLVM: {}", ty),
-        };
-        ty
-    }
-
-    fn anytype_to_basictype(ty: &AnyTypeEnum<'ctx>) -> Option<BasicTypeEnum<'ctx>> {
-        match ty {
-            AnyTypeEnum::IntType(ity) => Some(ity.clone().into()),
-            AnyTypeEnum::PointerType(pty) => Some(pty.clone().into()),
-            _ => None,
         }
     }
 }
@@ -225,18 +200,20 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::RoutineDef<SemanticAnnotations> {
             .module
             .get_function(&self.annotations.get_canonical_path().to_label())
             .expect("Could not find function");
+        let entry_bb = llvm.context.append_basic_block(fn_value, "entry");
+        llvm.builder.position_at_end(entry_bb);
+
         llvm.registers.open_fn().unwrap();
         let llvm_params = fn_value.get_params();
         let num_params = self.get_params().len();
         for pi in 0..num_params {
             let pname = &(*self.get_params())[pi].name;
-            llvm.registers
-                .insert(pname, llvm_params[pi].into())
-                .unwrap();
-        }
 
-        let entry_bb = llvm.context.append_basic_block(fn_value, "entry");
-        llvm.builder.position_at_end(entry_bb);
+            // move parameter into the stack
+            let pptr = llvm.builder.build_alloca(llvm_params[pi].get_type(), pname);
+            llvm.builder.build_store(pptr, llvm_params[pi]);
+            llvm.registers.insert(pname, pptr.into()).unwrap();
+        }
 
         // Compile the body to LLVM
         for stm in &self.body {
@@ -256,8 +233,23 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Statement<SemanticAnnotations> {
         match self {
             crate::ast::Statement::Return(ret) => ret.to_llvm_ir(llvm).map(|i| i.into()),
             crate::ast::Statement::Expression(exp) => exp.to_llvm_ir(llvm).map(|v| v.into()),
+            crate::ast::Statement::Bind(bind) => bind.to_llvm_ir(llvm).map(|i| i.into()),
             _ => None,
         }
+    }
+}
+
+impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Bind<SemanticAnnotations> {
+    type Value = PointerValue<'ctx>;
+
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        let ptr = llvm
+            .builder
+            .build_alloca(self.get_type().to_llvm(llvm), self.get_id());
+        let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
+        llvm.builder.build_store(ptr, rhs);
+        llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
+        Some(ptr)
     }
 }
 
@@ -305,8 +297,9 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 Some(bitcast.into())
             }
             crate::ast::Expression::Identifier(_, id) => {
-                let llvm_value = *llvm.registers.get(id).unwrap();
-                Some(llvm_value)
+                let ptr = llvm.registers.get(id).unwrap().into_pointer_value();
+                let val = llvm.builder.build_load(ptr, id);
+                Some(val)
             }
             crate::ast::Expression::UnaryOp(_, crate::ast::UnaryOperator::Minus, exp) => {
                 let v = exp
@@ -335,6 +328,24 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 Some(result_bv)
             }
             _ => todo!("{} not implemented yet", self),
+        }
+    }
+}
+
+impl crate::ast::Type {
+    fn to_llvm<'ctx>(&self, llvm: &IrGen<'ctx>) -> BasicTypeEnum<'ctx> {
+        match self {
+            crate::ast::Type::I32 => llvm.context.i32_type().into(),
+            crate::ast::Type::I64 => llvm.context.i64_type().into(),
+            crate::ast::Type::Bool => llvm.context.bool_type().into(),
+            crate::ast::Type::Unit => llvm.context.custom_width_int_type(1).into(),
+            crate::ast::Type::StringLiteral => llvm
+                .context
+                .i8_type()
+                .array_type(0)
+                .ptr_type(AddressSpace::Generic)
+                .into(),
+            _ => panic!("Can't convert type to LLVM: {}", self),
         }
     }
 }

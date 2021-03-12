@@ -8,7 +8,7 @@ use braid_lang::result::Result;
 use inkwell::values::{AnyValueEnum, BasicValueEnum};
 
 struct IdToValueMap<'ctx> {
-    map: HashMap<String, BasicValueEnum<'ctx>>,
+    map: HashMap<String, AnyValueEnum<'ctx>>,
 }
 
 impl<'ctx> IdToValueMap<'ctx> {
@@ -131,14 +131,14 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// maps to.  This will search through all scopes in the current stack
     /// starting from the top and moving down.  Returning the first match
     /// that is found, and returning `None` if no match is found.
-    pub fn get(&self, id: &str) -> Option<&BasicValueEnum<'ctx>> {
+    pub fn get(&self, id: &str) -> Option<&AnyValueEnum<'ctx>> {
         self.stack.iter().rev().find_map(|t| t.map.get(id))
     }
 
     /// Inserts a new mapping from `id` to `value` into the current scope.
     /// If `id` is already in the current scope it will be overwritten.
     /// This will return an `Err` if there is no open scope.
-    pub fn insert(&mut self, id: &str, value: BasicValueEnum<'ctx>) -> Result<()> {
+    pub fn insert(&mut self, id: &str, value: AnyValueEnum<'ctx>) -> Result<()> {
         if self.stack.len() == 0 {
             return Err("Cannot insert identifier: there is no open scope".into());
         }
