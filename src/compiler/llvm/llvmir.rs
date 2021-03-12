@@ -32,6 +32,8 @@ use crate::{
     semantics::semanticnode::SemanticAnnotations,
 };
 
+use super::scopestack::RegisterLookup;
+
 /// A LLVM IR generator which can be used to generate all the code
 /// for a single LLVM Module.
 pub struct IrGen<'ctx> {
@@ -40,6 +42,7 @@ pub struct IrGen<'ctx> {
     builder: Builder<'ctx>,
     externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
     string_pool: StringPool,
+    registers: RegisterLookup<'ctx>,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -54,6 +57,7 @@ impl<'ctx> IrGen<'ctx> {
             builder: ctx.create_builder(),
             externs,
             string_pool: StringPool::new(),
+            registers: RegisterLookup::new(),
         }
     }
 
@@ -189,13 +193,13 @@ trait ToLlvmIr<'ctx> {
 
     /// Compile a Language unit to LLVM and return the appropriate LLVM Value
     /// if it has one (Modules don't have LLVM Values so those will return None)
-    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value>;
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value>;
 }
 
 impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Module<SemanticAnnotations> {
     type Value = FunctionValue<'ctx>;
 
-    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         for m in self.get_modules() {
             m.to_llvm_ir(llvm);
         }
@@ -216,11 +220,21 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Module<SemanticAnnotations> {
 impl<'ctx> ToLlvmIr<'ctx> for crate::ast::RoutineDef<SemanticAnnotations> {
     type Value = FunctionValue<'ctx>;
 
-    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let fn_value = llvm
             .module
             .get_function(&self.annotations.get_canonical_path().to_label())
             .expect("Could not find function");
+        llvm.registers.open_fn().unwrap();
+        let llvm_params = fn_value.get_params();
+        let num_params = self.get_params().len();
+        for pi in 0..num_params {
+            let pname = &(*self.get_params())[pi].name;
+            llvm.registers
+                .insert(pname, llvm_params[pi].into())
+                .unwrap();
+        }
+
         let entry_bb = llvm.context.append_basic_block(fn_value, "entry");
         llvm.builder.position_at_end(entry_bb);
 
@@ -229,6 +243,8 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::RoutineDef<SemanticAnnotations> {
             let value = stm.to_llvm_ir(llvm);
         }
 
+        llvm.registers.close_fn().unwrap();
+
         Some(fn_value)
     }
 }
@@ -236,7 +252,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::RoutineDef<SemanticAnnotations> {
 impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Statement<SemanticAnnotations> {
     type Value = AnyValueEnum<'ctx>;
 
-    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
             crate::ast::Statement::Return(ret) => ret.to_llvm_ir(llvm).map(|i| i.into()),
             crate::ast::Statement::Expression(exp) => exp.to_llvm_ir(llvm).map(|v| v.into()),
@@ -248,7 +264,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Statement<SemanticAnnotations> {
 impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Return<SemanticAnnotations> {
     type Value = InstructionValue<'ctx>;
 
-    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         Some(match self.get_value() {
             None => llvm.builder.build_return(None),
             Some(val) => {
@@ -264,7 +280,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Return<SemanticAnnotations> {
 impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
     type Value = BasicValueEnum<'ctx>;
 
-    fn to_llvm_ir(&self, llvm: &IrGen<'ctx>) -> Option<Self::Value> {
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
             crate::ast::Expression::Integer64(_, i) => {
                 let vt = llvm.context.void_type();
@@ -287,6 +303,10 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                     "sptr",
                 );
                 Some(bitcast.into())
+            }
+            crate::ast::Expression::Identifier(_, id) => {
+                let llvm_value = *llvm.registers.get(id).unwrap();
+                Some(llvm_value)
             }
             crate::ast::Expression::UnaryOp(_, crate::ast::UnaryOperator::Minus, exp) => {
                 let v = exp
