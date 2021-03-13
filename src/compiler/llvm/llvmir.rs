@@ -63,11 +63,17 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
-    pub fn print(&self, path: &std::path::Path) {
+    /// Print the LLVM IR to stderr
+    pub fn print_err(&self) {
         self.module.print_to_stderr();
+    }
+
+    /// Print the LLVM IR to the given file
+    pub fn print(&self, path: &std::path::Path) {
         self.module.print_to_file(path).unwrap()
     }
 
+    /// Take the given Braid AST to compile it to LLVM IR and add it to the LLVM module.
     pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
         self.compile_string_pool(m);
         self.add_externs();
@@ -79,6 +85,9 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
+    /// Creates `main` entry point which will be called by the OS to start the Braid
+    /// application. This main will initialize platform level values and state, then
+    /// call the user defined main `my_main`.
     fn create_main(&self) {
         let main_type = self.context.i64_type().fn_type(&[], false);
         let main = self.module.add_function("main", main_type, None);
@@ -172,7 +181,7 @@ impl<'ctx> IrGen<'ctx> {
             let g = self.module.add_global(
                 self.context.i8_type().array_type(len_w_null as u32),
                 None,
-                &format!("str_{}", id),
+                &Self::id_to_str_pool_var(*id),
             );
             g.set_initializer(&self.context.const_string(s.as_bytes(), true));
         }
@@ -181,8 +190,14 @@ impl<'ctx> IrGen<'ctx> {
     /// Will look for `s` in the string pool, if found, it will return the
     /// name of the global variable that is bound to that string. Otherwise,
     /// it will return `None`
-    fn get_str_id(&self, s: &str) -> Option<String> {
-        self.string_pool.get(s).map(|id| format!("str_{}", id))
+    fn get_str_var(&self, s: &str) -> Option<String> {
+        self.string_pool.get(s).map(|id| Self::id_to_str_pool_var(*id))
+    }
+
+    /// Convert the ID of a string to the name of the global variable that
+    /// references that string
+    fn id_to_str_pool_var(id: usize) -> String {
+        format!("str_{}", id)
     }
 }
 
@@ -310,7 +325,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 Some(bt.const_int(*b as u64, false).into())
             }
             crate::ast::Expression::StringLiteral(_, s) => {
-                let str_id = llvm.get_str_id(s).unwrap();
+                let str_id = llvm.get_str_var(s).unwrap();
                 let val = llvm.module.get_global(&str_id).unwrap();
                 let val_ptr = val.as_pointer_value();
                 let bitcast = llvm.builder.build_bitcast(
