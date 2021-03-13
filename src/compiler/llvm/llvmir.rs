@@ -363,6 +363,46 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 llvm.registers.close_local().unwrap();
                 val
             }
+            crate::ast::Expression::If {
+                cond,
+                if_arm,
+                else_arm,
+                ..
+            } => {
+                let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
+                let current_fn = llvm
+                    .builder
+                    .get_insert_block()
+                    .unwrap()
+                    .get_parent()
+                    .unwrap();
+                let then_bb = llvm.context.append_basic_block(current_fn, "then");
+                let else_bb = llvm.context.insert_basic_block_after(then_bb, "else");
+                let merge_bb = llvm.context.insert_basic_block_after(else_bb, "merge");
+                llvm.builder
+                    .build_conditional_branch(cond_val, then_bb, else_bb);
+
+                llvm.builder.position_at_end(then_bb);
+                let if_arm_val = if_arm.to_llvm_ir(llvm).unwrap();
+                llvm.builder.build_unconditional_branch(merge_bb);
+
+                llvm.builder.position_at_end(else_bb);
+                let else_arm_val = else_arm.as_ref().map(|ea| ea.to_llvm_ir(llvm).unwrap());
+                llvm.builder.build_unconditional_branch(merge_bb);
+
+                llvm.builder.position_at_end(merge_bb);
+                // create phi to unify the branches
+                // if the else branch is None then the type of the if expressoin is unit and
+                // no phi is needed
+                match else_arm_val {
+                    Some(else_arm_val) => {
+                        let phi = llvm.builder.build_phi(if_arm_val.get_type(), "phi");
+                        phi.add_incoming(&[(&if_arm_val, then_bb), (&else_arm_val, else_bb)]);
+                        Some(phi.as_basic_value())
+                    }
+                    None => None,
+                }
+            }
             _ => todo!("{} not implemented yet", self),
             /*
             crate::ast::Expression::CustomType(_, _) => {}
@@ -370,7 +410,6 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
             crate::ast::Expression::MemberAccess(_, _, _) => {}
             crate::ast::Expression::IdentifierDeclare(_, _, _) => {}
             crate::ast::Expression::StructExpression(_, _, _) => {}
-            crate::ast::Expression::If { annotation, cond, if_arm, else_arm } => {}
             crate::ast::Expression::Yield(_, _) => {}
             */
         }

@@ -25,3 +25,11 @@ fn add(a: i64, b: i64) -> i64 {
 	};
 	return a + b + x;
 }
+
+fn if_test(a: i64) -> i64 {
+	return if (true) {
+		a + 2
+	} else {
+		a + 3
+	};
+}
