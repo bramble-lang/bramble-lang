@@ -5,7 +5,7 @@ while preserving the scope hierarchy.
 use std::collections::HashMap;
 
 use braid_lang::result::Result;
-use inkwell::values::{AnyValueEnum, BasicValueEnum};
+use inkwell::values::AnyValueEnum;
 
 struct IdToValueMap<'ctx> {
     map: HashMap<String, AnyValueEnum<'ctx>>,
