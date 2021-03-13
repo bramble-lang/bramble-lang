@@ -3,6 +3,9 @@ fn my_main() -> i64 {
 	root::std::io::write("hello\n");
 	root::std::io::write("world");
 	root::std::io::writebool(true);
+
+	let x: i64 := if_test(0);
+	root::std::io::writei64(x);
     return -10 + 5;
 }
 
@@ -27,8 +30,8 @@ fn add(a: i64, b: i64) -> i64 {
 }
 
 fn if_test(a: i64) -> i64 {
-	if (2*a < 10) {};
-	return if (true) {
+	if ((2*a < 10) && !(0 < a)) {};
+	return if ((2*a < 10) && (a > 0)) {
 		a + 2
 	} else {
 		a + 3

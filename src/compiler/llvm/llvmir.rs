@@ -328,12 +328,15 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 let val = llvm.builder.build_load(ptr, id);
                 Some(val)
             }
-            crate::ast::Expression::UnaryOp(_, crate::ast::UnaryOperator::Minus, exp) => {
+            crate::ast::Expression::UnaryOp(_, op, exp) => {
                 let v = exp
                     .to_llvm_ir(llvm)
                     .expect("Expected a value")
                     .into_int_value();
-                Some(llvm.builder.build_int_neg(v, "").into())
+                Some(match op {
+                    crate::ast::UnaryOperator::Minus => llvm.builder.build_int_neg(v, "").into(),
+                    crate::ast::UnaryOperator::Not => llvm.builder.build_not(v, "").into(),
+                })
             }
             crate::ast::Expression::BinaryOp(_, op, l, r) => {
                 let lv = l
