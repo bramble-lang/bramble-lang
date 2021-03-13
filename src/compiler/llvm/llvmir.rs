@@ -64,6 +64,14 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Take the given Braid AST to compile it to LLVM IR and add it to the LLVM module.
+    ///
+    /// All user input is expected to be fully validated and correct by the time it reaches
+    /// the compiler phase (via syntactic and semantic analysis).  Therefore, if anything
+    /// goes wrong during compilation, it is assumed to be the result of a critical bug in
+    /// the compiler itself and not an issue with the input Braid code. This means that any
+    /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
+    /// be trusted. So, if any unexpected state is encountered or any error happens this module
+    /// will panic at that point in code and crash the compiler.
     pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
         self.compile_string_pool(m);
         self.add_externs();
