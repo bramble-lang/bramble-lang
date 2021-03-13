@@ -383,7 +383,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                     .build_conditional_branch(cond_val, then_bb, else_bb);
 
                 llvm.builder.position_at_end(then_bb);
-                let if_arm_val = if_arm.to_llvm_ir(llvm).unwrap();
+                let if_arm_val = if_arm.to_llvm_ir(llvm);
                 llvm.builder.build_unconditional_branch(merge_bb);
 
                 llvm.builder.position_at_end(else_bb);
@@ -391,16 +391,19 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 llvm.builder.build_unconditional_branch(merge_bb);
 
                 llvm.builder.position_at_end(merge_bb);
-                // create phi to unify the branches
-                // if the else branch is None then the type of the if expressoin is unit and
-                // no phi is needed
-                match else_arm_val {
-                    Some(else_arm_val) => {
+
+                match (if_arm_val, else_arm_val) {
+                    (Some(if_arm_val), Some(else_arm_val)) => {
+                        // create phi to unify the branches
                         let phi = llvm.builder.build_phi(if_arm_val.get_type(), "phi");
                         phi.add_incoming(&[(&if_arm_val, then_bb), (&else_arm_val, else_bb)]);
                         Some(phi.as_basic_value())
                     }
-                    None => None,
+                    (None, None) => None,
+                    _ => panic!(
+                        "Mismatching arms on if expression: {:?}, {:?}",
+                        if_arm_val, else_arm_val
+                    ),
                 }
             }
             _ => todo!("{} not implemented yet", self),

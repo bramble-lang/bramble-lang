@@ -27,6 +27,7 @@ fn add(a: i64, b: i64) -> i64 {
 }
 
 fn if_test(a: i64) -> i64 {
+	if (true) {};
 	return if (true) {
 		a + 2
 	} else {
