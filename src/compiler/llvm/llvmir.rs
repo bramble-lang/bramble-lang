@@ -33,6 +33,7 @@ use crate::{
     compiler::memory::{scope::CompilerAnnotation, stringpool::StringPool},
     semantics::semanticnode::SemanticAnnotations,
 };
+use braid_lang::result::Result;
 
 use super::scopestack::RegisterLookup;
 
@@ -68,54 +69,60 @@ impl<'ctx> IrGen<'ctx> {
         self.module.print_to_file(path).unwrap()
     }
 
-    pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+    pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) -> Result<()> {
         self.compile_string_pool(m);
-        self.add_externs();
-        self.construct_fn_decls(m);
-        self.create_main();
+        self.add_externs()?;
+        self.construct_fn_decls(m)?;
+        self.create_main()?;
         match m.to_llvm_ir(self) {
-            None => (),
-            Some(_) => panic!("Expected None when compiling a Module"),
+            None => Ok(()),
+            Some(_) => Err("Expected None when compiling a Module".into()),
         }
     }
 
-    fn create_main(&self) {
+    fn create_main(&self) -> Result<()> {
         let main_type = self.context.i64_type().fn_type(&[], false);
         let main = self.module.add_function("main", main_type, None);
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
-        let user_main = self.module.get_function("root_my_main").unwrap();
+        let user_main = self
+            .module
+            .get_function("root_my_main")
+            .ok_or("No my_main function found")?;
         let status = self
             .builder
             .build_call(user_main, &[], "user_main")
             .try_as_basic_value()
             .left()
-            .unwrap();
+            .ok_or("Invalid return type associated with my_main function")?;
         self.builder.build_return(Some(&status));
+        Ok(())
     }
 
     /// Add the list of external function declarations to the function table
     /// in the LLVM module
-    fn add_externs(&self) {
+    fn add_externs(&self) -> Result<()> {
         for (path, params, ty) in self.externs {
-            println!("{}", path);
-            self.add_extern_decl(&path.to_label(), params, ty)
+            self.add_extern_decl(&path.to_label(), params, ty)?
         }
+        Ok(())
     }
 
     /// Take the given AST and add declarations for every function to the
     /// LLVM module. This is required so that the FunctionValue can be looked
     /// up when generating code for function calls.
-    fn construct_fn_decls(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+    fn construct_fn_decls(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) -> Result<()> {
         for f in m.get_functions() {
             if let crate::ast::Item::Routine(rd) = f {
-                self.add_fn_decl(rd);
+                self.add_fn_decl(rd)?;
             }
         }
 
         for m in m.get_modules() {
-            self.construct_fn_decls(m);
+            self.construct_fn_decls(m)?;
         }
+
+        Ok(())
     }
 
     /// Takes a RoutineDef and adds its declaration to the
@@ -123,20 +130,23 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
-        let ty = rd.ty.to_llvm(self);
+    fn add_fn_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) -> Result<()> {
         let mut params = vec![];
         for p in rd.get_params() {
             params.push(p.ty.to_llvm(self))
         }
 
+        let ty = rd.ty.to_llvm(self);
         let fn_type = match ty {
             BasicTypeEnum::IntType(ity) => ity.fn_type(&params, false),
             BasicTypeEnum::PointerType(pty) => pty.fn_type(&params, false),
-            _ => panic!(),
+            _ => return Err(format!("Cannot create function for: {}", rd.ty)),
         };
+
         let fn_name = rd.annotations.get_canonical_path().to_label();
         self.module.add_function(&fn_name, fn_type, None);
+
+        Ok(())
     }
 
     /// Takes a tuple describing the signature of an extern and adds its declaration to the
@@ -149,18 +159,20 @@ impl<'ctx> IrGen<'ctx> {
         name: &str,
         params: &Vec<crate::ast::Type>,
         ret_ty: &crate::ast::Type,
-    ) {
-        let llvm_ty = ret_ty.to_llvm(self);
+    ) -> Result<()> {
         let mut llvm_params = vec![];
         for p in params {
             println!("{}", p);
             llvm_params.push(p.to_llvm(self))
         }
+
+        let llvm_ty = ret_ty.to_llvm(self);
         let fn_type = match llvm_ty {
             BasicTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
-            _ => panic!(),
+            _ => return Err(format!("Cannot declare function of type: {}", ret_ty)),
         };
         self.module.add_function(name, fn_type, None);
+        Ok(())
     }
 
     /// Add all string literals to the data section of the assemby output
@@ -172,17 +184,25 @@ impl<'ctx> IrGen<'ctx> {
             let g = self.module.add_global(
                 self.context.i8_type().array_type(len_w_null as u32),
                 None,
-                &format!("str_{}", id),
+                &Self::get_pooled_str_name(*id),
             );
             g.set_initializer(&self.context.const_string(s.as_bytes(), true));
         }
+    }
+
+    /// Given an ID number for a string in the string pool, return the name
+    /// of the global variable associated with that string.
+    fn get_pooled_str_name(id: usize) -> String {
+        format!("str_{}", id)
     }
 
     /// Will look for `s` in the string pool, if found, it will return the
     /// name of the global variable that is bound to that string. Otherwise,
     /// it will return `None`
     fn get_str_id(&self, s: &str) -> Option<String> {
-        self.string_pool.get(s).map(|id| format!("str_{}", id))
+        self.string_pool
+            .get(s)
+            .map(|id| Self::get_pooled_str_name(*id))
     }
 }
 
