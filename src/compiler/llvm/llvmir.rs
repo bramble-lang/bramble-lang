@@ -177,6 +177,13 @@ impl<'ctx> IrGen<'ctx> {
             g.set_initializer(&self.context.const_string(s.as_bytes(), true));
         }
     }
+
+    /// Will look for `s` in the string pool, if found, it will return the
+    /// name of the global variable that is bound to that string. Otherwise,
+    /// it will return `None`
+    fn get_str_id(&self, s: &str) -> Option<String> {
+        self.string_pool.get(s).map(|id| format!("str_{}", id))
+    }
 }
 
 trait ToLlvmIr<'ctx> {
@@ -300,7 +307,8 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 Some(bt.const_int(*b as u64, false).into())
             }
             crate::ast::Expression::StringLiteral(_, s) => {
-                let val = llvm.module.get_global("str_0").unwrap();
+                let str_id = llvm.get_str_id(s).unwrap();
+                let val = llvm.module.get_global(&str_id).unwrap();
                 let val_ptr = val.as_pointer_value();
                 let bitcast = llvm.builder.build_bitcast(
                     val_ptr,
