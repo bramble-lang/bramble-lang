@@ -87,9 +87,8 @@ fn main() {
     {
         let context = Context::create();
         let mut llvm = compiler::llvm::IrGen::new(&context, "test", &imported);
-        llvm.compile(&semantic_ast).unwrap();
-        llvm.print_err().unwrap();
-        llvm.print(Path::new("./target/output.ll")).unwrap();
+        llvm.compile(&semantic_ast);
+        llvm.print(Path::new("./target/output.ll"));
     }
 
     // Compile

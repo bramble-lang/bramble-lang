@@ -46,7 +46,6 @@ pub struct IrGen<'ctx> {
     externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
-    failed: bool,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -62,46 +61,22 @@ impl<'ctx> IrGen<'ctx> {
             externs,
             string_pool: StringPool::new(),
             registers: RegisterLookup::new(),
-            failed: false,
         }
     }
 
-    pub fn print_err(&self) -> Result<()> {
-        if self.failed {
-            Err("Cannot print IR: LLVM compilation failed".into())
-        } else {
-            self.module.print_to_stderr();
-            Ok(())
-        }
-    }
-
-    pub fn print(&self, path: &std::path::Path) -> Result<()> {
-        if self.failed {
-            Err("Cannot print IR: LLVM compilation failed".into())
-        } else {
-            self.module
-                .print_to_file(path)
-                .or_else(|e| Err(e.to_string()))
-        }
+    pub fn print(&self, path: &std::path::Path) {
+        self.module.print_to_stderr();
+        self.module.print_to_file(path).unwrap()
     }
 
     pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) -> Result<()> {
-        let mut internal = || {
-            self.compile_string_pool(m);
-            self.add_externs()?;
-            self.construct_fn_decls(m)?;
-            self.create_main()?;
-            match m.to_llvm_ir(self) {
-                None => Ok(()),
-                Some(_) => Err("Expected None when compiling a Module".into()),
-            }
-        };
-        match internal() {
-            Ok(()) => Ok(()),
-            Err(msg) => {
-                self.failed = true;
-                Err(msg)
-            }
+        self.compile_string_pool(m);
+        self.add_externs()?;
+        self.construct_fn_decls(m)?;
+        self.create_main()?;
+        match m.to_llvm_ir(self) {
+            None => Ok(()),
+            Some(_) => Err("Expected None when compiling a Module".into()),
         }
     }
 
