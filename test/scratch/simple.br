@@ -27,7 +27,7 @@ fn add(a: i64, b: i64) -> i64 {
 }
 
 fn if_test(a: i64) -> i64 {
-	if (true) {};
+	if (2*a < 10) {};
 	return if (true) {
 		a + 2
 	} else {
