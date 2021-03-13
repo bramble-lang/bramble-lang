@@ -297,8 +297,11 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
+            crate::ast::Expression::Integer32(_, i) => {
+                let i32t = llvm.context.i32_type();
+                Some(i32t.const_int(*i as u64, true).into())
+            }
             crate::ast::Expression::Integer64(_, i) => {
-                let vt = llvm.context.void_type();
                 let i64t = llvm.context.i64_type();
                 Some(i64t.const_int(*i as u64, true).into())
             }
@@ -351,7 +354,25 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 let result_bv = result.try_as_basic_value().left().unwrap();
                 Some(result_bv)
             }
+            crate::ast::Expression::ExpressionBlock(_, stmts, exp) => {
+                llvm.registers.open_local().unwrap();
+                for stmt in stmts {
+                    stmt.to_llvm_ir(llvm).unwrap();
+                }
+                let val = exp.as_ref().map(|e| e.to_llvm_ir(llvm)).flatten();
+                llvm.registers.close_local().unwrap();
+                val
+            }
             _ => todo!("{} not implemented yet", self),
+            /*
+            crate::ast::Expression::CustomType(_, _) => {}
+            crate::ast::Expression::Path(_, _) => {}
+            crate::ast::Expression::MemberAccess(_, _, _) => {}
+            crate::ast::Expression::IdentifierDeclare(_, _, _) => {}
+            crate::ast::Expression::StructExpression(_, _, _) => {}
+            crate::ast::Expression::If { annotation, cond, if_arm, else_arm } => {}
+            crate::ast::Expression::Yield(_, _) => {}
+            */
         }
     }
 }

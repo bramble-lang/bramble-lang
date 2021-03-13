@@ -19,6 +19,9 @@ fn print_string(s: string) -> string {
 }
 
 fn add(a: i64, b: i64) -> i64 {
-	let x: i64 := 2;
+	let x: i64 := {
+		let x: i64 := 2;
+		2 + x
+	};
 	return a + b + x;
 }
