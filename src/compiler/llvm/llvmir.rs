@@ -10,27 +10,17 @@ use std::{collections::HashMap, error::Error};
 
 use inkwell::{
     builder::Builder,
-    types::FunctionType,
-    values::{
-        AnyValueEnum, BasicValueEnum, FunctionValue, InstructionValue, IntValue, PointerValue,
-    },
-    AddressSpace, IntPredicate,
-};
-use inkwell::{context::Context, values::AnyValue};
-use inkwell::{
+    context::Context,
     execution_engine::{ExecutionEngine, JitFunction},
-    types::AnyType,
-};
-use inkwell::{module::Module, types::AnyTypeEnum};
-use inkwell::{
+    module::Module,
     targets::{InitializationConfig, Target},
-    types::IntType,
+    types::*,
+    values::*,
+    AddressSpace, IntPredicate, OptimizationLevel,
 };
-use inkwell::{types::BasicTypeEnum, OptimizationLevel};
 
 use crate::{
-    ast::{Annotation, RoutineDef},
-    compiler::memory::{scope::CompilerAnnotation, stringpool::StringPool},
+    ast::RoutineDef, compiler::memory::stringpool::StringPool,
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -191,7 +181,9 @@ impl<'ctx> IrGen<'ctx> {
     /// name of the global variable that is bound to that string. Otherwise,
     /// it will return `None`
     fn get_str_var(&self, s: &str) -> Option<String> {
-        self.string_pool.get(s).map(|id| Self::id_to_str_pool_var(*id))
+        self.string_pool
+            .get(s)
+            .map(|id| Self::id_to_str_pool_var(*id))
     }
 
     /// Convert the ID of a string to the name of the global variable that
