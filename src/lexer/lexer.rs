@@ -274,13 +274,42 @@ impl Lexer {
                 }
             }
             let mut s = branch.merge();
+
+            // Remove the quotes from the string
             s.remove(0);
             s.pop();
 
-            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
+            let escaped_s = Self::parse_escape_seq(&s)?;
+
+            Ok(Some(Token::new(self.line, Lex::StringLiteral(escaped_s))))
         } else {
             Ok(None)
         }
+    }
+
+    fn parse_escape_seq(s: &str) -> Result<String> {
+        let mut is_escape = false;
+        let mut escaped_str = String::new();
+        for c in s.chars() {
+            if c != '\\' {
+                if !is_escape {
+                    escaped_str.push(c);
+                } else {
+                    is_escape = false;
+
+                    // process escaped character
+                    match c {
+                        '\\' => escaped_str.push('\\'),
+                        'n' => escaped_str.push('\n'),
+                        _ => return Err(format!("Unknown escape sequence \\{}", c)),
+                    }
+                }
+            } else {
+                is_escape = true;
+            }
+        }
+
+        Ok(escaped_str)
     }
 
     pub fn consume_integer(&mut self) -> Result<Option<Token>> {

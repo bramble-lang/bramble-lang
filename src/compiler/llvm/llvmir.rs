@@ -175,13 +175,14 @@ impl<'ctx> IrGen<'ctx> {
         self.string_pool.extract_from_module(m);
 
         for (s, id) in self.string_pool.pool.iter() {
-            let len_w_null = s.len() + 1;
+            let escaped_s = s; //str_to_llvm(s);
+            let len_w_null = escaped_s.len() + 1;
             let g = self.module.add_global(
                 self.context.i8_type().array_type(len_w_null as u32),
                 None,
                 &Self::id_to_str_pool_var(*id),
             );
-            g.set_initializer(&self.context.const_string(s.as_bytes(), true));
+            g.set_initializer(&self.context.const_string(escaped_s.as_bytes(), true));
         }
     }
 

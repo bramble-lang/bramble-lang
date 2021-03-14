@@ -167,7 +167,7 @@ impl<'a> Compiler<'a> {
 
         for (s, id) in self.string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
-            code.push(Inst::DataString(lbl, s.clone()));
+            code.push(Inst::DataString(lbl, unparse_escape_seq(s)));
         }
         code
     }
@@ -1202,7 +1202,11 @@ impl<'a> Compiler<'a> {
         for param in params.iter() {
             self.traverse_expression(param, current_func, &mut code)?;
             let pa = param.annotation();
-            self.insert_comment_from_annotations(&mut code, &param.to_string(), pa);
+            self.insert_comment_from_annotations(
+                &mut code,
+                &unparse_escape_seq(&param.to_string()),
+                pa,
+            );
             let reg = pa.scale_reg(Reg64::Rax).expect(&format!(
                 "Register could not be found for function parameter: L{}: {}",
                 pa.line(),
@@ -1327,4 +1331,22 @@ impl<CompilerAnnotation> RoutineDef<CompilerAnnotation> {
             ))
         }
     }
+}
+
+/// Given a string, replace every escape sequence charachter with
+/// two characters representing the escape sequence as they would
+/// be written in code.
+///
+/// # Example
+/// The new line character `\n` would be replaced with the two characters `['\\', 'n']"`
+fn unparse_escape_seq(s: &str) -> String {
+    let mut escaped_str = String::new();
+    for c in s.chars() {
+        match c {
+            '\n' => escaped_str.push_str("\\n"),
+            c => escaped_str.push(c),
+        }
+    }
+
+    escaped_str
 }
