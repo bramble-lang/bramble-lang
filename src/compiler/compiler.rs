@@ -1344,6 +1344,12 @@ fn unparse_escape_seq(s: &str) -> String {
     for c in s.chars() {
         match c {
             '\n' => escaped_str.push_str("\\n"),
+            '\r' => escaped_str.push_str("\\r"),
+            '\t' => escaped_str.push_str("\\t"),
+            '\\' => escaped_str.push_str("\\\\"),
+            '\0' => escaped_str.push_str("\\0"),
+            '\'' => escaped_str.push_str("\\'"),
+            '\"' => escaped_str.push_str("\\\""),
             c => escaped_str.push(c),
         }
     }
