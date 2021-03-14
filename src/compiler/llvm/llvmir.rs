@@ -8,6 +8,7 @@
 /// into native assembly or into a JIT.
 use std::{collections::HashMap, error::Error};
 
+use ast::Expression;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -20,7 +21,9 @@ use inkwell::{
 };
 
 use crate::{
-    ast::RoutineDef, compiler::memory::stringpool::StringPool,
+    ast,
+    ast::{Node, RoutineDef, StructDef},
+    compiler::memory::stringpool::StringPool,
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -35,6 +38,7 @@ pub struct IrGen<'ctx> {
     externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
+    struct_table: HashMap<String, &'ctx StructDef<SemanticAnnotations>>,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -50,6 +54,7 @@ impl<'ctx> IrGen<'ctx> {
             externs,
             string_pool: StringPool::new(),
             registers: RegisterLookup::new(),
+            struct_table: HashMap::new(),
         }
     }
 
@@ -75,7 +80,7 @@ impl<'ctx> IrGen<'ctx> {
     pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
         self.compile_string_pool(m);
         self.add_externs();
-        self.construct_fn_decls(m);
+        self.add_mod_items(m);
         self.create_main();
         match m.to_llvm_ir(self) {
             None => (),
@@ -113,7 +118,15 @@ impl<'ctx> IrGen<'ctx> {
     /// Take the given AST and add declarations for every function to the
     /// LLVM module. This is required so that the FunctionValue can be looked
     /// up when generating code for function calls.
-    fn construct_fn_decls(&self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+    fn add_mod_items(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+        for s in m.get_structs() {
+            if let crate::ast::Item::Struct(sd) = s {
+                self.add_struct_def(sd);
+            } else {
+                panic!("Expected a struct but got {}", s)
+            }
+        }
+
         for f in m.get_functions() {
             if let crate::ast::Item::Routine(rd) = f {
                 self.add_fn_decl(rd);
@@ -121,7 +134,7 @@ impl<'ctx> IrGen<'ctx> {
         }
 
         for m in m.get_modules() {
-            self.construct_fn_decls(m);
+            self.add_mod_items(m);
         }
     }
 
@@ -134,7 +147,15 @@ impl<'ctx> IrGen<'ctx> {
         let ty = rd.ty.to_llvm(self);
         let mut params = vec![];
         for p in rd.get_params() {
-            params.push(p.ty.to_llvm(self))
+            let mut p_ty = p.ty.to_llvm(self);
+
+            // Pass structs around by reference
+            match p_ty {
+                BasicTypeEnum::StructType(st_ty) => p_ty = st_ty.into(),
+                _ => {}
+            }
+
+            params.push(p_ty);
         }
 
         let fn_type = match ty {
@@ -160,7 +181,6 @@ impl<'ctx> IrGen<'ctx> {
         let llvm_ty = ret_ty.to_llvm(self);
         let mut llvm_params = vec![];
         for p in params {
-            println!("{}", p);
             llvm_params.push(p.to_llvm(self))
         }
         let fn_type = match llvm_ty {
@@ -168,6 +188,17 @@ impl<'ctx> IrGen<'ctx> {
             _ => panic!(),
         };
         self.module.add_function(name, fn_type, None);
+    }
+
+    /// Add a struct definition to the LLVM context
+    fn add_struct_def(&mut self, sd: &'ctx StructDef<SemanticAnnotations>) {
+        self.struct_table
+            .insert(sd.annotation().get_canonical_path().to_label(), sd);
+        let name = sd.annotation().get_canonical_path().to_label();
+        let fields_llvm: Vec<BasicTypeEnum<'ctx>> =
+            sd.get_fields().iter().map(|f| f.ty.to_llvm(self)).collect();
+        let struct_ty = self.context.opaque_struct_type(&name);
+        struct_ty.set_body(&fields_llvm, false);
     }
 
     /// Add all string literals to the data section of the assemby output
@@ -413,6 +444,24 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                     ),
                 }
             }
+            ast::Expression::MemberAccess(_, val, field) => {
+                let sdef = llvm
+                    .struct_table
+                    .get(&val.get_type().get_path().unwrap().to_label())
+                    .unwrap();
+                let field_idx = sdef.get_field_idx(field).unwrap();
+
+                let zero = llvm.context.i64_type().const_int(0, true);
+                let field_idx_llvm = llvm.context.i64_type().const_int(field_idx as u64, true);
+
+                let val_llvm = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
+                let field_ptr = llvm
+                    .builder
+                    .build_struct_gep(val_llvm, field_idx as u32, "")
+                    .unwrap();
+                let field_val = llvm.builder.build_load(field_ptr, "");
+                Some(field_val)
+            }
             _ => todo!("{} not implemented yet", self),
             /*
             crate::ast::Expression::CustomType(_, _) => {}
@@ -496,6 +545,12 @@ impl crate::ast::Type {
                 .context
                 .i8_type()
                 .array_type(0)
+                .ptr_type(AddressSpace::Generic)
+                .into(),
+            crate::ast::Type::Custom(name) => llvm
+                .module
+                .get_struct_type(&name.to_label())
+                .unwrap()
                 .ptr_type(AddressSpace::Generic)
                 .into(),
             _ => panic!("Can't convert type to LLVM: {}", self),

@@ -1,3 +1,13 @@
+struct MyStruct {
+	x: i32,
+	y: i64,
+	z: bool,
+}
+
+struct MyStruct2 {
+	ms: MyStruct,
+}
+
 fn my_main() -> i64 {
 	test();
 	root::std::io::write("hello\n");
@@ -36,4 +46,9 @@ fn if_test(a: i64) -> i64 {
 	} else {
 		a + 3
 	};
+}
+
+fn test_st(s: MyStruct2) {
+	let x: i64 := s.ms.y;
+	return;
 }

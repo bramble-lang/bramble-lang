@@ -16,6 +16,12 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn get_path(&self) -> Option<&Path> {
+        match self {
+            Type::Custom(path) => Some(path),
+            _ => None,
+        }
+    }
     pub fn get_members(&self) -> Option<&Vec<(String, Type)>> {
         match self {
             Type::StructDef(members) => Some(members),

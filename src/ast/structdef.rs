@@ -75,6 +75,14 @@ impl<M> StructDef<M> {
         self.fields.iter().find(|f| f.name == field).map(|f| &f.ty)
     }
 
+    pub fn get_field_idx(&self, field: &str) -> Option<usize> {
+        self.fields
+            .iter()
+            .enumerate()
+            .find(|(_, f)| field == f.name)
+            .map(|(idx, _)| idx)
+    }
+
     pub fn add_field(&mut self, field: Parameter<M>) -> Result<()> {
         if self.get_field(&field.name).is_none() {
             self.fields.push(field);
