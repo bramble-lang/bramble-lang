@@ -354,54 +354,9 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 })
             }
             crate::ast::Expression::BinaryOp(_, op, l, r) => {
-                let lv = l
-                    .to_llvm_ir(llvm)
-                    .expect("Expected a value")
-                    .into_int_value();
-                let rv = r
-                    .to_llvm_ir(llvm)
-                    .expect("Expected a value")
-                    .into_int_value();
-                Some(match op {
-                    crate::ast::BinaryOperator::Add => {
-                        llvm.builder.build_int_add(lv, rv, "").into()
-                    }
-                    crate::ast::BinaryOperator::Sub => {
-                        llvm.builder.build_int_sub(lv, rv, "").into()
-                    }
-                    crate::ast::BinaryOperator::Mul => {
-                        llvm.builder.build_int_mul(lv, rv, "").into()
-                    }
-                    crate::ast::BinaryOperator::Div => {
-                        llvm.builder.build_int_signed_div(lv, rv, "").into()
-                    }
-                    crate::ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
-                    crate::ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
-                    crate::ast::BinaryOperator::Eq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::EQ, lv, rv, "")
-                        .into(),
-                    crate::ast::BinaryOperator::NEq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::NE, lv, rv, "")
-                        .into(),
-                    crate::ast::BinaryOperator::Ls => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SLT, lv, rv, "")
-                        .into(),
-                    crate::ast::BinaryOperator::LsEq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SLE, lv, rv, "")
-                        .into(),
-                    crate::ast::BinaryOperator::Gr => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SGT, lv, rv, "")
-                        .into(),
-                    crate::ast::BinaryOperator::GrEq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SGE, lv, rv, "")
-                        .into(),
-                })
+                let left = l.to_llvm_ir(llvm).expect("Expected a value");
+                let right = r.to_llvm_ir(llvm).expect("Expected a value");
+                Some(op.to_llvm(llvm, left, right))
             }
             crate::ast::Expression::RoutineCall(_, call, name, params) => {
                 let llvm_params: Vec<BasicValueEnum<'ctx>> =
@@ -472,6 +427,51 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
             crate::ast::Expression::StructExpression(_, _, _) => {}
             crate::ast::Expression::Yield(_, _) => {}
             */
+        }
+    }
+}
+
+impl crate::ast::BinaryOperator {
+    fn to_llvm<'ctx>(
+        &self,
+        llvm: &IrGen<'ctx>,
+        left: BasicValueEnum<'ctx>,
+        right: BasicValueEnum<'ctx>,
+    ) -> BasicValueEnum<'ctx> {
+        let lv = left.into_int_value();
+        let rv = right.into_int_value();
+
+        match self {
+            crate::ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
+            crate::ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
+            crate::ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
+            crate::ast::BinaryOperator::Div => llvm.builder.build_int_signed_div(lv, rv, "").into(),
+            crate::ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
+            crate::ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
+            crate::ast::BinaryOperator::Eq => llvm
+                .builder
+                .build_int_compare(IntPredicate::EQ, lv, rv, "")
+                .into(),
+            crate::ast::BinaryOperator::NEq => llvm
+                .builder
+                .build_int_compare(IntPredicate::NE, lv, rv, "")
+                .into(),
+            crate::ast::BinaryOperator::Ls => llvm
+                .builder
+                .build_int_compare(IntPredicate::SLT, lv, rv, "")
+                .into(),
+            crate::ast::BinaryOperator::LsEq => llvm
+                .builder
+                .build_int_compare(IntPredicate::SLE, lv, rv, "")
+                .into(),
+            crate::ast::BinaryOperator::Gr => llvm
+                .builder
+                .build_int_compare(IntPredicate::SGT, lv, rv, "")
+                .into(),
+            crate::ast::BinaryOperator::GrEq => llvm
+                .builder
+                .build_int_compare(IntPredicate::SGE, lv, rv, "")
+                .into(),
         }
     }
 }
