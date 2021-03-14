@@ -462,6 +462,29 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 let field_val = llvm.builder.build_load(field_ptr, "");
                 Some(field_val)
             }
+            ast::Expression::StructExpression(_, name, fields) => {
+                let sname = self.annotation().ty().get_path().unwrap().to_label();
+                let sdef = llvm.struct_table.get(&sname).unwrap();
+                let sd_llvm = llvm.module.get_struct_type(&sname).unwrap();
+                let s_ptr = llvm.builder.build_alloca(sd_llvm, "");
+
+                // convert field names to field indexes (order of fields in expression may not
+                // be the same as in the defintion)
+                let idx_fields: Vec<(usize, &ast::Expression<SemanticAnnotations>)> = fields
+                    .iter()
+                    .map(|(n, v)| (sdef.get_field_idx(n).unwrap(), v))
+                    .collect();
+
+                for (f_idx, e) in idx_fields {
+                    let val = e.to_llvm_ir(llvm).unwrap();
+                    let f_ptr = llvm
+                        .builder
+                        .build_struct_gep(s_ptr, f_idx as u32, "")
+                        .unwrap();
+                    llvm.builder.build_store(f_ptr, val);
+                }
+                Some(s_ptr.into())
+            }
             _ => todo!("{} not implemented yet", self),
             /*
             crate::ast::Expression::CustomType(_, _) => {}
@@ -550,7 +573,7 @@ impl crate::ast::Type {
             crate::ast::Type::Custom(name) => llvm
                 .module
                 .get_struct_type(&name.to_label())
-                .unwrap()
+                .expect(&format!("Could not find struct {}", name))
                 .ptr_type(AddressSpace::Generic)
                 .into(),
             _ => panic!("Can't convert type to LLVM: {}", self),

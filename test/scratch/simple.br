@@ -48,7 +48,11 @@ fn if_test(a: i64) -> i64 {
 	};
 }
 
-fn test_st(s: MyStruct2) {
-	let x: i64 := s.ms.y;
+fn test_st() {
+	let x: MyStruct := MyStruct {
+		x: 1i32,
+		y: 2i64,
+		z: false,
+	};
 	return;
 }
