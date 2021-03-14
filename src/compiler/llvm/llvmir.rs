@@ -344,14 +344,8 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 Some(val)
             }
             crate::ast::Expression::UnaryOp(_, op, exp) => {
-                let v = exp
-                    .to_llvm_ir(llvm)
-                    .expect("Expected a value")
-                    .into_int_value();
-                Some(match op {
-                    crate::ast::UnaryOperator::Minus => llvm.builder.build_int_neg(v, "").into(),
-                    crate::ast::UnaryOperator::Not => llvm.builder.build_not(v, "").into(),
-                })
+                let v = exp.to_llvm_ir(llvm).expect("Expected a value");
+                Some(op.to_llvm(llvm, v))
             }
             crate::ast::Expression::BinaryOp(_, op, l, r) => {
                 let left = l.to_llvm_ir(llvm).expect("Expected a value");
@@ -427,6 +421,20 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
             crate::ast::Expression::StructExpression(_, _, _) => {}
             crate::ast::Expression::Yield(_, _) => {}
             */
+        }
+    }
+}
+
+impl crate::ast::UnaryOperator {
+    fn to_llvm<'ctx>(
+        &self,
+        llvm: &IrGen<'ctx>,
+        right: BasicValueEnum<'ctx>,
+    ) -> BasicValueEnum<'ctx> {
+        let rv = right.into_int_value();
+        match self {
+            crate::ast::UnaryOperator::Minus => llvm.builder.build_int_neg(rv, "").into(),
+            crate::ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
         }
     }
 }
