@@ -2,8 +2,8 @@
 
 run() {
     # test=$1
+    rm -rf ./target
     mkdir -p ./target
-    rm -f ./target/*
 
     built=0
 
