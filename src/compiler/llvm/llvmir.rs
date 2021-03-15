@@ -399,7 +399,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                         .i8_type()
                         .array_type(0)
                         .ptr_type(AddressSpace::Generic),
-                    "sptr",
+                    "",
                 );
                 Some(bitcast.into())
             }
@@ -436,7 +436,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
             }
             crate::ast::Expression::If {
                 cond,
-                if_arm,
+                if_arm: then_arm,
                 else_arm,
                 ..
             } => {
@@ -454,7 +454,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                     .build_conditional_branch(cond_val, then_bb, else_bb);
 
                 llvm.builder.position_at_end(then_bb);
-                let if_arm_val = if_arm.to_llvm_ir(llvm);
+                let then_arm_val = then_arm.to_llvm_ir(llvm);
                 llvm.builder.build_unconditional_branch(merge_bb);
 
                 llvm.builder.position_at_end(else_bb);
@@ -463,17 +463,17 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
 
                 llvm.builder.position_at_end(merge_bb);
 
-                match (if_arm_val, else_arm_val) {
-                    (Some(if_arm_val), Some(else_arm_val)) => {
+                match (then_arm_val, else_arm_val) {
+                    (Some(then_arm_val), Some(else_arm_val)) => {
                         // create phi to unify the branches
-                        let phi = llvm.builder.build_phi(if_arm_val.get_type(), "phi");
-                        phi.add_incoming(&[(&if_arm_val, then_bb), (&else_arm_val, else_bb)]);
+                        let phi = llvm.builder.build_phi(then_arm_val.get_type(), "phi");
+                        phi.add_incoming(&[(&then_arm_val, then_bb), (&else_arm_val, else_bb)]);
                         Some(phi.as_basic_value())
                     }
                     (None, None) => None,
                     _ => panic!(
                         "Mismatching arms on if expression: {:?}, {:?}",
-                        if_arm_val, else_arm_val
+                        then_arm_val, else_arm_val
                     ),
                 }
             }
@@ -484,7 +484,6 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                     .unwrap();
                 let field_idx = sdef.get_field_idx(field).unwrap();
 
-                let zero = llvm.context.i64_type().const_int(0, true);
                 let field_idx_llvm = llvm.context.i64_type().const_int(field_idx as u64, true);
 
                 let val_llvm = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
@@ -501,8 +500,8 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                     .struct_table
                     .get(&sname)
                     .expect(&format!("Cannot find {} in {:?}", sname, llvm.struct_table));
-                let sd_llvm = llvm.module.get_struct_type(&sname).unwrap();
-                let s_ptr = llvm.builder.build_alloca(sd_llvm, "");
+                let sdef_llvm = llvm.module.get_struct_type(&sname).unwrap();
+                let s_ptr = llvm.builder.build_alloca(sdef_llvm, "");
 
                 // convert field names to field indexes (order of fields in expression may not
                 // be the same as in the defintion)
@@ -513,11 +512,11 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
 
                 for (f_idx, e) in idx_fields {
                     let val = e.to_llvm_ir(llvm).unwrap();
-                    let f_ptr = llvm
+                    let fld_ptr = llvm
                         .builder
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
-                    llvm.builder.build_store(f_ptr, val);
+                    llvm.builder.build_store(fld_ptr, val);
                 }
                 Some(s_ptr.into())
             }

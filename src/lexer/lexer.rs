@@ -291,7 +291,9 @@ impl Lexer {
         let mut is_escape = false;
         let mut escaped_str = String::new();
         for c in s.chars() {
-            if c != '\\' {
+            if c == '\\' {
+                is_escape = true;
+            } else {
                 if !is_escape {
                     escaped_str.push(c);
                 } else {
@@ -304,8 +306,6 @@ impl Lexer {
                         _ => return Err(format!("Unknown escape sequence \\{}", c)),
                     }
                 }
-            } else {
-                is_escape = true;
             }
         }
 
