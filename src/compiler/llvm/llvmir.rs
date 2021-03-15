@@ -71,26 +71,6 @@ impl<'ctx> IrGen<'ctx> {
         self.module.print_to_file(path).unwrap()
     }
 
-    /// Take the given Braid AST to compile it to LLVM IR and add it to the LLVM module.
-    ///
-    /// All user input is expected to be fully validated and correct by the time it reaches
-    /// the compiler phase (via syntactic and semantic analysis).  Therefore, if anything
-    /// goes wrong during compilation, it is assumed to be the result of a critical bug in
-    /// the compiler itself and not an issue with the input Braid code. This means that any
-    /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
-    /// be trusted. So, if any unexpected state is encountered or any error happens this module
-    /// will panic at that point in code and crash the compiler.
-    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
-        self.compile_string_pool(m);
-        self.add_externs();
-        self.add_mod_items(m);
-        self.create_main();
-        match m.to_llvm_ir(self) {
-            None => (),
-            Some(_) => panic!("Expected None when compiling a Module"),
-        };
-    }
-
     /// Compile the LLVM IR into an object file for the target platform
     pub fn emit_object_code(&self, path: &std::path::Path) -> Result<()> {
         // Get target for current machine
@@ -120,6 +100,26 @@ impl<'ctx> IrGen<'ctx> {
         machine
             .write_to_file(&self.module, inkwell::targets::FileType::Object, path)
             .map_err(|e| e.to_string())
+    }
+
+    /// Take the given Braid AST to compile it to LLVM IR and add it to the LLVM module.
+    ///
+    /// All user input is expected to be fully validated and correct by the time it reaches
+    /// the compiler phase (via syntactic and semantic analysis).  Therefore, if anything
+    /// goes wrong during compilation, it is assumed to be the result of a critical bug in
+    /// the compiler itself and not an issue with the input Braid code. This means that any
+    /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
+    /// be trusted. So, if any unexpected state is encountered or any error happens this module
+    /// will panic at that point in code and crash the compiler.
+    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
+        self.compile_string_pool(m);
+        self.add_externs();
+        self.add_mod_items(m);
+        self.create_main();
+        match m.to_llvm_ir(self) {
+            None => (),
+            Some(_) => panic!("Expected None when compiling a Module"),
+        };
     }
 
     /// Creates `main` entry point which will be called by the OS to start the Braid
@@ -276,7 +276,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticAnnotations> {
         for m in self.get_modules() {
             m.to_llvm_ir(llvm);
         }
-        for s in self.get_structs() {}
+
         for f in self.get_functions() {
             if let ast::Item::Routine(rdef) = f {
                 let fn_val = rdef
@@ -284,7 +284,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticAnnotations> {
                     .expect("Expected Function Value from RoutineDef");
             }
         }
-        for c in self.get_coroutines() {}
+
+        for c in self.get_coroutines() {
+            todo!("Coroutine support not yet implemented")
+        }
 
         None
     }
