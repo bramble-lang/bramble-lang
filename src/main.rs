@@ -92,8 +92,7 @@ fn main() {
             llvm.print(Path::new("./target/output.ll"));
         }
 
-        llvm.emit_object_code(Path::new("./target/output.obj"))
-            .unwrap();
+        llvm.emit_object_code(Path::new(output_target)).unwrap();
     } else {
         let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
         // Compile

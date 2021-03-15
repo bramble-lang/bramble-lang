@@ -17,31 +17,33 @@ num_tests=0
 num_pass=0
 
 run_test() {
+    rm -rf ./target
+    mkdir -p ./target
     test=$1
     input="./src/${test}.in"
-    rm -rf ./target/*
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/debug/braid-lang --llvm -p linux -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+        ../target/debug/braid-lang --llvm -p linux -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/debug/braid-lang --llvm -p machos -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+        ../target/debug/braid-lang --llvm -p machos -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
-    if [ -f "./target/output.asm" ]
+    if [ -f "./target/output.obj" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            nasm -g -f elf64 ../braid/linux/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/std_io.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
+            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            nasm -g -f macho64 ../braid/macho64/std/io.asm -l ./target/std_io.lst -o ./target/std_io.obj > assembler.log
-            gcc -w ./target/std_io.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            nasm -g -f macho64 ../braid/macho64/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
+            gcc -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         else
             # If we can't figure out the OS, then just try the Linux build steps
-            gcc -no-pie -fno-pie -w ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
+            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=1
         fi
 
