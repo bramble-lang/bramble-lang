@@ -38,7 +38,7 @@ pub struct IrGen<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
-    externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
+    externs: &'ctx Vec<(ast::Path, Vec<ast::Type>, ast::Type)>,
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, &'ctx StructDef<SemanticAnnotations>>,
@@ -48,7 +48,7 @@ impl<'ctx> IrGen<'ctx> {
     pub fn new(
         ctx: &'ctx Context,
         module: &str,
-        externs: &'ctx Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>,
+        externs: &'ctx Vec<(ast::Path, Vec<ast::Type>, ast::Type)>,
     ) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
@@ -80,7 +80,7 @@ impl<'ctx> IrGen<'ctx> {
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
-    pub fn ingest(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
         self.compile_string_pool(m);
         self.add_externs();
         self.add_mod_items(m);
@@ -151,9 +151,9 @@ impl<'ctx> IrGen<'ctx> {
     /// Take the given AST and add declarations for every function to the
     /// LLVM module. This is required so that the FunctionValue can be looked
     /// up when generating code for function calls.
-    fn add_mod_items(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+    fn add_mod_items(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
         for s in m.get_structs() {
-            if let crate::ast::Item::Struct(sd) = s {
+            if let ast::Item::Struct(sd) = s {
                 self.add_struct_def(sd);
             } else {
                 panic!("Expected a struct but got {}", s)
@@ -161,7 +161,7 @@ impl<'ctx> IrGen<'ctx> {
         }
 
         for f in m.get_functions() {
-            if let crate::ast::Item::Routine(rd) = f {
+            if let ast::Item::Routine(rd) = f {
                 self.add_fn_decl(rd);
             }
         }
@@ -205,12 +205,7 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_extern_decl(
-        &self,
-        name: &str,
-        params: &Vec<crate::ast::Type>,
-        ret_ty: &crate::ast::Type,
-    ) {
+    fn add_extern_decl(&self, name: &str, params: &Vec<ast::Type>, ret_ty: &ast::Type) {
         let llvm_ty = ret_ty.to_llvm(self);
         let mut llvm_params = vec![];
         for p in params {
@@ -235,7 +230,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Add all string literals to the data section of the assemby output
-    fn compile_string_pool(&mut self, m: &crate::ast::Module<SemanticAnnotations>) {
+    fn compile_string_pool(&mut self, m: &ast::Module<SemanticAnnotations>) {
         self.string_pool.extract_from_module(m);
 
         for (s, id) in self.string_pool.pool.iter() {
@@ -274,7 +269,7 @@ trait ToLlvmIr<'ctx> {
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value>;
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Module<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticAnnotations> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -283,7 +278,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Module<SemanticAnnotations> {
         }
         for s in self.get_structs() {}
         for f in self.get_functions() {
-            if let crate::ast::Item::Routine(rdef) = f {
+            if let ast::Item::Routine(rdef) = f {
                 let fn_val = rdef
                     .to_llvm_ir(llvm)
                     .expect("Expected Function Value from RoutineDef");
@@ -295,7 +290,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Module<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for crate::ast::RoutineDef<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticAnnotations> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -329,20 +324,20 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::RoutineDef<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Statement<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Statement<SemanticAnnotations> {
     type Value = AnyValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
-            crate::ast::Statement::Return(ret) => ret.to_llvm_ir(llvm).map(|i| i.into()),
-            crate::ast::Statement::Expression(exp) => exp.to_llvm_ir(llvm).map(|v| v.into()),
-            crate::ast::Statement::Bind(bind) => bind.to_llvm_ir(llvm).map(|i| i.into()),
+            ast::Statement::Return(ret) => ret.to_llvm_ir(llvm).map(|i| i.into()),
+            ast::Statement::Expression(exp) => exp.to_llvm_ir(llvm).map(|v| v.into()),
+            ast::Statement::Bind(bind) => bind.to_llvm_ir(llvm).map(|i| i.into()),
             _ => None,
         }
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Bind<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
     type Value = PointerValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -356,7 +351,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Bind<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Return<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
     type Value = InstructionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -372,24 +367,24 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Return<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
     type Value = BasicValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
-            crate::ast::Expression::Integer32(_, i) => {
+            ast::Expression::Integer32(_, i) => {
                 let i32t = llvm.context.i32_type();
                 Some(i32t.const_int(*i as u64, true).into())
             }
-            crate::ast::Expression::Integer64(_, i) => {
+            ast::Expression::Integer64(_, i) => {
                 let i64t = llvm.context.i64_type();
                 Some(i64t.const_int(*i as u64, true).into())
             }
-            crate::ast::Expression::Boolean(_, b) => {
+            ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
                 Some(bt.const_int(*b as u64, false).into())
             }
-            crate::ast::Expression::StringLiteral(_, s) => {
+            ast::Expression::StringLiteral(_, s) => {
                 let str_id = llvm.get_str_var(s).unwrap();
                 let val = llvm.module.get_global(&str_id).unwrap();
                 let val_ptr = val.as_pointer_value();
@@ -403,21 +398,21 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 );
                 Some(bitcast.into())
             }
-            crate::ast::Expression::Identifier(_, id) => {
+            ast::Expression::Identifier(_, id) => {
                 let ptr = llvm.registers.get(id).unwrap().into_pointer_value();
                 let val = llvm.builder.build_load(ptr, id);
                 Some(val)
             }
-            crate::ast::Expression::UnaryOp(_, op, exp) => {
+            ast::Expression::UnaryOp(_, op, exp) => {
                 let v = exp.to_llvm_ir(llvm).expect("Expected a value");
                 Some(op.to_llvm(llvm, v))
             }
-            crate::ast::Expression::BinaryOp(_, op, l, r) => {
+            ast::Expression::BinaryOp(_, op, l, r) => {
                 let left = l.to_llvm_ir(llvm).expect("Expected a value");
                 let right = r.to_llvm_ir(llvm).expect("Expected a value");
                 Some(op.to_llvm(llvm, left, right))
             }
-            crate::ast::Expression::RoutineCall(_, call, name, params) => {
+            ast::Expression::RoutineCall(_, call, name, params) => {
                 let llvm_params: Vec<BasicValueEnum<'ctx>> =
                     params.iter().map(|p| p.to_llvm_ir(llvm).unwrap()).collect();
                 let call = llvm.module.get_function(&name.to_label()).unwrap();
@@ -425,7 +420,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 let result_bv = result.try_as_basic_value().left().unwrap();
                 Some(result_bv)
             }
-            crate::ast::Expression::ExpressionBlock(_, stmts, exp) => {
+            ast::Expression::ExpressionBlock(_, stmts, exp) => {
                 llvm.registers.open_local().unwrap();
                 for stmt in stmts {
                     stmt.to_llvm_ir(llvm).unwrap();
@@ -434,7 +429,7 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
                 llvm.registers.close_local().unwrap();
                 val
             }
-            crate::ast::Expression::If {
+            ast::Expression::If {
                 cond,
                 if_arm: then_arm,
                 else_arm,
@@ -522,18 +517,18 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
             }
             _ => todo!("{} not implemented yet", self),
             /*
-            crate::ast::Expression::CustomType(_, _) => {}
-            crate::ast::Expression::Path(_, _) => {}
-            crate::ast::Expression::MemberAccess(_, _, _) => {}
-            crate::ast::Expression::IdentifierDeclare(_, _, _) => {}
-            crate::ast::Expression::StructExpression(_, _, _) => {}
-            crate::ast::Expression::Yield(_, _) => {}
+            ast::Expression::CustomType(_, _) => {}
+            ast::Expression::Path(_, _) => {}
+            ast::Expression::MemberAccess(_, _, _) => {}
+            ast::Expression::IdentifierDeclare(_, _, _) => {}
+            ast::Expression::StructExpression(_, _, _) => {}
+            ast::Expression::Yield(_, _) => {}
             */
         }
     }
 }
 
-impl crate::ast::UnaryOperator {
+impl ast::UnaryOperator {
     fn to_llvm<'ctx>(
         &self,
         llvm: &IrGen<'ctx>,
@@ -541,13 +536,13 @@ impl crate::ast::UnaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let rv = right.into_int_value();
         match self {
-            crate::ast::UnaryOperator::Minus => llvm.builder.build_int_neg(rv, "").into(),
-            crate::ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
+            ast::UnaryOperator::Minus => llvm.builder.build_int_neg(rv, "").into(),
+            ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
         }
     }
 }
 
-impl crate::ast::BinaryOperator {
+impl ast::BinaryOperator {
     fn to_llvm<'ctx>(
         &self,
         llvm: &IrGen<'ctx>,
@@ -558,33 +553,33 @@ impl crate::ast::BinaryOperator {
         let rv = right.into_int_value();
 
         match self {
-            crate::ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
-            crate::ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
-            crate::ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
-            crate::ast::BinaryOperator::Div => llvm.builder.build_int_signed_div(lv, rv, "").into(),
-            crate::ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
-            crate::ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
-            crate::ast::BinaryOperator::Eq => llvm
+            ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
+            ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
+            ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
+            ast::BinaryOperator::Div => llvm.builder.build_int_signed_div(lv, rv, "").into(),
+            ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
+            ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
+            ast::BinaryOperator::Eq => llvm
                 .builder
                 .build_int_compare(IntPredicate::EQ, lv, rv, "")
                 .into(),
-            crate::ast::BinaryOperator::NEq => llvm
+            ast::BinaryOperator::NEq => llvm
                 .builder
                 .build_int_compare(IntPredicate::NE, lv, rv, "")
                 .into(),
-            crate::ast::BinaryOperator::Ls => llvm
+            ast::BinaryOperator::Ls => llvm
                 .builder
                 .build_int_compare(IntPredicate::SLT, lv, rv, "")
                 .into(),
-            crate::ast::BinaryOperator::LsEq => llvm
+            ast::BinaryOperator::LsEq => llvm
                 .builder
                 .build_int_compare(IntPredicate::SLE, lv, rv, "")
                 .into(),
-            crate::ast::BinaryOperator::Gr => llvm
+            ast::BinaryOperator::Gr => llvm
                 .builder
                 .build_int_compare(IntPredicate::SGT, lv, rv, "")
                 .into(),
-            crate::ast::BinaryOperator::GrEq => llvm
+            ast::BinaryOperator::GrEq => llvm
                 .builder
                 .build_int_compare(IntPredicate::SGE, lv, rv, "")
                 .into(),
@@ -592,20 +587,20 @@ impl crate::ast::BinaryOperator {
     }
 }
 
-impl crate::ast::Type {
+impl ast::Type {
     fn to_llvm<'ctx>(&self, llvm: &IrGen<'ctx>) -> BasicTypeEnum<'ctx> {
         match self {
-            crate::ast::Type::I32 => llvm.context.i32_type().into(),
-            crate::ast::Type::I64 => llvm.context.i64_type().into(),
-            crate::ast::Type::Bool => llvm.context.bool_type().into(),
-            crate::ast::Type::Unit => llvm.context.custom_width_int_type(1).into(),
-            crate::ast::Type::StringLiteral => llvm
+            ast::Type::I32 => llvm.context.i32_type().into(),
+            ast::Type::I64 => llvm.context.i64_type().into(),
+            ast::Type::Bool => llvm.context.bool_type().into(),
+            ast::Type::Unit => llvm.context.custom_width_int_type(1).into(),
+            ast::Type::StringLiteral => llvm
                 .context
                 .i8_type()
                 .array_type(0)
                 .ptr_type(AddressSpace::Generic)
                 .into(),
-            crate::ast::Type::Custom(name) => llvm
+            ast::Type::Custom(name) => llvm
                 .module
                 .get_struct_type(&name.to_label())
                 .expect(&format!("Could not find struct {}", name))
