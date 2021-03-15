@@ -87,7 +87,13 @@ fn main() {
         let context = Context::create();
         let mut llvm = compiler::llvm::IrGen::new(&context, "test", &imported);
         llvm.ingest(&semantic_ast);
-        llvm.print(Path::new("./target/output.ll"));
+
+        if config.is_present("emit") {
+            llvm.print(Path::new("./target/output.ll"));
+        }
+
+        llvm.emit_object_code(Path::new("./target/output.obj"))
+            .unwrap();
     } else {
         let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
         // Compile
@@ -135,6 +141,13 @@ fn configure_cli() -> clap::App<'static, 'static> {
             Arg::with_name("llvm")
             .long("llvm")
             .help("When set, then compiler will emit LLVM IR rather than x86 IR")
+        )
+        .arg(
+            Arg::with_name("emit")
+            .long("emit")
+                .possible_values(&["llvm-ir"])
+                .takes_value(true)
+            .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
         )
         .arg(
             Arg::with_name("platform")

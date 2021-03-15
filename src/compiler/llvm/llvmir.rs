@@ -6,7 +6,7 @@
 /// This uses the LLVM C API to interface with LLVM and construct the
 /// Module. Resulting IR can then be fed into the LLVM Compiler to compile
 /// into native assembly or into a JIT.
-use std::{collections::HashMap, error::Error};
+use std::{collections::HashMap, convert::TryFrom, error::Error};
 
 use ast::Expression;
 use inkwell::{
@@ -14,15 +14,18 @@ use inkwell::{
     context::Context,
     execution_engine::{ExecutionEngine, JitFunction},
     module::Module,
-    targets::{InitializationConfig, Target},
+    passes::PassManager,
+    targets::{CodeModel, InitializationConfig, RelocMode, Target},
     types::*,
     values::*,
     AddressSpace, IntPredicate, OptimizationLevel,
 };
 
+use braid_lang::result::Result;
+
 use crate::{
     ast,
-    ast::{Node, RoutineDef, StructDef},
+    ast::{Node, Parameter, RoutineDef, StructDef},
     compiler::memory::stringpool::StringPool,
     semantics::semanticnode::SemanticAnnotations,
 };
@@ -85,7 +88,38 @@ impl<'ctx> IrGen<'ctx> {
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
-        }
+        };
+    }
+
+    /// Compile the LLVM IR into an object file for the target platform
+    pub fn emit_object_code(&self, path: &std::path::Path) -> Result<()> {
+        // Get target for current machine
+        let triple = inkwell::targets::TargetMachine::get_default_triple();
+
+        let config = InitializationConfig::default();
+        inkwell::targets::Target::initialize_all(&config);
+        let target = inkwell::targets::Target::from_triple(&triple).unwrap();
+
+        let machine = target
+            .create_target_machine(
+                &triple,
+                "generic",
+                "",
+                OptimizationLevel::None,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .ok_or("Could not create a target machine for compilation")?;
+        let data = machine.get_target_data();
+
+        // Configure the module
+        self.module.set_data_layout(&data.get_data_layout());
+        self.module.set_triple(&triple);
+
+        // Emit object file
+        machine
+            .write_to_file(&self.module, inkwell::targets::FileType::Object, path)
+            .map_err(|e| e.to_string())
     }
 
     /// Creates `main` entry point which will be called by the OS to start the Braid
