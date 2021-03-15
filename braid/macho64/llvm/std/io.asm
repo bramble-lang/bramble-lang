@@ -21,8 +21,8 @@ section .data
 
 
 section .text
-global root_std_io_write
-root_std_io_write:
+global _root_std_io_write
+_root_std_io_write:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -44,8 +44,8 @@ root_std_io_write:
     ret
 
 
-global root_std_io_readi64
-root_std_io_readi64:
+global _root_std_io_readi64
+_root_std_io_readi64:
     extern _scanf
     push rbp
     mov rbp, rsp
@@ -69,8 +69,8 @@ root_std_io_readi64:
     ret
 
 
-global root_std_io_writei64
-root_std_io_writei64:
+global _root_std_io_writei64
+_root_std_io_writei64:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -92,8 +92,8 @@ root_std_io_writei64:
     ret
 
 
-global root_std_io_writei64ln
-root_std_io_writei64ln:
+global _root_std_io_writei64ln
+_root_std_io_writei64ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -115,8 +115,8 @@ root_std_io_writei64ln:
     ret
 
 
-global root_std_io_writei32
-root_std_io_writei32:
+global _root_std_io_writei32
+_root_std_io_writei32:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -138,8 +138,8 @@ root_std_io_writei32:
     ret
 
 
-global root_std_io_writei32ln
-root_std_io_writei32ln:
+global _root_std_io_writei32ln
+_root_std_io_writei32ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -161,8 +161,8 @@ root_std_io_writei32ln:
     ret
 
 
-global root_std_io_writebool
-root_std_io_writebool:
+global _root_std_io_writebool
+_root_std_io_writebool:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -190,8 +190,8 @@ root_std_io_writebool:
     ret
 
 
-global root_std_io_writeboolln
-root_std_io_writeboolln:
+global _root_std_io_writeboolln
+_root_std_io_writeboolln:
     extern _printf
     push rbp
     mov rbp, rsp
