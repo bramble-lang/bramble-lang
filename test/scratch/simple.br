@@ -52,11 +52,11 @@ fn if_test(a: i64) -> i64 {
 }
 
 fn test_st() {
-	let x: MyStruct := MyStruct {
-		x: 1i32,
-		y: 2i64,
-		z: false,
-	};
-	root::std::io::writeboolln(x.z);
+	let x: MyStruct2 := MyStruct2{ 
+		ms: MyStruct{
+			x: 1i32,
+			y: 2i64,
+			z: false,}};
+	root::std::io::writeboolln(x.ms.z);
 	return;
 }
