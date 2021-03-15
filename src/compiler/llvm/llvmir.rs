@@ -385,7 +385,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             }
             ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
-                Some(bt.const_int(*b as u64, false).into())
+                Some(bt.const_int(*b as u64, true).into())
             }
             ast::Expression::StringLiteral(_, s) => {
                 let str_id = llvm.get_str_var(s).unwrap();
