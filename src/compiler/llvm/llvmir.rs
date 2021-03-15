@@ -234,7 +234,7 @@ impl<'ctx> IrGen<'ctx> {
         self.string_pool.extract_from_module(m);
 
         for (s, id) in self.string_pool.pool.iter() {
-            let escaped_s = s; //str_to_llvm(s);
+            let escaped_s = convert_esc_seq_to_ascii(s).unwrap();
             let len_w_null = escaped_s.len() + 1;
             let g = self.module.add_global(
                 self.context.i8_type().array_type(len_w_null as u32),
@@ -612,4 +612,33 @@ impl ast::Type {
             _ => panic!("Can't convert type to LLVM: {}", self),
         }
     }
+}
+
+/// Convert any escape senquences to their ascii codes
+fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
+    let mut is_escape = false;
+    let mut escaped_str = String::new();
+    for c in s.chars() {
+        if c == '\\' {
+            is_escape = true;
+        } else {
+            if !is_escape {
+                escaped_str.push(c);
+            } else {
+                is_escape = false;
+
+                // process escaped character
+                match c {
+                    '\\' => escaped_str.push('\\'),
+                    'n' => escaped_str.push('\n'),
+                    'r' => escaped_str.push('\r'),
+                    '0' => escaped_str.push('\0'),
+                    '"' => escaped_str.push('\"'),
+                    _ => return Err(format!("Unknown escape sequence \\{}", c)),
+                }
+            }
+        }
+    }
+
+    Ok(escaped_str)
 }

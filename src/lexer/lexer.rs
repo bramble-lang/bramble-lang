@@ -288,40 +288,10 @@ impl Lexer {
             s.remove(0);
             s.pop();
 
-            let escaped_s = Self::convert_escape_seq(&s)?;
-
-            Ok(Some(Token::new(self.line, Lex::StringLiteral(escaped_s))))
+            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
         } else {
             Ok(None)
         }
-    }
-
-    fn convert_escape_seq(s: &str) -> Result<String> {
-        let mut is_escape = false;
-        let mut escaped_str = String::new();
-        for c in s.chars() {
-            if c == '\\' {
-                is_escape = true;
-            } else {
-                if !is_escape {
-                    escaped_str.push(c);
-                } else {
-                    is_escape = false;
-
-                    // process escaped character
-                    match c {
-                        '\\' => escaped_str.push('\\'),
-                        'n' => escaped_str.push('\n'),
-                        'r' => escaped_str.push('\r'),
-                        '0' => escaped_str.push('\0'),
-                        '"' => escaped_str.push('\"'),
-                        _ => return Err(format!("Unknown escape sequence \\{}", c)),
-                    }
-                }
-            }
-        }
-
-        Ok(escaped_str)
     }
 
     pub fn consume_integer(&mut self) -> Result<Option<Token>> {

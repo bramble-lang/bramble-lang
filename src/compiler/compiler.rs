@@ -167,7 +167,7 @@ impl<'a> Compiler<'a> {
 
         for (s, id) in self.string_pool.pool.iter() {
             let lbl = format!("str_{}", id);
-            code.push(Inst::DataString(lbl, unparse_escape_seq(s)));
+            code.push(Inst::DataString(lbl, s.clone()));
         }
         code
     }
