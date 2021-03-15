@@ -77,7 +77,7 @@ impl<'ctx> IrGen<'ctx> {
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
-    pub fn compile(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
+    pub fn ingest(&mut self, m: &'ctx crate::ast::Module<SemanticAnnotations>) {
         self.compile_string_pool(m);
         self.add_externs();
         self.add_mod_items(m);

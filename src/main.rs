@@ -86,7 +86,7 @@ fn main() {
     if config.is_present("llvm") {
         let context = Context::create();
         let mut llvm = compiler::llvm::IrGen::new(&context, "test", &imported);
-        llvm.compile(&semantic_ast);
+        llvm.ingest(&semantic_ast);
         llvm.print(Path::new("./target/output.ll"));
     } else {
         let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
