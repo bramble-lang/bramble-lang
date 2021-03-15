@@ -110,7 +110,6 @@ impl<'ctx> IrGen<'ctx> {
     /// in the LLVM module
     fn add_externs(&self) {
         for (path, params, ty) in self.externs {
-            println!("{}", path);
             self.add_extern_decl(&path.to_label(), params, ty)
         }
     }

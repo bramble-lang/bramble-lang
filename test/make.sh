@@ -41,5 +41,5 @@ run() {
     fi
 }
 
-echo "Compile ${1}"
+echo "Compile ${@}"
 run "$@"
