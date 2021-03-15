@@ -9,7 +9,7 @@ run() {
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         echo "Compiling"
-        cargo run -- --llvm -p linux "$@" -o ./target/output.asm
+        cargo run -- --llvm -p linux "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
         nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
@@ -17,7 +17,7 @@ run() {
         built=1
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         echo "Compiling"
-        cargo run -- --llvm -p machos "$@" -o ./target/output.asm
+        cargo run -- --llvm -p machos "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
         nasm -g -f macho64 ../braid/macho64/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log

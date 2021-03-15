@@ -453,10 +453,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 llvm.builder.position_at_end(then_bb);
                 let then_arm_val = then_arm.to_llvm_ir(llvm);
+                let then_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may change after compiling the then block
                 llvm.builder.build_unconditional_branch(merge_bb);
 
                 llvm.builder.position_at_end(else_bb);
                 let else_arm_val = else_arm.as_ref().map(|ea| ea.to_llvm_ir(llvm).unwrap());
+                let else_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may changing after compiling the else block
                 llvm.builder.build_unconditional_branch(merge_bb);
 
                 llvm.builder.position_at_end(merge_bb);
