@@ -276,7 +276,16 @@ impl Lexer {
                 // Parse escape sequence
                 if c == '\\' {
                     match branch.next() {
-                        Some(c) if c == 'n' || c == 'r' || c == '"' || c == '0' || c == '\\' => (),
+                        Some(c)
+                            if c == 'n'
+                                || c == 'r'
+                                || c == 't'
+                                || c == '"'
+                                || c == '0'
+                                || c == '\\' =>
+                        {
+                            ()
+                        }
                         Some(c) => return Err(format!("Invalid escape sequence \\{}", c)),
                         None => return Err("Expected escape character after \\".into()),
                     }
