@@ -634,6 +634,7 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
                     '\\' => escaped_str.push('\\'),
                     'n' => escaped_str.push('\n'),
                     'r' => escaped_str.push('\r'),
+                    't' => escaped_str.push('\t'),
                     '0' => escaped_str.push('\0'),
                     '"' => escaped_str.push('\"'),
                     _ => return Err(format!("Unknown escape sequence \\{}", c)),
