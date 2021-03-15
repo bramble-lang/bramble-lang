@@ -464,7 +464,10 @@ impl<'ctx> ToLlvmIr<'ctx> for crate::ast::Expression<SemanticAnnotations> {
             }
             ast::Expression::StructExpression(_, name, fields) => {
                 let sname = self.annotation().ty().get_path().unwrap().to_label();
-                let sdef = llvm.struct_table.get(&sname).unwrap();
+                let sdef = llvm
+                    .struct_table
+                    .get(&sname)
+                    .expect(&format!("Cannot find {} in {:?}", sname, llvm.struct_table));
                 let sd_llvm = llvm.module.get_struct_type(&sname).unwrap();
                 let s_ptr = llvm.builder.build_alloca(sd_llvm, "");
 

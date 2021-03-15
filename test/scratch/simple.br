@@ -16,6 +16,9 @@ fn my_main() -> i64 {
 
 	let x: i64 := if_test(0);
 	root::std::io::writei64(x);
+
+	test_st();
+
     return -10 + 5;
 }
 
@@ -54,5 +57,6 @@ fn test_st() {
 		y: 2i64,
 		z: false,
 	};
+	root::std::io::writeboolln(x.z);
 	return;
 }
