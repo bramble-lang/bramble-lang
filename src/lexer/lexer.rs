@@ -272,6 +272,15 @@ impl Lexer {
                 if c == '"' {
                     break;
                 }
+
+                // Parse escape sequence
+                if c == '\\' {
+                    match branch.next() {
+                        Some(c) if c == 'n' || c == 'r' || c == '"' || c == '0' || c == '\\' => (),
+                        Some(c) => return Err(format!("Invalid escape sequence \\{}", c)),
+                        None => return Err("Expected escape character after \\".into()),
+                    }
+                }
             }
             let mut s = branch.merge();
 
@@ -279,7 +288,7 @@ impl Lexer {
             s.remove(0);
             s.pop();
 
-            let escaped_s = Self::parse_escape_seq(&s)?;
+            let escaped_s = Self::convert_escape_seq(&s)?;
 
             Ok(Some(Token::new(self.line, Lex::StringLiteral(escaped_s))))
         } else {
@@ -287,7 +296,7 @@ impl Lexer {
         }
     }
 
-    fn parse_escape_seq(s: &str) -> Result<String> {
+    fn convert_escape_seq(s: &str) -> Result<String> {
         let mut is_escape = false;
         let mut escaped_str = String::new();
         for c in s.chars() {
@@ -303,6 +312,9 @@ impl Lexer {
                     match c {
                         '\\' => escaped_str.push('\\'),
                         'n' => escaped_str.push('\n'),
+                        'r' => escaped_str.push('\r'),
+                        '0' => escaped_str.push('\0'),
+                        '"' => escaped_str.push('\"'),
                         _ => return Err(format!("Unknown escape sequence \\{}", c)),
                     }
                 }
