@@ -12,6 +12,7 @@ fn my_main() -> i64 {
 	let x: i64 := ms2.ms.x;
 	root::std::io::writei64ln(ms2.a);
 	root::std::io::writei64ln(x);
+    return 0;
 }
 
 /*fn test() -> MyStruct {
