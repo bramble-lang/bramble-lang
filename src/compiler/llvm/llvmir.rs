@@ -312,8 +312,19 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticAnnotations> {
 
         llvm.registers.open_fn().unwrap();
         let llvm_params = fn_value.get_params();
-        let num_params = self.get_params().len();
-        for pi in 0..num_params {
+        let num_params = llvm_params.len();
+
+        // If the function returns a structure, then the first parameter will
+        // be the return parameter.
+        let start = if let ast::Type::Custom(_) = self.get_return_type() {
+            let pname = ".out";
+            llvm.registers.insert(pname, llvm_params[0].into()).unwrap();
+            1
+        } else {
+            0
+        };
+
+        for pi in start..num_params {
             let pname = &(*self.get_params())[pi].name;
 
             // move parameter into the stack
@@ -387,16 +398,41 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
         Some(match self.get_value() {
             None => llvm.builder.build_return(None),
             Some(val) => {
-                let val = match val.get_type() {
+                match val.get_type() {
                     ast::Type::Custom(_) => {
+                        let out = llvm.registers.get(".out").unwrap().into_pointer_value();
+                        let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
+
+                        // TODOC: there must be a way to dynamically get the alignment value
+                        let out_align = out
+                            .get_type()
+                            .get_alignment()
+                            .get_zero_extended_constant()
+                            .unwrap_or(8);
+                        let src_align = src_ptr
+                            .get_type()
+                            .get_alignment()
+                            .get_zero_extended_constant()
+                            .unwrap_or(8);
+                        llvm.builder
+                            .build_memcpy(
+                                out,
+                                out_align as u32,
+                                src_ptr,
+                                src_align as u32,
+                                out.get_type().get_element_type().size_of().unwrap(),
+                            )
+                            .unwrap();
                         // Use the return parameter as a ptr to memory to store the struct and copy it there
-                        todo!()
+                        llvm.builder.build_return(None)
                     }
-                    _ => val
-                        .to_llvm_ir(llvm)
-                        .expect("Return expression did not compile to an LLVM value"),
-                };
-                llvm.builder.build_return(Some(&val))
+                    _ => {
+                        let val = val
+                            .to_llvm_ir(llvm)
+                            .expect("Return expression did not compile to an LLVM value");
+                        llvm.builder.build_return(Some(&val))
+                    }
+                }
             }
         })
     }
