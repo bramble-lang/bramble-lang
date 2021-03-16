@@ -325,7 +325,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticAnnotations> {
         };
 
         for pi in start..num_params {
-            let pname = &(*self.get_params())[pi].name;
+            let pname = &(*self.get_params())[pi - start].name;
 
             // move parameter into the stack
             let pptr = llvm.builder.build_alloca(llvm_params[pi].get_type(), pname);
