@@ -335,7 +335,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Statement<SemanticAnnotations> {
             ast::Statement::Return(ret) => ret.to_llvm_ir(llvm).map(|i| i.into()),
             ast::Statement::Expression(exp) => exp.to_llvm_ir(llvm).map(|v| v.into()),
             ast::Statement::Bind(bind) => bind.to_llvm_ir(llvm).map(|i| i.into()),
-            _ => None,
+            ast::Statement::Mutate(mutate) => mutate.to_llvm_ir(llvm).map(|i| i.into()),
+            ast::Statement::YieldReturn(_) => todo!("Coroutines not yet implemented: {}", self),
         }
     }
 }
@@ -351,6 +352,21 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
         llvm.builder.build_store(ptr, rhs);
         llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
         Some(ptr)
+    }
+}
+
+impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticAnnotations> {
+    type Value = PointerValue<'ctx>;
+
+    fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
+        let v_ptr = llvm
+            .registers
+            .get(self.get_id())
+            .unwrap()
+            .into_pointer_value();
+        llvm.builder.build_store(v_ptr, rhs);
+        Some(v_ptr)
     }
 }
 
