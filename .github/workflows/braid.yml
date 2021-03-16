@@ -51,4 +51,4 @@ jobs:
       - name: Run Braid Test Suite
         run: |
           cd test
-          bash ./test.sh
+          bash ./test-llvm.sh
