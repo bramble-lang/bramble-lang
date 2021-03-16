@@ -218,7 +218,12 @@ impl<'ctx> IrGen<'ctx> {
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
             .iter()
-            .filter_map(|f| anytype_to_basictype(f.ty.to_llvm(self)))
+            .filter_map(|f| match f.ty {
+                ast::Type::Custom(_) => {
+                    anytype_to_basictype(f.ty.to_llvm(self).into_pointer_type().get_element_type())
+                }
+                _ => anytype_to_basictype(f.ty.to_llvm(self)),
+            })
             .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
         struct_ty.set_body(&fields_llvm, false);
@@ -505,8 +510,14 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     .builder
                     .build_struct_gep(val_llvm, field_idx as u32, "")
                     .unwrap();
-                let field_val = llvm.builder.build_load(field_ptr, "");
-                Some(field_val)
+
+                // check if the field_ptr element type is an aggregate, if so, return the ptr
+                if field_ptr.get_type().get_element_type().is_struct_type() {
+                    Some(field_ptr.into())
+                } else {
+                    let field_val = llvm.builder.build_load(field_ptr, "");
+                    Some(field_val)
+                }
             }
             ast::Expression::StructExpression(_, name, fields) => {
                 let sname = self.annotation().ty().get_path().unwrap().to_label();
@@ -530,7 +541,19 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                         .builder
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
-                    llvm.builder.build_store(fld_ptr, val);
+                    if fld_ptr.get_type().get_element_type().is_struct_type() {
+                        llvm.builder
+                            .build_memcpy(
+                                fld_ptr,
+                                8,
+                                val.into_pointer_value(),
+                                8,
+                                fld_ptr.get_type().get_element_type().size_of().unwrap(),
+                            )
+                            .unwrap();
+                    } else {
+                        llvm.builder.build_store(fld_ptr, val);
+                    }
                 }
                 Some(s_ptr.into())
             }
