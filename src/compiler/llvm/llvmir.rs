@@ -178,23 +178,22 @@ impl<'ctx> IrGen<'ctx> {
     /// compiling the AST to LLVM.
     fn add_fn_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
         let ty = rd.ty.to_llvm(self);
-        let mut params = vec![];
+        let mut params: Vec<BasicTypeEnum<'ctx>> = vec![];
         for p in rd.get_params() {
-            let mut p_ty = p.ty.to_llvm(self);
-
             // Pass structs around by reference
-            match p_ty {
-                BasicTypeEnum::StructType(st_ty) => p_ty = st_ty.into(),
-                _ => {}
-            }
+            let p_ty = anytype_to_basictype(p.ty.to_llvm(self));
 
-            params.push(p_ty);
+            match p_ty {
+                Some(p_ty) => params.push(p_ty),
+                None => (),
+            }
         }
 
         let fn_type = match ty {
-            BasicTypeEnum::IntType(ity) => ity.fn_type(&params, false),
-            BasicTypeEnum::PointerType(pty) => pty.fn_type(&params, false),
-            _ => panic!(),
+            AnyTypeEnum::IntType(ity) => ity.fn_type(&params, false),
+            AnyTypeEnum::PointerType(pty) => pty.fn_type(&params, false),
+            AnyTypeEnum::VoidType(vty) => vty.fn_type(&params, false),
+            _ => panic!("Unexpected type {:?}", ty),
         };
         let fn_name = rd.annotations.get_canonical_path().to_label();
         self.module.add_function(&fn_name, fn_type, None);
@@ -209,11 +208,16 @@ impl<'ctx> IrGen<'ctx> {
         let llvm_ty = ret_ty.to_llvm(self);
         let mut llvm_params = vec![];
         for p in params {
-            llvm_params.push(p.to_llvm(self))
+            let ty_llvm = anytype_to_basictype(p.to_llvm(self));
+            match ty_llvm {
+                Some(ty_llvm) => llvm_params.push(ty_llvm),
+                None => (),
+            }
         }
         let fn_type = match llvm_ty {
-            BasicTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
-            _ => panic!(),
+            AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
+            AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
+            _ => panic!("Unexpected type: {:?}", llvm_ty),
         };
         self.module.add_function(name, fn_type, None);
     }
@@ -223,8 +227,11 @@ impl<'ctx> IrGen<'ctx> {
         self.struct_table
             .insert(sd.annotation().get_canonical_path().to_label(), sd);
         let name = sd.annotation().get_canonical_path().to_label();
-        let fields_llvm: Vec<BasicTypeEnum<'ctx>> =
-            sd.get_fields().iter().map(|f| f.ty.to_llvm(self)).collect();
+        let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
+            .get_fields()
+            .iter()
+            .filter_map(|f| anytype_to_basictype(f.ty.to_llvm(self)))
+            .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
         struct_ty.set_body(&fields_llvm, false);
     }
@@ -345,13 +352,17 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
     type Value = PointerValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
-        let ptr = llvm
-            .builder
-            .build_alloca(self.get_type().to_llvm(llvm), self.get_id());
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
-        llvm.builder.build_store(ptr, rhs);
-        llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
-        Some(ptr)
+
+        match anytype_to_basictype(self.get_type().to_llvm(llvm)) {
+            Some(ty) => {
+                let ptr = llvm.builder.build_alloca(ty, self.get_id());
+                llvm.builder.build_store(ptr, rhs);
+                llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
+                Some(ptr)
+            }
+            None => None,
+        }
     }
 }
 
@@ -436,13 +447,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     params.iter().map(|p| p.to_llvm_ir(llvm).unwrap()).collect();
                 let call = llvm.module.get_function(&name.to_label()).unwrap();
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
-                let result_bv = result.try_as_basic_value().left().unwrap();
-                Some(result_bv)
+                result.try_as_basic_value().left()
             }
             ast::Expression::ExpressionBlock(_, stmts, exp) => {
                 llvm.registers.open_local().unwrap();
                 for stmt in stmts {
-                    stmt.to_llvm_ir(llvm).unwrap();
+                    stmt.to_llvm_ir(llvm);
                 }
                 let val = exp.as_ref().map(|e| e.to_llvm_ir(llvm)).flatten();
                 llvm.registers.close_local().unwrap();
@@ -473,7 +483,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 llvm.builder.build_unconditional_branch(merge_bb);
 
                 llvm.builder.position_at_end(else_bb);
-                let else_arm_val = else_arm.as_ref().map(|ea| ea.to_llvm_ir(llvm).unwrap());
+                let else_arm_val = else_arm.as_ref().map(|ea| ea.to_llvm_ir(llvm)).flatten();
                 let else_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may changing after compiling the else block
                 llvm.builder.build_unconditional_branch(merge_bb);
 
@@ -609,12 +619,13 @@ impl ast::BinaryOperator {
 }
 
 impl ast::Type {
-    fn to_llvm<'ctx>(&self, llvm: &IrGen<'ctx>) -> BasicTypeEnum<'ctx> {
+    fn to_llvm<'ctx>(&self, llvm: &IrGen<'ctx>) -> AnyTypeEnum<'ctx> {
         match self {
             ast::Type::I32 => llvm.context.i32_type().into(),
             ast::Type::I64 => llvm.context.i64_type().into(),
             ast::Type::Bool => llvm.context.bool_type().into(),
-            ast::Type::Unit => llvm.context.custom_width_int_type(1).into(),
+            //ast::Type::Unit => llvm.context.custom_width_int_type(1).into(), // TODOC: Hacky place holder, need to get the right solution in here before merging
+            ast::Type::Unit => llvm.context.void_type().into(), // TODOC: Hacky place holder, need to get the right solution in here before merging
             ast::Type::StringLiteral => llvm
                 .context
                 .i8_type()
@@ -660,4 +671,17 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     }
 
     Ok(escaped_str)
+}
+
+fn anytype_to_basictype<'ctx>(any_ty: AnyTypeEnum<'ctx>) -> Option<BasicTypeEnum<'ctx>> {
+    match any_ty {
+        AnyTypeEnum::StructType(st_ty) => Some(st_ty.into()),
+        AnyTypeEnum::IntType(i_ty) => Some(i_ty.into()),
+        AnyTypeEnum::PointerType(ptr_ty) => Some(ptr_ty.into()),
+        AnyTypeEnum::VoidType(_) => None,
+        AnyTypeEnum::ArrayType(_)
+        | AnyTypeEnum::FloatType(_)
+        | AnyTypeEnum::FunctionType(_)
+        | AnyTypeEnum::VectorType(_) => todo!("Not implemented"),
+    }
 }
