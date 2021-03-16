@@ -32,6 +32,8 @@ use crate::{
 
 use super::scopestack::RegisterLookup;
 
+const MEM_ALIGNMENT: u64 = 8;
+
 /// A LLVM IR generator which can be used to generate all the code
 /// for a single LLVM Module.
 pub struct IrGen<'ctx> {
@@ -198,15 +200,15 @@ impl<'ctx> IrGen<'ctx> {
         // a return parameter and make the function a void
         let llvm_ty = match ret_ty {
             ast::Type::Custom(_) => {
-                let ptr_ty = anytype_to_basictype(ret_ty.to_llvm(self)).unwrap();
+                let ptr_ty = anytype_to_basictype(ret_ty.to_llvm_ir(self)).unwrap();
                 llvm_params.push(ptr_ty);
-                ast::Type::Unit.to_llvm(self)
+                ast::Type::Unit.to_llvm_ir(self)
             }
-            _ => ret_ty.to_llvm(self),
+            _ => ret_ty.to_llvm_ir(self),
         };
 
         for p in params {
-            let ty_llvm = anytype_to_basictype(p.to_llvm(self));
+            let ty_llvm = anytype_to_basictype(p.to_llvm_ir(self));
             match ty_llvm {
                 Some(ty_llvm) => llvm_params.push(ty_llvm),
                 None => (),
@@ -230,10 +232,10 @@ impl<'ctx> IrGen<'ctx> {
             .get_fields()
             .iter()
             .filter_map(|f| match f.ty {
-                ast::Type::Custom(_) => {
-                    anytype_to_basictype(f.ty.to_llvm(self).into_pointer_type().get_element_type())
-                }
-                _ => anytype_to_basictype(f.ty.to_llvm(self)),
+                ast::Type::Custom(_) => anytype_to_basictype(
+                    f.ty.to_llvm_ir(self).into_pointer_type().get_element_type(),
+                ),
+                _ => anytype_to_basictype(f.ty.to_llvm_ir(self)),
             })
             .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
@@ -369,7 +371,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
 
-        match anytype_to_basictype(self.get_type().to_llvm(llvm)) {
+        match anytype_to_basictype(self.get_type().to_llvm_ir(llvm)) {
             Some(ty) => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
                 llvm.builder.build_store(ptr, rhs);
@@ -413,12 +415,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
                             .get_type()
                             .get_alignment()
                             .get_zero_extended_constant()
-                            .unwrap_or(8);
+                            .unwrap_or(MEM_ALIGNMENT);
                         let src_align = src_ptr
                             .get_type()
                             .get_alignment()
                             .get_zero_extended_constant()
-                            .unwrap_or(8);
+                            .unwrap_or(MEM_ALIGNMENT);
                         llvm.builder
                             .build_memcpy(
                                 out,
@@ -481,12 +483,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             }
             ast::Expression::UnaryOp(_, op, exp) => {
                 let v = exp.to_llvm_ir(llvm).expect("Expected a value");
-                Some(op.to_llvm(llvm, v))
+                Some(op.to_llvm_ir(llvm, v))
             }
             ast::Expression::BinaryOp(_, op, l, r) => {
                 let left = l.to_llvm_ir(llvm).expect("Expected a value");
                 let right = r.to_llvm_ir(llvm).expect("Expected a value");
-                Some(op.to_llvm(llvm, left, right))
+                Some(op.to_llvm_ir(llvm, left, right))
             }
             ast::Expression::RoutineCall(_, call, name, params) => {
                 call.to_llvm_ir(llvm, name, params, self.get_type())
@@ -620,7 +622,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 }
 
 impl ast::UnaryOperator {
-    fn to_llvm<'ctx>(
+    fn to_llvm_ir<'ctx>(
         &self,
         llvm: &IrGen<'ctx>,
         right: BasicValueEnum<'ctx>,
@@ -634,7 +636,7 @@ impl ast::UnaryOperator {
 }
 
 impl ast::BinaryOperator {
-    fn to_llvm<'ctx>(
+    fn to_llvm_ir<'ctx>(
         &self,
         llvm: &IrGen<'ctx>,
         left: BasicValueEnum<'ctx>,
@@ -644,37 +646,34 @@ impl ast::BinaryOperator {
         let rv = right.into_int_value();
 
         match self {
-            ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
-            ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
-            ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
-            ast::BinaryOperator::Div => llvm.builder.build_int_signed_div(lv, rv, "").into(),
-            ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
-            ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
-            ast::BinaryOperator::Eq => llvm
-                .builder
-                .build_int_compare(IntPredicate::EQ, lv, rv, "")
-                .into(),
-            ast::BinaryOperator::NEq => llvm
-                .builder
-                .build_int_compare(IntPredicate::NE, lv, rv, "")
-                .into(),
-            ast::BinaryOperator::Ls => llvm
-                .builder
-                .build_int_compare(IntPredicate::SLT, lv, rv, "")
-                .into(),
-            ast::BinaryOperator::LsEq => llvm
-                .builder
-                .build_int_compare(IntPredicate::SLE, lv, rv, "")
-                .into(),
-            ast::BinaryOperator::Gr => llvm
-                .builder
-                .build_int_compare(IntPredicate::SGT, lv, rv, "")
-                .into(),
-            ast::BinaryOperator::GrEq => llvm
-                .builder
-                .build_int_compare(IntPredicate::SGE, lv, rv, "")
-                .into(),
+            ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, ""),
+            ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, ""),
+            ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, ""),
+            ast::BinaryOperator::Div => llvm.builder.build_int_signed_div(lv, rv, ""),
+            ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, ""),
+            ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, ""),
+            ast::BinaryOperator::Eq => llvm.builder.build_int_compare(IntPredicate::EQ, lv, rv, ""),
+            ast::BinaryOperator::NEq => {
+                llvm.builder.build_int_compare(IntPredicate::NE, lv, rv, "")
+            }
+            ast::BinaryOperator::Ls => {
+                llvm.builder
+                    .build_int_compare(IntPredicate::SLT, lv, rv, "")
+            }
+            ast::BinaryOperator::LsEq => {
+                llvm.builder
+                    .build_int_compare(IntPredicate::SLE, lv, rv, "")
+            }
+            ast::BinaryOperator::Gr => {
+                llvm.builder
+                    .build_int_compare(IntPredicate::SGT, lv, rv, "")
+            }
+            ast::BinaryOperator::GrEq => {
+                llvm.builder
+                    .build_int_compare(IntPredicate::SGE, lv, rv, "")
+            }
         }
+        .into()
     }
 }
 
@@ -723,7 +722,7 @@ impl ast::RoutineCall {
 }
 
 impl ast::Type {
-    fn to_llvm<'ctx>(&self, llvm: &IrGen<'ctx>) -> AnyTypeEnum<'ctx> {
+    fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> AnyTypeEnum<'ctx> {
         match self {
             ast::Type::I32 => llvm.context.i32_type().into(),
             ast::Type::I64 => llvm.context.i64_type().into(),
@@ -768,6 +767,7 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
                     't' => escaped_str.push('\t'),
                     '0' => escaped_str.push('\0'),
                     '"' => escaped_str.push('\"'),
+                    '\'' => escaped_str.push('\''),
                     _ => return Err(format!("Unknown escape sequence \\{}", c)),
                 }
             }
