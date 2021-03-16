@@ -144,7 +144,7 @@ impl<'ctx> IrGen<'ctx> {
     /// in the LLVM module
     fn add_externs(&self) {
         for (path, params, ty) in self.externs {
-            self.add_extern_decl(&path.to_label(), params, ty)
+            self.add_fn_decl(&path.to_label(), params, ty)
         }
     }
 
@@ -162,7 +162,7 @@ impl<'ctx> IrGen<'ctx> {
 
         for f in m.get_functions() {
             if let ast::Item::Routine(rd) = f {
-                self.add_fn_decl(rd);
+                self.add_fn_def_decl(rd);
             }
         }
 
@@ -176,35 +176,22 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
-        let ty = rd.ty.to_llvm(self);
-        let mut params: Vec<BasicTypeEnum<'ctx>> = vec![];
-        for p in rd.get_params() {
-            // Pass structs around by reference
-            let p_ty = anytype_to_basictype(p.ty.to_llvm(self));
-
-            match p_ty {
-                Some(p_ty) => params.push(p_ty),
-                None => (),
-            }
-        }
-
-        let fn_type = match ty {
-            AnyTypeEnum::IntType(ity) => ity.fn_type(&params, false),
-            AnyTypeEnum::PointerType(pty) => pty.fn_type(&params, false),
-            AnyTypeEnum::VoidType(vty) => vty.fn_type(&params, false),
-            _ => panic!("Unexpected type {:?}", ty),
-        };
-        let fn_name = rd.annotations.get_canonical_path().to_label();
-        self.module.add_function(&fn_name, fn_type, None);
+    fn add_fn_def_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
+        let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
+        Self::add_fn_decl(
+            &self,
+            &rd.annotations.get_canonical_path().to_label(),
+            &params,
+            &rd.ty,
+        )
     }
 
-    /// Takes a tuple describing the signature of an extern and adds its declaration to the
+    /// Takes a tuple describing the signature of an function (internal or external) to the
     /// LLVM Module. This function declaration can then be
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_extern_decl(&self, name: &str, params: &Vec<ast::Type>, ret_ty: &ast::Type) {
+    fn add_fn_decl(&self, name: &str, params: &Vec<ast::Type>, ret_ty: &ast::Type) {
         let llvm_ty = ret_ty.to_llvm(self);
         let mut llvm_params = vec![];
         for p in params {
@@ -216,13 +203,14 @@ impl<'ctx> IrGen<'ctx> {
         }
         let fn_type = match llvm_ty {
             AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
+            AnyTypeEnum::PointerType(pty) => pty.fn_type(&llvm_params, false),
             AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
             _ => panic!("Unexpected type: {:?}", llvm_ty),
         };
         self.module.add_function(name, fn_type, None);
     }
 
-    /// Add a struct definition to the LLVM context
+    /// Add a struct definition to the LLVM context and module.
     fn add_struct_def(&mut self, sd: &'ctx StructDef<SemanticAnnotations>) {
         self.struct_table
             .insert(sd.annotation().get_canonical_path().to_label(), sd);
