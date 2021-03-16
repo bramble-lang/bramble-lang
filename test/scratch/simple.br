@@ -4,11 +4,8 @@ struct MyStruct {
 	z: bool,
 }
 
-struct MyStruct2 {
-	ms: MyStruct,
-}
-
 fn my_main() -> i64 {
+	let ms: MyStruct := test();
     return 0;
 }
 

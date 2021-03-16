@@ -483,12 +483,33 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 let right = r.to_llvm_ir(llvm).expect("Expected a value");
                 Some(op.to_llvm(llvm, left, right))
             }
-            ast::Expression::RoutineCall(_, call, name, params) => {
-                let llvm_params: Vec<BasicValueEnum<'ctx>> =
-                    params.iter().map(|p| p.to_llvm_ir(llvm).unwrap()).collect();
+            ast::Expression::RoutineCall(_, ast::RoutineCall::Function, name, params) => {
+                // Check if the function returns a struct, if it does then create a local struct
+                // and pass that as the first parameter
+                let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
+
+                // TODOC: I don't like that the determination of a function being transformed is spread out over many places, I think it can be centralized
+                let out_param = match self.get_type() {
+                    ast::Type::Custom(sdef) => {
+                        let sdef_llvm = llvm.module.get_struct_type(&sdef.to_label()).unwrap();
+                        let ptr = llvm.builder.build_alloca(sdef_llvm, "");
+                        llvm_params.push(ptr.into());
+                        Some(ptr)
+                    }
+                    _ => None,
+                };
+
+                for p in params {
+                    let p_llvm = p.to_llvm_ir(llvm).unwrap();
+                    llvm_params.push(p_llvm);
+                }
+
                 let call = llvm.module.get_function(&name.to_label()).unwrap();
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
-                result.try_as_basic_value().left()
+                match out_param {
+                    Some(ptr) => Some(ptr.into()),
+                    None => result.try_as_basic_value().left(),
+                }
             }
             ast::Expression::ExpressionBlock(_, stmts, exp) => {
                 llvm.registers.open_local().unwrap();
