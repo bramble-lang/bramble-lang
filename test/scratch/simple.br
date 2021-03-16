@@ -9,42 +9,13 @@ struct MyStruct2 {
 }
 
 fn my_main() -> i64 {
-	test();
-	root::std::io::write("hello\n");
-	root::std::io::write("world");
-	root::std::io::writebool(true);
-
-	let x: i64 := if_test(0);
-	root::std::io::writei64(x);
-
-    return -10 + 5;
+    return 0;
 }
 
-fn test() -> bool {
-    return false;
-}
-
-fn get_string() -> string {
-	return "hello\n";
-}
-
-fn print_string(s: string) -> string {
-	return s;
-}
-
-fn add(a: i64, b: i64) -> i64 {
-	let x: i64 := {
-		let x: i64 := 2;
-		2 + x
-	};
-	return a + b + x;
-}
-
-fn if_test(a: i64) -> i64 {
-	if ((2*a < 10) && !(0 < a)) {};
-	return if ((2*a < 10) && (a > 0)) {
-		a + 2
-	} else {
-		a + 3
+fn test() -> MyStruct {
+    return MyStruct{
+		x: 0i32,
+		y: 1,
+		z: false,
 	};
 }
