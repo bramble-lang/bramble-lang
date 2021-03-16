@@ -548,12 +548,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             }
             _ => todo!("{} not implemented yet", self),
             /*
+            ast::Expression::Yield(_, _) => {}
+
+            // These expressions are never compiled, they are only semantic concepts
             ast::Expression::CustomType(_, _) => {}
             ast::Expression::Path(_, _) => {}
-            ast::Expression::MemberAccess(_, _, _) => {}
             ast::Expression::IdentifierDeclare(_, _, _) => {}
-            ast::Expression::StructExpression(_, _, _) => {}
-            ast::Expression::Yield(_, _) => {}
             */
         }
     }
