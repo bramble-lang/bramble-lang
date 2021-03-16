@@ -6,6 +6,7 @@ struct MyStruct {
 
 fn my_main() -> i64 {
 	let ms: MyStruct := test();
+	root::std::io::writei64ln(ms.y);
     return 0;
 }
 

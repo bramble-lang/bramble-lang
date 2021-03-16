@@ -488,7 +488,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 // and pass that as the first parameter
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
-                // TODOC: I don't like that the determination of a function being transformed is spread out over many places, I think it can be centralized
+                /*
+                TODOC: I don't like that the determination of a function being transformed isspread out over many places, I think it can be centralized
+                */
                 let out_param = match self.get_type() {
                     ast::Type::Custom(sdef) => {
                         let sdef_llvm = llvm.module.get_struct_type(&sdef.to_label()).unwrap();
