@@ -192,8 +192,19 @@ impl<'ctx> IrGen<'ctx> {
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
     fn add_fn_decl(&self, name: &str, params: &Vec<ast::Type>, ret_ty: &ast::Type) {
-        let llvm_ty = ret_ty.to_llvm(self);
         let mut llvm_params = vec![];
+
+        // If the return type is a structure, then update the function to use
+        // a return parameter and make the function a void
+        let llvm_ty = match ret_ty {
+            ast::Type::Custom(_) => {
+                let ptr_ty = anytype_to_basictype(ret_ty.to_llvm(self)).unwrap();
+                llvm_params.push(ptr_ty);
+                ast::Type::Unit.to_llvm(self)
+            }
+            _ => ret_ty.to_llvm(self),
+        };
+
         for p in params {
             let ty_llvm = anytype_to_basictype(p.to_llvm(self));
             match ty_llvm {
@@ -381,9 +392,15 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
         Some(match self.get_value() {
             None => llvm.builder.build_return(None),
             Some(val) => {
-                let val = val
-                    .to_llvm_ir(llvm)
-                    .expect("Return expression did not compile to an LLVM value");
+                let val = match val.get_type() {
+                    ast::Type::Custom(_) => {
+                        // Use the return parameter as a ptr to memory to store the struct and copy it there
+                        todo!()
+                    }
+                    _ => val
+                        .to_llvm_ir(llvm)
+                        .expect("Return expression did not compile to an LLVM value"),
+                };
                 llvm.builder.build_return(Some(&val))
             }
         })
