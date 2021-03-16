@@ -138,15 +138,15 @@ fn configure_cli() -> clap::App<'static, 'static> {
         )
         .arg(
             Arg::with_name("llvm")
-            .long("llvm")
-            .help("When set, then compiler will emit LLVM IR rather than x86 IR")
+                .long("llvm")
+                .help("When set, then compiler will emit LLVM IR rather than x86 IR")
         )
         .arg(
             Arg::with_name("emit")
-            .long("emit")
+                .long("emit")
                 .possible_values(&["llvm-ir"])
                 .takes_value(true)
-            .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
+                .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
         )
         .arg(
             Arg::with_name("platform")
