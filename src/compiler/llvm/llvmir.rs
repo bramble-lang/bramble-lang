@@ -262,6 +262,20 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
+    fn build_memcpy(&self, dest: PointerValue<'ctx>, src: PointerValue<'ctx>) {
+        let dest_align = get_ptr_alignment(dest);
+        let src_align = get_ptr_alignment(src);
+        self.builder
+            .build_memcpy(
+                dest,
+                dest_align,
+                src,
+                src_align,
+                dest.get_type().get_element_type().size_of().unwrap(),
+            )
+            .unwrap();
+    }
+
     /// Will look for `s` in the string pool, if found, it will return the
     /// name of the global variable that is bound to that string. Otherwise,
     /// it will return `None`
@@ -378,22 +392,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
         match anytype_to_basictype(self.get_type().to_llvm_ir(llvm)) {
             Some(ty) if ty.is_struct_type() => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
-                let ptr_align = get_ptr_alignment(ptr);
                 let rhs_ptr = rhs.into_pointer_value();
-                let rhs_align = get_ptr_alignment(rhs_ptr);
-                llvm.builder
-                    .build_memcpy(
-                        ptr,
-                        ptr_align,
-                        rhs_ptr,
-                        rhs_align,
-                        rhs.get_type()
-                            .into_pointer_type()
-                            .get_element_type()
-                            .size_of()
-                            .unwrap(),
-                    )
-                    .unwrap();
+                llvm.build_memcpy(ptr, rhs_ptr);
 
                 llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
                 Some(ptr)
@@ -435,19 +435,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
                     ast::Type::Custom(_) => {
                         let out = llvm.registers.get(".out").unwrap().into_pointer_value();
                         let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
+                        llvm.build_memcpy(out, src_ptr);
 
-                        let out_align = get_ptr_alignment(out);
-                        let src_align = get_ptr_alignment(src_ptr);
-
-                        llvm.builder
-                            .build_memcpy(
-                                out,
-                                out_align as u32,
-                                src_ptr,
-                                src_align as u32,
-                                out.get_type().get_element_type().size_of().unwrap(),
-                            )
-                            .unwrap();
                         // Use the return parameter as a ptr to memory to store the struct and copy it there
                         llvm.builder.build_return(None)
                     }
@@ -615,18 +604,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
                     if fld_ptr.get_type().get_element_type().is_struct_type() {
-                        let fld_align = get_ptr_alignment(fld_ptr);
                         let val_ptr = val.into_pointer_value();
-                        let val_align = get_ptr_alignment(val_ptr);
-                        llvm.builder
-                            .build_memcpy(
-                                fld_ptr,
-                                fld_align,
-                                val_ptr,
-                                val_align,
-                                fld_ptr.get_type().get_element_type().size_of().unwrap(),
-                            )
-                            .unwrap();
+                        llvm.build_memcpy(fld_ptr, val_ptr);
                     } else {
                         llvm.builder.build_store(fld_ptr, val);
                     }
@@ -634,14 +613,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 Some(s_ptr.into())
             }
             _ => todo!("{} not implemented yet", self),
-            /*
-            ast::Expression::Yield(_, _) => {}
-
-            // These expressions are never compiled, they are only semantic concepts
-            ast::Expression::CustomType(_, _) => {}
-            ast::Expression::Path(_, _) => {}
-            ast::Expression::IdentifierDeclare(_, _, _) => {}
-            */
         }
     }
 }
@@ -731,17 +702,12 @@ impl ast::RoutineCall {
 
                 for p in params {
                     let p_llvm = p.to_llvm_ir(llvm).unwrap();
-                    if p_llvm.is_struct_value() {
-                        llvm_params.push(p_llvm.into_pointer_value().into()); // TODOC: Do I need to convert into a pointer value?  Seems redundant
-                    } else {
-                        llvm_params.push(p_llvm);
-                    }
+                    llvm_params.push(p_llvm);
                 }
 
                 let call = llvm.module.get_function(&name.to_label()).unwrap();
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
                 match out_param {
-                    // TODOC: if I used an out parameter, then this should resolve to the struct value that was passed as the out param
                     Some(ptr) => Some(ptr.into()),
                     None => result.try_as_basic_value().left(),
                 }
