@@ -6,7 +6,11 @@
 /// This uses the LLVM C API to interface with LLVM and construct the
 /// Module. Resulting IR can then be fed into the LLVM Compiler to compile
 /// into native assembly or into a JIT.
-use std::{collections::HashMap, convert::TryFrom, error::Error};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    error::Error,
+};
 
 use ast::Expression;
 use inkwell::{
@@ -44,6 +48,7 @@ pub struct IrGen<'ctx> {
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, &'ctx StructDef<SemanticAnnotations>>,
+    fn_use_out_param: HashSet<String>,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -60,6 +65,7 @@ impl<'ctx> IrGen<'ctx> {
             string_pool: StringPool::new(),
             registers: RegisterLookup::new(),
             struct_table: HashMap::new(),
+            fn_use_out_param: HashSet::new(),
         }
     }
 
@@ -144,7 +150,7 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Add the list of external function declarations to the function table
     /// in the LLVM module
-    fn add_externs(&self) {
+    fn add_externs(&mut self) {
         for (path, params, ty) in self.externs {
             self.add_fn_decl(&path.to_label(), params, ty)
         }
@@ -178,10 +184,9 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_def_decl(&self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
+    fn add_fn_def_decl(&mut self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
         let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
-        Self::add_fn_decl(
-            &self,
+        self.add_fn_decl(
             &rd.annotations.get_canonical_path().to_label(),
             &params,
             &rd.ty,
@@ -193,7 +198,7 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_decl(&self, name: &str, params: &Vec<ast::Type>, ret_ty: &ast::Type) {
+    fn add_fn_decl(&mut self, name: &str, params: &Vec<ast::Type>, ret_ty: &ast::Type) {
         let mut llvm_params = vec![];
 
         // If the return type is a structure, then update the function to use
@@ -226,6 +231,7 @@ impl<'ctx> IrGen<'ctx> {
             AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
             _ => panic!("Unexpected type: {:?}", llvm_ty),
         };
+        self.fn_use_out_param.insert(name.into());
         self.module.add_function(name, fn_type, None);
     }
 
@@ -328,9 +334,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticAnnotations> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        let fn_name = self.annotations.get_canonical_path().to_label();
         let fn_value = llvm
             .module
-            .get_function(&self.annotations.get_canonical_path().to_label())
+            .get_function(&fn_name)
             .expect("Could not find function");
         let entry_bb = llvm.context.append_basic_block(fn_value, "entry");
         llvm.builder.position_at_end(entry_bb);
@@ -341,7 +348,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticAnnotations> {
 
         // If the function returns a structure, then the first parameter will
         // be the return parameter.
-        let start = if let ast::Type::Custom(_) = self.get_return_type() {
+        let start = if llvm.fn_use_out_param.contains(&fn_name) {
             let pname = ".out";
             llvm.registers.insert(pname, llvm_params[0].into()).unwrap();
             1
@@ -685,19 +692,21 @@ impl ast::RoutineCall {
             ast::RoutineCall::Function => {
                 // Check if the function returns a struct, if it does then create a local struct
                 // and pass that as the first parameter
+                let fn_name = name.to_label();
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
-                /*
-                TODOC: I don't like that the determination of a function being transformed isspread out over many places, I think it can be centralized
-                */
-                let out_param = match ret_ty {
-                    ast::Type::Custom(sdef) => {
-                        let sdef_llvm = llvm.module.get_struct_type(&sdef.to_label()).unwrap();
-                        let ptr = llvm.builder.build_alloca(sdef_llvm, "");
-                        llvm_params.push(ptr.into());
-                        Some(ptr)
+                let out_param = if llvm.fn_use_out_param.contains(&fn_name) {
+                    match ret_ty {
+                        ast::Type::Custom(sdef) => {
+                            let sdef_llvm = llvm.module.get_struct_type(&sdef.to_label()).unwrap();
+                            let ptr = llvm.builder.build_alloca(sdef_llvm, "");
+                            llvm_params.push(ptr.into());
+                            Some(ptr)
+                        }
+                        _ => None,
                     }
-                    _ => None,
+                } else {
+                    None
                 };
 
                 for p in params {
@@ -705,7 +714,7 @@ impl ast::RoutineCall {
                     llvm_params.push(p_llvm);
                 }
 
-                let call = llvm.module.get_function(&name.to_label()).unwrap();
+                let call = llvm.module.get_function(&fn_name).unwrap();
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
                 match out_param {
                     Some(ptr) => Some(ptr.into()),
@@ -723,8 +732,7 @@ impl ast::Type {
             ast::Type::I32 => llvm.context.i32_type().into(),
             ast::Type::I64 => llvm.context.i64_type().into(),
             ast::Type::Bool => llvm.context.bool_type().into(),
-            //ast::Type::Unit => llvm.context.custom_width_int_type(1).into(), // TODOC: Hacky place holder, need to get the right solution in here before merging
-            ast::Type::Unit => llvm.context.void_type().into(), // TODOC: Hacky place holder, need to get the right solution in here before merging
+            ast::Type::Unit => llvm.context.void_type().into(),
             ast::Type::StringLiteral => llvm
                 .context
                 .i8_type()
