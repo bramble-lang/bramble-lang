@@ -205,11 +205,14 @@ impl<'ctx> IrGen<'ctx> {
         // a return parameter and make the function a void
         let llvm_ty = match ret_ty {
             ast::Type::Custom(_) => {
+                self.fn_use_out_param.insert(name.into());
+
                 let ptr_ty = anytype_to_basictype(ret_ty.to_llvm_ir(self))
                     .unwrap()
                     .ptr_type(AddressSpace::Generic)
                     .into();
                 llvm_params.push(ptr_ty);
+
                 ast::Type::Unit.to_llvm_ir(self)
             }
             _ => ret_ty.to_llvm_ir(self),
@@ -231,7 +234,6 @@ impl<'ctx> IrGen<'ctx> {
             AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
             _ => panic!("Unexpected type: {:?}", llvm_ty),
         };
-        self.fn_use_out_param.insert(name.into());
         self.module.add_function(name, fn_type, None);
     }
 
