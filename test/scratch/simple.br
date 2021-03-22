@@ -1,5 +1,7 @@
 struct MyStruct {
 	x: i64,
+	y: i64,
+	z: bool,
 }
 
 struct MyStruct2 {
@@ -8,10 +10,12 @@ struct MyStruct2 {
 }
 
 fn my_main() -> i64 {
-	let ms2: MyStruct2 := MyStruct2{a: 15, ms: MyStruct{x: 31}};
-	let x: i64 := ms2.ms.x;
-	root::std::io::writei64ln(ms2.a);
-	root::std::io::writei64ln(x);
+	//let ms2: MyStruct2 := MyStruct2{a: 15, ms: MyStruct{x: 31}};
+	let ms: MyStruct := MyStruct{ x: 5, y: 1, z: true };
+	//root::std::io::writei64ln(ms2.a);
+	root::std::io::writei64ln(ms.x);
+	root::std::io::writei64ln(ms.y);
+	root::std::io::writeboolln(ms.z);
     return 0;
 }
 
