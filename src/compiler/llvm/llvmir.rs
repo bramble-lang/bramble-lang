@@ -378,13 +378,15 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
         match anytype_to_basictype(self.get_type().to_llvm_ir(llvm)) {
             Some(ty) if ty.is_struct_type() => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
+                let ptr_align = get_ptr_alignment(ptr);
                 let rhs_ptr = rhs.into_pointer_value();
+                let rhs_align = get_ptr_alignment(rhs_ptr);
                 llvm.builder
                     .build_memcpy(
                         ptr,
-                        8,
+                        ptr_align,
                         rhs_ptr,
-                        8,
+                        rhs_align,
                         rhs.get_type()
                             .into_pointer_type()
                             .get_element_type()
@@ -434,17 +436,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
                         let out = llvm.registers.get(".out").unwrap().into_pointer_value();
                         let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
 
-                        // TODOC: there must be a way to dynamically get the alignment value
-                        let out_align = out
-                            .get_type()
-                            .get_alignment()
-                            .get_zero_extended_constant()
-                            .unwrap_or(MEM_ALIGNMENT);
-                        let src_align = src_ptr
-                            .get_type()
-                            .get_alignment()
-                            .get_zero_extended_constant()
-                            .unwrap_or(MEM_ALIGNMENT);
+                        let out_align = get_ptr_alignment(out);
+                        let src_align = get_ptr_alignment(src_ptr);
+
                         llvm.builder
                             .build_memcpy(
                                 out,
@@ -621,12 +615,15 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
                     if fld_ptr.get_type().get_element_type().is_struct_type() {
+                        let fld_align = get_ptr_alignment(fld_ptr);
+                        let val_ptr = val.into_pointer_value();
+                        let val_align = get_ptr_alignment(val_ptr);
                         llvm.builder
                             .build_memcpy(
                                 fld_ptr,
-                                8,
-                                val.into_pointer_value(),
-                                8,
+                                fld_align,
+                                val_ptr,
+                                val_align,
                                 fld_ptr.get_type().get_element_type().size_of().unwrap(),
                             )
                             .unwrap();
@@ -820,4 +817,11 @@ fn anytype_to_basictype<'ctx>(any_ty: AnyTypeEnum<'ctx>) -> Option<BasicTypeEnum
         | AnyTypeEnum::FunctionType(_)
         | AnyTypeEnum::VectorType(_) => todo!("Not implemented"),
     }
+}
+
+fn get_ptr_alignment<'ctx>(ptr: PointerValue<'ctx>) -> u32 {
+    ptr.get_type()
+        .get_alignment()
+        .get_zero_extended_constant()
+        .unwrap_or(MEM_ALIGNMENT) as u32
 }
