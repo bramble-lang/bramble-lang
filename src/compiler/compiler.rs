@@ -408,16 +408,16 @@ impl<'a> Compiler<'a> {
                 }
             }
             Expression::Identifier(m, id) => {
-                let reg = ast
-                    .annotation()
-                    .scale_reg(Reg64::Rax)
-                    .expect("Expect a register to be assigned to an identifier");
                 let id_offset = self.scope.find(id).unwrap().offset;
                 match m.ty() {
                     Type::Custom(_) => {
                         assembly! {(code) {lea %rax, [%rbp-{id_offset}];}}
                     }
                     _ => {
+                        let reg = ast
+                            .annotation()
+                            .scale_reg(Reg64::Rax)
+                            .expect("Expect a register to be assigned to an identifier");
                         assembly! {(code) {mov %{reg}, [%rbp-{id_offset}];}}
                     }
                 }

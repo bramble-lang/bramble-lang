@@ -3,8 +3,6 @@ use std::collections::HashMap;
 
 use crate::ast::*;
 
-use super::scope::CompilerAnnotation;
-
 #[derive(Debug, PartialEq)]
 pub struct StringPool {
     pub pool: HashMap<String, usize>,
@@ -39,7 +37,7 @@ impl StringPool {
 
     /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
-    pub fn extract_from(&mut self, ast: &Expression<CompilerAnnotation>) {
+    pub fn extract_from<A>(&mut self, ast: &Expression<A>) {
         use crate::ast::Expression::*;
 
         match ast {
@@ -98,7 +96,7 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_module(&mut self, module: &Module<CompilerAnnotation>) {
+    pub fn extract_from_module<A>(&mut self, module: &Module<A>) {
         for m in module.get_modules().iter() {
             self.extract_from_module(m);
         }
@@ -111,20 +109,20 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_item(&mut self, item: &Item<CompilerAnnotation>) {
+    pub fn extract_from_item<A>(&mut self, item: &Item<A>) {
         match item {
             Item::Routine(r) => self.extract_from_routine(r),
             Item::Struct(_) => (),
         }
     }
 
-    pub fn extract_from_routine(&mut self, routine: &RoutineDef<CompilerAnnotation>) {
+    pub fn extract_from_routine<A>(&mut self, routine: &RoutineDef<A>) {
         for s in routine.get_body().iter() {
             self.extract_from_statement(s);
         }
     }
 
-    pub fn extract_from_statement(&mut self, statement: &Statement<CompilerAnnotation>) {
+    pub fn extract_from_statement<A>(&mut self, statement: &Statement<A>) {
         match statement {
             Statement::Bind(b) => self.extract_from_bind(b),
             Statement::Mutate(m) => self.extract_from_mutate(m),
@@ -134,22 +132,22 @@ impl StringPool {
         }
     }
 
-    pub fn extract_from_bind(&mut self, bind: &Bind<CompilerAnnotation>) {
+    pub fn extract_from_bind<A>(&mut self, bind: &Bind<A>) {
         self.extract_from(bind.get_rhs())
     }
 
-    pub fn extract_from_mutate(&mut self, mutate: &Mutate<CompilerAnnotation>) {
+    pub fn extract_from_mutate<A>(&mut self, mutate: &Mutate<A>) {
         self.extract_from(mutate.get_rhs())
     }
 
-    pub fn extract_from_yieldreturn(&mut self, yr: &YieldReturn<CompilerAnnotation>) {
+    pub fn extract_from_yieldreturn<A>(&mut self, yr: &YieldReturn<A>) {
         match yr.get_value() {
             None => (),
             Some(val) => self.extract_from(val),
         }
     }
 
-    pub fn extract_from_return(&mut self, r: &Return<CompilerAnnotation>) {
+    pub fn extract_from_return<A>(&mut self, r: &Return<A>) {
         match r.get_value() {
             None => (),
             Some(val) => self.extract_from(val),

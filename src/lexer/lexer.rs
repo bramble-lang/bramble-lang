@@ -272,8 +272,28 @@ impl Lexer {
                 if c == '"' {
                     break;
                 }
+
+                // Parse escape sequence
+                if c == '\\' {
+                    match branch.next() {
+                        Some(c)
+                            if c == 'n'
+                                || c == 'r'
+                                || c == 't'
+                                || c == '"'
+                                || c == '0'
+                                || c == '\\' =>
+                        {
+                            ()
+                        }
+                        Some(c) => return Err(format!("Invalid escape sequence \\{}", c)),
+                        None => return Err("Expected escape character after \\".into()),
+                    }
+                }
             }
             let mut s = branch.merge();
+
+            // Remove the quotes from the string
             s.remove(0);
             s.pop();
 

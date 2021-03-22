@@ -257,13 +257,10 @@ impl<'a> TypeResolver<'a> {
                     .symbols
                     .add(bind.get_id(), meta.ty.clone(), bind.is_mutable())
                 {
-                    Ok(()) => Ok(Bind::new(
-                        meta,
-                        bind.get_id(),
-                        bind.get_type().clone(),
-                        bind.is_mutable(),
-                        rhs,
-                    )),
+                    Ok(()) => {
+                        let ty = meta.ty().clone();
+                        Ok(Bind::new(meta, bind.get_id(), ty, bind.is_mutable(), rhs))
+                    }
                     Err(e) => Err(e),
                 }
             } else {

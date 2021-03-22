@@ -41,5 +41,6 @@
 pub mod compiler;
 
 mod arch;
+pub mod llvm;
 mod memory;
 mod x86;

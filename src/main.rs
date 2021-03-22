@@ -8,11 +8,13 @@ mod lexer;
 mod parser;
 mod semantics;
 
-use crate::ast::Path;
+use std::path::Path;
+
 use ast::Type;
 use clap::{App, Arg};
 use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
+use inkwell::context::Context;
 use lexer::tokens::Token;
 use semantics::type_resolver::*;
 
@@ -80,19 +82,32 @@ fn main() {
         .expect("Must provide a target platform")
         .into();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
-    let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
 
-    // Compile
-    let program = Compiler::compile(
-        semantic_ast,
-        imported.iter().map(|(p, _, _)| p.clone()).collect(),
-        target_platform,
-        trace_reg_assigner,
-    );
+    if config.is_present("llvm") {
+        let context = Context::create();
+        let mut llvm = compiler::llvm::IrGen::new(&context, "test", &imported);
+        llvm.ingest(&semantic_ast);
 
-    // Write the resulting assembly code to the target output file
-    let mut output = std::fs::File::create(output_target).expect("Failed to create output file");
-    Compiler::print(&program, &mut output).expect("Failed to write assembly");
+        if config.is_present("emit") {
+            llvm.print(Path::new("./target/output.ll"));
+        }
+
+        llvm.emit_object_code(Path::new(output_target)).unwrap();
+    } else {
+        let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
+        // Compile
+        let program = Compiler::compile(
+            semantic_ast,
+            imported.iter().map(|(p, _, _)| p.clone()).collect(),
+            target_platform,
+            trace_reg_assigner,
+        );
+
+        // Write the resulting assembly code to the target output file
+        let mut output =
+            std::fs::File::create(output_target).expect("Failed to create output file");
+        Compiler::print(&program, &mut output).expect("Failed to write assembly");
+    }
 }
 
 // Exit Codes for different types of errors
@@ -120,6 +135,18 @@ fn configure_cli() -> clap::App<'static, 'static> {
                 .takes_value(true)
                 .required(true)
                 .help("Name the output file that the assembly will be written to"),
+        )
+        .arg(
+            Arg::with_name("llvm")
+                .long("llvm")
+                .help("When set, then compiler will emit LLVM IR rather than x86 IR")
+        )
+        .arg(
+            Arg::with_name("emit")
+                .long("emit")
+                .possible_values(&["llvm-ir"])
+                .takes_value(true)
+                .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
         )
         .arg(
             Arg::with_name("platform")
@@ -171,7 +198,7 @@ fn configure_cli() -> clap::App<'static, 'static> {
     app
 }
 
-fn configure_imported_functions() -> Vec<(Path, Vec<Type>, Type)> {
+fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
     vec![
         (
             vec!["root", "std", "io", "write"].into(),

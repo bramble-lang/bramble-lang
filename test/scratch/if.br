@@ -1,0 +1,9 @@
+fn my_main() -> i64 {
+    root::std::io::writei64ln(if (true) {1} else {3});
+    let x:i64 := if (2 < 3) {4} else {5};
+    root::std::io::writei64ln(x);
+    root::std::io::writei64ln((if (x < 1) {100} else {500}));
+    root::std::io::writei64ln(if (x < 1) {0} else if (x < 10) {5} else {7});
+    /*root::std::io::writei64ln(if (x < 1) {0} else if (x < 2) {5} else {7});*/
+    return 0;
+}

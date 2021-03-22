@@ -2,13 +2,13 @@
 
 name: Braid
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -22,9 +22,14 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      - name: Install LLVM 11
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 11
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-  
+
       # Setup Rust to use nightly tool chain
       - name: rust-toolchain
         uses: actions-rs/toolchain@v1
@@ -46,4 +51,4 @@ jobs:
       - name: Run Braid Test Suite
         run: |
           cd test
-          bash ./test.sh
+          bash ./test-llvm.sh
