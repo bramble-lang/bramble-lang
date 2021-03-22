@@ -200,7 +200,6 @@ impl<'ctx> IrGen<'ctx> {
         // a return parameter and make the function a void
         let llvm_ty = match ret_ty {
             ast::Type::Custom(_) => {
-                // TODOC: Get the pointer to the type
                 let ptr_ty = anytype_to_basictype(ret_ty.to_llvm_ir(self))
                     .unwrap()
                     .ptr_type(AddressSpace::Generic)
@@ -212,7 +211,6 @@ impl<'ctx> IrGen<'ctx> {
         };
 
         for p in params {
-            // TODOC: If the type is a struct the get the pointer to it
             let ty_llvm = anytype_to_basictype(p.to_llvm_ir(self));
             match ty_llvm {
                 Some(ty_llvm) if ty_llvm.is_struct_type() => {
@@ -224,7 +222,7 @@ impl<'ctx> IrGen<'ctx> {
         }
         let fn_type = match llvm_ty {
             AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
-            AnyTypeEnum::PointerType(pty) => pty.fn_type(&llvm_params, false), // TODOC: This is should no longer come up: nvm, used for strings
+            AnyTypeEnum::PointerType(pty) => pty.fn_type(&llvm_params, false),
             AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
             _ => panic!("Unexpected type: {:?}", llvm_ty),
         };
@@ -240,9 +238,7 @@ impl<'ctx> IrGen<'ctx> {
             .get_fields()
             .iter()
             .filter_map(|f| match f.ty {
-                ast::Type::Custom(_) => anytype_to_basictype(
-                    f.ty.to_llvm_ir(self), //.into_pointer_type().get_element_type(), // TODOC: Get ride of the get_element_type
-                ),
+                ast::Type::Custom(_) => anytype_to_basictype(f.ty.to_llvm_ir(self)),
                 _ => anytype_to_basictype(f.ty.to_llvm_ir(self)),
             })
             .collect();
@@ -380,7 +376,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
 
         match anytype_to_basictype(self.get_type().to_llvm_ir(llvm)) {
-            // TODOC: for struct types, memcpy the RHS to the binding location
             Some(ty) if ty.is_struct_type() => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
                 let rhs_ptr = rhs.into_pointer_value();
@@ -729,9 +724,7 @@ impl ast::RoutineCall {
                 */
                 let out_param = match ret_ty {
                     ast::Type::Custom(sdef) => {
-                        // TODOC: Get the ptr type
                         let sdef_llvm = llvm.module.get_struct_type(&sdef.to_label()).unwrap();
-                        //.ptr_type(AddressSpace::Generic);
                         let ptr = llvm.builder.build_alloca(sdef_llvm, "");
                         llvm_params.push(ptr.into());
                         Some(ptr)
@@ -740,10 +733,9 @@ impl ast::RoutineCall {
                 };
 
                 for p in params {
-                    // TODOC: If a parameter is a struct, then pass a pointer to the value
                     let p_llvm = p.to_llvm_ir(llvm).unwrap();
                     if p_llvm.is_struct_value() {
-                        llvm_params.push(p_llvm.into_pointer_value().into());
+                        llvm_params.push(p_llvm.into_pointer_value().into()); // TODOC: Do I need to convert into a pointer value?  Seems redundant
                     } else {
                         llvm_params.push(p_llvm);
                     }
@@ -780,7 +772,6 @@ impl ast::Type {
                 .module
                 .get_struct_type(&name.to_label())
                 .expect(&format!("Could not find struct {}", name))
-                //.ptr_type(AddressSpace::Generic)
                 .into(),
             _ => panic!("Can't convert type to LLVM: {}", self),
         }
