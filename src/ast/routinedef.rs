@@ -65,6 +65,14 @@ impl<M> Extern<M> {
         &self.name
     }
 
+    pub fn get_params(&self) -> &Vec<Parameter<M>> {
+        &self.params
+    }
+
+    pub fn get_return_type(&self) -> &Type {
+        &self.ty
+    }
+
     pub fn root_str(&self) -> String {
         format!("extern fn {}", self.name)
     }

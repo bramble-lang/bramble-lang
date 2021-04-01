@@ -175,6 +175,10 @@ impl<M> Module<M> {
         &mut self.structs
     }
 
+    pub fn get_externs(&self) -> &Vec<Item<M>> {
+        &self.externs
+    }
+
     pub fn get_module(&self, name: &str) -> Option<&Module<M>> {
         self.modules.iter().find(|m| m.name == name)
     }
