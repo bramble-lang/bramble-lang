@@ -121,7 +121,7 @@ impl<M> Module<M> {
             self.externs.push(Item::Extern(e));
             Ok(())
         } else {
-            Err(format!("An item named {} already exists in module", name))
+            Err(format!("{} already exists in module", name))
         }
     }
 
@@ -272,38 +272,6 @@ mod test {
         module.add_function(fdef.clone()).unwrap();
         let f = module.get_item("not_found");
         assert_eq!(f, None);
-    }
-
-    #[test]
-    pub fn test_add_function() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            annotations: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let f = module.get_item("func");
-        assert_eq!(f, Some(&Item::Routine(fdef)));
-    }
-
-    #[test]
-    pub fn test_add_function_that_already_exists() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            annotations: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let result = module.add_function(fdef.clone());
-        assert_eq!(result, Err("func already exists in module".into()));
     }
 
     #[test]
@@ -468,6 +436,60 @@ mod test {
         outer.add_module(module.clone());
         let f = outer.go_to(&vec!["outer", "inner", "co"].into());
         assert_eq!(f, Some(&Item::Routine(fdef)));
+    }
+
+    #[test]
+    pub fn test_add_extern() {
+        let mut module = Module::new("test", 1);
+        let edef = Extern::new("puts", 1, vec![], Type::Unit);
+        module.add_extern(edef.clone()).unwrap();
+        let c = module.get_item("puts").unwrap();
+        assert_eq!(c, &Item::Extern(edef));
+    }
+
+    #[test]
+    pub fn test_add_extern_that_already_exists() {
+        let mut module = Module::new("test", 1);
+        let edef = Extern::new("puts", 1, vec![], Type::Unit);
+        module.add_extern(edef.clone()).unwrap();
+        let result = module.add_extern(edef.clone());
+        assert_eq!(result, Err("puts already exists in module".into()));
+    }
+
+    #[test]
+    pub fn test_add_extern_with_same_name_as_function() {
+        let mut module = Module::new("test", 1);
+        let fdef = RoutineDef {
+            annotations: 1,
+            name: "dupe".into(),
+            def: RoutineDefType::Function,
+            params: vec![],
+            ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+
+        let edef = Extern::new("dupe", 1, vec![], Type::Unit);
+        let result = module.add_extern(edef.clone());
+        assert_eq!(result, Err("dupe already exists in module".into()));
+    }
+
+    #[test]
+    pub fn test_add_function_with_same_name_as_extern() {
+        let mut module = Module::new("test", 1);
+        let edef = Extern::new("dupe", 1, vec![], Type::Unit);
+        module.add_extern(edef.clone()).unwrap();
+
+        let fdef = RoutineDef {
+            annotations: 1,
+            name: "dupe".into(),
+            def: RoutineDefType::Function,
+            params: vec![],
+            ty: Type::I64,
+            body: vec![],
+        };
+        let result = module.add_function(fdef.clone());
+        assert_eq!(result, Err("dupe already exists in module".into()));
     }
 }
 
