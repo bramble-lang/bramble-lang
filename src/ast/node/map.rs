@@ -97,6 +97,7 @@ where
             v.push(match i {
                 Item::Struct(sd) => Item::Struct(self.for_structdef(sd)),
                 Item::Routine(rd) => Item::Routine(self.for_routinedef(rd)),
+                Item::Extern(_) => todo!(),
             });
         }
         v

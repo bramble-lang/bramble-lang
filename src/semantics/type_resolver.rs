@@ -119,6 +119,7 @@ impl<'a> TypeResolver<'a> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r).map(|r2| Item::Routine(r2)),
+            Item::Extern(_) => todo!(),
         }
     }
 

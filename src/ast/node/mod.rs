@@ -30,6 +30,7 @@ pub enum NodeType {
     Statement,
     RoutineCall,
     BinOp,
+    Extern,
 }
 
 impl Display for NodeType {
@@ -44,6 +45,7 @@ impl Display for NodeType {
             NodeType::Statement => f.write_str("stm"),
             NodeType::RoutineCall => f.write_str("call"),
             NodeType::BinOp => f.write_str("bin op"),
+            NodeType::Extern => f.write_str("extern"),
         }
     }
 }

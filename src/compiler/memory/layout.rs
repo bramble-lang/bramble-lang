@@ -33,6 +33,7 @@ fn generate_stackframe_layout(
     let mut current_layout = LayoutData::new(0);
     let f = |n: &dyn Node<SemanticAnnotations>| {
         let (annotation, layout) = match n.node_type() {
+            NodeType::Extern => todo!("Figure out memory layout for an extern, should be 0"),
             NodeType::Module => CompilerAnnotation::module_from(
                 n.annotation(),
                 n.name().expect("Modules must have a name"),

@@ -83,6 +83,7 @@ impl SymbolTable {
         match item {
             Item::Routine(rd) => SymbolTable::add_routine_parameters(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
+            Item::Extern(_) => todo!(),
         }
     }
 

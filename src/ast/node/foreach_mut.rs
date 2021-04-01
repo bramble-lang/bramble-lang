@@ -97,6 +97,7 @@ where
                 Item::Routine(rd) => {
                     self.for_routinedef(rd, f);
                 }
+                Item::Extern(_) => todo!(),
             };
         }
     }

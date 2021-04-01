@@ -3,7 +3,7 @@ use super::{
         Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     path::Path,
-    routinedef::{RoutineDef, RoutineDefType},
+    routinedef::{Extern, RoutineDef, RoutineDefType},
     structdef::StructDef,
 };
 use braid_lang::result::Result;
@@ -16,6 +16,7 @@ pub struct Module<M> {
     functions: Vec<Item<M>>,
     coroutines: Vec<Item<M>>,
     structs: Vec<Item<M>>,
+    externs: Vec<Item<M>>,
 }
 
 impl<M: Annotation> Node<M> for Module<M> {
@@ -76,6 +77,7 @@ impl<M> Module<M> {
             functions: Vec::new(),
             coroutines: Vec::new(),
             structs: Vec::new(),
+            externs: Vec::new(),
         }
     }
 
@@ -113,6 +115,16 @@ impl<M> Module<M> {
         }
     }
 
+    pub fn add_extern(&mut self, e: Extern<M>) -> Result<()> {
+        let name = e.get_name();
+        if self.get_item(name).is_none() {
+            self.externs.push(Item::Extern(e));
+            Ok(())
+        } else {
+            Err(format!("An item named {} already exists in module", name))
+        }
+    }
+
     pub fn add_item(&mut self, i: Item<M>) -> Result<()> {
         match i {
             Item::Routine(r) => {
@@ -123,6 +135,7 @@ impl<M> Module<M> {
                 }
             }
             Item::Struct(s) => self.add_struct(s),
+            Item::Extern(e) => self.add_extern(e),
         }
     }
 
@@ -171,7 +184,11 @@ impl<M> Module<M> {
             .coroutines
             .iter()
             .find(|c| c.get_name() == name)
-            .or(self.structs.iter().find(|c| c.get_name() == name)))
+            .or(self
+                .structs
+                .iter()
+                .find(|c| c.get_name() == name)
+                .or(self.externs.iter().find(|e| e.get_name() == name))))
     }
 
     pub fn go_to(&self, path: &Path) -> Option<&Item<M>> {
@@ -458,6 +475,7 @@ mod test {
 pub enum Item<M> {
     Routine(RoutineDef<M>),
     Struct(StructDef<M>),
+    Extern(Extern<M>),
 }
 
 impl<M: Annotation> Node<M> for Item<M> {
@@ -465,6 +483,7 @@ impl<M: Annotation> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.annotation(),
             Item::Struct(s) => s.annotation(),
+            Item::Extern(e) => e.annotation(),
         }
     }
 
@@ -472,6 +491,7 @@ impl<M: Annotation> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.annotation_mut(),
             Item::Struct(s) => s.annotation_mut(),
+            Item::Extern(e) => e.annotation_mut(),
         }
     }
 
@@ -479,6 +499,7 @@ impl<M: Annotation> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.node_type(),
             Item::Struct(s) => s.node_type(),
+            Item::Extern(e) => e.node_type(),
         }
     }
 
@@ -486,6 +507,7 @@ impl<M: Annotation> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.children(),
             Item::Struct(s) => s.children(),
+            Item::Extern(e) => e.children(),
         }
     }
 
@@ -493,6 +515,7 @@ impl<M: Annotation> Node<M> for Item<M> {
         match self {
             Item::Routine(r) => r.name(),
             Item::Struct(s) => s.name(),
+            Item::Extern(e) => e.name(),
         }
     }
 
@@ -516,6 +539,7 @@ impl<M> Item<M> {
         match self {
             Item::Routine(r) => r.get_name(),
             Item::Struct(s) => s.get_name(),
+            Item::Extern(e) => e.get_name(),
         }
     }
 
@@ -523,6 +547,7 @@ impl<M> Item<M> {
         match self {
             Item::Routine(r) => Some(r),
             Item::Struct(_) => None,
+            Item::Extern(_) => None,
         }
     }
 
@@ -530,6 +555,7 @@ impl<M> Item<M> {
         match self {
             Item::Routine(r) => format!("{} {}", r.get_def(), r.get_name()),
             Item::Struct(s) => s.root_str(),
+            Item::Extern(e) => e.root_str(),
         }
     }
 }

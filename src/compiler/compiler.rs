@@ -604,6 +604,9 @@ impl<'a> Compiler<'a> {
             Item::Struct(_) => {
                 panic!("StructDefs should have been pruned from the AST before the compiler layer")
             }
+            Item::Extern(_) => {
+                panic!("Externs should have been pruned from the AST before the compiler layer")
+            }
             Item::Routine(r) => self.traverse_routine_def(r, code),
         };
         self.pop();

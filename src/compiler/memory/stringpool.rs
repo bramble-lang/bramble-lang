@@ -113,6 +113,7 @@ impl StringPool {
         match item {
             Item::Routine(r) => self.extract_from_routine(r),
             Item::Struct(_) => (),
+            Item::Extern(_) => (),
         }
     }
 
