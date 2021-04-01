@@ -1303,7 +1303,7 @@ mod tests {
         }
     }
 
-    #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
+    #[test]
     pub fn test_coroutine_params_renamed_with_canonical_path() {
         for text in vec![
             "
