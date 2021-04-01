@@ -107,6 +107,11 @@ impl<'a> TypeResolver<'a> {
             .iter()
             .map(|s| self.analyze_item(s))
             .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
+        *nmodule.get_externs_mut() = m
+            .get_externs()
+            .iter()
+            .map(|e| self.analyze_item(e))
+            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
 
         let mut meta = nmodule.annotation_mut();
         meta.ty = Type::Unit;
@@ -119,7 +124,7 @@ impl<'a> TypeResolver<'a> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r).map(|r2| Item::Routine(r2)),
-            Item::Extern(_) => todo!(),
+            Item::Extern(ex) => self.analyze_extern(ex).map(|e2| Item::Extern(e2)),
         }
     }
 
@@ -222,6 +227,37 @@ impl<'a> TypeResolver<'a> {
             struct_def.get_name().clone(),
             meta.clone(),
             canonical_fields,
+        ))
+    }
+
+    fn analyze_extern(
+        &mut self,
+        ex: &Extern<SemanticAnnotations>,
+    ) -> Result<Extern<SemanticAnnotations>> {
+        // Check the type of each member
+        let params = ex.get_params();
+        for Parameter { ty: field_type, .. } in params.iter() {
+            if let Type::Custom(_) = field_type {
+                panic!("Custom types are not supported for extern function declarations")
+            }
+        }
+
+        // Update all fields so that their types use the full canonical path of the type
+        let canonical_params = self.params_to_canonical(params)?;
+
+        // Update the annotations with canonical path information and set the type to Type::Unit
+        let mut meta = ex.annotation().clone();
+        meta.ty = self.symbols.canonize_local_type_ref(ex.get_return_type())?;
+        meta.set_canonical_path(
+            self.symbols
+                .to_canonical(&vec![ex.get_name().clone()].into())?,
+        );
+
+        Ok(Extern::new(
+            ex.get_name().clone(),
+            meta.clone(),
+            canonical_params,
+            meta.ty.clone(),
         ))
     }
 
@@ -2161,6 +2197,74 @@ mod tests {
                     return 5;
                 }",
                 Err("Semantic: L2: Return expected unit but got i64"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // Check the return value
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.get_type(), expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        let value_ty = r
+                            .get_value()
+                            .clone()
+                            .map(|v| v.get_type().clone())
+                            .unwrap_or(Type::Unit);
+                        assert_eq!(value_ty, expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_extern_calls() {
+        for (text, expected) in vec![
+            (
+                "
+                extern fn number() -> i64;
+                fn main() -> i64 {
+                    return number();
+                }
+                ",
+                Ok(Type::I64),
+            ),
+            (
+                "
+                extern fn number() -> i32;
+                fn main() -> i32 {
+                    return number();
+                }
+                ",
+                Ok(Type::I32),
+            ),
+            (
+                "fn main() -> bool {
+                    return number();
+                }
+                extern fn number() -> i64;
+                ",
+                Err("Semantic: L2: Return expected bool but got i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)

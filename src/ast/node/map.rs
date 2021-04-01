@@ -87,6 +87,8 @@ where
             .append(&mut self.for_items(m.get_coroutines()));
         m2.get_structs_mut()
             .append(&mut self.for_items(m.get_structs()));
+        m2.get_externs_mut()
+            .append(&mut self.for_items(m.get_externs()));
 
         m2
     }
@@ -97,10 +99,16 @@ where
             v.push(match i {
                 Item::Struct(sd) => Item::Struct(self.for_structdef(sd)),
                 Item::Routine(rd) => Item::Routine(self.for_routinedef(rd)),
-                Item::Extern(_) => todo!(),
+                Item::Extern(ex) => Item::Extern(self.for_extern(ex)),
             });
         }
         v
+    }
+
+    fn for_extern(&mut self, ex: &Extern<A>) -> Extern<B> {
+        let b = self.transform(ex);
+        let params = self.for_parameters(&ex.params);
+        Extern::new(ex.get_name(), b, params, ex.ty.clone())
     }
 
     fn for_structdef(&mut self, sd: &StructDef<A>) -> StructDef<B> {

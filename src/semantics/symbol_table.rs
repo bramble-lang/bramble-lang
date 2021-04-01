@@ -66,8 +66,13 @@ impl SymbolTable {
         for co in cm.iter_mut() {
             SymbolTable::for_item(co, &mut annotations)?;
         }
+
         for st in module.get_structs_mut().iter_mut() {
             SymbolTable::for_item(st, &mut annotations)?;
+        }
+
+        for e in module.get_externs_mut().iter_mut() {
+            SymbolTable::for_item(e, &mut annotations)?;
         }
 
         for m in module.get_modules_mut().iter_mut() {
@@ -83,7 +88,7 @@ impl SymbolTable {
         match item {
             Item::Routine(rd) => SymbolTable::add_routine_parameters(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
-            Item::Extern(_) => todo!(),
+            Item::Extern(e) => SymbolTable::add_extern(e, sym),
         }
     }
 
@@ -102,6 +107,19 @@ impl SymbolTable {
             ),
             false,
         )
+    }
+
+    fn add_extern(
+        ex: &mut Extern<SemanticAnnotations>,
+        sym: &mut SemanticAnnotations,
+    ) -> Result<()> {
+        let Extern {
+            name, params, ty, ..
+        } = ex;
+
+        let def = Type::FunctionDef(Self::get_types_for_params(params), Box::new(ty.clone()));
+
+        sym.sym.add(name, def, false)
     }
 
     fn add_routine_parameters(
