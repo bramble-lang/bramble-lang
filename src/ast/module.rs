@@ -283,6 +283,38 @@ mod test {
     }
 
     #[test]
+    pub fn test_add_function() {
+        let mut module = Module::new("test", 1);
+        let fdef = RoutineDef {
+            annotations: 1,
+            name: "func".into(),
+            def: RoutineDefType::Function,
+            params: vec![],
+            ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+        let f = module.get_item("func");
+        assert_eq!(f, Some(&Item::Routine(fdef)));
+    }
+
+    #[test]
+    pub fn test_add_function_that_already_exists() {
+        let mut module = Module::new("test", 1);
+        let fdef = RoutineDef {
+            annotations: 1,
+            name: "func".into(),
+            def: RoutineDefType::Function,
+            params: vec![],
+            ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+        let result = module.add_function(fdef.clone());
+        assert_eq!(result, Err("func already exists in module".into()));
+    }
+
+    #[test]
     pub fn test_add_coroutine() {
         let mut module = Module::new("test", 1);
         let cdef = RoutineDef {
