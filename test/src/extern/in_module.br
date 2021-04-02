@@ -1,0 +1,15 @@
+
+fn my_main() -> i64 {
+	my_mod::print("hello");
+	my_mod::puts("hello");
+    return 0;
+}
+
+mod my_mod {
+    extern fn puts(s: string);
+
+    fn print(s: string) {
+        puts(s);
+        return;
+    }
+}
