@@ -248,10 +248,7 @@ impl<'a> TypeResolver<'a> {
         // Update the annotations with canonical path information and set the type to Type::Unit
         let mut meta = ex.annotation().clone();
         meta.ty = self.symbols.canonize_local_type_ref(ex.get_return_type())?;
-        meta.set_canonical_path(
-            self.symbols
-                .to_canonical(&vec![ex.get_name().clone()].into())?,
-        );
+        meta.set_canonical_path(vec![ex.get_name().clone()].into());
 
         Ok(Extern::new(
             ex.get_name().clone(),

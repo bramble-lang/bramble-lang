@@ -202,7 +202,11 @@ impl<'ctx> IrGen<'ctx> {
     fn add_extern_fn_decl(&mut self, ex: &'ctx Extern<SemanticAnnotations>) {
         // Delcare external function
         let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
-        self.add_fn_decl(ex.get_name(), &params, ex.get_return_type());
+        self.add_fn_decl(
+            &ex.annotation().get_canonical_path().to_label(),
+            &params,
+            ex.get_return_type(),
+        );
     }
 
     /// Takes a tuple describing the signature of an function (internal or external) to the
