@@ -172,13 +172,7 @@ impl<'a> SymbolTableScopeStack<'a> {
 
             // Make sure that there is no ambiguity about what is being referenced
             match (project_symbol, imported_symbol) {
-                (Some(ps), None) => {
-                    if !ps.is_extern {
-                        Ok((ps, canon_path))
-                    } else {
-                        Ok((ps, vec![ps.name.clone()].into()))
-                    }
-                }
+                (Some(ps), None) => Ok((ps, canon_path)),
                 (None, Some(is)) => Ok((is, canon_path)),
                 (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
                 (None, None) => Err(format!("Could not find item with the given path: {}", path)),
@@ -190,17 +184,18 @@ impl<'a> SymbolTableScopeStack<'a> {
             self.head
                 .get(item)
                 .or_else(|| self.get_symbol(item))
-                .map(|i| {
-                    if !i.is_extern {
-                        (i, canon_path)
-                    } else {
-                        (i, vec![i.name.clone()].into())
-                    }
-                })
+                .map(|i| (i, canon_path))
                 .ok_or(format!("{} is not defined", item))
         } else {
             Err("empty path passed to lookup_path".into())
         }
+        .map(|(s, p)| {
+            if s.is_extern {
+                (s, vec![s.name.clone()].into())
+            } else {
+                (s, p)
+            }
+        })
     }
 
     /**
