@@ -81,6 +81,46 @@ run_test() {
     fi
 }
 
+run_fail_test() {
+    rm -rf ./target
+    mkdir -p ./target
+    test=$1
+    input="./src/${test}.in"
+
+    # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        ../target/debug/braid-lang --llvm -p linux -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        ../target/debug/braid-lang --llvm -p machos -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
+    fi
+
+    # If there were no compilation errors then run the assembler and linker
+    if [ -f "./target/output.obj" ]
+    then
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
+            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stderr 1> gcc.log
+            built=$?
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            nasm -g -f macho64 ../braid/macho64/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
+            gcc -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stderr
+            built=$?
+        else
+            # If we can't figure out the OS, then just try the Linux build steps
+            nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
+            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>./target/stderr 1> gcc.log
+            built=$?
+        fi
+
+        if [[ $built -ne 0 ]]; then
+            ((num_pass=num_pass+1))
+            echo "${test}: Pass"
+        else 
+            echo "${test}: Fail"
+        fi
+    fi
+}
+
 cargo build
 if [ $? -eq 0 ]
 then
@@ -93,6 +133,15 @@ then
         ((num_tests=num_tests+1))
         run_test $test
     done
+
+    echo ""
+    echo "Test Failure Cases"
+    tests=`find ./src | grep "\.fail" | grep -v "coroutine" | sort | sed 's/\.\/src\/\(.*\)\.fail/\1/'`
+    for test in ${tests[@]}; do
+        ((num_tests=num_tests+1))
+        run_fail_test $test
+    done
+
     stop_time=$SECONDS
     duration=$(($stop_time-$start_time))
     echo ""
