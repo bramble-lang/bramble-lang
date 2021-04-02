@@ -206,12 +206,32 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> ParserResult<Module<u32>
             parent_module.add_struct(s)?;
         }
 
+        if let Some(e) = extern_def(stream)? {
+            parent_module.add_extern(e)?;
+        }
+
         if stream.index() == start_index {
             break;
         }
     }
 
     Ok(Some(parent_module))
+}
+
+fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
+    match stream.next_if(&Lex::Extern) {
+        Some(token) => match function_decl(stream)? {
+            Some((fn_line, fn_name, params, fn_type)) => {
+                stream.next_must_be(&Lex::Semicolon)?;
+                Ok(Some(Extern::new(&fn_name, fn_line, params, fn_type)))
+            }
+            None => Err(format!(
+                "L{}: expected function declaration after extern",
+                token.l
+            )),
+        },
+        None => Ok(None),
+    }
 }
 
 fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
@@ -229,7 +249,9 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
     }
 }
 
-fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
+fn function_decl(
+    stream: &mut TokenStream,
+) -> ParserResult<(u32, String, Vec<Parameter<u32>>, Type)> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -243,6 +265,15 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
     } else {
         Type::Unit
+    };
+
+    Ok(Some((fn_line, fn_name, params, fn_type)))
+}
+
+fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
+    let (fn_line, fn_name, params, fn_type) = match function_decl(stream)? {
+        Some((l, n, p, t)) => (l, n, p, t),
+        None => return Ok(None),
     };
 
     stream.next_must_be(&Lex::LBrace)?;
@@ -971,6 +1002,36 @@ pub mod tests {
                 assert_eq!(*sd.annotation(), 1);
                 assert_eq!(sd.get_name(), "my_struct");
                 assert_eq!(sd.get_fields(), &vec![Parameter::new(1, "x", &Type::I64)]);
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_extern() {
+        let text = "mod test_extern_mod { extern fn my_fn(x: i64) -> i32; }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(m) = module(&mut iter).unwrap() {
+            assert_eq!(*m.annotation(), 1);
+            assert_eq!(m.get_name(), "test_extern_mod");
+
+            assert_eq!(m.get_modules().len(), 0);
+            assert_eq!(m.get_functions().len(), 0);
+            assert_eq!(m.get_coroutines().len(), 0);
+            assert_eq!(m.get_structs().len(), 0);
+            assert_eq!(m.get_externs().len(), 1);
+
+            if let Some(Item::Extern(e)) = m.get_item("my_fn") {
+                assert_eq!(*e.annotation(), 1);
+                assert_eq!(e.get_name(), "my_fn");
+                assert_eq!(e.get_params(), &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(e.get_return_type(), Type::I32);
             }
         } else {
             panic!("No nodes returned by parser")

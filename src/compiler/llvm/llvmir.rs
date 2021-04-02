@@ -29,7 +29,7 @@ use braid_lang::result::Result;
 
 use crate::{
     ast,
-    ast::{Node, Parameter, RoutineDef, StructDef},
+    ast::{Extern, Node, Parameter, RoutineDef, StructDef},
     compiler::memory::stringpool::StringPool,
     semantics::semanticnode::SemanticAnnotations,
 };
@@ -174,6 +174,12 @@ impl<'ctx> IrGen<'ctx> {
             }
         }
 
+        for ex in m.get_externs() {
+            if let ast::Item::Extern(ex) = ex {
+                self.add_extern_fn_decl(ex);
+            }
+        }
+
         for m in m.get_modules() {
             self.add_mod_items(m);
         }
@@ -191,6 +197,16 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             &rd.ty,
         )
+    }
+
+    fn add_extern_fn_decl(&mut self, ex: &'ctx Extern<SemanticAnnotations>) {
+        // Delcare external function
+        let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
+        self.add_fn_decl(
+            &ex.annotation().get_canonical_path().to_label(),
+            &params,
+            ex.get_return_type(),
+        );
     }
 
     /// Takes a tuple describing the signature of an function (internal or external) to the
@@ -716,7 +732,10 @@ impl ast::RoutineCall {
                     llvm_params.push(p_llvm);
                 }
 
-                let call = llvm.module.get_function(&fn_name).unwrap();
+                let call = llvm
+                    .module
+                    .get_function(&fn_name)
+                    .expect(&format!("Could not find function {}", fn_name));
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
                 match out_param {
                     Some(ptr) => Some(ptr.into()),

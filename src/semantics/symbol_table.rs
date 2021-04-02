@@ -66,8 +66,13 @@ impl SymbolTable {
         for co in cm.iter_mut() {
             SymbolTable::for_item(co, &mut annotations)?;
         }
+
         for st in module.get_structs_mut().iter_mut() {
             SymbolTable::for_item(st, &mut annotations)?;
+        }
+
+        for e in module.get_externs_mut().iter_mut() {
+            SymbolTable::for_item(e, &mut annotations)?;
         }
 
         for m in module.get_modules_mut().iter_mut() {
@@ -83,6 +88,7 @@ impl SymbolTable {
         match item {
             Item::Routine(rd) => SymbolTable::add_routine_parameters(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
+            Item::Extern(e) => SymbolTable::add_extern(e, sym),
         }
     }
 
@@ -100,7 +106,21 @@ impl SymbolTable {
                     .collect(),
             ),
             false,
+            false,
         )
+    }
+
+    fn add_extern(
+        ex: &mut Extern<SemanticAnnotations>,
+        sym: &mut SemanticAnnotations,
+    ) -> Result<()> {
+        let Extern {
+            name, params, ty, ..
+        } = ex;
+
+        let def = Type::FunctionDef(Self::get_types_for_params(params), Box::new(ty.clone()));
+
+        sym.sym.add(name, def, false, true)
     }
 
     fn add_routine_parameters(
@@ -124,7 +144,7 @@ impl SymbolTable {
             }
         };
 
-        sym.sym.add(name, def, false)
+        sym.sym.add(name, def, false, false)
     }
 
     fn get_types_for_params(params: &Vec<Parameter<SemanticAnnotations>>) -> Vec<Type> {
@@ -151,7 +171,7 @@ impl SymbolTable {
         }
     }
 
-    pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
+    pub fn add(&mut self, name: &str, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
         if self.get(name).is_some() {
             Err(format!("{} already declared", name))
         } else {
@@ -159,6 +179,7 @@ impl SymbolTable {
                 name: name.into(),
                 ty,
                 mutable,
+                is_extern,
             });
             Ok(())
         }
@@ -180,6 +201,7 @@ pub struct Symbol {
     pub name: String,
     pub ty: Type,
     pub mutable: bool,
+    pub is_extern: bool,
 }
 
 impl std::fmt::Display for Symbol {
