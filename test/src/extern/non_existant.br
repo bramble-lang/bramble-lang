@@ -1,0 +1,6 @@
+extern fn smutz(s: string);
+
+fn my_main() -> i64 {
+	smutz("hello\n");
+    return 0;
+}
