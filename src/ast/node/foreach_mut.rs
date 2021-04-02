@@ -97,7 +97,7 @@ where
                 Item::Routine(rd) => {
                     self.for_routinedef(rd, f);
                 }
-                Item::Extern(_) => todo!(),
+                Item::Extern(ex) => self.for_extern(ex, f),
             };
         }
     }
@@ -122,6 +122,14 @@ where
         for e in rd.get_body_mut().iter_mut() {
             self.for_statement(e, f);
         }
+    }
+
+    fn for_extern<F>(&self, ex: &mut Extern<A>, f: F)
+    where
+        F: FnMut(&mut A) + Copy,
+    {
+        self.transform(ex.annotation_mut(), f);
+        self.for_parameters(&mut ex.params, f);
     }
 
     fn for_parameters<F>(&self, params: &mut Vec<Parameter<A>>, f: F)
