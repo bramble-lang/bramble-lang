@@ -70,6 +70,13 @@ run_test() {
     else
         echo "${test}: Fail"
         echo ${result}
+        echo ""
+        echo "Actual:"
+        cat ./target/stdout
+        echo "\n-------------"
+        echo "Expected:"
+        cat ./src/${test}.out
+        echo "\n-------------"
         exit 1
     fi
 }
