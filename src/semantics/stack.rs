@@ -172,7 +172,13 @@ impl<'a> SymbolTableScopeStack<'a> {
 
             // Make sure that there is no ambiguity about what is being referenced
             match (project_symbol, imported_symbol) {
-                (Some(ps), None) => Ok((ps, canon_path)),
+                (Some(ps), None) => {
+                    if !ps.is_extern {
+                        Ok((ps, canon_path))
+                    } else {
+                        Ok((ps, vec![ps.name.clone()].into()))
+                    }
+                }
                 (None, Some(is)) => Ok((is, canon_path)),
                 (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
                 (None, None) => Err(format!("Could not find item with the given path: {}", path)),
