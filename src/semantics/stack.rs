@@ -54,6 +54,7 @@ impl<'a> SymbolTableScopeStack<'a> {
                     name: item.into(),
                     ty: Type::FunctionDef(params, Box::new(return_ty)),
                     mutable: false,
+                    is_extern: false,
                 },
             ),
             None => None,
@@ -90,8 +91,8 @@ impl<'a> SymbolTableScopeStack<'a> {
 
     /// Add a new symbol to the current symbol table (the SymbolTable that is at the
     /// top of the stack).
-    pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
-        self.head.add(name, ty, mutable)
+    pub fn add(&mut self, name: &str, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
+        self.head.add(name, ty, mutable, is_extern)
     }
 
     /// Finds the given variable in the current symbol table or in the symbol table history
@@ -183,7 +184,13 @@ impl<'a> SymbolTableScopeStack<'a> {
             self.head
                 .get(item)
                 .or_else(|| self.get_symbol(item))
-                .map(|i| (i, canon_path))
+                .map(|i| {
+                    if !i.is_extern {
+                        (i, canon_path)
+                    } else {
+                        (i, vec![i.name.clone()].into())
+                    }
+                })
                 .ok_or(format!("{} is not defined", item))
         } else {
             Err("empty path passed to lookup_path".into())

@@ -106,6 +106,7 @@ impl SymbolTable {
                     .collect(),
             ),
             false,
+            false,
         )
     }
 
@@ -119,7 +120,7 @@ impl SymbolTable {
 
         let def = Type::FunctionDef(Self::get_types_for_params(params), Box::new(ty.clone()));
 
-        sym.sym.add(name, def, false)
+        sym.sym.add(name, def, false, true)
     }
 
     fn add_routine_parameters(
@@ -143,7 +144,7 @@ impl SymbolTable {
             }
         };
 
-        sym.sym.add(name, def, false)
+        sym.sym.add(name, def, false, false)
     }
 
     fn get_types_for_params(params: &Vec<Parameter<SemanticAnnotations>>) -> Vec<Type> {
@@ -170,7 +171,7 @@ impl SymbolTable {
         }
     }
 
-    pub fn add(&mut self, name: &str, ty: Type, mutable: bool) -> Result<()> {
+    pub fn add(&mut self, name: &str, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
         if self.get(name).is_some() {
             Err(format!("{} already declared", name))
         } else {
@@ -178,6 +179,7 @@ impl SymbolTable {
                 name: name.into(),
                 ty,
                 mutable,
+                is_extern,
             });
             Ok(())
         }
@@ -199,6 +201,7 @@ pub struct Symbol {
     pub name: String,
     pub ty: Type,
     pub mutable: bool,
+    pub is_extern: bool,
 }
 
 impl std::fmt::Display for Symbol {

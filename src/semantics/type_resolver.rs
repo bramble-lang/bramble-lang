@@ -164,7 +164,7 @@ impl<'a> TypeResolver<'a> {
 
         // Add parameters to symbol table
         for p in canonical_params.iter() {
-            meta.sym.add(&p.name, p.ty.clone(), false)?;
+            meta.sym.add(&p.name, p.ty.clone(), false, false)?;
         }
 
         self.symbols.enter_scope(&meta.sym);
@@ -292,7 +292,7 @@ impl<'a> TypeResolver<'a> {
             if meta.ty == rhs.get_type() {
                 match self
                     .symbols
-                    .add(bind.get_id(), meta.ty.clone(), bind.is_mutable())
+                    .add(bind.get_id(), meta.ty.clone(), bind.is_mutable(), false)
                 {
                     Ok(()) => {
                         let ty = meta.ty().clone();
@@ -695,7 +695,8 @@ impl<'a> TypeResolver<'a> {
 
                 let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
                 meta.ty = Type::Custom(canonical_path.clone());
-                self.symbols.add(&anonymouse_name, meta.ty.clone(), false)?;
+                self.symbols
+                    .add(&anonymouse_name, meta.ty.clone(), false, false)?;
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
