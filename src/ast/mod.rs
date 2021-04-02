@@ -1,4 +1,5 @@
 mod expression;
+mod extern_decl;
 mod module;
 mod node;
 mod parameter;
@@ -9,13 +10,13 @@ mod structdef;
 mod ty;
 
 pub use self::expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator};
+pub use self::extern_decl::Extern;
 pub use self::module::{Item, Module};
 pub use self::node::{
     Annotation, ForEachPreOrderMut, MapPreOrder, Node, NodeType, PostOrderIter, PreOrderIter,
 };
 pub use self::parameter::Parameter;
 pub use self::path::Path;
-pub use self::routinedef::Extern;
 pub use self::routinedef::{RoutineDef, RoutineDefType};
 pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;

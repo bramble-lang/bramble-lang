@@ -1,9 +1,10 @@
 use super::{
+    extern_decl::Extern,
     node::{
         Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     path::Path,
-    routinedef::{Extern, RoutineDef, RoutineDefType},
+    routinedef::{RoutineDef, RoutineDefType},
     structdef::StructDef,
 };
 use braid_lang::result::Result;

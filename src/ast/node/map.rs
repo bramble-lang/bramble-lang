@@ -5,6 +5,7 @@ use crate::ast::routinedef::*;
 use crate::ast::statement::*;
 use crate::ast::structdef::*;
 use crate::ast::Expression;
+use crate::ast::Extern;
 use crate::{
     ast::module::*,
     diagnostics::{config::TracingConfig, Diag, DiagRecorder},

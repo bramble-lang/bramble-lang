@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::diagnostics::config::TracingConfig;
 use crate::{
-    ast::{module::*, routinedef::*, statement::*, structdef::*, Expression},
+    ast::{extern_decl::Extern, module::*, routinedef::*, statement::*, structdef::*, Expression},
     diagnostics::{Diag, DiagRecorder},
 };
 
