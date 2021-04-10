@@ -690,10 +690,7 @@ impl<'a> TypeResolver<'a> {
                     resolved_params.push((pn.clone(), param));
                 }
 
-                let anonymouse_name = format!("!{}_{}", canonical_path, meta.id);
                 meta.ty = Type::Custom(canonical_path.clone());
-                self.symbols
-                    .add(&anonymouse_name, meta.ty.clone(), false, false)?;
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
