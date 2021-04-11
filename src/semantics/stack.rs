@@ -112,6 +112,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             | Type::Bool
             | Type::StringLiteral
             | Type::Unit => Ok(symbol),
+            Type::Array(_, _) => todo!(),
         }
     }
 

@@ -496,7 +496,10 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
         }
         _ => match path(stream)? {
             Some((_, path)) => Some(Type::Custom(path)),
-            _ => None,
+            _ => match array_type(stream)? {
+                Some(ty) => Some(ty),
+                None => None,
+            },
         },
     }
     .map(|ty| {
@@ -507,6 +510,29 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
         }
     });
     Ok(ty)
+}
+
+fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
+    trace!(stream);
+    match stream.next_if(&Lex::LBracket) {
+        Some(_) => {
+            let element_ty =
+                consume_type(stream)?.ok_or("Expected type in array type declaration")?;
+            stream.next_must_be(&Lex::Semicolon)?;
+
+            let len = expression(stream)?
+                .ok_or("Expected size to be specified in array type declaration")?;
+            let len = match len {
+                Expression::Integer32(_, l) => l as usize,
+                Expression::Integer64(_, l) => l as usize,
+                _ => return Err("Expected integer literal for array size".into()),
+            };
+
+            stream.next_must_be(&Lex::RBracket)?;
+            Ok(Some(Type::Array(Box::new(element_ty), len)))
+        }
+        None => Ok(None),
+    }
 }
 
 pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
@@ -824,6 +850,10 @@ pub mod tests {
             ("let x:i64 := 5;", Type::I64),
             ("let x: bool := true;", Type::Bool),
             ("let x: string := \"hello\";", Type::StringLiteral),
+            (
+                "let x: [i32;5] := [1, 2, 3, 4, 5];",
+                Type::Array(Box::new(Type::I32), 5),
+            ),
         ]
         .iter()
         {
@@ -1385,6 +1415,7 @@ pub mod tests {
             panic!("No nodes returned by parser, got: {:?}", exp)
         }
     }
+
     #[test]
     fn parse_struct_def() {
         for (text, expected) in vec![

@@ -6,6 +6,7 @@ pub enum Type {
     I64,
     Bool,
     StringLiteral,
+    Array(Box<Type>, usize),
     Unit,
     Custom(Path),
     StructDef(Vec<(String, Type)>),
@@ -56,6 +57,7 @@ impl std::fmt::Display for Type {
             I64 => f.write_str("i64"),
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
+            Array(ty, len) => f.write_str(&format!("[{}; {}]", ty, len)),
             Unit => f.write_str("unit"),
             Custom(path) => f.write_str(&format!("{}", path)),
             StructDef(members) => {
