@@ -13,6 +13,7 @@ pub enum Expression<I> {
     Integer64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
+    ArrayValue(I, usize, Vec<Expression<I>>),
     CustomType(I, Path),
     Identifier(I, String),
     Path(I, Path),
@@ -54,6 +55,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
+            ArrayValue(m, _, _) => m,
         }
     }
 
@@ -76,6 +78,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
+            ArrayValue(m, _, _) => m,
         }
     }
 
@@ -134,6 +137,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | Integer64(..)
             | Boolean(..)
             | StringLiteral(..)
+            | ArrayValue(_, _, _)
             | CustomType(..)
             | Identifier(..)
             | IdentifierDeclare(..)
@@ -168,6 +172,13 @@ impl<I> Expression<I> {
             Integer64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
+            ArrayValue(_, _, v) => format!(
+                "[{}]",
+                v.iter()
+                    .map(|e| format!("{}", e))
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),

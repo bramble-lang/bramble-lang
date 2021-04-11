@@ -448,6 +448,7 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = Type::StringLiteral;
                 Ok(Expression::StringLiteral(meta.clone(), v.clone()))
             }
+            Expression::ArrayValue(..) => todo!(),
             Expression::CustomType(meta, name) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::Custom(name.clone());

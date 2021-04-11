@@ -197,6 +197,7 @@ where
             Integer64(_, i) => Integer64(self.transform(exp), *i),
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
+            ArrayValue(_, _, _) => todo!(),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
             Path(_, path) => Path(self.transform(exp), path.clone()),

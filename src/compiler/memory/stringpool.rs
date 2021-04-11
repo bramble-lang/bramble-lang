@@ -56,6 +56,7 @@ impl StringPool {
             StringLiteral(_, s) => {
                 self.insert(s);
             }
+            ArrayValue(..) => todo!(),
             CustomType(..) => {}
             Identifier(..) => {}
             IdentifierDeclare(..) => {}

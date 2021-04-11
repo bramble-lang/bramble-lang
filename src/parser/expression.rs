@@ -404,6 +404,28 @@ fn struct_init_params(
     }
 }
 
+fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+    trace!(stream);
+    match stream.next_if(&Lex::LBracket) {
+        Some(token) => {
+            let mut elements = vec![];
+            // loop through comma separated list of expressions
+            while let Some(element) = expression(stream)? {
+                elements.push(element);
+                match stream.next_if(&Lex::Comma) {
+                    Some(_) => {}
+                    None => break,
+                };
+            }
+            stream.next_must_be(&Lex::RBracket)?;
+
+            let len = elements.len();
+            Ok(Some(Expression::ArrayValue(token.l, len, elements)))
+        }
+        None => Ok(None),
+    }
+}
+
 fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     number(stream)
@@ -473,6 +495,62 @@ mod test {
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
                 Err(err) => panic!("Expected {:?}, but got {}", expected, err),
             }
+        }
+    }
+
+    #[test]
+    fn parse_array_value() {
+        for (text, expected) in vec![
+            (
+                "[1]",
+                Expression::ArrayValue(1, 1, vec![Expression::Integer64(1, 1)]),
+            ),
+            (
+                "[1,]",
+                Expression::ArrayValue(1, 1, vec![Expression::Integer64(1, 1)]),
+            ),
+            (
+                "[1, 2, 3]",
+                Expression::ArrayValue(
+                    1,
+                    3,
+                    vec![
+                        Expression::Integer64(1, 1),
+                        Expression::Integer64(1, 2),
+                        Expression::Integer64(1, 3),
+                    ],
+                ),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            match array_value(&mut stream) {
+                Ok(Some(e)) => assert_eq!(e, expected),
+                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
+                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_array_fails() {
+        for (text, msg) in [
+            ("[5", "L0: Expected ], but found EOF"),
+            ("[5 6]", "L1: Expected ], but found i64 literal 6"),
+        ]
+        .iter()
+        {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            assert_eq!(array_value(&mut stream), Err((*msg).into()), "{:?}", text);
         }
     }
 
