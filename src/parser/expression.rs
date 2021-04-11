@@ -282,7 +282,8 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
             .por(expression_block, stream)
             .por(function_call_or_variable, stream)
             .por(co_yield, stream)
-            .por(constant, stream),
+            .por(constant, stream)
+            .por(array_value, stream),
     }
 }
 
