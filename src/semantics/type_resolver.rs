@@ -457,7 +457,7 @@ impl<'a> TypeResolver<'a> {
                 let nelements = nelements?;
 
                 // Check that they are homogenous
-                let mut el_ty = Type::Unknown;
+                let el_ty;
                 if nelements.len() == 0 {
                     el_ty = Type::Unit;
                 } else {
