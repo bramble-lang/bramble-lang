@@ -108,3 +108,6 @@ start:
 ```
 Interestingly, the Rust compiler moves the variable `a` up into the parameter list and uses that as
 the name of the output parameter.
+
+# FAQ
+1. What about an empty array value `[]` what type does that resolve to?

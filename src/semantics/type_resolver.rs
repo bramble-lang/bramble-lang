@@ -448,7 +448,33 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = Type::StringLiteral;
                 Ok(Expression::StringLiteral(meta.clone(), v.clone()))
             }
-            Expression::ArrayValue(..) => todo!(),
+            Expression::ArrayValue(meta, len, elements) => {
+                // Resolve the types for each element in the array value
+                let nelements: Result<Vec<Expression<SemanticAnnotations>>> = elements
+                    .iter()
+                    .map(|e| self.traverse(e, current_func))
+                    .collect();
+                let nelements = nelements?;
+
+                // Check that they are homogenous
+                let mut el_ty = Type::Unknown;
+                if nelements.len() == 0 {
+                    el_ty = Type::Unit;
+                } else {
+                    el_ty = nelements[0].annotation().ty.clone();
+                    for e in &nelements {
+                        if e.annotation().ty != el_ty {
+                            return Err("Inconsistent types in array value".into());
+                        }
+                    }
+                }
+
+                let mut meta = meta.clone();
+                meta.ty = Type::Array(Box::new(el_ty), *len);
+
+                // Use the size of the array and the type to define the array type
+                Ok(Expression::ArrayValue(meta, *len, nelements))
+            }
             Expression::CustomType(meta, name) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::Custom(name.clone());
@@ -1981,6 +2007,34 @@ mod tests {
                     return k;
                 }",
                 Ok(Type::I32),
+            ),
+            (
+                "fn main() -> [i64;5] {
+                    let k: [i64;5] := [1, 2, 3, 4, 5];
+                    return k;
+                }",
+                Ok(Type::Array(Box::new(Type::I64), 5)),
+            ),
+            (
+                "fn main() -> [i32;5] {
+                    let k: [i64;5] := [1, 2, 3, 4, 5];
+                    return k;
+                }",
+                Err("Semantic: L3: Return expected [i32; 5] but got [i64; 5]"),
+            ),
+            (
+                "fn main() -> [i32;5] {
+                    let k: [i32;5] := [1, 2, 3, 4, 5];
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected [i32; 5] but got [i64; 5]"),
+            ),
+            (
+                "fn main() -> [i64;5] {
+                    let k: [i64;5] := [1, 2i32, 3, 4, 5];
+                    return k;
+                }",
+                Err("Semantic: L2: Inconsistent types in array value"),
             ),
             (
                 "fn main() -> i64 {

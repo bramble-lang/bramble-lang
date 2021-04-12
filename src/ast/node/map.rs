@@ -197,7 +197,7 @@ where
             Integer64(_, i) => Integer64(self.transform(exp), *i),
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
-            ArrayValue(_, _, _) => todo!(),
+            ArrayValue(_, _, _) => self.for_array_value(exp),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
             Path(_, path) => Path(self.transform(exp), path.clone()),
@@ -318,6 +318,19 @@ where
             Expression::StructExpression(b, struct_name.clone(), nfields)
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
+        }
+    }
+
+    fn for_array_value(&mut self, av: &Expression<A>) -> Expression<B> {
+        if let Expression::ArrayValue(_, len, elements) = av {
+            let b = self.transform(av);
+            let mut nelements = vec![];
+            for e in elements {
+                nelements.push(self.for_expression(e));
+            }
+            Expression::ArrayValue(b, *len, nelements)
+        } else {
+            panic!("Expected ArrayValue but got {:?}", av)
         }
     }
 }

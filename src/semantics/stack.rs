@@ -111,8 +111,8 @@ impl<'a> SymbolTableScopeStack<'a> {
             | Type::I64
             | Type::Bool
             | Type::StringLiteral
+            | Type::Array(_, _)
             | Type::Unit => Ok(symbol),
-            Type::Array(_, _) => todo!(),
         }
     }
 
