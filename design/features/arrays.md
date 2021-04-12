@@ -178,12 +178,26 @@ To read elements from the array, Rust uses a similar strategy, but using the `lo
 ## How Braid will compile:
 Braid will start out by just copying the way that Rust compiles these expressions:
 
-### Bind
+### Array Value
 1. Allocate space on the stack with `alloca`
 1. `bitcast` the array pointer to a pointer to the first element in the array
 1. For each element in the array, compile the element to LLVM
 1. For each LLVM Value, use `getelementptr` to point to the array at a given index
 1. `store` the value to that location
+
+### Binding
+1. Allocate space on the stack with `alloca`
+1. Evaluate the RHS of the bind expression
+1. Do I memcpy the result of the RHS into the newly allocated space on the stack or do I use a pointer?
+
+### Passing to a function
+1. In parameters, evaluate the array type to an LLVM pointer
+1. Make all array usage use the pointer to an array and GEP. So that it doesn't matter if an array was defined locally or if it was passed in as a parameter.
+
+### Returning from a function
+1. Update the signature of the function: insert a new parameter that is a pointer to an array (the same type as the return type) and make the return type void
+1. At the call site, `alloca` space for the returned array on the stack then pass the pointer to the array as the out parameter for the function.
+1. In the function, at the point of return, copy the array value to the location pointed to by the out parameter.
 
 ## FAQ
 1. What about an empty array value `[]` what type does that resolve to? What's the difference between an array with no values and the unit?
