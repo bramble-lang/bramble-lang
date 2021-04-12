@@ -637,6 +637,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 }
                 Some(s_ptr.into())
             }
+            ast::Expression::ArrayValue(_, len, elements) => {
+                let a = llvm.context.i64_type();
+                Some(a.const_array(&[]).into())
+            }
             _ => todo!("{} not implemented yet", self),
         }
     }
@@ -765,7 +769,16 @@ impl ast::Type {
                 .get_struct_type(&name.to_label())
                 .expect(&format!("Could not find struct {}", name))
                 .into(),
-            _ => panic!("Can't convert type to LLVM: {}", self),
+            ast::Type::Array(a, len) => {
+                let el_ty = a.as_ref().to_llvm_ir(llvm);
+                let len = *len as u32;
+                anytype_to_basictype(el_ty).unwrap().array_type(len).into()
+            }
+            ast::Type::StructDef(_)
+            | ast::Type::FunctionDef(_, _)
+            | ast::Type::CoroutineDef(_, _)
+            | ast::Type::Coroutine(_)
+            | ast::Type::Unknown => panic!("Can't convert type to LLVM: {}", self),
         }
     }
 }
@@ -806,11 +819,11 @@ fn anytype_to_basictype<'ctx>(any_ty: AnyTypeEnum<'ctx>) -> Option<BasicTypeEnum
         AnyTypeEnum::StructType(st_ty) => Some(st_ty.into()),
         AnyTypeEnum::IntType(i_ty) => Some(i_ty.into()),
         AnyTypeEnum::PointerType(ptr_ty) => Some(ptr_ty.into()),
-        AnyTypeEnum::VoidType(_) => None,
-        AnyTypeEnum::ArrayType(_)
-        | AnyTypeEnum::FloatType(_)
-        | AnyTypeEnum::FunctionType(_)
-        | AnyTypeEnum::VectorType(_) => todo!("Not implemented"),
+        AnyTypeEnum::ArrayType(a_ty) => Some(a_ty.into()),
+        AnyTypeEnum::VoidType(_) => panic!("Cannot convert void to basic type"),
+        AnyTypeEnum::FloatType(_) | AnyTypeEnum::FunctionType(_) | AnyTypeEnum::VectorType(_) => {
+            todo!("Not implemented")
+        }
     }
 }
 

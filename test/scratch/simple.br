@@ -1,6 +1,6 @@
 extern fn puts(s: string);
 
 fn my_main() -> i64 {
-	puts("hello\n");
+	let a: [i64; 5] := [1, 2, 3, 4, 5];
     return 0;
 }

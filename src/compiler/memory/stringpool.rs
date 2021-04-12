@@ -56,7 +56,11 @@ impl StringPool {
             StringLiteral(_, s) => {
                 self.insert(s);
             }
-            ArrayValue(..) => todo!(),
+            ArrayValue(_, _, elements) => {
+                for e in elements {
+                    self.extract_from(e);
+                }
+            }
             CustomType(..) => {}
             Identifier(..) => {}
             IdentifierDeclare(..) => {}
