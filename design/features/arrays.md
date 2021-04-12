@@ -109,5 +109,81 @@ start:
 Interestingly, the Rust compiler moves the variable `a` up into the parameter list and uses that as
 the name of the output parameter.
 
-# FAQ
-1. What about an empty array value `[]` what type does that resolve to?
+#### Using an array
+Here's an example of a function which creates a two element array and then returns the first element:
+```rust
+pub fn ret() -> i32 {
+    let a = [1, 2];
+
+    a[0]
+}
+```
+
+The LLVM:
+```llvm
+define i32 @_ZN7example3ret17h010117d9a2fb03b8E() unnamed_addr #0 !dbg !13 {
+start:
+  %a = alloca [2 x i32], align 4
+  %0 = bitcast [2 x i32]* %a to i32*, !dbg !14
+  store i32 1, i32* %0, align 4, !dbg !14
+  %1 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i32 0, i32 1, !dbg !14
+  store i32 2, i32* %1, align 4, !dbg !14
+  %2 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i64 0, i64 0, !dbg !15
+  %3 = load i32, i32* %2, align 4, !dbg !15
+  ret i32 %3, !dbg !16
+}
+```
+In this example, Rust uses the GEP to get pointers to individual fields and set the values.
+
+##### Using an array with more complex elements
+```rust
+pub fn ret() -> i32 {
+    let a = [inc(1), inc(2)];
+
+    a[0]
+}
+
+pub fn inc(x: i32) -> i32 {
+    x + 1
+}
+```
+And it's LLVM (leaving out the `inc` function):
+```llvm
+define i32 @_ZN7example3ret17h010117d9a2fb03b8E() unnamed_addr #0 !dbg !13 {
+start:
+  %a = alloca [2 x i32], align 4
+  %_2 = call i32 @_ZN7example3inc17h810941d63eecc67fE(i32 1), !dbg !14
+  br label %bb1, !dbg !14
+
+bb1:                                              ; preds = %start
+  %_3 = call i32 @_ZN7example3inc17h810941d63eecc67fE(i32 2), !dbg !15
+  br label %bb2, !dbg !15
+
+bb2:                                              ; preds = %bb1
+  %0 = bitcast [2 x i32]* %a to i32*, !dbg !16
+  store i32 %_2, i32* %0, align 4, !dbg !16
+  %1 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i32 0, i32 1, !dbg !16
+  store i32 %_3, i32* %1, align 4, !dbg !16
+  %2 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i64 0, i64 0, !dbg !17
+  %3 = load i32, i32* %2, align 4, !dbg !17
+  ret i32 %3, !dbg !18
+}
+```
+
+### Breakdown of how Rust works
+Rust uses `alloca` to allocate space on the stack for the array. Then to use the array, it casts the array pointer (returned by `alloca`) to a pointer to the element type (in the preceding example it goes from `[2 x i32]*` to `i32*`).  This creates a pointer to the first element in the array. To access the first element of the array, Rust just uses that pointer directly.  To Access other elements of the array, Rust uses the GEP on the pointer to the first element.
+
+To read elements from the array, Rust uses a similar strategy, but using the `load` instruction to read data from where the GEP is pointing. One difference, is that in my example, Rust does not use the first element pointer to read the first element of the array, it uses the GEP to get a pointer to the first element and then calls `load` on that pointer.  I'm guessing this is because the first element pointer is created in the compilation of the `bind` expression and is therefore inaccessible to the `read element at` expression. (Will LLVM optimization catch this?)
+
+## How Braid will compile:
+Braid will start out by just copying the way that Rust compiles these expressions:
+
+### Bind
+1. Allocate space on the stack with `alloca`
+1. `bitcast` the array pointer to a pointer to the first element in the array
+1. For each element in the array, compile the element to LLVM
+1. For each LLVM Value, use `getelementptr` to point to the array at a given index
+1. `store` the value to that location
+
+## FAQ
+1. What about an empty array value `[]` what type does that resolve to? What's the difference between an array with no values and the unit?

@@ -637,9 +637,23 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 }
                 Some(s_ptr.into())
             }
-            ast::Expression::ArrayValue(_, len, elements) => {
-                let a = llvm.context.i64_type();
-                Some(a.const_array(&[]).into())
+            ast::Expression::ArrayValue(meta, len, elements) => {
+                let a_ty = anytype_to_basictype(meta.ty.to_llvm_ir(llvm)).unwrap();
+                let a_ptr = llvm.builder.build_alloca(a_ty, "");
+
+                let elements_llvm: Vec<_> = elements
+                    .iter()
+                    .map(|e| e.to_llvm_ir(llvm).unwrap())
+                    .collect();
+
+                let mut idx = 0;
+                let array = llvm.builder.build_load(a_ptr, "").into_array_value();
+                for e in elements_llvm {
+                    llvm.builder.build_insert_value(array, e, idx, "").unwrap();
+                    idx += 1;
+                }
+
+                Some(array.into())
             }
             _ => todo!("{} not implemented yet", self),
         }
