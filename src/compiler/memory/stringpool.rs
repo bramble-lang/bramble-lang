@@ -61,6 +61,10 @@ impl StringPool {
                     self.extract_from(e);
                 }
             }
+            ArrayAt { array, index, .. } => {
+                self.extract_from(array);
+                self.extract_from(index);
+            }
             CustomType(..) => {}
             Identifier(..) => {}
             IdentifierDeclare(..) => {}

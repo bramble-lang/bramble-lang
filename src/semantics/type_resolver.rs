@@ -475,6 +475,7 @@ impl<'a> TypeResolver<'a> {
                 // Use the size of the array and the type to define the array type
                 Ok(Expression::ArrayValue(meta, *len, nelements))
             }
+            Expression::ArrayAt { .. } => todo!("Add semantic analysis for array at"),
             Expression::CustomType(meta, name) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::Custom(name.clone());

@@ -198,6 +198,7 @@ where
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
             ArrayValue(_, _, _) => self.for_array_value(exp),
+            ArrayAt { .. } => self.for_array_at(exp),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
             Path(_, path) => Path(self.transform(exp), path.clone()),
@@ -331,6 +332,21 @@ where
             Expression::ArrayValue(b, *len, nelements)
         } else {
             panic!("Expected ArrayValue but got {:?}", av)
+        }
+    }
+
+    fn for_array_at(&mut self, ar_at: &Expression<A>) -> Expression<B> {
+        if let Expression::ArrayAt { array, index, .. } = ar_at {
+            let b = self.transform(ar_at);
+            let array = self.for_expression(array);
+            let index = self.for_expression(index);
+            Expression::ArrayAt {
+                annotation: b,
+                array: box array,
+                index: box index,
+            }
+        } else {
+            panic!("Expected ArrayAt, but got {:?}", ar_at)
         }
     }
 }

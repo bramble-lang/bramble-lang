@@ -14,6 +14,11 @@ pub enum Expression<I> {
     Boolean(I, bool),
     StringLiteral(I, String),
     ArrayValue(I, usize, Vec<Expression<I>>),
+    ArrayAt {
+        annotation: I,
+        array: Box<Expression<I>>,
+        index: Box<Expression<I>>,
+    },
     CustomType(I, Path),
     Identifier(I, String),
     Path(I, Path),
@@ -56,6 +61,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             ArrayValue(m, _, _) => m,
+            ArrayAt { annotation: m, .. } => m,
         }
     }
 
@@ -79,6 +85,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             ArrayValue(m, _, _) => m,
+            ArrayAt { annotation: m, .. } => m,
         }
     }
 
@@ -100,6 +107,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
                 }
                 o
             }
+            ArrayAt { array, index, .. } => vec![array.as_ref(), index.as_ref()],
             MemberAccess(_, src, _) => vec![src.as_ref()],
             BinaryOp(.., l, r) => vec![l.as_ref(), r.as_ref()],
             UnaryOp(.., r) => vec![r.as_ref()],
@@ -179,6 +187,7 @@ impl<I> Expression<I> {
                     .collect::<Vec<String>>()
                     .join(",")
             ),
+            ArrayAt { array, index, .. } => format!("{}[{}]", array, index),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),

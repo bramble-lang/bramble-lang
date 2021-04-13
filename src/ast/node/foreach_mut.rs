@@ -213,6 +213,7 @@ where
             Expression::Boolean(ref mut annotation, _b) => self.transform(annotation, f),
             Expression::StringLiteral(ref mut annotation, _s) => self.transform(annotation, f),
             Expression::ArrayValue(_, _, _) => todo!(),
+            Expression::ArrayAt { .. } => todo!(),
             Expression::CustomType(ref mut annotation, _name) => self.transform(annotation, f),
             Expression::Identifier(ref mut annotation, _id) => self.transform(annotation, f),
             Path(ref mut annotation, _path) => self.transform(annotation, f),
