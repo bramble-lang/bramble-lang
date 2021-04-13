@@ -673,6 +673,29 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 // The arch value of this expression is the ptr to the array
                 Some(a_ptr.into())
             }
+            ast::Expression::ArrayAt {
+                annotation: meta,
+                array,
+                index,
+            } => {
+                // evalute the array to get the ptr to the array
+                let llvm_array_ptr = array.to_llvm_ir(llvm).unwrap().into_pointer_value();
+
+                // evaluate the index to get the index value
+                let llvm_index = index.to_llvm_ir(llvm).unwrap().into_int_value();
+
+                // Compute the GEP
+                let outer_idx = llvm.context.i64_type().const_int(0, false);
+                let el_ptr = unsafe {
+                    llvm.builder
+                        .build_gep(llvm_array_ptr, &[outer_idx, llvm_index], "")
+                };
+
+                // Load the value pointed to by GEP and return that
+                let el_val = llvm.builder.build_load(el_ptr, "");
+
+                Some(el_val.into())
+            }
             _ => todo!("{} not implemented yet", self),
         }
     }

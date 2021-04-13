@@ -2,8 +2,9 @@ extern fn puts(s: string);
 
 fn my_main() -> i64 {
 	let a:[i64;2] := [1, 2];
-	blah(a);
-    return 0;
+	let x: i64 := a[0];
+	root::std::io::writei64ln(a[1]);
+    return x;
 }
 
 fn blah(a: [i64; 2]) -> [i64; 2] {
