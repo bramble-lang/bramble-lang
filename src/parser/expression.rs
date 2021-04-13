@@ -249,7 +249,7 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
 
 fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
-    match factor(stream)? {
+    match array_at_index(stream)? {
         Some(f) => {
             let mut ma = f;
             while let Some(token) = stream.next_if(&Lex::MemberAccess) {
@@ -261,6 +261,49 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
                 ma = Expression::MemberAccess(line, Box::new(ma), member);
             }
             Ok(Some(ma))
+        }
+        None => Ok(None),
+    }
+}
+
+fn array_at_index(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+    trace!(stream);
+
+    match factor(stream)? {
+        Some(f) => {
+            match stream.next_if(&Lex::LBracket) {
+                Some(l_br) => {
+                    //
+                    let index = expression(stream)?.ok_or(format!(
+                        "L{}: Index operator must contain valid expression",
+                        l_br.l
+                    ))?;
+                    stream.next_must_be(&Lex::RBracket)?;
+
+                    let mut exp = Expression::ArrayAt {
+                        annotation: l_br.l,
+                        array: box f,
+                        index: box index,
+                    };
+
+                    while let Some(l_br) = stream.next_if(&Lex::LBracket) {
+                        let index = expression(stream)?.ok_or(format!(
+                            "L{}: Index operator must contain valid expression",
+                            l_br.l
+                        ))?;
+                        stream.next_must_be(&Lex::RBracket)?;
+
+                        exp = Expression::ArrayAt {
+                            annotation: l_br.l,
+                            array: box exp,
+                            index: box index,
+                        }
+                    }
+
+                    Ok(Some(exp))
+                }
+                None => Ok(Some(f)),
+            }
         }
         None => Ok(None),
     }
@@ -552,6 +595,90 @@ mod test {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             assert_eq!(array_value(&mut stream), Err((*msg).into()), "{:?}", text);
+        }
+    }
+
+    #[test]
+    fn parse_array_at_index() {
+        for (text, expected) in vec![
+            //
+            (
+                "a[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::Identifier(1, "a".into()),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
+                "(a)[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::Identifier(1, "a".into()),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
+                "a[1][2]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::ArrayAt {
+                        annotation: 1,
+                        array: box Expression::Identifier(1, "a".into()),
+                        index: box Expression::Integer64(1, 1),
+                    },
+                    index: box Expression::Integer64(1, 2),
+                },
+            ),
+            (
+                "((a)[1])[2]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::ArrayAt {
+                        annotation: 1,
+                        array: box Expression::Identifier(1, "a".into()),
+                        index: box Expression::Integer64(1, 1),
+                    },
+                    index: box Expression::Integer64(1, 2),
+                },
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            match array_at_index(&mut stream) {
+                Ok(Some(e)) => assert_eq!(e, expected),
+                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
+                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_array_at_index_fails() {
+        for (text, msg) in [
+            ("a[5", "L0: Expected ], but found EOF"),
+            ("a[5 6]", "L1: Expected ], but found i64 literal 6"),
+            ("a[]", "L1: Index operator must contain valid expression"),
+            ("a[2 + ]", "L1: expected expression after +"),
+        ]
+        .iter()
+        {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            assert_eq!(
+                array_at_index(&mut stream),
+                Err((*msg).into()),
+                "{:?}",
+                text
+            );
         }
     }
 
