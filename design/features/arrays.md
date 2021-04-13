@@ -193,18 +193,25 @@ Braid will start out by just copying the way that Rust compiles these expression
 1. I copy the pointer to the space to the variable name.
 1. In `let a = [1, 2, 3]`, the variable `a` is a pointer to the first element in the array.
 
-### The get operation
+### The get an element operation `let x := a[0]`
 1. Given an array pointer (the LLVM result that comes from computing an array value)
 1. and an index
 1. Compute the GEP for the array pointer at that index
 1. Load that value into a register
 1. That is the result of a get operation
 
-### The set operation
+### The set an element operation `mut a[0] := 5`
 1. Given a mutation statement with a LHS that is an indexed array (`a[0]`)
 1. Compute the RHS expression of the mutation statement
 1. Compute the GEP of the array element at the given index
 1. Store the result of the RHS expression into the GEP
+
+### Mutate the array itself `mut a := [1, 2]`
+1. What about `mut a = [1, 2]`?
+1. Evalutation each element expression in the LHS
+1. Use the RHS as the array pointer
+1. Compute the GEP for each element in the array
+1. Store the result of the corresponding LHS element
 
 ### Passing to a function
 1. In parameters, evaluate the array type to an LLVM pointer
