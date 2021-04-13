@@ -1,10 +1,10 @@
 extern fn puts(s: string);
 
 fn my_main() -> i64 {
-	let a:[i64;2] := [1, 2];
-	let x: i64 := a[0];
-	root::std::io::writei64ln(a[1]);
-    return x;
+	let a:[[i64;2]; 1] := [[1, 2]];
+	let x: i64 := a[0][1];
+	root::std::io::writei64ln(x);
+    return 0;
 }
 
 fn blah(a: [i64; 2]) -> [i64; 2] {

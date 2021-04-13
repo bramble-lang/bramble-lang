@@ -665,7 +665,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     let llvm_idx = llvm.context.i64_type().const_int(idx, false);
                     unsafe {
                         let el_ptr = llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "");
-                        llvm.builder.build_store(el_ptr, e);
+                        if el_ptr.get_type().get_element_type().is_array_type() {
+                            llvm.build_memcpy(el_ptr, e.into_pointer_value());
+                        } else {
+                            llvm.builder.build_store(el_ptr, e);
+                        }
                     }
                     idx += 1;
                 }
@@ -692,9 +696,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 };
 
                 // Load the value pointed to by GEP and return that
-                let el_val = llvm.builder.build_load(el_ptr, "");
+                let el_val = if el_ptr.get_type().get_element_type().is_array_type() {
+                    el_ptr.into()
+                } else {
+                    llvm.builder.build_load(el_ptr, "").into()
+                };
 
-                Some(el_val.into())
+                Some(el_val)
             }
             _ => todo!("{} not implemented yet", self),
         }
