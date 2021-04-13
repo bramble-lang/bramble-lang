@@ -2,9 +2,10 @@ extern fn puts(s: string);
 
 fn my_main() -> i64 {
 	let a:[i64;2] := [1, 2];
+	blah(a);
     return 0;
 }
 
-fn blah() -> i64 {
+fn blah(a: [i64; 2]) -> i64 {
 	return 5;
 }

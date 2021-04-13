@@ -237,7 +237,7 @@ impl<'ctx> IrGen<'ctx> {
         for p in params {
             let ty_llvm = anytype_to_basictype(p.to_llvm_ir(self));
             match ty_llvm {
-                Some(ty_llvm) if ty_llvm.is_struct_type() => {
+                Some(ty_llvm) if ty_llvm.is_struct_type() || ty_llvm.is_array_type() => {
                     llvm_params.push(ty_llvm.ptr_type(AddressSpace::Generic).into())
                 }
                 Some(ty_llvm) => llvm_params.push(ty_llvm),
