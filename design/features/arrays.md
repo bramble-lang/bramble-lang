@@ -199,6 +199,8 @@ Braid will start out by just copying the way that Rust compiles these expression
 1. Compute the GEP for the array pointer at that index
 1. Load that value into a register
 1. That is the result of a get operation
+1. The semantic rule for the index operator is that the LHS must be an array type and the resolved type is the element type of the LHS.
+1. Another semantic rule: the index type must resolve to be an i64 type
 
 ### The set an element operation `mut a[0] := 5`
 1. Given a mutation statement with a LHS that is an indexed array (`a[0]`)
