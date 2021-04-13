@@ -638,22 +638,29 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 Some(s_ptr.into())
             }
             ast::Expression::ArrayValue(meta, len, elements) => {
-                let a_ty = anytype_to_basictype(meta.ty.to_llvm_ir(llvm)).unwrap();
-                let a_ptr = llvm.builder.build_alloca(a_ty, "");
+                let a_ty = meta.ty();
+                let a_llvm_ty = anytype_to_basictype(a_ty.to_llvm_ir(llvm)).unwrap();
+                let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
 
+                // Compute the results for each element of the array value
                 let elements_llvm: Vec<_> = elements
                     .iter()
                     .map(|e| e.to_llvm_ir(llvm).unwrap())
                     .collect();
 
+                // Move those results into the elements of the array
                 let mut idx = 0;
-                let array = llvm.builder.build_load(a_ptr, "").into_array_value();
+                let outer_idx = llvm.context.i64_type().const_int(0, false);
                 for e in elements_llvm {
-                    llvm.builder.build_insert_value(array, e, idx, "").unwrap();
+                    let llvm_idx = llvm.context.i64_type().const_int(idx, false);
+                    unsafe {
+                        let el_ptr = llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "");
+                        llvm.builder.build_store(el_ptr, e);
+                    }
                     idx += 1;
                 }
 
-                Some(array.into())
+                Some(a_ptr.into())
             }
             _ => todo!("{} not implemented yet", self),
         }

@@ -1,6 +1,10 @@
 extern fn puts(s: string);
 
 fn my_main() -> i64 {
-	let a: [i64; 5] := [1, 2, 3, 4, 5];
+	[1, blah(), 3, 4, blah()];
     return 0;
+}
+
+fn blah() -> i64 {
+	return 5;
 }

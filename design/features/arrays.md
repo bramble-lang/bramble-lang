@@ -180,15 +180,18 @@ Braid will start out by just copying the way that Rust compiles these expression
 
 ### Array Value
 1. Allocate space on the stack with `alloca`
-1. `bitcast` the array pointer to a pointer to the first element in the array
+1. <s>`bitcast` the array pointer to a pointer to the first element in the array</s>.  This understanding is wrong.  Rust bitcasts the array ptr to assign the first element but ONLY the first element. For all other elements it uses GEP on the array pointer to get the element
 1. For each element in the array, compile the element to LLVM
-1. For each LLVM Value, use `getelementptr` to point to the array at a given index
+1. For each LLVM Value, use `getelementptr` on the _array_ pointer to point to the array at a given index
 1. `store` the value to that location
+1. Resolve the LLVM value of the array value to be the pointer returned by `alloca`.  This can then be copied into the binding variable.
 
 ### Binding
 1. Allocate space on the stack with `alloca`
 1. Evaluate the RHS of the bind expression
 1. Do I memcpy the result of the RHS into the newly allocated space on the stack or do I use a pointer?
+1. I copy the pointer to the space to the variable name.
+1. In `let a = [1, 2, 3]`, the variable `a` is a pointer to the first element in the array.
 
 ### Passing to a function
 1. In parameters, evaluate the array type to an LLVM pointer
@@ -198,6 +201,12 @@ Braid will start out by just copying the way that Rust compiles these expression
 1. Update the signature of the function: insert a new parameter that is a pointer to an array (the same type as the return type) and make the return type void
 1. At the call site, `alloca` space for the returned array on the stack then pass the pointer to the array as the out parameter for the function.
 1. In the function, at the point of return, copy the array value to the location pointed to by the out parameter.
+1. This is why Rust has compile time array sizes: if the size of an array returned by a function was dynamically set within the function, then Rust would not know how much space to allocate for the array at the call site.  (How does Clang deal with this?)
 
 ## FAQ
 1. What about an empty array value `[]` what type does that resolve to? What's the difference between an array with no values and the unit?
+2. In the line `let a = [1, 2, 3]` what is `a`? `a` is a pointer to the space in memory where the array begings.  The pointer to the first element in the array.  In the case of LLVM, `a` would be the value returned by `alloca`.
+3. Do arrays embed information about their size? No, because arrays have fixed compile time size, they do not need to embed information about their size into the array. This lets the array also be a core model for how contiguous memory works in the hardware.  If we want to do bounds checking on indices, then that can be computed at compile time because the size for an array
+will be known at compile time.
+4. What about when we need dynamically sized segment of memory? For things like building memory buffers, creating vectors, creating strings, etc.? Dynamically sized buffers will need to go into the heap. So a separate heap only array can be created once I have built the heap system and memory management for Braid.
+5. Something I noticed in the Rust examples: some of hte GEP calls use `i64` for the index and some use `i32`? Why does this happen?
