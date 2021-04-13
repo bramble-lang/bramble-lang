@@ -663,13 +663,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 let outer_idx = llvm.context.i64_type().const_int(0, false);
                 for e in elements_llvm {
                     let llvm_idx = llvm.context.i64_type().const_int(idx, false);
-                    unsafe {
-                        let el_ptr = llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "");
-                        if el_ptr.get_type().get_element_type().is_array_type() {
-                            llvm.build_memcpy(el_ptr, e.into_pointer_value());
-                        } else {
-                            llvm.builder.build_store(el_ptr, e);
-                        }
+                    let el_ptr =
+                        unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
+                    let el_ty = el_ptr.get_type().get_element_type();
+                    if el_ty.is_array_type() {
+                        llvm.build_memcpy(el_ptr, e.into_pointer_value());
+                    } else {
+                        llvm.builder.build_store(el_ptr, e);
                     }
                     idx += 1;
                 }
@@ -696,7 +696,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 };
 
                 // Load the value pointed to by GEP and return that
-                let el_val = if el_ptr.get_type().get_element_type().is_array_type() {
+                let el_ty = el_ptr.get_type().get_element_type();
+                let el_val = if el_ty.is_array_type() {
                     el_ptr.into()
                 } else {
                     llvm.builder.build_load(el_ptr, "").into()
