@@ -220,7 +220,7 @@ impl<'ctx> IrGen<'ctx> {
         // If the return type is a structure, then update the function to use
         // a return parameter and make the function a void
         let llvm_ty = match ret_ty {
-            ast::Type::Custom(_) => {
+            ast::Type::Custom(_) | ast::Type::Array(..) => {
                 self.fn_use_out_param.insert(name.into());
 
                 let ptr_ty = anytype_to_basictype(ret_ty.to_llvm_ir(self))
@@ -465,7 +465,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
             None => llvm.builder.build_return(None),
             Some(val) => {
                 match val.get_type() {
-                    ast::Type::Custom(_) => {
+                    // Instead of type use the table that indicates the out parameter was added
+                    ast::Type::Custom(_) | ast::Type::Array(..) => {
                         let out = llvm.registers.get(".out").unwrap().into_pointer_value();
                         let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
                         llvm.build_memcpy(out, src_ptr);
@@ -754,6 +755,13 @@ impl ast::RoutineCall {
                             let ptr = llvm.builder.build_alloca(sdef_llvm, "");
                             llvm_params.push(ptr.into());
                             Some(ptr)
+                        }
+                        ast::Type::Array(el_ty, len) => {
+                            let el_llvm_ty = anytype_to_basictype(el_ty.to_llvm_ir(llvm)).unwrap();
+                            let a_llvm_ty = el_llvm_ty.array_type(*len as u32);
+                            let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
+                            llvm_params.push(a_ptr.into());
+                            Some(a_ptr)
                         }
                         _ => None,
                     }

@@ -6,6 +6,6 @@ fn my_main() -> i64 {
     return 0;
 }
 
-fn blah(a: [i64; 2]) -> i64 {
-	return 5;
+fn blah(a: [i64; 2]) -> [i64; 2] {
+	return a;
 }
