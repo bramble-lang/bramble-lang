@@ -1,4 +1,4 @@
-# Feature: Arrays
+# Feature: Arrays Allocation and Values
 ## Problem
 A fixed set of randomly accessible data is one of the most basic types used in computer science
 and is the foundation for almost all complex data structures.  It is also necessary for modelling
@@ -192,6 +192,19 @@ Braid will start out by just copying the way that Rust compiles these expression
 1. Do I memcpy the result of the RHS into the newly allocated space on the stack or do I use a pointer?
 1. I copy the pointer to the space to the variable name.
 1. In `let a = [1, 2, 3]`, the variable `a` is a pointer to the first element in the array.
+
+### The get operation
+1. Given an array pointer (the LLVM result that comes from computing an array value)
+1. and an index
+1. Compute the GEP for the array pointer at that index
+1. Load that value into a register
+1. That is the result of a get operation
+
+### The set operation
+1. Given a mutation statement with a LHS that is an indexed array (`a[0]`)
+1. Compute the RHS expression of the mutation statement
+1. Compute the GEP of the array element at the given index
+1. Store the result of the RHS expression into the GEP
 
 ### Passing to a function
 1. In parameters, evaluate the array type to an LLVM pointer
