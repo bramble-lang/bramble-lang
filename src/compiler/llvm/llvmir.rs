@@ -466,6 +466,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
             Some(val) => {
                 match val.get_type() {
                     // Instead of type use the table that indicates the out parameter was added
+                    // TODO: I think that this can be linked to the `llvm.fn_out_params` table
                     ast::Type::Custom(_) | ast::Type::Array(..) => {
                         let out = llvm.registers.get(".out").unwrap().into_pointer_value();
                         let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
@@ -749,6 +750,7 @@ impl ast::RoutineCall {
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
                 let out_param = if llvm.fn_use_out_param.contains(&fn_name) {
+                    // TODO: I think that this can be genericized and linked to the `llvm.fn_out_params` table
                     match ret_ty {
                         ast::Type::Custom(sdef) => {
                             let sdef_llvm = llvm.module.get_struct_type(&sdef.to_label()).unwrap();
