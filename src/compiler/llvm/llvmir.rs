@@ -423,6 +423,14 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
                 llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
                 Some(ptr)
             }
+            Some(ty) if ty.is_array_type() => {
+                let ptr = llvm
+                    .builder
+                    .build_alloca(ty.ptr_type(AddressSpace::Generic), self.get_id());
+                llvm.builder.build_store(ptr, rhs);
+                llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
+                Some(ptr)
+            }
             Some(ty) => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
                 llvm.builder.build_store(ptr, rhs);
@@ -660,6 +668,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     idx += 1;
                 }
 
+                // The arch value of this expression is the ptr to the array
                 Some(a_ptr.into())
             }
             _ => todo!("{} not implemented yet", self),
