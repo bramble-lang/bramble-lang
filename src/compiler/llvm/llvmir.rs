@@ -464,7 +464,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
             Some(val) => {
                 match val.get_type() {
                     // Instead of type use the table that indicates the out parameter was added
-                    // TODO: I think that this can be linked to the `llvm.fn_out_params` table
+                    // TODO: I think that this can be linked to the `llvm.fn_out_params` table. I do it with Return
                     ast::Type::Custom(_) | ast::Type::Array(..) => {
                         let out = llvm.registers.get(".out").unwrap().into_pointer_value();
                         let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
@@ -893,19 +893,6 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     }
 
     Ok(escaped_str)
-}
-
-fn anytype_to_basictype2(any_ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
-    match any_ty {
-        AnyTypeEnum::StructType(st_ty) => Some(st_ty.into()),
-        AnyTypeEnum::IntType(i_ty) => Some(i_ty.into()),
-        AnyTypeEnum::PointerType(ptr_ty) => Some(ptr_ty.into()),
-        AnyTypeEnum::ArrayType(a_ty) => Some(a_ty.into()),
-        AnyTypeEnum::VoidType(_) => panic!("Cannot convert void to basic type"),
-        AnyTypeEnum::FloatType(_) | AnyTypeEnum::FunctionType(_) | AnyTypeEnum::VectorType(_) => {
-            todo!("Not implemented")
-        }
-    }
 }
 
 fn get_ptr_alignment<'ctx>(ptr: PointerValue<'ctx>) -> u32 {
