@@ -200,15 +200,18 @@ impl<'a> TypeResolver<'a> {
             ..
         } in fields.iter()
         {
-            if let Type::Custom(ty_name) = field_type {
-                self.symbols.lookup_symbol_by_path(ty_name).map_err(|e| {
-                    format!(
-                        "member {}.{} invalid: {}",
-                        struct_def.get_name(),
-                        field_name,
-                        e
-                    )
-                })?;
+            match field_type {
+                Type::Custom(ty_name) => {
+                    self.symbols.lookup_symbol_by_path(ty_name).map_err(|e| {
+                        format!(
+                            "member {}.{} invalid: {}",
+                            struct_def.get_name(),
+                            field_name,
+                            e
+                        )
+                    })?;
+                }
+                _ => (),
             }
         }
 
@@ -459,7 +462,7 @@ impl<'a> TypeResolver<'a> {
                 // Check that they are homogenous
                 let el_ty;
                 if nelements.len() == 0 {
-                    el_ty = Type::Unit;
+                    return Err("Arrays with 0 length are not allowed".into());
                 } else {
                     el_ty = nelements[0].annotation().ty.clone();
                     for e in &nelements {
@@ -470,7 +473,9 @@ impl<'a> TypeResolver<'a> {
                 }
 
                 let mut meta = meta.clone();
-                meta.ty = Type::Array(Box::new(el_ty), *len);
+                meta.ty = self
+                    .symbols
+                    .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;
 
                 // Use the size of the array and the type to define the array type
                 Ok(Expression::ArrayValue(meta, nelements, *len))

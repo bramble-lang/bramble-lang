@@ -214,6 +214,16 @@ impl<'a> SymbolTableScopeStack<'a> {
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
                 self.canonize_nonlocal_type_ref(parent_path, &ty)?,
             ))),
+            Type::Array(el_ty, len) => {
+                if *len <= 0 {
+                    Err(format!("Expected length > 0 for array, but found {}", *len))
+                } else {
+                    Ok(Type::Array(
+                        box self.canonize_nonlocal_type_ref(parent_path, el_ty)?,
+                        *len,
+                    ))
+                }
+            }
             _ => Ok(ty.clone()),
         }
     }
@@ -232,6 +242,13 @@ impl<'a> SymbolTableScopeStack<'a> {
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
                 self.canonize_local_type_ref(&ty)?,
             ))),
+            Type::Array(el_ty, len) => {
+                if *len <= 0 {
+                    Err(format!("Expected length > 0 for array, but found {}", *len))
+                } else {
+                    Ok(Type::Array(box self.canonize_local_type_ref(el_ty)?, *len))
+                }
+            }
             _ => Ok(ty.clone()),
         }
     }
