@@ -13,5 +13,5 @@ struct S {
 }
 
 struct S2 {
-    x: [S; 2],
+    x: [root::S; 2],
 }
