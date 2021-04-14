@@ -2145,6 +2145,21 @@ mod tests {
                 Err("Semantic: L3: Return expected [i32; 5] but got [i64; 5]"),
             ),
             (
+                "fn main() -> [i32;0] {
+                    let k: [i64;0] := [];
+                    return k;
+                }",
+                Err("Semantic: Expected length > 0 for array, but found 0"),
+            ),
+            (
+                "fn main() -> [i32;1] {
+                    [];
+                    let k: [i64;1] := [1];
+                    return k;
+                }",
+                Err("Semantic: L2: Arrays with 0 length are not allowed"),
+            ),
+            (
                 "fn main() -> [i32;5] {
                     let k: [i32;5] := [1, 2, 3, 4, 5];
                     return k;
