@@ -256,27 +256,26 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
             // if `.` then parse member access operation
             // if `[` then parse index operation
             while let Some(token) = stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket]) {
-                match token.s {
-                    Lex::MemberAccess => {
-                        let line = token.l;
-                        let (_, member) = stream.next_if_id().ok_or(format!(
+                ma = match token.s {
+                    Lex::MemberAccess => stream
+                        .next_if_id()
+                        .map(|(_, member)| Expression::MemberAccess(token.l, Box::new(ma), member))
+                        .ok_or(format!(
                             "L{}: expect field name after member access '.'",
-                            line
-                        ))?;
-                        ma = Expression::MemberAccess(line, Box::new(ma), member);
-                    }
+                            token.l
+                        ))?,
                     Lex::LBracket => {
                         let index = expression(stream)?.ok_or(format!(
                             "L{}: Index operator must contain valid expression",
                             token.l
                         ))?;
-                        stream.next_must_be(&Lex::RBracket)?;
-
-                        ma = Expression::ArrayAt {
-                            annotation: token.l,
-                            array: box ma,
-                            index: box index,
-                        };
+                        stream
+                            .next_must_be(&Lex::RBracket)
+                            .map(|_| Expression::ArrayAt {
+                                annotation: token.l,
+                                array: box ma,
+                                index: box index,
+                            })?
                     }
                     _ => {
                         return Err(format!(
@@ -284,7 +283,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
                             token.l, token.s
                         ))
                     }
-                }
+                };
             }
 
             Ok(Some(ma))
