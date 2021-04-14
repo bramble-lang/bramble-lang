@@ -546,6 +546,18 @@ mod test {
                     3,
                 ),
             ),
+            (
+                "[[1,],]",
+                Expression::ArrayValue(
+                    1,
+                    vec![Expression::ArrayValue(
+                        1,
+                        vec![Expression::Integer64(1, 1)],
+                        1,
+                    )],
+                    1,
+                ),
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
