@@ -240,4 +240,7 @@ will be known at compile time.
 1. Array of structs
 1. Array of structs that have an array field
 1. Struct with a field that's an array of structs
- 
+
+### Bugs
+1. When using a struct in the array type of a binding it must be the canonical path or I get an error.  I must have forgotten to canonize array types
+1. Parser fails when I put the [] operator after a member dereference

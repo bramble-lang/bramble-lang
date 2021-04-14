@@ -666,7 +666,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     let el_ptr =
                         unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
                     let el_ty = el_ptr.get_type().get_element_type();
-                    if el_ty.is_array_type() {
+
+                    if el_ty.is_array_type() || el_ty.is_struct_type() {
                         llvm.build_memcpy(el_ptr, e.into_pointer_value());
                     } else {
                         llvm.builder.build_store(el_ptr, e);
@@ -697,7 +698,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 // Load the value pointed to by GEP and return that
                 let el_ty = el_ptr.get_type().get_element_type();
-                let el_val = if el_ty.is_array_type() {
+                let el_val = if el_ty.is_array_type() || el_ty.is_struct_type() {
                     el_ptr.into()
                 } else {
                     llvm.builder.build_load(el_ptr, "").into()

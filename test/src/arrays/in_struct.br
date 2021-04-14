@@ -1,0 +1,11 @@
+fn my_main() -> i64 {
+    let s: S := S{x: [1, 2]};
+
+    root::std::io::writei64ln(s.x[0]);
+
+    return 0;
+}
+
+struct S {
+    x: [i64;2],
+}
