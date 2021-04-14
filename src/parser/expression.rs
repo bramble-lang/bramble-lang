@@ -243,7 +243,7 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
                 negate(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
             Expression::unary_op(op.l, &op.s, Box::new(factor))
         }
-        None => array_at_index(stream),
+        None => member_access(stream),
     }
 }
 
@@ -252,58 +252,42 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
     match factor(stream)? {
         Some(f) => {
             let mut ma = f;
-            while let Some(token) = stream.next_if(&Lex::MemberAccess) {
-                let line = token.l;
-                let (_, member) = stream.next_if_id().ok_or(format!(
-                    "L{}: expect field name after member access '.'",
-                    line
-                ))?;
-                ma = Expression::MemberAccess(line, Box::new(ma), member);
-            }
-            Ok(Some(ma))
-        }
-        None => Ok(None),
-    }
-}
-
-fn array_at_index(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
-    trace!(stream);
-
-    match member_access(stream)? {
-        Some(f) => {
-            match stream.next_if(&Lex::LBracket) {
-                Some(l_br) => {
-                    //
-                    let index = expression(stream)?.ok_or(format!(
-                        "L{}: Index operator must contain valid expression",
-                        l_br.l
-                    ))?;
-                    stream.next_must_be(&Lex::RBracket)?;
-
-                    let mut exp = Expression::ArrayAt {
-                        annotation: l_br.l,
-                        array: box f,
-                        index: box index,
-                    };
-
-                    while let Some(l_br) = stream.next_if(&Lex::LBracket) {
+            // Peek at next token
+            // if `.` then parse member access operation
+            // if `[` then parse index operation
+            while let Some(token) = stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket]) {
+                match token.s {
+                    Lex::MemberAccess => {
+                        let line = token.l;
+                        let (_, member) = stream.next_if_id().ok_or(format!(
+                            "L{}: expect field name after member access '.'",
+                            line
+                        ))?;
+                        ma = Expression::MemberAccess(line, Box::new(ma), member);
+                    }
+                    Lex::LBracket => {
                         let index = expression(stream)?.ok_or(format!(
                             "L{}: Index operator must contain valid expression",
-                            l_br.l
+                            token.l
                         ))?;
                         stream.next_must_be(&Lex::RBracket)?;
 
-                        exp = Expression::ArrayAt {
-                            annotation: l_br.l,
-                            array: box exp,
+                        ma = Expression::ArrayAt {
+                            annotation: token.l,
+                            array: box ma,
                             index: box index,
-                        }
+                        };
                     }
-
-                    Ok(Some(exp))
+                    _ => {
+                        return Err(format!(
+                            "L{}: Expected [ or . but found {}",
+                            token.l, token.s
+                        ))
+                    }
                 }
-                None => Ok(Some(f)),
             }
+
+            Ok(Some(ma))
         }
         None => Ok(None),
     }
@@ -643,6 +627,22 @@ mod test {
                 ),
             ),
             (
+                "a[0].b[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::MemberAccess(
+                        1,
+                        box Expression::ArrayAt {
+                            annotation: 1,
+                            array: box Expression::Identifier(1, "a".into()),
+                            index: box Expression::Integer64(1, 0),
+                        },
+                        "b".into(),
+                    ),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
                 "a[1][2]",
                 Expression::ArrayAt {
                     annotation: 1,
@@ -697,12 +697,7 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            assert_eq!(
-                array_at_index(&mut stream),
-                Err((*msg).into()),
-                "{:?}",
-                text
-            );
+            assert_eq!(expression(&mut stream), Err((*msg).into()), "{:?}", text);
         }
     }
 
