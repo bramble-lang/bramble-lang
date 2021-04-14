@@ -212,6 +212,21 @@ where
             Expression::Integer64(ref mut annotation, _i) => self.transform(annotation, f),
             Expression::Boolean(ref mut annotation, _b) => self.transform(annotation, f),
             Expression::StringLiteral(ref mut annotation, _s) => self.transform(annotation, f),
+            Expression::ArrayValue(ref mut annotation, el, _) => {
+                self.transform(annotation, f);
+                for e in el {
+                    self.transform(e.annotation_mut(), f);
+                }
+            }
+            Expression::ArrayAt {
+                annotation,
+                array,
+                index,
+            } => {
+                self.transform(annotation, f);
+                self.transform(array.annotation_mut(), f);
+                self.transform(index.annotation_mut(), f);
+            }
             Expression::CustomType(ref mut annotation, _name) => self.transform(annotation, f),
             Expression::Identifier(ref mut annotation, _id) => self.transform(annotation, f),
             Path(ref mut annotation, _path) => self.transform(annotation, f),

@@ -197,6 +197,8 @@ where
             Integer64(_, i) => Integer64(self.transform(exp), *i),
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
+            ArrayValue(_, _, _) => self.for_array_value(exp),
+            ArrayAt { .. } => self.for_array_at(exp),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
             Path(_, path) => Path(self.transform(exp), path.clone()),
@@ -317,6 +319,34 @@ where
             Expression::StructExpression(b, struct_name.clone(), nfields)
         } else {
             panic!("Expected StructExpression, but got {:?}", se)
+        }
+    }
+
+    fn for_array_value(&mut self, av: &Expression<A>) -> Expression<B> {
+        if let Expression::ArrayValue(_, elements, len) = av {
+            let b = self.transform(av);
+            let mut nelements = vec![];
+            for e in elements {
+                nelements.push(self.for_expression(e));
+            }
+            Expression::ArrayValue(b, nelements, *len)
+        } else {
+            panic!("Expected ArrayValue but got {:?}", av)
+        }
+    }
+
+    fn for_array_at(&mut self, ar_at: &Expression<A>) -> Expression<B> {
+        if let Expression::ArrayAt { array, index, .. } = ar_at {
+            let b = self.transform(ar_at);
+            let array = self.for_expression(array);
+            let index = self.for_expression(index);
+            Expression::ArrayAt {
+                annotation: b,
+                array: box array,
+                index: box index,
+            }
+        } else {
+            panic!("Expected ArrayAt, but got {:?}", ar_at)
         }
     }
 }

@@ -13,6 +13,12 @@ pub enum Expression<I> {
     Integer64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
+    ArrayValue(I, Vec<Expression<I>>, usize),
+    ArrayAt {
+        annotation: I,
+        array: Box<Expression<I>>,
+        index: Box<Expression<I>>,
+    },
     CustomType(I, Path),
     Identifier(I, String),
     Path(I, Path),
@@ -54,6 +60,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
+            ArrayValue(m, _, _) => m,
+            ArrayAt { annotation: m, .. } => m,
         }
     }
 
@@ -76,6 +84,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
+            ArrayValue(m, _, _) => m,
+            ArrayAt { annotation: m, .. } => m,
         }
     }
 
@@ -97,6 +107,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
                 }
                 o
             }
+            ArrayAt { array, index, .. } => vec![array.as_ref(), index.as_ref()],
             MemberAccess(_, src, _) => vec![src.as_ref()],
             BinaryOp(.., l, r) => vec![l.as_ref(), r.as_ref()],
             UnaryOp(.., r) => vec![r.as_ref()],
@@ -134,6 +145,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | Integer64(..)
             | Boolean(..)
             | StringLiteral(..)
+            | ArrayValue(_, _, _)
             | CustomType(..)
             | Identifier(..)
             | IdentifierDeclare(..)
@@ -168,6 +180,14 @@ impl<I> Expression<I> {
             Integer64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
+            ArrayValue(_, v, _) => format!(
+                "[{}]",
+                v.iter()
+                    .map(|e| format!("{}", e))
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
+            ArrayAt { array, index, .. } => format!("{}[{}]", array, index),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => v.clone(),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),

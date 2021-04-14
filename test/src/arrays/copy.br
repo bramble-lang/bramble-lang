@@ -1,0 +1,18 @@
+
+fn my_main() -> i64 {
+    let a: [i64; 5] := [1, 2, 3, 4, 5];
+    root::std::io::writei64ln(a[0]);
+    root::std::io::writei64ln(a[1]);
+    root::std::io::writei64ln(a[2]);
+    root::std::io::writei64ln(a[3]);
+    root::std::io::writei64ln(a[4]);
+
+    let b: [i64; 5] := a;
+    root::std::io::writei64ln(b[0]);
+    root::std::io::writei64ln(b[1]);
+    root::std::io::writei64ln(b[2]);
+    root::std::io::writei64ln(b[3]);
+    root::std::io::writei64ln(b[4]);
+
+    return 0;
+}

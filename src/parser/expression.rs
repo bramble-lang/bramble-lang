@@ -252,14 +252,38 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
     match factor(stream)? {
         Some(f) => {
             let mut ma = f;
-            while let Some(token) = stream.next_if(&Lex::MemberAccess) {
-                let line = token.l;
-                let (_, member) = stream.next_if_id().ok_or(format!(
-                    "L{}: expect field name after member access '.'",
-                    line
-                ))?;
-                ma = Expression::MemberAccess(line, Box::new(ma), member);
+            while let Some(token) = stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket]) {
+                ma = match token.s {
+                    Lex::MemberAccess => stream
+                        .next_if_id()
+                        .map(|(_, member)| Expression::MemberAccess(token.l, Box::new(ma), member))
+                        .ok_or(format!(
+                            "L{}: expect field name after member access '.'",
+                            token.l
+                        ))?,
+                    Lex::LBracket => expression(stream)?
+                        .ok_or(format!(
+                            "L{}: Index operator must contain valid expression",
+                            token.l
+                        ))
+                        .map(|index| {
+                            stream
+                                .next_must_be(&Lex::RBracket)
+                                .map(|_| Expression::ArrayAt {
+                                    annotation: token.l,
+                                    array: box ma,
+                                    index: box index,
+                                })
+                        })??,
+                    _ => {
+                        return Err(format!(
+                            "L{}: Expected [ or . but found {}",
+                            token.l, token.s
+                        ))
+                    }
+                };
             }
+
             Ok(Some(ma))
         }
         None => Ok(None),
@@ -282,7 +306,8 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
             .por(expression_block, stream)
             .por(function_call_or_variable, stream)
             .por(co_yield, stream)
-            .por(constant, stream),
+            .por(constant, stream)
+            .por(array_value, stream),
     }
 }
 
@@ -404,6 +429,28 @@ fn struct_init_params(
     }
 }
 
+fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+    trace!(stream);
+    match stream.next_if(&Lex::LBracket) {
+        Some(token) => {
+            let mut elements = vec![];
+            // loop through comma separated list of expressions
+            while let Some(element) = expression(stream)? {
+                elements.push(element);
+                match stream.next_if(&Lex::Comma) {
+                    Some(_) => {}
+                    None => break,
+                };
+            }
+            stream.next_must_be(&Lex::RBracket)?;
+
+            let len = elements.len();
+            Ok(Some(Expression::ArrayValue(token.l, elements, len)))
+        }
+        None => Ok(None),
+    }
+}
+
 fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     number(stream)
@@ -473,6 +520,193 @@ mod test {
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
                 Err(err) => panic!("Expected {:?}, but got {}", expected, err),
             }
+        }
+    }
+
+    #[test]
+    fn parse_array_value() {
+        for (text, expected) in vec![
+            (
+                "[1]",
+                Expression::ArrayValue(1, vec![Expression::Integer64(1, 1)], 1),
+            ),
+            (
+                "[1,]",
+                Expression::ArrayValue(1, vec![Expression::Integer64(1, 1)], 1),
+            ),
+            (
+                "[1, 2, 3]",
+                Expression::ArrayValue(
+                    1,
+                    vec![
+                        Expression::Integer64(1, 1),
+                        Expression::Integer64(1, 2),
+                        Expression::Integer64(1, 3),
+                    ],
+                    3,
+                ),
+            ),
+            (
+                "[[1,],]",
+                Expression::ArrayValue(
+                    1,
+                    vec![Expression::ArrayValue(
+                        1,
+                        vec![Expression::Integer64(1, 1)],
+                        1,
+                    )],
+                    1,
+                ),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            match array_value(&mut stream) {
+                Ok(Some(e)) => assert_eq!(e, expected),
+                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
+                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_array_fails() {
+        for (text, msg) in [
+            ("[5", "L0: Expected ], but found EOF"),
+            ("[5 6]", "L1: Expected ], but found i64 literal 6"),
+        ]
+        .iter()
+        {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            assert_eq!(array_value(&mut stream), Err((*msg).into()), "{:?}", text);
+        }
+    }
+
+    #[test]
+    fn parse_array_at_index() {
+        for (text, expected) in vec![
+            //
+            (
+                "a[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::Identifier(1, "a".into()),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
+                "(a)[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::Identifier(1, "a".into()),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
+                "a.b[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::MemberAccess(
+                        1,
+                        box Expression::Identifier(1, "a".into()),
+                        "b".into(),
+                    ),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
+                "a[1].b",
+                Expression::MemberAccess(
+                    1,
+                    box Expression::ArrayAt {
+                        annotation: 1,
+                        array: box Expression::Identifier(1, "a".into()),
+                        index: box Expression::Integer64(1, 1),
+                    },
+                    "b".into(),
+                ),
+            ),
+            (
+                "a[0].b[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::MemberAccess(
+                        1,
+                        box Expression::ArrayAt {
+                            annotation: 1,
+                            array: box Expression::Identifier(1, "a".into()),
+                            index: box Expression::Integer64(1, 0),
+                        },
+                        "b".into(),
+                    ),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
+                "a[1][2]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::ArrayAt {
+                        annotation: 1,
+                        array: box Expression::Identifier(1, "a".into()),
+                        index: box Expression::Integer64(1, 1),
+                    },
+                    index: box Expression::Integer64(1, 2),
+                },
+            ),
+            (
+                "((a)[1])[2]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::ArrayAt {
+                        annotation: 1,
+                        array: box Expression::Identifier(1, "a".into()),
+                        index: box Expression::Integer64(1, 1),
+                    },
+                    index: box Expression::Integer64(1, 2),
+                },
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            match expression(&mut stream) {
+                Ok(Some(e)) => assert_eq!(e, expected),
+                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
+                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_array_at_index_fails() {
+        for (text, msg) in [
+            ("a[5", "L0: Expected ], but found EOF"),
+            ("a[5 6]", "L1: Expected ], but found i64 literal 6"),
+            ("a[]", "L1: Index operator must contain valid expression"),
+            ("a[2 + ]", "L1: expected expression after +"),
+        ]
+        .iter()
+        {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens);
+            assert_eq!(expression(&mut stream), Err((*msg).into()), "{:?}", text);
         }
     }
 

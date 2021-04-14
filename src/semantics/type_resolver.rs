@@ -200,15 +200,18 @@ impl<'a> TypeResolver<'a> {
             ..
         } in fields.iter()
         {
-            if let Type::Custom(ty_name) = field_type {
-                self.symbols.lookup_symbol_by_path(ty_name).map_err(|e| {
-                    format!(
-                        "member {}.{} invalid: {}",
-                        struct_def.get_name(),
-                        field_name,
-                        e
-                    )
-                })?;
+            match field_type {
+                Type::Custom(ty_name) => {
+                    self.symbols.lookup_symbol_by_path(ty_name).map_err(|e| {
+                        format!(
+                            "member {}.{} invalid: {}",
+                            struct_def.get_name(),
+                            field_name,
+                            e
+                        )
+                    })?;
+                }
+                _ => (),
             }
         }
 
@@ -447,6 +450,65 @@ impl<'a> TypeResolver<'a> {
                 let mut meta = meta.clone();
                 meta.ty = Type::StringLiteral;
                 Ok(Expression::StringLiteral(meta.clone(), v.clone()))
+            }
+            Expression::ArrayValue(meta, elements, len) => {
+                // Resolve the types for each element in the array value
+                let nelements: Result<Vec<Expression<SemanticAnnotations>>> = elements
+                    .iter()
+                    .map(|e| self.traverse(e, current_func))
+                    .collect();
+                let nelements = nelements?;
+
+                // Check that they are homogenous
+                let el_ty;
+                if nelements.len() == 0 {
+                    return Err("Arrays with 0 length are not allowed".into());
+                } else {
+                    el_ty = nelements[0].annotation().ty.clone();
+                    for e in &nelements {
+                        if e.annotation().ty != el_ty {
+                            return Err("Inconsistent types in array value".into());
+                        }
+                    }
+                }
+
+                let mut meta = meta.clone();
+                meta.ty = self
+                    .symbols
+                    .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;
+
+                // Use the size of the array and the type to define the array type
+                Ok(Expression::ArrayValue(meta, nelements, *len))
+            }
+            Expression::ArrayAt {
+                annotation: meta,
+                array,
+                index,
+            } => {
+                //  Check that the array value is an array type
+                let n_array = self.traverse(array, current_func)?;
+                let el_ty = match n_array.annotation().ty() {
+                    Type::Array(box el_ty, _) => Ok(el_ty),
+                    ty => Err(format!("Expected array type on LHS of [] but found {}", ty)),
+                }?;
+
+                // Check that the index is an i64 type
+                let n_index = self.traverse(index, current_func)?;
+                if n_index.annotation().ty() != Type::I64 {
+                    return Err(format!(
+                        "Expected i64 for index but found {}",
+                        n_index.annotation().ty()
+                    ));
+                }
+
+                let mut meta = meta.clone();
+                meta.ty = el_ty.clone();
+
+                Ok(Expression::ArrayAt {
+                    annotation: meta,
+                    array: box n_array,
+                    index: box n_index,
+                })
             }
             Expression::CustomType(meta, name) => {
                 let mut meta = meta.clone();
@@ -1944,6 +2006,93 @@ mod tests {
     }
 
     #[test]
+    pub fn test_array_at_index() {
+        for (text, expected) in vec![
+            (
+                "fn main() -> i64 {
+                    let a: [i64; 5] := [1, 2, 3, 4, 5];
+                    let k: i64 := a[0];
+                    return k * 3;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let a: [i64; 5] := [[1, 2, 3, 4, 5]][0];
+                    let k: i64 := a[0];
+                    return k * 3;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let a: [[i64; 1]; 1] := [[1]];
+                    let k: i64 := a[0][0];
+                    return k * 3;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> bool {
+                    let a: [i64; 5] := [1, 2, 3, 4, 5];
+                    let k: i64 := a[false];
+                    return k * 3;
+                }",
+                Err("Semantic: L3: Expected i64 for index but found bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let a: i64 := 1;
+                    let k: i64 := a[0];
+                    return k * 3;
+                }",
+                Err("Semantic: L3: Expected array type on LHS of [] but found i64"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    let bind_stm = &fn_main.get_body()[1];
+                    assert_eq!(bind_stm.annotation().ty, Type::I64);
+
+                    // validate that the RHS of the bind is the correct type
+                    if let Statement::Bind(box b) = bind_stm {
+                        assert_eq!(b.get_rhs().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[2];
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_bind_statement() {
         for (text, expected) in vec![
             (
@@ -1980,6 +2129,49 @@ mod tests {
                     return k;
                 }",
                 Ok(Type::I32),
+            ),
+            (
+                "fn main() -> [i64;5] {
+                    let k: [i64;5] := [1, 2, 3, 4, 5];
+                    return k;
+                }",
+                Ok(Type::Array(Box::new(Type::I64), 5)),
+            ),
+            (
+                "fn main() -> [i32;5] {
+                    let k: [i64;5] := [1, 2, 3, 4, 5];
+                    return k;
+                }",
+                Err("Semantic: L3: Return expected [i32; 5] but got [i64; 5]"),
+            ),
+            (
+                "fn main() -> [i32;0] {
+                    let k: [i64;0] := [];
+                    return k;
+                }",
+                Err("Semantic: Expected length > 0 for array, but found 0"),
+            ),
+            (
+                "fn main() -> [i32;1] {
+                    [];
+                    let k: [i64;1] := [1];
+                    return k;
+                }",
+                Err("Semantic: L2: Arrays with 0 length are not allowed"),
+            ),
+            (
+                "fn main() -> [i32;5] {
+                    let k: [i32;5] := [1, 2, 3, 4, 5];
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected [i32; 5] but got [i64; 5]"),
+            ),
+            (
+                "fn main() -> [i64;5] {
+                    let k: [i64;5] := [1, 2i32, 3, 4, 5];
+                    return k;
+                }",
+                Err("Semantic: L2: Inconsistent types in array value"),
             ),
             (
                 "fn main() -> i64 {

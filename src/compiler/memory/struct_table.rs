@@ -158,6 +158,7 @@ impl UnresolvedStructTable {
                 Type::FunctionDef(_, _) => None,
                 Type::CoroutineDef(_, _) => None,
                 Type::Unknown => None,
+                Type::Array(_, _) => todo!(),
             }
         }
 
@@ -216,6 +217,7 @@ impl ResolvedStructTable {
             Type::StructDef(..) => Some(0),
             Type::Unit => Some(0),
             Type::Unknown => panic!("Requesting size for a type of Unknown"),
+            Type::Array(_, _) => todo!(),
         }
     }
 }

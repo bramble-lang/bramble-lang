@@ -1,6 +1,9 @@
 extern fn puts(s: string);
 
 fn my_main() -> i64 {
-	puts("hello\n");
     return 0;
+}
+
+fn test(a: [i64; 0]) {
+	return;
 }
