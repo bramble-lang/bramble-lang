@@ -243,7 +243,7 @@ impl<'ctx> IrGen<'ctx> {
                     llvm_params.push(ty_llvm.ptr_type(AddressSpace::Generic).into())
                 }
                 Ok(ty_llvm) => llvm_params.push(ty_llvm),
-                Err(msg) => panic!(msg),
+                Err(msg) => panic!("Failed to convert parameter type to LLVM: {}", msg),
             }
         }
         let fn_type = match llvm_ty {
