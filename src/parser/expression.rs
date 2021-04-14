@@ -631,6 +631,18 @@ mod test {
                 },
             ),
             (
+                "a[1].b",
+                Expression::MemberAccess(
+                    1,
+                    box Expression::ArrayAt {
+                        annotation: 1,
+                        array: box Expression::Identifier(1, "a".into()),
+                        index: box Expression::Integer64(1, 1),
+                    },
+                    "b".into(),
+                ),
+            ),
+            (
                 "a[1][2]",
                 Expression::ArrayAt {
                     annotation: 1,
@@ -661,7 +673,7 @@ mod test {
                 .collect::<Result<_>>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            match array_at_index(&mut stream) {
+            match expression(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
                 Err(err) => panic!("Expected {:?}, but got {}", expected, err),
