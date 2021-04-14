@@ -223,7 +223,9 @@ impl<'ctx> IrGen<'ctx> {
             ast::Type::Custom(_) | ast::Type::Array(..) => {
                 self.fn_use_out_param.insert(name.into());
 
-                let ptr_ty = anytype_to_basictype(ret_ty.to_llvm_ir(self))
+                let ptr_ty = ret_ty
+                    .to_llvm_ir(self)
+                    .into_basic_type()
                     .unwrap()
                     .ptr_type(AddressSpace::Generic)
                     .into();
@@ -235,13 +237,13 @@ impl<'ctx> IrGen<'ctx> {
         };
 
         for p in params {
-            let ty_llvm = anytype_to_basictype(p.to_llvm_ir(self));
+            let ty_llvm = p.to_llvm_ir(self).into_basic_type();
             match ty_llvm {
-                Some(ty_llvm) if ty_llvm.is_aggregate_type() => {
+                Ok(ty_llvm) if ty_llvm.is_aggregate_type() => {
                     llvm_params.push(ty_llvm.ptr_type(AddressSpace::Generic).into())
                 }
-                Some(ty_llvm) => llvm_params.push(ty_llvm),
-                None => (),
+                Ok(ty_llvm) => llvm_params.push(ty_llvm),
+                Err(msg) => panic!(msg),
             }
         }
         let fn_type = match llvm_ty {
@@ -261,9 +263,13 @@ impl<'ctx> IrGen<'ctx> {
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
             .iter()
-            .filter_map(|f| match f.ty {
-                ast::Type::Custom(_) => anytype_to_basictype(f.ty.to_llvm_ir(self)),
-                _ => anytype_to_basictype(f.ty.to_llvm_ir(self)),
+            .filter_map(|f| {
+                // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
+                match f.ty {
+                    ast::Type::Custom(_) => f.ty.to_llvm_ir(self).into_basic_type(),
+                    _ => f.ty.to_llvm_ir(self).into_basic_type(),
+                }
+                .ok()
             })
             .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
@@ -414,8 +420,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
 
-        match anytype_to_basictype(self.get_type().to_llvm_ir(llvm)) {
-            Some(ty) if ty.is_aggregate_type() => {
+        match self.get_type().to_llvm_ir(llvm).into_basic_type() {
+            Ok(ty) if ty.is_aggregate_type() => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
                 let rhs_ptr = rhs.into_pointer_value();
                 llvm.build_memcpy(ptr, rhs_ptr);
@@ -423,13 +429,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
                 llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
                 Some(ptr)
             }
-            Some(ty) => {
+            Ok(ty) => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
                 llvm.builder.build_store(ptr, rhs);
                 llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
                 Some(ptr)
             }
-            None => None,
+            Err(msg) => panic!(msg),
         }
     }
 }
@@ -645,7 +651,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             }
             ast::Expression::ArrayValue(meta, len, elements) => {
                 let a_ty = meta.ty();
-                let a_llvm_ty = anytype_to_basictype(a_ty.to_llvm_ir(llvm)).unwrap();
+                let a_llvm_ty = a_ty.to_llvm_ir(llvm).into_basic_type().unwrap();
                 let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
 
                 // Compute the results for each element of the array value
@@ -790,10 +796,12 @@ impl ast::RoutineCall {
                             .get_struct_type(&sdef.to_label())
                             .unwrap()
                             .into(),
-                        ast::Type::Array(el_ty, len) => {
-                            let el_llvm_ty = anytype_to_basictype(el_ty.to_llvm_ir(llvm)).unwrap();
-                            el_llvm_ty.array_type(*len as u32).into()
-                        }
+                        ast::Type::Array(el_ty, len) => el_ty
+                            .to_llvm_ir(llvm)
+                            .into_basic_type()
+                            .unwrap()
+                            .array_type(*len as u32)
+                            .into(),
                         ty => panic!("Expected an aggregate type but got {}", ty),
                     };
 
@@ -845,7 +853,7 @@ impl ast::Type {
             ast::Type::Array(a, len) => {
                 let el_ty = a.as_ref().to_llvm_ir(llvm);
                 let len = *len as u32;
-                anytype_to_basictype(el_ty).unwrap().array_type(len).into()
+                el_ty.into_basic_type().unwrap().array_type(len).into()
             }
             ast::Type::StructDef(_)
             | ast::Type::FunctionDef(_, _)
@@ -887,7 +895,7 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     Ok(escaped_str)
 }
 
-fn anytype_to_basictype(any_ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
+fn anytype_to_basictype2(any_ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
     match any_ty {
         AnyTypeEnum::StructType(st_ty) => Some(st_ty.into()),
         AnyTypeEnum::IntType(i_ty) => Some(i_ty.into()),
@@ -922,5 +930,25 @@ impl<'ctx> LlvmTypeHelper for AnyTypeEnum<'ctx> {
 impl<'ctx> LlvmTypeHelper for BasicTypeEnum<'ctx> {
     fn is_aggregate_type(&self) -> bool {
         self.is_array_type() || self.is_struct_type()
+    }
+}
+
+trait LlvmToBasicTypeEnum<'ctx> {
+    fn into_basic_type(self) -> Result<BasicTypeEnum<'ctx>>;
+}
+
+impl<'ctx> LlvmToBasicTypeEnum<'ctx> for AnyTypeEnum<'ctx> {
+    fn into_basic_type(self) -> Result<BasicTypeEnum<'ctx>> {
+        match self {
+            AnyTypeEnum::StructType(st_ty) => Ok(st_ty.into()),
+            AnyTypeEnum::IntType(i_ty) => Ok(i_ty.into()),
+            AnyTypeEnum::PointerType(ptr_ty) => Ok(ptr_ty.into()),
+            AnyTypeEnum::ArrayType(a_ty) => Ok(a_ty.into()),
+            AnyTypeEnum::VoidType(_) => Err("Cannot convert void to basic type".into()),
+            AnyTypeEnum::FunctionType(_) => Err("Cannot convert void to basic type".into()),
+            AnyTypeEnum::FloatType(_) | AnyTypeEnum::VectorType(_) => {
+                todo!("Not implemented")
+            }
+        }
     }
 }
