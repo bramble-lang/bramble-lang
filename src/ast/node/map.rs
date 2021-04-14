@@ -323,13 +323,13 @@ where
     }
 
     fn for_array_value(&mut self, av: &Expression<A>) -> Expression<B> {
-        if let Expression::ArrayValue(_, len, elements) = av {
+        if let Expression::ArrayValue(_, elements, len) = av {
             let b = self.transform(av);
             let mut nelements = vec![];
             for e in elements {
                 nelements.push(self.for_expression(e));
             }
-            Expression::ArrayValue(b, *len, nelements)
+            Expression::ArrayValue(b, nelements, *len)
         } else {
             panic!("Expected ArrayValue but got {:?}", av)
         }

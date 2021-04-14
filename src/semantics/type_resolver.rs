@@ -448,7 +448,7 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = Type::StringLiteral;
                 Ok(Expression::StringLiteral(meta.clone(), v.clone()))
             }
-            Expression::ArrayValue(meta, len, elements) => {
+            Expression::ArrayValue(meta, elements, len) => {
                 // Resolve the types for each element in the array value
                 let nelements: Result<Vec<Expression<SemanticAnnotations>>> = elements
                     .iter()
@@ -473,7 +473,7 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = Type::Array(Box::new(el_ty), *len);
 
                 // Use the size of the array and the type to define the array type
-                Ok(Expression::ArrayValue(meta, *len, nelements))
+                Ok(Expression::ArrayValue(meta, nelements, *len))
             }
             Expression::ArrayAt {
                 annotation: meta,

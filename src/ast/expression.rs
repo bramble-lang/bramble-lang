@@ -13,7 +13,7 @@ pub enum Expression<I> {
     Integer64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
-    ArrayValue(I, usize, Vec<Expression<I>>),
+    ArrayValue(I, Vec<Expression<I>>, usize),
     ArrayAt {
         annotation: I,
         array: Box<Expression<I>>,
@@ -180,7 +180,7 @@ impl<I> Expression<I> {
             Integer64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
-            ArrayValue(_, _, v) => format!(
+            ArrayValue(_, v, _) => format!(
                 "[{}]",
                 v.iter()
                     .map(|e| format!("{}", e))

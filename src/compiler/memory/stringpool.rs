@@ -56,7 +56,7 @@ impl StringPool {
             StringLiteral(_, s) => {
                 self.insert(s);
             }
-            ArrayValue(_, _, elements) => {
+            ArrayValue(_, elements, _) => {
                 for e in elements {
                     self.extract_from(e);
                 }

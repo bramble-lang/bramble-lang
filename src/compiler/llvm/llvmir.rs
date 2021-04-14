@@ -649,7 +649,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 }
                 Some(s_ptr.into())
             }
-            ast::Expression::ArrayValue(meta, len, elements) => {
+            ast::Expression::ArrayValue(meta, elements, len) => {
                 let a_ty = meta.ty();
                 let a_llvm_ty = a_ty.to_llvm_ir(llvm).into_basic_type().unwrap();
                 let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");

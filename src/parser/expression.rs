@@ -445,7 +445,7 @@ fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>>
             stream.next_must_be(&Lex::RBracket)?;
 
             let len = elements.len();
-            Ok(Some(Expression::ArrayValue(token.l, len, elements)))
+            Ok(Some(Expression::ArrayValue(token.l, elements, len)))
         }
         None => Ok(None),
     }
@@ -528,22 +528,22 @@ mod test {
         for (text, expected) in vec![
             (
                 "[1]",
-                Expression::ArrayValue(1, 1, vec![Expression::Integer64(1, 1)]),
+                Expression::ArrayValue(1, vec![Expression::Integer64(1, 1)], 1),
             ),
             (
                 "[1,]",
-                Expression::ArrayValue(1, 1, vec![Expression::Integer64(1, 1)]),
+                Expression::ArrayValue(1, vec![Expression::Integer64(1, 1)], 1),
             ),
             (
                 "[1, 2, 3]",
                 Expression::ArrayValue(
                     1,
-                    3,
                     vec![
                         Expression::Integer64(1, 1),
                         Expression::Integer64(1, 2),
                         Expression::Integer64(1, 3),
                     ],
+                    3,
                 ),
             ),
         ] {
