@@ -887,7 +887,7 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     Ok(escaped_str)
 }
 
-fn anytype_to_basictype<'ctx>(any_ty: AnyTypeEnum<'ctx>) -> Option<BasicTypeEnum<'ctx>> {
+fn anytype_to_basictype(any_ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
     match any_ty {
         AnyTypeEnum::StructType(st_ty) => Some(st_ty.into()),
         AnyTypeEnum::IntType(i_ty) => Some(i_ty.into()),
