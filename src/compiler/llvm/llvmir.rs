@@ -903,18 +903,18 @@ fn get_ptr_alignment<'ctx>(ptr: PointerValue<'ctx>) -> u32 {
 }
 
 /// Defines helper functions for interacting with LLVM types
-trait LlvmTypeHelper {
+trait LlvmIsAggregateType {
     /// Returns `true` if the type is an array or a struct
     fn is_aggregate_type(&self) -> bool;
 }
 
-impl<'ctx> LlvmTypeHelper for AnyTypeEnum<'ctx> {
+impl<'ctx> LlvmIsAggregateType for AnyTypeEnum<'ctx> {
     fn is_aggregate_type(&self) -> bool {
         self.is_array_type() || self.is_struct_type()
     }
 }
 
-impl<'ctx> LlvmTypeHelper for BasicTypeEnum<'ctx> {
+impl<'ctx> LlvmIsAggregateType for BasicTypeEnum<'ctx> {
     fn is_aggregate_type(&self) -> bool {
         self.is_array_type() || self.is_struct_type()
     }
