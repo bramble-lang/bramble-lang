@@ -851,7 +851,7 @@ impl ast::Type {
                 .expect(&format!("Could not find struct {}", name))
                 .into(),
             ast::Type::Array(a, len) => {
-                let el_ty = a.as_ref().to_llvm_ir(llvm);
+                let el_ty = a.to_llvm_ir(llvm);
                 let len = *len as u32;
                 el_ty.into_basic_type().unwrap().array_type(len).into()
             }
