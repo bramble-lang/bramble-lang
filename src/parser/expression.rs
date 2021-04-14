@@ -243,13 +243,13 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
                 negate(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
             Expression::unary_op(op.l, &op.s, Box::new(factor))
         }
-        None => member_access(stream),
+        None => array_at_index(stream),
     }
 }
 
 fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
-    match array_at_index(stream)? {
+    match factor(stream)? {
         Some(f) => {
             let mut ma = f;
             while let Some(token) = stream.next_if(&Lex::MemberAccess) {
@@ -269,7 +269,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
 fn array_at_index(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
 
-    match factor(stream)? {
+    match member_access(stream)? {
         Some(f) => {
             match stream.next_if(&Lex::LBracket) {
                 Some(l_br) => {
@@ -615,6 +615,18 @@ mod test {
                 Expression::ArrayAt {
                     annotation: 1,
                     array: box Expression::Identifier(1, "a".into()),
+                    index: box Expression::Integer64(1, 1),
+                },
+            ),
+            (
+                "a.b[1]",
+                Expression::ArrayAt {
+                    annotation: 1,
+                    array: box Expression::MemberAccess(
+                        1,
+                        box Expression::Identifier(1, "a".into()),
+                        "b".into(),
+                    ),
                     index: box Expression::Integer64(1, 1),
                 },
             ),

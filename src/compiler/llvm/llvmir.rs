@@ -609,7 +609,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     .unwrap();
 
                 // check if the field_ptr element type is an aggregate, if so, return the ptr
-                if field_ptr.get_type().get_element_type().is_struct_type() {
+                let el_ty = field_ptr.get_type().get_element_type();
+                if el_ty.is_struct_type() || el_ty.is_array_type() {
                     Some(field_ptr.into())
                 } else {
                     let field_val = llvm.builder.build_load(field_ptr, "");
@@ -684,7 +685,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 index,
             } => {
                 // evalute the array to get the ptr to the array
-                let llvm_array_ptr = array.to_llvm_ir(llvm).unwrap().into_pointer_value();
+                // Check the array type, if it's not a pointer then get the GEP
+                let llvm_array_ptr = match array.to_llvm_ir(llvm) {
+                    Some(a) if a.is_pointer_value() => a.into_pointer_value(),
+                    Some(a) => panic!("Unexpected type for array: {:?}", a),
+                    None => panic!("Could not convert type {} to LLVM type", array),
+                };
 
                 // evaluate the index to get the index value
                 let llvm_index = index.to_llvm_ir(llvm).unwrap().into_int_value();
