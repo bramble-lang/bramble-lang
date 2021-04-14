@@ -784,23 +784,22 @@ impl ast::RoutineCall {
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
                 let out_param = if llvm.fn_use_out_param.contains(&fn_name) {
-                    // TODO: I think that this can be genericized and linked to the `llvm.fn_out_params` table
-                    match ret_ty {
-                        ast::Type::Custom(sdef) => {
-                            let sdef_llvm = llvm.module.get_struct_type(&sdef.to_label()).unwrap();
-                            let ptr = llvm.builder.build_alloca(sdef_llvm, "");
-                            llvm_params.push(ptr.into());
-                            Some(ptr)
-                        }
+                    let el_ty: BasicTypeEnum<'ctx> = match ret_ty {
+                        ast::Type::Custom(sdef) => llvm
+                            .module
+                            .get_struct_type(&sdef.to_label())
+                            .unwrap()
+                            .into(),
                         ast::Type::Array(el_ty, len) => {
                             let el_llvm_ty = anytype_to_basictype(el_ty.to_llvm_ir(llvm)).unwrap();
-                            let a_llvm_ty = el_llvm_ty.array_type(*len as u32);
-                            let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
-                            llvm_params.push(a_ptr.into());
-                            Some(a_ptr)
+                            el_llvm_ty.array_type(*len as u32).into()
                         }
-                        _ => None,
-                    }
+                        ty => panic!("Expected an aggregate type but got {}", ty),
+                    };
+
+                    let ptr = llvm.builder.build_alloca(el_ty, "");
+                    llvm_params.push(ptr.into());
+                    Some(ptr)
                 } else {
                     None
                 };
