@@ -639,7 +639,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                         .builder
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
-                    if fld_ptr.get_type().get_element_type().is_struct_type() {
+
+                    let el_ty = fld_ptr.get_type().get_element_type();
+                    if el_ty.is_struct_type() || el_ty.is_array_type() {
+                        // TODO: should I do this for all pointer values?
                         let val_ptr = val.into_pointer_value();
                         llvm.build_memcpy(fld_ptr, val_ptr);
                     } else {
