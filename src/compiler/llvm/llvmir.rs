@@ -237,7 +237,7 @@ impl<'ctx> IrGen<'ctx> {
         for p in params {
             let ty_llvm = anytype_to_basictype(p.to_llvm_ir(self));
             match ty_llvm {
-                Some(ty_llvm) if ty_llvm.is_struct_type() || ty_llvm.is_array_type() => {
+                Some(ty_llvm) if ty_llvm.is_aggregate_type() => {
                     llvm_params.push(ty_llvm.ptr_type(AddressSpace::Generic).into())
                 }
                 Some(ty_llvm) => llvm_params.push(ty_llvm),
@@ -424,6 +424,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
                 Some(ptr)
             }
             Some(ty) if ty.is_array_type() => {
+                // TODO: Should I copy the array over rather than the pointer, like with Struct?
                 let ptr = llvm
                     .builder
                     .build_alloca(ty.ptr_type(AddressSpace::Generic), self.get_id());
@@ -521,6 +522,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             ast::Expression::Identifier(_, id) => {
                 let ptr = llvm.registers.get(id).unwrap().into_pointer_value();
                 if ptr.get_type().get_element_type().is_struct_type() {
+                    // TODO: do I need to put arrays here too?
                     Some(ptr.into())
                 } else {
                     let val = llvm.builder.build_load(ptr, id);
@@ -610,7 +612,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 // check if the field_ptr element type is an aggregate, if so, return the ptr
                 let el_ty = field_ptr.get_type().get_element_type();
-                if el_ty.is_struct_type() || el_ty.is_array_type() {
+                if el_ty.is_aggregate_type() {
                     Some(field_ptr.into())
                 } else {
                     let field_val = llvm.builder.build_load(field_ptr, "");
@@ -641,7 +643,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                         .unwrap();
 
                     let el_ty = fld_ptr.get_type().get_element_type();
-                    if el_ty.is_struct_type() || el_ty.is_array_type() {
+                    if el_ty.is_aggregate_type() {
                         // TODO: should I do this for all pointer values?
                         let val_ptr = val.into_pointer_value();
                         llvm.build_memcpy(fld_ptr, val_ptr);
@@ -671,7 +673,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                         unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
                     let el_ty = el_ptr.get_type().get_element_type();
 
-                    if el_ty.is_array_type() || el_ty.is_struct_type() {
+                    if el_ty.is_aggregate_type() {
                         llvm.build_memcpy(el_ptr, e.into_pointer_value());
                     } else {
                         llvm.builder.build_store(el_ptr, e);
@@ -707,7 +709,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 // Load the value pointed to by GEP and return that
                 let el_ty = el_ptr.get_type().get_element_type();
-                let el_val = if el_ty.is_array_type() || el_ty.is_struct_type() {
+                let el_val = if el_ty.is_aggregate_type() {
                     el_ptr.into()
                 } else {
                     llvm.builder.build_load(el_ptr, "").into()
@@ -914,4 +916,22 @@ fn get_ptr_alignment<'ctx>(ptr: PointerValue<'ctx>) -> u32 {
         .get_alignment()
         .get_zero_extended_constant()
         .unwrap_or(MEM_ALIGNMENT) as u32
+}
+
+/// Defines helper functions for interacting with LLVM types
+trait LlvmTypeHelper {
+    /// Returns `true` if the type is an array or a struct
+    fn is_aggregate_type(&self) -> bool;
+}
+
+impl<'ctx> LlvmTypeHelper for AnyTypeEnum<'ctx> {
+    fn is_aggregate_type(&self) -> bool {
+        self.is_array_type() || self.is_struct_type()
+    }
+}
+
+impl<'ctx> LlvmTypeHelper for BasicTypeEnum<'ctx> {
+    fn is_aggregate_type(&self) -> bool {
+        self.is_array_type() || self.is_struct_type()
+    }
 }
