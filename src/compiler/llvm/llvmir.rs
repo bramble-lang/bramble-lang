@@ -523,6 +523,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 let ptr = llvm.registers.get(id).unwrap().into_pointer_value();
                 if ptr.get_type().get_element_type().is_struct_type() {
                     // TODO: do I need to put arrays here too?
+                    // Answer: Right now, array variables are pointers to arrays rather than arrays so this would not work
+                    // but if I change this then I would need to update here
                     Some(ptr.into())
                 } else {
                     let val = llvm.builder.build_load(ptr, id);
