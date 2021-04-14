@@ -795,7 +795,9 @@ impl ast::RoutineCall {
                         panic!("Expected an aggregate type but got {}", ret_ty);
                     }
 
-                    let ptr = llvm.builder.build_alloca(out_ty, "");
+                    let ptr = llvm
+                        .builder
+                        .build_alloca(out_ty, &format!("_out_{}", fn_name));
                     llvm_params.push(ptr.into());
                     Some(ptr)
                 } else {
