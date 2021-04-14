@@ -252,9 +252,6 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
     match factor(stream)? {
         Some(f) => {
             let mut ma = f;
-            // Peek at next token
-            // if `.` then parse member access operation
-            // if `[` then parse index operation
             while let Some(token) = stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket]) {
                 ma = match token.s {
                     Lex::MemberAccess => stream
