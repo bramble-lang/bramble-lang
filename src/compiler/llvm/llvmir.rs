@@ -435,7 +435,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
                 llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
                 Some(ptr)
             }
-            Err(msg) => panic!(msg),
+            Err(msg) => panic!("Failed to convert to basic type: {}", msg),
         }
     }
 }
