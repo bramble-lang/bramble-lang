@@ -415,20 +415,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
 
         match anytype_to_basictype(self.get_type().to_llvm_ir(llvm)) {
-            Some(ty) if ty.is_struct_type() => {
+            Some(ty) if ty.is_aggregate_type() => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
                 let rhs_ptr = rhs.into_pointer_value();
                 llvm.build_memcpy(ptr, rhs_ptr);
 
-                llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
-                Some(ptr)
-            }
-            Some(ty) if ty.is_array_type() => {
-                // TODO: Should I copy the array over rather than the pointer, like with Struct?
-                let ptr = llvm
-                    .builder
-                    .build_alloca(ty.ptr_type(AddressSpace::Generic), self.get_id());
-                llvm.builder.build_store(ptr, rhs);
                 llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
                 Some(ptr)
             }
@@ -521,10 +512,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             }
             ast::Expression::Identifier(_, id) => {
                 let ptr = llvm.registers.get(id).unwrap().into_pointer_value();
-                if ptr.get_type().get_element_type().is_struct_type() {
-                    // TODO: do I need to put arrays here too?
-                    // Answer: Right now, array variables are pointers to arrays rather than arrays so this would not work
-                    // but if I change this then I would need to update here
+                if ptr.get_type().get_element_type().is_aggregate_type() {
                     Some(ptr.into())
                 } else {
                     let val = llvm.builder.build_load(ptr, id);
