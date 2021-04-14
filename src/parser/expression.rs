@@ -264,19 +264,20 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
                             "L{}: expect field name after member access '.'",
                             token.l
                         ))?,
-                    Lex::LBracket => {
-                        let index = expression(stream)?.ok_or(format!(
+                    Lex::LBracket => expression(stream)?
+                        .ok_or(format!(
                             "L{}: Index operator must contain valid expression",
                             token.l
-                        ))?;
-                        stream
-                            .next_must_be(&Lex::RBracket)
-                            .map(|_| Expression::ArrayAt {
-                                annotation: token.l,
-                                array: box ma,
-                                index: box index,
-                            })?
-                    }
+                        ))
+                        .map(|index| {
+                            stream
+                                .next_must_be(&Lex::RBracket)
+                                .map(|_| Expression::ArrayAt {
+                                    annotation: token.l,
+                                    array: box ma,
+                                    index: box index,
+                                })
+                        })??,
                     _ => {
                         return Err(format!(
                             "L{}: Expected [ or . but found {}",
