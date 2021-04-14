@@ -790,22 +790,12 @@ impl ast::RoutineCall {
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
                 let out_param = if llvm.fn_use_out_param.contains(&fn_name) {
-                    let el_ty: BasicTypeEnum<'ctx> = match ret_ty {
-                        ast::Type::Custom(sdef) => llvm
-                            .module
-                            .get_struct_type(&sdef.to_label())
-                            .unwrap()
-                            .into(),
-                        ast::Type::Array(el_ty, len) => el_ty
-                            .to_llvm_ir(llvm)
-                            .into_basic_type()
-                            .unwrap()
-                            .array_type(*len as u32)
-                            .into(),
-                        ty => panic!("Expected an aggregate type but got {}", ty),
-                    };
+                    let out_ty = ret_ty.to_llvm_ir(llvm).into_basic_type().unwrap();
+                    if !out_ty.is_aggregate_type() {
+                        panic!("Expected an aggregate type but got {}", ret_ty);
+                    }
 
-                    let ptr = llvm.builder.build_alloca(el_ty, "");
+                    let ptr = llvm.builder.build_alloca(out_ty, "");
                     llvm_params.push(ptr.into());
                     Some(ptr)
                 } else {
