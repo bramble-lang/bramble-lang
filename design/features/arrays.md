@@ -233,3 +233,11 @@ will be known at compile time.
 4. What about when we need dynamically sized segment of memory? For things like building memory buffers, creating vectors, creating strings, etc.? Dynamically sized buffers will need to go into the heap. So a separate heap only array can be created once I have built the heap system and memory management for Braid.
 5. Something I noticed in the Rust examples: some of hte GEP calls use `i64` for the index and some use `i32`? Why does this happen?
 6. In Rust, what happens if I make the parameter for a function mutable (`fn test(mut a: [i32; 5])`)? It's locally mutable within the function but the mutations should not be seen outside the function. Rust does this by making a copy of the array at the call site and passing that copy to the function, rather than passing the original.
+
+## Tests
+1. Struct with an array field
+1. Struct with multiple array fields
+1. Array of structs
+1. Array of structs that have an array field
+1. Struct with a field that's an array of structs
+ 
