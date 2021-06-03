@@ -591,6 +591,28 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     ),
                 }
             }
+            ast::Expression::While { cond, body, .. } => {
+                let current_fn = llvm
+                    .builder
+                    .get_insert_block()
+                    .unwrap()
+                    .get_parent()
+                    .unwrap();
+
+                let preheader_bb = llvm.builder.get_insert_block().unwrap();
+                let loop_bb = llvm.context.append_basic_block(current_fn, "loop");
+
+                llvm.builder.build_unconditional_branch(loop_bb);
+                llvm.builder.position_at_end(loop_bb);
+                let loop_end = llvm.builder.get_insert_block();
+                let after_bb = llvm.context.append_basic_block(current_fn, "after_loop");
+                let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
+
+                llvm.builder
+                    .build_conditional_branch(cond_val, loop_bb, after_bb);
+
+                None
+            }
             ast::Expression::MemberAccess(_, val, field) => {
                 let sdef = llvm
                     .struct_table
