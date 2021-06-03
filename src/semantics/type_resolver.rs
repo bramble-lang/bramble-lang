@@ -621,7 +621,37 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
-            Expression::While { .. } => todo!(),
+            Expression::While {
+                annotation: meta,
+                cond,
+                body,
+                ..
+            } => {
+                let mut meta = meta.clone();
+                let cond = self.traverse(&cond, current_func)?;
+                if cond.get_type() == Type::Bool {
+                    let body = self.traverse(&body, current_func)?;
+
+                    if body.get_type() == Type::Unit {
+                        meta.ty = Type::Unit;
+                        Ok(Expression::While {
+                            annotation: meta.clone(),
+                            cond: box cond,
+                            body: box body,
+                        })
+                    } else {
+                        Err(format!(
+                            "Expected unit type for the body of while, but got: {}",
+                            body.get_type()
+                        ))
+                    }
+                } else {
+                    Err(format!(
+                        "Expected boolean expression in the while conditional, got: {}",
+                        cond.get_type()
+                    ))
+                }
+            }
             Expression::Yield(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func)?;
@@ -3118,6 +3148,78 @@ mod tests {
                 }
                 ",
                 Ok(Type::Unit),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    let bind_stm = &fn_main.get_body()[0];
+                    assert_eq!(bind_stm.get_type(), expected_ty);
+
+                    // Check the return value
+                    if expected_ty != Type::Unit {
+                        if let Statement::Bind(box b) = bind_stm {
+                            let rhs_ty = b.get_rhs().get_type();
+                            assert_eq!(rhs_ty, expected_ty);
+                        } else {
+                            panic!("Expected a return statement")
+                        }
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_while_expressions() {
+        for (text, expected) in vec![
+            (
+                "fn main() {
+                    while (true) {1;};
+                    return;
+                }
+                ",
+                Ok(Type::Unit),
+            ),
+            (
+                "fn main() {
+                    return while (true) {1;};
+                }
+                ",
+                Ok(Type::Unit),
+            ),
+            (
+                "fn main() {
+                    while (5) {1;};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Expected boolean expression in the while conditional, got: i64"),
+            ),
+            (
+                "fn main() {
+                    while (true) {1};
+                    return;
+                }
+                ",
+                Err("Semantic: L2: Expected unit type for the body of while, but got: i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)

@@ -209,7 +209,7 @@ where
             UnaryOp(..) => self.for_unary_op(exp),
             BinaryOp(..) => self.for_binary_op(exp),
             If { .. } => self.for_if(exp),
-            While { .. } => todo!(),
+            While { .. } => self.for_while(exp),
             Yield(..) => self.for_yield(exp),
             RoutineCall(..) => self.for_routine_call(exp),
             StructExpression(..) => self.for_struct_expression(exp),
@@ -284,6 +284,21 @@ where
             }
         } else {
             panic!("Expected IfExpression, but got {:?}", if_exp)
+        }
+    }
+
+    fn for_while(&mut self, while_exp: &Expression<A>) -> Expression<B> {
+        if let Expression::While { cond, body, .. } = while_exp {
+            let b = self.transform(while_exp);
+            let cond = self.for_expression(cond);
+            let body = self.for_expression(body);
+            Expression::While {
+                annotation: b,
+                cond: box cond,
+                body: box body,
+            }
+        } else {
+            panic!("Expected WhileExpression, but got {:?}", while_exp)
         }
     }
 
