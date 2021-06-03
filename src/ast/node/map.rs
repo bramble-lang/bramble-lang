@@ -209,6 +209,7 @@ where
             UnaryOp(..) => self.for_unary_op(exp),
             BinaryOp(..) => self.for_binary_op(exp),
             If { .. } => self.for_if(exp),
+            While { .. } => todo!(),
             Yield(..) => self.for_yield(exp),
             RoutineCall(..) => self.for_routine_call(exp),
             StructExpression(..) => self.for_struct_expression(exp),

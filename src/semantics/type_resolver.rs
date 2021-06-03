@@ -621,6 +621,7 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
+            Expression::While { .. } => todo!(),
             Expression::Yield(meta, exp) => {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func)?;

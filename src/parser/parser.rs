@@ -1417,6 +1417,37 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_while_expression() {
+        let text = "while (x) {5;}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let exp = expression(&mut stream).unwrap();
+        if let Some(Expression::While {
+            annotation: l,
+            cond,
+            body,
+        }) = exp
+        {
+            assert_eq!(l, 1);
+            assert_eq!(*cond, Expression::Identifier(1, "x".into()));
+            if let Expression::ExpressionBlock(_l, body, None) = *body {
+                assert_eq!(
+                    body[0],
+                    Statement::Expression(box Expression::Integer64(1, 5))
+                );
+            } else {
+                panic!("Expected Expression block, got {:?}", *body);
+            }
+        } else {
+            panic!("No nodes returned by parser, got: {:?}", exp)
+        }
+    }
+
+    #[test]
     fn parse_struct_def() {
         for (text, expected) in vec![
             ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),

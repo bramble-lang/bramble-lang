@@ -303,6 +303,7 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
             Ok(exp)
         }
         _ => if_expression(stream)
+            .por(while_expression, stream)
             .por(expression_block, stream)
             .por(function_call_or_variable, stream)
             .por(co_yield, stream)
@@ -353,6 +354,30 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
                 cond: Box::new(cond),
                 if_arm: Box::new(if_arm),
                 else_arm: else_arm.map(|f| box f),
+            })
+        }
+        _ => None,
+    })
+}
+
+fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+    trace!(stream);
+    Ok(match stream.next_if(&Lex::While) {
+        Some(token) => {
+            stream.next_must_be(&Lex::LParen)?;
+            let cond = expression(stream)?.ok_or(format!(
+                "L{}: Expected conditional expression after while",
+                token.l
+            ))?;
+            stream.next_must_be(&Lex::RParen)?;
+
+            let body =
+                expression_block(stream)?.ok_or(format!("L{}: Expression in body", token.l))?;
+
+            Some(Expression::While {
+                annotation: token.l,
+                cond: Box::new(cond),
+                body: Box::new(body),
             })
         }
         _ => None,
