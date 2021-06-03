@@ -599,17 +599,17 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     .get_parent()
                     .unwrap();
 
-                let preheader_bb = llvm.builder.get_insert_block().unwrap();
                 let loop_bb = llvm.context.append_basic_block(current_fn, "loop");
-
                 llvm.builder.build_unconditional_branch(loop_bb);
                 llvm.builder.position_at_end(loop_bb);
-                let loop_end = llvm.builder.get_insert_block();
+
                 let after_bb = llvm.context.append_basic_block(current_fn, "after_loop");
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
 
                 llvm.builder
                     .build_conditional_branch(cond_val, loop_bb, after_bb);
+
+                llvm.builder.position_at_end(after_bb);
 
                 None
             }

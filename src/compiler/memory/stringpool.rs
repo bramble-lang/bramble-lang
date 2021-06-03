@@ -89,8 +89,9 @@ impl StringPool {
                 self.extract_from(if_arm);
                 else_arm.as_ref().map(|ea| self.extract_from(&ea));
             }
-            While { .. } => {
-                todo!()
+            While { cond, body, .. } => {
+                self.extract_from(cond);
+                self.extract_from(body);
             }
             Yield(_, e) => {
                 self.extract_from(e);
