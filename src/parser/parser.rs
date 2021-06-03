@@ -740,7 +740,7 @@ pub mod tests {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, msg),
+                        Err(msg) => assert!(false, "{}", msg),
                     }
                 }
                 Ok(Some(Expression::Identifier(l, id))) => {
@@ -750,13 +750,13 @@ pub mod tests {
                             assert_eq!(expected.len(), 1);
                             assert_eq!(id, expected[0]);
                         }
-                        Err(msg) => assert!(false, msg),
+                        Err(msg) => assert!(false, "{}", msg),
                     }
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
-                    Ok(_) => assert!(false, msg),
+                    Ok(_) => assert!(false, "{}", msg),
                     Err(expected) => assert_eq!(expected, msg),
                 },
             }
