@@ -1,0 +1,13 @@
+extern fn puts(s: string);
+
+fn my_main() -> i64 {
+    let mut x: i64 := 0;
+    let mut y: i64 := 15;
+    while (x <= 5 && y >= 11) {
+        root::std::io::writei64ln(x);
+        root::std::io::writei64ln(y);
+        mut x := x + 1;
+        mut y := y - 1;
+    };
+    return 0;
+}
