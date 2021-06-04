@@ -306,6 +306,14 @@ impl<'ctx> IrGen<'ctx> {
             .unwrap();
     }
 
+    /// If the LLVM builder cursor is currently within a function, this will
+    /// return that function.  Otherwise it will return `None`.
+    fn get_current_fn(&self) -> Option<FunctionValue> {
+        self.builder
+            .get_insert_block()
+            .and_then(|bb| bb.get_parent())
+    }
+
     /// Will look for `s` in the string pool, if found, it will return the
     /// name of the global variable that is bound to that string. Otherwise,
     /// it will return `None`
@@ -553,12 +561,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 ..
             } => {
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
-                let current_fn = llvm
-                    .builder
-                    .get_insert_block()
-                    .unwrap()
-                    .get_parent()
-                    .unwrap();
+                let current_fn = llvm.get_current_fn().unwrap();
                 let then_bb = llvm.context.append_basic_block(current_fn, "then");
                 let else_bb = llvm.context.insert_basic_block_after(then_bb, "else");
                 let merge_bb = llvm.context.insert_basic_block_after(else_bb, "merge");
@@ -592,12 +595,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 }
             }
             ast::Expression::While { cond, body, .. } => {
-                let current_fn = llvm
-                    .builder
-                    .get_insert_block()
-                    .unwrap()
-                    .get_parent()
-                    .unwrap();
+                let current_fn = llvm.get_current_fn().unwrap();
 
                 // Construct the three components of the while loop
                 // 1. The top of the loop that checks the condition
