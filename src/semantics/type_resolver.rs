@@ -641,13 +641,13 @@ impl<'a> TypeResolver<'a> {
                         })
                     } else {
                         Err(format!(
-                            "Expected unit type for the body of while, but got: {}",
+                            "The body of a while expression must resolve to a unit type, but got: {}",
                             body.get_type()
                         ))
                     }
                 } else {
                     Err(format!(
-                        "Expected boolean expression in the while conditional, got: {}",
+                        "The condition of a while expression must resolve to a unit type, but got: {}",
                         cond.get_type()
                     ))
                 }
@@ -3211,7 +3211,7 @@ mod tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Expected boolean expression in the while conditional, got: i64"),
+                Err("Semantic: L2: The condition of a while expression must resolve to a unit type, but got: i64"),
             ),
             (
                 "fn main() {
@@ -3219,7 +3219,7 @@ mod tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Expected unit type for the body of while, but got: i64"),
+                Err("Semantic: L2: The body of a while expression must resolve to a unit type, but got: i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
