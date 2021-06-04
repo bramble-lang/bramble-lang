@@ -320,6 +320,24 @@ where
         }
     }
 
+    fn for_while<F>(&self, while_exp: &mut Expression<A>, f: F)
+    where
+        F: FnMut(&mut A) + Copy,
+    {
+        if let Expression::While {
+            ref mut annotation,
+            cond,
+            body,
+        } = while_exp
+        {
+            self.transform(annotation, f);
+            self.for_expression(cond, f);
+            self.for_expression(body, f);
+        } else {
+            panic!("Expected WhileExpression, but got {:?}", while_exp)
+        }
+    }
+
     fn for_routine_call<F>(&self, rc: &mut Expression<A>, f: F)
     where
         F: FnMut(&mut A) + Copy,
