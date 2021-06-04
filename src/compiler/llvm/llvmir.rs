@@ -603,9 +603,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 // 1. The top of the loop that checks the condition
                 // 2. The expression that is executed if the condition is true
                 // 3. The exit point for the loop that is jumped to when the condition is false
-                let loop_bb = llvm.context.append_basic_block(current_fn, "loop_cond");
-                let body_bb = llvm.context.append_basic_block(current_fn, "loop_body");
-                let after_bb = llvm.context.append_basic_block(current_fn, "after_loop");
+                let loop_bb = llvm.context.append_basic_block(current_fn, "while_cond");
+                let body_bb = llvm.context.append_basic_block(current_fn, "while_body");
+                let after_bb = llvm.context.append_basic_block(current_fn, "while_end");
 
                 // Emit the logic for checking the while condition
                 llvm.builder.build_unconditional_branch(loop_bb);
