@@ -599,16 +599,28 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     .get_parent()
                     .unwrap();
 
-                let loop_bb = llvm.context.append_basic_block(current_fn, "loop");
+                // Construct the three components of the while loop
+                // 1. The top of the loop that checks the condition
+                // 2. The expression that is executed if the condition is true
+                // 3. The exit point for the loop that is jumped to when the condition is false
+                let loop_bb = llvm.context.append_basic_block(current_fn, "loop_cond");
+                let body_bb = llvm.context.append_basic_block(current_fn, "loop_body");
+                let after_bb = llvm.context.append_basic_block(current_fn, "after_loop");
+
+                // Emit the logic for checking the while condition
                 llvm.builder.build_unconditional_branch(loop_bb);
                 llvm.builder.position_at_end(loop_bb);
-
-                let after_bb = llvm.context.append_basic_block(current_fn, "after_loop");
+                // Test the condition and determine if the loop should be terminated
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
-
                 llvm.builder
-                    .build_conditional_branch(cond_val, loop_bb, after_bb);
+                    .build_conditional_branch(cond_val, body_bb, after_bb);
 
+                // Emit the code that will evaluate the loop body
+                llvm.builder.position_at_end(body_bb);
+                body.to_llvm_ir(llvm); // The result of the body is not used for anything so ignore it
+                llvm.builder.build_unconditional_branch(loop_bb);
+
+                // Position the LLVM Builder cursor to be immediately after the loop
                 llvm.builder.position_at_end(after_bb);
 
                 None
