@@ -1,9 +1,11 @@
 extern fn puts(s: string);
 
 fn my_main() -> i64 {
+    let mut x: i64 := 0;
+    while (x < 5) {
+        root::std::io::writei64(x);
+        root::std::io::write(" hello, world\n");
+        mut x := x + 1;
+    };
     return 0;
-}
-
-fn test(a: [i64; 0]) {
-	return;
 }

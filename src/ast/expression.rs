@@ -32,6 +32,11 @@ pub enum Expression<I> {
         if_arm: Box<Expression<I>>,
         else_arm: Option<Box<Expression<I>>>,
     },
+    While {
+        annotation: I,
+        cond: Box<Expression<I>>,
+        body: Box<Expression<I>>,
+    },
     ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Expression<I>>>),
 
     BinaryOp(I, BinaryOperator, Box<Expression<I>>, Box<Expression<I>>),
@@ -56,6 +61,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
             | If { annotation: m, .. }
+            | While { annotation: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
@@ -80,6 +86,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
             | If { annotation: m, .. }
+            | While { annotation: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
@@ -121,6 +128,10 @@ impl<M: Annotation> Node<M> for Expression<M> {
                 if let Some(e) = else_arm {
                     o.push(e.as_ref());
                 }
+                o
+            }
+            While { cond, body, .. } => {
+                let o: Vec<&dyn Node<M>> = vec![cond.as_ref(), body.as_ref()];
                 o
             }
             ExpressionBlock(_, stms, exp) => {
@@ -198,6 +209,7 @@ impl<I> Expression<I> {
             StructExpression(_, name, ..) => format!("intialization for struct {}", name),
             RoutineCall(_, call, name, ..) => format!("{} {}", call, name),
             If { .. } => "if".into(),
+            While { .. } => "while".into(),
             ExpressionBlock(..) => "expression block".into(),
             Yield(_, _) => "yield".into(),
         }

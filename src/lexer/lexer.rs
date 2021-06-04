@@ -475,6 +475,7 @@ impl Lexer {
                 "init" => Token::new(self.line, Init),
                 "if" => Token::new(self.line, If),
                 "else" => Token::new(self.line, Else),
+                "while" => Token::new(self.line, While),
                 _ => Token::new(self.line, Identifier(id.clone())),
             },
             _ => token,
@@ -624,6 +625,7 @@ mod tests {
             ("struct", Token::new(1, Struct)),
             ("if", Token::new(1, If)),
             ("else", Token::new(1, Else)),
+            ("while", Token::new(1, While)),
         ]
         .iter()
         {

@@ -237,6 +237,7 @@ where
             UnaryOp(..) => self.for_unary_op(exp, f),
             BinaryOp(..) => self.for_binary_op(exp, f),
             If { .. } => self.for_if(exp, f),
+            While { .. } => todo!(),
             Yield(..) => self.for_yield(exp, f),
             RoutineCall(..) => self.for_routine_call(exp, f),
             StructExpression(..) => self.for_struct_expression(exp, f),
@@ -316,6 +317,24 @@ where
             else_arm.as_mut().map(|ea| self.for_expression(ea, f));
         } else {
             panic!("Expected IfExpression, but got {:?}", if_exp)
+        }
+    }
+
+    fn for_while<F>(&self, while_exp: &mut Expression<A>, f: F)
+    where
+        F: FnMut(&mut A) + Copy,
+    {
+        if let Expression::While {
+            ref mut annotation,
+            cond,
+            body,
+        } = while_exp
+        {
+            self.transform(annotation, f);
+            self.for_expression(cond, f);
+            self.for_expression(body, f);
+        } else {
+            panic!("Expected WhileExpression, but got {:?}", while_exp)
         }
     }
 

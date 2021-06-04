@@ -306,6 +306,14 @@ impl<'ctx> IrGen<'ctx> {
             .unwrap();
     }
 
+    /// If the LLVM builder cursor is currently within a function, this will
+    /// return that function.  Otherwise it will return `None`.
+    fn get_current_fn(&self) -> Option<FunctionValue> {
+        self.builder
+            .get_insert_block()
+            .and_then(|bb| bb.get_parent())
+    }
+
     /// Will look for `s` in the string pool, if found, it will return the
     /// name of the global variable that is bound to that string. Otherwise,
     /// it will return `None`
@@ -553,12 +561,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 ..
             } => {
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
-                let current_fn = llvm
-                    .builder
-                    .get_insert_block()
-                    .unwrap()
-                    .get_parent()
-                    .unwrap();
+                let current_fn = llvm.get_current_fn().unwrap();
                 let then_bb = llvm.context.append_basic_block(current_fn, "then");
                 let else_bb = llvm.context.insert_basic_block_after(then_bb, "else");
                 let merge_bb = llvm.context.insert_basic_block_after(else_bb, "merge");
@@ -590,6 +593,35 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                         then_arm_val, else_arm_val
                     ),
                 }
+            }
+            ast::Expression::While { cond, body, .. } => {
+                let current_fn = llvm.get_current_fn().unwrap();
+
+                // Construct the three components of the while loop
+                // 1. The top of the loop that checks the condition
+                // 2. The expression that is executed if the condition is true
+                // 3. The exit point for the loop that is jumped to when the condition is false
+                let loop_bb = llvm.context.append_basic_block(current_fn, "while_cond");
+                let body_bb = llvm.context.append_basic_block(current_fn, "while_body");
+                let after_bb = llvm.context.append_basic_block(current_fn, "while_end");
+
+                // Emit the logic for checking the while condition
+                llvm.builder.build_unconditional_branch(loop_bb);
+                llvm.builder.position_at_end(loop_bb);
+                // Test the condition and determine if the loop should be terminated
+                let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
+                llvm.builder
+                    .build_conditional_branch(cond_val, body_bb, after_bb);
+
+                // Emit the code that will evaluate the loop body
+                llvm.builder.position_at_end(body_bb);
+                body.to_llvm_ir(llvm); // The result of the body is not used for anything so ignore it
+                llvm.builder.build_unconditional_branch(loop_bb);
+
+                // Position the LLVM Builder cursor to be immediately after the loop
+                llvm.builder.position_at_end(after_bb);
+
+                None
             }
             ast::Expression::MemberAccess(_, val, field) => {
                 let sdef = llvm

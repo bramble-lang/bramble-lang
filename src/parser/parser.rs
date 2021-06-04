@@ -740,7 +740,7 @@ pub mod tests {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, msg),
+                        Err(msg) => assert!(false, "{}", msg),
                     }
                 }
                 Ok(Some(Expression::Identifier(l, id))) => {
@@ -750,13 +750,13 @@ pub mod tests {
                             assert_eq!(expected.len(), 1);
                             assert_eq!(id, expected[0]);
                         }
-                        Err(msg) => assert!(false, msg),
+                        Err(msg) => assert!(false, "{}", msg),
                     }
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
-                    Ok(_) => assert!(false, msg),
+                    Ok(_) => assert!(false, "{}", msg),
                     Err(expected) => assert_eq!(expected, msg),
                 },
             }
@@ -1410,6 +1410,37 @@ pub mod tests {
                 }
             } else {
                 panic!("Expected if statement in else arm");
+            }
+        } else {
+            panic!("No nodes returned by parser, got: {:?}", exp)
+        }
+    }
+
+    #[test]
+    fn parse_while_expression() {
+        let text = "while (x) {5;}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_>>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens);
+        let exp = expression(&mut stream).unwrap();
+        if let Some(Expression::While {
+            annotation: l,
+            cond,
+            body,
+        }) = exp
+        {
+            assert_eq!(l, 1);
+            assert_eq!(*cond, Expression::Identifier(1, "x".into()));
+            if let Expression::ExpressionBlock(_l, body, None) = *body {
+                assert_eq!(
+                    body[0],
+                    Statement::Expression(box Expression::Integer64(1, 5))
+                );
+            } else {
+                panic!("Expected Expression block, got {:?}", *body);
             }
         } else {
             panic!("No nodes returned by parser, got: {:?}", exp)
