@@ -12,7 +12,6 @@ use std::path::Path;
 
 use ast::Type;
 use clap::{App, Arg};
-use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
 use inkwell::context::Context;
 use lexer::tokens::Token;
@@ -77,10 +76,6 @@ fn main() {
     };
 
     // Configure the compiler
-    let target_platform = config
-        .value_of("platform")
-        .expect("Must provide a target platform")
-        .into();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     if config.is_present("llvm") {
@@ -94,19 +89,6 @@ fn main() {
 
         llvm.emit_object_code(Path::new(output_target)).unwrap();
     } else {
-        let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
-        // Compile
-        let program = Compiler::compile(
-            semantic_ast,
-            imported.iter().map(|(p, _, _)| p.clone()).collect(),
-            target_platform,
-            trace_reg_assigner,
-        );
-
-        // Write the resulting assembly code to the target output file
-        let mut output =
-            std::fs::File::create(output_target).expect("Failed to create output file");
-        Compiler::print(&program, &mut output).expect("Failed to write assembly");
     }
 }
 
