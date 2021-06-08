@@ -231,11 +231,10 @@ mod test {
                 .unwrap();
             let ast = parser::parse(tokens).unwrap().unwrap();
             let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
-            /*let (compiler_ast, ..) = compute_layout_for_program(&module).unwrap();
             let mut sp = StringPool::new();
-            sp.extract_from_module(&compiler_ast);
+            sp.extract_from_module(&module);
 
-            assert!(cmp(&sp, &expected));*/
+            assert!(cmp(&sp, &expected));
         }
     }
 
