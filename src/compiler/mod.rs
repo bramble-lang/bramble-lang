@@ -38,9 +38,4 @@
  * for those fields to reside.
  * 4. Construct a string pool of all string literals.
  */
-pub mod compiler;
-
-mod arch;
 pub mod llvm;
-mod memory;
-mod x86;
