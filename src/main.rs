@@ -2,9 +2,9 @@
 #![feature(box_syntax, box_patterns)]
 
 mod ast;
-mod compiler;
 mod diagnostics;
 mod lexer;
+mod llvm;
 mod parser;
 mod semantics;
 
@@ -12,7 +12,6 @@ use std::path::Path;
 
 use ast::Type;
 use clap::{App, Arg};
-use compiler::compiler::*;
 use diagnostics::config::TracingConfig;
 use inkwell::context::Context;
 use lexer::tokens::Token;
@@ -77,15 +76,11 @@ fn main() {
     };
 
     // Configure the compiler
-    let target_platform = config
-        .value_of("platform")
-        .expect("Must provide a target platform")
-        .into();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     if config.is_present("llvm") {
         let context = Context::create();
-        let mut llvm = compiler::llvm::IrGen::new(&context, "test", &imported);
+        let mut llvm = llvm::IrGen::new(&context, "test", &imported);
         llvm.ingest(&semantic_ast);
 
         if config.is_present("emit") {
@@ -94,19 +89,6 @@ fn main() {
 
         llvm.emit_object_code(Path::new(output_target)).unwrap();
     } else {
-        let trace_reg_assigner = TracingConfig::parse(config.value_of("trace-reg-assigner"));
-        // Compile
-        let program = Compiler::compile(
-            semantic_ast,
-            imported.iter().map(|(p, _, _)| p.clone()).collect(),
-            target_platform,
-            trace_reg_assigner,
-        );
-
-        // Write the resulting assembly code to the target output file
-        let mut output =
-            std::fs::File::create(output_target).expect("Failed to create output file");
-        Compiler::print(&program, &mut output).expect("Failed to write assembly");
     }
 }
 

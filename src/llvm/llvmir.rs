@@ -30,11 +30,10 @@ use braid_lang::result::Result;
 use crate::{
     ast,
     ast::{Extern, Node, Parameter, RoutineDef, StructDef},
-    compiler::memory::stringpool::StringPool,
     semantics::semanticnode::SemanticAnnotations,
 };
 
-use super::scopestack::RegisterLookup;
+use super::{scopestack::RegisterLookup, stringpool::StringPool};
 
 const MEM_ALIGNMENT: u64 = 8;
 
