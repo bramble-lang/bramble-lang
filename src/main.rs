@@ -2,9 +2,9 @@
 #![feature(box_syntax, box_patterns)]
 
 mod ast;
-mod compiler;
 mod diagnostics;
 mod lexer;
+mod llvm;
 mod parser;
 mod semantics;
 
@@ -80,7 +80,7 @@ fn main() {
 
     if config.is_present("llvm") {
         let context = Context::create();
-        let mut llvm = compiler::llvm::IrGen::new(&context, "test", &imported);
+        let mut llvm = llvm::IrGen::new(&context, "test", &imported);
         llvm.ingest(&semantic_ast);
 
         if config.is_present("emit") {
