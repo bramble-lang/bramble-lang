@@ -810,7 +810,10 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Minus => {
-                if operand.get_type() == Type::I32 || operand.get_type() == Type::I64 {
+                if operand.get_type() == Type::I8
+                    || operand.get_type() == Type::I32
+                    || operand.get_type() == Type::I64
+                {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(format!(
@@ -848,12 +851,17 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if (l.get_type() == Type::I64 && r.get_type() == Type::I64)
+                // TODO: must be a better way to handle this so that all integers are captured
+                if l.get_type() == Type::I64 && r.get_type() == Type::I64
                     || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
+                    || (l.get_type() == Type::I8 && r.get_type() == Type::I8)
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type() == Type::I64 || l.get_type() == Type::I32 {
+                    let expected = if l.get_type() == Type::I64
+                        || l.get_type() == Type::I32
+                        || l.get_type() == Type::I8
+                    {
                         format!("{}", l.get_type())
                     } else {
                         "i64".into()
