@@ -83,7 +83,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserInfo>> {
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
                 None => expression(stream)?
-                    .ok_or(format!("L{}: expected expression on LHS of bind", token.l))?,
+                    .ok_or(format!("L{}: expected expression on RHS of bind", token.l))?,
             };
 
             match id_decl {
