@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
+    I8,
     I32,
     I64,
     Bool,
@@ -9,6 +10,7 @@ pub enum Primitive {
 impl std::fmt::Display for Primitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Primitive::I8 => f.write_str("i8"),
             Primitive::I32 => f.write_str("i32"),
             Primitive::I64 => f.write_str("i64"),
             Primitive::Bool => f.write_str("bool"),
@@ -19,6 +21,7 @@ impl std::fmt::Display for Primitive {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lex {
+    Integer8(i8),
     Integer32(i32),
     Integer64(i64),
     Bool(bool),
@@ -80,6 +83,7 @@ impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
         match self {
+            Integer8(i) => f.write_str(&format!("i8 literal {}", i)),
             Integer32(i) => f.write_str(&format!("i32 literal {}", i)),
             Integer64(i) => f.write_str(&format!("i64 literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),

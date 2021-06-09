@@ -322,12 +322,15 @@ impl Lexer {
         let int_token = branch.cut();
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal
-        let mut is_i32 = false;
-        if branch.next_ifn("i32") {
-            is_i32 = true;
+        let prim = if branch.next_ifn("i8") {
+            Primitive::I8
+        } else if branch.next_ifn("i32") {
+            Primitive::I32
         } else if branch.next_ifn("i64") {
-            is_i32 = false;
-        }
+            Primitive::I64
+        } else {
+            Primitive::I64
+        };
 
         if branch
             .peek()
@@ -341,16 +344,20 @@ impl Lexer {
         }
 
         branch.merge();
-        if !is_i32 {
-            Ok(Some(Token::new(
+        match prim {
+            Primitive::I8 => Ok(Some(Token::new(
                 self.line,
-                Integer64(int_token.parse::<i64>().unwrap()),
-            )))
-        } else {
-            Ok(Some(Token::new(
+                Integer8(int_token.parse::<i8>().unwrap()),
+            ))),
+            Primitive::I32 => Ok(Some(Token::new(
                 self.line,
                 Integer32(int_token.parse::<i32>().unwrap()),
-            )))
+            ))),
+            Primitive::I64 => Ok(Some(Token::new(
+                self.line,
+                Integer64(int_token.parse::<i64>().unwrap()),
+            ))),
+            _ => Err(format!("Unexpected primitive type after number: {}", prim)),
         }
     }
 
@@ -445,6 +452,7 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
+                "i8" => Token::new(self.line, Primitive(Primitive::I32)),
                 "i32" => Token::new(self.line, Primitive(Primitive::I32)),
                 "i64" => Token::new(self.line, Primitive(Primitive::I64)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
@@ -495,6 +503,16 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer64(5)));
+    }
+
+    #[test]
+    fn test_integer8() {
+        let text = "5i8";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, Integer8(5)));
     }
 
     #[test]
