@@ -485,15 +485,19 @@ fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
 
 fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
-    match stream.next_if_one_of(vec![Lex::Integer64(0), Lex::Integer32(0)]) {
+    match stream.next_if_one_of(vec![Lex::Integer8(0), Lex::Integer32(0), Lex::Integer64(0)]) {
         Some(Token {
             l,
-            s: Lex::Integer64(i),
-        }) => Ok(Some(Expression::Integer64(l, i))),
+            s: Lex::Integer8(i),
+        }) => Ok(Some(Expression::Integer8(l, i))),
         Some(Token {
             l,
             s: Lex::Integer32(i),
         }) => Ok(Some(Expression::Integer32(l, i))),
+        Some(Token {
+            l,
+            s: Lex::Integer64(i),
+        }) => Ok(Some(Expression::Integer64(l, i))),
         Some(t) => panic!("Unexpected token: {:?}", t),
         None => Ok(None),
     }

@@ -497,6 +497,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
+            ast::Expression::Integer8(_, i) => {
+                let i8t = llvm.context.i8_type();
+                Some(i8t.const_int(*i as u64, true).into())
+            }
             ast::Expression::Integer32(_, i) => {
                 let i32t = llvm.context.i32_type();
                 Some(i32t.const_int(*i as u64, true).into())

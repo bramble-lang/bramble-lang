@@ -322,6 +322,9 @@ impl Lexer {
         let int_token = branch.cut();
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal
+        // TODO: I think conceptually this may be the wrong approach, should the type after
+        // the number be considered part of the token or as an operator?
+        // TODO: regardless, I think that this should be pulled out into a support function.
         let prim = if branch.next_ifn("i8") {
             Primitive::I8
         } else if branch.next_ifn("i32") {
@@ -344,6 +347,7 @@ impl Lexer {
         }
 
         branch.merge();
+        // TODO: pull this out into a support function
         match prim {
             Primitive::I8 => Ok(Some(Token::new(
                 self.line,
@@ -452,7 +456,7 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
-                "i8" => Token::new(self.line, Primitive(Primitive::I32)),
+                "i8" => Token::new(self.line, Primitive(Primitive::I8)),
                 "i32" => Token::new(self.line, Primitive(Primitive::I32)),
                 "i64" => Token::new(self.line, Primitive(Primitive::I64)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
@@ -657,6 +661,7 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
+            ("i8", Token::new(1, Primitive(Primitive::I8))),
             ("i32", Token::new(1, Primitive(Primitive::I32))),
             ("i64", Token::new(1, Primitive(Primitive::I64))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),

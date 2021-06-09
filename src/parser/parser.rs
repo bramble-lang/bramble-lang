@@ -846,6 +846,8 @@ pub mod tests {
     #[test]
     fn parse_primitives() {
         for (text, expected_ty) in vec![
+            ("let x:i8 := 5;", Type::I8),
+            ("let x:i8 := 5i8;", Type::I8),
             ("let x:i32 := 5;", Type::I32),
             ("let x:i32 := 5i32;", Type::I32),
             ("let x:i64 := 5;", Type::I64),
@@ -868,9 +870,9 @@ pub mod tests {
             let stm = statement(&mut stream).unwrap().unwrap();
             match stm {
                 Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), expected_ty);
-                    assert_eq!(b.is_mutable(), false);
+                    assert_eq!(b.get_id(), "x", "{}", text);
+                    assert_eq!(b.get_type(), expected_ty, "{}", text);
+                    assert_eq!(b.is_mutable(), false, "{}", text);
                 }
                 _ => panic!("Not a binding statement"),
             }

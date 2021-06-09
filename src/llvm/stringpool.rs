@@ -50,6 +50,7 @@ impl StringPool {
                     Some(fe) => self.extract_from(fe),
                 }
             }
+            Integer8(..) => {}
             Integer32(..) => {}
             Integer64(..) => {}
             Boolean(..) => {}

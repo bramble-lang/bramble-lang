@@ -9,6 +9,7 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
+    Integer8(I, i8),
     Integer32(I, i32),
     Integer64(I, i64),
     Boolean(I, bool),
@@ -49,7 +50,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation(&self) -> &M {
         use Expression::*;
         match self {
-            Integer32(m, ..)
+            Integer8(m, ..)
+            | Integer32(m, ..)
             | Integer64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
@@ -74,7 +76,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
-            Integer32(m, ..)
+            Integer8(m, ..)
+            | Integer32(m, ..)
             | Integer64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
@@ -152,7 +155,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
                 }
                 o
             }
-            Integer32(..)
+            Integer8(..)
+            | Integer32(..)
             | Integer64(..)
             | Boolean(..)
             | StringLiteral(..)
@@ -187,6 +191,7 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
+            Integer8(_, v) => format!("i8({})", v),
             Integer32(_, v) => format!("i32({})", v),
             Integer64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),

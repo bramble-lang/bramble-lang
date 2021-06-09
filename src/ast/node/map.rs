@@ -193,6 +193,7 @@ where
         use Expression::*;
 
         match exp {
+            Integer8(_, i) => Integer8(self.transform(exp), *i),
             Integer32(_, i) => Integer32(self.transform(exp), *i),
             Integer64(_, i) => Integer64(self.transform(exp), *i),
             Boolean(_, b) => Boolean(self.transform(exp), *b),

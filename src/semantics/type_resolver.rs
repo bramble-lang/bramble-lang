@@ -431,6 +431,11 @@ impl<'a> TypeResolver<'a> {
         current_func: &str,
     ) -> Result<SemanticNode> {
         match &ast {
+            &Expression::Integer8(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::I8;
+                Ok(Expression::Integer8(meta, *v))
+            }
             &Expression::Integer32(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I32;
