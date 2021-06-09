@@ -152,6 +152,7 @@ impl Token {
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {
+        // TODO: is there a way to make this easier to code
         match self.s {
             Lex::Integer8(_) => match a {
                 Lex::Integer8(_) => true,
@@ -181,7 +182,46 @@ impl Token {
                 Lex::Primitive(_) => true,
                 _ => false,
             },
-            _ => *a == self.s,
+            Lex::Mul
+            | Lex::Div
+            | Lex::Add
+            | Lex::Minus
+            | Lex::Not
+            | Lex::BAnd
+            | Lex::BOr
+            | Lex::GrEq
+            | Lex::LsEq
+            | Lex::Gr
+            | Lex::Ls
+            | Lex::Eq
+            | Lex::NEq
+            | Lex::Assign
+            | Lex::Semicolon
+            | Lex::Comma
+            | Lex::Let
+            | Lex::Mut
+            | Lex::Return
+            | Lex::LParen
+            | Lex::RParen
+            | Lex::LBrace
+            | Lex::RBrace
+            | Lex::LBracket
+            | Lex::RBracket
+            | Lex::Init
+            | Lex::Yield
+            | Lex::YieldReturn
+            | Lex::CoroutineDef
+            | Lex::FunctionDef
+            | Lex::ModuleDef
+            | Lex::Struct
+            | Lex::Extern
+            | Lex::If
+            | Lex::Else
+            | Lex::While
+            | Lex::Colon
+            | Lex::MemberAccess
+            | Lex::PathSeparator
+            | Lex::LArrow => *a == self.s,
         }
     }
 }
