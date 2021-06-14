@@ -431,6 +431,7 @@ impl<'a> TypeResolver<'a> {
         current_func: &str,
     ) -> Result<SemanticNode> {
         match &ast {
+            &Expression::U64(_meta, _v) => todo!(),
             &Expression::Integer8(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I8;

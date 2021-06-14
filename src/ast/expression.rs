@@ -9,6 +9,7 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
+    U64(I, u64),
     Integer8(I, i8),
     Integer16(I, i16),
     Integer32(I, i32),
@@ -51,7 +52,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation(&self) -> &M {
         use Expression::*;
         match self {
-            Integer8(m, ..)
+            U64(m, ..)
+            | Integer8(m, ..)
             | Integer16(m, ..)
             | Integer32(m, ..)
             | Integer64(m, ..)
@@ -78,7 +80,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
-            Integer8(m, ..)
+            U64(m, ..)
+            | Integer8(m, ..)
             | Integer16(m, ..)
             | Integer32(m, ..)
             | Integer64(m, ..)
@@ -158,7 +161,8 @@ impl<M: Annotation> Node<M> for Expression<M> {
                 }
                 o
             }
-            Integer8(..)
+            U64(..)
+            | Integer8(..)
             | Integer16(..)
             | Integer32(..)
             | Integer64(..)
@@ -195,6 +199,7 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
+            U64(_, v) => format!("u64({})", v),
             Integer8(_, v) => format!("i8({})", v),
             Integer16(_, v) => format!("i16({})", v),
             Integer32(_, v) => format!("i32({})", v),
