@@ -431,7 +431,11 @@ impl<'a> TypeResolver<'a> {
         current_func: &str,
     ) -> Result<SemanticNode> {
         match &ast {
-            &Expression::U64(_meta, _v) => todo!(),
+            &Expression::U64(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U64;
+                Ok(Expression::U64(meta, *v))
+            }
             &Expression::Integer8(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I8;
@@ -863,6 +867,7 @@ impl<'a> TypeResolver<'a> {
                     || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
                     || (l.get_type() == Type::I16 && r.get_type() == Type::I16)
                     || (l.get_type() == Type::I8 && r.get_type() == Type::I8)
+                    || (l.get_type() == Type::U64 && r.get_type() == Type::U64)
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
@@ -870,10 +875,11 @@ impl<'a> TypeResolver<'a> {
                         || l.get_type() == Type::I32
                         || l.get_type() == Type::I16
                         || l.get_type() == Type::I8
+                        || l.get_type() == Type::U64
                     {
                         format!("{}", l.get_type())
                     } else {
-                        "i64".into()
+                        "i64".into() // TODO: why assume i64?  Can I change this to an unknown type error?
                     };
                     Err(format!(
                         "{} expected {} but found {} and {}",
@@ -1051,6 +1057,13 @@ mod tests {
                 Ok(Type::I64),
             ),
             (
+                "fn main() -> u64 {
+                    let k: u64 := 5u64;
+                    return k;
+                }",
+                Ok(Type::U64),
+            ),
+            (
                 "fn main() -> i32 {
                     let k: i32 := 5i32;
                     return k;
@@ -1112,6 +1125,13 @@ mod tests {
                     return k;
                 }",
                 Err("Semantic: L2: Bind expected i8 but got i64"),
+            ),
+            (
+                "fn main() -> u64 {
+                    let k: u64 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected u64 but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -1597,6 +1617,22 @@ mod tests {
             ),
             (
                 line!(),
+                "fn main() -> u64 {
+                    let k: u64 := 1u64 + 5u64;
+                    return k;
+                }",
+                Ok(Type::U64),
+            ),
+            (
+                line!(),
+                "fn main() -> u64 {
+                    let k: u64 := (1u64 + 5u64) * (3u64 - 4u64/(2u64 + 3u64));
+                    return k;
+                }",
+                Ok(Type::U64),
+            ),
+            (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
                     return k;
@@ -1634,6 +1670,14 @@ mod tests {
                     return k;
                 }",
                 Err("Semantic: L2: + expected i8 but found i8 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: u64 := 1u64 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected u64 but found u64 and i64"), // TODO: Change this error message to specify the right operand is wrong
             ),
             (
                 line!(),
@@ -1738,7 +1782,14 @@ mod tests {
                     let k: bool := false;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i32 or i64 but found bool"),
+                Err("Semantic: L3: - expected i32 or i64 but found bool"), // TODO: Change this error message to include i8 and i16
+            ),
+            (
+                "fn main() -> u64 {
+                    let k: u64 := 5u64;
+                    return -k;
+                }",
+                Err("Semantic: L3: - expected i32 or i64 but found u64"),
             ),
             (
                 "fn main() -> bool {
