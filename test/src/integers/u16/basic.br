@@ -1,0 +1,23 @@
+fn my_main() -> i64 {
+    let x:u16 := 4u16;
+    let y:u16 := test();
+    let z:u16 := test2(16000u16);
+    let z2:u16 := test2(32767u16);
+    let z3:u16 := test2(65535u16);
+
+    root::std::io::writeu16ln(x);
+    root::std::io::writeu16ln(y);
+    root::std::io::writeu16ln(z);
+    root::std::io::writeu16ln(z2);
+    root::std::io::writeu16ln(z3);
+    
+    return 0;
+}
+
+fn test() -> u16 {
+    return 5u16;
+}
+
+fn test2(i: u16) -> u16 {
+    return i;
+}
