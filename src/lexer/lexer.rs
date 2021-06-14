@@ -321,13 +321,11 @@ impl Lexer {
 
         let int_token = branch.cut();
 
-        // Check if there is a postfix (i32, i64, etc) on the integer literal
         // TODO: I think conceptually this may be the wrong approach, should the type after
         // the number be considered part of the token or as an operator?
-        // TODO: regardless, I think that this should be pulled out into a support function.
+        // Check if there is a postfix (i32, i64, etc) on the integer literal
         let prim_suffix = Self::consume_type_suffix(&mut branch)?.unwrap_or(Primitive::I64);
 
-        // TODO: this check seems to narrow
         if branch
             .peek()
             .map(|c| c.is_alphabetic() || c == '_')
