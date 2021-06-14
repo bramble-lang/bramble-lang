@@ -42,6 +42,29 @@ impl Type {
             .flatten()
     }
 
+    pub fn is_int(&self) -> bool {
+        match self {
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64 => true,
+            Type::Bool
+            | Type::StringLiteral
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::Unknown => false,
+        }
+    }
+
     pub fn is_unsigned_int(&self) -> bool {
         match self {
             Type::U8 => true,

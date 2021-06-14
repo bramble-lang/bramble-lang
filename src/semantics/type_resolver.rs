@@ -877,30 +877,13 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                // TODO: must be a better way to handle this so that all integers are captured
-                if l.get_type() == Type::I64 && r.get_type() == Type::I64
-                    || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
-                    || (l.get_type() == Type::I16 && r.get_type() == Type::I16)
-                    || (l.get_type() == Type::I8 && r.get_type() == Type::I8)
-                    || (l.get_type() == Type::U8 && r.get_type() == Type::U8)
-                    || (l.get_type() == Type::U16 && r.get_type() == Type::U16)
-                    || (l.get_type() == Type::U32 && r.get_type() == Type::U32)
-                    || (l.get_type() == Type::U64 && r.get_type() == Type::U64)
-                {
+                if l.get_type().is_int() && r.get_type().is_int() && l.get_type() == r.get_type() {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type() == Type::I64
-                        || l.get_type() == Type::I32
-                        || l.get_type() == Type::I16
-                        || l.get_type() == Type::I8
-                        || l.get_type() == Type::U8
-                        || l.get_type() == Type::U16
-                        || l.get_type() == Type::U32
-                        || l.get_type() == Type::U64
-                    {
+                    let expected = if l.get_type().is_int() {
                         format!("{}", l.get_type())
                     } else {
-                        "i64".into() // TODO: why assume i64?  Can I change this to an unknown type error?
+                        "i64".into()
                     };
                     Err(format!(
                         "{} expected {} but found {} and {}",
