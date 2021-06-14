@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
+    U64,
     I8,
     I16,
     I32,
@@ -11,6 +12,7 @@ pub enum Primitive {
 impl std::fmt::Display for Primitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Primitive::U64 => f.write_str("u64"),
             Primitive::I8 => f.write_str("i8"),
             Primitive::I16 => f.write_str("i16"),
             Primitive::I32 => f.write_str("i32"),
@@ -23,6 +25,7 @@ impl std::fmt::Display for Primitive {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lex {
+    U64(u64),
     Integer8(i8),
     Integer16(i16),
     Integer32(i32),
@@ -86,6 +89,7 @@ impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
         match self {
+            U64(i) => f.write_str(&format!("u64 literal {}", i)),
             Integer8(i) => f.write_str(&format!("i8 literal {}", i)),
             Integer16(i) => f.write_str(&format!("i16 literal {}", i)),
             Integer32(i) => f.write_str(&format!("i32 literal {}", i)),
@@ -158,6 +162,10 @@ impl Token {
     pub fn token_eq(&self, a: &Lex) -> bool {
         // TODO: is there a way to make this easier to code
         match self.s {
+            Lex::U64(_) => match a {
+                Lex::U64(_) => true,
+                _ => false,
+            },
             Lex::Integer8(_) => match a {
                 Lex::Integer8(_) => true,
                 _ => false,

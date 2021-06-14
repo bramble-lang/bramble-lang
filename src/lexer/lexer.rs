@@ -325,18 +325,9 @@ impl Lexer {
         // TODO: I think conceptually this may be the wrong approach, should the type after
         // the number be considered part of the token or as an operator?
         // TODO: regardless, I think that this should be pulled out into a support function.
-        let prim = if branch.next_ifn("i8") {
-            Primitive::I8
-        } else if branch.next_ifn("i16") {
-            Primitive::I16
-        } else if branch.next_ifn("i32") {
-            Primitive::I32
-        } else if branch.next_ifn("i64") {
-            Primitive::I64
-        } else {
-            Primitive::I64
-        };
+        let prim_suffix = Self::consume_type_suffix(&mut branch)?.unwrap_or(Primitive::I64);
 
+        // TODO: this check seems to narrow
         if branch
             .peek()
             .map(|c| c.is_alphabetic() || c == '_')
@@ -350,7 +341,11 @@ impl Lexer {
 
         branch.merge();
         // TODO: pull this out into a support function
-        match prim {
+        match prim_suffix {
+            Primitive::U64 => Ok(Some(Token::new(
+                self.line,
+                U64(int_token.parse::<u64>().unwrap()),
+            ))),
             Primitive::I8 => Ok(Some(Token::new(
                 self.line,
                 Integer8(int_token.parse::<i8>().unwrap()),
@@ -367,10 +362,27 @@ impl Lexer {
                 self.line,
                 Integer64(int_token.parse::<i64>().unwrap()),
             ))),
-            Primitive::Bool | Primitive::StringLiteral => {
-                Err(format!("Unexpected primitive type after number: {}", prim))
-            }
+            Primitive::Bool | Primitive::StringLiteral => Err(format!(
+                "Unexpected primitive type after number: {}",
+                prim_suffix
+            )),
         }
+    }
+
+    fn consume_type_suffix(branch: &mut LexerBranch) -> Result<Option<Primitive>> {
+        Ok(if branch.next_ifn("i8") {
+            Some(Primitive::I8)
+        } else if branch.next_ifn("i16") {
+            Some(Primitive::I16)
+        } else if branch.next_ifn("i32") {
+            Some(Primitive::I32)
+        } else if branch.next_ifn("i64") {
+            Some(Primitive::I64)
+        } else if branch.next_ifn("u64") {
+            Some(Primitive::U64)
+        } else {
+            None
+        })
     }
 
     pub fn consume_operator(&mut self) -> Result<Option<Token>> {
@@ -464,6 +476,7 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
+                "u64" => Token::new(self.line, Primitive(Primitive::U64)),
                 "i8" => Token::new(self.line, Primitive(Primitive::I8)),
                 "i16" => Token::new(self.line, Primitive(Primitive::I16)),
                 "i32" => Token::new(self.line, Primitive(Primitive::I32)),
@@ -556,6 +569,16 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer64(5)));
+    }
+
+    #[test]
+    fn test_u64() {
+        let text = "5u64";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U64(5)));
     }
 
     #[test]
@@ -680,6 +703,7 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
+            ("u64", Token::new(1, Primitive(Primitive::U64))),
             ("i8", Token::new(1, Primitive(Primitive::I8))),
             ("i16", Token::new(1, Primitive(Primitive::I16))),
             ("i32", Token::new(1, Primitive(Primitive::I32))),

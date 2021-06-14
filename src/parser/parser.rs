@@ -486,6 +486,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
             s: Lex::Primitive(primitive),
         }) => {
             let ty = match *primitive {
+                Primitive::U64 => todo!(),
                 Primitive::I8 => Some(Type::I8),
                 Primitive::I16 => Some(Type::I16),
                 Primitive::I32 => Some(Type::I32),
