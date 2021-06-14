@@ -497,7 +497,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
-            ast::Expression::U64(_, i) => todo!(),
+            ast::Expression::U64(_, i) => {
+                let u64t = llvm.context.i64_type();
+                Some(u64t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
             ast::Expression::Integer8(_, i) => {
                 let i8t = llvm.context.i8_type();
                 Some(i8t.const_int(*i as u64, true).into())
