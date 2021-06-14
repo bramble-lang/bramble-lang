@@ -31,6 +31,20 @@ fn my_main() -> i64 {
     let g: i8 := add(x, y);
     root::std::io::writei8ln(g); // 10
 
+    let h: i8 := -5i8;
+    root::std::io::writei8ln(h); // -5
+
+    // test under flow
+    let i: i8 := h - 124i8;
+    root::std::io::writei8ln(i); // 127
+
+    // test overflow
+    let j: i8 := 10i8;
+    root::std::io::writei8ln(j); // 5
+    let k: i8 := j + 118i8;
+    root::std::io::writei8ln(k); // -128
+
+
     if (5i8 < 10i8) {
         root::std::io::write("5 is less than 10\n");
     };
