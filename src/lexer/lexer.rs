@@ -360,19 +360,19 @@ impl Lexer {
             ))),
             Primitive::I8 => Ok(Some(Token::new(
                 self.line,
-                Integer8(int_token.parse::<i8>().unwrap()),
+                I8(int_token.parse::<i8>().unwrap()),
             ))),
             Primitive::I16 => Ok(Some(Token::new(
                 self.line,
-                Integer16(int_token.parse::<i16>().unwrap()),
+                I16(int_token.parse::<i16>().unwrap()),
             ))),
             Primitive::I32 => Ok(Some(Token::new(
                 self.line,
-                Integer32(int_token.parse::<i32>().unwrap()),
+                I32(int_token.parse::<i32>().unwrap()),
             ))),
             Primitive::I64 => Ok(Some(Token::new(
                 self.line,
-                Integer64(int_token.parse::<i64>().unwrap()),
+                I64(int_token.parse::<i64>().unwrap()),
             ))),
             Primitive::Bool | Primitive::StringLiteral => Err(format!(
                 "Unexpected primitive type after number: {}",
@@ -549,7 +549,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer64(5)));
+        assert_eq!(token, Token::new(1, I64(5)));
     }
 
     #[test]
@@ -559,7 +559,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer8(5)));
+        assert_eq!(token, Token::new(1, I8(5)));
     }
 
     #[test]
@@ -569,7 +569,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer16(5)));
+        assert_eq!(token, Token::new(1, I16(5)));
     }
 
     #[test]
@@ -579,7 +579,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer32(5)));
+        assert_eq!(token, Token::new(1, I32(5)));
     }
 
     #[test]
@@ -589,7 +589,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer64(5)));
+        assert_eq!(token, Token::new(1, I64(5)));
     }
 
     #[test]
@@ -809,7 +809,7 @@ mod tests {
                 Token::new(*t3, Identifier("x".into()))
             );
             assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer64(5)));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, I64(5)));
             assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
             assert_eq!(tokens[6].clone().unwrap(), Token::new(*t7, Bool(true)));
             assert_eq!(tokens[7].clone().unwrap(), Token::new(*t8, RParen));
@@ -849,7 +849,7 @@ mod tests {
                 Token::new(*t3, Identifier("x".into()))
             );
             assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer64(5)));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, I64(5)));
             assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
         }
     }

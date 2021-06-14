@@ -35,10 +35,10 @@ pub enum Lex {
     U16(u16),
     U32(u32),
     U64(u64),
-    Integer8(i8),
-    Integer16(i16),
-    Integer32(i32),
-    Integer64(i64),
+    I8(i8),
+    I16(i16),
+    I32(i32),
+    I64(i64),
     Bool(bool),
     Identifier(String),
     StringLiteral(String),
@@ -102,10 +102,10 @@ impl std::fmt::Display for Lex {
             U16(i) => f.write_str(&format!("u16 literal {}", i)),
             U32(i) => f.write_str(&format!("u32 literal {}", i)),
             U64(i) => f.write_str(&format!("u64 literal {}", i)),
-            Integer8(i) => f.write_str(&format!("i8 literal {}", i)),
-            Integer16(i) => f.write_str(&format!("i16 literal {}", i)),
-            Integer32(i) => f.write_str(&format!("i32 literal {}", i)),
-            Integer64(i) => f.write_str(&format!("i64 literal {}", i)),
+            I8(i) => f.write_str(&format!("i8 literal {}", i)),
+            I16(i) => f.write_str(&format!("i16 literal {}", i)),
+            I32(i) => f.write_str(&format!("i32 literal {}", i)),
+            I64(i) => f.write_str(&format!("i64 literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
@@ -190,20 +190,20 @@ impl Token {
                 Lex::U64(_) => true,
                 _ => false,
             },
-            Lex::Integer8(_) => match a {
-                Lex::Integer8(_) => true,
+            Lex::I8(_) => match a {
+                Lex::I8(_) => true,
                 _ => false,
             },
-            Lex::Integer16(_) => match a {
-                Lex::Integer16(_) => true,
+            Lex::I16(_) => match a {
+                Lex::I16(_) => true,
                 _ => false,
             },
-            Lex::Integer32(_) => match a {
-                Lex::Integer32(_) => true,
+            Lex::I32(_) => match a {
+                Lex::I32(_) => true,
                 _ => false,
             },
-            Lex::Integer64(_) => match a {
-                Lex::Integer64(_) => true,
+            Lex::I64(_) => match a {
+                Lex::I64(_) => true,
                 _ => false,
             },
             Lex::Bool(_) => match a {
