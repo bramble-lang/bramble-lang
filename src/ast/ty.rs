@@ -42,7 +42,7 @@ impl Type {
             .flatten()
     }
 
-    pub fn is_int(&self) -> bool {
+    pub fn is_integral(&self) -> bool {
         match self {
             Type::U8
             | Type::U16
@@ -67,14 +67,31 @@ impl Type {
 
     pub fn is_unsigned_int(&self) -> bool {
         match self {
-            Type::U8 => true,
-            Type::U16 => true,
-            Type::U32 => true,
-            Type::U64 => true,
+            Type::U8 | Type::U16 | Type::U32 | Type::U64 => true,
             Type::I8
             | Type::I16
             | Type::I32
             | Type::I64
+            | Type::Bool
+            | Type::StringLiteral
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::Unknown => false,
+        }
+    }
+
+    pub fn is_signed_int(&self) -> bool {
+        match self {
+            Type::I8 | Type::I16 | Type::I32 | Type::I64 => true,
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
             | Type::Bool
             | Type::StringLiteral
             | Type::Array(_, _)

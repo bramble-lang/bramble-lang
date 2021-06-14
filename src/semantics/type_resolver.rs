@@ -835,11 +835,7 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Minus => {
-                if operand.get_type() == Type::I8
-                    || operand.get_type() == Type::I16
-                    || operand.get_type() == Type::I32
-                    || operand.get_type() == Type::I64
-                {
+                if operand.get_type().is_signed_int() {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(format!(
@@ -877,10 +873,13 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if l.get_type().is_int() && r.get_type().is_int() && l.get_type() == r.get_type() {
+                if l.get_type().is_integral()
+                    && r.get_type().is_integral()
+                    && l.get_type() == r.get_type()
+                {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type().is_int() {
+                    let expected = if l.get_type().is_integral() {
                         format!("{}", l.get_type())
                     } else {
                         "i64".into()
