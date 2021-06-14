@@ -342,6 +342,18 @@ impl Lexer {
         branch.merge();
         // TODO: pull this out into a support function
         match prim_suffix {
+            Primitive::U8 => Ok(Some(Token::new(
+                self.line,
+                U8(int_token.parse::<u8>().unwrap()),
+            ))),
+            Primitive::U16 => Ok(Some(Token::new(
+                self.line,
+                U16(int_token.parse::<u16>().unwrap()),
+            ))),
+            Primitive::U32 => Ok(Some(Token::new(
+                self.line,
+                U32(int_token.parse::<u32>().unwrap()),
+            ))),
             Primitive::U64 => Ok(Some(Token::new(
                 self.line,
                 U64(int_token.parse::<u64>().unwrap()),
@@ -378,6 +390,12 @@ impl Lexer {
             Some(Primitive::I32)
         } else if branch.next_ifn("i64") {
             Some(Primitive::I64)
+        } else if branch.next_ifn("u8") {
+            Some(Primitive::U8)
+        } else if branch.next_ifn("u16") {
+            Some(Primitive::U16)
+        } else if branch.next_ifn("u32") {
+            Some(Primitive::U32)
         } else if branch.next_ifn("u64") {
             Some(Primitive::U64)
         } else {
@@ -476,6 +494,9 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
+                "u8" => Token::new(self.line, Primitive(Primitive::U8)),
+                "u16" => Token::new(self.line, Primitive(Primitive::U16)),
+                "u32" => Token::new(self.line, Primitive(Primitive::U32)),
                 "u64" => Token::new(self.line, Primitive(Primitive::U64)),
                 "i8" => Token::new(self.line, Primitive(Primitive::I8)),
                 "i16" => Token::new(self.line, Primitive(Primitive::I16)),
@@ -569,6 +590,36 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer64(5)));
+    }
+
+    #[test]
+    fn test_u8() {
+        let text = "5u8";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U8(5)));
+    }
+
+    #[test]
+    fn test_u16() {
+        let text = "5u16";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U16(5)));
+    }
+
+    #[test]
+    fn test_u32() {
+        let text = "5u32";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U32(5)));
     }
 
     #[test]
@@ -703,6 +754,9 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
+            ("u8", Token::new(1, Primitive(Primitive::U8))),
+            ("u16", Token::new(1, Primitive(Primitive::U16))),
+            ("u32", Token::new(1, Primitive(Primitive::U32))),
             ("u64", Token::new(1, Primitive(Primitive::U64))),
             ("i8", Token::new(1, Primitive(Primitive::I8))),
             ("i16", Token::new(1, Primitive(Primitive::I16))),

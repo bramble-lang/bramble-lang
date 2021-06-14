@@ -1,5 +1,8 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
+    U8,
+    U16,
+    U32,
     U64,
     I8,
     I16,
@@ -12,6 +15,9 @@ pub enum Primitive {
 impl std::fmt::Display for Primitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Primitive::U8 => f.write_str("u8"),
+            Primitive::U16 => f.write_str("u16"),
+            Primitive::U32 => f.write_str("u32"),
             Primitive::U64 => f.write_str("u64"),
             Primitive::I8 => f.write_str("i8"),
             Primitive::I16 => f.write_str("i16"),
@@ -25,6 +31,9 @@ impl std::fmt::Display for Primitive {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lex {
+    U8(u8),
+    U16(u16),
+    U32(u32),
     U64(u64),
     Integer8(i8),
     Integer16(i16),
@@ -89,6 +98,9 @@ impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
         match self {
+            U8(i) => f.write_str(&format!("u8 literal {}", i)),
+            U16(i) => f.write_str(&format!("u16 literal {}", i)),
+            U32(i) => f.write_str(&format!("u32 literal {}", i)),
             U64(i) => f.write_str(&format!("u64 literal {}", i)),
             Integer8(i) => f.write_str(&format!("i8 literal {}", i)),
             Integer16(i) => f.write_str(&format!("i16 literal {}", i)),
@@ -162,6 +174,18 @@ impl Token {
     pub fn token_eq(&self, a: &Lex) -> bool {
         // TODO: is there a way to make this easier to code
         match self.s {
+            Lex::U8(_) => match a {
+                Lex::U8(_) => true,
+                _ => false,
+            },
+            Lex::U16(_) => match a {
+                Lex::U16(_) => true,
+                _ => false,
+            },
+            Lex::U32(_) => match a {
+                Lex::U32(_) => true,
+                _ => false,
+            },
             Lex::U64(_) => match a {
                 Lex::U64(_) => true,
                 _ => false,
