@@ -321,8 +321,6 @@ impl Lexer {
 
         let int_token = branch.cut();
 
-        // TODO: I think conceptually this may be the wrong approach, should the type after
-        // the number be considered part of the token or as an operator?
         // Check if there is a postfix (i32, i64, etc) on the integer literal
         let prim_suffix = Self::consume_type_suffix(&mut branch)?.unwrap_or(Primitive::I64);
 
