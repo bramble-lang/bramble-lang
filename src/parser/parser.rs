@@ -569,7 +569,7 @@ pub mod tests {
     #[test]
     fn parse_unary_operators() {
         for (text, expected) in
-            vec![("-a", UnaryOperator::Minus), ("!a", UnaryOperator::Not)].iter()
+            vec![("-a", UnaryOperator::Negate), ("!a", UnaryOperator::Not)].iter()
         {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -591,7 +591,7 @@ pub mod tests {
     #[test]
     fn parse_double_unary_operators() {
         for (text, expected) in
-            vec![("--a", UnaryOperator::Minus), ("!!a", UnaryOperator::Not)].iter()
+            vec![("--a", UnaryOperator::Negate), ("!!a", UnaryOperator::Not)].iter()
         {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()

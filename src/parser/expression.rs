@@ -75,7 +75,7 @@ impl Expression<ParserInfo> {
         match op {
             Lex::Minus => Ok(Some(Expression::UnaryOp(
                 line,
-                UnaryOperator::Minus,
+                UnaryOperator::Negate,
                 operand,
             ))),
             Lex::Not => Ok(Some(Expression::UnaryOp(line, UnaryOperator::Not, operand))),

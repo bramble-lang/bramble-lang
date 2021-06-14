@@ -799,7 +799,7 @@ impl ast::UnaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let rv = right.into_int_value();
         match self {
-            ast::UnaryOperator::Minus => llvm.builder.build_int_neg(rv, "").into(),
+            ast::UnaryOperator::Negate => llvm.builder.build_int_neg(rv, "").into(),
             ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
         }
     }

@@ -834,7 +834,7 @@ impl<'a> TypeResolver<'a> {
         let operand = self.traverse(operand, current_func)?;
 
         match op {
-            Minus => {
+            Negate => {
                 if operand.get_type().is_signed_int() {
                     Ok((operand.get_type().clone(), operand))
                 } else {

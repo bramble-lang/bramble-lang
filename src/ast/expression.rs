@@ -284,7 +284,7 @@ impl std::fmt::Display for BinaryOperator {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UnaryOperator {
-    Minus,
+    Negate,
     Not,
 }
 
@@ -292,7 +292,7 @@ impl std::fmt::Display for UnaryOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         use UnaryOperator::*;
         match self {
-            Minus => f.write_str("-"),
+            Negate => f.write_str("-"),
             Not => f.write_str("!"),
         }
     }

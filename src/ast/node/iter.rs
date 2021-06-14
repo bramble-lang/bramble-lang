@@ -206,7 +206,7 @@ mod test_preorder {
             9,
             Some(Expression::UnaryOp(
                 10,
-                UnaryOperator::Minus,
+                UnaryOperator::Negate,
                 box Expression::ExpressionBlock(
                     11,
                     vec![Statement::Expression(box Expression::Yield(
@@ -327,7 +327,7 @@ mod test_postorder {
             9,
             Some(Expression::UnaryOp(
                 10,
-                UnaryOperator::Minus,
+                UnaryOperator::Negate,
                 box Expression::ExpressionBlock(
                     11,
                     vec![Statement::Expression(box Expression::Yield(
