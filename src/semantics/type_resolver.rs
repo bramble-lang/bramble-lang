@@ -1047,6 +1047,27 @@ mod tests {
                 Ok(Type::I64),
             ),
             (
+                "fn main() -> i32 {
+                    let k: i32 := 5i32;
+                    return k;
+                }",
+                Ok(Type::I32),
+            ),
+            (
+                "fn main() -> i16 {
+                    let k: i16 := 5i16;
+                    return k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                "fn main() -> i8 {
+                    let k: i8 := 5i8;
+                    return k;
+                }",
+                Ok(Type::I8),
+            ),
+            (
                 "fn main() -> bool {
                     let k: bool := false;
                     return k;
@@ -1066,6 +1087,27 @@ mod tests {
                     return k;
                 }",
                 Err("Semantic: L2: Bind expected i64 but got bool"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i32 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i32 but got i64"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i16 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i16 but got i64"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i8 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i8 but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -1519,6 +1561,22 @@ mod tests {
             ),
             (
                 line!(),
+                "fn main() -> i16 {
+                    let k: i16 := 1i16 + 5i16;
+                    return k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                line!(),
+                "fn main() -> i16 {
+                    let k: i16 := (1i16 + 5i16) * (3i16 - 4i16/(2i16 + 3i16));
+                    return k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
                     return k;
@@ -1564,6 +1622,7 @@ mod tests {
             );
             match expected {
                 Ok(expected_ty) => {
+                    assert!(module.is_ok(), "Test Case at L:{}", line);
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
