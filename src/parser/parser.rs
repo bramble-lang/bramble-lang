@@ -487,6 +487,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
         }) => {
             let ty = match *primitive {
                 Primitive::I8 => Some(Type::I8),
+                Primitive::I16 => todo!(),
                 Primitive::I32 => Some(Type::I32),
                 Primitive::I64 => Some(Type::I64),
                 Primitive::Bool => Some(Type::Bool),

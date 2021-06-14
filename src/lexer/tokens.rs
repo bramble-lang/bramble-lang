@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
     I8,
+    I16,
     I32,
     I64,
     Bool,
@@ -11,6 +12,7 @@ impl std::fmt::Display for Primitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Primitive::I8 => f.write_str("i8"),
+            Primitive::I16 => f.write_str("i16"),
             Primitive::I32 => f.write_str("i32"),
             Primitive::I64 => f.write_str("i64"),
             Primitive::Bool => f.write_str("bool"),
@@ -22,6 +24,7 @@ impl std::fmt::Display for Primitive {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lex {
     Integer8(i8),
+    Integer16(i16),
     Integer32(i32),
     Integer64(i64),
     Bool(bool),
@@ -84,6 +87,7 @@ impl std::fmt::Display for Lex {
         use Lex::*;
         match self {
             Integer8(i) => f.write_str(&format!("Integer8({})", i)),
+            Integer16(i) => f.write_str(&format!("Integer16({})", i)),
             Integer32(i) => f.write_str(&format!("Integer32({})", i)),
             Integer64(i) => f.write_str(&format!("Integer64({})", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
@@ -156,6 +160,10 @@ impl Token {
         match self.s {
             Lex::Integer8(_) => match a {
                 Lex::Integer8(_) => true,
+                _ => false,
+            },
+            Lex::Integer16(_) => match a {
+                Lex::Integer16(_) => true,
                 _ => false,
             },
             Lex::Integer32(_) => match a {

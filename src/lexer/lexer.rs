@@ -327,6 +327,8 @@ impl Lexer {
         // TODO: regardless, I think that this should be pulled out into a support function.
         let prim = if branch.next_ifn("i8") {
             Primitive::I8
+        } else if branch.next_ifn("i16") {
+            Primitive::I16
         } else if branch.next_ifn("i32") {
             Primitive::I32
         } else if branch.next_ifn("i64") {
@@ -353,6 +355,10 @@ impl Lexer {
                 self.line,
                 Integer8(int_token.parse::<i8>().unwrap()),
             ))),
+            Primitive::I16 => Ok(Some(Token::new(
+                self.line,
+                Integer16(int_token.parse::<i16>().unwrap()),
+            ))),
             Primitive::I32 => Ok(Some(Token::new(
                 self.line,
                 Integer32(int_token.parse::<i32>().unwrap()),
@@ -361,7 +367,9 @@ impl Lexer {
                 self.line,
                 Integer64(int_token.parse::<i64>().unwrap()),
             ))),
-            _ => Err(format!("Unexpected primitive type after number: {}", prim)),
+            Primitive::Bool | Primitive::StringLiteral => {
+                Err(format!("Unexpected primitive type after number: {}", prim))
+            }
         }
     }
 
@@ -457,6 +465,7 @@ impl Lexer {
                 s: Identifier(ref id),
             } => match id.as_str() {
                 "i8" => Token::new(self.line, Primitive(Primitive::I8)),
+                "i16" => Token::new(self.line, Primitive(Primitive::I16)),
                 "i32" => Token::new(self.line, Primitive(Primitive::I32)),
                 "i64" => Token::new(self.line, Primitive(Primitive::I64)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
@@ -517,6 +526,16 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(token, Token::new(1, Integer8(5)));
+    }
+
+    #[test]
+    fn test_integer16() {
+        let text = "5i16";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, Integer16(5)));
     }
 
     #[test]
@@ -662,6 +681,7 @@ mod tests {
     fn test_primitives() {
         for (text, expected_token) in [
             ("i8", Token::new(1, Primitive(Primitive::I8))),
+            ("i16", Token::new(1, Primitive(Primitive::I16))),
             ("i32", Token::new(1, Primitive(Primitive::I32))),
             ("i64", Token::new(1, Primitive(Primitive::I64))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),
