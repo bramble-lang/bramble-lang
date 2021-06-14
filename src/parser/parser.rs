@@ -487,7 +487,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
         }) => {
             let ty = match *primitive {
                 Primitive::I8 => Some(Type::I8),
-                Primitive::I16 => todo!(),
+                Primitive::I16 => Some(Type::I16),
                 Primitive::I32 => Some(Type::I32),
                 Primitive::I64 => Some(Type::I64),
                 Primitive::Bool => Some(Type::Bool),
@@ -525,6 +525,7 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
             let len = expression(stream)?
                 .ok_or("Expected size to be specified in array type declaration")?;
             let len = match len {
+                // TODO: Support i8 and i16
                 Expression::Integer32(_, l) => l as usize,
                 Expression::Integer64(_, l) => l as usize,
                 _ => return Err("Expected integer literal for array size".into()),
@@ -849,6 +850,8 @@ pub mod tests {
         for (text, expected_ty) in vec![
             ("let x:i8 := 5;", Type::I8),
             ("let x:i8 := 5i8;", Type::I8),
+            ("let x:i16 := 5;", Type::I16),
+            ("let x:i16 := 5i16;", Type::I16),
             ("let x:i32 := 5;", Type::I32),
             ("let x:i32 := 5i32;", Type::I32),
             ("let x:i64 := 5;", Type::I64),
@@ -868,8 +871,10 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
 
-            let stm = statement(&mut stream).unwrap().unwrap();
-            match stm {
+            let stm = statement(&mut stream);
+            assert!(stm.is_ok(), "{}", text);
+
+            match stm.unwrap().unwrap() {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x", "{}", text);
                     assert_eq!(b.get_type(), expected_ty, "{}", text);

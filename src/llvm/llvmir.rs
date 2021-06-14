@@ -501,6 +501,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 let i8t = llvm.context.i8_type();
                 Some(i8t.const_int(*i as u64, true).into())
             }
+            ast::Expression::Integer16(_, i) => {
+                let i16t = llvm.context.i16_type();
+                Some(i16t.const_int(*i as u64, true).into())
+            }
             ast::Expression::Integer32(_, i) => {
                 let i32t = llvm.context.i32_type();
                 Some(i32t.const_int(*i as u64, true).into())
@@ -748,7 +752,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 Some(el_val)
             }
-            _ => todo!("{} not implemented yet", self),
+            ast::Expression::CustomType(..) => panic!("CustomType should not be passed to LLVM"),
+            ast::Expression::Path(..) => panic!("Path should not be passed to LLVM"),
+            ast::Expression::IdentifierDeclare(..) => {
+                panic!("IdentifierDelcare nodes should not be passed to LLVM")
+            }
+            ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
         }
     }
 }
@@ -863,6 +872,7 @@ impl ast::Type {
     fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> AnyTypeEnum<'ctx> {
         match self {
             ast::Type::I8 => llvm.context.i8_type().into(),
+            ast::Type::I16 => llvm.context.i16_type().into(),
             ast::Type::I32 => llvm.context.i32_type().into(),
             ast::Type::I64 => llvm.context.i64_type().into(),
             ast::Type::Bool => llvm.context.bool_type().into(),

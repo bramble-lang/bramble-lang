@@ -51,6 +51,7 @@ impl StringPool {
                 }
             }
             Integer8(..) => {}
+            Integer16(..) => {}
             Integer32(..) => {}
             Integer64(..) => {}
             Boolean(..) => {}

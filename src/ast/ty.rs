@@ -3,6 +3,7 @@ use super::path::Path;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     I8,
+    I16,
     I32,
     I64,
     Bool,
@@ -55,6 +56,7 @@ impl std::fmt::Display for Type {
         use Type::*;
         match self {
             I8 => f.write_str("i8"),
+            I16 => f.write_str("i16"),
             I32 => f.write_str("i32"),
             I64 => f.write_str("i64"),
             Bool => f.write_str("bool"),

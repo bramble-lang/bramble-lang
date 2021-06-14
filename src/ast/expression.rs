@@ -10,6 +10,7 @@ use super::{
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
     Integer8(I, i8),
+    Integer16(I, i16),
     Integer32(I, i32),
     Integer64(I, i64),
     Boolean(I, bool),
@@ -51,6 +52,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
         use Expression::*;
         match self {
             Integer8(m, ..)
+            | Integer16(m, ..)
             | Integer32(m, ..)
             | Integer64(m, ..)
             | Boolean(m, ..)
@@ -77,6 +79,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
         use Expression::*;
         match self {
             Integer8(m, ..)
+            | Integer16(m, ..)
             | Integer32(m, ..)
             | Integer64(m, ..)
             | Boolean(m, ..)
@@ -156,6 +159,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
                 o
             }
             Integer8(..)
+            | Integer16(..)
             | Integer32(..)
             | Integer64(..)
             | Boolean(..)
@@ -192,6 +196,7 @@ impl<I> Expression<I> {
         use Expression::*;
         match self {
             Integer8(_, v) => format!("i8({})", v),
+            Integer16(_, v) => format!("i16({})", v),
             Integer32(_, v) => format!("i32({})", v),
             Integer64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),

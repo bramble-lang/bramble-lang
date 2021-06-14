@@ -436,6 +436,11 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = Type::I8;
                 Ok(Expression::Integer8(meta, *v))
             }
+            &Expression::Integer16(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::I16;
+                Ok(Expression::Integer16(meta, *v))
+            }
             &Expression::Integer32(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I32;
