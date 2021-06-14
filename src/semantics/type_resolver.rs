@@ -882,6 +882,9 @@ impl<'a> TypeResolver<'a> {
                     || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
                     || (l.get_type() == Type::I16 && r.get_type() == Type::I16)
                     || (l.get_type() == Type::I8 && r.get_type() == Type::I8)
+                    || (l.get_type() == Type::U8 && r.get_type() == Type::U8)
+                    || (l.get_type() == Type::U16 && r.get_type() == Type::U16)
+                    || (l.get_type() == Type::U32 && r.get_type() == Type::U32)
                     || (l.get_type() == Type::U64 && r.get_type() == Type::U64)
                 {
                     Ok((l.get_type().clone(), l, r))
@@ -890,6 +893,9 @@ impl<'a> TypeResolver<'a> {
                         || l.get_type() == Type::I32
                         || l.get_type() == Type::I16
                         || l.get_type() == Type::I8
+                        || l.get_type() == Type::U8
+                        || l.get_type() == Type::U16
+                        || l.get_type() == Type::U32
                         || l.get_type() == Type::U64
                     {
                         format!("{}", l.get_type())
@@ -1658,6 +1664,30 @@ mod tests {
                     return k;
                 }",
                 Ok(Type::U64),
+            ),
+            (
+                line!(),
+                "fn main() -> u8 {
+                    let k: u8 := (1u8 + 5u8) * (3u8 - 4u8/(2u8 + 3u8));
+                    return k;
+                }",
+                Ok(Type::U8),
+            ),
+            (
+                line!(),
+                "fn main() -> u16 {
+                    let k: u16 := (1u16 + 5u16) * (3u16 - 4u16/(2u16 + 3u16));
+                    return k;
+                }",
+                Ok(Type::U16),
+            ),
+            (
+                line!(),
+                "fn main() -> u32 {
+                    let k: u32 := (1u32 + 5u32) * (3u32 - 4u32/(2u32 + 3u32));
+                    return k;
+                }",
+                Ok(Type::U32),
             ),
             (
                 line!(),
