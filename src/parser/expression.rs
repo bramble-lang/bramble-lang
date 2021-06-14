@@ -543,6 +543,8 @@ mod test {
     #[test]
     fn parse_number() {
         for (text, expected) in vec![
+            ("5i8", Expression::Integer8(1, 5)),
+            ("5i16", Expression::Integer16(1, 5)),
             ("5i32", Expression::Integer32(1, 5)),
             ("64i64", Expression::Integer64(1, 64)),
             ("64", Expression::Integer64(1, 64)),
