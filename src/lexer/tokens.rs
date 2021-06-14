@@ -86,10 +86,10 @@ impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
         match self {
-            Integer8(i) => f.write_str(&format!("Integer8({})", i)),
-            Integer16(i) => f.write_str(&format!("Integer16({})", i)),
-            Integer32(i) => f.write_str(&format!("Integer32({})", i)),
-            Integer64(i) => f.write_str(&format!("Integer64({})", i)),
+            Integer8(i) => f.write_str(&format!("i8 literal {}", i)),
+            Integer16(i) => f.write_str(&format!("i16 literal {}", i)),
+            Integer32(i) => f.write_str(&format!("i32 literal {}", i)),
+            Integer64(i) => f.write_str(&format!("i64 literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
