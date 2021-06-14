@@ -816,6 +816,7 @@ impl<'a> TypeResolver<'a> {
         match op {
             Minus => {
                 if operand.get_type() == Type::I8
+                    || operand.get_type() == Type::I16
                     || operand.get_type() == Type::I32
                     || operand.get_type() == Type::I64
                 {
@@ -859,12 +860,14 @@ impl<'a> TypeResolver<'a> {
                 // TODO: must be a better way to handle this so that all integers are captured
                 if l.get_type() == Type::I64 && r.get_type() == Type::I64
                     || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
+                    || (l.get_type() == Type::I16 && r.get_type() == Type::I16)
                     || (l.get_type() == Type::I8 && r.get_type() == Type::I8)
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
                     let expected = if l.get_type() == Type::I64
                         || l.get_type() == Type::I32
+                        || l.get_type() == Type::I16
                         || l.get_type() == Type::I8
                     {
                         format!("{}", l.get_type())
@@ -1577,6 +1580,22 @@ mod tests {
             ),
             (
                 line!(),
+                "fn main() -> i8 {
+                    let k: i8 := 1i8 + 5i8;
+                    return k;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                line!(),
+                "fn main() -> i8 {
+                    let k: i8 := (1i8 + 5i8) * (3i8 - 4i8/(2i8 + 3i8));
+                    return k;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
                     return k;
@@ -1606,6 +1625,22 @@ mod tests {
                     return k;
                 }",
                 Err("Semantic: L2: + expected i32 but found i32 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1i8 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i8 but found i8 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1i16 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i16 but found i16 and i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1675,6 +1710,27 @@ mod tests {
                     return -k;
                 }",
                 Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5i32;
+                    return -k;
+                }",
+                Ok(Type::I32),
+            ),
+            (
+                "fn main() -> i16 {
+                    let k: i16 := 5i16;
+                    return -k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                "fn main() -> i8 {
+                    let k: i8 := 5i8;
+                    return -k;
+                }",
+                Ok(Type::I8),
             ),
             (
                 "fn main() -> bool {
