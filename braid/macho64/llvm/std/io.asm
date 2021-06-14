@@ -8,6 +8,12 @@
 
 section .data
     dest_i64: dq 0 ; 64-bits integer = 8 bytes.  Destination for scanf to write to
+    fmt_u8: db "%hhu", 0
+    fmt_u8ln: db `%hhu\n`, 0
+    fmt_u16: db "%hu", 0
+    fmt_u16ln: db `%hu\n`, 0
+    fmt_u32: db "%lu", 0
+    fmt_u32ln: db `%lu\n`, 0
     fmt_u64: db "%llu", 0
     fmt_u64ln: db `%llu\n`, 0
     fmt_i64: db "%ld", 0
@@ -72,6 +78,144 @@ _root_std_io_readi64:
     mov rsp, rbp
     pop rbp
     
+    ret
+
+
+global _root_std_io_writeu8
+_root_std_io_writeu8:
+    extern _printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rax, rdi
+    mov rdi, fmt_u8
+    mov rsi, rax
+    xor rax, rax
+    call _printf
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+global _root_std_io_writeu8ln
+_root_std_io_writeu8ln:
+    extern _printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rax, rdi
+    mov rdi, fmt_u8ln
+    mov rsi, rax
+    xor rax, rax
+    call _printf
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+global _root_std_io_writeu16
+_root_std_io_writeu16:
+    extern _printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rax, rdi
+    mov rdi, fmt_u16
+    mov rsi, rax
+    xor rax, rax
+    call _printf
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+global _root_std_io_writeu16ln
+_root_std_io_writeu16ln:
+    extern _printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rax, rdi
+    mov rdi, fmt_u16ln
+    mov rsi, rax
+    xor rax, rax
+    call _printf
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+global _root_std_io_writeu32
+_root_std_io_writeu32:
+    extern _printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rax, rdi
+    mov rdi, fmt_u32
+    mov rsi, rax
+    xor rax, rax
+    call _printf
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+global _root_std_io_writeu32ln
+_root_std_io_writeu32ln:
+    extern _printf
+    push rbp
+    mov rbp, rsp
+
+    ; This is to make sure that the boundary of the stack frame is 16 byte aligned
+    ; before calling scanf
+    ; !! This is a temporary hack and what should happen is that Braid compiler sizes
+    ; each stack frame to be 16byte aligned
+    and rsp, 18446744073709551600
+
+    mov rax, rdi
+    mov rdi, fmt_u32ln
+    mov rsi, rax
+    xor rax, rax
+    call _printf
+
+    mov rsp, rbp
+    pop rbp
     ret
 
 

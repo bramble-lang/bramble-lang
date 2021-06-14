@@ -570,7 +570,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 // transcribes exactly what it is given.  Ultimately, I need to capture the notion
                 // of operators for each operand type in the language layer; especially when I get
                 // to implementing FP values and operations.
-                if *op == BinaryOperator::Div && l.get_type() == ast::Type::U64 {
+                if *op == BinaryOperator::Div && l.get_type().is_unsigned_int() {
                     let lv = left.into_int_value();
                     let rv = right.into_int_value();
                     Some(llvm.builder.build_int_unsigned_div(lv, rv, "").into())

@@ -193,6 +193,36 @@ fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
             Type::I64,
         ),
         (
+            vec!["root", "std", "io", "writeu8"].into(),
+            vec![Type::U8],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu8ln"].into(),
+            vec![Type::U8],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu16"].into(),
+            vec![Type::U16],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu16ln"].into(),
+            vec![Type::U16],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu32"].into(),
+            vec![Type::U32],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu32ln"].into(),
+            vec![Type::U32],
+            Type::Unit,
+        ),
+        (
             vec!["root", "std", "io", "writeu64"].into(),
             vec![Type::U64],
             Type::Unit,
