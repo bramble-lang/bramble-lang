@@ -213,6 +213,16 @@ fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
             Type::Unit,
         ),
         (
+            vec!["root", "std", "io", "writei16"].into(),
+            vec![Type::I16],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writei16ln"].into(),
+            vec![Type::I16],
+            Type::Unit,
+        ),
+        (
             vec!["root", "std", "io", "writei8"].into(),
             vec![Type::I8],
             Type::Unit,
