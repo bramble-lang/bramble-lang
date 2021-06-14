@@ -193,6 +193,9 @@ where
         use Expression::*;
 
         match exp {
+            U8(_, i) => U8(self.transform(exp), *i),
+            U16(_, i) => U16(self.transform(exp), *i),
+            U32(_, i) => U32(self.transform(exp), *i),
             U64(_, i) => U64(self.transform(exp), *i),
             Integer8(_, i) => Integer8(self.transform(exp), *i),
             Integer16(_, i) => Integer16(self.transform(exp), *i),

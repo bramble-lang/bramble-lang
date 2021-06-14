@@ -50,6 +50,9 @@ impl StringPool {
                     Some(fe) => self.extract_from(fe),
                 }
             }
+            U8(..) => {}
+            U16(..) => {}
+            U32(..) => {}
             U64(..) => {}
             Integer8(..) => {}
             Integer16(..) => {}

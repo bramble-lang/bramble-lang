@@ -208,6 +208,9 @@ where
 
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, f),
+            Expression::U8(ref mut annotation, _i) => self.transform(annotation, f),
+            Expression::U16(ref mut annotation, _i) => self.transform(annotation, f),
+            Expression::U32(ref mut annotation, _i) => self.transform(annotation, f),
             Expression::U64(ref mut annotation, _i) => self.transform(annotation, f),
             Expression::Integer8(ref mut annotation, _i) => self.transform(annotation, f),
             Expression::Integer16(ref mut annotation, _i) => self.transform(annotation, f),

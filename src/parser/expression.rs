@@ -486,12 +486,18 @@ fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
 fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     trace!(stream);
     match stream.next_if_one_of(vec![
+        Lex::U8(0),
+        Lex::U16(0),
+        Lex::U32(0),
         Lex::U64(0),
         Lex::Integer8(0),
         Lex::Integer16(0),
         Lex::Integer32(0),
         Lex::Integer64(0),
     ]) {
+        Some(Token { l, s: Lex::U8(i) }) => Ok(Some(Expression::U8(l, i))),
+        Some(Token { l, s: Lex::U16(i) }) => Ok(Some(Expression::U16(l, i))),
+        Some(Token { l, s: Lex::U32(i) }) => Ok(Some(Expression::U32(l, i))),
         Some(Token { l, s: Lex::U64(i) }) => Ok(Some(Expression::U64(l, i))),
         Some(Token {
             l,
@@ -545,6 +551,9 @@ mod test {
     #[test]
     fn parse_number() {
         for (text, expected) in vec![
+            ("64u8", Expression::U8(1, 64)),
+            ("64u16", Expression::U16(1, 64)),
+            ("64u32", Expression::U32(1, 64)),
             ("64u64", Expression::U64(1, 64)),
             ("5i8", Expression::Integer8(1, 5)),
             ("5i16", Expression::Integer16(1, 5)),

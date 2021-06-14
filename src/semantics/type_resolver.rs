@@ -431,6 +431,21 @@ impl<'a> TypeResolver<'a> {
         current_func: &str,
     ) -> Result<SemanticNode> {
         match &ast {
+            &Expression::U8(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U8;
+                Ok(Expression::U8(meta, *v))
+            }
+            &Expression::U16(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U16;
+                Ok(Expression::U16(meta, *v))
+            }
+            &Expression::U32(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U32;
+                Ok(Expression::U32(meta, *v))
+            }
             &Expression::U64(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::U64;
@@ -1057,6 +1072,27 @@ mod tests {
                 Ok(Type::I64),
             ),
             (
+                "fn main() -> u8 {
+                    let k: u8 := 5u8;
+                    return k;
+                }",
+                Ok(Type::U8),
+            ),
+            (
+                "fn main() -> u16 {
+                    let k: u16 := 5u16;
+                    return k;
+                }",
+                Ok(Type::U16),
+            ),
+            (
+                "fn main() -> u32 {
+                    let k: u32 := 5u32;
+                    return k;
+                }",
+                Ok(Type::U32),
+            ),
+            (
                 "fn main() -> u64 {
                     let k: u64 := 5u64;
                     return k;
@@ -1146,7 +1182,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = parser::parse(tokens).expect(&format!("{}", text)).unwrap();
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,

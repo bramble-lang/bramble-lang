@@ -107,6 +107,9 @@ impl<'a> SymbolTableScopeStack<'a> {
             | Type::Unknown => return Err(format!("{} is not a variable", id)),
             Type::Custom(..)
             | Type::Coroutine(_)
+            | Type::U8
+            | Type::U16
+            | Type::U32
             | Type::U64
             | Type::I8
             | Type::I16

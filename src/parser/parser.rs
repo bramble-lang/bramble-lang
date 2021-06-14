@@ -486,9 +486,9 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
             s: Lex::Primitive(primitive),
         }) => {
             let ty = match *primitive {
-                Primitive::U8 => todo!(),
-                Primitive::U16 => todo!(),
-                Primitive::U32 => todo!(),
+                Primitive::U8 => Some(Type::U8),
+                Primitive::U16 => Some(Type::U16),
+                Primitive::U32 => Some(Type::U32),
                 Primitive::U64 => Some(Type::U64),
                 Primitive::I8 => Some(Type::I8),
                 Primitive::I16 => Some(Type::I16),
@@ -852,6 +852,9 @@ pub mod tests {
     #[test]
     fn parse_primitives() {
         for (text, expected_ty) in vec![
+            ("let x:u8 := 5u8;", Type::U8),
+            ("let x:u16 := 5u16;", Type::U16),
+            ("let x:u32 := 5u32;", Type::U32),
             ("let x:u64 := 5u64;", Type::U64),
             ("let x:i8 := 5;", Type::I8),
             ("let x:i8 := 5i8;", Type::I8),

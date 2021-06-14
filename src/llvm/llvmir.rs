@@ -497,6 +497,18 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
+            ast::Expression::U8(_, i) => {
+                let u8t = llvm.context.i8_type();
+                Some(u8t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
+            ast::Expression::U16(_, i) => {
+                let u16t = llvm.context.i16_type();
+                Some(u16t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
+            ast::Expression::U32(_, i) => {
+                let u32t = llvm.context.i32_type();
+                Some(u32t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
             ast::Expression::U64(_, i) => {
                 let u64t = llvm.context.i64_type();
                 Some(u64t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
@@ -887,9 +899,9 @@ impl ast::RoutineCall {
 impl ast::Type {
     fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> AnyTypeEnum<'ctx> {
         match self {
-            ast::Type::I8 => llvm.context.i8_type().into(),
-            ast::Type::I16 => llvm.context.i16_type().into(),
-            ast::Type::I32 => llvm.context.i32_type().into(),
+            ast::Type::I8 | ast::Type::U8 => llvm.context.i8_type().into(),
+            ast::Type::I16 | ast::Type::U16 => llvm.context.i16_type().into(),
+            ast::Type::I32 | ast::Type::U32 => llvm.context.i32_type().into(),
             ast::Type::I64 | ast::Type::U64 => llvm.context.i64_type().into(),
             ast::Type::Bool => llvm.context.bool_type().into(),
             ast::Type::Unit => llvm.context.void_type().into(),

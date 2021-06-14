@@ -2,6 +2,9 @@ use super::path::Path;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
+    U8,
+    U16,
+    U32,
     U64,
     I8,
     I16,
@@ -56,6 +59,9 @@ impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Type::*;
         match self {
+            U8 => f.write_str("u8"),
+            U16 => f.write_str("u16"),
+            U32 => f.write_str("u32"),
             U64 => f.write_str("u64"),
             I8 => f.write_str("i8"),
             I16 => f.write_str("i16"),
