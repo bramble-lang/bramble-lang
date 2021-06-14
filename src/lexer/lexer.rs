@@ -340,44 +340,40 @@ impl Lexer {
         }
 
         branch.merge();
-        // TODO: pull this out into a support function
-        match prim_suffix {
-            Primitive::U8 => Ok(Some(Token::new(
-                self.line,
-                U8(int_token.parse::<u8>().unwrap()),
-            ))),
+        Self::create_int_literal(self.line, &int_token, prim_suffix)
+    }
+
+    fn create_int_literal(line: u32, int_token: &str, prim: Primitive) -> Result<Option<Token>> {
+        match prim {
+            Primitive::U8 => Ok(Some(Token::new(line, U8(int_token.parse::<u8>().unwrap())))),
             Primitive::U16 => Ok(Some(Token::new(
-                self.line,
+                line,
                 U16(int_token.parse::<u16>().unwrap()),
             ))),
             Primitive::U32 => Ok(Some(Token::new(
-                self.line,
+                line,
                 U32(int_token.parse::<u32>().unwrap()),
             ))),
             Primitive::U64 => Ok(Some(Token::new(
-                self.line,
+                line,
                 U64(int_token.parse::<u64>().unwrap()),
             ))),
-            Primitive::I8 => Ok(Some(Token::new(
-                self.line,
-                I8(int_token.parse::<i8>().unwrap()),
-            ))),
+            Primitive::I8 => Ok(Some(Token::new(line, I8(int_token.parse::<i8>().unwrap())))),
             Primitive::I16 => Ok(Some(Token::new(
-                self.line,
+                line,
                 I16(int_token.parse::<i16>().unwrap()),
             ))),
             Primitive::I32 => Ok(Some(Token::new(
-                self.line,
+                line,
                 I32(int_token.parse::<i32>().unwrap()),
             ))),
             Primitive::I64 => Ok(Some(Token::new(
-                self.line,
+                line,
                 I64(int_token.parse::<i64>().unwrap()),
             ))),
-            Primitive::Bool | Primitive::StringLiteral => Err(format!(
-                "Unexpected primitive type after number: {}",
-                prim_suffix
-            )),
+            Primitive::Bool | Primitive::StringLiteral => {
+                Err(format!("Unexpected primitive type after number: {}", prim))
+            }
         }
     }
 
