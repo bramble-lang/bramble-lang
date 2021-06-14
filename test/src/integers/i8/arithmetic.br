@@ -3,12 +3,12 @@ fn my_main() -> i64 {
     let y:i8 := test();
     let z:i8 := test2(y);
     
-    root::std::io::writei8ln(x);    // 5
-    root::std::io::writei8ln(y);    // 5
-    root::std::io::writei8ln(z);    // -5
+    root::std::io::writei8ln(x); // 5
+    root::std::io::writei8ln(y); // 5
+    root::std::io::writei8ln(z); // -5
 
     let w: i8 := x + y;
-    root::std::io::writei8ln(w);    // 10
+    root::std::io::writei8ln(w); // 10
 
     let a: i8 := w + z;
     root::std::io::writei8ln(a); // 5
