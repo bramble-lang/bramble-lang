@@ -54,10 +54,10 @@ impl StringPool {
             U16(..) => {}
             U32(..) => {}
             U64(..) => {}
-            Integer8(..) => {}
-            Integer16(..) => {}
-            Integer32(..) => {}
-            Integer64(..) => {}
+            I8(..) => {}
+            I16(..) => {}
+            I32(..) => {}
+            I64(..) => {}
             Boolean(..) => {}
             StringLiteral(_, s) => {
                 self.insert(s);

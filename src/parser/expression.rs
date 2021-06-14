@@ -499,10 +499,10 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
         Some(Token { l, s: Lex::U16(i) }) => Ok(Some(Expression::U16(l, i))),
         Some(Token { l, s: Lex::U32(i) }) => Ok(Some(Expression::U32(l, i))),
         Some(Token { l, s: Lex::U64(i) }) => Ok(Some(Expression::U64(l, i))),
-        Some(Token { l, s: Lex::I8(i) }) => Ok(Some(Expression::Integer8(l, i))),
-        Some(Token { l, s: Lex::I16(i) }) => Ok(Some(Expression::Integer16(l, i))),
-        Some(Token { l, s: Lex::I32(i) }) => Ok(Some(Expression::Integer32(l, i))),
-        Some(Token { l, s: Lex::I64(i) }) => Ok(Some(Expression::Integer64(l, i))),
+        Some(Token { l, s: Lex::I8(i) }) => Ok(Some(Expression::I8(l, i))),
+        Some(Token { l, s: Lex::I16(i) }) => Ok(Some(Expression::I16(l, i))),
+        Some(Token { l, s: Lex::I32(i) }) => Ok(Some(Expression::I32(l, i))),
+        Some(Token { l, s: Lex::I64(i) }) => Ok(Some(Expression::I64(l, i))),
         Some(t) => panic!("Unexpected token: {:?}", t),
         None => Ok(None),
     }
@@ -543,11 +543,11 @@ mod test {
             ("64u16", Expression::U16(1, 64)),
             ("64u32", Expression::U32(1, 64)),
             ("64u64", Expression::U64(1, 64)),
-            ("5i8", Expression::Integer8(1, 5)),
-            ("5i16", Expression::Integer16(1, 5)),
-            ("5i32", Expression::Integer32(1, 5)),
-            ("64i64", Expression::Integer64(1, 64)),
-            ("64", Expression::Integer64(1, 64)),
+            ("5i8", Expression::I8(1, 5)),
+            ("5i16", Expression::I16(1, 5)),
+            ("5i32", Expression::I32(1, 5)),
+            ("64i64", Expression::I64(1, 64)),
+            ("64", Expression::I64(1, 64)),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -568,20 +568,20 @@ mod test {
         for (text, expected) in vec![
             (
                 "[1]",
-                Expression::ArrayValue(1, vec![Expression::Integer64(1, 1)], 1),
+                Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
             ),
             (
                 "[1,]",
-                Expression::ArrayValue(1, vec![Expression::Integer64(1, 1)], 1),
+                Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
             ),
             (
                 "[1, 2, 3]",
                 Expression::ArrayValue(
                     1,
                     vec![
-                        Expression::Integer64(1, 1),
-                        Expression::Integer64(1, 2),
-                        Expression::Integer64(1, 3),
+                        Expression::I64(1, 1),
+                        Expression::I64(1, 2),
+                        Expression::I64(1, 3),
                     ],
                     3,
                 ),
@@ -590,11 +590,7 @@ mod test {
                 "[[1,],]",
                 Expression::ArrayValue(
                     1,
-                    vec![Expression::ArrayValue(
-                        1,
-                        vec![Expression::Integer64(1, 1)],
-                        1,
-                    )],
+                    vec![Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1)],
                     1,
                 ),
             ),
@@ -640,7 +636,7 @@ mod test {
                 Expression::ArrayAt {
                     annotation: 1,
                     array: box Expression::Identifier(1, "a".into()),
-                    index: box Expression::Integer64(1, 1),
+                    index: box Expression::I64(1, 1),
                 },
             ),
             (
@@ -648,7 +644,7 @@ mod test {
                 Expression::ArrayAt {
                     annotation: 1,
                     array: box Expression::Identifier(1, "a".into()),
-                    index: box Expression::Integer64(1, 1),
+                    index: box Expression::I64(1, 1),
                 },
             ),
             (
@@ -660,7 +656,7 @@ mod test {
                         box Expression::Identifier(1, "a".into()),
                         "b".into(),
                     ),
-                    index: box Expression::Integer64(1, 1),
+                    index: box Expression::I64(1, 1),
                 },
             ),
             (
@@ -670,7 +666,7 @@ mod test {
                     box Expression::ArrayAt {
                         annotation: 1,
                         array: box Expression::Identifier(1, "a".into()),
-                        index: box Expression::Integer64(1, 1),
+                        index: box Expression::I64(1, 1),
                     },
                     "b".into(),
                 ),
@@ -684,11 +680,11 @@ mod test {
                         box Expression::ArrayAt {
                             annotation: 1,
                             array: box Expression::Identifier(1, "a".into()),
-                            index: box Expression::Integer64(1, 0),
+                            index: box Expression::I64(1, 0),
                         },
                         "b".into(),
                     ),
-                    index: box Expression::Integer64(1, 1),
+                    index: box Expression::I64(1, 1),
                 },
             ),
             (
@@ -698,9 +694,9 @@ mod test {
                     array: box Expression::ArrayAt {
                         annotation: 1,
                         array: box Expression::Identifier(1, "a".into()),
-                        index: box Expression::Integer64(1, 1),
+                        index: box Expression::I64(1, 1),
                     },
-                    index: box Expression::Integer64(1, 2),
+                    index: box Expression::I64(1, 2),
                 },
             ),
             (
@@ -710,9 +706,9 @@ mod test {
                     array: box Expression::ArrayAt {
                         annotation: 1,
                         array: box Expression::Identifier(1, "a".into()),
-                        index: box Expression::Integer64(1, 1),
+                        index: box Expression::I64(1, 1),
                     },
-                    index: box Expression::Integer64(1, 2),
+                    index: box Expression::I64(1, 2),
                 },
             ),
         ] {
@@ -791,7 +787,7 @@ mod test {
         {
             assert_eq!(l, 1);
             assert_eq!(body.len(), 0);
-            assert_eq!(*final_exp, Expression::Integer64(1, 5));
+            assert_eq!(*final_exp, Expression::I64(1, 5));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -843,7 +839,7 @@ mod test {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), "x");
                     assert_eq!(b.get_type(), Type::I64);
-                    assert_eq!(*b.get_rhs(), Expression::Integer64(1, 5));
+                    assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
                 }
                 _ => panic!("Not a binding statement"),
             }

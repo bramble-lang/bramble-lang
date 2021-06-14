@@ -159,7 +159,7 @@ mod test_preorder {
             2,
             vec![],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(3, 2))],
+            vec![Statement::Expression(box Expression::I64(3, 2))],
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
@@ -171,7 +171,7 @@ mod test_preorder {
                 ty: Type::Bool,
             }],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(6, 2))],
+            vec![Statement::Expression(box Expression::I64(6, 2))],
         ))
         .unwrap();
         m.add_module(Module::new("m2", 7));
@@ -195,8 +195,8 @@ mod test_preorder {
                 cond: box Expression::BinaryOp(
                     4,
                     crate::ast::expression::BinaryOperator::Eq,
-                    box Expression::Integer64(5, 1),
-                    box Expression::Integer64(6, 1),
+                    box Expression::I64(5, 1),
+                    box Expression::I64(6, 1),
                 ),
                 if_arm: box Expression::Identifier(7, "y".into()),
                 else_arm: Some(box Expression::StringLiteral(8, "h".into())),
@@ -280,7 +280,7 @@ mod test_postorder {
             2,
             vec![],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(3, 2))],
+            vec![Statement::Expression(box Expression::I64(3, 2))],
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
@@ -292,7 +292,7 @@ mod test_postorder {
                 ty: Type::Bool,
             }],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(6, 2))],
+            vec![Statement::Expression(box Expression::I64(6, 2))],
         ))
         .unwrap();
         m.add_module(Module::new("m2", 7));
@@ -316,8 +316,8 @@ mod test_postorder {
                 cond: box Expression::BinaryOp(
                     4,
                     crate::ast::expression::BinaryOperator::Eq,
-                    box Expression::Integer64(5, 1),
-                    box Expression::Integer64(6, 1),
+                    box Expression::I64(5, 1),
+                    box Expression::I64(6, 1),
                 ),
                 if_arm: box Expression::Identifier(7, "y".into()),
                 else_arm: Some(box Expression::StringLiteral(8, "h".into())),

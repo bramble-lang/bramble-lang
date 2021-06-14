@@ -451,25 +451,25 @@ impl<'a> TypeResolver<'a> {
                 meta.ty = Type::U64;
                 Ok(Expression::U64(meta, *v))
             }
-            &Expression::Integer8(meta, v) => {
+            &Expression::I8(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I8;
-                Ok(Expression::Integer8(meta, *v))
+                Ok(Expression::I8(meta, *v))
             }
-            &Expression::Integer16(meta, v) => {
+            &Expression::I16(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I16;
-                Ok(Expression::Integer16(meta, *v))
+                Ok(Expression::I16(meta, *v))
             }
-            &Expression::Integer32(meta, v) => {
+            &Expression::I32(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I32;
-                Ok(Expression::Integer32(meta, *v))
+                Ok(Expression::I32(meta, *v))
             }
-            &Expression::Integer64(meta, v) => {
+            &Expression::I64(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I64;
-                Ok(Expression::Integer64(meta, *v))
+                Ok(Expression::I64(meta, *v))
             }
             Expression::Boolean(meta, v) => {
                 let mut meta = meta.clone();

@@ -212,10 +212,10 @@ where
             Expression::U16(ref mut annotation, _i) => self.transform(annotation, f),
             Expression::U32(ref mut annotation, _i) => self.transform(annotation, f),
             Expression::U64(ref mut annotation, _i) => self.transform(annotation, f),
-            Expression::Integer8(ref mut annotation, _i) => self.transform(annotation, f),
-            Expression::Integer16(ref mut annotation, _i) => self.transform(annotation, f),
-            Expression::Integer32(ref mut annotation, _i) => self.transform(annotation, f),
-            Expression::Integer64(ref mut annotation, _i) => self.transform(annotation, f),
+            Expression::I8(ref mut annotation, _i) => self.transform(annotation, f),
+            Expression::I16(ref mut annotation, _i) => self.transform(annotation, f),
+            Expression::I32(ref mut annotation, _i) => self.transform(annotation, f),
+            Expression::I64(ref mut annotation, _i) => self.transform(annotation, f),
             Expression::Boolean(ref mut annotation, _b) => self.transform(annotation, f),
             Expression::StringLiteral(ref mut annotation, _s) => self.transform(annotation, f),
             Expression::ArrayValue(ref mut annotation, el, _) => {
@@ -408,7 +408,7 @@ mod tests {
             1,
             vec![],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+            vec![Statement::Expression(box Expression::I64(1, 2))],
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
@@ -420,7 +420,7 @@ mod tests {
                 ty: Type::Bool,
             }],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+            vec![Statement::Expression(box Expression::I64(1, 2))],
         ))
         .unwrap();
         m.add_module(Module::new("m2", 1));

@@ -13,10 +13,10 @@ pub enum Expression<I> {
     U16(I, u16),
     U32(I, u32),
     U64(I, u64),
-    Integer8(I, i8),
-    Integer16(I, i16),
-    Integer32(I, i32),
-    Integer64(I, i64),
+    I8(I, i8),
+    I16(I, i16),
+    I32(I, i32),
+    I64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
     ArrayValue(I, Vec<Expression<I>>, usize),
@@ -59,10 +59,10 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | U16(m, ..)
             | U32(m, ..)
             | U64(m, ..)
-            | Integer8(m, ..)
-            | Integer16(m, ..)
-            | Integer32(m, ..)
-            | Integer64(m, ..)
+            | I8(m, ..)
+            | I16(m, ..)
+            | I32(m, ..)
+            | I64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)
@@ -90,10 +90,10 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | U16(m, ..)
             | U32(m, ..)
             | U64(m, ..)
-            | Integer8(m, ..)
-            | Integer16(m, ..)
-            | Integer32(m, ..)
-            | Integer64(m, ..)
+            | I8(m, ..)
+            | I16(m, ..)
+            | I32(m, ..)
+            | I64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)
@@ -174,10 +174,10 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | U16(..)
             | U32(..)
             | U64(..)
-            | Integer8(..)
-            | Integer16(..)
-            | Integer32(..)
-            | Integer64(..)
+            | I8(..)
+            | I16(..)
+            | I32(..)
+            | I64(..)
             | Boolean(..)
             | StringLiteral(..)
             | ArrayValue(_, _, _)
@@ -215,10 +215,10 @@ impl<I> Expression<I> {
             U16(_, v) => format!("u16({})", v),
             U32(_, v) => format!("u32({})", v),
             U64(_, v) => format!("u64({})", v),
-            Integer8(_, v) => format!("i8({})", v),
-            Integer16(_, v) => format!("i16({})", v),
-            Integer32(_, v) => format!("i32({})", v),
-            Integer64(_, v) => format!("i64({})", v),
+            I8(_, v) => format!("i8({})", v),
+            I16(_, v) => format!("i16({})", v),
+            I32(_, v) => format!("i32({})", v),
+            I64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
             ArrayValue(_, v, _) => format!(

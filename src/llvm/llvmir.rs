@@ -513,19 +513,19 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                 let u64t = llvm.context.i64_type();
                 Some(u64t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
-            ast::Expression::Integer8(_, i) => {
+            ast::Expression::I8(_, i) => {
                 let i8t = llvm.context.i8_type();
                 Some(i8t.const_int(*i as u64, true).into())
             }
-            ast::Expression::Integer16(_, i) => {
+            ast::Expression::I16(_, i) => {
                 let i16t = llvm.context.i16_type();
                 Some(i16t.const_int(*i as u64, true).into())
             }
-            ast::Expression::Integer32(_, i) => {
+            ast::Expression::I32(_, i) => {
                 let i32t = llvm.context.i32_type();
                 Some(i32t.const_int(*i as u64, true).into())
             }
-            ast::Expression::Integer64(_, i) => {
+            ast::Expression::I64(_, i) => {
                 let i64t = llvm.context.i64_type();
                 Some(i64t.const_int(*i as u64, true).into())
             }
