@@ -29,7 +29,7 @@ use braid_lang::result::Result;
 
 use crate::{
     ast,
-    ast::{Extern, Node, Parameter, RoutineDef, StructDef},
+    ast::{BinaryOperator, Extern, Node, Parameter, RoutineDef, StructDef},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -551,7 +551,20 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             ast::Expression::BinaryOp(_, op, l, r) => {
                 let left = l.to_llvm_ir(llvm).expect("Expected a value");
                 let right = r.to_llvm_ir(llvm).expect("Expected a value");
-                Some(op.to_llvm_ir(llvm, left, right))
+
+                // With the current design, the difference between signed and unsigned division is
+                // a hardware difference and falls squarely within the field of the LLVM generator
+                // module.  But this violates the precept that this module makes no decisions and only
+                // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+                // of operators for each operand type in the language layer; especially when I get
+                // to implementing FP values and operations.
+                if *op == BinaryOperator::Div && l.get_type() == ast::Type::U64 {
+                    let lv = left.into_int_value();
+                    let rv = right.into_int_value();
+                    Some(llvm.builder.build_int_unsigned_div(lv, rv, "").into())
+                } else {
+                    Some(op.to_llvm_ir(llvm, left, right))
+                }
             }
             ast::Expression::RoutineCall(_, call, name, params) => {
                 call.to_llvm_ir(llvm, name, params, self.get_type())
@@ -789,7 +802,6 @@ impl ast::BinaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let lv = left.into_int_value();
         let rv = right.into_int_value();
-
         match self {
             ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, ""),
             ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, ""),

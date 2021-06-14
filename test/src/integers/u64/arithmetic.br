@@ -30,10 +30,7 @@ fn my_main() -> i64 {
     let i: u64 := w + 18446744073709551606u64;
     root::std::io::writeu64ln(i); // 0
 
-    // Test unsigned division
-    let j: u64 := 18446744073709551615u64;
-    let k: u64 := 2u64 / j;
-    root::std::io::writeu64ln(k); // 0
+    test_udiv();
 
     if (5u64 < 10u64) {
         root::std::io::write("5 is less than 10\n");
@@ -52,4 +49,13 @@ fn sub(i: u64, j: u64) -> u64 {
 
 fn add(a: u64, b: u64) -> u64 {
     return a + b;
+}
+
+fn test_udiv() {
+    // Test unsigned division
+    let j: u64 := 18446744073709551615u64;
+    let k: u64 := 2u64 / j;
+    root::std::io::writeu64ln(k); // 0
+
+    return;
 }
