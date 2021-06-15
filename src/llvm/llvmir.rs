@@ -761,10 +761,14 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 Some(el_val)
             }
-            ast::Expression::CustomType(..) => panic!("CustomType should not be passed to LLVM"),
-            ast::Expression::Path(..) => panic!("Path should not be passed to LLVM"),
+            ast::Expression::CustomType(..) => {
+                panic!("CustomType nodes should be resolved and removed before the compiler stage.")
+            }
+            ast::Expression::Path(..) => {
+                panic!("Path nodes should be resolved and removed before the compiler stage.")
+            }
             ast::Expression::IdentifierDeclare(..) => {
-                panic!("IdentifierDelcare nodes should not be passed to LLVM")
+                panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
             }
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
         }
