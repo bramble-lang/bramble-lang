@@ -435,11 +435,11 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        stack.add("y", Type::I8, false, false).unwrap();
 
         // Module 1
         let module = SymbolTable::new_module("first");
         stack.enter_scope(&module);
-
         stack.add("x", Type::I8, false, false).unwrap();
 
         // Module 2
@@ -449,7 +449,14 @@ mod tests {
         let local = SymbolTable::new();
         stack.enter_scope(&local);
 
-        let (s, _) = stack.get_symbol("x").unwrap();
+        // across 1 boundary
+        let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
+        assert_eq!(p, vec!["self", "super"].into());
+
+        // across 2 boundaries
+        let (s, p) = stack.get_symbol("y").unwrap();
+        assert_eq!(s.name, "y");
+        assert_eq!(p, vec!["self", "super", "super"].into());
     }
 }
