@@ -276,16 +276,7 @@ impl Lexer {
                 // Parse escape sequence
                 if c == '\\' {
                     match branch.next() {
-                        Some(c)
-                            if c == 'n'
-                                || c == 'r'
-                                || c == 't'
-                                || c == '"'
-                                || c == '0'
-                                || c == '\\' =>
-                        {
-                            ()
-                        }
+                        Some(c) if Self::is_escape_code(c) => (),
                         Some(c) => return Err(format!("Invalid escape sequence \\{}", c)),
                         None => return Err("Expected escape character after \\".into()),
                     }
@@ -321,17 +312,16 @@ impl Lexer {
 
         let int_token = branch.cut();
 
-        // Check if there is a postfix (i32, i64, etc) on the integer literal
-        let mut is_i32 = false;
-        if branch.next_ifn("i32") {
-            is_i32 = true;
-        } else if branch.next_ifn("i64") {
-            is_i32 = false;
-        }
+        // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
+        // no suffix then default to i64
+        let type_suffix = Self::consume_int_suffix(&mut branch)?.unwrap_or(Primitive::I64);
 
+        // Check that the current character at the lexer cursor position is a delimiter (we have
+        // reached the end of the token); otherwise this is not a valid integer literal and an
+        // error should be thrown.
         if branch
             .peek()
-            .map(|c| c.is_alphabetic() || c == '_')
+            .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
             return Err(format!(
@@ -341,17 +331,63 @@ impl Lexer {
         }
 
         branch.merge();
-        if !is_i32 {
-            Ok(Some(Token::new(
-                self.line,
-                Integer64(int_token.parse::<i64>().unwrap()),
-            )))
-        } else {
-            Ok(Some(Token::new(
-                self.line,
-                Integer32(int_token.parse::<i32>().unwrap()),
-            )))
+        Self::create_int_literal(self.line, &int_token, type_suffix)
+    }
+
+    fn create_int_literal(line: u32, int_token: &str, prim: Primitive) -> Result<Option<Token>> {
+        match prim {
+            Primitive::U8 => Ok(Some(Token::new(line, U8(int_token.parse::<u8>().unwrap())))),
+            Primitive::U16 => Ok(Some(Token::new(
+                line,
+                U16(int_token.parse::<u16>().unwrap()),
+            ))),
+            Primitive::U32 => Ok(Some(Token::new(
+                line,
+                U32(int_token.parse::<u32>().unwrap()),
+            ))),
+            Primitive::U64 => Ok(Some(Token::new(
+                line,
+                U64(int_token.parse::<u64>().unwrap()),
+            ))),
+            Primitive::I8 => Ok(Some(Token::new(line, I8(int_token.parse::<i8>().unwrap())))),
+            Primitive::I16 => Ok(Some(Token::new(
+                line,
+                I16(int_token.parse::<i16>().unwrap()),
+            ))),
+            Primitive::I32 => Ok(Some(Token::new(
+                line,
+                I32(int_token.parse::<i32>().unwrap()),
+            ))),
+            Primitive::I64 => Ok(Some(Token::new(
+                line,
+                I64(int_token.parse::<i64>().unwrap()),
+            ))),
+            Primitive::Bool | Primitive::StringLiteral => {
+                Err(format!("Unexpected primitive type after number: {}", prim))
+            }
         }
+    }
+
+    fn consume_int_suffix(branch: &mut LexerBranch) -> Result<Option<Primitive>> {
+        Ok(if branch.next_ifn("i8") {
+            Some(Primitive::I8)
+        } else if branch.next_ifn("i16") {
+            Some(Primitive::I16)
+        } else if branch.next_ifn("i32") {
+            Some(Primitive::I32)
+        } else if branch.next_ifn("i64") {
+            Some(Primitive::I64)
+        } else if branch.next_ifn("u8") {
+            Some(Primitive::U8)
+        } else if branch.next_ifn("u16") {
+            Some(Primitive::U16)
+        } else if branch.next_ifn("u32") {
+            Some(Primitive::U32)
+        } else if branch.next_ifn("u64") {
+            Some(Primitive::U64)
+        } else {
+            None
+        })
     }
 
     pub fn consume_operator(&mut self) -> Result<Option<Token>> {
@@ -445,6 +481,12 @@ impl Lexer {
                 l: _,
                 s: Identifier(ref id),
             } => match id.as_str() {
+                "u8" => Token::new(self.line, Primitive(Primitive::U8)),
+                "u16" => Token::new(self.line, Primitive(Primitive::U16)),
+                "u32" => Token::new(self.line, Primitive(Primitive::U32)),
+                "u64" => Token::new(self.line, Primitive(Primitive::U64)),
+                "i8" => Token::new(self.line, Primitive(Primitive::I8)),
+                "i16" => Token::new(self.line, Primitive(Primitive::I16)),
                 "i32" => Token::new(self.line, Primitive(Primitive::I32)),
                 "i64" => Token::new(self.line, Primitive(Primitive::I64)),
                 "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
@@ -481,6 +523,14 @@ impl Lexer {
             _ => token,
         }
     }
+
+    fn is_delimiter(c: char) -> bool {
+        c.is_ascii_punctuation() || c.is_whitespace()
+    }
+
+    fn is_escape_code(c: char) -> bool {
+        c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
+    }
 }
 
 #[cfg(test)]
@@ -494,7 +544,27 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer64(5)));
+        assert_eq!(token, Token::new(1, I64(5)));
+    }
+
+    #[test]
+    fn test_integer8() {
+        let text = "5i8";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, I8(5)));
+    }
+
+    #[test]
+    fn test_integer16() {
+        let text = "5i16";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, I16(5)));
     }
 
     #[test]
@@ -504,7 +574,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer32(5)));
+        assert_eq!(token, Token::new(1, I32(5)));
     }
 
     #[test]
@@ -514,7 +584,47 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(1, Integer64(5)));
+        assert_eq!(token, Token::new(1, I64(5)));
+    }
+
+    #[test]
+    fn test_u8() {
+        let text = "5u8";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U8(5)));
+    }
+
+    #[test]
+    fn test_u16() {
+        let text = "5u16";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U16(5)));
+    }
+
+    #[test]
+    fn test_u32() {
+        let text = "5u32";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U32(5)));
+    }
+
+    #[test]
+    fn test_u64() {
+        let text = "5u64";
+        let mut lexer = Lexer::new(text);
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(1, U64(5)));
     }
 
     #[test]
@@ -639,6 +749,12 @@ mod tests {
     #[test]
     fn test_primitives() {
         for (text, expected_token) in [
+            ("u8", Token::new(1, Primitive(Primitive::U8))),
+            ("u16", Token::new(1, Primitive(Primitive::U16))),
+            ("u32", Token::new(1, Primitive(Primitive::U32))),
+            ("u64", Token::new(1, Primitive(Primitive::U64))),
+            ("i8", Token::new(1, Primitive(Primitive::I8))),
+            ("i16", Token::new(1, Primitive(Primitive::I16))),
             ("i32", Token::new(1, Primitive(Primitive::I32))),
             ("i64", Token::new(1, Primitive(Primitive::I64))),
             ("bool", Token::new(1, Primitive(Primitive::Bool))),
@@ -688,7 +804,7 @@ mod tests {
                 Token::new(*t3, Identifier("x".into()))
             );
             assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer64(5)));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, I64(5)));
             assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
             assert_eq!(tokens[6].clone().unwrap(), Token::new(*t7, Bool(true)));
             assert_eq!(tokens[7].clone().unwrap(), Token::new(*t8, RParen));
@@ -728,7 +844,7 @@ mod tests {
                 Token::new(*t3, Identifier("x".into()))
             );
             assert_eq!(tokens[3].clone().unwrap(), Token::new(*t4, Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, Integer64(5)));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(*t5, I64(5)));
             assert_eq!(tokens[5].clone().unwrap(), Token::new(*t6, BOr));
         }
     }

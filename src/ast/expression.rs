@@ -9,8 +9,14 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
-    Integer32(I, i32),
-    Integer64(I, i64),
+    U8(I, u8),
+    U16(I, u16),
+    U32(I, u32),
+    U64(I, u64),
+    I8(I, i8),
+    I16(I, i16),
+    I32(I, i32),
+    I64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
     ArrayValue(I, Vec<Expression<I>>, usize),
@@ -49,8 +55,14 @@ impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation(&self) -> &M {
         use Expression::*;
         match self {
-            Integer32(m, ..)
-            | Integer64(m, ..)
+            U8(m, ..)
+            | U16(m, ..)
+            | U32(m, ..)
+            | U64(m, ..)
+            | I8(m, ..)
+            | I16(m, ..)
+            | I32(m, ..)
+            | I64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)
@@ -74,8 +86,14 @@ impl<M: Annotation> Node<M> for Expression<M> {
     fn annotation_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
-            Integer32(m, ..)
-            | Integer64(m, ..)
+            U8(m, ..)
+            | U16(m, ..)
+            | U32(m, ..)
+            | U64(m, ..)
+            | I8(m, ..)
+            | I16(m, ..)
+            | I32(m, ..)
+            | I64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)
@@ -152,8 +170,14 @@ impl<M: Annotation> Node<M> for Expression<M> {
                 }
                 o
             }
-            Integer32(..)
-            | Integer64(..)
+            U8(..)
+            | U16(..)
+            | U32(..)
+            | U64(..)
+            | I8(..)
+            | I16(..)
+            | I32(..)
+            | I64(..)
             | Boolean(..)
             | StringLiteral(..)
             | ArrayValue(_, _, _)
@@ -187,8 +211,14 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
-            Integer32(_, v) => format!("i32({})", v),
-            Integer64(_, v) => format!("i64({})", v),
+            U8(_, v) => format!("u8({})", v),
+            U16(_, v) => format!("u16({})", v),
+            U32(_, v) => format!("u32({})", v),
+            U64(_, v) => format!("u64({})", v),
+            I8(_, v) => format!("i8({})", v),
+            I16(_, v) => format!("i16({})", v),
+            I32(_, v) => format!("i32({})", v),
+            I64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
             ArrayValue(_, v, _) => format!(
@@ -254,7 +284,7 @@ impl std::fmt::Display for BinaryOperator {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UnaryOperator {
-    Minus,
+    Negate,
     Not,
 }
 
@@ -262,7 +292,7 @@ impl std::fmt::Display for UnaryOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         use UnaryOperator::*;
         match self {
-            Minus => f.write_str("-"),
+            Negate => f.write_str("-"),
             Not => f.write_str("!"),
         }
     }

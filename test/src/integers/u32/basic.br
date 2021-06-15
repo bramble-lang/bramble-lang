@@ -1,0 +1,23 @@
+fn my_main() -> i64 {
+    let x:u32 := 4u32;
+    let y:u32 := test();
+    let z:u32 := test2(640000u32);
+    let z2:u32 := test2(2147483647u32);
+    let z3:u32 := test2(4294967295u32);
+
+    root::std::io::writeu32ln(x);
+    root::std::io::writeu32ln(y);
+    root::std::io::writeu32ln(z);
+    root::std::io::writeu32ln(z2);
+    root::std::io::writeu32ln(z3);
+    
+    return 0;
+}
+
+fn test() -> u32 {
+    return 5u32;
+}
+
+fn test2(i: u32) -> u32 {
+    return i;
+}

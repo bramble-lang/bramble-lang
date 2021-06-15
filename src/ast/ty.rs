@@ -2,6 +2,12 @@ use super::path::Path;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
+    U8,
+    U16,
+    U32,
+    U64,
+    I8,
+    I16,
     I32,
     I64,
     Bool,
@@ -35,6 +41,69 @@ impl Type {
             .map(|ms| ms.iter().find(|(n, _)| n == member).map(|m| &m.1))
             .flatten()
     }
+
+    pub fn is_integral(&self) -> bool {
+        match self {
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64 => true,
+            Type::Bool
+            | Type::StringLiteral
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::Unknown => false,
+        }
+    }
+
+    pub fn is_unsigned_int(&self) -> bool {
+        match self {
+            Type::U8 | Type::U16 | Type::U32 | Type::U64 => true,
+            Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64
+            | Type::Bool
+            | Type::StringLiteral
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::Unknown => false,
+        }
+    }
+
+    pub fn is_signed_int(&self) -> bool {
+        match self {
+            Type::I8 | Type::I16 | Type::I32 | Type::I64 => true,
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::Bool
+            | Type::StringLiteral
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::Unknown => false,
+        }
+    }
 }
 
 impl PartialEq<Type> for &Type {
@@ -53,6 +122,12 @@ impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Type::*;
         match self {
+            U8 => f.write_str("u8"),
+            U16 => f.write_str("u16"),
+            U32 => f.write_str("u32"),
+            U64 => f.write_str("u64"),
+            I8 => f.write_str("i8"),
+            I16 => f.write_str("i16"),
             I32 => f.write_str("i32"),
             I64 => f.write_str("i64"),
             Bool => f.write_str("bool"),

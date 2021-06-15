@@ -486,6 +486,12 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
             s: Lex::Primitive(primitive),
         }) => {
             let ty = match *primitive {
+                Primitive::U8 => Some(Type::U8),
+                Primitive::U16 => Some(Type::U16),
+                Primitive::U32 => Some(Type::U32),
+                Primitive::U64 => Some(Type::U64),
+                Primitive::I8 => Some(Type::I8),
+                Primitive::I16 => Some(Type::I16),
                 Primitive::I32 => Some(Type::I32),
                 Primitive::I64 => Some(Type::I64),
                 Primitive::Bool => Some(Type::Bool),
@@ -523,8 +529,14 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
             let len = expression(stream)?
                 .ok_or("Expected size to be specified in array type declaration")?;
             let len = match len {
-                Expression::Integer32(_, l) => l as usize,
-                Expression::Integer64(_, l) => l as usize,
+                Expression::U8(_, l) => l as usize,
+                Expression::U16(_, l) => l as usize,
+                Expression::U32(_, l) => l as usize,
+                Expression::U64(_, l) => l as usize,
+                Expression::I8(_, l) => l as usize,
+                Expression::I16(_, l) => l as usize,
+                Expression::I32(_, l) => l as usize,
+                Expression::I64(_, l) => l as usize,
                 _ => return Err("Expected integer literal for array size".into()),
             };
 
@@ -562,7 +574,7 @@ pub mod tests {
     #[test]
     fn parse_unary_operators() {
         for (text, expected) in
-            vec![("-a", UnaryOperator::Minus), ("!a", UnaryOperator::Not)].iter()
+            vec![("-a", UnaryOperator::Negate), ("!a", UnaryOperator::Not)].iter()
         {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -584,7 +596,7 @@ pub mod tests {
     #[test]
     fn parse_double_unary_operators() {
         for (text, expected) in
-            vec![("--a", UnaryOperator::Minus), ("!!a", UnaryOperator::Not)].iter()
+            vec![("--a", UnaryOperator::Negate), ("!!a", UnaryOperator::Not)].iter()
         {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -633,8 +645,8 @@ pub mod tests {
             {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
-                assert_eq!(*left, Expression::Integer64(1, 2));
-                assert_eq!(*right, Expression::Integer64(1, 2));
+                assert_eq!(*left, Expression::I64(1, 2));
+                assert_eq!(*right, Expression::I64(1, 2));
             } else {
                 panic!("No nodes returned by parser for {}", text)
             }
@@ -682,12 +694,12 @@ pub mod tests {
             assert_eq!(l, 1);
             match left.as_ref() {
                 Expression::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
-                    assert_eq!(**ll, Expression::Integer64(1, 2));
-                    assert_eq!(**lr, Expression::Integer64(1, 4));
+                    assert_eq!(**ll, Expression::I64(1, 2));
+                    assert_eq!(**lr, Expression::I64(1, 4));
                 }
                 _ => panic!("Expected Add syntax"),
             }
-            assert_eq!(*right, Expression::Integer64(1, 3));
+            assert_eq!(*right, Expression::I64(1, 3));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -815,7 +827,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), false);
-                assert_eq!(*b.get_rhs(), Expression::Integer64(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -836,7 +848,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), "x");
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), true);
-                assert_eq!(*b.get_rhs(), Expression::Integer64(1, 5));
+                assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -845,6 +857,14 @@ pub mod tests {
     #[test]
     fn parse_primitives() {
         for (text, expected_ty) in vec![
+            ("let x:u8 := 5u8;", Type::U8),
+            ("let x:u16 := 5u16;", Type::U16),
+            ("let x:u32 := 5u32;", Type::U32),
+            ("let x:u64 := 5u64;", Type::U64),
+            ("let x:i8 := 5;", Type::I8),
+            ("let x:i8 := 5i8;", Type::I8),
+            ("let x:i16 := 5;", Type::I16),
+            ("let x:i16 := 5i16;", Type::I16),
             ("let x:i32 := 5;", Type::I32),
             ("let x:i32 := 5i32;", Type::I32),
             ("let x:i64 := 5;", Type::I64),
@@ -864,12 +884,14 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
 
-            let stm = statement(&mut stream).unwrap().unwrap();
-            match stm {
+            let stm = statement(&mut stream);
+            assert!(stm.is_ok(), "{}", text);
+
+            match stm.unwrap().unwrap() {
                 Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
-                    assert_eq!(b.get_type(), expected_ty);
-                    assert_eq!(b.is_mutable(), false);
+                    assert_eq!(b.get_id(), "x", "{}", text);
+                    assert_eq!(b.get_type(), expected_ty, "{}", text);
+                    assert_eq!(b.is_mutable(), false, "{}", text);
                 }
                 _ => panic!("Not a binding statement"),
             }
@@ -889,7 +911,7 @@ pub mod tests {
         match stm {
             Statement::Mutate(box m) => {
                 assert_eq!(m.get_id(), "x");
-                assert_eq!(*m.get_rhs(), Expression::Integer64(1, 5));
+                assert_eq!(*m.get_rhs(), Expression::I64(1, 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -1243,7 +1265,7 @@ pub mod tests {
                         1,
                         RoutineCall::CoroutineInit,
                         vec!["c"].into(),
-                        vec![Expression::Integer64(1, 1), Expression::Integer64(1, 2)]
+                        vec![Expression::I64(1, 1), Expression::I64(1, 2)]
                     )
                 );
             }
@@ -1271,7 +1293,7 @@ pub mod tests {
                         1,
                         RoutineCall::CoroutineInit,
                         vec!["a", "b", "c"].into(),
-                        vec![Expression::Integer64(1, 1), Expression::Integer64(1, 2)]
+                        vec![Expression::I64(1, 1), Expression::I64(1, 2)]
                     )
                 );
             }
@@ -1340,13 +1362,13 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(*cond, Expression::Identifier(1, "x".into()));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Expression::Integer64(1, 5));
+                assert_eq!(*final_exp, Expression::I64(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
 
             if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
-                assert_eq!(*final_exp, Expression::Integer64(1, 7));
+                assert_eq!(*final_exp, Expression::I64(1, 7));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1375,7 +1397,7 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(*cond, Expression::Identifier(1, "x".into()));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Expression::Integer64(1, 5));
+                assert_eq!(*final_exp, Expression::I64(1, 5));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1397,14 +1419,14 @@ pub mod tests {
                     )
                 );
                 if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                    assert_eq!(*final_exp, Expression::Integer64(1, 7));
+                    assert_eq!(*final_exp, Expression::I64(1, 7));
                 } else {
                     panic!("Expected Expression block");
                 }
 
                 if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm
                 {
-                    assert_eq!(*final_exp, Expression::Integer64(1, 8));
+                    assert_eq!(*final_exp, Expression::I64(1, 8));
                 } else {
                     panic!("Expected Expression block");
                 }
@@ -1435,10 +1457,7 @@ pub mod tests {
             assert_eq!(l, 1);
             assert_eq!(*cond, Expression::Identifier(1, "x".into()));
             if let Expression::ExpressionBlock(_l, body, None) = *body {
-                assert_eq!(
-                    body[0],
-                    Statement::Expression(box Expression::Integer64(1, 5))
-                );
+                assert_eq!(body[0], Statement::Expression(box Expression::I64(1, 5)));
             } else {
                 panic!("Expected Expression block, got {:?}", *body);
             }
@@ -1491,7 +1510,7 @@ pub mod tests {
                 Expression::StructExpression(
                     1,
                     vec!["MyStruct"].into(),
-                    vec![("x".into(), Expression::Integer64(1, 5))],
+                    vec![("x".into(), Expression::I64(1, 5))],
                 ),
             ),
             (
@@ -1500,7 +1519,7 @@ pub mod tests {
                     1,
                     vec!["MyStruct"].into(),
                     vec![
-                        ("x".into(), Expression::Integer64(1, 5)),
+                        ("x".into(), Expression::I64(1, 5)),
                         ("y".into(), Expression::Boolean(1, false)),
                     ],
                 ),
@@ -1511,13 +1530,13 @@ pub mod tests {
                     1,
                     vec!["MyStruct"].into(),
                     vec![
-                        ("x".into(), Expression::Integer64(1, 5)),
+                        ("x".into(), Expression::I64(1, 5)),
                         (
                             "y".into(),
                             Expression::StructExpression(
                                 1,
                                 vec!["MyStruct2"].into(),
-                                vec![("z".into(), Expression::Integer64(1, 3))],
+                                vec![("z".into(), Expression::I64(1, 3))],
                             ),
                         ),
                     ],

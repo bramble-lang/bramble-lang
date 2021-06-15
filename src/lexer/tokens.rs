@@ -1,5 +1,11 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
+    U8,
+    U16,
+    U32,
+    U64,
+    I8,
+    I16,
     I32,
     I64,
     Bool,
@@ -9,6 +15,12 @@ pub enum Primitive {
 impl std::fmt::Display for Primitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Primitive::U8 => f.write_str("u8"),
+            Primitive::U16 => f.write_str("u16"),
+            Primitive::U32 => f.write_str("u32"),
+            Primitive::U64 => f.write_str("u64"),
+            Primitive::I8 => f.write_str("i8"),
+            Primitive::I16 => f.write_str("i16"),
             Primitive::I32 => f.write_str("i32"),
             Primitive::I64 => f.write_str("i64"),
             Primitive::Bool => f.write_str("bool"),
@@ -19,8 +31,14 @@ impl std::fmt::Display for Primitive {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lex {
-    Integer32(i32),
-    Integer64(i64),
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    I8(i8),
+    I16(i16),
+    I32(i32),
+    I64(i64),
     Bool(bool),
     Identifier(String),
     StringLiteral(String),
@@ -80,8 +98,14 @@ impl std::fmt::Display for Lex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Lex::*;
         match self {
-            Integer32(i) => f.write_str(&format!("i32 literal {}", i)),
-            Integer64(i) => f.write_str(&format!("i64 literal {}", i)),
+            U8(i) => f.write_str(&format!("u8 literal {}", i)),
+            U16(i) => f.write_str(&format!("u16 literal {}", i)),
+            U32(i) => f.write_str(&format!("u32 literal {}", i)),
+            U64(i) => f.write_str(&format!("u64 literal {}", i)),
+            I8(i) => f.write_str(&format!("i8 literal {}", i)),
+            I16(i) => f.write_str(&format!("i16 literal {}", i)),
+            I32(i) => f.write_str(&format!("i32 literal {}", i)),
+            I64(i) => f.write_str(&format!("i64 literal {}", i)),
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
@@ -148,13 +172,38 @@ impl Token {
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {
+        // TODO: is there a way to make this easier to code
         match self.s {
-            Lex::Integer32(_) => match a {
-                Lex::Integer32(_) => true,
+            Lex::U8(_) => match a {
+                Lex::U8(_) => true,
                 _ => false,
             },
-            Lex::Integer64(_) => match a {
-                Lex::Integer64(_) => true,
+            Lex::U16(_) => match a {
+                Lex::U16(_) => true,
+                _ => false,
+            },
+            Lex::U32(_) => match a {
+                Lex::U32(_) => true,
+                _ => false,
+            },
+            Lex::U64(_) => match a {
+                Lex::U64(_) => true,
+                _ => false,
+            },
+            Lex::I8(_) => match a {
+                Lex::I8(_) => true,
+                _ => false,
+            },
+            Lex::I16(_) => match a {
+                Lex::I16(_) => true,
+                _ => false,
+            },
+            Lex::I32(_) => match a {
+                Lex::I32(_) => true,
+                _ => false,
+            },
+            Lex::I64(_) => match a {
+                Lex::I64(_) => true,
                 _ => false,
             },
             Lex::Bool(_) => match a {
@@ -173,7 +222,46 @@ impl Token {
                 Lex::Primitive(_) => true,
                 _ => false,
             },
-            _ => *a == self.s,
+            Lex::Mul
+            | Lex::Div
+            | Lex::Add
+            | Lex::Minus
+            | Lex::Not
+            | Lex::BAnd
+            | Lex::BOr
+            | Lex::GrEq
+            | Lex::LsEq
+            | Lex::Gr
+            | Lex::Ls
+            | Lex::Eq
+            | Lex::NEq
+            | Lex::Assign
+            | Lex::Semicolon
+            | Lex::Comma
+            | Lex::Let
+            | Lex::Mut
+            | Lex::Return
+            | Lex::LParen
+            | Lex::RParen
+            | Lex::LBrace
+            | Lex::RBrace
+            | Lex::LBracket
+            | Lex::RBracket
+            | Lex::Init
+            | Lex::Yield
+            | Lex::YieldReturn
+            | Lex::CoroutineDef
+            | Lex::FunctionDef
+            | Lex::ModuleDef
+            | Lex::Struct
+            | Lex::Extern
+            | Lex::If
+            | Lex::Else
+            | Lex::While
+            | Lex::Colon
+            | Lex::MemberAccess
+            | Lex::PathSeparator
+            | Lex::LArrow => *a == self.s,
         }
     }
 }

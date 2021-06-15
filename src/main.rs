@@ -193,6 +193,46 @@ fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
             Type::I64,
         ),
         (
+            vec!["root", "std", "io", "writeu8"].into(),
+            vec![Type::U8],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu8ln"].into(),
+            vec![Type::U8],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu16"].into(),
+            vec![Type::U16],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu16ln"].into(),
+            vec![Type::U16],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu32"].into(),
+            vec![Type::U32],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu32ln"].into(),
+            vec![Type::U32],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu64"].into(),
+            vec![Type::U64],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writeu64ln"].into(),
+            vec![Type::U64],
+            Type::Unit,
+        ),
+        (
             vec!["root", "std", "io", "writei64"].into(),
             vec![Type::I64],
             Type::Unit,
@@ -210,6 +250,26 @@ fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
         (
             vec!["root", "std", "io", "writei32ln"].into(),
             vec![Type::I32],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writei16"].into(),
+            vec![Type::I16],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writei16ln"].into(),
+            vec![Type::I16],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writei8"].into(),
+            vec![Type::I8],
+            Type::Unit,
+        ),
+        (
+            vec!["root", "std", "io", "writei8ln"].into(),
+            vec![Type::I8],
             Type::Unit,
         ),
         (

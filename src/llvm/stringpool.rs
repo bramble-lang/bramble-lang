@@ -50,8 +50,14 @@ impl StringPool {
                     Some(fe) => self.extract_from(fe),
                 }
             }
-            Integer32(..) => {}
-            Integer64(..) => {}
+            U8(..) => {}
+            U16(..) => {}
+            U32(..) => {}
+            U64(..) => {}
+            I8(..) => {}
+            I16(..) => {}
+            I32(..) => {}
+            I64(..) => {}
             Boolean(..) => {}
             StringLiteral(_, s) => {
                 self.insert(s);

@@ -431,15 +431,45 @@ impl<'a> TypeResolver<'a> {
         current_func: &str,
     ) -> Result<SemanticNode> {
         match &ast {
-            &Expression::Integer32(meta, v) => {
+            &Expression::U8(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U8;
+                Ok(Expression::U8(meta, *v))
+            }
+            &Expression::U16(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U16;
+                Ok(Expression::U16(meta, *v))
+            }
+            &Expression::U32(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U32;
+                Ok(Expression::U32(meta, *v))
+            }
+            &Expression::U64(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::U64;
+                Ok(Expression::U64(meta, *v))
+            }
+            &Expression::I8(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::I8;
+                Ok(Expression::I8(meta, *v))
+            }
+            &Expression::I16(meta, v) => {
+                let mut meta = meta.clone();
+                meta.ty = Type::I16;
+                Ok(Expression::I16(meta, *v))
+            }
+            &Expression::I32(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I32;
-                Ok(Expression::Integer32(meta, *v))
+                Ok(Expression::I32(meta, *v))
             }
-            &Expression::Integer64(meta, v) => {
+            &Expression::I64(meta, v) => {
                 let mut meta = meta.clone();
                 meta.ty = Type::I64;
-                Ok(Expression::Integer64(meta, *v))
+                Ok(Expression::I64(meta, *v))
             }
             Expression::Boolean(meta, v) => {
                 let mut meta = meta.clone();
@@ -804,8 +834,8 @@ impl<'a> TypeResolver<'a> {
         let operand = self.traverse(operand, current_func)?;
 
         match op {
-            Minus => {
-                if operand.get_type() == Type::I32 || operand.get_type() == Type::I64 {
+            Negate => {
+                if operand.get_type().is_signed_int() {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(format!(
@@ -843,12 +873,13 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Add | Sub | Mul | Div => {
-                if (l.get_type() == Type::I64 && r.get_type() == Type::I64)
-                    || (l.get_type() == Type::I32 && r.get_type() == Type::I32)
+                if l.get_type().is_integral()
+                    && r.get_type().is_integral()
+                    && l.get_type() == r.get_type()
                 {
                     Ok((l.get_type().clone(), l, r))
                 } else {
-                    let expected = if l.get_type() == Type::I64 || l.get_type() == Type::I32 {
+                    let expected = if l.get_type().is_integral() {
                         format!("{}", l.get_type())
                     } else {
                         "i64".into()
@@ -1029,6 +1060,55 @@ mod tests {
                 Ok(Type::I64),
             ),
             (
+                "fn main() -> u8 {
+                    let k: u8 := 5u8;
+                    return k;
+                }",
+                Ok(Type::U8),
+            ),
+            (
+                "fn main() -> u16 {
+                    let k: u16 := 5u16;
+                    return k;
+                }",
+                Ok(Type::U16),
+            ),
+            (
+                "fn main() -> u32 {
+                    let k: u32 := 5u32;
+                    return k;
+                }",
+                Ok(Type::U32),
+            ),
+            (
+                "fn main() -> u64 {
+                    let k: u64 := 5u64;
+                    return k;
+                }",
+                Ok(Type::U64),
+            ),
+            (
+                "fn main() -> i32 {
+                    let k: i32 := 5i32;
+                    return k;
+                }",
+                Ok(Type::I32),
+            ),
+            (
+                "fn main() -> i16 {
+                    let k: i16 := 5i16;
+                    return k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                "fn main() -> i8 {
+                    let k: i8 := 5i8;
+                    return k;
+                }",
+                Ok(Type::I8),
+            ),
+            (
                 "fn main() -> bool {
                     let k: bool := false;
                     return k;
@@ -1051,6 +1131,34 @@ mod tests {
             ),
             (
                 "fn main() -> bool {
+                    let k: i32 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i32 but got i64"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i16 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i16 but got i64"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i8 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected i8 but got i64"),
+            ),
+            (
+                "fn main() -> u64 {
+                    let k: u64 := 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: Bind expected u64 but got i64"),
+            ),
+            (
+                "fn main() -> bool {
                     let k: i64 := 5;
                     return k;
                 }",
@@ -1062,7 +1170,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = parser::parse(tokens).expect(&format!("{}", text)).unwrap();
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1501,6 +1609,78 @@ mod tests {
             ),
             (
                 line!(),
+                "fn main() -> i16 {
+                    let k: i16 := 1i16 + 5i16;
+                    return k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                line!(),
+                "fn main() -> i16 {
+                    let k: i16 := (1i16 + 5i16) * (3i16 - 4i16/(2i16 + 3i16));
+                    return k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                line!(),
+                "fn main() -> i8 {
+                    let k: i8 := 1i8 + 5i8;
+                    return k;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                line!(),
+                "fn main() -> i8 {
+                    let k: i8 := (1i8 + 5i8) * (3i8 - 4i8/(2i8 + 3i8));
+                    return k;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                line!(),
+                "fn main() -> u64 {
+                    let k: u64 := 1u64 + 5u64;
+                    return k;
+                }",
+                Ok(Type::U64),
+            ),
+            (
+                line!(),
+                "fn main() -> u8 {
+                    let k: u8 := (1u8 + 5u8) * (3u8 - 4u8/(2u8 + 3u8));
+                    return k;
+                }",
+                Ok(Type::U8),
+            ),
+            (
+                line!(),
+                "fn main() -> u16 {
+                    let k: u16 := (1u16 + 5u16) * (3u16 - 4u16/(2u16 + 3u16));
+                    return k;
+                }",
+                Ok(Type::U16),
+            ),
+            (
+                line!(),
+                "fn main() -> u32 {
+                    let k: u32 := (1u32 + 5u32) * (3u32 - 4u32/(2u32 + 3u32));
+                    return k;
+                }",
+                Ok(Type::U32),
+            ),
+            (
+                line!(),
+                "fn main() -> u64 {
+                    let k: u64 := (1u64 + 5u64) * (3u64 - 4u64/(2u64 + 3u64));
+                    return k;
+                }",
+                Ok(Type::U64),
+            ),
+            (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
                     return k;
@@ -1531,6 +1711,30 @@ mod tests {
                 }",
                 Err("Semantic: L2: + expected i32 but found i32 and i64"),
             ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1i8 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i8 but found i8 and i64"),
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: u64 := 1u64 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected u64 but found u64 and i64"), // TODO: Change this error message to specify the right operand is wrong
+            ),
+            (
+                line!(),
+                "fn main() -> i32 {
+                    let k: i64 := 1i16 + 5i64;
+                    return k;
+                }",
+                Err("Semantic: L2: + expected i16 but found i16 and i64"),
+            ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
@@ -1546,6 +1750,7 @@ mod tests {
             );
             match expected {
                 Ok(expected_ty) => {
+                    assert!(module.is_ok(), "Test Case at L:{}", line);
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
@@ -1600,11 +1805,39 @@ mod tests {
                 Ok(Type::I64),
             ),
             (
+                "fn main() -> i32 {
+                    let k: i32 := 5i32;
+                    return -k;
+                }",
+                Ok(Type::I32),
+            ),
+            (
+                "fn main() -> i16 {
+                    let k: i16 := 5i16;
+                    return -k;
+                }",
+                Ok(Type::I16),
+            ),
+            (
+                "fn main() -> i8 {
+                    let k: i8 := 5i8;
+                    return -k;
+                }",
+                Ok(Type::I8),
+            ),
+            (
                 "fn main() -> bool {
                     let k: bool := false;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i32 or i64 but found bool"),
+                Err("Semantic: L3: - expected i32 or i64 but found bool"), // TODO: Change this error message to include i8 and i16
+            ),
+            (
+                "fn main() -> u64 {
+                    let k: u64 := 5u64;
+                    return -k;
+                }",
+                Err("Semantic: L3: - expected i32 or i64 but found u64"),
             ),
             (
                 "fn main() -> bool {
@@ -2037,6 +2270,131 @@ mod tests {
     }
 
     #[test]
+    pub fn test_array_size_types() {
+        for ty in vec!["u64", "u32", "u16", "u8", "i64", "i32", "i16", "i8"] {
+            let text = format!(
+                "fn main() -> i64 {{
+                    let a: [i64; 2{}] := [1, 2,];
+                    return 0;
+                }}",
+                ty
+            );
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            let module = module.unwrap();
+            let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+            let bind_stm = &fn_main.get_body()[0];
+            assert_eq!(bind_stm.annotation().ty, Type::Array(box Type::I64, 2));
+        }
+    }
+
+    #[test]
+    pub fn test_array_element_types() {
+        for (text, expected) in vec![
+            (
+                "fn main() -> i64 {
+                    let a: [i64; 5] := [1, 2, 3, 4, 5];
+                    let k: i64 := a[0];
+                    return k * 3;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let a: [[i64; 1]; 1] := [[1]];
+                    let k: i64 := a[0][0];
+                    return k * 3;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i8 {
+                    let a: [i8; 5] := [1i8, 2i8, 3i8, 4i8, 5i8];
+                    let k: i8 := a[0];
+                    return k * 3i8;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                "fn main() -> u8 {
+                    let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
+                    let k: u8 := a[0];
+                    return k * 3u8;
+                }",
+                Ok(Type::U8),
+            ),
+            (
+                "fn main() -> u16 {
+                    let a: [u16; 5] := [1u16, 2u16, 3u16, 4u16, 5u16];
+                    let k: u16 := a[0];
+                    return k * 3u16;
+                }",
+                Ok(Type::U16),
+            ),
+            (
+                "fn main() -> i16 {
+                    let a: [i16; 2] := [1, 2,];
+                    let k: i16 := a[0];
+                    return k * 3i16;
+                }",
+                Err("Semantic: L2: Bind expected [i16; 2] but got [i64; 2]"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    let bind_stm = &fn_main.get_body()[1];
+                    assert_eq!(bind_stm.annotation().ty, expected_ty);
+
+                    // validate that the RHS of the bind is the correct type
+                    if let Statement::Bind(box b) = bind_stm {
+                        assert_eq!(b.get_rhs().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[2];
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_array_at_index() {
         for (text, expected) in vec![
             (
@@ -2062,6 +2420,22 @@ mod tests {
                     return k * 3;
                 }",
                 Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i8 {
+                    let a: [i8; 5] := [1i8, 2i8, 3i8, 4i8, 5i8];
+                    let k: i8 := a[0];
+                    return k * 3i8;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                "fn main() -> u8 {
+                    let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
+                    let k: u8 := a[0];
+                    return k * 3u8;
+                }",
+                Ok(Type::U8),
             ),
             (
                 "fn main() -> bool {
@@ -2098,7 +2472,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[1];
-                    assert_eq!(bind_stm.annotation().ty, Type::I64);
+                    assert_eq!(bind_stm.annotation().ty, expected_ty);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {

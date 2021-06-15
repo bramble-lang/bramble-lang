@@ -1,0 +1,19 @@
+fn my_main() -> i64 {
+    let x:i8 := 4i8;
+    let y:i8 := test();
+    let z:i8 := test2(6i8);
+
+    root::std::io::writei8ln(x);
+    root::std::io::writei8ln(y);
+    root::std::io::writei8ln(z);
+    
+    return 0;
+}
+
+fn test() -> i8 {
+    return 5i8;
+}
+
+fn test2(i: i8) -> i8 {
+    return i;
+}

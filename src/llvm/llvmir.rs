@@ -29,7 +29,7 @@ use braid_lang::result::Result;
 
 use crate::{
     ast,
-    ast::{Extern, Node, Parameter, RoutineDef, StructDef},
+    ast::{BinaryOperator, Extern, Node, Parameter, RoutineDef, StructDef},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -497,11 +497,35 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
-            ast::Expression::Integer32(_, i) => {
+            ast::Expression::U8(_, i) => {
+                let u8t = llvm.context.i8_type();
+                Some(u8t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
+            ast::Expression::U16(_, i) => {
+                let u16t = llvm.context.i16_type();
+                Some(u16t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
+            ast::Expression::U32(_, i) => {
+                let u32t = llvm.context.i32_type();
+                Some(u32t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
+            ast::Expression::U64(_, i) => {
+                let u64t = llvm.context.i64_type();
+                Some(u64t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+            }
+            ast::Expression::I8(_, i) => {
+                let i8t = llvm.context.i8_type();
+                Some(i8t.const_int(*i as u64, true).into())
+            }
+            ast::Expression::I16(_, i) => {
+                let i16t = llvm.context.i16_type();
+                Some(i16t.const_int(*i as u64, true).into())
+            }
+            ast::Expression::I32(_, i) => {
                 let i32t = llvm.context.i32_type();
                 Some(i32t.const_int(*i as u64, true).into())
             }
-            ast::Expression::Integer64(_, i) => {
+            ast::Expression::I64(_, i) => {
                 let i64t = llvm.context.i64_type();
                 Some(i64t.const_int(*i as u64, true).into())
             }
@@ -532,15 +556,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     Some(val)
                 }
             }
-            ast::Expression::UnaryOp(_, op, exp) => {
-                let v = exp.to_llvm_ir(llvm).expect("Expected a value");
-                Some(op.to_llvm_ir(llvm, v))
-            }
-            ast::Expression::BinaryOp(_, op, l, r) => {
-                let left = l.to_llvm_ir(llvm).expect("Expected a value");
-                let right = r.to_llvm_ir(llvm).expect("Expected a value");
-                Some(op.to_llvm_ir(llvm, left, right))
-            }
+            ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp)),
+            ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r)),
             ast::Expression::RoutineCall(_, call, name, params) => {
                 call.to_llvm_ir(llvm, name, params, self.get_type())
             }
@@ -744,7 +761,16 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 Some(el_val)
             }
-            _ => todo!("{} not implemented yet", self),
+            ast::Expression::CustomType(..) => {
+                panic!("CustomType nodes should be resolved and removed before the compiler stage.")
+            }
+            ast::Expression::Path(..) => {
+                panic!("Path nodes should be resolved and removed before the compiler stage.")
+            }
+            ast::Expression::IdentifierDeclare(..) => {
+                panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
+            }
+            ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
         }
     }
 }
@@ -752,12 +778,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 impl ast::UnaryOperator {
     fn to_llvm_ir<'ctx>(
         &self,
-        llvm: &IrGen<'ctx>,
-        right: BasicValueEnum<'ctx>,
+        llvm: &mut IrGen<'ctx>,
+        right: &ast::Expression<SemanticAnnotations>,
     ) -> BasicValueEnum<'ctx> {
-        let rv = right.into_int_value();
+        let r = right.to_llvm_ir(llvm).expect("Expected a value");
+        let rv = r.into_int_value();
         match self {
-            ast::UnaryOperator::Minus => llvm.builder.build_int_neg(rv, "").into(),
+            ast::UnaryOperator::Negate => llvm.builder.build_int_neg(rv, "").into(),
             ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
         }
     }
@@ -766,18 +793,31 @@ impl ast::UnaryOperator {
 impl ast::BinaryOperator {
     fn to_llvm_ir<'ctx>(
         &self,
-        llvm: &IrGen<'ctx>,
-        left: BasicValueEnum<'ctx>,
-        right: BasicValueEnum<'ctx>,
+        llvm: &mut IrGen<'ctx>,
+        left: &ast::Expression<SemanticAnnotations>,
+        right: &ast::Expression<SemanticAnnotations>,
     ) -> BasicValueEnum<'ctx> {
-        let lv = left.into_int_value();
-        let rv = right.into_int_value();
-
+        let l = left.to_llvm_ir(llvm).expect("Expected a value");
+        let r = right.to_llvm_ir(llvm).expect("Expected a value");
+        let lv = l.into_int_value();
+        let rv = r.into_int_value();
         match self {
             ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, ""),
             ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, ""),
             ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, ""),
-            ast::BinaryOperator::Div => llvm.builder.build_int_signed_div(lv, rv, ""),
+            ast::BinaryOperator::Div => {
+                // With the current design, the difference between signed and unsigned division is
+                // a hardware difference and falls squarely within the field of the LLVM generator
+                // module.  But this violates the precept that this module makes no decisions and only
+                // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+                // of operators for each operand type in the language layer; especially when I get
+                // to implementing FP values and operations.
+                if left.get_type().is_unsigned_int() {
+                    llvm.builder.build_int_unsigned_div(lv, rv, "")
+                } else {
+                    llvm.builder.build_int_signed_div(lv, rv, "")
+                }
+            }
             ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, ""),
             ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, ""),
             ast::BinaryOperator::Eq => llvm.builder.build_int_compare(IntPredicate::EQ, lv, rv, ""),
@@ -858,8 +898,10 @@ impl ast::RoutineCall {
 impl ast::Type {
     fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> AnyTypeEnum<'ctx> {
         match self {
-            ast::Type::I32 => llvm.context.i32_type().into(),
-            ast::Type::I64 => llvm.context.i64_type().into(),
+            ast::Type::U8 | ast::Type::I8 => llvm.context.i8_type().into(),
+            ast::Type::U16 | ast::Type::I16 => llvm.context.i16_type().into(),
+            ast::Type::U32 | ast::Type::I32 => llvm.context.i32_type().into(),
+            ast::Type::U64 | ast::Type::I64 => llvm.context.i64_type().into(),
             ast::Type::Bool => llvm.context.bool_type().into(),
             ast::Type::Unit => llvm.context.void_type().into(),
             ast::Type::StringLiteral => llvm

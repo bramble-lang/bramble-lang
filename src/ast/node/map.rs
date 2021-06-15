@@ -193,8 +193,14 @@ where
         use Expression::*;
 
         match exp {
-            Integer32(_, i) => Integer32(self.transform(exp), *i),
-            Integer64(_, i) => Integer64(self.transform(exp), *i),
+            U8(_, i) => U8(self.transform(exp), *i),
+            U16(_, i) => U16(self.transform(exp), *i),
+            U32(_, i) => U32(self.transform(exp), *i),
+            U64(_, i) => U64(self.transform(exp), *i),
+            I8(_, i) => I8(self.transform(exp), *i),
+            I16(_, i) => I16(self.transform(exp), *i),
+            I32(_, i) => I32(self.transform(exp), *i),
+            I64(_, i) => I64(self.transform(exp), *i),
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
             ArrayValue(_, _, _) => self.for_array_value(exp),
@@ -477,7 +483,7 @@ mod test {
             1,
             vec![],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+            vec![Statement::Expression(box Expression::I64(1, 2))],
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
@@ -489,7 +495,7 @@ mod test {
                 ty: Type::Bool,
             }],
             Type::Unit,
-            vec![Statement::Expression(box Expression::Integer64(1, 2))],
+            vec![Statement::Expression(box Expression::I64(1, 2))],
         ))
         .unwrap();
         m.add_module(Module::new("m2", 1));

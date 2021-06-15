@@ -1,0 +1,61 @@
+fn my_main() -> i64 {
+    let x:u8 := 5u8;
+    let y:u8 := test();
+    let z:u8 := sub(x, y);
+    
+    root::std::io::writeu8ln(x); // 5
+    root::std::io::writeu8ln(y); // 5
+    root::std::io::writeu8ln(z); // 0
+
+    let w: u8 := x + y;
+    root::std::io::writeu8ln(w); // 10
+
+    let a: u8 := w + z;
+    root::std::io::writeu8ln(a); // 10
+
+    let b: u8 := w * z;
+    root::std::io::writeu8ln(b); // 0
+
+    let f: u8 := x/w;
+    root::std::io::writeu8ln(f); // 0
+
+    let g: u8 := add(x, y);
+    root::std::io::writeu8ln(g); // 10
+
+    // test under flow (< 0)
+    let h: u8 := w - 11u8;
+    root::std::io::writeu8ln(h); // 255
+
+    // test overflow
+    let i: u8 := w + 246u8;
+    root::std::io::writeu8ln(i); // 0
+
+    test_udiv(); // 0
+
+    if (5u8 < 10u8) {
+        root::std::io::write("5 is less than 10\n");
+    };
+    
+    return 0;
+}
+
+fn test() -> u8 {
+    return 5u8;
+}
+
+fn sub(i: u8, j: u8) -> u8 {
+    return i - j;
+}
+
+fn add(a: u8, b: u8) -> u8 {
+    return a + b;
+}
+
+fn test_udiv() {
+    // Test unsigned division
+    let j: u8 := 255u8;
+    let k: u8 := 2u8 / j;
+    root::std::io::writeu8ln(k); // 0
+
+    return;
+}
