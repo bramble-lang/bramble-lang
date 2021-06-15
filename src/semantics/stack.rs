@@ -171,9 +171,8 @@ impl<'a> SymbolTableScopeStack<'a> {
     ///
     /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
-        let canon_path = self.to_canonical(path)?;
-
         if path.len() > 1 {
+            let canon_path = self.to_canonical(path)?;
             // If the path contains more than just the item's name then
             // traverse the parent path to find the specified item
             let item = canon_path
@@ -202,7 +201,6 @@ impl<'a> SymbolTableScopeStack<'a> {
             // the parent scopes for the given symbol
             let item = &path[0];
             self.get_symbol(item)
-                //.map(|i| (i.0, canon_path))
                 .ok_or(format!("{} is not defined", item))
         } else {
             Err("empty path passed to lookup_path".into())
