@@ -188,9 +188,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
             let item = &path[0];
-            self.head
-                .get(item)
-                .or_else(|| self.get_symbol(item))
+            self.get_symbol(item)
                 .map(|i| (i, canon_path))
                 .ok_or(format!("{} is not defined", item))
         } else {

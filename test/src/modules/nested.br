@@ -21,9 +21,12 @@ mod my_mod {
     }
     
     mod inner {
+        fn plus(a: i64, b: i64) -> i64 {
+            return a + b;
+        }
 
         fn add(a: i64, b: i64) -> i64 {
-            return a + b;
+            return plus(a, b);
         }
     }
 }
