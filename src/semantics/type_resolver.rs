@@ -2271,7 +2271,7 @@ mod tests {
 
     #[test]
     pub fn test_array_size_types() {
-        for ty in vec![("i64"), ("i32"), ("i16"), ("i8")] {
+        for ty in vec!["u64", "u32", "u16", "u8", "i64", "i32", "i16", "i8"] {
             let text = format!(
                 "fn main() -> i64 {{
                     let a: [i64; 2{}] := [1, 2,];

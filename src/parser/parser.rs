@@ -529,7 +529,10 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
             let len = expression(stream)?
                 .ok_or("Expected size to be specified in array type declaration")?;
             let len = match len {
-                // TODO: Support i8 and i16
+                Expression::U8(_, l) => l as usize,
+                Expression::U16(_, l) => l as usize,
+                Expression::U32(_, l) => l as usize,
+                Expression::U64(_, l) => l as usize,
                 Expression::I8(_, l) => l as usize,
                 Expression::I16(_, l) => l as usize,
                 Expression::I32(_, l) => l as usize,
