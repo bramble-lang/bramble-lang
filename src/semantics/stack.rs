@@ -90,7 +90,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             self.stack.iter().rev().find_map(|scope| {
                 let s = scope.get(name);
                 if s.is_none() && scope.scope_type().is_boundary() {
-                    // If we reach the end of the canonical path, then can be no more locations
+                    // If we reach the end of the canonical path, there can be no more locations
                     // for the symbol to exist and so we should return None
                     cpath.pop()?;
                 }
@@ -273,7 +273,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// Converts a relative path, `path`, into a canonical path by merging it with
     /// the path to the current node, as represented by the stack.
     pub fn to_canonical(&self, path: &Path) -> Result<Path> {
-        let current_path = self.to_path().ok_or(format!("A valid path is expected"))?;
+        let current_path = self.to_path().ok_or("A valid path is expected")?;
         path.to_canonical(&current_path)
     }
 
