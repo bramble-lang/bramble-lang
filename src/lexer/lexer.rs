@@ -321,12 +321,16 @@ impl Lexer {
 
         let int_token = branch.cut();
 
-        // Check if there is a postfix (i32, i64, etc) on the integer literal
+        // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
+        // no suffix then default to i64
         let prim_suffix = Self::consume_type_suffix(&mut branch)?.unwrap_or(Primitive::I64);
 
+        // Check that any character following the numeric literal is not an alphanumeric or
+        // _.  This is to confirm that we have truly reached the end of the token (e.g. that
+        // we do not have "13412afda" or 123u32y52)
         if branch
             .peek()
-            .map(|c| c.is_alphabetic() || c == '_')
+            .map(|c| c.is_alphanumeric() || c == '_')
             .unwrap_or(false)
         {
             return Err(format!(
