@@ -219,3 +219,12 @@ pub(super) enum ScopeType {
     Routine,
     Module { name: String },
 }
+
+impl ScopeType {
+    pub fn is_boundary(&self) -> bool {
+        match self {
+            Self::Local => false,
+            Self::Routine | Self::Module { .. } => true,
+        }
+    }
+}

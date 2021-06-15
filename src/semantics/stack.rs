@@ -83,10 +83,21 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// for a symbol that matches `name`.
     ///
     /// Returns the first match.  Returns `None` if no matching symbol was found.
-    fn get_symbol(&self, name: &str) -> Option<&Symbol> {
-        self.head
-            .get(name)
-            .or_else(|| self.stack.iter().rev().find_map(|scope| scope.get(name)))
+    fn get_symbol(&self, name: &str) -> Option<(&Symbol, Path)> {
+        let mut path = Path::new();
+        path.push("self");
+        let s = self.head.get(name).or_else(|| {
+            self.stack.iter().rev().find_map(|scope| {
+                let s = scope.get(name);
+                if s.is_none() && scope.scope_type().is_boundary() {
+                    path.push("super");
+                }
+                s
+            })
+        })?;
+        //.map(|s| (s, self.to_canonical(&path).ok()?))
+        let canon = self.to_canonical(&path).ok()?;
+        Some((s, canon))
     }
 
     /// Add a new symbol to the current symbol table (the SymbolTable that is at the
@@ -189,7 +200,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             // the parent scopes for the given symbol
             let item = &path[0];
             self.get_symbol(item)
-                .map(|i| (i, canon_path))
+                .map(|i| (i.0, canon_path))
                 .ok_or(format!("{} is not defined", item))
         } else {
             Err("empty path passed to lookup_path".into())
