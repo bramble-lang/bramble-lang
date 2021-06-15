@@ -325,12 +325,12 @@ impl Lexer {
         // no suffix then default to i64
         let prim_suffix = Self::consume_type_suffix(&mut branch)?.unwrap_or(Primitive::I64);
 
-        // Check that any character following the numeric literal is not an alphanumeric or
-        // _.  This is to confirm that we have truly reached the end of the token (e.g. that
-        // we do not have "13412afda" or 123u32y52)
+        // Check that the current character at the lexer cursor position is a delimiter (we have
+        // reached the end of the token); otherwise this is not a valid integer literal and an
+        // error should be thrown.
         if branch
             .peek()
-            .map(|c| c.is_alphanumeric() || c == '_')
+            .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
             return Err(format!(
@@ -531,6 +531,10 @@ impl Lexer {
             },
             _ => token,
         }
+    }
+
+    fn is_delimiter(c: char) -> bool {
+        c.is_ascii_punctuation() || c.is_whitespace()
     }
 }
 
