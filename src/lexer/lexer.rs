@@ -276,16 +276,7 @@ impl Lexer {
                 // Parse escape sequence
                 if c == '\\' {
                     match branch.next() {
-                        Some(c)
-                            if c == 'n'
-                                || c == 'r'
-                                || c == 't'
-                                || c == '"'
-                                || c == '0'
-                                || c == '\\' =>
-                        {
-                            ()
-                        }
+                        Some(c) if Self::is_escape_code(c) => (),
                         Some(c) => return Err(format!("Invalid escape sequence \\{}", c)),
                         None => return Err("Expected escape character after \\".into()),
                     }
@@ -535,6 +526,10 @@ impl Lexer {
 
     fn is_delimiter(c: char) -> bool {
         c.is_ascii_punctuation() || c.is_whitespace()
+    }
+
+    fn is_escape_code(c: char) -> bool {
+        c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
     }
 }
 
