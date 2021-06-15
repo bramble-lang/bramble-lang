@@ -85,21 +85,23 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// Returns the first match and the canonical path to that match.  
     /// Returns `None` if no matching symbol was found.
     fn get_symbol(&self, name: &str) -> Option<(&Symbol, Path)> {
-        let mut path = Path::new();
-        path.push("self");
+        let mut cpath = self.to_path()?;
         let s = self.head.get(name).or_else(|| {
             self.stack.iter().rev().find_map(|scope| {
                 let s = scope.get(name);
                 if s.is_none() && scope.scope_type().is_boundary() {
-                    path.push("super");
+                    // If we reach the end of the canonical path, then can be no more locations
+                    // for the symbol to exist and so we should return None
+                    cpath.pop()?;
                 }
                 s
             })
         });
-        if s.is_some() {
-            path.push(name);
-        }
-        s.map(|s| (s, self.to_canonical(&path).unwrap()))
+
+        s.map(|s| {
+            cpath.push(name);
+            (s, cpath)
+        })
     }
 
     /// Add a new symbol to the current symbol table (the SymbolTable that is at the

@@ -21,6 +21,10 @@ impl Path {
         self.path.push(step.into())
     }
 
+    pub fn pop(&mut self) -> Option<String> {
+        self.path.pop()
+    }
+
     pub fn iter(&self) -> std::slice::Iter<String> {
         self.path.iter()
     }
