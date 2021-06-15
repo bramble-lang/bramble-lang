@@ -2270,6 +2270,131 @@ mod tests {
     }
 
     #[test]
+    pub fn test_array_size_types() {
+        for ty in vec![("i64"), ("i32"), ("i16"), ("i8")] {
+            let text = format!(
+                "fn main() -> i64 {{
+                    let a: [i64; 2{}] := [1, 2,];
+                    return 0;
+                }}",
+                ty
+            );
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            let module = module.unwrap();
+            let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+            let bind_stm = &fn_main.get_body()[0];
+            assert_eq!(bind_stm.annotation().ty, Type::Array(box Type::I64, 2));
+        }
+    }
+
+    #[test]
+    pub fn test_array_element_types() {
+        for (text, expected) in vec![
+            (
+                "fn main() -> i64 {
+                    let a: [i64; 5] := [1, 2, 3, 4, 5];
+                    let k: i64 := a[0];
+                    return k * 3;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let a: [[i64; 1]; 1] := [[1]];
+                    let k: i64 := a[0][0];
+                    return k * 3;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i8 {
+                    let a: [i8; 5] := [1i8, 2i8, 3i8, 4i8, 5i8];
+                    let k: i8 := a[0];
+                    return k * 3i8;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                "fn main() -> u8 {
+                    let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
+                    let k: u8 := a[0];
+                    return k * 3u8;
+                }",
+                Ok(Type::U8),
+            ),
+            (
+                "fn main() -> u16 {
+                    let a: [u16; 5] := [1u16, 2u16, 3u16, 4u16, 5u16];
+                    let k: u16 := a[0];
+                    return k * 3u16;
+                }",
+                Ok(Type::U16),
+            ),
+            (
+                "fn main() -> i16 {
+                    let a: [i16; 2] := [1, 2,];
+                    let k: i16 := a[0];
+                    return k * 3i16;
+                }",
+                Err("Semantic: L2: Bind expected [i16; 2] but got [i64; 2]"),
+            ),
+        ] {
+            let tokens: Vec<Token> = Lexer::new(&text)
+                .tokenize()
+                .into_iter()
+                .collect::<Result<_>>()
+                .unwrap();
+            let ast = parser::parse(tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    let bind_stm = &fn_main.get_body()[1];
+                    assert_eq!(bind_stm.annotation().ty, expected_ty);
+
+                    // validate that the RHS of the bind is the correct type
+                    if let Statement::Bind(box b) = bind_stm {
+                        assert_eq!(b.get_rhs().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[2];
+                    assert_eq!(ret_stm.annotation().ty, expected_ty);
+                    if let Statement::Return(box r) = ret_stm {
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_array_at_index() {
         for (text, expected) in vec![
             (
@@ -2295,6 +2420,22 @@ mod tests {
                     return k * 3;
                 }",
                 Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i8 {
+                    let a: [i8; 5] := [1i8, 2i8, 3i8, 4i8, 5i8];
+                    let k: i8 := a[0];
+                    return k * 3i8;
+                }",
+                Ok(Type::I8),
+            ),
+            (
+                "fn main() -> u8 {
+                    let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
+                    let k: u8 := a[0];
+                    return k * 3u8;
+                }",
+                Ok(Type::U8),
             ),
             (
                 "fn main() -> bool {
@@ -2331,7 +2472,7 @@ mod tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[1];
-                    assert_eq!(bind_stm.annotation().ty, Type::I64);
+                    assert_eq!(bind_stm.annotation().ty, expected_ty);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {

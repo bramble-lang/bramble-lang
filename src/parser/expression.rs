@@ -571,6 +571,10 @@ mod test {
                 Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
             ),
             (
+                "[1u8]",
+                Expression::ArrayValue(1, vec![Expression::U8(1, 1)], 1),
+            ),
+            (
                 "[1,]",
                 Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
             ),
@@ -581,6 +585,18 @@ mod test {
                     vec![
                         Expression::I64(1, 1),
                         Expression::I64(1, 2),
+                        Expression::I64(1, 3),
+                    ],
+                    3,
+                ),
+            ),
+            (
+                "[1, 2i8, 3]", // This is legal at the parser level (it is illegal semantically)
+                Expression::ArrayValue(
+                    1,
+                    vec![
+                        Expression::I64(1, 1),
+                        Expression::I8(1, 2),
                         Expression::I64(1, 3),
                     ],
                     3,
