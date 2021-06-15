@@ -19,11 +19,15 @@ mod my_mod {
         let x: i64 := self::inner::add(1, 2);
         return i == x;
     }
+        
+    fn plus(a: i64, b: i64) -> i64 {
+        return a + b;
+    }
     
     mod inner {
-
         fn add(a: i64, b: i64) -> i64 {
-            return a + b;
+            return plus(a, b);
+            //return a + b;
         }
     }
 }
