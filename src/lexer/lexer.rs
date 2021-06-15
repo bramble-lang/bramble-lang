@@ -314,7 +314,7 @@ impl Lexer {
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
         // no suffix then default to i64
-        let prim_suffix = Self::consume_type_suffix(&mut branch)?.unwrap_or(Primitive::I64);
+        let type_suffix = Self::consume_int_suffix(&mut branch)?.unwrap_or(Primitive::I64);
 
         // Check that the current character at the lexer cursor position is a delimiter (we have
         // reached the end of the token); otherwise this is not a valid integer literal and an
@@ -331,7 +331,7 @@ impl Lexer {
         }
 
         branch.merge();
-        Self::create_int_literal(self.line, &int_token, prim_suffix)
+        Self::create_int_literal(self.line, &int_token, type_suffix)
     }
 
     fn create_int_literal(line: u32, int_token: &str, prim: Primitive) -> Result<Option<Token>> {
@@ -368,7 +368,7 @@ impl Lexer {
         }
     }
 
-    fn consume_type_suffix(branch: &mut LexerBranch) -> Result<Option<Primitive>> {
+    fn consume_int_suffix(branch: &mut LexerBranch) -> Result<Option<Primitive>> {
         Ok(if branch.next_ifn("i8") {
             Some(Primitive::I8)
         } else if branch.next_ifn("i16") {
