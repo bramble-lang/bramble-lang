@@ -83,21 +83,10 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// for a symbol that matches `name`.
     ///
     /// Returns the first match.  Returns `None` if no matching symbol was found.
-    fn get_symbol(&self, name: &str) -> Option<(&Symbol, Path)> {
-        let mut path = Path::new();
-        path.push("self");
-        let s = self.head.get(name).or_else(|| {
-            self.stack.iter().rev().find_map(|scope| {
-                let s = scope.get(name);
-                if s.is_none() && scope.scope_type().is_boundary() {
-                    path.push("super");
-                }
-                s
-            })
-        })?;
-        //.map(|s| (s, self.to_canonical(&path).ok()?))
-        let canon = self.to_canonical(&path).ok()?;
-        Some((s, canon))
+    fn get_symbol(&self, name: &str) -> Option<&Symbol> {
+        self.head
+            .get(name)
+            .or_else(|| self.stack.iter().rev().find_map(|scope| scope.get(name)))
     }
 
     /// Add a new symbol to the current symbol table (the SymbolTable that is at the
@@ -200,7 +189,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             // the parent scopes for the given symbol
             let item = &path[0];
             self.get_symbol(item)
-                .map(|i| (i.0, canon_path))
+                .map(|i| (i, canon_path))
                 .ok_or(format!("{} is not defined", item))
         } else {
             Err("empty path passed to lookup_path".into())
@@ -377,16 +366,81 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+
+        // Module 1
         let module = SymbolTable::new_module("first");
         stack.enter_scope(&module);
+
+        // Module 2
         let module2 = SymbolTable::new_module("second");
         stack.enter_scope(&module2);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let local2 = SymbolTable::new();
         stack.enter_scope(&local2);
+
         let path = stack.to_path().unwrap();
         let expected = vec!["first", "second"].into();
         assert_eq!(path, expected);
+    }
+
+    #[test]
+    fn test_local_get_symbol() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+
+        let local = SymbolTable::new();
+        stack.enter_scope(&local);
+        stack.add("x", Type::I8, false, false).unwrap();
+
+        let s = stack.get_symbol("x").unwrap();
+        assert_eq!(s.name, "x");
+    }
+
+    #[test]
+    fn test_local_get_symbol_in_parent_scope() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+
+        let local = SymbolTable::new();
+        stack.enter_scope(&local);
+        stack.add("x", Type::I8, false, false).unwrap();
+
+        let local2 = SymbolTable::new();
+        stack.enter_scope(&local2);
+
+        let s = stack.get_symbol("x").unwrap();
+        assert_eq!(s.name, "x");
+    }
+
+    #[test]
+    fn test_local_get_symbol_across_boundary() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+
+        // Module 1
+        let module = SymbolTable::new_module("first");
+        stack.enter_scope(&module);
+
+        stack.add("x", Type::I8, false, false).unwrap();
+
+        // Module 2
+        let module2 = SymbolTable::new_module("second");
+        stack.enter_scope(&module2);
+
+        let local = SymbolTable::new();
+        stack.enter_scope(&local);
+
+        let s = stack.get_symbol("x").unwrap();
+        assert_eq!(s.name, "x");
     }
 }
