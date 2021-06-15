@@ -556,28 +556,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
                     Some(val)
                 }
             }
-            ast::Expression::UnaryOp(_, op, exp) => {
-                let v = exp.to_llvm_ir(llvm).expect("Expected a value");
-                Some(op.to_llvm_ir(llvm, v))
-            }
-            ast::Expression::BinaryOp(_, op, l, r) => {
-                let left = l.to_llvm_ir(llvm).expect("Expected a value");
-                let right = r.to_llvm_ir(llvm).expect("Expected a value");
-
-                // With the current design, the difference between signed and unsigned division is
-                // a hardware difference and falls squarely within the field of the LLVM generator
-                // module.  But this violates the precept that this module makes no decisions and only
-                // transcribes exactly what it is given.  Ultimately, I need to capture the notion
-                // of operators for each operand type in the language layer; especially when I get
-                // to implementing FP values and operations.
-                if *op == BinaryOperator::Div && l.get_type().is_unsigned_int() {
-                    let lv = left.into_int_value();
-                    let rv = right.into_int_value();
-                    Some(llvm.builder.build_int_unsigned_div(lv, rv, "").into())
-                } else {
-                    Some(op.to_llvm_ir(llvm, left, right))
-                }
-            }
+            ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp)),
+            ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r)),
             ast::Expression::RoutineCall(_, call, name, params) => {
                 call.to_llvm_ir(llvm, name, params, self.get_type())
             }
@@ -794,10 +774,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 impl ast::UnaryOperator {
     fn to_llvm_ir<'ctx>(
         &self,
-        llvm: &IrGen<'ctx>,
-        right: BasicValueEnum<'ctx>,
+        llvm: &mut IrGen<'ctx>,
+        right: &ast::Expression<SemanticAnnotations>,
     ) -> BasicValueEnum<'ctx> {
-        let rv = right.into_int_value();
+        let r = right.to_llvm_ir(llvm).expect("Expected a value");
+        let rv = r.into_int_value();
         match self {
             ast::UnaryOperator::Negate => llvm.builder.build_int_neg(rv, "").into(),
             ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
@@ -808,17 +789,31 @@ impl ast::UnaryOperator {
 impl ast::BinaryOperator {
     fn to_llvm_ir<'ctx>(
         &self,
-        llvm: &IrGen<'ctx>,
-        left: BasicValueEnum<'ctx>,
-        right: BasicValueEnum<'ctx>,
+        llvm: &mut IrGen<'ctx>,
+        left: &ast::Expression<SemanticAnnotations>,
+        right: &ast::Expression<SemanticAnnotations>,
     ) -> BasicValueEnum<'ctx> {
-        let lv = left.into_int_value();
-        let rv = right.into_int_value();
+        let l = left.to_llvm_ir(llvm).expect("Expected a value");
+        let r = right.to_llvm_ir(llvm).expect("Expected a value");
+        let lv = l.into_int_value();
+        let rv = r.into_int_value();
         match self {
             ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, ""),
             ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, ""),
             ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, ""),
-            ast::BinaryOperator::Div => llvm.builder.build_int_signed_div(lv, rv, ""),
+            ast::BinaryOperator::Div => {
+                // With the current design, the difference between signed and unsigned division is
+                // a hardware difference and falls squarely within the field of the LLVM generator
+                // module.  But this violates the precept that this module makes no decisions and only
+                // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+                // of operators for each operand type in the language layer; especially when I get
+                // to implementing FP values and operations.
+                if left.get_type().is_unsigned_int() {
+                    llvm.builder.build_int_unsigned_div(lv, rv, "")
+                } else {
+                    llvm.builder.build_int_signed_div(lv, rv, "")
+                }
+            }
             ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, ""),
             ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, ""),
             ast::BinaryOperator::Eq => llvm.builder.build_int_compare(IntPredicate::EQ, lv, rv, ""),
