@@ -524,9 +524,9 @@ impl<'a> TypeResolver<'a> {
 
                 // Check that the index is an i64 type
                 let n_index = self.traverse(index, current_func)?;
-                if n_index.annotation().ty() != Type::I64 {
+                if !n_index.annotation().ty().is_integral() {
                     return Err(format!(
-                        "Expected i64 for index but found {}",
+                        "Expected integral type for index but found {}",
                         n_index.annotation().ty()
                     ));
                 }
@@ -2432,7 +2432,7 @@ mod tests {
             (
                 "fn main() -> u8 {
                     let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
-                    let k: u8 := a[0];
+                    let k: u8 := a[0i8];
                     return k * 3u8;
                 }",
                 Ok(Type::U8),
@@ -2443,7 +2443,7 @@ mod tests {
                     let k: i64 := a[false];
                     return k * 3;
                 }",
-                Err("Semantic: L3: Expected i64 for index but found bool"),
+                Err("Semantic: L3: Expected integral type for index but found bool"),
             ),
             (
                 "fn main() -> bool {
