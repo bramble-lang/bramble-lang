@@ -6,5 +6,90 @@ fn my_main() -> i64 {
     root::std::io::writei64ln(a[3]);
     root::std::io::writei64ln(a[4]);
 
+    test_i8();
+    test_i16();
+    test_i32();
+    test_u8();
+    test_u16();
+    test_u32();
+    test_u64();
+
     return 0;
+}
+
+fn test_i8() {
+    let a: [i8; 5] := [1i8, 2i8, 3i8, 4i8, 5i8];
+    let mut idx: i8 := 0i8;
+    while (idx < 5i8) {
+        root::std::io::writei8ln(a[idx]);
+        mut idx := idx + 1i8;
+    };
+
+    return;
+}
+
+fn test_i16() {
+    let a: [i16; 2] := [1i16, 2i16, ];
+    let mut idx: i16 := 0i16;
+    while (idx < 2i16) {
+        root::std::io::writei16ln(a[idx]);
+        mut idx := idx + 1i16;
+    };
+
+    return;
+}
+
+fn test_i32() {
+    let a: [i32; 2] := [1i32, 2i32, ];
+    let mut idx: i32 := 0i32;
+    while (idx < 2i32) {
+        root::std::io::writei32ln(a[idx]);
+        mut idx := idx + 1i32;
+    };
+
+    return;
+}
+
+fn test_u8() {
+    let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
+    let mut idx: u8 := 0u8;
+    while (idx < 5u8) {
+        root::std::io::writeu8ln(a[idx]);
+        mut idx := idx + 1u8;
+    };
+
+    return;
+}
+
+fn test_u16() {
+    let a: [u16; 2] := [1u16, 2u16, ];
+    let mut idx: u16 := 0u16;
+    while (idx < 2u16) {
+        root::std::io::writeu16ln(a[idx]);
+        mut idx := idx + 1u16;
+    };
+
+    return;
+}
+
+fn test_u32() {
+    let a: [u32; 2] := [1u32, 2u32, ];
+    let mut idx: u32 := 0u32;
+    while (idx < 2u32) {
+        root::std::io::writeu32ln(a[idx]);
+        mut idx := idx + 1u32;
+    };
+
+    return;
+}
+
+fn test_u64() {
+    let a: [u64; 2] := [1u64, 2u64, ];
+    let mut idx: u64 := 0u64;
+    while (idx < 2u64) {
+        root::std::io::writeu64ln(a[idx]);
+        mut idx := idx + 1u64;
+    };
+
+    return;
 }
