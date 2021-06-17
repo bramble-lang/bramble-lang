@@ -9,7 +9,7 @@ use braid_lang::result::Result;
 use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
 pub fn resolve_types(
-    ast: &Module<ParserInfo>,
+    ast: &Vec<Module<ParserInfo>>,
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
     trace_path: TracingConfig,
@@ -18,14 +18,14 @@ pub fn resolve_types(
 }
 
 pub fn resolve_types_with_imports(
-    ast: &Module<ParserInfo>,
+    ast: &Vec<Module<ParserInfo>>,
     imported_functions: &Vec<(Path, Vec<Type>, Type)>,
     trace_semantic_node: TracingConfig,
     trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
-    let mut sm_ast = sa.from_module(&ast, trace_semantic_node);
+    let mut sm_ast = sa.from_module(&ast[0], trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
     let mut semantic = TypeResolver::new(&sm_ast);
@@ -1170,7 +1170,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).expect(&format!("{}", text)).unwrap();
+            let ast = vec![parser::parse(&tokens).expect(&format!("{}", text)).unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1229,7 +1229,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1285,7 +1285,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1328,7 +1328,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1375,7 +1375,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1437,7 +1437,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
@@ -1474,7 +1474,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1515,7 +1515,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1550,7 +1550,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1741,7 +1741,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1859,7 +1859,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1922,7 +1922,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -1996,7 +1996,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2071,7 +2071,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2146,7 +2146,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2230,7 +2230,7 @@ mod tests {
                     .into_iter()
                     .collect::<Result<_>>()
                     .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
+                let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
                 let module = resolve_types(
                     &ast,
                     TracingConfig::Off,
@@ -2284,7 +2284,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2356,7 +2356,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2459,7 +2459,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2627,7 +2627,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2713,7 +2713,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2796,7 +2796,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -2864,7 +2864,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -3027,7 +3027,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
@@ -3132,7 +3132,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
@@ -3215,7 +3215,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -3295,7 +3295,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -3361,7 +3361,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -3431,7 +3431,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -3529,7 +3529,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -3601,7 +3601,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let module = resolve_types(
                 &ast,
                 TracingConfig::Off,
@@ -3825,7 +3825,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
             let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
@@ -3859,7 +3859,7 @@ mod tests {
                     .into_iter()
                     .collect::<Result<_>>()
                     .unwrap();
-                let ast = parser::parse(tokens).unwrap().unwrap();
+                let ast = vec![parser::parse(&tokens).unwrap().unwrap()];
                 let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
@@ -3961,7 +3961,7 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(tokens).unwrap().unwrap();
+            let ast = parser::parse(&tokens).unwrap().unwrap();
             let mut sa = SemanticAst::new();
             let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
             SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
