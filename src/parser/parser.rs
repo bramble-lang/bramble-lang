@@ -152,7 +152,7 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> ParserResult<Module<u32>> {
+pub fn parse(tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
     let start_index = stream.index();
     let mut item = None;
@@ -943,7 +943,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
 
-        if let Some(m) = parse(tokens).unwrap() {
+        if let Some(m) = parse(&tokens).unwrap() {
             assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "root");
 
@@ -1218,7 +1218,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        if let Some(m) = parse(tokens).unwrap() {
+        if let Some(m) = parse(&tokens).unwrap() {
             assert_eq!(*m.annotation(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
@@ -1565,7 +1565,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let module = parse(tokens).unwrap();
+            let module = parse(&tokens).unwrap();
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
