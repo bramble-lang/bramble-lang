@@ -130,12 +130,13 @@ struct CompilationUnit<T> {
 /// that directory and its subdirectories.  If it is a file, it will read
 /// only that file.
 fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
-    let files = get_files(&src_path).unwrap();
+    let files = get_files(&src_path).expect(&format!("Could not open: {:?}", src_path));
     let mut texts: Vec<CompilationUnit<String>> = vec![];
     for file in files {
         let p = file_path_to_module_path(&file, &src_path);
 
-        let text = std::fs::read_to_string(file).expect("Failed to read input file");
+        let text = std::fs::read_to_string(&file)
+            .expect(&format!("Failed to read input file: {:?}", file));
         texts.push(CompilationUnit {
             path: p,
             data: text,

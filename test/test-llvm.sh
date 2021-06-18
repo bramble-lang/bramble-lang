@@ -24,9 +24,9 @@ run_test() {
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/debug/braid-lang --llvm -p linux -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
+        ../target/debug/braid-lang --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/debug/braid-lang --llvm -p machos -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
+        ../target/debug/braid-lang --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
@@ -89,9 +89,9 @@ run_fail_test() {
 
     # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/debug/braid-lang --llvm -p linux -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
+        ../target/debug/braid-lang --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/debug/braid-lang --llvm -p machos -i ./src/${test}.br -o ./target/output.obj > ./target/stdout
+        ../target/debug/braid-lang --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
