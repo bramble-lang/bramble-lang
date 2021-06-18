@@ -8,7 +8,10 @@ mod llvm;
 mod parser;
 mod semantics;
 
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    process::exit,
+};
 
 use ast::Type;
 use clap::{App, Arg};
@@ -41,8 +44,13 @@ fn main() {
     let mut asts = vec![];
     let mut root = Module::new("root", 0);
     for src_tokens in token_sets {
-        let src_ast = parse_src_tokens(src_tokens).unwrap();
-        append_module_ast(&mut root, src_ast);
+        match parse_src_tokens(src_tokens) {
+            Ok(ast) => append_module_ast(&mut root, ast),
+            Err(msg) => {
+                println!("{}", msg);
+                exit(1)
+            }
+        }
     }
     asts.push(root);
 
@@ -126,7 +134,6 @@ fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
     let mut texts: Vec<CompilationUnit<String>> = vec![];
     for file in files {
         let p = file_path_to_module_path(&file, &src_path);
-        println!("{:?} -> {:?}", file, p);
 
         let text = std::fs::read_to_string(file).expect("Failed to read input file");
         texts.push(CompilationUnit {

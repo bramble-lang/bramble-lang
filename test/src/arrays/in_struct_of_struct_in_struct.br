@@ -46,11 +46,11 @@ struct S {
 }
 
 struct S2 {
-    s: [root::S; 2],
+    s: [root::in_struct_of_struct_in_struct::S; 2],
 }
 
 struct S3 {
     i: [i64;2],
-    s: [root::S; 2],
-    s2: [[root::S2; 2]; 2],
+    s: [root::in_struct_of_struct_in_struct::S; 2],
+    s2: [[root::in_struct_of_struct_in_struct::S2; 2]; 2],
 }

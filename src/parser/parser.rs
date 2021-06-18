@@ -186,6 +186,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
             Some((ln, module_name)) => {
                 let mut module = Module::new(&module_name, ln);
                 stream.next_must_be(&Lex::LBrace)?;
+
                 if let Some((submods, items)) = parse_items(stream)? {
                     for sm in submods {
                         module.add_module(sm);
@@ -195,6 +196,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
                         module.add_item(item)?;
                     }
                 }
+
                 stream.next_must_be(&Lex::RBrace)?;
                 Some(module)
             }
@@ -367,6 +369,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
 }
 
 pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
+    trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
         stmts.push(s);
@@ -375,6 +378,7 @@ pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo
 }
 
 fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
+    trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement_or_yield_return(stream)? {
         stmts.push(s);

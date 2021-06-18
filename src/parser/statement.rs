@@ -31,6 +31,7 @@ pub(super) fn statement_or_yield_return(
 }
 
 pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
+    trace!(stream);
     let start_index = stream.index();
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
     let stm = match let_bind(stream)? {
