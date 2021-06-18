@@ -169,6 +169,7 @@ impl Expression<ParserInfo> {
 }
 
 fn expression_block(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+    trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
             let stmts = block(stream)?;
