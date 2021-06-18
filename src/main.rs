@@ -126,6 +126,7 @@ fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
     let mut texts: Vec<CompilationUnit<String>> = vec![];
     for file in files {
         let p = file_path_to_module_path(&file, &src_path);
+        println!("{:?} -> {:?}", file, p);
 
         let text = std::fs::read_to_string(file).expect("Failed to read input file");
         texts.push(CompilationUnit {
@@ -230,12 +231,14 @@ fn get_files(path: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
 
 fn file_path_to_module_path(file: &PathBuf, src_path: &Path) -> Vec<String> {
     let fpath = file.as_path();
-
-    let rel_path = if src_path.is_dir() {
-        fpath.strip_prefix(&src_path).unwrap()
+    let base = if src_path.is_dir() {
+        src_path
     } else {
-        file.as_path()
+        src_path.parent().unwrap()
     };
+
+    let rel_path = fpath.strip_prefix(&base).unwrap();
+
     let mut p: Vec<String> = rel_path
         .iter()
         .map(|e| e.to_str().unwrap().into())
