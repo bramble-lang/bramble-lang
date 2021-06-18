@@ -155,8 +155,10 @@ impl Parser {
 pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
     let start_index = stream.index();
+
     let module_line = stream.peek().map_or(1, |t| t.l);
     let mut module = Module::new(&name, module_line);
+
     while stream.peek().is_some() {
         if let Some((submods, items)) =
             parse_items(&mut stream).map_err(|e| format!("Parser: {}", e))?
