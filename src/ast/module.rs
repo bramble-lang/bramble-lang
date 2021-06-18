@@ -188,6 +188,10 @@ impl<M> Module<M> {
         self.modules.iter().find(|m| m.name == name)
     }
 
+    pub fn get_module_mut(&mut self, name: &str) -> Option<&mut Module<M>> {
+        self.modules.iter_mut().find(|m| m.name == name)
+    }
+
     pub fn get_item(&self, name: &str) -> Option<&Item<M>> {
         self.functions.iter().find(|f| f.get_name() == name).or(self
             .coroutines

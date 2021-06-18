@@ -1,0 +1,29 @@
+fn my_main() -> i64 {
+    let x:i64 := my_mod::add(3, 2);
+    root::std::io::writei64ln(x);
+    
+    let y:i64 := my_mod::sub(3, 2);
+    root::std::io::writei64ln(y);
+
+    let b:bool := my_mod::my_bool();
+    root::std::io::writeboolln(b);
+
+    return 0;
+}
+
+mod my_mod {
+    fn my_bool() -> bool {
+        let b:bool := false;
+        return b;
+    }
+
+    fn add(a: i64, b: i64) -> i64 {
+        return a + b;
+    }
+}
+
+mod my_mod {
+    fn sub(a: i64, b: i64) -> i64 {
+        return a - b;
+    }
+}
