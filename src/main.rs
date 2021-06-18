@@ -30,7 +30,6 @@ fn main() {
     let mut texts: Vec<(Vec<String>, String)> = vec![];
     for file in files {
         let p = file_path_to_module_path(&file, &src_path);
-        println!("{:?} -> {:?}", file, p);
 
         let text = std::fs::read_to_string(file).expect("Failed to read input file");
         texts.push((p, text));
