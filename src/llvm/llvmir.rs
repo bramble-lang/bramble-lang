@@ -164,11 +164,11 @@ impl<'ctx> IrGen<'ctx> {
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
 
-        let user_main_path = path.join("_");
+        let user_main_name = path.join("_");
         let user_main = self
             .module
-            .get_function(&user_main_path)
-            .expect(&format!("Could not find {}", user_main_path));
+            .get_function(&user_main_name)
+            .expect(&format!("Could not find {}", user_main_name));
         let status = self
             .builder
             .build_call(user_main, &[], "user_main")
