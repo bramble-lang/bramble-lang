@@ -161,6 +161,13 @@ fn tokenize_src_file(
     }
 }
 
+/// Takes CompilationUnit which has been tokenized and parses the tokens into
+/// an AST.
+///
+/// The last element of the compilation unit's path (the name of the module derived
+/// from the source file name).  Will be removed from the path vector, because it becomes
+/// part of the data field (when a module is created with the same name that becomes the
+/// parent of all items within the source file).
 fn parse_src_tokens(
     src_tokens: CompilationUnit<Vec<Token>>,
 ) -> Result<CompilationUnit<Module<u32>>, String> {
