@@ -121,23 +121,54 @@ impl<'ctx> IrGen<'ctx> {
     pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
         self.compile_string_pool(m);
         self.add_externs();
+
         self.add_mod_items(m);
-        self.create_main();
+
+        let main_path = Self::find_main(m).unwrap();
+        self.configure_user_main(&main_path);
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
         };
     }
 
+    fn find_main(module: &'ctx ast::Module<SemanticAnnotations>) -> Option<Vec<String>> {
+        let mut path = vec![module.name().unwrap().into()];
+        // Search through functions for "my_main"
+        let functions = module.get_functions();
+        for f in functions {
+            if f.name() == Some("my_main") {
+                path.push("my_main".into());
+                return Some(path);
+            }
+        }
+
+        // If not found, recurse through every module in this module
+        let modules = module.get_modules();
+        for m in modules {
+            if let Some(mut sub_path) = Self::find_main(m) {
+                path.append(&mut sub_path);
+                return Some(path);
+            }
+        }
+
+        None
+    }
+
     /// Creates `main` entry point which will be called by the OS to start the Braid
     /// application. This main will initialize platform level values and state, then
     /// call the user defined main `my_main`.
-    fn create_main(&self) {
+    fn configure_user_main(&self, path: &Vec<String>) {
         let main_type = self.context.i64_type().fn_type(&[], false);
         let main = self.module.add_function("main", main_type, None);
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
-        let user_main = self.module.get_function("root_my_main").unwrap();
+
+        let user_main_path = path.join("_");
+        let user_main = self
+            .module
+            .get_function(&user_main_path)
+            .expect(&format!("Could not find {}", user_main_path));
         let status = self
             .builder
             .build_call(user_main, &[], "user_main")
