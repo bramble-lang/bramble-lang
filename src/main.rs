@@ -268,7 +268,9 @@ fn file_path_to_module_path(file: &PathBuf, src_path: &Path) -> Vec<String> {
     let base = if src_path.is_dir() {
         src_path
     } else {
-        src_path.parent().unwrap()
+        src_path
+            .parent()
+            .expect("Given a file which is also the root of the directory structure.")
     };
 
     let rel_path = fpath.strip_prefix(&base).unwrap();
