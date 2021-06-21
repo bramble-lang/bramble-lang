@@ -37,9 +37,7 @@ fn main() {
     let token_sets = tokenize_src_files(src_input, trace_lexer);
 
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
-    parser::parser::set_tracing(trace_parser);
-
-    let root = parse_all(token_sets);
+    let root = parse_all(token_sets, trace_parser);
 
     // Type Check
     let trace_semantic_node = TracingConfig::parse(config.value_of("trace-semantic-node"));
@@ -140,7 +138,11 @@ fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
     texts
 }
 
-fn parse_all(token_sets: Vec<CompilationUnit<Vec<Token>>>) -> Module<u32> {
+fn parse_all(
+    token_sets: Vec<CompilationUnit<Vec<Token>>>,
+    trace_parser: TracingConfig,
+) -> Module<u32> {
+    parser::parser::set_tracing(trace_parser);
     let mut root = Module::new("root", 0);
     for src_tokens in token_sets {
         match parse_src_tokens(src_tokens) {
