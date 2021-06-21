@@ -210,13 +210,9 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     Ok(mod_def)
 }
 
-fn parse_items(
-    //parent_module: &mut Module<u32>,
-    stream: &mut TokenStream,
-) -> ParserResult<(Vec<Module<u32>>, Vec<Item<u32>>)> {
+fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<Item<u32>>)> {
     let mut modules = vec![];
     let mut items = vec![];
-    //let mut parent_module = Module::new(name, module_line);
     while stream.peek().is_some() {
         let start_index = stream.index();
         if let Some(m) = module(stream)? {
