@@ -160,15 +160,27 @@ pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut module = Module::new(&name, module_line);
 
     while stream.peek().is_some() {
-        if let Some((submods, items)) =
+        if let Some((submods, routines, coroutines, structs, externs)) =
             parse_items(&mut stream).map_err(|e| format!("Parser: {}", e))?
         {
             for sm in submods {
                 module.add_module(sm);
             }
 
-            for item in items {
-                module.add_item(item)?;
+            for r in routines {
+                module.add_function(r)?;
+            }
+
+            for c in coroutines {
+                module.add_coroutine(c)?;
+            }
+
+            for s in structs {
+                module.add_struct(s)?;
+            }
+
+            for e in externs {
+                module.add_extern(e)?;
             }
         }
 
@@ -187,13 +199,27 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
                 let mut module = Module::new(&module_name, ln);
                 stream.next_must_be(&Lex::LBrace)?;
 
-                if let Some((submods, items)) = parse_items(stream)? {
+                if let Some((submods, routines, coroutines, structs, externs)) =
+                    parse_items(stream)?
+                {
                     for sm in submods {
                         module.add_module(sm);
                     }
 
-                    for item in items {
-                        module.add_item(item)?;
+                    for r in routines {
+                        module.add_function(r)?;
+                    }
+
+                    for c in coroutines {
+                        module.add_coroutine(c)?;
+                    }
+
+                    for s in structs {
+                        module.add_struct(s)?;
+                    }
+
+                    for e in externs {
+                        module.add_extern(e)?;
                     }
                 }
 
@@ -210,9 +236,21 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     Ok(mod_def)
 }
 
-fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<Item<u32>>)> {
+fn parse_items(
+    stream: &mut TokenStream,
+) -> ParserResult<(
+    Vec<Module<u32>>,
+    Vec<RoutineDef<u32>>,
+    Vec<RoutineDef<u32>>,
+    Vec<StructDef<u32>>,
+    Vec<Extern<u32>>,
+)> {
     let mut modules = vec![];
-    let mut items = vec![];
+    let mut routines = vec![];
+    let mut coroutines = vec![];
+    let mut structs = vec![];
+    let mut externs = vec![];
+
     while stream.peek().is_some() {
         let start_index = stream.index();
         if let Some(m) = module(stream)? {
@@ -220,18 +258,18 @@ fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<
         }
 
         if let Some(f) = function_def(stream)? {
-            items.push(Item::Routine(f));
+            routines.push(f);
         }
         if let Some(c) = coroutine_def(stream)? {
-            items.push(Item::Routine(c));
+            coroutines.push(c);
         }
 
         if let Some(s) = struct_def(stream)? {
-            items.push(Item::Struct(s));
+            structs.push(s);
         }
 
         if let Some(e) = extern_def(stream)? {
-            items.push(Item::Extern(e));
+            externs.push(e);
         }
 
         if stream.index() == start_index {
@@ -239,7 +277,7 @@ fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<
         }
     }
 
-    Ok(Some((modules, items)))
+    Ok(Some((modules, routines, coroutines, structs, externs)))
 }
 
 fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
