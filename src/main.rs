@@ -39,7 +39,7 @@ fn main() {
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
     parser::parser::set_tracing(trace_parser);
 
-    let asts = parse_all(token_sets);
+    let root = parse_all(token_sets);
 
     // Type Check
     let trace_semantic_node = TracingConfig::parse(config.value_of("trace-semantic-node"));
@@ -48,7 +48,7 @@ fn main() {
     let imported = configure_imported_functions();
 
     let semantic_ast = match resolve_types_with_imports(
-        &asts,
+        &root,
         &imported,
         trace_semantic_node,
         trace_type_resolver,
