@@ -36,6 +36,7 @@ use crate::{
 use super::{scopestack::RegisterLookup, stringpool::StringPool};
 
 const MEM_ALIGNMENT: u64 = 8;
+const USER_MAIN_FN: &str = "my_main";
 
 /// A LLVM IR generator which can be used to generate all the code
 /// for a single LLVM Module.
@@ -141,9 +142,15 @@ impl<'ctx> IrGen<'ctx> {
         if matches.len() == 1 {
             Ok(matches[0].clone())
         } else if matches.len() == 0 {
-            Err("Could not find the user defined my_main function in any source file.".into())
+            Err(format!(
+                "Could not find the user defined {} function in any source file.",
+                USER_MAIN_FN
+            ))
         } else {
-            Err("Found multiple my_main functions in the project".into())
+            Err(format!(
+                "Found multiple {} functions in the project",
+                USER_MAIN_FN
+            ))
         }
     }
 
@@ -156,10 +163,13 @@ impl<'ctx> IrGen<'ctx> {
         // Search through functions for "my_main"
         let functions = module.get_functions();
         for f in functions {
-            if f.name() == Some("my_main") {
-                let mut path = path.clone();
-                path.push("my_main".into());
-                matches.push(path);
+            match f.name() {
+                Some(name) if name == USER_MAIN_FN => {
+                    let mut path = path.clone();
+                    path.push(name.into());
+                    matches.push(path);
+                }
+                _ => (),
             }
         }
 
