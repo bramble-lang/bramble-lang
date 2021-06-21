@@ -152,7 +152,7 @@ impl<'ctx> IrGen<'ctx> {
         mut path: Path,
         matches: &mut Vec<Path>,
     ) {
-        path.push(module.name().unwrap());
+        path.push(module.name().expect("Modules must have a name."));
         // Search through functions for "my_main"
         let functions = module.get_functions();
         for f in functions {
