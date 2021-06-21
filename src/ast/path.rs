@@ -25,6 +25,12 @@ impl Path {
         self.path.pop()
     }
 
+    pub fn append(&mut self, p: &Path) {
+        for s in p.iter() {
+            self.path.push(s.into());
+        }
+    }
+
     pub fn iter(&self) -> std::slice::Iter<String> {
         self.path.iter()
     }

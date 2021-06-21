@@ -29,7 +29,7 @@ use braid_lang::result::Result;
 
 use crate::{
     ast,
-    ast::{BinaryOperator, Extern, Node, Parameter, RoutineDef, StructDef},
+    ast::{BinaryOperator, Extern, Node, Parameter, Path, RoutineDef, StructDef},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -124,7 +124,7 @@ impl<'ctx> IrGen<'ctx> {
 
         self.add_mod_items(m);
 
-        let main_path = Self::find_main(m)
+        let main_path = Self::find_user_main(m)
             .ok_or("Could not find the user defined my_main function in any source file.")?;
         self.configure_user_main(&main_path);
         match m.to_llvm_ir(self) {
@@ -135,8 +135,8 @@ impl<'ctx> IrGen<'ctx> {
         Ok(())
     }
 
-    fn find_main(module: &'ctx ast::Module<SemanticAnnotations>) -> Option<Vec<String>> {
-        let mut path = vec![module.name().unwrap().into()];
+    fn find_user_main(module: &'ctx ast::Module<SemanticAnnotations>) -> Option<Path> {
+        let mut path: Path = vec![module.name().unwrap()].into();
         // Search through functions for "my_main"
         let functions = module.get_functions();
         for f in functions {
@@ -149,7 +149,7 @@ impl<'ctx> IrGen<'ctx> {
         // If not found, recurse through every module in this module
         let modules = module.get_modules();
         for m in modules {
-            if let Some(mut sub_path) = Self::find_main(m) {
+            if let Some(mut sub_path) = Self::find_user_main(m) {
                 path.append(&mut sub_path);
                 return Some(path);
             }
@@ -161,13 +161,13 @@ impl<'ctx> IrGen<'ctx> {
     /// Creates `main` entry point which will be called by the OS to start the Braid
     /// application. This main will initialize platform level values and state, then
     /// call the user defined main `my_main`.
-    fn configure_user_main(&self, path: &Vec<String>) {
+    fn configure_user_main(&self, path: &Path) {
         let main_type = self.context.i64_type().fn_type(&[], false);
         let main = self.module.add_function("main", main_type, None);
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
 
-        let user_main_name = path.join("_");
+        let user_main_name = path.to_label();
         let user_main = self
             .module
             .get_function(&user_main_name)
