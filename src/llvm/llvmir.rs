@@ -124,8 +124,7 @@ impl<'ctx> IrGen<'ctx> {
 
         self.add_mod_items(m);
 
-        let main_path = Self::find_user_main(m)
-            .ok_or("Could not find the user defined my_main function in any source file.")?;
+        let main_path = Self::find_distinct_user_main(m)?;
         self.configure_user_main(&main_path);
         match m.to_llvm_ir(self) {
             None => (),
@@ -135,24 +134,41 @@ impl<'ctx> IrGen<'ctx> {
         Ok(())
     }
 
-    fn find_user_main(module: &'ctx ast::Module<SemanticAnnotations>) -> Option<Path> {
-        let mut path: Path = vec![module.name().unwrap()].into();
+    fn find_distinct_user_main(m: &'ctx ast::Module<SemanticAnnotations>) -> Result<Path> {
+        let mut matches = vec![];
+        let base_path = Path::new();
+        let main_path = Self::find_user_main(m, base_path, &mut matches);
+        if matches.len() == 1 {
+            Ok(matches[0].clone())
+        } else if matches.len() == 0 {
+            Err("Could not find the user defined my_main function in any source file.".into())
+        } else {
+            Err("Found multiple my_main functions in the project".into())
+        }
+    }
+
+    fn find_user_main(
+        module: &'ctx ast::Module<SemanticAnnotations>,
+        mut path: Path,
+        matches: &mut Vec<Path>,
+    ) -> Option<Path> {
+        path.push(module.name().unwrap());
+        //let mut path: Path = vec![module.name().unwrap()].into();
         // Search through functions for "my_main"
         let functions = module.get_functions();
         for f in functions {
             if f.name() == Some("my_main") {
+                let mut path = path.clone();
                 path.push("my_main".into());
-                return Some(path);
+                matches.push(path);
+                return None; //Some(path);
             }
         }
 
         // If not found, recurse through every module in this module
         let modules = module.get_modules();
         for m in modules {
-            if let Some(mut sub_path) = Self::find_user_main(m) {
-                path.append(&mut sub_path);
-                return Some(path);
-            }
+            Self::find_user_main(m, path.clone(), matches);
         }
 
         None
