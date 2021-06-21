@@ -22,6 +22,8 @@ use semantics::type_resolver::*;
 
 use crate::ast::Module;
 
+const BRAID_FILE_EXT: &str = "br";
+
 fn main() {
     let config = configure_cli().get_matches();
 
@@ -87,14 +89,14 @@ fn find_or_create_module<'a>(
     path: &[String],
 ) -> Option<&'a mut Module<u32>> {
     match path.split_first() {
-        Some((f, rest)) => {
-            if module.get_module(f).is_none() {
-                let sub = Module::new(f, 0);
+        Some((head, rest)) => {
+            if module.get_module(head).is_none() {
+                let sub = Module::new(head, 0);
                 module.add_module(sub);
             }
 
             let sub = module
-                .get_module_mut(f)
+                .get_module_mut(head)
                 .expect("A module with this name was just created and ought to be found");
 
             if rest.len() == 0 {
@@ -121,7 +123,8 @@ struct CompilationUnit<T> {
 /// that directory and its subdirectories.  If it is a file, it will read
 /// only that file.
 fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
-    let files = get_files(&src_path).expect(&format!("Could not open: {:?}", src_path));
+    let files =
+        get_files(&src_path, BRAID_FILE_EXT).expect(&format!("Could not open: {:?}", src_path));
     let mut texts: Vec<CompilationUnit<String>> = vec![];
     for file in files {
         let p = file_path_to_module_path(&file, &src_path);
@@ -142,7 +145,7 @@ fn parse_all(token_sets: Vec<CompilationUnit<Vec<Token>>>) -> Vec<Module<u32>> {
     let mut root = Module::new("root", 0);
     for src_tokens in token_sets {
         match parse_src_tokens(src_tokens) {
-            Ok(ast) => append_module_ast(&mut root, ast),
+            Ok(ast) => append_module(&mut root, ast),
             Err(msg) => {
                 println!("{}", msg);
                 exit(1)
@@ -213,7 +216,7 @@ fn parse_src_tokens(
     }
 }
 
-fn append_module_ast(root: &mut Module<u32>, src_ast: CompilationUnit<Module<u32>>) {
+fn append_module(root: &mut Module<u32>, src_ast: CompilationUnit<Module<u32>>) {
     let parent = if src_ast.path.len() == 0 {
         root
     } else {
@@ -222,23 +225,23 @@ fn append_module_ast(root: &mut Module<u32>, src_ast: CompilationUnit<Module<u32
     parent.add_module(src_ast.data);
 }
 
-fn get_files(path: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
+fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error> {
     let mut files = vec![];
     match path.extension() {
         None => {
             let dir = std::fs::read_dir(path)?;
             for f in dir {
                 let f = f?;
-                let fty = f.file_type().unwrap();
+                let fty = f.file_type()?;
                 if fty.is_file() {
                     match f.path().extension() {
-                        Some(ex) if ex.to_ascii_lowercase() == "br" => {
+                        Some(ex) if ex.to_ascii_lowercase() == ext => {
                             files.push(f.path());
                         }
                         _ => (),
                     }
                 } else if fty.is_dir() {
-                    let mut sub_files = get_files(&f.path())?;
+                    let mut sub_files = get_files(&f.path(), ext)?;
                     files.append(&mut sub_files);
                 }
             }
@@ -246,10 +249,14 @@ fn get_files(path: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
         Some(ex) if ex.to_ascii_lowercase() == "br" => {
             files.push(path.to_path_buf());
         }
-        Some(_) => {
+        Some(ex) => {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                "Is not a Braid language file",
+                format!(
+                    "Is not a Braid language file, expected extension {} but got {}",
+                    BRAID_FILE_EXT,
+                    ex.to_str().unwrap()
+                ),
             ));
         }
     }
