@@ -235,7 +235,7 @@ mod test {
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let ast = vec![parser::parse("root", &tokens).unwrap().unwrap()];
+            let ast = parser::parse("root", &tokens).unwrap().unwrap();
             let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from_module(&module);

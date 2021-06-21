@@ -140,8 +140,7 @@ fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
     texts
 }
 
-fn parse_all(token_sets: Vec<CompilationUnit<Vec<Token>>>) -> Vec<Module<u32>> {
-    let mut asts = vec![];
+fn parse_all(token_sets: Vec<CompilationUnit<Vec<Token>>>) -> Module<u32> {
     let mut root = Module::new("root", 0);
     for src_tokens in token_sets {
         match parse_src_tokens(src_tokens) {
@@ -152,8 +151,7 @@ fn parse_all(token_sets: Vec<CompilationUnit<Vec<Token>>>) -> Vec<Module<u32>> {
             }
         }
     }
-    asts.push(root);
-    asts
+    root
 }
 
 fn tokenize_src_files(
