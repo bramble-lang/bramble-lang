@@ -160,7 +160,7 @@ pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut module = Module::new(&name, module_line);
 
     while stream.peek().is_some() {
-        parse_items_into(&mut stream, &mut module)?;
+        parse_items_into(&mut stream, &mut module).map_err(|e| format!("Parser: {}", e))?;
 
         if stream.index() == start_index {
             return Err(format!("Parser cannot advance past {:?}", stream.peek()));
