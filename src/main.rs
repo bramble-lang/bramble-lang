@@ -23,6 +23,7 @@ use semantics::type_resolver::*;
 use crate::ast::Module;
 
 const BRAID_FILE_EXT: &str = "br";
+const ROOT_MODULE_NAME: &str = "root";
 
 fn main() {
     let config = configure_cli().get_matches();
@@ -143,7 +144,7 @@ fn parse_all(
     trace_parser: TracingConfig,
 ) -> Module<u32> {
     parser::parser::set_tracing(trace_parser);
-    let mut root = Module::new("root", 0);
+    let mut root = Module::new(ROOT_MODULE_NAME, 0);
     for src_tokens in token_sets {
         match parse_src_tokens(src_tokens) {
             Ok(ast) => append_module(&mut root, ast),
