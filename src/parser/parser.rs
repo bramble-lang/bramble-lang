@@ -160,17 +160,7 @@ pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut module = Module::new(&name, module_line);
 
     while stream.peek().is_some() {
-        if let Some((submods, items)) =
-            parse_items(&mut stream).map_err(|e| format!("Parser: {}", e))?
-        {
-            for sm in submods {
-                module.add_module(sm);
-            }
-
-            for item in items {
-                module.add_item(item)?;
-            }
-        }
+        parse_items_into(&mut stream, &mut module)?;
 
         if stream.index() == start_index {
             return Err(format!("Parser cannot advance past {:?}", stream.peek()));
@@ -187,15 +177,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
                 let mut module = Module::new(&module_name, ln);
                 stream.next_must_be(&Lex::LBrace)?;
 
-                if let Some((submods, items)) = parse_items(stream)? {
-                    for sm in submods {
-                        module.add_module(sm);
-                    }
-
-                    for item in items {
-                        module.add_item(item)?;
-                    }
-                }
+                parse_items_into(stream, &mut module)?;
 
                 stream.next_must_be(&Lex::RBrace)?;
                 Some(module)
@@ -208,6 +190,20 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     };
 
     Ok(mod_def)
+}
+
+fn parse_items_into(stream: &mut TokenStream, module: &mut Module<u32>) -> ParserResult<()> {
+    if let Some((submods, items)) = parse_items(stream)? {
+        for sm in submods {
+            module.add_module(sm);
+        }
+
+        for item in items {
+            module.add_item(item)?;
+        }
+    }
+
+    Ok(Some(()))
 }
 
 fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<Item<u32>>)> {
