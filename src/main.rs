@@ -32,27 +32,12 @@ fn main() {
     let src_input = read_src_files(&src_path);
 
     let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
-    let mut token_sets = vec![];
-    for src in src_input {
-        let src_tokens = tokenize_src_file(src, trace_lexer);
-        token_sets.push(src_tokens);
-    }
+    let token_sets = tokenize_src_files(src_input, trace_lexer);
 
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
     parser::parser::set_tracing(trace_parser);
 
-    let mut asts = vec![];
-    let mut root = Module::new("root", 0);
-    for src_tokens in token_sets {
-        match parse_src_tokens(src_tokens) {
-            Ok(ast) => append_module_ast(&mut root, ast),
-            Err(msg) => {
-                println!("{}", msg);
-                exit(1)
-            }
-        }
-    }
-    asts.push(root);
+    let asts = parse_all(token_sets);
 
     // Type Check
     let trace_semantic_node = TracingConfig::parse(config.value_of("trace-semantic-node"));
@@ -150,6 +135,34 @@ fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
     }
 
     texts
+}
+
+fn parse_all(token_sets: Vec<CompilationUnit<Vec<Token>>>) -> Vec<Module<u32>> {
+    let mut asts = vec![];
+    let mut root = Module::new("root", 0);
+    for src_tokens in token_sets {
+        match parse_src_tokens(src_tokens) {
+            Ok(ast) => append_module_ast(&mut root, ast),
+            Err(msg) => {
+                println!("{}", msg);
+                exit(1)
+            }
+        }
+    }
+    asts.push(root);
+    asts
+}
+
+fn tokenize_src_files(
+    src_input: Vec<CompilationUnit<String>>,
+    trace_lexer: TracingConfig,
+) -> Vec<CompilationUnit<Vec<Token>>> {
+    let mut token_sets = vec![];
+    for src in src_input {
+        let src_tokens = tokenize_src_file(src, trace_lexer);
+        token_sets.push(src_tokens);
+    }
+    token_sets
 }
 
 fn tokenize_src_file(
