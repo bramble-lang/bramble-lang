@@ -278,7 +278,7 @@ fn file_path_to_module_path(file: &PathBuf, src_path: &Path) -> Vec<String> {
 
     let mut p: Vec<String> = rel_path
         .iter()
-        .map(|e| e.to_str().unwrap().into())
+        .map(|e| e.to_str().expect("File name was not valid unicode").into())
         .collect();
 
     truncate_extension(&mut p, ".br");
