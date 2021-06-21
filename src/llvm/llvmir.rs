@@ -118,18 +118,21 @@ impl<'ctx> IrGen<'ctx> {
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
-    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
+    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) -> Result<()> {
         self.compile_string_pool(m);
         self.add_externs();
 
         self.add_mod_items(m);
 
-        let main_path = Self::find_main(m).unwrap();
+        let main_path = Self::find_main(m)
+            .ok_or("Could not find the user defined my_main function in any source file.")?;
         self.configure_user_main(&main_path);
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
         };
+
+        Ok(())
     }
 
     fn find_main(module: &'ctx ast::Module<SemanticAnnotations>) -> Option<Vec<String>> {

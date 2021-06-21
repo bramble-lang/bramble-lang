@@ -80,7 +80,13 @@ fn main() {
     if config.is_present("llvm") {
         let context = Context::create();
         let mut llvm = llvm::IrGen::new(&context, "test", &imported);
-        llvm.ingest(&semantic_ast);
+        match llvm.ingest(&semantic_ast) {
+            Ok(()) => (),
+            Err(msg) => {
+                println!("LLVM IR translation failed: {}", msg);
+                std::process::exit(ERR_LLVM_IR_ERROR);
+            }
+        }
 
         if config.is_present("emit") {
             llvm.print(Path::new("./target/output.ll"));
@@ -267,6 +273,7 @@ fn truncate_extension(path: &mut Vec<String>, ext: &str) {
 const ERR_TYPE_CHECK: i32 = 1;
 const ERR_NO_AST: i32 = 2;
 const ERR_PARSER_ERROR: i32 = 3;
+const ERR_LLVM_IR_ERROR: i32 = 4;
 
 fn configure_cli() -> clap::App<'static, 'static> {
     let app = App::new("Braid Compiler")
