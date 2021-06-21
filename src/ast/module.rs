@@ -88,29 +88,21 @@ impl<M> Module<M> {
 
     pub fn add_function(&mut self, f: RoutineDef<M>) -> Result<()> {
         let fname = f.get_name();
-        if *f.get_def() != RoutineDefType::Function {
-            Err(format!("{} is not a function", fname))
+        if self.get_item(fname).is_none() {
+            self.functions.push(Item::Routine(f));
+            Ok(())
         } else {
-            if self.get_item(fname).is_none() {
-                self.functions.push(Item::Routine(f));
-                Ok(())
-            } else {
-                Err(format!("{} already exists in module", fname))
-            }
+            Err(format!("{} already exists in module", fname))
         }
     }
 
     pub fn add_coroutine(&mut self, c: RoutineDef<M>) -> Result<()> {
         let cname = c.get_name();
-        if *c.get_def() != RoutineDefType::Coroutine {
-            Err(format!("{} is not a function", cname))
+        if self.get_item(cname).is_none() {
+            self.coroutines.push(Item::Routine(c));
+            Ok(())
         } else {
-            if self.get_item(cname).is_none() {
-                self.coroutines.push(Item::Routine(c));
-                Ok(())
-            } else {
-                Err(format!("{} already exists in module", cname))
-            }
+            Err(format!("{} already exists in module", cname))
         }
     }
 
