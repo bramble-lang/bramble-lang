@@ -83,10 +83,7 @@ fn main() {
     }
 }
 
-fn find_or_create_module<'a>(
-    module: &'a mut Module<u32>,
-    path: &[String],
-) -> Option<&'a mut Module<u32>> {
+fn create_parents<'a>(module: &'a mut Module<u32>, path: &[String]) -> Option<&'a mut Module<u32>> {
     match path.split_first() {
         Some((head, rest)) => {
             if module.get_module(head).is_none() {
@@ -101,7 +98,7 @@ fn find_or_create_module<'a>(
             if rest.len() == 0 {
                 Some(sub)
             } else {
-                find_or_create_module(sub, rest)
+                create_parents(sub, rest)
             }
         }
         None => None,
@@ -221,7 +218,7 @@ fn append_module(root: &mut Module<u32>, src_ast: CompilationUnit<Module<u32>>) 
     let parent = if src_ast.path.len() == 0 {
         root
     } else {
-        find_or_create_module(root, &src_ast.path).unwrap()
+        create_parents(root, &src_ast.path).unwrap()
     };
     parent.add_module(src_ast.data);
 }
