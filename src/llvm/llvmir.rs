@@ -151,9 +151,8 @@ impl<'ctx> IrGen<'ctx> {
         module: &'ctx ast::Module<SemanticAnnotations>,
         mut path: Path,
         matches: &mut Vec<Path>,
-    ) -> Option<Path> {
+    ) {
         path.push(module.name().unwrap());
-        //let mut path: Path = vec![module.name().unwrap()].into();
         // Search through functions for "my_main"
         let functions = module.get_functions();
         for f in functions {
@@ -161,7 +160,6 @@ impl<'ctx> IrGen<'ctx> {
                 let mut path = path.clone();
                 path.push("my_main".into());
                 matches.push(path);
-                return None; //Some(path);
             }
         }
 
@@ -170,8 +168,6 @@ impl<'ctx> IrGen<'ctx> {
         for m in modules {
             Self::find_user_main(m, path.clone(), matches);
         }
-
-        None
     }
 
     /// Creates `main` entry point which will be called by the OS to start the Braid
