@@ -29,7 +29,7 @@ use braid_lang::result::Result;
 
 use crate::{
     ast,
-    ast::{BinaryOperator, Extern, Node, Parameter, RoutineDef, StructDef},
+    ast::{BinaryOperator, Extern, Node, Parameter, Path, RoutineDef, StructDef},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -118,26 +118,89 @@ impl<'ctx> IrGen<'ctx> {
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
-    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
+    pub fn ingest(
+        &mut self,
+        m: &'ctx ast::Module<SemanticAnnotations>,
+        user_main: &str,
+    ) -> Result<()> {
         self.compile_string_pool(m);
         self.add_externs();
+
         self.add_mod_items(m);
-        self.create_main();
+
+        let main_path = Self::find_distinct_user_main(m, user_main)?;
+        self.configure_user_main(&main_path);
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
         };
+
+        Ok(())
+    }
+
+    fn find_distinct_user_main(
+        m: &'ctx ast::Module<SemanticAnnotations>,
+        user_main: &str,
+    ) -> Result<Path> {
+        let mut matches = vec![];
+        let base_path = Path::new();
+        let main_path = Self::find_user_main(m, user_main, base_path, &mut matches);
+        if matches.len() == 1 {
+            Ok(matches[0].clone())
+        } else if matches.len() == 0 {
+            Err(format!(
+                "Could not find the user defined {} function in any source file.",
+                user_main,
+            ))
+        } else {
+            Err(format!(
+                "Found multiple {} functions in the project",
+                user_main,
+            ))
+        }
+    }
+
+    fn find_user_main(
+        module: &'ctx ast::Module<SemanticAnnotations>,
+        user_main: &str,
+        mut path: Path,
+        matches: &mut Vec<Path>,
+    ) {
+        path.push(module.name().expect("Modules must have a name."));
+        // Search through functions for "my_main"
+        let functions = module.get_functions();
+        for f in functions {
+            match f.name() {
+                Some(name) if name == user_main => {
+                    let mut path = path.clone();
+                    path.push(name.into());
+                    matches.push(path);
+                }
+                _ => (),
+            }
+        }
+
+        // If not found, recurse through every module in this module
+        let modules = module.get_modules();
+        for m in modules {
+            Self::find_user_main(m, user_main, path.clone(), matches);
+        }
     }
 
     /// Creates `main` entry point which will be called by the OS to start the Braid
     /// application. This main will initialize platform level values and state, then
     /// call the user defined main `my_main`.
-    fn create_main(&self) {
+    fn configure_user_main(&self, path: &Path) {
         let main_type = self.context.i64_type().fn_type(&[], false);
         let main = self.module.add_function("main", main_type, None);
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
-        let user_main = self.module.get_function("root_my_main").unwrap();
+
+        let user_main_name = path.to_label();
+        let user_main = self
+            .module
+            .get_function(&user_main_name)
+            .expect(&format!("Could not find {}", user_main_name));
         let status = self
             .builder
             .build_call(user_main, &[], "user_main")

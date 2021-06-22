@@ -1,0 +1,4 @@
+fn my_bool() -> bool {
+    let b:bool := false;
+    return b;
+}

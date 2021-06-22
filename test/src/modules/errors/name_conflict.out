@@ -1,1 +1,0 @@
-Error: Semantic: L3: Bind expected root::MyStruct but got root::my_mod::MyStruct

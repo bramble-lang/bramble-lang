@@ -152,29 +152,35 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> ParserResult<Module<u32>> {
+pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
     let start_index = stream.index();
-    let mut item = None;
+
+    let module_line = stream.peek().map_or(1, |t| t.l);
+    let mut module = Module::new(&name, module_line);
+
     while stream.peek().is_some() {
-        item = parse_items("root", &mut stream).map_err(|e| format!("Parser: {}", e))?;
+        parse_items_into(&mut stream, &mut module).map_err(|e| format!("Parser: {}", e))?;
 
         if stream.index() == start_index {
             return Err(format!("Parser cannot advance past {:?}", stream.peek()));
         }
     }
 
-    Ok(item)
+    Ok(Some(module))
 }
 
 fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
-            Some((_, module_name)) => {
+            Some((ln, module_name)) => {
+                let mut module = Module::new(&module_name, ln);
                 stream.next_must_be(&Lex::LBrace)?;
-                let module = parse_items(&module_name, stream)?;
+
+                parse_items_into(stream, &mut module)?;
+
                 stream.next_must_be(&Lex::RBrace)?;
-                module
+                Some(module)
             }
             _ => {
                 return Err(format!("L{}: expected name after mod keyword", token.l));
@@ -186,28 +192,42 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     Ok(mod_def)
 }
 
-fn parse_items(name: &str, stream: &mut TokenStream) -> ParserResult<Module<u32>> {
-    let module_line = stream.peek().map_or(1, |t| t.l);
-    let mut parent_module = Module::new(name, module_line);
+fn parse_items_into(stream: &mut TokenStream, module: &mut Module<u32>) -> ParserResult<()> {
+    if let Some((submods, items)) = parse_items(stream)? {
+        for sm in submods {
+            module.add_module(sm);
+        }
+
+        for item in items {
+            module.add_item(item)?;
+        }
+    }
+
+    Ok(Some(()))
+}
+
+fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<Item<u32>>)> {
+    let mut modules = vec![];
+    let mut items = vec![];
     while stream.peek().is_some() {
         let start_index = stream.index();
         if let Some(m) = module(stream)? {
-            parent_module.add_module(m);
+            modules.push(m);
         }
 
         if let Some(f) = function_def(stream)? {
-            parent_module.add_function(f)?;
+            items.push(Item::Routine(f));
         }
         if let Some(c) = coroutine_def(stream)? {
-            parent_module.add_coroutine(c)?;
+            items.push(Item::Routine(c));
         }
 
         if let Some(s) = struct_def(stream)? {
-            parent_module.add_struct(s)?;
+            items.push(Item::Struct(s));
         }
 
         if let Some(e) = extern_def(stream)? {
-            parent_module.add_extern(e)?;
+            items.push(Item::Extern(e));
         }
 
         if stream.index() == start_index {
@@ -215,7 +235,7 @@ fn parse_items(name: &str, stream: &mut TokenStream) -> ParserResult<Module<u32>
         }
     }
 
-    Ok(Some(parent_module))
+    Ok(Some((modules, items)))
 }
 
 fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
@@ -341,6 +361,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
 }
 
 pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
+    trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
         stmts.push(s);
@@ -349,6 +370,7 @@ pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo
 }
 
 fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
+    trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement_or_yield_return(stream)? {
         stmts.push(s);
@@ -943,7 +965,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
 
-        if let Some(m) = parse(tokens).unwrap() {
+        if let Some(m) = parse("root", &tokens).unwrap() {
             assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "root");
 
@@ -1218,7 +1240,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        if let Some(m) = parse(tokens).unwrap() {
+        if let Some(m) = parse("root", &tokens).unwrap() {
             assert_eq!(*m.annotation(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
@@ -1565,7 +1587,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let module = parse(tokens).unwrap();
+            let module = parse("root", &tokens).unwrap();
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {

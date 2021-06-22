@@ -1,9 +1,9 @@
 fn my_main() -> i64 {
-    let a: [root::S; 2] := [S{x: 1}, S{x: 2}];
+    let a: [root::copy_of_structs::S; 2] := [S{x: 1}, S{x: 2}];
     root::std::io::writei64ln(a[0].x);
     root::std::io::writei64ln(a[1].x);
 
-    let b: [root::S; 2] := a;
+    let b: [root::copy_of_structs::S; 2] := a;
     root::std::io::writei64ln(b[0].x);
     root::std::io::writei64ln(b[1].x);
 
