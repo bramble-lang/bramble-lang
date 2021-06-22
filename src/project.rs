@@ -71,14 +71,21 @@ pub fn parse_project(
     root_module: &str,
     token_sets: Project<Vec<Token>>,
     trace_parser: TracingConfig,
-) -> Result<Module<u32>> {
+) -> NResult<Module<u32>> {
     parser::parser::set_tracing(trace_parser);
     let mut root = Module::new(root_module, 0);
+    let mut errors = vec![];
     for src_tokens in token_sets {
-        let ast = parse_src_tokens(src_tokens)?;
-        append_module(&mut root, ast);
+        match parse_src_tokens(src_tokens) {
+            Ok(ast) => append_module(&mut root, ast),
+            Err(e) => errors.push(e),
+        }
     }
-    Ok(root)
+    if errors.len() > 0 {
+        Err(errors)
+    } else {
+        Ok(root)
+    }
 }
 
 pub fn tokenize_project(

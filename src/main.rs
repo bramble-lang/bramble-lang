@@ -37,9 +37,7 @@ fn main() {
     let token_sets = match tokenize_project(src_input, trace_lexer) {
         Ok(ts) => ts,
         Err(errs) => {
-            for e in errs {
-                println!("{}", e);
-            }
+            print_errs(&errs);
             exit(ERR_LEXER_ERROR)
         }
     };
@@ -47,8 +45,8 @@ fn main() {
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
     let root = match parse_project(ROOT_MODULE_NAME, token_sets, trace_parser) {
         Ok(root) => root,
-        Err(msg) => {
-            println!("{}", msg);
+        Err(errs) => {
+            print_errs(&errs);
             exit(ERR_PARSER_ERROR)
         }
     };
@@ -91,4 +89,10 @@ fn main() {
     }
 
     llvm.emit_object_code(Path::new(output_target)).unwrap();
+}
+
+fn print_errs(errs: &[String]) {
+    for e in errs {
+        println!("{}", e);
+    }
 }
