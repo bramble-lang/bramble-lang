@@ -106,3 +106,6 @@ Some digging around here is needed.
     - the problem I'm running into is that I have code that expects that a canonical path is one that starts with
     `root` but if root is not the name of the project to search through then things get difficult.  Further, I don't
     want "root" to be in the names items when their LLVM labels are generated.  It should be the project name.
+7. Need to distinctly define what a canonical path is. Especially now that "projects" are involved and a path that a
+user writes could reference the current project or an external project or it could be relative.  Then define exactly
+what the label in LLVM is, which should _not_ include "root" in its name.
