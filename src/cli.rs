@@ -9,6 +9,12 @@ pub const ERR_PARSER_ERROR: i32 = 3;
 pub const ERR_LLVM_IR_ERROR: i32 = 4;
 pub const ERR_LEXER_ERROR: i32 = 5;
 
+pub fn print_errs(errs: &[String]) {
+    for e in errs {
+        println!("{}", e);
+    }
+}
+
 pub fn configure_cli() -> clap::App<'static, 'static> {
     let app = App::new("Braid Compiler")
         .version("0.1.0")

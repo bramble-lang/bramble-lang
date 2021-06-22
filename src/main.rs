@@ -90,9 +90,3 @@ fn main() {
 
     llvm.emit_object_code(Path::new(output_target)).unwrap();
 }
-
-fn print_errs(errs: &[String]) {
-    for e in errs {
-        println!("{}", e);
-    }
-}
