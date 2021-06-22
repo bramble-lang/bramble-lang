@@ -42,3 +42,30 @@ system, other than the pathing from the root of a project.  Good reason to imple
 4. If I go with loading all projects at once then there is no real linking issue as it just becomes a matter of outputting
 everything to the same LLVM file.  If I go with multistep compilation (one project at a time) then each will output an
 LLVM file that is then linked at a later stage.
+
+
+### Thoughts
+If I go with the "load everything together" approach, I don't want to redesign the path semanttics again.  I want
+to leave the `root::` behaving as it currently is with `root::` meaning the root of the project (as I think that's
+how any user would think of it).  So instead, I think the right approach would be to create a new path keyword that
+for targeting a different project:  `project::std::io::writeln`.
+
+Design wise, I want to keep as much of this implementation and details at the "interface" boundaries between the CLI
+and the compiler itself.  This will make it easier to change in the future if I want to.
+
+
+Rough Draft of Changes:
+1. In the parser, the root module is named after the project.  Then `root` becomes a keyword that is synonymous with
+the current project.
+2. Semantic analysis needs to be able to take a set of projects (where each project is a Module named for the project).  Generate the Item metadata for all of them, then semantic analysis for all of them.
+3. The LLVM Compiler needs to take a set of projects (see prev) and compile them into binary output(s).  From here, I 
+could still output each as its own LLVM file and then link together.  This would then make it easy for me to slowly
+break multiproject compilation apart (I think, compiling one project at a time is preferable but requires more features
+to be implemented and so is better to build towards that).
+4. Name the LLVM output file after the project rather than `output.ll` or `output.s` or whatever.
+5. Name the output binary after the project rather than `output` :).
+
+Things to Learn First:
+1. How does linking work in LLVM?  How can I output multiple LLVM files and link them together?
+2. Do I need to identify Items as external for LLVM? (e.g. will I need to add that metadata to functions during semantic
+analysis?)
