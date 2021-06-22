@@ -71,3 +71,15 @@ Things to Learn First:
 1. How does linking work in LLVM?  How can I output multiple LLVM files and link them together?
 2. Do I need to identify Items as external for LLVM? (e.g. will I need to add that metadata to functions during semantic
 analysis?)
+3. https://llvm.org/docs/LangRef.html#module-structure
+4. https://llvm.org/docs/CommandGuide/llvm-link.html
+5. I think to link between modules I need to use `extern` in the LLVM bitcode, which means that I need a way to convert
+every reference to an external item to the correct LLVM label of that item. (Which I think can be done with the changes
+I proposed making to the path concept by adding project name as the root of the project)
+
+
+Changes to make:
+1. use project name for root module and output file
+2. Create `project::` path keyword.
+3. `project::<current project>::item` is the same as `root::item`
+4. Then start work on multiproject compilation
