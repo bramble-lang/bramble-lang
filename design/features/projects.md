@@ -64,6 +64,8 @@ break multiproject compilation apart (I think, compiling one project at a time i
 to be implemented and so is better to build towards that).
 4. Name the LLVM output file after the project rather than `output.ll` or `output.s` or whatever.
 5. Name the output binary after the project rather than `output` :).
+6. Need to have a policy on picking the name for a project. Will be the name of the directory storing the source files,
+but should put that into code.  Also, need to have a policy for when the input is a single file (filename?).
 
 Things to Learn First:
 1. How does linking work in LLVM?  How can I output multiple LLVM files and link them together?
