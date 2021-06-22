@@ -76,22 +76,19 @@ fn main() {
     // Configure the compiler
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
-    if config.is_present("llvm") {
-        let context = Context::create();
-        let mut llvm = llvm::IrGen::new(&context, "test", &imported);
-        match llvm.ingest(&semantic_ast, USER_MAIN_FN) {
-            Ok(()) => (),
-            Err(msg) => {
-                println!("LLVM IR translation failed: {}", msg);
-                std::process::exit(ERR_LLVM_IR_ERROR);
-            }
+    let context = Context::create();
+    let mut llvm = llvm::IrGen::new(&context, "test", &imported);
+    match llvm.ingest(&semantic_ast, USER_MAIN_FN) {
+        Ok(()) => (),
+        Err(msg) => {
+            println!("LLVM IR translation failed: {}", msg);
+            std::process::exit(ERR_LLVM_IR_ERROR);
         }
-
-        if config.is_present("emit") {
-            llvm.print(Path::new("./target/output.ll"));
-        }
-
-        llvm.emit_object_code(Path::new(output_target)).unwrap();
-    } else {
     }
+
+    if config.is_present("emit") {
+        llvm.print(Path::new("./target/output.ll"));
+    }
+
+    llvm.emit_object_code(Path::new(output_target)).unwrap();
 }
