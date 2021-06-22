@@ -36,7 +36,6 @@ use crate::{
 use super::{scopestack::RegisterLookup, stringpool::StringPool};
 
 const MEM_ALIGNMENT: u64 = 8;
-const USER_MAIN_FN: &str = "my_main";
 
 /// A LLVM IR generator which can be used to generate all the code
 /// for a single LLVM Module.
@@ -119,13 +118,17 @@ impl<'ctx> IrGen<'ctx> {
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
-    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) -> Result<()> {
+    pub fn ingest(
+        &mut self,
+        m: &'ctx ast::Module<SemanticAnnotations>,
+        user_main: &str,
+    ) -> Result<()> {
         self.compile_string_pool(m);
         self.add_externs();
 
         self.add_mod_items(m);
 
-        let main_path = Self::find_distinct_user_main(m)?;
+        let main_path = Self::find_distinct_user_main(m, user_main)?;
         self.configure_user_main(&main_path);
         match m.to_llvm_ir(self) {
             None => (),
@@ -135,27 +138,31 @@ impl<'ctx> IrGen<'ctx> {
         Ok(())
     }
 
-    fn find_distinct_user_main(m: &'ctx ast::Module<SemanticAnnotations>) -> Result<Path> {
+    fn find_distinct_user_main(
+        m: &'ctx ast::Module<SemanticAnnotations>,
+        user_main: &str,
+    ) -> Result<Path> {
         let mut matches = vec![];
         let base_path = Path::new();
-        let main_path = Self::find_user_main(m, base_path, &mut matches);
+        let main_path = Self::find_user_main(m, user_main, base_path, &mut matches);
         if matches.len() == 1 {
             Ok(matches[0].clone())
         } else if matches.len() == 0 {
             Err(format!(
                 "Could not find the user defined {} function in any source file.",
-                USER_MAIN_FN
+                user_main,
             ))
         } else {
             Err(format!(
                 "Found multiple {} functions in the project",
-                USER_MAIN_FN
+                user_main,
             ))
         }
     }
 
     fn find_user_main(
         module: &'ctx ast::Module<SemanticAnnotations>,
+        user_main: &str,
         mut path: Path,
         matches: &mut Vec<Path>,
     ) {
@@ -164,7 +171,7 @@ impl<'ctx> IrGen<'ctx> {
         let functions = module.get_functions();
         for f in functions {
             match f.name() {
-                Some(name) if name == USER_MAIN_FN => {
+                Some(name) if name == user_main => {
                     let mut path = path.clone();
                     path.push(name.into());
                     matches.push(path);
@@ -176,7 +183,7 @@ impl<'ctx> IrGen<'ctx> {
         // If not found, recurse through every module in this module
         let modules = module.get_modules();
         for m in modules {
-            Self::find_user_main(m, path.clone(), matches);
+            Self::find_user_main(m, user_main, path.clone(), matches);
         }
     }
 

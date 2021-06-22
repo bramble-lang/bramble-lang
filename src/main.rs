@@ -24,6 +24,7 @@ use crate::ast::Module;
 
 const BRAID_FILE_EXT: &str = "br";
 const ROOT_MODULE_NAME: &str = "root";
+const USER_MAIN_FN: &str = "my_main";
 
 fn main() {
     let config = configure_cli().get_matches();
@@ -66,7 +67,7 @@ fn main() {
     if config.is_present("llvm") {
         let context = Context::create();
         let mut llvm = llvm::IrGen::new(&context, "test", &imported);
-        match llvm.ingest(&semantic_ast) {
+        match llvm.ingest(&semantic_ast, USER_MAIN_FN) {
             Ok(()) => (),
             Err(msg) => {
                 println!("LLVM IR translation failed: {}", msg);
