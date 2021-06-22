@@ -43,7 +43,7 @@ fn main() {
     };
 
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
-    let root = match parse_project(ROOT_MODULE_NAME, token_sets, trace_parser) {
+    let root = match parse_project("test", token_sets, trace_parser) {
         Ok(root) => root,
         Err(errs) => {
             print_errs(&errs);

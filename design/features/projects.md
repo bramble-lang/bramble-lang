@@ -83,3 +83,15 @@ Changes to make:
 2. Create `project::` path keyword.
 3. `project::<current project>::item` is the same as `root::item`
 4. Then start work on multiproject compilation
+
+Notes:
+1. The method `    pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {` in module.rs has a logical
+problem, which is that when you it a path to a module it assumes not that hte path is relative to it but rather
+that it is relative to its parent.  That is, it assumes that hte first element in the path will be itself and
+so it checks to make sure that the names match.  But that's very hard reason about, most people (myself included)
+would expect the path to be relative to the module.  That is, if I called `go_to_module` on module `A` with the
+path `B::C`, `A` would check if it had a submodule `B` and the call `go_to` on `B` for the path `C`.  But, instead
+it would fail because `A != B`.
+    - Stack is the only thing that calls `go_to_module` so I can very easily change the design.
+    - The root problem is, root is not a keyword currently it's what is expected to be the name of the module capturing
+    all contents of a single file

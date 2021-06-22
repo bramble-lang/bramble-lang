@@ -204,7 +204,9 @@ impl<M> Module<M> {
                 .or(self.externs.iter().find(|e| e.get_name() == name))))
     }
 
-    pub fn go_to(&self, path: &Path) -> Option<&Item<M>> {
+    // TODO: This function appears to only be used in tests, so I believe it can be
+    // deleted
+    /*pub fn go_to(&self, path: &Path) -> Option<&Item<M>> {
         // If the path is empty, then return None as it is not possible for
         // anything to match
         if path.len() == 0 {
@@ -232,7 +234,7 @@ impl<M> Module<M> {
                 None => None,
             }
         }
-    }
+    }*/
 
     pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {
         if path.len() == 0 {
@@ -401,7 +403,7 @@ mod test {
         assert_eq!(result, Err("dupe already exists in module".into()));
     }
 
-    #[test]
+    /*#[test]
     pub fn test_go_to_item_does_not_exist() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
@@ -481,7 +483,7 @@ mod test {
         outer.add_module(module.clone());
         let f = outer.go_to(&vec!["outer", "inner", "co"].into());
         assert_eq!(f, Some(&Item::Routine(fdef)));
-    }
+    }*/
 
     #[test]
     pub fn test_add_extern() {
