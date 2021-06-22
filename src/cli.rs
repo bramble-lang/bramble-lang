@@ -7,6 +7,7 @@ pub const ERR_TYPE_CHECK: i32 = 1;
 pub const ERR_NO_AST: i32 = 2;
 pub const ERR_PARSER_ERROR: i32 = 3;
 pub const ERR_LLVM_IR_ERROR: i32 = 4;
+pub const ERR_LEXER_ERROR: i32 = 5;
 
 pub fn configure_cli() -> clap::App<'static, 'static> {
     let app = App::new("Braid Compiler")

@@ -4,7 +4,7 @@ use crate::{
     ast::Module, diagnostics::config::TracingConfig, io::get_files, lexer::tokens::Token, parser,
 };
 
-use braid_lang::result::Result;
+use braid_lang::result::{NResult, Result};
 
 fn create_module_path<'a>(
     module: &'a mut Module<u32>,
@@ -84,37 +84,54 @@ pub fn parse_project(
 pub fn tokenize_project(
     src_input: Project<String>,
     trace_lexer: TracingConfig,
-) -> Vec<CompilationUnit<Vec<Token>>> {
+) -> NResult<Vec<CompilationUnit<Vec<Token>>>> {
     let mut token_sets = vec![];
+    let mut errors = vec![];
     for src in src_input {
-        let src_tokens = tokenize_src_file(src, trace_lexer);
-        token_sets.push(src_tokens);
+        match tokenize_src_file(src, trace_lexer) {
+            Ok(t) => token_sets.push(t),
+            Err(mut e) => errors.append(&mut e),
+        }
     }
-    token_sets
+
+    if errors.len() > 0 {
+        Err(errors)
+    } else {
+        Ok(token_sets)
+    }
 }
 
 fn tokenize_src_file(
     src: CompilationUnit<String>,
     trace_lexer: TracingConfig,
-) -> CompilationUnit<Vec<Token>> {
+) -> NResult<CompilationUnit<Vec<Token>>> {
     let mut lexer = crate::lexer::lexer::Lexer::new(&src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
-    let tokens: Vec<Token> = tokens
-        .into_iter()
-        .filter(|t| match t {
-            Ok(_) => true,
-            Err(msg) => {
-                println!("{}", msg);
-                false
-            }
-        })
-        .map(|t| t.unwrap())
-        .collect();
+    let (tokens, errors): (Vec<Result<Token>>, Vec<Result<Token>>) =
+        tokens.into_iter().partition(|t| t.is_ok());
 
-    CompilationUnit {
-        path: src.path,
-        data: tokens,
+    if errors.len() > 0 {
+        let errors: Vec<String> = errors
+            .into_iter()
+            .filter_map(|t| match t {
+                Ok(_) => None,
+                Err(msg) => Some(msg),
+            })
+            .collect();
+        Err(errors)
+    } else {
+        let tokens: Vec<Token> = tokens
+            .into_iter()
+            .filter_map(|t| match t {
+                Ok(token) => Some(token),
+                Err(_) => None,
+            })
+            .collect();
+        Ok(CompilationUnit {
+            path: src.path,
+            data: tokens,
+        })
     }
 }
 

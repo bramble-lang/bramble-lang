@@ -34,13 +34,21 @@ fn main() {
     let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
 
     let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
-    let token_sets = tokenize_project(src_input, trace_lexer);
+    let token_sets = match tokenize_project(src_input, trace_lexer) {
+        Ok(ts) => ts,
+        Err(errs) => {
+            for e in errs {
+                println!("{}", e);
+            }
+            exit(ERR_LEXER_ERROR)
+        }
+    };
 
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
     let root = match parse_project(ROOT_MODULE_NAME, token_sets, trace_parser) {
         Ok(root) => root,
         Err(msg) => {
-            println!("Compilation failed: {}", msg);
+            println!("{}", msg);
             exit(ERR_PARSER_ERROR)
         }
     };
