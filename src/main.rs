@@ -4,6 +4,7 @@
 mod ast;
 mod cli;
 mod diagnostics;
+mod io;
 mod lexer;
 mod llvm;
 mod parser;
@@ -17,6 +18,7 @@ use std::{
 use cli::*;
 use diagnostics::config::TracingConfig;
 use inkwell::context::Context;
+use io::get_files;
 use lexer::tokens::Token;
 use semantics::type_resolver::*;
 
@@ -222,44 +224,6 @@ fn append_module(root: &mut Module<u32>, src_ast: CompilationUnit<Module<u32>>) 
         create_parents(root, &src_ast.path).unwrap()
     };
     parent.add_module(src_ast.data);
-}
-
-fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error> {
-    let mut files = vec![];
-    match path.extension() {
-        None => {
-            let dir = std::fs::read_dir(path)?;
-            for f in dir {
-                let f = f?;
-                let fty = f.file_type()?;
-                if fty.is_file() {
-                    match f.path().extension() {
-                        Some(ex) if ex.to_ascii_lowercase() == ext => {
-                            files.push(f.path());
-                        }
-                        _ => (),
-                    }
-                } else if fty.is_dir() {
-                    let mut sub_files = get_files(&f.path(), ext)?;
-                    files.append(&mut sub_files);
-                }
-            }
-        }
-        Some(ex) if ex.to_ascii_lowercase() == "br" => {
-            files.push(path.to_path_buf());
-        }
-        Some(ex) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!(
-                    "Is not a Braid language file, expected extension {} but got {}",
-                    BRAID_FILE_EXT,
-                    ex.to_str().unwrap()
-                ),
-            ));
-        }
-    }
-    Ok(files)
 }
 
 fn file_path_to_module_path(file: &PathBuf, src_path: &Path) -> Vec<String> {
