@@ -98,3 +98,11 @@ it would fail because `A != B`.
 2. Semantic rules for path `root::item == project::current::item == ::item`
 3. Should I create the `CanonicalPath` type to represent canonical paths?  This could be a good opportunity to add
 that to my code.
+4. One challenge I'm running into is that semantic analysis is using "root" to for teh canonical names of types
+and functions.  Need to change that.
+5. Another problem is that Path assumes a canonical path starts with "root".  But that's not really true anymore?
+Some digging around here is needed.
+6. I think the best way to get what I want is to have a different type for Canonical paths?
+    - the problem I'm running into is that I have code that expects that a canonical path is one that starts with
+    `root` but if root is not the name of the project to search through then things get difficult.  Further, I don't
+    want "root" to be in the names items when their LLVM labels are generated.  It should be the project name.
