@@ -13,6 +13,10 @@ impl Path {
         self.path.len()
     }
 
+    pub fn first(&self) -> Option<&String> {
+        self.path.first()
+    }
+
     pub fn last(&self) -> Option<&String> {
         self.path.last()
     }

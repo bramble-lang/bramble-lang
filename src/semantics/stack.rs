@@ -214,10 +214,22 @@ impl<'a> SymbolTableScopeStack<'a> {
             .item()
             .expect("Expected a canonical path with at least one step in it");
 
-        self.root
-            .go_to_module(&canon_path.parent())
-            .map(|module| module.annotation().sym.get(&item))
-            .flatten()
+        match canon_path.first() {
+            Some(e) if e == "root" => (),
+            _ => panic!("Invalid canonical path: {}", canon_path),
+        }
+
+        let mut current = self.root;
+        // Follow the path, up to, but not including the final element of the path
+        // (which is the item being looked for);
+        for idx in 1..canon_path.len() - 1 {
+            match current.get_module(&canon_path[idx]) {
+                Some(m) => current = m,
+                None => return None,
+            }
+        }
+
+        current.annotation().sym.get(item)
     }
 
     /**
