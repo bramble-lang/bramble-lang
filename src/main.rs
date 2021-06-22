@@ -38,10 +38,10 @@ fn main() {
     let src_input = read_src_files(&src_path);
 
     let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
-    let token_sets = tokenize_src_files(src_input, trace_lexer);
+    let token_sets = tokenize_project(src_input, trace_lexer);
 
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
-    let root = parse_all(token_sets, trace_parser);
+    let root = parse_project(ROOT_MODULE_NAME, token_sets, trace_parser);
 
     // Type Check
     let trace_semantic_node = TracingConfig::parse(config.value_of("trace-semantic-node"));
@@ -86,7 +86,7 @@ fn main() {
     }
 }
 
-fn create_module_parents<'a>(
+fn create_module_path<'a>(
     module: &'a mut Module<u32>,
     path: &[String],
 ) -> Option<&'a mut Module<u32>> {
@@ -104,12 +104,14 @@ fn create_module_parents<'a>(
             if rest.len() == 0 {
                 Some(sub)
             } else {
-                create_module_parents(sub, rest)
+                create_module_path(sub, rest)
             }
         }
         None => None,
     }
 }
+
+type Project<T> = Vec<CompilationUnit<T>>;
 
 struct CompilationUnit<T> {
     path: Vec<String>,
@@ -142,12 +144,17 @@ fn read_src_files(src_path: &Path) -> Vec<CompilationUnit<String>> {
     texts
 }
 
-fn parse_all(
-    token_sets: Vec<CompilationUnit<Vec<Token>>>,
+/// Parses every tokenized compilation unit in the given vector.
+/// Each compilation unit is parsed into a module named after the
+/// path given in the CompilationUnit and all are added as child
+/// modules of a single "root" module.
+fn parse_project(
+    root_module: &str,
+    token_sets: Project<Vec<Token>>,
     trace_parser: TracingConfig,
 ) -> Module<u32> {
     parser::parser::set_tracing(trace_parser);
-    let mut root = Module::new(ROOT_MODULE_NAME, 0);
+    let mut root = Module::new(root_module, 0);
     for src_tokens in token_sets {
         match parse_src_tokens(src_tokens) {
             Ok(ast) => append_module(&mut root, ast),
@@ -160,8 +167,8 @@ fn parse_all(
     root
 }
 
-fn tokenize_src_files(
-    src_input: Vec<CompilationUnit<String>>,
+fn tokenize_project(
+    src_input: Project<String>,
     trace_lexer: TracingConfig,
 ) -> Vec<CompilationUnit<Vec<Token>>> {
     let mut token_sets = vec![];
@@ -224,7 +231,7 @@ fn append_module(root: &mut Module<u32>, src_ast: CompilationUnit<Module<u32>>) 
     let parent = if src_ast.path.len() == 0 {
         root
     } else {
-        create_module_parents(root, &src_ast.path).unwrap()
+        create_module_path(root, &src_ast.path).unwrap()
     };
     parent.add_module(src_ast.data);
 }
