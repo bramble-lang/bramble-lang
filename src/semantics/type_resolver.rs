@@ -60,7 +60,7 @@ impl<'a> TypeResolver<'a> {
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
-            main_fn: vec!["root", "my_main"].into(),
+            main_fn: vec!["root", "my_main"].into(), // TODO: should get rid of this
         }
     }
 
