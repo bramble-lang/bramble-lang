@@ -95,3 +95,6 @@ it would fail because `A != B`.
     - Stack is the only thing that calls `go_to_module` so I can very easily change the design.
     - The root problem is, root is not a keyword currently it's what is expected to be the name of the module capturing
     all contents of a single file
+2. Semantic rules for path `root::item == project::current::item == ::item`
+3. Should I create the `CanonicalPath` type to represent canonical paths?  This could be a good opportunity to add
+that to my code.

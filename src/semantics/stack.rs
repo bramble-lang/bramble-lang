@@ -175,18 +175,9 @@ impl<'a> SymbolTableScopeStack<'a> {
     pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
-            // If the path contains more than just the item's name then
-            // traverse the parent path to find the specified item
-            let item = canon_path
-                .item()
-                .expect("Expected a canonical path with at least one step in it");
 
             // Look in the project being compiled
-            let project_symbol = self
-                .root
-                .go_to_module(&canon_path.parent())
-                .map(|module| module.annotation().sym.get(&item))
-                .flatten();
+            let project_symbol = self.get_item(&canon_path);
 
             // look in any imported symbols
             let imported_symbol = self.get_imported_symbol(&canon_path);
@@ -214,6 +205,19 @@ impl<'a> SymbolTableScopeStack<'a> {
                 (s, p)
             }
         })
+    }
+
+    fn get_item(&self, canon_path: &Path) -> Option<&Symbol> {
+        // If the path contains more than just the item's name then
+        // traverse the parent path to find the specified item
+        let item = canon_path
+            .item()
+            .expect("Expected a canonical path with at least one step in it");
+
+        self.root
+            .go_to_module(&canon_path.parent())
+            .map(|module| module.annotation().sym.get(&item))
+            .flatten()
     }
 
     /**
