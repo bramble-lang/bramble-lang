@@ -208,7 +208,7 @@ fn truncate_extension(path: &mut Vec<String>, ext: &str) {
 }
 
 pub fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
-    vec![
+    let mut externs: Vec<(crate::ast::Path, Vec<Type>, Type)> = vec![
         (
             vec!["root", "std", "io", "write"].into(),
             vec![Type::StringLiteral],
@@ -309,5 +309,8 @@ pub fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)
             vec![Type::Bool],
             Type::Unit,
         ),
-    ]
+    ];
+
+    externs.iter_mut().for_each(|f| f.0.set_canonical(true));
+    externs
 }

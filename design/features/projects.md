@@ -88,6 +88,7 @@ Changes to make:
     - `::<item>`
     - `project::my_proj::item`
 Note that the last method is the only one that will allow them to specify the name of the current project.  Without the project keyword prefix, it is not possible for the path resolver to know whether m_proj refers to the project or a module under the project.
+6. Remember that `self` refers to the current module.
 
 Notes:
 1. The method `    pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {` in module.rs has a logical
@@ -123,3 +124,4 @@ Plan 1
     -
 2. If this works, then maybe create a new CanonicalPath type that will allow me to specify what a function wants.
 3. I want to remove support for `::item` paths right now, because they are hardcoded to just put "root" at the head of the path. I'd like to get how to map "root" to the canon path figured out first?  (or maybe in to_canon I can change root to the canon path).
+4. Change the references from "root::std::io" to "project::std::io".  Here, then in the From fucntions, if the first element is project, I should mark the path as canonical

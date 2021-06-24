@@ -214,9 +214,8 @@ impl<'a> SymbolTableScopeStack<'a> {
             .item()
             .expect("Expected a canonical path with at least one step in it");
 
-        match canon_path.first() {
-            Some(e) if e == "root" => (),
-            _ => panic!("Invalid canonical path: {}", canon_path),
+        if !canon_path.is_canonical() {
+            panic!("Given path is not canonical: {}", canon_path);
         }
 
         let mut current = self.root;
