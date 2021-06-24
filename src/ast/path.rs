@@ -3,11 +3,15 @@ use braid_lang::result::Result;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path {
     path: Vec<String>,
+    is_canonical: bool,
 }
 
 impl Path {
     pub fn new() -> Path {
-        Path { path: vec![] }
+        Path {
+            path: vec![],
+            is_canonical: false,
+        }
     }
     pub fn len(&self) -> usize {
         self.path.len()
@@ -51,6 +55,7 @@ impl Path {
     pub fn parent(&self) -> Path {
         let mut path = Path {
             path: self.path.clone(),
+            is_canonical: self.is_canonical,
         };
         path.path.pop();
         path
@@ -65,6 +70,7 @@ impl Path {
     - occurances of `super` will move up the current path
     */
     pub fn to_canonical(&self, current_path: &Path) -> Result<Path> {
+        // TODO: make this method move "self"?
         if self.path[0] == "root" {
             Ok(self.clone())
         } else {
@@ -88,7 +94,10 @@ impl Path {
                     merged.push(step.clone());
                 }
             }
-            Ok(Path { path: merged })
+            Ok(Path {
+                path: merged,
+                is_canonical: true,
+            })
         }
     }
 
@@ -114,7 +123,10 @@ impl std::fmt::Display for Path {
 
 impl From<Vec<String>> for Path {
     fn from(v: Vec<String>) -> Self {
-        Path { path: v.clone() }
+        Path {
+            path: v.clone(),
+            is_canonical: false,
+        }
     }
 }
 
@@ -122,6 +134,7 @@ impl From<Vec<&str>> for Path {
     fn from(v: Vec<&str>) -> Self {
         Path {
             path: v.into_iter().map(|e| e.into()).collect(),
+            is_canonical: false,
         }
     }
 }

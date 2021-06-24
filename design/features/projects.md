@@ -83,6 +83,11 @@ Changes to make:
 2. Create `project::` path keyword.
 3. `project::<current project>::item` is the same as `root::item`
 4. Then start work on multiproject compilation
+5. There are only 3 ways for a user to create a canonical path in code:
+    - `root::<item>`
+    - `::<item>`
+    - `project::my_proj::item`
+Note that the last method is the only one that will allow them to specify the name of the current project.  Without the project keyword prefix, it is not possible for the path resolver to know whether m_proj refers to the project or a module under the project.
 
 Notes:
 1. The method `    pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {` in module.rs has a logical
@@ -112,4 +117,9 @@ what the label in LLVM is, which should _not_ include "root" in its name.
 
 Plan 1
 1. Add a flag to Path that indicates if the path is canonical or not.  If it is, then make canonical will do nothing. If it isn't then make canonical will make it canonical and then set the flag to true.
+    - to_canonical checks if a path is canonical by seeing if the first element is "root"
+    - get_item checks if a path is canonical with the same method
+    - From methods also need me to set the flag.  I set them to false here, because the methods are only used when first creating the canonical path
+    -
 2. If this works, then maybe create a new CanonicalPath type that will allow me to specify what a function wants.
+3. I want to remove support for `::item` paths right now, because they are hardcoded to just put "root" at the head of the path. I'd like to get how to map "root" to the canon path figured out first?  (or maybe in to_canon I can change root to the canon path).

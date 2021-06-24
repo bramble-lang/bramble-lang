@@ -233,7 +233,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 
     /**
-    Given a type reference that appears in a node that is not the curren node, will convert
+    Given a type reference that appears in a node that is not the current node, will convert
     that type reference to a canonical path from a relative path.  If the type reference is
     already an absolute path then no change is made.  This is used for indirect type reference
     look ups: for example, if the current node is a routine call and the routine definition is
