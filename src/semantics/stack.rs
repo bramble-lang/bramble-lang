@@ -301,8 +301,8 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
     pub fn to_path(&self) -> Option<Path> {
-        //let project = self.root.name()?;
-        let mut steps: Vec<String> = vec!["project".into()];
+        let project = self.root.name()?;
+        let mut steps: Vec<String> = vec!["project".into(), project.into()];
 
         for node in self.stack.iter() {
             match node.scope_type() {
@@ -318,7 +318,8 @@ impl<'a> SymbolTableScopeStack<'a> {
             _ => (),
         }
 
-        println!("{:?}", steps);
+        println!("to_path: Path {:?}", steps);
+        println!("to_path: Stack {:?}", self.stack);
         if steps.len() > 0 {
             Some(steps.into())
         } else {
