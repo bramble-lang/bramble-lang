@@ -109,3 +109,7 @@ Some digging around here is needed.
 7. Need to distinctly define what a canonical path is. Especially now that "projects" are involved and a path that a
 user writes could reference the current project or an external project or it could be relative.  Then define exactly
 what the label in LLVM is, which should _not_ include "root" in its name.
+
+Plan 1
+1. Add a flag to Path that indicates if the path is canonical or not.  If it is, then make canonical will do nothing. If it isn't then make canonical will make it canonical and then set the flag to true.
+2. If this works, then maybe create a new CanonicalPath type that will allow me to specify what a function wants.
