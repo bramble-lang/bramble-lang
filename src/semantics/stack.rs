@@ -317,8 +317,6 @@ impl<'a> SymbolTableScopeStack<'a> {
             _ => (),
         }
 
-        println!("to_path: Path {:?}", steps);
-        println!("to_path: Stack {:?}", self.stack);
         if steps.len() > 0 {
             Some(steps.into())
         } else {

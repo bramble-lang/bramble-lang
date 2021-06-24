@@ -60,7 +60,7 @@ impl<'a> TypeResolver<'a> {
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
-            main_fn: vec!["root", "my_main"].into(), // TODO: should get rid of this
+            main_fn: vec!["project", "root", "my_main"].into(), // TODO: should get rid of this
         }
     }
 
@@ -709,7 +709,7 @@ impl<'a> TypeResolver<'a> {
                     self.symbols.lookup_symbol_by_path(routine_path)?;
 
                 let (expected_param_tys, ret_ty) =
-                    self.extract_routine_type_info(symbol, call, &routine_path)?;
+                    self.extract_routine_type_info(symbol, call, &routine_canon_path)?;
                 let expected_param_tys = expected_param_tys
                     .iter()
                     .map(|pty| {
@@ -1024,19 +1024,19 @@ impl<'a> TypeResolver<'a> {
         // If routine is root::my_main it must be a function type and have type () -> i64
         if def != &RoutineDefType::Function {
             return Err(format!(
-                "root::my_main must be a function of type () -> i64"
+                "$root::my_main must be a function of type () -> i64"
             ));
         }
 
         if params.len() > 0 {
             return Err(format!(
-                "root::my_main must take no parameters. It must be of type () -> i64"
+                "$root::my_main must take no parameters. It must be of type () -> i64"
             ));
         }
 
         if p != Type::I64 {
             return Err(format!(
-                "root::my_main must return an i64. It must be of type () -> i64"
+                "$root::my_main must return an i64. It must be of type () -> i64"
             ));
         }
 
@@ -1419,7 +1419,7 @@ mod tests {
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
-                        let expected: Path = vec!["root", "test"].into();
+                        let expected: Path = vec!["project", "root", "test"].into();
                         assert_eq!(struct_name, &expected)
                     } else {
                         panic!("Not a struct expression")
@@ -1526,7 +1526,7 @@ mod tests {
                     ..
                 } = &params[0]
                 {
-                    let expected: Path = vec!["root", "test"].into();
+                    let expected: Path = vec!["project", "root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -1563,7 +1563,7 @@ mod tests {
             .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
-                    let expected: Path = vec!["root", "test"].into();
+                    let expected: Path = vec!["project", "root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -1599,7 +1599,7 @@ mod tests {
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
-                    let expected: Path = vec!["root", "test"].into();
+                    let expected: Path = vec!["project", "root", "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -3144,7 +3144,7 @@ mod tests {
                 }
                 fn number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Expected coroutine but number is a fn (i64) -> i64"),
+                Err("Semantic: L2: Expected coroutine but $root::number is a fn (i64) -> i64"),
             ),
             (
                 "fn main() {
@@ -3824,7 +3824,7 @@ mod tests {
                     let y: i64 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 but got root::MyStruct"),
+                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected $root::MyStruct2 but got $root::MyStruct"),
             ),
             (
                 line!(),
@@ -3835,12 +3835,12 @@ mod tests {
                     let x: root::MyStruct2 := self::MyStruct{x: 1};
                     return x;
                 }",
-                Err("Semantic: L5: Bind expected root::MyStruct2 but got root::MyStruct"),
+                Err("Semantic: L5: Bind expected $root::MyStruct2 but got $root::MyStruct"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:false};}",
-                Err("Semantic: L1: root::MyStruct.x expects i64 but got bool"),
+                Err("Semantic: L1: $root::MyStruct.x expects i64 but got bool"),
             ),
             (
                 line!(),
@@ -3850,7 +3850,7 @@ mod tests {
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> i64 {return MyStruct{x:5};}",
-                Err("Semantic: L1: Return expected i64 but got root::MyStruct"),
+                Err("Semantic: L1: Return expected i64 but got $root::MyStruct"),
             ),
             (
                 line!(),

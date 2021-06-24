@@ -85,7 +85,7 @@ impl Path {
         println!("{} - {}", stdext::function_name!(), current_path);
         // TODO: make this method move "self"?
         if !current_path.is_canonical() {
-            return Err(format!("Current path is not canonical: {}", current_path));
+            panic!("Current path is not canonical: {}", current_path);
         }
         if self.is_canonical() {
             Ok(self.clone())
