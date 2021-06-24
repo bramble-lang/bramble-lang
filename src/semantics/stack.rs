@@ -173,6 +173,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     ///
     /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
+        println!("{} - {}", stdext::function_name!(), path);
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
 
@@ -187,7 +188,10 @@ impl<'a> SymbolTableScopeStack<'a> {
                 (Some(ps), None) => Ok((ps, canon_path)),
                 (None, Some(is)) => Ok((is, canon_path)),
                 (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
-                (None, None) => Err(format!("Could not find item with the given path: {}", path)),
+                (None, None) => Err(format!(
+                    "Could not find item with the given path: {} ({})",
+                    path, canon_path
+                )),
             }
         } else if path.len() == 1 {
             // If the path has just the item name, then check the local scope and
@@ -208,6 +212,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 
     fn get_item(&self, canon_path: &Path) -> Option<&Symbol> {
+        println!("get_item: {}", canon_path);
         // If the path contains more than just the item's name then
         // traverse the parent path to find the specified item
         let item = canon_path
@@ -296,7 +301,8 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
     pub fn to_path(&self) -> Option<Path> {
-        let mut steps = vec![];
+        //let project = self.root.name()?;
+        let mut steps: Vec<String> = vec!["project".into()];
 
         for node in self.stack.iter() {
             match node.scope_type() {
@@ -312,6 +318,7 @@ impl<'a> SymbolTableScopeStack<'a> {
             _ => (),
         }
 
+        println!("{:?}", steps);
         if steps.len() > 0 {
             Some(steps.into())
         } else {
@@ -333,8 +340,24 @@ mod tests {
         let mut stack = SymbolTableScopeStack::new(&m);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
-        let path = stack.to_path();
-        assert_eq!(path, None);
+        let path = stack.to_path().unwrap();
+        assert_eq!(path, vec!["project", "test"].into());
+        assert!(path.is_canonical());
+    }
+
+    #[test]
+    fn to_path_is_canonical() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("root");
+        stack.enter_scope(&sym);
+        let local = SymbolTable::new();
+        stack.enter_scope(&local);
+        let path = stack.to_path().unwrap();
+        assert!(path.is_canonical());
     }
 
     #[test]
@@ -349,8 +372,9 @@ mod tests {
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
-        let expected = vec!["root"].into();
+        let expected = vec!["project", "test", "root"].into();
         assert_eq!(path, expected);
+        assert!(path.is_canonical());
     }
 
     #[test]
@@ -365,7 +389,7 @@ mod tests {
         let current = SymbolTable::new_module("inner");
         stack.enter_scope(&current);
         let path = stack.to_path().unwrap();
-        let expected = vec!["root", "inner"].into();
+        let expected = vec!["project", "test", "root", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -383,7 +407,7 @@ mod tests {
         let local2 = SymbolTable::new();
         stack.enter_scope(&local2);
         let path = stack.to_path().unwrap();
-        let expected = vec!["root"].into();
+        let expected = vec!["project", "test", "root"].into();
         assert_eq!(path, expected);
     }
 
@@ -408,7 +432,7 @@ mod tests {
         stack.enter_scope(&local2);
 
         let path = stack.to_path().unwrap();
-        let expected = vec!["first", "second"].into();
+        let expected = vec!["project", "test", "first", "second"].into();
         assert_eq!(path, expected);
     }
 
@@ -478,7 +502,7 @@ mod tests {
         // across 1 boundary
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec!["first", "x"].into());
+        assert_eq!(p, vec!["project", "test", "first", "x"].into());
 
         // across 2 boundaries
         // Module 2
@@ -487,6 +511,6 @@ mod tests {
 
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec!["first", "second", "x"].into());
+        assert_eq!(p, vec!["project", "test", "first", "second", "x"].into());
     }
 }

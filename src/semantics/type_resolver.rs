@@ -1200,8 +1200,22 @@ mod tests {
 
     #[test]
     pub fn test_path_to_function() {
-        for (text, expected) in vec![
+        for (ln, text, expected) in vec![
             (
+                line!(),
+                "mod my_mod{ 
+                    fn test() -> i64{ 
+                        return 0;
+                    } 
+                    fn main() {
+                        let i: i64 := self::test(); 
+                        return;
+                    }
+                }",
+                Ok(()),
+            ),
+            (
+                line!(),
                 "mod my_mod{ 
                     fn test() -> i64{ 
                         return 0;
@@ -1216,6 +1230,20 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
+                "mod my_mod{ 
+                    fn test() -> i64{ 
+                        return 0;
+                    } 
+                    fn main() {
+                        let j: i64 := project::test::my_mod::test();
+                        return;
+                    }
+                }",
+                Ok(()),
+            ),
+            (
+                line!(),
                 "mod my_mod{ 
                     fn test() -> i64{ return 0;} 
                     fn main() {
@@ -1223,15 +1251,16 @@ mod tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test"),
+                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
+            println!("Test: {}", ln);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse("test", &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 TracingConfig::Off,

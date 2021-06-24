@@ -117,6 +117,7 @@ user writes could reference the current project or an external project or it cou
 what the label in LLVM is, which should _not_ include "root" in its name.
 
 Plan 1
+0. Need to define how a canonical path will be stored in the system and how it will be represented to the user.
 1. Add a flag to Path that indicates if the path is canonical or not.  If it is, then make canonical will do nothing. If it isn't then make canonical will make it canonical and then set the flag to true.
     - to_canonical checks if a path is canonical by seeing if the first element is "root"
     - get_item checks if a path is canonical with the same method
