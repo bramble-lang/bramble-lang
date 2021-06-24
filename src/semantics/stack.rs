@@ -301,8 +301,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
     pub fn to_path(&self) -> Option<Path> {
-        let project = self.root.name()?;
-        let mut steps: Vec<String> = vec!["project".into(), project.into()];
+        let mut steps: Vec<String> = vec!["project".into()];
 
         for node in self.stack.iter() {
             match node.scope_type() {
@@ -339,6 +338,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
@@ -353,6 +354,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
         let sym = SymbolTable::new_module("root");
         stack.enter_scope(&sym);
         let local = SymbolTable::new();
@@ -368,6 +371,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
         let sym = SymbolTable::new_module("root");
         stack.enter_scope(&sym);
         let local = SymbolTable::new();
@@ -385,6 +390,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
         let sym = SymbolTable::new_module("root");
         stack.enter_scope(&sym);
         let current = SymbolTable::new_module("inner");
@@ -401,6 +408,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
         let module = SymbolTable::new_module("root");
         stack.enter_scope(&module);
         let local = SymbolTable::new();
@@ -419,6 +428,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");
@@ -444,6 +455,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");
@@ -464,6 +477,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");
@@ -487,6 +502,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");

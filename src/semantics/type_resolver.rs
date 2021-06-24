@@ -75,6 +75,8 @@ impl<'a> TypeResolver<'a> {
     }
 
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
+        // TODO: I think that this is the problem, perhaps I should get rid of the concept
+        // of the stack root?  I need root to be able to find items using the stack.
         self.analyze_module(self.symbols.root)
             .map_err(|e| format!("Semantic: {}", e))
     }
@@ -1351,7 +1353,7 @@ mod tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test"),
+                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($root::my_mod::my_mod::test)"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1446,21 +1448,21 @@ mod tests {
                 "fn my_main() -> i32 {
                     return 0i32;
                 }",
-                Err("Semantic: L1: root::my_main must return an i64. It must be of type () -> i64"),
+                Err("Semantic: L1: $root::my_main must return an i64. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "fn my_main(i: i32) -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: root::my_main must take no parameters. It must be of type () -> i64"),
+                Err("Semantic: L1: $root::my_main must take no parameters. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "co my_main() -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: root::my_main must be a function of type () -> i64"),
+                Err("Semantic: L1: $root::my_main must be a function of type () -> i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1470,10 +1472,9 @@ mod tests {
                 .unwrap();
             let ast = parser::parse("root",&tokens).unwrap().unwrap();
             let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
-            match expected {
-                Ok(expected_ty) => {
-                    let module = module.unwrap();
-                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+            match (expected, module) {
+                (Ok(expected_ty), Ok(actual)) => {
+                    let fn_main = actual.get_functions()[0].to_routine().unwrap();
 
                     assert_eq!(
                         fn_main.annotation().ty,
@@ -1482,8 +1483,14 @@ mod tests {
                         line
                     );
                 }
-                Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
+                (Ok(_), Err(actual)) => {
+                    assert!(false, "L{}: Expected OK, got Err({})", line, actual);
+                }
+                (Err(expected), Ok(_)) => {
+                    assert!(false, "L{}: Expected Err({}), but got Ok", line, expected);
+                }
+                (Err(msg), Err(actual)) => {
+                    assert_eq!(actual, msg, "Test Case at L:{}", line);
                 }
             }
         }
@@ -3873,7 +3880,7 @@ mod tests {
                     return ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
-                Err("Semantic: L1: root::MyStruct does not have member y")),
+                Err("Semantic: L1: $root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i64")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.x;}",
@@ -3881,7 +3888,7 @@ mod tests {
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.y;}",
-                Err("Semantic: L1: root::MyStruct does not have member y")),
+                Err("Semantic: L1: $root::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i64")),
             ] {
@@ -3905,7 +3912,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test();
+                    let k: i64 := project::std::test();
                     return;
                 }
                 ",
@@ -3915,7 +3922,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    return root::std::test();
+                    return project::std::test();
                 }
                 ",
                 (vec![],(Type::Unit)),
@@ -3924,7 +3931,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5);
+                    let k: i64 := project::std::test(5);
                     return;
                 }
                 ",
@@ -3934,7 +3941,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5, true);
+                    let k: i64 := project::std::test(5, true);
                     return;
                 }
                 ",
@@ -3944,37 +3951,39 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test2();
+                    let k: i64 := project::std::test2();
                     return;
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Could not find item with the given path: root::std::test2"),
+                Err("Semantic: L3: Could not find item with the given path: $std::test2 ($std::test2)"),
             ),
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5);
+                    let k: i64 := project::std::test(5);
                     return;
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Incorrect number of parameters passed to routine: root::std::test. Expected 0 but got 1"),
+                Err("Semantic: L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
             ),
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5, 2);
+                    let k: i64 := project::std::test(5, 2);
                     return;
                 }
                 ",
                 (vec![Type::I64, Type::Bool], (Type::I64)),
-                Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i64"),
+                Err("Semantic: L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
+            /*
+            Delete at code review, this test is no longer valid with the updates to path semantics
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5);
+                    let k: i64 := project::std::test(5);
                     return;
                 }
                 mod std {
@@ -3984,15 +3993,15 @@ mod tests {
                 }
                 ",
                 (vec![Type::I64], (Type::I64)),
-                Err("Semantic: L3: Found multiple definitions of root::std::test"),
-            ),
+                Err("Semantic: L3: Found multiple definitions of $std::test ($std::test)"),
+            ),*/
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root",&tokens).unwrap().unwrap();
+            let ast = parser::parse("std",&tokens).unwrap().unwrap();
             let mut sa = SemanticAst::new();
             let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
             SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
@@ -4000,7 +4009,7 @@ mod tests {
             let mut semantic = TypeResolver::new(&sm_ast);
 
             semantic.import_function(
-                vec!["root", "std", "test"].into(),
+                vec!["project", "std", "test"].into(),
                 import_func.0, import_func.1,
             );
 
