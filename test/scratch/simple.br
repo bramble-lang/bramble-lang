@@ -1,7 +1,8 @@
 extern fn puts(s: string);
+extern fn printf(fmt: string, ...);
 
 fn my_main() -> i64 {
     let mut x: i64 := 0;
-    puts("hello\n");
+    printf("hello %s\n", "Erich");
     return 0;
 }
