@@ -1,11 +1,8 @@
 extern fn puts(s: string);
+extern fn printf(fmt: string, i: i64);
 
 fn my_main() -> i64 {
     let mut x: i64 := 0;
-    while (x < 5) {
-        project::std::io::writei64(x);
-        project::std::io::write(" hello, world\n");
-        mut x := x + 1;
-    };
+    printf("Hello, %ld\n", 5i32);
     return 0;
 }

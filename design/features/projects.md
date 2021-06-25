@@ -132,3 +132,16 @@ Plan 1
 7. Pull string literals out into constants.
     - DONE
 8. Name the output binary (and project module) after the src directory or the name of the source file.
+    - This is a bit of a pain, so I will look at this later.
+9. Allow importing projects to be used as external libraries
+    - Add a CLI flag for listing imported projects
+    - Extract a list of functions from the imports
+    - Pass to the semantic analyzer using the existing "externs" interface
+    - Compile each project as an obj and then use gcc to link them all together
+        - in LLVM, if there is no my_main then don't compile the main function
+    - For each project, I need to extract a list of all the functions/structs in that project that I can import
+    along with semantic info about them. To keep things simple, I will start by just manually writing a manifest file for the std::io project and just read that as the "external functions" table for the compiler.
+    - The next problem is, implementing the IO for ints and stuff, if I can only import one printf.  Need to see if I can just %ld for all integers (probaly not because of width) and if not, what can I do?  Do I make extern local and scoped or do I allow aliasing of different externs?  The problem is that printf is variadic and I don't have variadic support in Braid, but I can extern printf as `extern fn printf(string, i64)` but then I can only use it for i64 because of semantic analysis.
+        - How does Rust extern variadic functions?
+        - Allow local definition of extern, then each function has its own
+        - Allow aliasing of extern (does LLVM support this?)
