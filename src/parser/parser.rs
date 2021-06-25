@@ -303,7 +303,12 @@ fn function_decl(
 
 fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
-        Some((l, n, p, _, t)) => (l, n, p, t),
+        Some((l, n, p, v, t)) => {
+            if v {
+                return Err("VarArgs are not allowed in Braid function definitions".into());
+            }
+            (l, n, p, t)
+        }
         None => return Ok(None),
     };
 
@@ -341,7 +346,12 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let (co_line, co_name) = stream
         .next_if_id()
         .ok_or(format!("L{}: Expected identifier after co", co_line))?;
-    let (params, _) = fn_def_params(stream, false)?;
+    let (params, has_varargs) = fn_def_params(stream, false)?;
+
+    if has_varargs {
+        return Err("VarArgs are not allowed in Braid function definitions".into());
+    }
+
     let co_type = match stream.next_if(&Lex::LArrow) {
         Some(t) => consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", t.l))?,
         _ => Type::Unit,
