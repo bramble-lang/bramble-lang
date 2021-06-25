@@ -26,6 +26,8 @@ run_test() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         ../target/debug/braid-lang --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # cargo run -- --llvm -p machos --input "../braid/std" -o ./target/std.obj
+        ../target/debug/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
         ../target/debug/braid-lang --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
     fi
 
@@ -38,7 +40,7 @@ run_test() {
             built=$?
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             nasm -g -f macho64 ../braid/macho64/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-            gcc -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
+            gcc -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
             built=$?
         else
             # If we can't figure out the OS, then just try the Linux build steps

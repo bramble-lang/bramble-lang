@@ -24,3 +24,81 @@ fn writei32ln(i: i32) {
     printf("%d\n", i);
     return;
 }
+
+fn writei16(i: i16) {
+    printf("%hd", i);
+    return;
+}
+
+fn writei16ln(i: i16) {
+    printf("%hd\n", i);
+    return;
+}
+
+fn writei8(i: i8) {
+    printf("%hhd", i);
+    return;
+}
+
+fn writei8ln(i: i8) {
+    printf("%hhd\n", i);
+    return;
+}
+
+fn writeu64(i: u64) {
+    printf("%lu", i);
+    return;
+}
+
+fn writeu64ln(i: u64) {
+    printf("%lu\n", i);
+    return;
+}
+
+fn writeu32(i: u32) {
+    printf("%u", i);
+    return;
+}
+
+fn writeu32ln(i: u32) {
+    printf("%u\n", i);
+    return;
+}
+
+fn writeu16(i: u16) {
+    printf("%hu", i);
+    return;
+}
+
+fn writeu16ln(i: u16) {
+    printf("%hu\n", i);
+    return;
+}
+
+fn writeu8(i: u8) {
+    printf("%hhu", i);
+    return;
+}
+
+fn writeu8ln(i: u8) {
+    printf("%hhu\n", i);
+    return;
+}
+
+fn writebool(b: bool) {
+    if(b) {
+        printf("true");
+    } else {
+        printf("false");
+    };
+    return;
+}
+
+fn writeboolln(b: bool) {
+    if(b) {
+        printf("true\n");
+    } else {
+        printf("false\n");
+    };
+    return;
+}
