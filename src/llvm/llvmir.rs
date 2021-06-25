@@ -128,8 +128,10 @@ impl<'ctx> IrGen<'ctx> {
 
         self.add_mod_items(m);
 
-        let main_path = Self::find_distinct_user_main(m, user_main)?;
-        self.configure_user_main(&main_path);
+        match Self::find_distinct_user_main(m, user_main)? {
+            Some(main_path) => self.configure_user_main(&main_path),
+            None => (),
+        }
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
@@ -141,17 +143,18 @@ impl<'ctx> IrGen<'ctx> {
     fn find_distinct_user_main(
         m: &'ctx ast::Module<SemanticAnnotations>,
         user_main: &str,
-    ) -> Result<Path> {
+    ) -> Result<Option<Path>> {
         let mut matches = vec![];
         let base_path = Path::new();
         let main_path = Self::find_user_main(m, user_main, base_path, &mut matches);
         if matches.len() == 1 {
-            Ok(matches[0].clone())
+            Ok(Some(matches[0].clone()))
         } else if matches.len() == 0 {
-            Err(format!(
+            Ok(None)
+            /*Err(format!(
                 "Could not find the user defined {} function in any source file.",
                 user_main,
-            ))
+            ))*/
         } else {
             Err(format!(
                 "Found multiple {} functions in the project",
