@@ -1018,9 +1018,12 @@ impl<'a> TypeResolver<'a> {
                 mismatches.push((idx, user_ty, expected));
             }
         }
-        if has_varargs && mismatches.len() == 0 && given.len() >= expected_types.len() {
+
+        if !has_varargs && mismatches.len() == 0 && given.len() == expected_types.len() {
             Ok(())
-        } else if mismatches.len() > 0 || given.len() != expected_types.len() {
+        } else if has_varargs && mismatches.len() == 0 && given.len() >= expected_types.len() {
+            Ok(())
+        } else {
             let errors: Vec<String> = mismatches
                 .iter()
                 .map(|(idx, got, expected)| {
@@ -1032,8 +1035,6 @@ impl<'a> TypeResolver<'a> {
                 routine_path,
                 errors.join(", ")
             ))
-        } else {
-            Ok(())
         }
     }
 
