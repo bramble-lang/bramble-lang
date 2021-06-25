@@ -147,5 +147,9 @@ Plan 1
         - Allow aliasing of extern (does LLVM support this?)
     STEPS:
         1. First, update to compile libraries (no main function) to obj files and keep the current manual addition of extern functions.
+            - DONE
         2. Figure out how to deal with variadic printf or come up with an alternative for printing integers
             - https://doc.rust-lang.org/reference/items/external-blocks.html#variadic-functions
+            - DONE
+        3. Add a manifest design, which reads the functions in a library from a manifest file.
+        4. Update the compiler to output a manifest for projects which do not have a main function (projects which are not executable).  Or include an option to output the manifest after compiling a project.
