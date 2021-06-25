@@ -17,11 +17,12 @@ run() {
         built=1
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         echo "Compiling"
+        cargo run -- --llvm -p machos --input "../braid/std" -o ./target/std.obj
         cargo run -- --llvm -p machos "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
         nasm -g -f macho64 ../braid/macho64/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-        gcc -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+        gcc -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
         built=1
     else
         echo "Unknown OS: ${OSTYPE}"

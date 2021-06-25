@@ -76,7 +76,7 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, "test", &imported);
+    let mut llvm = llvm::IrGen::new(&context, project_name, &imported);
     match llvm.ingest(&semantic_ast, USER_MAIN_FN) {
         Ok(()) => (),
         Err(msg) => {

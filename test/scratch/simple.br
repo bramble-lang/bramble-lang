@@ -3,6 +3,6 @@ extern fn printf(fmt: string, ...);
 
 fn my_main() -> i64 {
     let mut x: i64 := 0;
-    printf("hello %s\n", "Erich");
+    project::std::io::write("hello\n");
     return 0;
 }

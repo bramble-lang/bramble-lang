@@ -1,6 +1,6 @@
 extern fn printf(fmt: string, ...);
 
-fn writeln(s: string) {
+fn write(s: string) {
     printf(s);
     return;
 }
@@ -12,5 +12,15 @@ fn writei64(i: i64) {
 
 fn writei64ln(i: i64) {
     printf("%ld\n", i);
+    return;
+}
+
+fn writei32(i: i32) {
+    printf("%d", i);
+    return;
+}
+
+fn writei32ln(i: i32) {
+    printf("%d\n", i);
     return;
 }
