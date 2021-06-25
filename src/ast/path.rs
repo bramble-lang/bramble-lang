@@ -1,7 +1,8 @@
 use braid_lang::result::Result;
 
-const CANONICAL_ROOT: &str = "project";
-const ROOT_SUGAR: &str = "root";
+pub const CANONICAL_ROOT: &str = "project";
+pub const ROOT_SUGAR: &str = "root";
+pub const SELF: &str = "self";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path {
@@ -185,53 +186,53 @@ mod test_path {
 
     #[test]
     fn test_canonical_to_canonical() {
-        let path: Path = vec!["root", "first"].into();
-        let current = vec!["project", "current"].into();
+        let path: Path = vec![ROOT_SUGAR, "first"].into();
+        let current = vec![CANONICAL_ROOT, "current"].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec!["project", "current", "first"].into();
+        let expected = vec![CANONICAL_ROOT, "current", "first"].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_relative_to_canonical() {
         let path: Path = vec!["relative"].into();
-        let current = vec!["project", "current"].into();
+        let current = vec![CANONICAL_ROOT, "current"].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec!["project", "current", "relative"].into();
+        let expected = vec![CANONICAL_ROOT, "current", "relative"].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_self_to_canonical() {
         let path: Path = vec!["self", "relative"].into();
-        let current = vec!["project", "current"].into();
+        let current = vec![CANONICAL_ROOT, "current"].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec!["project", "current", "relative"].into();
+        let expected = vec![CANONICAL_ROOT, "current", "relative"].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_relative_with_super_to_canonical() {
         let path: Path = vec!["super", "relative"].into();
-        let current = vec!["project", "test", "current"].into();
+        let current = vec![CANONICAL_ROOT, "test", "current"].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec!["project", "test", "relative"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "relative"].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_relative_with_post_super_to_canonical() {
         let path: Path = vec!["relative", "super"].into();
-        let current = vec!["project", "current"].into();
+        let current = vec![CANONICAL_ROOT, "current"].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec!["project", "current"].into();
+        let expected = vec![CANONICAL_ROOT, "current"].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_too_many_supers() {
         let path: Path = vec!["super", "super", "relative"].into();
-        let current = vec!["project", "current"].into();
+        let current = vec![CANONICAL_ROOT, "current"].into();
         let canonized_path = path.to_canonical(&current);
         let expected = "Use of super in path exceeded the depth of the current path".into();
         assert_eq!(canonized_path, Err(expected));
@@ -240,9 +241,9 @@ mod test_path {
     #[test]
     fn test_relative_with_scattered_super_to_canonical() {
         let path: Path = vec!["super", "relative", "super"].into();
-        let current = vec!["project", "test", "current"].into();
+        let current = vec![CANONICAL_ROOT, "test", "current"].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec!["project", "test"].into();
+        let expected = vec![CANONICAL_ROOT, "test"].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 

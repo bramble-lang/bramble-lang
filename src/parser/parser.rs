@@ -471,7 +471,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
 
     // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
     if stream.next_if(&Lex::PathSeparator).is_some() {
-        path.push("root".into());
+        path.push(ROOT_SUGAR.into());
     }
 
     match stream.next_if_id() {
@@ -751,7 +751,7 @@ pub mod tests {
     fn parse_path() {
         for (text, expected) in vec![
             ("thing", Ok(vec!["thing"])),
-            ("::thing", Ok(vec!["root", "thing"])),
+            ("::thing", Ok(vec![ROOT_SUGAR, "thing"])),
             ("thing::first", Ok(vec!["thing", "first"])),
             ("thing::first::second", Ok(vec!["thing", "first", "second"])),
             (
@@ -965,9 +965,9 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
 
-        if let Some(m) = parse("root", &tokens).unwrap() {
+        if let Some(m) = parse("test", &tokens).unwrap() {
             assert_eq!(*m.annotation(), 1);
-            assert_eq!(m.get_name(), "root");
+            assert_eq!(m.get_name(), "test");
 
             assert_eq!(m.get_modules().len(), 1);
             assert_eq!(m.get_functions().len(), 0);
@@ -1240,7 +1240,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        if let Some(m) = parse("root", &tokens).unwrap() {
+        if let Some(m) = parse("test_mod", &tokens).unwrap() {
             assert_eq!(*m.annotation(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
@@ -1587,7 +1587,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let module = parse("root", &tokens).unwrap();
+            let module = parse("test_mod", &tokens).unwrap();
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {

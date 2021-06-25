@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Module, Node, Path, Type};
+use crate::ast::{Module, Node, Path, Type, CANONICAL_ROOT};
 use braid_lang::result::Result;
 
 use super::{
@@ -301,7 +301,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
     pub fn to_path(&self) -> Option<Path> {
-        let mut steps: Vec<String> = vec!["project".into()];
+        let mut steps: Vec<String> = vec![CANONICAL_ROOT.into()];
 
         for node in self.stack.iter() {
             match node.scope_type() {
@@ -341,7 +341,7 @@ mod tests {
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
-        assert_eq!(path, vec!["project", "test"].into());
+        assert_eq!(path, vec![CANONICAL_ROOT, "test"].into());
         assert!(path.is_canonical());
     }
 
@@ -354,7 +354,7 @@ mod tests {
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("test");
         stack.enter_scope(&sym);
-        let sym = SymbolTable::new_module("root");
+        let sym = SymbolTable::new_module("inner");
         stack.enter_scope(&sym);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
@@ -371,12 +371,12 @@ mod tests {
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("test");
         stack.enter_scope(&sym);
-        let sym = SymbolTable::new_module("root");
+        let sym = SymbolTable::new_module("inner");
         stack.enter_scope(&sym);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
-        let expected = vec!["project", "test", "root"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "inner"].into();
         assert_eq!(path, expected);
         assert!(path.is_canonical());
     }
@@ -390,12 +390,12 @@ mod tests {
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("test");
         stack.enter_scope(&sym);
-        let sym = SymbolTable::new_module("root");
+        let sym = SymbolTable::new_module("test_mod");
         stack.enter_scope(&sym);
         let current = SymbolTable::new_module("inner");
         stack.enter_scope(&current);
         let path = stack.to_path().unwrap();
-        let expected = vec!["project", "test", "root", "inner"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "test_mod", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -408,14 +408,14 @@ mod tests {
         let mut stack = SymbolTableScopeStack::new(&m);
         let sym = SymbolTable::new_module("test");
         stack.enter_scope(&sym);
-        let module = SymbolTable::new_module("root");
+        let module = SymbolTable::new_module("inner");
         stack.enter_scope(&module);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let local2 = SymbolTable::new();
         stack.enter_scope(&local2);
         let path = stack.to_path().unwrap();
-        let expected = vec!["project", "test", "root"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -442,7 +442,7 @@ mod tests {
         stack.enter_scope(&local2);
 
         let path = stack.to_path().unwrap();
-        let expected = vec!["project", "test", "first", "second"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "first", "second"].into();
         assert_eq!(path, expected);
     }
 
@@ -518,7 +518,7 @@ mod tests {
         // across 1 boundary
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec!["project", "test", "first", "x"].into());
+        assert_eq!(p, vec![CANONICAL_ROOT, "test", "first", "x"].into());
 
         // across 2 boundaries
         // Module 2
@@ -527,6 +527,9 @@ mod tests {
 
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec!["project", "test", "first", "second", "x"].into());
+        assert_eq!(
+            p,
+            vec![CANONICAL_ROOT, "test", "first", "second", "x"].into()
+        );
     }
 }

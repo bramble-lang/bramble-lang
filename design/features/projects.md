@@ -127,3 +127,5 @@ Plan 1
 3. I want to remove support for `::item` paths right now, because they are hardcoded to just put "root" at the head of the path. I'd like to get how to map "root" to the canon path figured out first?  (or maybe in to_canon I can change root to the canon path).
 4. Change the references from "root::std::io" to "project::std::io".  Here, then in the From fucntions, if the first element is project, I should mark the path as canonical
 5. Need to come up with rules for my_main and how it can be defined.  Can it be in any module, etc?
+6. Update the CLI to allow me to specify a project to compile into a binary and a set of import projects to load as libraries (e.g. `--input <src path> --import <path> <path> <path>`).  The `input` source is the one that will determine the name of the output binary.
+7. Pull string literals out into constants.
