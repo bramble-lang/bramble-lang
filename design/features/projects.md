@@ -131,3 +131,4 @@ Plan 1
 6. Update the CLI to allow me to specify a project to compile into a binary and a set of import projects to load as libraries (e.g. `--input <src path> --import <path> <path> <path>`).  The `input` source is the one that will determine the name of the output binary.
 7. Pull string literals out into constants.
     - DONE
+8. Name the output binary (and project module) after the src directory or the name of the source file.

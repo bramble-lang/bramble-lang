@@ -1,1 +1,1 @@
-Error: Semantic: L2: $test::type_mismatch::MyStruct.z expects bool but got i64
+Error: Semantic: L2: $type_mismatch::type_mismatch::MyStruct.z expects bool but got i64

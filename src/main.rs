@@ -31,6 +31,7 @@ fn main() {
         .value_of("input")
         .expect("Expected an input source file to compile");
     let src_path = Path::new(input);
+    let project_name = get_project_name(&src_path).unwrap();
     let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
 
     let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
@@ -43,7 +44,7 @@ fn main() {
     };
 
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
-    let root = match parse_project("test", token_sets, trace_parser) {
+    let root = match parse_project(project_name, token_sets, trace_parser) {
         Ok(root) => root,
         Err(errs) => {
             print_errs(&errs);
@@ -89,4 +90,19 @@ fn main() {
     }
 
     llvm.emit_object_code(Path::new(output_target)).unwrap();
+}
+
+/// Given the path to a source, return the name that should be used
+/// for the project.
+/// If the path is a file, then return the file name (without extension)
+/// If the path is a directory, then return the name of the directory
+fn get_project_name(src: &Path) -> Result<&str, String> {
+    if src.is_file() || src.is_dir() {
+        src.file_stem()
+            .map(|name| name.to_str())
+            .flatten()
+            .ok_or("Could not extract name from given path".into())
+    } else {
+        Err("Given path is neither a directory or a file".into())
+    }
 }
