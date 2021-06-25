@@ -92,7 +92,7 @@ impl Path {
             Ok(self.clone())
         } else {
             let mut uses_root = false;
-            let path = if self.path[0] == "self" {
+            let path = if self.path[0] == SELF {
                 &self.path[1..]
             } else if self.path[0] == ROOT_SUGAR {
                 uses_root = true;
@@ -204,7 +204,7 @@ mod test_path {
 
     #[test]
     fn test_self_to_canonical() {
-        let path: Path = vec!["self", "relative"].into();
+        let path: Path = vec![SELF, "relative"].into();
         let current = vec![CANONICAL_ROOT, "current"].into();
         let canonized_path = path.to_canonical(&current);
         let expected = vec![CANONICAL_ROOT, "current", "relative"].into();

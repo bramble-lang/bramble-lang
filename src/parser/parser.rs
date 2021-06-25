@@ -1219,7 +1219,7 @@ pub mod tests {
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(name, vec!["self", "test"].into());
+            assert_eq!(name, vec![SELF, "test"].into());
             assert_eq!(
                 params,
                 vec![
