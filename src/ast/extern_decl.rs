@@ -6,11 +6,14 @@ use super::{
     ty::Type,
 };
 
+pub type HasVarArgs = bool;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Extern<M> {
     pub annotations: M,
     pub name: String,
     pub params: Vec<Parameter<M>>,
+    pub has_varargs: HasVarArgs,
     pub ty: Type,
 }
 
@@ -51,11 +54,18 @@ impl<M> std::fmt::Display for Extern<M> {
 }
 
 impl<M> Extern<M> {
-    pub fn new(name: &str, annotations: M, params: Vec<Parameter<M>>, ty: Type) -> Extern<M> {
+    pub fn new(
+        name: &str,
+        annotations: M,
+        params: Vec<Parameter<M>>,
+        has_varargs: bool,
+        ty: Type,
+    ) -> Extern<M> {
         Extern {
             annotations,
             name: name.into(),
             params,
+            has_varargs,
             ty,
         }
     }

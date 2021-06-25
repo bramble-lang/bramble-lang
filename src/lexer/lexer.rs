@@ -395,6 +395,7 @@ impl Lexer {
         let line = self.line;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
+            ("...", VarArgs),
             ("->", LArrow),
             ("&&", BAnd),
             ("||", BOr),
@@ -663,6 +664,7 @@ mod tests {
     #[test]
     fn test_operator() {
         for (text, expected_token) in [
+            ("...", Token::new(1, VarArgs)),
             ("*", Token::new(1, Mul)),
             ("/", Token::new(1, Div)),
             ("+", Token::new(1, Add)),

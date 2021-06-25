@@ -1,0 +1,12 @@
+extern fn printf(s: string, ...);
+
+fn my_main() -> i64 {
+    let name: string := "Alice";
+    let age: i64 := 43;
+    let id: u8 := 5u8;
+
+    printf("Start Test\n");
+	printf("Hello, %s\n", name);
+    printf("ID: %hhd\nAge: %d\n", id, age);
+    return 0;
+}

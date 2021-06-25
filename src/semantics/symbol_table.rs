@@ -118,7 +118,11 @@ impl SymbolTable {
             name, params, ty, ..
         } = ex;
 
-        let def = Type::FunctionDef(Self::get_types_for_params(params), Box::new(ty.clone()));
+        let def = Type::ExternDecl(
+            Self::get_types_for_params(params),
+            ex.has_varargs,
+            Box::new(ty.clone()),
+        );
 
         sym.sym.add(name, def, false, true)
     }

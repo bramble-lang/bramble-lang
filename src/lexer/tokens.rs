@@ -42,6 +42,7 @@ pub enum Lex {
     Bool(bool),
     Identifier(String),
     StringLiteral(String),
+    VarArgs,
     Mul,
     Div,
     Add,
@@ -109,6 +110,7 @@ impl std::fmt::Display for Lex {
             Bool(b) => f.write_str(&format!("literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
+            VarArgs => f.write_str("..."),
             Ls => f.write_str("<"),
             LsEq => f.write_str("<="),
             Gr => f.write_str(">"),
@@ -222,7 +224,8 @@ impl Token {
                 Lex::Primitive(_) => true,
                 _ => false,
             },
-            Lex::Mul
+            Lex::VarArgs
+            | Lex::Mul
             | Lex::Div
             | Lex::Add
             | Lex::Minus
