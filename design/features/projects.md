@@ -145,3 +145,7 @@ Plan 1
         - How does Rust extern variadic functions?
         - Allow local definition of extern, then each function has its own
         - Allow aliasing of extern (does LLVM support this?)
+    STEPS:
+        1. First, update to compile libraries (no main function) to obj files and keep the current manual addition of extern functions.
+        2. Figure out how to deal with variadic printf or come up with an alternative for printing integers
+            - https://doc.rust-lang.org/reference/items/external-blocks.html#variadic-functions

@@ -1,8 +1,10 @@
-extern fn puts(s: string);
+extern fn puts(s: [u8; 7]);
 extern fn printf(fmt: string, i: i64);
 
 fn my_main() -> i64 {
     let mut x: i64 := 0;
-    printf("Hello, %ld\n", 5i32);
+    let s: [u8; 7] := [72u8, 101u8, 108u8, 108u8, 111u8, 10u8, 0u8];
+    printf("Hello, %ld\n", 5);
+    puts(s);
     return 0;
 }
