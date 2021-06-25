@@ -1,10 +1,10 @@
 fn my_main() -> i64 {
     let z: MyStruct2 := test2();
-    root::std::io::writei64ln(z.a);
-    root::std::io::writei64ln(z.ms.x);
-    root::std::io::writei64ln(z.ms.y);
-    root::std::io::writei64ln(z.ms.z);
-    root::std::io::writei64ln(z.b);
+    project::std::io::writei64ln(z.a);
+    project::std::io::writei64ln(z.ms.x);
+    project::std::io::writei64ln(z.ms.y);
+    project::std::io::writei64ln(z.ms.z);
+    project::std::io::writei64ln(z.b);
 
     return 0;
 }

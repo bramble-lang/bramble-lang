@@ -1,7 +1,7 @@
 fn my_main() -> i64 {
     let s: string := "hello\n";
-    root::std::io::writei64ln(5);
-    root::std::io::writei64(10);
+    project::std::io::writei64ln(5);
+    project::std::io::writei64(10);
 
     return 0;
 }

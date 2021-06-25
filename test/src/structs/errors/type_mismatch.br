@@ -4,9 +4,9 @@ fn my_main() -> i64 {
         y: 1, 
         z: 10,
     };
-    root::std::io::writei64ln(t.x);
-    root::std::io::writei64ln(t.y);
-    root::std::io::writeboolln(t.z);
+    project::std::io::writei64ln(t.x);
+    project::std::io::writei64ln(t.y);
+    project::std::io::writeboolln(t.z);
     
     return 0;
 }

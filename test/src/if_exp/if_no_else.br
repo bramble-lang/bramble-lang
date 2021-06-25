@@ -16,7 +16,7 @@ fn my_main() -> i64 {
 
 fn test(a: i64) {
     if (a < 10) {
-        root::std::io::writei64ln(a)
+        project::std::io::writei64ln(a)
     };
 
     return;

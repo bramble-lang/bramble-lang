@@ -3,12 +3,12 @@ fn my_main() -> i64 {
     while (x <= 5) {
         let mut y: i64 := 0;
         while (y <= 2) {
-            root::std::io::write("y: ");
-            root::std::io::writei64ln(y);
+            project::std::io::write("y: ");
+            project::std::io::writei64ln(y);
             mut y := y + 1;
         };
-        root::std::io::write("x: ");
-        root::std::io::writei64ln(x);
+        project::std::io::write("x: ");
+        project::std::io::writei64ln(x);
         mut x := x + 1;
     };
     return 0;

@@ -1,7 +1,7 @@
 
 fn my_main() -> i64 {
     let y:i64 := test(10, MyStruct{x: 1111, y: 2222, z: 3333});
-    root::std::io::writei64ln(y);
+    project::std::io::writei64ln(y);
     
     return 0;
 }
@@ -13,10 +13,10 @@ struct MyStruct {
 }
 
 fn test(x: i64, t: MyStruct) -> i64 {
-    root::std::io::writei64ln(x);
-    root::std::io::writei64ln(t.x);
-    root::std::io::writei64ln(t.y);
-    root::std::io::writei64ln(t.z);
+    project::std::io::writei64ln(x);
+    project::std::io::writei64ln(t.x);
+    project::std::io::writei64ln(t.y);
+    project::std::io::writei64ln(t.z);
 
     return x * (t.x + t.y + t.z);
 }

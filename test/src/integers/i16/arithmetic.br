@@ -3,53 +3,53 @@ fn my_main() -> i64 {
     let y:i16 := test();
     let z:i16 := test2(y);
     
-    root::std::io::writei16ln(x); // 5
-    root::std::io::writei16ln(y); // 5
-    root::std::io::writei16ln(z); // -5
+    project::std::io::writei16ln(x); // 5
+    project::std::io::writei16ln(y); // 5
+    project::std::io::writei16ln(z); // -5
 
     let w: i16 := x + y;
-    root::std::io::writei16ln(w); // 10
+    project::std::io::writei16ln(w); // 10
 
     let a: i16 := w + z;
-    root::std::io::writei16ln(a); // 5
+    project::std::io::writei16ln(a); // 5
 
     let b: i16 := w * z;
-    root::std::io::writei16ln(b); // -50
+    project::std::io::writei16ln(b); // -50
 
     let c: i16 := -(z * (2i16 * y));
-    root::std::io::writei16ln(c); // 50
+    project::std::io::writei16ln(c); // 50
 
     let d: i16 := -(y * (12i16 + y));
-    root::std::io::writei16ln(d); // -85
+    project::std::io::writei16ln(d); // -85
 
     let e: i16 := -(z * (12i16 - (20i16 / x)));
-    root::std::io::writei16ln(e); // 40
+    project::std::io::writei16ln(e); // 40
 
     let f: i16 := x/w;
-    root::std::io::writei16ln(f); // 0
+    project::std::io::writei16ln(f); // 0
 
     let g: i16 := add(x, y);
-    root::std::io::writei16ln(g); // 10
+    project::std::io::writei16ln(g); // 10
 
     let h: i16 := -5000i16;
-    root::std::io::writei16ln(h); // -5000
+    project::std::io::writei16ln(h); // -5000
 
     let h2: i16 := h + -5000i16;
-    root::std::io::writei16ln(h2); // -10000
+    project::std::io::writei16ln(h2); // -10000
 
     // test under flow (< -32,768)
     let i: i16 := h - 27769i16;
-    root::std::io::writei16ln(i); // 32767
+    project::std::io::writei16ln(i); // 32767
 
     // test overflow
     let j: i16 := 10i16;
-    root::std::io::writei16ln(j); // 10
+    project::std::io::writei16ln(j); // 10
     let k: i16 := j + 32758i16;
-    root::std::io::writei16ln(k); // -32768
+    project::std::io::writei16ln(k); // -32768
 
 
     if (5i16 < 10i16) {
-        root::std::io::write("5 is less than 10\n");
+        project::std::io::write("5 is less than 10\n");
     };
     
     return 0;

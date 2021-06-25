@@ -4,13 +4,13 @@ fn my_main() -> i64 {
         let y: i64 := 4;
         x + y
     };
-    root::std::io::writei64ln(x);
+    project::std::io::writei64ln(x);
 
     let b:bool := {
         let b: bool := true;
         b && my_bool()
     };
-    root::std::io::writeboolln(b);
+    project::std::io::writeboolln(b);
     return 0;
 }
 

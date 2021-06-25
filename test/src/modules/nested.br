@@ -1,15 +1,15 @@
 fn my_main() -> i64 {
     let x:i64 := my_mod::inner::add(3, 2);
-    root::std::io::writei64ln(x);
+    project::std::io::writei64ln(x);
 
     let b:bool := ::nested::my_mod::is_3(1);
-    root::std::io::writeboolln(b);
+    project::std::io::writeboolln(b);
 
     let b2:bool := root::nested::my_mod::is_3(3);
-    root::std::io::writeboolln(b2);
+    project::std::io::writeboolln(b2);
     
     let y:i64 := self::my_mod::inner::add(7, 2);
-    root::std::io::writei64ln(y);
+    project::std::io::writei64ln(y);
 
     return 0;
 }

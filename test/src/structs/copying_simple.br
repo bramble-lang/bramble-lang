@@ -5,13 +5,13 @@ fn my_main() -> i64 {
         z: 3,
     };
 
-    root::std::io::writei64ln(ms.x);
-    root::std::io::writei64ln(ms.y);
-    root::std::io::writei64ln(ms.z);
+    project::std::io::writei64ln(ms.x);
+    project::std::io::writei64ln(ms.y);
+    project::std::io::writei64ln(ms.z);
     let ms2: MyStruct := ms;
-    root::std::io::writei64ln(ms2.x);
-    root::std::io::writei64ln(ms2.y);
-    root::std::io::writei64ln(ms2.z);
+    project::std::io::writei64ln(ms2.x);
+    project::std::io::writei64ln(ms2.y);
+    project::std::io::writei64ln(ms2.z);
 
 
     return 0;

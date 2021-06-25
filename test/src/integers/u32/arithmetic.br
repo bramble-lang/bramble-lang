@@ -3,37 +3,37 @@ fn my_main() -> i64 {
     let y:u32 := test();
     let z:u32 := sub(x, y);
     
-    root::std::io::writeu32ln(x); // 5
-    root::std::io::writeu32ln(y); // 5
-    root::std::io::writeu32ln(z); // 0
+    project::std::io::writeu32ln(x); // 5
+    project::std::io::writeu32ln(y); // 5
+    project::std::io::writeu32ln(z); // 0
 
     let w: u32 := x + y;
-    root::std::io::writeu32ln(w); // 10
+    project::std::io::writeu32ln(w); // 10
 
     let a: u32 := w + z;
-    root::std::io::writeu32ln(a); // 10
+    project::std::io::writeu32ln(a); // 10
 
     let b: u32 := w * z;
-    root::std::io::writeu32ln(b); // 0
+    project::std::io::writeu32ln(b); // 0
 
     let f: u32 := x/w;
-    root::std::io::writeu32ln(f); // 0
+    project::std::io::writeu32ln(f); // 0
 
     let g: u32 := add(x, y);
-    root::std::io::writeu32ln(g); // 10
+    project::std::io::writeu32ln(g); // 10
 
     // test under flow (< 0)
     let h: u32 := w - 11u32;
-    root::std::io::writeu32ln(h); // 4294967295
+    project::std::io::writeu32ln(h); // 4294967295
 
     // test overflow
     let i: u32 := w + 4294967286u32;
-    root::std::io::writeu32ln(i); // 0
+    project::std::io::writeu32ln(i); // 0
 
     test_udiv(); // 0
 
     if (5u32 < 10u32) {
-        root::std::io::write("5 is less than 10\n");
+        project::std::io::write("5 is less than 10\n");
     };
     
     return 0;
@@ -55,7 +55,7 @@ fn test_udiv() {
     // Test unsigned division
     let j: u32 := 4294967295u32;
     let k: u32 := 2u32 / j;
-    root::std::io::writeu32ln(k); // 0
+    project::std::io::writeu32ln(k); // 0
 
     return;
 }

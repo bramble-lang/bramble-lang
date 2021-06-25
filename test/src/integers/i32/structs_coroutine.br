@@ -8,11 +8,11 @@ fn my_main() -> i64 {
         b: y,
     };
 
-    root::std::io::writei32ln(b.a);
-    root::std::io::writei32ln(b.b);
+    project::std::io::writei32ln(b.a);
+    project::std::io::writei32ln(b.b);
 
     let z: i32 := b.a;
-    root::std::io::writei32ln(z);
+    project::std::io::writei32ln(z);
 
     let m: Mixed := Mixed {
         a: 5i32,
@@ -22,22 +22,22 @@ fn my_main() -> i64 {
     test(m);
 
     let c: co i32 := init cotest(m);
-    root::std::io::writei32ln(yield c);
-    root::std::io::writei32ln(yield c);
+    project::std::io::writei32ln(yield c);
+    project::std::io::writei32ln(yield c);
 
     return 0;
 }
 
 fn test(m: Mixed) {
-    root::std::io::writei32ln(m.a);
-    root::std::io::writei64ln(m.b);
+    project::std::io::writei32ln(m.a);
+    project::std::io::writei64ln(m.b);
     return;
 }
 
 co cotest(m: Mixed) -> i32 {
-    root::std::io::writei32ln(m.a);
+    project::std::io::writei32ln(m.a);
     yret 41i32;
-    root::std::io::writei64ln(m.b);
+    project::std::io::writei64ln(m.b);
     yret 42i32;
 
     return 5i32;

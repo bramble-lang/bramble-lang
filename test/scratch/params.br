@@ -8,8 +8,8 @@ fn my_main() -> i64 {
 }
 
 fn test(a: i64, b: i64) {
-    root::std::io::writei64ln(a);
-    root::std::io::writei64ln(b);
+    project::std::io::writei64ln(a);
+    project::std::io::writei64ln(b);
 
     return;
 }

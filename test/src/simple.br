@@ -1,9 +1,9 @@
 fn my_main() -> i64 {
     let x:i64 := 5;
-    root::std::io::writei64ln(x);
+    project::std::io::writei64ln(x);
 
     let b:bool := my_bool();
-    root::std::io::writeboolln(b);
+    project::std::io::writeboolln(b);
     return 0;
 }
 

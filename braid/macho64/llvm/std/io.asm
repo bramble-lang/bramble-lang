@@ -33,8 +33,8 @@ section .data
 
 
 section .text
-global _root_std_io_write
-_root_std_io_write:
+global _std_io_write
+_std_io_write:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -56,8 +56,8 @@ _root_std_io_write:
     ret
 
 
-global _root_std_io_readi64
-_root_std_io_readi64:
+global _std_io_readi64
+_std_io_readi64:
     extern _scanf
     push rbp
     mov rbp, rsp
@@ -81,8 +81,8 @@ _root_std_io_readi64:
     ret
 
 
-global _root_std_io_writeu8
-_root_std_io_writeu8:
+global _std_io_writeu8
+_std_io_writeu8:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -104,8 +104,8 @@ _root_std_io_writeu8:
     ret
 
 
-global _root_std_io_writeu8ln
-_root_std_io_writeu8ln:
+global _std_io_writeu8ln
+_std_io_writeu8ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -127,8 +127,8 @@ _root_std_io_writeu8ln:
     ret
 
 
-global _root_std_io_writeu16
-_root_std_io_writeu16:
+global _std_io_writeu16
+_std_io_writeu16:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -150,8 +150,8 @@ _root_std_io_writeu16:
     ret
 
 
-global _root_std_io_writeu16ln
-_root_std_io_writeu16ln:
+global _std_io_writeu16ln
+_std_io_writeu16ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -173,8 +173,8 @@ _root_std_io_writeu16ln:
     ret
 
 
-global _root_std_io_writeu32
-_root_std_io_writeu32:
+global _std_io_writeu32
+_std_io_writeu32:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -196,8 +196,8 @@ _root_std_io_writeu32:
     ret
 
 
-global _root_std_io_writeu32ln
-_root_std_io_writeu32ln:
+global _std_io_writeu32ln
+_std_io_writeu32ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -219,8 +219,8 @@ _root_std_io_writeu32ln:
     ret
 
 
-global _root_std_io_writeu64
-_root_std_io_writeu64:
+global _std_io_writeu64
+_std_io_writeu64:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -242,8 +242,8 @@ _root_std_io_writeu64:
     ret
 
 
-global _root_std_io_writeu64ln
-_root_std_io_writeu64ln:
+global _std_io_writeu64ln
+_std_io_writeu64ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -265,8 +265,8 @@ _root_std_io_writeu64ln:
     ret
 
 
-global _root_std_io_writei64
-_root_std_io_writei64:
+global _std_io_writei64
+_std_io_writei64:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -288,8 +288,8 @@ _root_std_io_writei64:
     ret
 
 
-global _root_std_io_writei64ln
-_root_std_io_writei64ln:
+global _std_io_writei64ln
+_std_io_writei64ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -311,8 +311,8 @@ _root_std_io_writei64ln:
     ret
 
 
-global _root_std_io_writei32
-_root_std_io_writei32:
+global _std_io_writei32
+_std_io_writei32:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -334,8 +334,8 @@ _root_std_io_writei32:
     ret
 
 
-global _root_std_io_writei32ln
-_root_std_io_writei32ln:
+global _std_io_writei32ln
+_std_io_writei32ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -357,8 +357,8 @@ _root_std_io_writei32ln:
     ret
 
 
-global _root_std_io_writei16
-_root_std_io_writei16:
+global _std_io_writei16
+_std_io_writei16:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -380,8 +380,8 @@ _root_std_io_writei16:
     ret
 
 
-global _root_std_io_writei16ln
-_root_std_io_writei16ln:
+global _std_io_writei16ln
+_std_io_writei16ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -403,8 +403,8 @@ _root_std_io_writei16ln:
     ret
 
 
-global _root_std_io_writei8
-_root_std_io_writei8:
+global _std_io_writei8
+_std_io_writei8:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -426,8 +426,8 @@ _root_std_io_writei8:
     ret
 
 
-global _root_std_io_writei8ln
-_root_std_io_writei8ln:
+global _std_io_writei8ln
+_std_io_writei8ln:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -449,8 +449,8 @@ _root_std_io_writei8ln:
     ret
 
 
-global _root_std_io_writebool
-_root_std_io_writebool:
+global _std_io_writebool
+_std_io_writebool:
     extern _printf
     push rbp
     mov rbp, rsp
@@ -478,8 +478,8 @@ _root_std_io_writebool:
     ret
 
 
-global _root_std_io_writeboolln
-_root_std_io_writeboolln:
+global _std_io_writeboolln
+_std_io_writeboolln:
     extern _printf
     push rbp
     mov rbp, rsp

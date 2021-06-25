@@ -1,12 +1,12 @@
 fn my_main() -> i64 {
     let x:i64 := my_mod::add(3, 2);
-    root::std::io::writei64ln(x);
+    project::std::io::writei64ln(x);
     
     let y:i64 := my_mod::sub(3, 2);
-    root::std::io::writei64ln(y);
+    project::std::io::writei64ln(y);
 
     let b:bool := my_mod::my_bool();
-    root::std::io::writeboolln(b);
+    project::std::io::writeboolln(b);
 
     return 0;
 }

@@ -5,10 +5,10 @@ fn my_main() -> i64 {
 }
 
 fn test(a: [i64; 5]) {
-    root::std::io::writei64ln(a[0]);
-    root::std::io::writei64ln(a[1]);
-    root::std::io::writei64ln(a[2]);
-    root::std::io::writei64ln(a[3]);
-    root::std::io::writei64ln(a[4]);
+    project::std::io::writei64ln(a[0]);
+    project::std::io::writei64ln(a[1]);
+    project::std::io::writei64ln(a[2]);
+    project::std::io::writei64ln(a[3]);
+    project::std::io::writei64ln(a[4]);
     return;
 }

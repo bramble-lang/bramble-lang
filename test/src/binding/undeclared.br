@@ -1,4 +1,4 @@
 fn my_main() -> i64 {
-    root::std::io::writei64ln(x);
+    project::std::io::writei64ln(x);
     return 0;
 }

@@ -3,37 +3,37 @@ fn my_main() -> i64 {
     let y:u64 := test();
     let z:u64 := sub(x, y);
     
-    root::std::io::writeu64ln(x); // 5
-    root::std::io::writeu64ln(y); // 5
-    root::std::io::writeu64ln(z); // 0
+    project::std::io::writeu64ln(x); // 5
+    project::std::io::writeu64ln(y); // 5
+    project::std::io::writeu64ln(z); // 0
 
     let w: u64 := x + y;
-    root::std::io::writeu64ln(w); // 10
+    project::std::io::writeu64ln(w); // 10
 
     let a: u64 := w + z;
-    root::std::io::writeu64ln(a); // 10
+    project::std::io::writeu64ln(a); // 10
 
     let b: u64 := w * z;
-    root::std::io::writeu64ln(b); // 0
+    project::std::io::writeu64ln(b); // 0
 
     let f: u64 := x/w;
-    root::std::io::writeu64ln(f); // 0
+    project::std::io::writeu64ln(f); // 0
 
     let g: u64 := add(x, y);
-    root::std::io::writeu64ln(g); // 10
+    project::std::io::writeu64ln(g); // 10
 
     // test under flow (< 0)
     let h: u64 := w - 11u64;
-    root::std::io::writeu64ln(h); // 18446744073709551615
+    project::std::io::writeu64ln(h); // 18446744073709551615
 
     // test overflow
     let i: u64 := w + 18446744073709551606u64;
-    root::std::io::writeu64ln(i); // 0
+    project::std::io::writeu64ln(i); // 0
 
     test_udiv();
 
     if (5u64 < 10u64) {
-        root::std::io::write("5 is less than 10\n");
+        project::std::io::write("5 is less than 10\n");
     };
     
     return 0;
@@ -55,7 +55,7 @@ fn test_udiv() {
     // Test unsigned division
     let j: u64 := 18446744073709551615u64;
     let k: u64 := 2u64 / j;
-    root::std::io::writeu64ln(k); // 0
+    project::std::io::writeu64ln(k); // 0
 
     return;
 }

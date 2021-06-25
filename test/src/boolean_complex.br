@@ -5,11 +5,11 @@ fn my_main() -> i64 {
     let d:bool := 2 < 3 || 3 < 2 && 2 > 4 && 2 <= 1;
     let e: bool := 2 > 3 || 2 != 2;
     let f:bool := a && b && c && d || e;
-    root::std::io::writeboolln(a);
-    root::std::io::writeboolln(b);
-    root::std::io::writeboolln(c);
-    root::std::io::writeboolln(d);
-    root::std::io::writeboolln(e);
-    root::std::io::writeboolln(f);
+    project::std::io::writeboolln(a);
+    project::std::io::writeboolln(b);
+    project::std::io::writeboolln(c);
+    project::std::io::writeboolln(d);
+    project::std::io::writeboolln(e);
+    project::std::io::writeboolln(f);
     return 0;
 }

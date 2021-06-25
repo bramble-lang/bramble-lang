@@ -5,11 +5,11 @@ fn my_main() -> i64 {
     let z2:u64 := test2(9223372036854775807u64);
     let z3:u64 := test2(18446744073709551615u64);
 
-    root::std::io::writeu64ln(x);
-    root::std::io::writeu64ln(y);
-    root::std::io::writeu64ln(z);
-    root::std::io::writeu64ln(z2);
-    root::std::io::writeu64ln(z3);
+    project::std::io::writeu64ln(x);
+    project::std::io::writeu64ln(y);
+    project::std::io::writeu64ln(z);
+    project::std::io::writeu64ln(z2);
+    project::std::io::writeu64ln(z3);
     
     return 0;
 }

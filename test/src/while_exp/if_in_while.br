@@ -2,7 +2,7 @@ fn my_main() -> i64 {
     let mut x: i64 := 0;
     while (x <= 5) {
         if ((x > 1) && (x < 4)) {
-            root::std::io::writei64ln(x);
+            project::std::io::writei64ln(x);
         };
         mut x := x + 1;
     };

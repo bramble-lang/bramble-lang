@@ -3,50 +3,50 @@ fn my_main() -> i64 {
     let y:i8 := test();
     let z:i8 := test2(y);
     
-    root::std::io::writei8ln(x); // 5
-    root::std::io::writei8ln(y); // 5
-    root::std::io::writei8ln(z); // -5
+    project::std::io::writei8ln(x); // 5
+    project::std::io::writei8ln(y); // 5
+    project::std::io::writei8ln(z); // -5
 
     let w: i8 := x + y;
-    root::std::io::writei8ln(w); // 10
+    project::std::io::writei8ln(w); // 10
 
     let a: i8 := w + z;
-    root::std::io::writei8ln(a); // 5
+    project::std::io::writei8ln(a); // 5
 
     let b: i8 := w * z;
-    root::std::io::writei8ln(b); // -50
+    project::std::io::writei8ln(b); // -50
 
     let c: i8 := -(z * (2i8 * y));
-    root::std::io::writei8ln(c); // 50
+    project::std::io::writei8ln(c); // 50
 
     let d: i8 := -(y * (12i8 + y));
-    root::std::io::writei8ln(d); // -85
+    project::std::io::writei8ln(d); // -85
 
     let e: i8 := -(z * (12i8 - (20i8 / x)));
-    root::std::io::writei8ln(e); // 40
+    project::std::io::writei8ln(e); // 40
 
     let f: i8 := x/w;
-    root::std::io::writei8ln(f); // 0
+    project::std::io::writei8ln(f); // 0
 
     let g: i8 := add(x, y);
-    root::std::io::writei8ln(g); // 10
+    project::std::io::writei8ln(g); // 10
 
     let h: i8 := -5i8;
-    root::std::io::writei8ln(h); // -5
+    project::std::io::writei8ln(h); // -5
 
     // test under flow
     let i: i8 := h - 124i8;
-    root::std::io::writei8ln(i); // 127
+    project::std::io::writei8ln(i); // 127
 
     // test overflow
     let j: i8 := 10i8;
-    root::std::io::writei8ln(j); // 5
+    project::std::io::writei8ln(j); // 5
     let k: i8 := j + 118i8;
-    root::std::io::writei8ln(k); // -128
+    project::std::io::writei8ln(k); // -128
 
 
     if (5i8 < 10i8) {
-        root::std::io::write("5 is less than 10\n");
+        project::std::io::write("5 is less than 10\n");
     };
     
     return 0;

@@ -6,12 +6,12 @@ fn my_main() -> i64 {
         b: 456,
     };
 
-    root::std::io::writei64ln(t.a);
-    root::std::io::writei64ln(t.ms1.x);
-    root::std::io::writei64ln(t.ms1.y);
-    root::std::io::writei64ln(t.ms2.x);
-    root::std::io::writei64ln(t.ms2.y);
-    root::std::io::writei64ln(t.b);
+    project::std::io::writei64ln(t.a);
+    project::std::io::writei64ln(t.ms1.x);
+    project::std::io::writei64ln(t.ms1.y);
+    project::std::io::writei64ln(t.ms2.x);
+    project::std::io::writei64ln(t.ms2.y);
+    project::std::io::writei64ln(t.b);
 
     return 0;
 }

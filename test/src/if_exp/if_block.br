@@ -1,18 +1,18 @@
 fn my_main() -> i64 {
     let x:i64 := test(2);
     let y:i64 := test(11);
-    root::std::io::writei64ln(x);
-    root::std::io::writei64ln(y);
+    project::std::io::writei64ln(x);
+    project::std::io::writei64ln(y);
     return 0;
 }
 
 fn test(a: i64) -> i64 {
     let x:i64 := if (a < 10) {
-        root::std::io::writei64ln(0);
+        project::std::io::writei64ln(0);
         let i:i64 := a * 2;
         i
     } else {
-        root::std::io::writei64ln(1);
+        project::std::io::writei64ln(1);
         let j:i64 := a * 2;
         j + a
     };

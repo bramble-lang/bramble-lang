@@ -1,8 +1,8 @@
 fn my_main() -> i64 {
     let c: co i64 := init my_mod::count(3);
-    root::std::io::writei64ln((yield c));
-    root::std::io::writei64ln((yield c));
-    root::std::io::writei64ln((yield c));
+    project::std::io::writei64ln((yield c));
+    project::std::io::writei64ln((yield c));
+    project::std::io::writei64ln((yield c));
 
     return 0;
 }
