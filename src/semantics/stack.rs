@@ -173,7 +173,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     ///
     /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
-        println!("{} - {}", stdext::function_name!(), path);
+        //println!("{} - {}", stdext::function_name!(), path);
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
 
@@ -212,7 +212,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 
     fn get_item(&self, canon_path: &Path) -> Option<&Symbol> {
-        println!("get_item: {}", canon_path);
+        //println!("get_item: {}", canon_path);
         // If the path contains more than just the item's name then
         // traverse the parent path to find the specified item
         let item = canon_path
