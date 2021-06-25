@@ -118,6 +118,7 @@ impl<'a> SymbolTableScopeStack<'a> {
         match symbol.ty {
             Type::FunctionDef(..)
             | Type::CoroutineDef(..)
+            | Type::ExternDecl(..)
             | Type::StructDef { .. }
             | Type::Unknown => return Err(format!("{} is not a variable", id)),
             Type::Custom(..)

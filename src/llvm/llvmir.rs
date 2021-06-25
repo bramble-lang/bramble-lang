@@ -268,7 +268,7 @@ impl<'ctx> IrGen<'ctx> {
         self.add_fn_decl(
             &ex.annotation().get_canonical_path().to_label(),
             &params,
-            ex.variadic,
+            ex.has_varargs,
             ex.get_return_type(),
         );
     }
@@ -996,6 +996,7 @@ impl ast::Type {
             | ast::Type::FunctionDef(_, _)
             | ast::Type::CoroutineDef(_, _)
             | ast::Type::Coroutine(_)
+            | ast::Type::ExternDecl(..)
             | ast::Type::Unknown => panic!("Can't convert type to LLVM: {}", self),
         }
     }

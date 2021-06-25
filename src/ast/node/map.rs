@@ -109,7 +109,7 @@ where
     fn for_extern(&mut self, ex: &Extern<A>) -> Extern<B> {
         let b = self.transform(ex);
         let params = self.for_parameters(&ex.params);
-        Extern::new(ex.get_name(), b, params, ex.ty.clone())
+        Extern::new(ex.get_name(), b, params, ex.has_varargs, ex.ty.clone())
     }
 
     fn for_structdef(&mut self, sd: &StructDef<A>) -> StructDef<B> {

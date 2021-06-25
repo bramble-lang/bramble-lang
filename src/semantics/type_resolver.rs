@@ -257,6 +257,7 @@ impl<'a> TypeResolver<'a> {
             ex.get_name().clone(),
             meta.clone(),
             canonical_params,
+            ex.has_varargs,
             meta.ty.clone(),
         ))
     }
@@ -2848,6 +2849,15 @@ mod tests {
                 extern fn number() -> i32;
                 fn main() -> i32 {
                     return number();
+                }
+                ",
+                Ok(Type::I32),
+            ),
+            (
+                "
+                extern fn number(i: i64, ...) -> i32;
+                fn main() -> i32 {
+                    return number(5, 10, 15i32, 8u8, \"hello\");
                 }
                 ",
                 Ok(Type::I32),

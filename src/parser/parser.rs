@@ -21,6 +21,7 @@ use super::{
 };
 
 pub type ParserInfo = u32;
+type HasVarArgs = bool;
 
 impl Annotation for ParserInfo {
     fn id(&self) -> u32 {
@@ -240,10 +241,19 @@ fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<
 
 fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
     match stream.next_if(&Lex::Extern) {
-        Some(token) => match function_decl(stream)? {
-            Some((fn_line, fn_name, params, fn_type)) => {
+        Some(token) => match function_decl(stream, true)? {
+            Some((fn_line, fn_name, params, has_varargs, fn_type)) => {
+                if has_varargs && params.len() == 0 {
+                    return Err("An extern declaration must have at least one parameter before a VarArgs (...) parameter".into());
+                }
                 stream.next_must_be(&Lex::Semicolon)?;
-                Ok(Some(Extern::new(&fn_name, fn_line, params, fn_type)))
+                Ok(Some(Extern::new(
+                    &fn_name,
+                    fn_line,
+                    params,
+                    has_varargs,
+                    fn_type,
+                )))
             }
             None => Err(format!(
                 "L{}: expected function declaration after extern",
@@ -271,7 +281,8 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
 
 fn function_decl(
     stream: &mut TokenStream,
-) -> ParserResult<(u32, String, Vec<Parameter<u32>>, Type)> {
+    allow_var_args: bool,
+) -> ParserResult<(u32, String, Vec<Parameter<u32>>, HasVarArgs, Type)> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -280,19 +291,19 @@ fn function_decl(
     let (fn_line, fn_name) = stream
         .next_if_id()
         .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
-    let params = fn_def_params(stream)?;
+    let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
         consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
     } else {
         Type::Unit
     };
 
-    Ok(Some((fn_line, fn_name, params, fn_type)))
+    Ok(Some((fn_line, fn_name, params, has_varargs, fn_type)))
 }
 
 fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
-    let (fn_line, fn_name, params, fn_type) = match function_decl(stream)? {
-        Some((l, n, p, t)) => (l, n, p, t),
+    let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
+        Some((l, n, p, _, t)) => (l, n, p, t),
         None => return Ok(None),
     };
 
@@ -330,7 +341,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let (co_line, co_name) = stream
         .next_if_id()
         .ok_or(format!("L{}: Expected identifier after co", co_line))?;
-    let params = fn_def_params(stream)?;
+    let (params, _) = fn_def_params(stream, false)?;
     let co_type = match stream.next_if(&Lex::LArrow) {
         Some(t) => consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", t.l))?,
         _ => Type::Unit,
@@ -378,13 +389,23 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
     Ok(stmts)
 }
 
-fn fn_def_params(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
+fn fn_def_params(
+    stream: &mut TokenStream,
+    allow_var_args: bool,
+) -> Result<(Vec<Parameter<ParserInfo>>, HasVarArgs)> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
     let params = parameter_list(stream)?;
+
+    let has_varargs = if allow_var_args {
+        stream.next_if(&Lex::VarArgs).is_some()
+    } else {
+        false
+    };
+
     stream.next_must_be(&Lex::RParen)?;
 
-    Ok(params)
+    Ok((params, has_varargs))
 }
 
 fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
@@ -1106,6 +1127,37 @@ pub mod tests {
                 assert_eq!(e.get_name(), "my_fn");
                 assert_eq!(e.get_params(), &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(e.get_return_type(), Type::I32);
+            }
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn parse_module_with_extern_with_varargs() {
+        let text = "mod test_extern_mod { extern fn my_fn(x: i64, ...) -> i32; }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_>>()
+            .unwrap();
+        let mut iter = TokenStream::new(&tokens);
+        if let Some(m) = module(&mut iter).unwrap() {
+            assert_eq!(*m.annotation(), 1);
+            assert_eq!(m.get_name(), "test_extern_mod");
+
+            assert_eq!(m.get_modules().len(), 0);
+            assert_eq!(m.get_functions().len(), 0);
+            assert_eq!(m.get_coroutines().len(), 0);
+            assert_eq!(m.get_structs().len(), 0);
+            assert_eq!(m.get_externs().len(), 1);
+
+            if let Some(Item::Extern(e)) = m.get_item("my_fn") {
+                assert_eq!(*e.annotation(), 1);
+                assert_eq!(e.get_name(), "my_fn");
+                assert_eq!(e.get_params(), &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(e.get_return_type(), Type::I32);
+                assert_eq!(e.has_varargs, true);
             }
         } else {
             panic!("No nodes returned by parser")

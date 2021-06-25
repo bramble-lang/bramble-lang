@@ -19,6 +19,7 @@ pub enum Type {
     FunctionDef(Vec<Type>, Box<Type>),
     CoroutineDef(Vec<Type>, Box<Type>),
     Coroutine(Box<Type>),
+    ExternDecl(Vec<Type>, Box<Type>),
     Unknown,
 }
 
@@ -61,6 +62,7 @@ impl Type {
             | Type::FunctionDef(_, _)
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
+            | Type::ExternDecl(..)
             | Type::Unknown => false,
         }
     }
@@ -81,6 +83,7 @@ impl Type {
             | Type::FunctionDef(_, _)
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
+            | Type::ExternDecl(..)
             | Type::Unknown => false,
         }
     }
@@ -101,6 +104,7 @@ impl Type {
             | Type::FunctionDef(_, _)
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
+            | Type::ExternDecl(..)
             | Type::Unknown => false,
         }
     }
@@ -159,6 +163,14 @@ impl std::fmt::Display for Type {
                     .collect::<Vec<String>>()
                     .join(",");
                 f.write_fmt(format_args!("fn ({}) -> {}", params, ret_ty))
+            }
+            Type::ExternDecl(params, ret_ty) => {
+                let params = params
+                    .iter()
+                    .map(|p| format!("{}", p))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                f.write_fmt(format_args!("extern fn ({}) -> {}", params, ret_ty))
             }
             Unknown => f.write_str("unknown"),
         }
