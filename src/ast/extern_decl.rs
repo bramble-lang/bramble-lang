@@ -11,6 +11,7 @@ pub struct Extern<M> {
     pub annotations: M,
     pub name: String,
     pub params: Vec<Parameter<M>>,
+    pub variadic: bool,
     pub ty: Type,
 }
 
@@ -56,6 +57,7 @@ impl<M> Extern<M> {
             annotations,
             name: name.into(),
             params,
+            variadic: false,
             ty,
         }
     }

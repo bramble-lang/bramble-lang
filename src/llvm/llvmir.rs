@@ -214,7 +214,7 @@ impl<'ctx> IrGen<'ctx> {
     /// in the LLVM module
     fn add_externs(&mut self) {
         for (path, params, ty) in self.externs {
-            self.add_fn_decl(&path.to_label(), params, ty)
+            self.add_fn_decl(&path.to_label(), params, false, ty)
         }
     }
 
@@ -257,6 +257,7 @@ impl<'ctx> IrGen<'ctx> {
         self.add_fn_decl(
             &rd.annotations.get_canonical_path().to_label(),
             &params,
+            false,
             &rd.ty,
         )
     }
@@ -267,6 +268,7 @@ impl<'ctx> IrGen<'ctx> {
         self.add_fn_decl(
             &ex.annotation().get_canonical_path().to_label(),
             &params,
+            ex.variadic,
             ex.get_return_type(),
         );
     }
@@ -276,7 +278,13 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_decl(&mut self, name: &str, params: &Vec<ast::Type>, ret_ty: &ast::Type) {
+    fn add_fn_decl(
+        &mut self,
+        name: &str,
+        params: &Vec<ast::Type>,
+        has_var_arg: bool,
+        ret_ty: &ast::Type,
+    ) {
         let mut llvm_params = vec![];
 
         // If the return type is a structure, then update the function to use
@@ -308,10 +316,11 @@ impl<'ctx> IrGen<'ctx> {
                 Err(msg) => panic!("Failed to convert parameter type to LLVM: {}", msg),
             }
         }
+
         let fn_type = match llvm_ty {
-            AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, false),
-            AnyTypeEnum::PointerType(pty) => pty.fn_type(&llvm_params, false),
-            AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, false),
+            AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, has_var_arg),
+            AnyTypeEnum::PointerType(pty) => pty.fn_type(&llvm_params, has_var_arg),
+            AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, has_var_arg),
             _ => panic!("Unexpected type: {:?}", llvm_ty),
         };
         self.module.add_function(name, fn_type, None);
