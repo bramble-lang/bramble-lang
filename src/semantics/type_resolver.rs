@@ -707,7 +707,7 @@ impl<'a> TypeResolver<'a> {
                 let (symbol, routine_canon_path) =
                     self.symbols.lookup_symbol_by_path(routine_path)?;
 
-                let (expected_param_tys, ret_ty) =
+                let (expected_param_tys, has_varargs, ret_ty) =
                     self.extract_routine_type_info(symbol, call, &routine_path)?;
                 let expected_param_tys = expected_param_tys
                     .iter()
@@ -719,7 +719,9 @@ impl<'a> TypeResolver<'a> {
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
-                if resolved_params.len() != expected_param_tys.len() {
+                if !has_varargs && (resolved_params.len() != expected_param_tys.len())
+                    || has_varargs && (resolved_params.len() < expected_param_tys.len())
+                {
                     Err(format!(
                         "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
                         routine_path,
@@ -731,6 +733,7 @@ impl<'a> TypeResolver<'a> {
                         &routine_path,
                         &resolved_params,
                         &expected_param_tys,
+                        has_varargs,
                     ) {
                         Err(msg) => Err(msg),
                         Ok(()) => {
@@ -948,14 +951,24 @@ impl<'a> TypeResolver<'a> {
         symbol: &'b Symbol,
         call: &RoutineCall,
         routine_path: &Path,
-    ) -> Result<(&'b Vec<Type>, Type)> {
+    ) -> Result<(&'b Vec<Type>, HasVarArgs, Type)> {
         let routine_path_parent = routine_path.parent();
-        let (expected_param_tys, ret_ty) = match symbol {
+        let (expected_param_tys, has_varargs, ret_ty) = match symbol {
             Symbol {
                 ty: Type::FunctionDef(pty, rty),
                 ..
             } if *call == RoutineCall::Function => (
                 pty,
+                false,
+                self.symbols
+                    .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
+            ),
+            Symbol {
+                ty: Type::ExternDecl(pty, has_varargs, rty),
+                ..
+            } if *call == RoutineCall::Function => (
+                pty,
+                *has_varargs,
                 self.symbols
                     .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
             ),
@@ -964,6 +977,7 @@ impl<'a> TypeResolver<'a> {
                 ..
             } if *call == RoutineCall::CoroutineInit => (
                 pty,
+                false,
                 Type::Coroutine(Box::new(
                     self.symbols
                         .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
@@ -981,13 +995,14 @@ impl<'a> TypeResolver<'a> {
             }
         };
 
-        Ok((expected_param_tys, ret_ty))
+        Ok((expected_param_tys, has_varargs, ret_ty))
     }
 
     fn check_for_invalid_routine_parameters<'b>(
         routine_path: &Path,
         given: &'b Vec<SemanticNode>,
         expected_types: &'b Vec<Type>,
+        has_varargs: HasVarArgs,
     ) -> Result<()> {
         let mut mismatches = vec![];
         let mut idx = 0;
@@ -998,7 +1013,9 @@ impl<'a> TypeResolver<'a> {
                 mismatches.push((idx, user_ty, expected));
             }
         }
-        if mismatches.len() > 0 || given.len() != expected_types.len() {
+        if has_varargs && mismatches.len() == 0 && given.len() >= expected_types.len() {
+            Ok(())
+        } else if mismatches.len() > 0 || given.len() != expected_types.len() {
             let errors: Vec<String> = mismatches
                 .iter()
                 .map(|(idx, got, expected)| {
@@ -2861,6 +2878,15 @@ mod tests {
                 }
                 ",
                 Ok(Type::I32),
+            ),
+            (
+                "
+                extern fn number(i: i64, ...) -> i32;
+                fn main() -> i32 {
+                    return number(5i32, 10, 15i32, 8u8, \"hello\");
+                }
+                ",
+                Err("Semantic: L4: One or more parameters have mismatching types for function number: parameter 1 expected i64 but got i32"),
             ),
             (
                 "fn main() -> bool {

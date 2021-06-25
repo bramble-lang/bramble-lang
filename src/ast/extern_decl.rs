@@ -6,12 +6,14 @@ use super::{
     ty::Type,
 };
 
+pub type HasVarArgs = bool;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Extern<M> {
     pub annotations: M,
     pub name: String,
     pub params: Vec<Parameter<M>>,
-    pub has_varargs: bool,
+    pub has_varargs: HasVarArgs,
     pub ty: Type,
 }
 
