@@ -719,12 +719,17 @@ impl<'a> TypeResolver<'a> {
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
-                if !has_varargs && (resolved_params.len() != expected_param_tys.len())
-                    || has_varargs && (resolved_params.len() < expected_param_tys.len())
-                {
+                if !has_varargs && (resolved_params.len() != expected_param_tys.len()) {
                     Err(format!(
                         "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
                         routine_path,
+                        expected_param_tys.len(),
+                        resolved_params.len(),
+                    ))
+                } else if has_varargs && (resolved_params.len() < expected_param_tys.len()) {
+                    Err(format!(
+                        "Function {} expects at least {} parameters, but got {}",
+                        routine_canon_path,
                         expected_param_tys.len(),
                         resolved_params.len(),
                     ))
@@ -2887,6 +2892,24 @@ mod tests {
                 }
                 ",
                 Err("Semantic: L4: One or more parameters have mismatching types for function number: parameter 1 expected i64 but got i32"),
+            ),
+            (
+                "
+                extern fn number(i: i64, ...) -> i32;
+                fn main() -> i32 {
+                    return number();
+                }
+                ",
+                Err("Semantic: L4: Function number expects at least 1 parameters, but got 0"),
+            ),
+            (
+                "
+                extern fn number(i: i64, j: i32, ...) -> i32;
+                fn main() -> i32 {
+                    return number(5);
+                }
+                ",
+                Err("Semantic: L4: Function number expects at least 2 parameters, but got 1"),
             ),
             (
                 "fn main() -> bool {
