@@ -21,6 +21,7 @@ run_test() {
     mkdir -p ./target
     test=$1
     input="./src/${test}.in"
+    built=1
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         ../target/debug/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj > ./target/stdout
@@ -34,12 +35,12 @@ run_test() {
     if [ -f "./target/output.obj" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/std.obj  ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
+            gcc -no-pie -fno-pie -w ./target/std.obj  ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=$?
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            nasm -g -f macho64 ../braid/macho64/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-            gcc -w ./target/std.obj ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
+            nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
+            gcc -w ./target/std.obj ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
             built=$?
         else
             # If we can't figure out the OS, then just try the Linux build steps
@@ -47,7 +48,7 @@ run_test() {
             gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=$?
         fi
-
+    
         if [[ $built -eq 0 ]]; then
             if [[ -f $input ]]; then
                 timeout 5s "./target/output" < $input >> ./target/stdout
@@ -55,8 +56,8 @@ run_test() {
                 timeout 5s "./target/output" >> ./target/stdout
             fi
             if [[ $? -eq 124 ]]; then
-             echo "Timed out"
-             echo "Timed out" >> ./target/stdout
+                echo "Timed out"
+                echo "Timed out" >> ./target/stdout
             fi
         else 
             echo "Build failed"
@@ -78,7 +79,6 @@ run_test() {
         echo "Expected:"
         cat ./src/${test}.out
         echo "\n-------------"
-        exit 1
     fi
 }
 
@@ -88,10 +88,11 @@ run_fail_test() {
     test=$1
     input="./src/${test}.in"
 
-    # cargo run -- -i ./src/${test}.br -o ./target/output.asm > ./target/stdout
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        ../target/debug/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj > ./target/stdout
         ../target/debug/braid-lang --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
+        ../target/debug/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
         ../target/debug/braid-lang --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
     fi
 
@@ -99,17 +100,17 @@ run_fail_test() {
     if [ -f "./target/output.obj" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stderr 1> gcc.log
+            nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
+            gcc -no-pie -fno-pie -w ./target/std.obj  ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=$?
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            nasm -g -f macho64 ../braid/macho64/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-            gcc -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stderr
+            nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
+            gcc -w ./target/std.obj ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
             built=$?
         else
             # If we can't figure out the OS, then just try the Linux build steps
             nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>./target/stderr 1> gcc.log
+            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=$?
         fi
 
