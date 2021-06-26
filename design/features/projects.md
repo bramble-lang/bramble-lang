@@ -91,8 +91,8 @@ Note that the last method is the only one that will allow them to specify the na
 6. Remember that `self` refers to the current module.
 
 Notes:
-1. The method `    pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {` in module.rs has a logical
-problem, which is that when you it a path to a module it assumes not that hte path is relative to it but rather
+1. The method `pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {` in module.rs has a logical
+problem, which is that when you give it a path to a module it assumes not that hte path is relative to it but rather
 that it is relative to its parent.  That is, it assumes that hte first element in the path will be itself and
 so it checks to make sure that the names match.  But that's very hard reason about, most people (myself included)
 would expect the path to be relative to the module.  That is, if I called `go_to_module` on module `A` with the
