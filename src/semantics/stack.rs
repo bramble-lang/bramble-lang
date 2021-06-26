@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Module, Node, Path, Type, PROJECT_ROOT};
+use crate::ast::{Module, Node, Path, Type, CANONICAL_ROOT};
 use braid_lang::result::Result;
 
 use super::{
@@ -302,7 +302,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
     pub fn to_path(&self) -> Option<Path> {
-        let mut steps: Vec<String> = vec![PROJECT_ROOT.into()];
+        let mut steps: Vec<String> = vec![CANONICAL_ROOT.into()];
 
         for node in self.stack.iter() {
             match node.scope_type() {
@@ -342,7 +342,7 @@ mod tests {
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
-        assert_eq!(path, vec![PROJECT_ROOT, "test"].into());
+        assert_eq!(path, vec![CANONICAL_ROOT, "test"].into());
         assert!(path.is_canonical());
     }
 
@@ -377,7 +377,7 @@ mod tests {
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
-        let expected = vec![PROJECT_ROOT, "test", "inner"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "inner"].into();
         assert_eq!(path, expected);
         assert!(path.is_canonical());
     }
@@ -396,7 +396,7 @@ mod tests {
         let current = SymbolTable::new_module("inner");
         stack.enter_scope(&current);
         let path = stack.to_path().unwrap();
-        let expected = vec![PROJECT_ROOT, "test", "test_mod", "inner"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "test_mod", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -416,7 +416,7 @@ mod tests {
         let local2 = SymbolTable::new();
         stack.enter_scope(&local2);
         let path = stack.to_path().unwrap();
-        let expected = vec![PROJECT_ROOT, "test", "inner"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -443,7 +443,7 @@ mod tests {
         stack.enter_scope(&local2);
 
         let path = stack.to_path().unwrap();
-        let expected = vec![PROJECT_ROOT, "test", "first", "second"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "first", "second"].into();
         assert_eq!(path, expected);
     }
 
@@ -519,7 +519,7 @@ mod tests {
         // across 1 boundary
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec![PROJECT_ROOT, "test", "first", "x"].into());
+        assert_eq!(p, vec![CANONICAL_ROOT, "test", "first", "x"].into());
 
         // across 2 boundaries
         // Module 2
@@ -528,6 +528,9 @@ mod tests {
 
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec![PROJECT_ROOT, "test", "first", "second", "x"].into());
+        assert_eq!(
+            p,
+            vec![CANONICAL_ROOT, "test", "first", "second", "x"].into()
+        );
     }
 }
