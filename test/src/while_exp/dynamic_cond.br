@@ -7,7 +7,7 @@ fn my_main() -> i64 {
 fn test(n: i64) {
     let mut x: i64 := 0;
     while (x <= n) {
-        root::std::io::writei64ln(x);
+        project::std::io::writei64ln(x);
         mut x := x + 1;
     };
 

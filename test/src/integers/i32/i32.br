@@ -3,9 +3,9 @@ fn my_main() -> i64 {
     let y:i32 := test();
     let z:i32 := test2(6i32);
 
-    root::std::io::writei32ln(x);
-    root::std::io::writei32ln(y);
-    root::std::io::writei32ln(z);
+    project::std::io::writei32ln(x);
+    project::std::io::writei32ln(y);
+    project::std::io::writei32ln(z);
     
     return 0;
 }

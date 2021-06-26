@@ -1,13 +1,13 @@
 fn my_main() -> i64 {
     let a: [S; 2] := [S{x: 1}, S{x: 2}];
-    root::std::io::writei64ln(a[0].x);
-    root::std::io::writei64ln(a[1].x);
+    project::std::io::writei64ln(a[0].x);
+    project::std::io::writei64ln(a[1].x);
 
     let b: [[root::of_structs::S; 2]; 2] := [[S{x: 1}, S{x: 2}], [S{x: 3}, S{x: 4}]];
-    root::std::io::writei64ln(b[0][0].x);
-    root::std::io::writei64ln(b[0][1].x);
-    root::std::io::writei64ln(b[1][0].x);
-    root::std::io::writei64ln(b[1][1].x);
+    project::std::io::writei64ln(b[0][0].x);
+    project::std::io::writei64ln(b[0][1].x);
+    project::std::io::writei64ln(b[1][0].x);
+    project::std::io::writei64ln(b[1][1].x);
 
     return 0;
 }

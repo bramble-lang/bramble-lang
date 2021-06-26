@@ -16,8 +16,10 @@ pub use self::node::{
     Annotation, ForEachPreOrderMut, MapPreOrder, Node, NodeType, PostOrderIter, PreOrderIter,
 };
 pub use self::parameter::Parameter;
-pub use self::path::Path;
+pub use self::path::{Path, CANONICAL_ROOT, ROOT_PATH, SELF};
 pub use self::routinedef::{RoutineDef, RoutineDefType};
 pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;
 pub use self::ty::Type;
+
+pub const MAIN_MODULE: &str = "main";

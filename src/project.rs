@@ -1,3 +1,4 @@
+use crate::ast::CANONICAL_ROOT;
 use std::path::{Path, PathBuf};
 
 use crate::{
@@ -9,6 +10,21 @@ use crate::{
 };
 
 use braid_lang::result::{NResult, Result};
+
+/// Given the path to a source, return the name that should be used
+/// for the project.
+/// If the path is a file, then return the file name (without extension)
+/// If the path is a directory, then return the name of the directory
+pub fn get_project_name(src: &Path) -> Result<&str> {
+    if src.is_file() || src.is_dir() {
+        src.file_stem()
+            .map(|name| name.to_str())
+            .flatten()
+            .ok_or("Could not extract name from given path".into())
+    } else {
+        Err("Given path is neither a directory or a file".into())
+    }
+}
 
 fn create_module_path<'a>(
     module: &'a mut Module<u32>,
@@ -210,102 +226,102 @@ fn truncate_extension(path: &mut Vec<String>, ext: &str) {
 pub fn configure_imported_functions() -> Vec<(crate::ast::Path, Vec<Type>, Type)> {
     vec![
         (
-            vec!["root", "std", "io", "write"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "write"].into(),
             vec![Type::StringLiteral],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "readi64"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "readi64"].into(),
             vec![],
             Type::I64,
         ),
         (
-            vec!["root", "std", "io", "writeu8"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu8"].into(),
             vec![Type::U8],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeu8ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu8ln"].into(),
             vec![Type::U8],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeu16"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu16"].into(),
             vec![Type::U16],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeu16ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu16ln"].into(),
             vec![Type::U16],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeu32"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu32"].into(),
             vec![Type::U32],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeu32ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu32ln"].into(),
             vec![Type::U32],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeu64"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu64"].into(),
             vec![Type::U64],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeu64ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeu64ln"].into(),
             vec![Type::U64],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei64"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei64"].into(),
             vec![Type::I64],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei64ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei64ln"].into(),
             vec![Type::I64],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei32"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei32"].into(),
             vec![Type::I32],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei32ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei32ln"].into(),
             vec![Type::I32],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei16"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei16"].into(),
             vec![Type::I16],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei16ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei16ln"].into(),
             vec![Type::I16],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei8"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei8"].into(),
             vec![Type::I8],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writei8ln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writei8ln"].into(),
             vec![Type::I8],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writebool"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writebool"].into(),
             vec![Type::Bool],
             Type::Unit,
         ),
         (
-            vec!["root", "std", "io", "writeboolln"].into(),
+            vec![CANONICAL_ROOT, "std", "io", "writeboolln"].into(),
             vec![Type::Bool],
             Type::Unit,
         ),

@@ -11,9 +11,9 @@ fn my_main() -> i64 {
         MyStruct{x: 0, y: 0, z: 0}
     };
 
-    root::std::io::writei64ln(t.x);
-    root::std::io::writei64ln(t.y);
-    root::std::io::writei64ln(t.z);
+    project::std::io::writei64ln(t.x);
+    project::std::io::writei64ln(t.y);
+    project::std::io::writei64ln(t.z);
     
     return 0;
 }

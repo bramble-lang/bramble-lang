@@ -1,7 +1,7 @@
 fn my_main() -> i64 {
     let t: MyStruct := MyStruct{};
     let y: MyStruct := test(t);
-    root::std::io::writei64ln(2);
+    project::std::io::writei64ln(2);
     return 0;
 }
 
@@ -10,6 +10,6 @@ struct MyStruct {
 
 fn test(e: MyStruct) -> MyStruct {
     let t: MyStruct := e;
-    root::std::io::writei64ln(1);
+    project::std::io::writei64ln(1);
     return t;
 }

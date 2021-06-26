@@ -5,11 +5,11 @@ fn my_main() -> i64 {
     let z2:u8 := test2(127u8);
     let z3:u8 := test2(255u8);
 
-    root::std::io::writeu8ln(x);
-    root::std::io::writeu8ln(y);
-    root::std::io::writeu8ln(z);
-    root::std::io::writeu8ln(z2);
-    root::std::io::writeu8ln(z3);
+    project::std::io::writeu8ln(x);
+    project::std::io::writeu8ln(y);
+    project::std::io::writeu8ln(z);
+    project::std::io::writeu8ln(z2);
+    project::std::io::writeu8ln(z3);
     
     return 0;
 }

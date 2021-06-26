@@ -5,27 +5,27 @@ fn my_main() -> i64 {
     let c: co MyStruct := init my_co(ms, ms2);
     
     let w : MyStruct := yield (c);
-    root::std::io::writei64ln(w.x);
-    root::std::io::writei64ln(w.y);
-    root::std::io::writeboolln(w.z);
+    project::std::io::writei64ln(w.x);
+    project::std::io::writei64ln(w.y);
+    project::std::io::writeboolln(w.z);
     
     let w2 : MyStruct := yield c;
-    root::std::io::writei64ln(w2.x);
-    root::std::io::writei64ln(w2.y);
-    root::std::io::writeboolln(w2.z);
+    project::std::io::writei64ln(w2.x);
+    project::std::io::writei64ln(w2.y);
+    project::std::io::writeboolln(w2.z);
     
     let w3 : MyStruct := yield c;
-    root::std::io::writei64ln(w3.x);
-    root::std::io::writei64ln(w3.y);
-    root::std::io::writeboolln(w3.z);
+    project::std::io::writei64ln(w3.x);
+    project::std::io::writei64ln(w3.y);
+    project::std::io::writeboolln(w3.z);
     
     return 0;
 }
 
 co my_co (x: MyStruct, y: MyStruct) -> MyStruct {
-    root::std::io::writei64ln(x.x);
+    project::std::io::writei64ln(x.x);
     yret x;
-    root::std::io::writeboolln(y.z);
+    project::std::io::writeboolln(y.z);
     return y;
 }
 

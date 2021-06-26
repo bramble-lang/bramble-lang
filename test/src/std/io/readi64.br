@@ -1,11 +1,11 @@
 fn my_main() -> i64 {
-    let x: i64 := root::std::io::readi64();
-    root::std::io::writei64ln(x);
+    let x: i64 := project::std::io::readi64();
+    project::std::io::writei64ln(x);
 
-    let y: i64 := root::std::io::readi64();
-    root::std::io::writei64ln(y);
+    let y: i64 := project::std::io::readi64();
+    project::std::io::writei64ln(y);
 
-    let z: i64 := root::std::io::readi64();
-    root::std::io::writei64ln(z);
+    let z: i64 := project::std::io::readi64();
+    project::std::io::writei64ln(z);
     return 0;
 }

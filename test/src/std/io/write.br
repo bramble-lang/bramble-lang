@@ -1,4 +1,4 @@
 fn my_main() -> i64 {
-    root::std::io::write("hello, world\n");
+    project::std::io::write("hello, world\n");
     return 0;
 }

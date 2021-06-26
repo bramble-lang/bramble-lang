@@ -3,6 +3,6 @@ extern fn abs(i: i32) -> i32;
 fn my_main() -> i64 {
     let i: i32 := -5i32;
 	let i2: i32 := abs(i);
-    root::std::io::writei32ln(i2);
+    project::std::io::writei32ln(i2);
     return 0;
 }

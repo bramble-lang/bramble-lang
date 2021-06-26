@@ -8,13 +8,13 @@ fn test(n: i64) {
     if (n == 0) {
         let mut x: i64 := 0;
         while (x <= 5) {
-            root::std::io::writei64ln(x);
+            project::std::io::writei64ln(x);
             mut x := x + 1;
         };
     } else {
         let mut x: i64 := 5;
         while (x >= 0) {
-            root::std::io::writei64ln(x);
+            project::std::io::writei64ln(x);
             mut x := x - 1;
         };
     };

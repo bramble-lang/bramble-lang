@@ -1,11 +1,11 @@
 fn my_main() -> i64 {
 	let i:i64 := recurse(0);
-	root::std::io::writei64ln(i);
+	project::std::io::writei64ln(i);
 	return 0;
 }
 
 fn recurse(a: i64) -> i64 {
-	root::std::io::writei64ln(a);
+	project::std::io::writei64ln(a);
 	let i:i64 := if (a <= 5) {
 		recurse(a+1)
 	} else {

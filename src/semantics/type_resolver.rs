@@ -10,15 +10,24 @@ use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
 pub fn resolve_types(
     ast: &Module<ParserInfo>,
+    main_fn: &str,
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
-    resolve_types_with_imports(ast, &vec![], trace_semantic_node, trace, trace_path)
+    resolve_types_with_imports(
+        ast,
+        main_fn,
+        &vec![],
+        trace_semantic_node,
+        trace,
+        trace_path,
+    )
 }
 
 pub fn resolve_types_with_imports(
     ast: &Module<ParserInfo>,
+    main_fn: &str,
     imported_functions: &Vec<(Path, Vec<Type>, Type)>,
     trace_semantic_node: TracingConfig,
     trace_type_resolver: TracingConfig,
@@ -28,7 +37,7 @@ pub fn resolve_types_with_imports(
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
 
-    let mut semantic = TypeResolver::new(&sm_ast);
+    let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
     for (name, params, ret_ty) in imported_functions.into_iter() {
         semantic.import_function(name.clone(), params.clone(), ret_ty.clone());
@@ -54,13 +63,13 @@ impl<'a> Tracing for TypeResolver<'a> {
 }
 
 impl<'a> TypeResolver<'a> {
-    pub fn new(root: &'a Module<SemanticAnnotations>) -> TypeResolver {
+    pub fn new(root: &'a Module<SemanticAnnotations>, main_fn: &'a str) -> TypeResolver<'a> {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
-            main_fn: vec!["root", "my_main"].into(),
+            main_fn: vec![CANONICAL_ROOT, MAIN_MODULE, main_fn.into()].into(), // TODO: should get rid of this
         }
     }
 
@@ -75,6 +84,8 @@ impl<'a> TypeResolver<'a> {
     }
 
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
+        // TODO: I think that this is the problem, perhaps I should get rid of the concept
+        // of the stack root?  I need root to be able to find items using the stack.
         self.analyze_module(self.symbols.root)
             .map_err(|e| format!("Semantic: {}", e))
     }
@@ -708,7 +719,7 @@ impl<'a> TypeResolver<'a> {
                     self.symbols.lookup_symbol_by_path(routine_path)?;
 
                 let (expected_param_tys, has_varargs, ret_ty) =
-                    self.extract_routine_type_info(symbol, call, &routine_path)?;
+                    self.extract_routine_type_info(symbol, call, &routine_canon_path)?;
                 let expected_param_tys = expected_param_tys
                     .iter()
                     .map(|pty| {
@@ -1045,20 +1056,18 @@ impl<'a> TypeResolver<'a> {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if def != &RoutineDefType::Function {
-            return Err(format!(
-                "root::my_main must be a function of type () -> i64"
-            ));
+            return Err(format!("my_main must be a function of type () -> i64",));
         }
 
         if params.len() > 0 {
             return Err(format!(
-                "root::my_main must take no parameters. It must be of type () -> i64"
+                "my_main must take no parameters. It must be of type () -> i64",
             ));
         }
 
         if p != Type::I64 {
             return Err(format!(
-                "root::my_main must return an i64. It must be of type () -> i64"
+                "my_main must return an i64. It must be of type () -> i64",
             ));
         }
 
@@ -1194,11 +1203,12 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens)
+            let ast = parser::parse("test", &tokens)
                 .expect(&format!("{}", text))
                 .unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1224,8 +1234,22 @@ mod tests {
 
     #[test]
     pub fn test_path_to_function() {
-        for (text, expected) in vec![
+        for (ln, text, expected) in vec![
             (
+                line!(),
+                "mod my_mod{ 
+                    fn test() -> i64{ 
+                        return 0;
+                    } 
+                    fn main() {
+                        let i: i64 := self::test(); 
+                        return;
+                    }
+                }",
+                Ok(()),
+            ),
+            (
+                line!(),
                 "mod my_mod{ 
                     fn test() -> i64{ 
                         return 0;
@@ -1240,6 +1264,20 @@ mod tests {
                 Ok(()),
             ),
             (
+                line!(),
+                "mod my_mod{ 
+                    fn test() -> i64{ 
+                        return 0;
+                    } 
+                    fn main() {
+                        let j: i64 := project::test::my_mod::test();
+                        return;
+                    }
+                }",
+                Ok(()),
+            ),
+            (
+                line!(),
                 "mod my_mod{ 
                     fn test() -> i64{ return 0;} 
                     fn main() {
@@ -1247,17 +1285,19 @@ mod tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test"),
+                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
+            println!("Test: {}", ln);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse("test", &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1311,9 +1351,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse("test", &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1346,7 +1387,7 @@ mod tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test"),
+                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1354,9 +1395,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse("test", &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1401,9 +1443,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse("test", &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1412,7 +1455,7 @@ mod tests {
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
-                        let expected: Path = vec!["root", "test"].into();
+                        let expected: Path = vec![CANONICAL_ROOT, "test", "test"].into();
                         assert_eq!(struct_name, &expected)
                     } else {
                         panic!("Not a struct expression")
@@ -1441,21 +1484,21 @@ mod tests {
                 "fn my_main() -> i32 {
                     return 0i32;
                 }",
-                Err("Semantic: L1: root::my_main must return an i64. It must be of type () -> i64"),
+                Err("Semantic: L1: my_main must return an i64. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "fn my_main(i: i32) -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: root::my_main must take no parameters. It must be of type () -> i64"),
+                Err("Semantic: L1: my_main must take no parameters. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "co my_main() -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: root::my_main must be a function of type () -> i64"),
+                Err("Semantic: L1: my_main must be a function of type () -> i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1463,12 +1506,17 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root",&tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
-            match expected {
-                Ok(expected_ty) => {
-                    let module = module.unwrap();
-                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let module = resolve_types(
+                &ast,
+                "my_main",
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
+            match (expected, module) {
+                (Ok(expected_ty), Ok(actual)) => {
+                    let fn_main = actual.get_functions()[0].to_routine().unwrap();
 
                     assert_eq!(
                         fn_main.annotation().ty,
@@ -1477,8 +1525,14 @@ mod tests {
                         line
                     );
                 }
-                Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
+                (Ok(_), Err(actual)) => {
+                    assert!(false, "L{}: Expected OK, got Err({})", line, actual);
+                }
+                (Err(expected), Ok(_)) => {
+                    assert!(false, "L{}: Expected Err({}), but got Ok", line, expected);
+                }
+                (Err(msg), Err(actual)) => {
+                    assert_eq!(actual, msg, "Test Case at L:{}", line);
                 }
             }
         }
@@ -1500,9 +1554,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1514,7 +1569,7 @@ mod tests {
                     ..
                 } = &params[0]
                 {
-                    let expected: Path = vec!["root", "test"].into();
+                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -1541,9 +1596,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1551,7 +1607,7 @@ mod tests {
             .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
-                    let expected: Path = vec!["root", "test"].into();
+                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -1576,9 +1632,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1587,7 +1644,7 @@ mod tests {
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
-                    let expected: Path = vec!["root", "test"].into();
+                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -1767,9 +1824,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1885,9 +1943,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1948,9 +2007,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2022,9 +2082,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2097,9 +2158,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2172,9 +2234,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2256,9 +2319,10 @@ mod tests {
                     .into_iter()
                     .collect::<Result<_>>()
                     .unwrap();
-                let ast = parser::parse("root", &tokens).unwrap().unwrap();
+                let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
                 let module = resolve_types(
                     &ast,
+                    "my_main",
                     TracingConfig::Off,
                     TracingConfig::Off,
                     TracingConfig::Off,
@@ -2310,9 +2374,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2382,9 +2447,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2485,9 +2551,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2653,9 +2720,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2739,9 +2807,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2822,9 +2891,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2926,9 +2996,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3089,8 +3160,8 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root",&tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
+            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, "my_main", TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -3168,7 +3239,7 @@ mod tests {
                 }
                 fn number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Expected coroutine but number is a fn (i64) -> i64"),
+                Err("Semantic: L2: Expected coroutine but $main::number is a fn (i64) -> i64"),
             ),
             (
                 "fn main() {
@@ -3194,8 +3265,8 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root",&tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
+            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, "my_main", TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -3277,9 +3348,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3357,9 +3429,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3423,9 +3496,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3493,9 +3567,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3591,9 +3666,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root", &tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3663,9 +3739,10 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root",&tokens).unwrap().unwrap();
+            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
+                "my_main",
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3848,7 +3925,7 @@ mod tests {
                     let y: i64 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected root::MyStruct2 but got root::MyStruct"),
+                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
@@ -3859,12 +3936,12 @@ mod tests {
                     let x: root::MyStruct2 := self::MyStruct{x: 1};
                     return x;
                 }",
-                Err("Semantic: L5: Bind expected root::MyStruct2 but got root::MyStruct"),
+                Err("Semantic: L5: Bind expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:false};}",
-                Err("Semantic: L1: root::MyStruct.x expects i64 but got bool"),
+                Err("Semantic: L1: $main::MyStruct.x expects i64 but got bool"),
             ),
             (
                 line!(),
@@ -3874,7 +3951,7 @@ mod tests {
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> i64 {return MyStruct{x:5};}",
-                Err("Semantic: L1: Return expected i64 but got root::MyStruct"),
+                Err("Semantic: L1: Return expected i64 but got $main::MyStruct"),
             ),
             (
                 line!(),
@@ -3887,8 +3964,8 @@ mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root",&tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
+            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let result = resolve_types(&ast, "my_main", TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -3904,7 +3981,7 @@ mod tests {
                     return ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
-                Err("Semantic: L1: root::MyStruct does not have member y")),
+                Err("Semantic: L1: $main::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i64")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.x;}",
@@ -3912,7 +3989,7 @@ mod tests {
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.y;}",
-                Err("Semantic: L1: root::MyStruct does not have member y")),
+                Err("Semantic: L1: $main::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i64")),
             ] {
@@ -3921,8 +3998,8 @@ mod tests {
                     .into_iter()
                     .collect::<Result<_>>()
                     .unwrap();
-                let ast = parser::parse("root",&tokens).unwrap().unwrap();
-                let result = resolve_types(&ast, TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
+                let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+                let result = resolve_types(&ast, "my_main", TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -3936,7 +4013,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test();
+                    let k: i64 := project::std::test();
                     return;
                 }
                 ",
@@ -3946,7 +4023,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    return root::std::test();
+                    return project::std::test();
                 }
                 ",
                 (vec![],(Type::Unit)),
@@ -3955,7 +4032,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5);
+                    let k: i64 := project::std::test(5);
                     return;
                 }
                 ",
@@ -3965,7 +4042,7 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5, true);
+                    let k: i64 := project::std::test(5, true);
                     return;
                 }
                 ",
@@ -3975,37 +4052,39 @@ mod tests {
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test2();
+                    let k: i64 := project::std::test2();
                     return;
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Could not find item with the given path: root::std::test2"),
+                Err("Semantic: L3: Could not find item with the given path: $std::test2 ($std::test2)"),
             ),
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5);
+                    let k: i64 := project::std::test(5);
                     return;
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Incorrect number of parameters passed to routine: root::std::test. Expected 0 but got 1"),
+                Err("Semantic: L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
             ),
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5, 2);
+                    let k: i64 := project::std::test(5, 2);
                     return;
                 }
                 ",
                 (vec![Type::I64, Type::Bool], (Type::I64)),
-                Err("Semantic: L3: One or more parameters have mismatching types for function root::std::test: parameter 2 expected bool but got i64"),
+                Err("Semantic: L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
+            /*
+            Delete at code review, this test is no longer valid with the updates to path semantics
             (
                 " 
                 fn main() {
-                    let k: i64 := root::std::test(5);
+                    let k: i64 := project::std::test(5);
                     return;
                 }
                 mod std {
@@ -4015,23 +4094,23 @@ mod tests {
                 }
                 ",
                 (vec![Type::I64], (Type::I64)),
-                Err("Semantic: L3: Found multiple definitions of root::std::test"),
-            ),
+                Err("Semantic: L3: Found multiple definitions of $std::test ($std::test)"),
+            ),*/
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("root",&tokens).unwrap().unwrap();
+            let ast = parser::parse("std",&tokens).unwrap().unwrap();
             let mut sa = SemanticAst::new();
             let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
             SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
 
-            let mut semantic = TypeResolver::new(&sm_ast);
+            let mut semantic = TypeResolver::new(&sm_ast, "my_main");
 
             semantic.import_function(
-                vec!["root", "std", "test"].into(),
+                vec![CANONICAL_ROOT, "std", "test"].into(),
                 import_func.0, import_func.1,
             );
 

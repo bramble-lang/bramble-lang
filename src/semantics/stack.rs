@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Module, Node, Path, Type};
+use crate::ast::{Module, Node, Path, Type, CANONICAL_ROOT};
 use braid_lang::result::Result;
 
 use super::{
@@ -174,20 +174,12 @@ impl<'a> SymbolTableScopeStack<'a> {
     ///
     /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
+        //println!("{} - {}", stdext::function_name!(), path);
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
-            // If the path contains more than just the item's name then
-            // traverse the parent path to find the specified item
-            let item = canon_path
-                .item()
-                .expect("Expected a canonical path with at least one step in it");
 
             // Look in the project being compiled
-            let project_symbol = self
-                .root
-                .go_to_module(&canon_path.parent())
-                .map(|module| module.annotation().sym.get(&item))
-                .flatten();
+            let project_symbol = self.get_item(&canon_path);
 
             // look in any imported symbols
             let imported_symbol = self.get_imported_symbol(&canon_path);
@@ -197,7 +189,10 @@ impl<'a> SymbolTableScopeStack<'a> {
                 (Some(ps), None) => Ok((ps, canon_path)),
                 (None, Some(is)) => Ok((is, canon_path)),
                 (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
-                (None, None) => Err(format!("Could not find item with the given path: {}", path)),
+                (None, None) => Err(format!(
+                    "Could not find item with the given path: {} ({})",
+                    path, canon_path
+                )),
             }
         } else if path.len() == 1 {
             // If the path has just the item name, then check the local scope and
@@ -217,8 +212,33 @@ impl<'a> SymbolTableScopeStack<'a> {
         })
     }
 
+    fn get_item(&self, canon_path: &Path) -> Option<&Symbol> {
+        //println!("get_item: {}", canon_path);
+        // If the path contains more than just the item's name then
+        // traverse the parent path to find the specified item
+        let item = canon_path
+            .item()
+            .expect("Expected a canonical path with at least one step in it");
+
+        if !canon_path.is_canonical() {
+            panic!("Given path is not canonical: {}", canon_path);
+        }
+
+        let mut current = self.root;
+        // Follow the path, up to, but not including the final element of the path
+        // (which is the item being looked for);
+        for idx in 1..canon_path.len() - 1 {
+            match current.get_module(&canon_path[idx]) {
+                Some(m) => current = m,
+                None => return None,
+            }
+        }
+
+        current.annotation().sym.get(item)
+    }
+
     /**
-    Given a type reference that appears in a node that is not the curren node, will convert
+    Given a type reference that appears in a node that is not the current node, will convert
     that type reference to a canonical path from a relative path.  If the type reference is
     already an absolute path then no change is made.  This is used for indirect type reference
     look ups: for example, if the current node is a routine call and the routine definition is
@@ -282,7 +302,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     /// of all the modules that we are current in, in effect
     /// the current path within the AST.
     pub fn to_path(&self) -> Option<Path> {
-        let mut steps = vec![];
+        let mut steps: Vec<String> = vec![CANONICAL_ROOT.into()];
 
         for node in self.stack.iter() {
             match node.scope_type() {
@@ -317,10 +337,30 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
-        let path = stack.to_path();
-        assert_eq!(path, None);
+        let path = stack.to_path().unwrap();
+        assert_eq!(path, vec![CANONICAL_ROOT, "test"].into());
+        assert!(path.is_canonical());
+    }
+
+    #[test]
+    fn to_path_is_canonical() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
+        let sym = SymbolTable::new_module("inner");
+        stack.enter_scope(&sym);
+        let local = SymbolTable::new();
+        stack.enter_scope(&local);
+        let path = stack.to_path().unwrap();
+        assert!(path.is_canonical());
     }
 
     #[test]
@@ -330,13 +370,16 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
-        let sym = SymbolTable::new_module("root");
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
+        let sym = SymbolTable::new_module("inner");
         stack.enter_scope(&sym);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let path = stack.to_path().unwrap();
-        let expected = vec!["root"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "inner"].into();
         assert_eq!(path, expected);
+        assert!(path.is_canonical());
     }
 
     #[test]
@@ -346,12 +389,14 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
-        let sym = SymbolTable::new_module("root");
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
+        let sym = SymbolTable::new_module("test_mod");
         stack.enter_scope(&sym);
         let current = SymbolTable::new_module("inner");
         stack.enter_scope(&current);
         let path = stack.to_path().unwrap();
-        let expected = vec!["root", "inner"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "test_mod", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -362,14 +407,16 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
-        let module = SymbolTable::new_module("root");
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
+        let module = SymbolTable::new_module("inner");
         stack.enter_scope(&module);
         let local = SymbolTable::new();
         stack.enter_scope(&local);
         let local2 = SymbolTable::new();
         stack.enter_scope(&local2);
         let path = stack.to_path().unwrap();
-        let expected = vec!["root"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "inner"].into();
         assert_eq!(path, expected);
     }
 
@@ -380,6 +427,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");
@@ -394,7 +443,7 @@ mod tests {
         stack.enter_scope(&local2);
 
         let path = stack.to_path().unwrap();
-        let expected = vec!["first", "second"].into();
+        let expected = vec![CANONICAL_ROOT, "test", "first", "second"].into();
         assert_eq!(path, expected);
     }
 
@@ -405,6 +454,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");
@@ -425,6 +476,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");
@@ -448,6 +501,8 @@ mod tests {
             SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
 
         // Module 1
         let module = SymbolTable::new_module("first");
@@ -464,7 +519,7 @@ mod tests {
         // across 1 boundary
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec!["first", "x"].into());
+        assert_eq!(p, vec![CANONICAL_ROOT, "test", "first", "x"].into());
 
         // across 2 boundaries
         // Module 2
@@ -473,6 +528,9 @@ mod tests {
 
         let (s, p) = stack.get_symbol("x").unwrap();
         assert_eq!(s.name, "x");
-        assert_eq!(p, vec!["first", "second", "x"].into());
+        assert_eq!(
+            p,
+            vec![CANONICAL_ROOT, "test", "first", "second", "x"].into()
+        );
     }
 }

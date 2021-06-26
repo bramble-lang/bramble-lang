@@ -1,7 +1,7 @@
 fn my_main() -> i64 {
     let a:bool := true || false;
     let b:bool := !a;
-    root::std::io::writeboolln(a);
-    root::std::io::writeboolln(b);
+    project::std::io::writeboolln(a);
+    project::std::io::writeboolln(b);
     return 0;
 }

@@ -1,23 +1,23 @@
 fn my_main() -> i64 {
     let choice: i64 := get_user_action();
     if (choice == 0) {
-        root::std::io::write("Goodbye!\n");
+        project::std::io::write("Goodbye!\n");
     } else if (choice == 1) {
         let result: i64 := add();
-        root::std::io::write("Sum = ");
-        root::std::io::writei64ln(result);
+        project::std::io::write("Sum = ");
+        project::std::io::writei64ln(result);
     } else if (choice == 2) {
         let result: i64 := subtract();
-        root::std::io::write("Sub = ");
-        root::std::io::writei64ln(result);
+        project::std::io::write("Sub = ");
+        project::std::io::writei64ln(result);
     } else if (choice == 3) {
         let result: i64 := multiply();
-        root::std::io::write("Mul = ");
-        root::std::io::writei64ln(result);
+        project::std::io::write("Mul = ");
+        project::std::io::writei64ln(result);
     } else if (choice == 4) {
         let result: i64 := divide();
-        root::std::io::write("Div = ");
-        root::std::io::writei64ln(result);
+        project::std::io::write("Div = ");
+        project::std::io::writei64ln(result);
     } else {
 
     };
@@ -27,11 +27,11 @@ fn my_main() -> i64 {
 
 fn get_user_action() -> i64 {
     print_menu();
-    root::std::io::write(">: ");
-    let choice:i64 := root::std::io::readi64();
+    project::std::io::write(">: ");
+    let choice:i64 := project::std::io::readi64();
 
     return if (choice < 0 || choice > 4) {
-        root::std::io::write("Invalid choice.  Must be between 0 and 4.\n");
+        project::std::io::write("Invalid choice.  Must be between 0 and 4.\n");
         get_user_action()
     } else {
         choice
@@ -39,11 +39,11 @@ fn get_user_action() -> i64 {
 }
 
 fn print_menu() {
-    root::std::io::write("1. Add\n");
-    root::std::io::write("2. Subtract\n");
-    root::std::io::write("3. Multiply\n");
-    root::std::io::write("4. Divide\n");
-    root::std::io::write("0. Quit\n");
+    project::std::io::write("1. Add\n");
+    project::std::io::write("2. Subtract\n");
+    project::std::io::write("3. Multiply\n");
+    project::std::io::write("4. Divide\n");
+    project::std::io::write("0. Quit\n");
 
     return;
 }
@@ -65,8 +65,8 @@ fn divide() -> i64 {
 }
 
 fn get_number() -> i64 {
-    root::std::io::write("Integer: ");
-    return root::std::io::readi64();
+    project::std::io::write("Integer: ");
+    return project::std::io::readi64();
 }
 
 /*

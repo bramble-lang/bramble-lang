@@ -128,8 +128,10 @@ impl<'ctx> IrGen<'ctx> {
 
         self.add_mod_items(m);
 
-        let main_path = Self::find_distinct_user_main(m, user_main)?;
-        self.configure_user_main(&main_path);
+        match Self::find_distinct_user_main(m, user_main)? {
+            Some(main_path) => self.configure_user_main(&main_path),
+            None => (),
+        }
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
@@ -141,17 +143,14 @@ impl<'ctx> IrGen<'ctx> {
     fn find_distinct_user_main(
         m: &'ctx ast::Module<SemanticAnnotations>,
         user_main: &str,
-    ) -> Result<Path> {
+    ) -> Result<Option<Path>> {
         let mut matches = vec![];
         let base_path = Path::new();
         let main_path = Self::find_user_main(m, user_main, base_path, &mut matches);
         if matches.len() == 1 {
-            Ok(matches[0].clone())
+            Ok(Some(matches[0].clone()))
         } else if matches.len() == 0 {
-            Err(format!(
-                "Could not find the user defined {} function in any source file.",
-                user_main,
-            ))
+            Ok(None)
         } else {
             Err(format!(
                 "Found multiple {} functions in the project",
@@ -357,7 +356,7 @@ impl<'ctx> IrGen<'ctx> {
             let g = self.module.add_global(
                 self.context.i8_type().array_type(len_w_null as u32),
                 None,
-                &Self::id_to_str_pool_var(*id),
+                &self.get_stringpool_label(*id),
             );
             g.set_initializer(&self.context.const_string(escaped_s.as_bytes(), true));
         }
@@ -391,13 +390,20 @@ impl<'ctx> IrGen<'ctx> {
     fn get_str_var(&self, s: &str) -> Option<String> {
         self.string_pool
             .get(s)
-            .map(|id| Self::id_to_str_pool_var(*id))
+            .map(|id| self.get_stringpool_label(*id))
     }
 
     /// Convert the ID of a string to the name of the global variable that
     /// references that string
-    fn id_to_str_pool_var(id: usize) -> String {
-        format!("str_{}", id)
+    fn get_stringpool_label(&self, id: usize) -> String {
+        format!(
+            "str_{}_{}",
+            self.module
+                .get_name()
+                .to_str()
+                .expect("Expected a valid UTF string for the Module name"),
+            id
+        )
     }
 }
 

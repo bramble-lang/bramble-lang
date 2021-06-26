@@ -3,17 +3,17 @@ fn my_main() -> i64 {
     let c : co i64 := init my_co(ms, ms);
     let w : i64 := yield c;
     let x : i64 := 1;
-    root::std::io::writei64ln(x);
-    root::std::io::writei64ln(w);
+    project::std::io::writei64ln(x);
+    project::std::io::writei64ln(w);
     let z : i64 := yield c;
-    root::std::io::writei64ln(z);
+    project::std::io::writei64ln(z);
     return 0;
 }
 
 co my_co (x: MyStruct, y: MyStruct) -> i64 {
-    root::std::io::writei64ln(x.x);
+    project::std::io::writei64ln(x.x);
     yret x.y + y.y;
-    root::std::io::writei64ln(x.y);
+    project::std::io::writei64ln(x.y);
     return x.x * y.x;
 }
 

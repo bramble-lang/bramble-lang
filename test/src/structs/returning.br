@@ -1,20 +1,20 @@
 fn my_main() -> i64 {
     let y: MyStruct := test();
-    root::std::io::writei64ln(y.x);
-    root::std::io::writei64ln(y.y);
-    root::std::io::writei64ln(y.z);
+    project::std::io::writei64ln(y.x);
+    project::std::io::writei64ln(y.y);
+    project::std::io::writei64ln(y.z);
 
     let z: MyStruct2 := test2();
-    root::std::io::writei64ln(z.a);
-    root::std::io::writei64ln(z.ms.x);
-    root::std::io::writei64ln(z.ms.y);
-    root::std::io::writei64ln(z.ms.z);
-    root::std::io::writei64ln(z.b);
+    project::std::io::writei64ln(z.a);
+    project::std::io::writei64ln(z.ms.x);
+    project::std::io::writei64ln(z.ms.y);
+    project::std::io::writei64ln(z.ms.z);
+    project::std::io::writei64ln(z.b);
 
     let a: MyStruct := test3();
-    root::std::io::writei64ln(a.x);
-    root::std::io::writei64ln(a.y);
-    root::std::io::writei64ln(a.z);
+    project::std::io::writei64ln(a.x);
+    project::std::io::writei64ln(a.y);
+    project::std::io::writei64ln(a.z);
 
     return 0;
 }
@@ -33,7 +33,7 @@ struct MyStruct2 {
 
 fn test() -> MyStruct {
     let t: MyStruct := MyStruct{z: 10, x: 5, y: 2};
-    root::std::io::writei64ln(t.x);
+    project::std::io::writei64ln(t.x);
     return t;
 }
 

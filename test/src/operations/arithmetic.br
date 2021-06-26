@@ -5,10 +5,10 @@ fn my_main() -> i64 {
     let negative:i64 := 0 - sub;
     let multiply:i64 := 5 * -negative;
     let divide:i64 := multiply / 5;
-    root::std::io::writei64ln(add);
-    root::std::io::writei64ln(sub);
-    root::std::io::writei64ln(negative);
-    root::std::io::writei64ln(multiply);
-    root::std::io::writei64ln(divide);
+    project::std::io::writei64ln(add);
+    project::std::io::writei64ln(sub);
+    project::std::io::writei64ln(negative);
+    project::std::io::writei64ln(multiply);
+    project::std::io::writei64ln(divide);
     return 0;
 }

@@ -3,36 +3,36 @@ fn my_main() -> i64 {
     let y:i32 := test();
     let z:i32 := test2(y);
     
-    root::std::io::writei32ln(x);    // 5
-    root::std::io::writei32ln(y);    // 5
-    root::std::io::writei32ln(z);    // -5
+    project::std::io::writei32ln(x);    // 5
+    project::std::io::writei32ln(y);    // 5
+    project::std::io::writei32ln(z);    // -5
 
     let w: i32 := x + y;
-    root::std::io::writei32ln(w);    // 10
+    project::std::io::writei32ln(w);    // 10
 
     let a: i32 := w + z;
-    root::std::io::writei32ln(a); // 5
+    project::std::io::writei32ln(a); // 5
 
     let b: i32 := a * w * z;
-    root::std::io::writei32ln(b); // -250
+    project::std::io::writei32ln(b); // -250
 
     let c: i32 := -(a * w * z * (12i32 * y));
-    root::std::io::writei32ln(c); // 15000
+    project::std::io::writei32ln(c); // 15000
 
     let d: i32 := -(a * w * z * (12i32 + y));
-    root::std::io::writei32ln(d); // 4250
+    project::std::io::writei32ln(d); // 4250
 
     let e: i32 := -(a * w * z * (12i32 - y * (20i32 / x)));
-    root::std::io::writei32ln(e); // 4250
+    project::std::io::writei32ln(e); // 4250
 
     let f: i32 := x/w;
-    root::std::io::writei32ln(f); // 0
+    project::std::io::writei32ln(f); // 0
 
     let g: i32 := add(x, y);
-    root::std::io::writei32ln(g); // 10
+    project::std::io::writei32ln(g); // 10
 
     if (5i32 < 10i32) {
-        root::std::io::write("5 is less than 10\n");
+        project::std::io::write("5 is less than 10\n");
     };
     
     return 0;

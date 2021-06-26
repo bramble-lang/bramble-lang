@@ -31,6 +31,7 @@ fn main() {
         .value_of("input")
         .expect("Expected an input source file to compile");
     let src_path = Path::new(input);
+    let project_name = get_project_name(&src_path).unwrap();
     let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
 
     let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
@@ -43,7 +44,7 @@ fn main() {
     };
 
     let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
-    let root = match parse_project(ROOT_MODULE_NAME, token_sets, trace_parser) {
+    let root = match parse_project(project_name, token_sets, trace_parser) {
         Ok(root) => root,
         Err(errs) => {
             print_errs(&errs);
@@ -59,6 +60,7 @@ fn main() {
 
     let semantic_ast = match resolve_types_with_imports(
         &root,
+        USER_MAIN_FN,
         &imported,
         trace_semantic_node,
         trace_type_resolver,
@@ -75,7 +77,7 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, "test", &imported);
+    let mut llvm = llvm::IrGen::new(&context, project_name, &imported);
     match llvm.ingest(&semantic_ast, USER_MAIN_FN) {
         Ok(()) => (),
         Err(msg) => {

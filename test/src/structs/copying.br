@@ -6,9 +6,9 @@ fn my_main() -> i64 {
     };
 
     let ms2: MyStruct := ms;
-    root::std::io::writei64ln(ms2.x);
-    root::std::io::writei64ln(ms2.y);
-    root::std::io::writei64ln(ms2.z);
+    project::std::io::writei64ln(ms2.x);
+    project::std::io::writei64ln(ms2.y);
+    project::std::io::writei64ln(ms2.z);
 
 
     let t:MyStruct2 := MyStruct2{
@@ -17,11 +17,11 @@ fn my_main() -> i64 {
         b: 456,
     };
 
-    root::std::io::writei64ln(t.a);
-    root::std::io::writei64ln(t.ms.x);
-    root::std::io::writei64ln(t.ms.y);
-    root::std::io::writei64ln(t.ms.z);
-    root::std::io::writei64ln(t.b);
+    project::std::io::writei64ln(t.a);
+    project::std::io::writei64ln(t.ms.x);
+    project::std::io::writei64ln(t.ms.y);
+    project::std::io::writei64ln(t.ms.z);
+    project::std::io::writei64ln(t.b);
 
     let t3: MyStruct3 := MyStruct3{
         h: 321,
@@ -29,30 +29,30 @@ fn my_main() -> i64 {
         k: true,
     };
 
-    root::std::io::writei64ln(t3.h);
-    root::std::io::writei64ln(t3.ms2.a);
-    root::std::io::writei64ln(t3.ms2.ms.x);
-    root::std::io::writei64ln(t3.ms2.ms.y);
-    root::std::io::writei64ln(t3.ms2.ms.z);
-    root::std::io::writei64ln(t3.ms2.b);
-    root::std::io::writeboolln(t3.k);
+    project::std::io::writei64ln(t3.h);
+    project::std::io::writei64ln(t3.ms2.a);
+    project::std::io::writei64ln(t3.ms2.ms.x);
+    project::std::io::writei64ln(t3.ms2.ms.y);
+    project::std::io::writei64ln(t3.ms2.ms.z);
+    project::std::io::writei64ln(t3.ms2.b);
+    project::std::io::writeboolln(t3.k);
 
     let t4: MyStruct4 := MyStruct4 {
         a: t3,
         b: t3,
     };
 
-    root::std::io::writei64ln(t4.a.ms2.a);
-    root::std::io::writei64ln(t4.a.ms2.ms.x);
-    root::std::io::writei64ln(t4.a.ms2.ms.y);
-    root::std::io::writei64ln(t4.a.ms2.ms.z);
-    root::std::io::writei64ln(t4.a.ms2.b);
+    project::std::io::writei64ln(t4.a.ms2.a);
+    project::std::io::writei64ln(t4.a.ms2.ms.x);
+    project::std::io::writei64ln(t4.a.ms2.ms.y);
+    project::std::io::writei64ln(t4.a.ms2.ms.z);
+    project::std::io::writei64ln(t4.a.ms2.b);
 
-    root::std::io::writei64ln(t4.b.ms2.a);
-    root::std::io::writei64ln(t4.b.ms2.ms.x);
-    root::std::io::writei64ln(t4.b.ms2.ms.y);
-    root::std::io::writei64ln(t4.b.ms2.ms.z);
-    root::std::io::writei64ln(t4.b.ms2.b);
+    project::std::io::writei64ln(t4.b.ms2.a);
+    project::std::io::writei64ln(t4.b.ms2.ms.x);
+    project::std::io::writei64ln(t4.b.ms2.ms.y);
+    project::std::io::writei64ln(t4.b.ms2.ms.z);
+    project::std::io::writei64ln(t4.b.ms2.b);
 
     return 0;
 }

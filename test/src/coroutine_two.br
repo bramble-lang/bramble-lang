@@ -1,10 +1,10 @@
 fn my_main() -> i64 {
     let c:co i64 := init my_co(5, 13);
     let c2:co i64 := init my_co(17, 27);
-    root::std::io::writei64ln((yield c));
-    root::std::io::writei64ln((yield c2));
-    root::std::io::writei64ln((yield c));
-    root::std::io::writei64ln((yield c2));
+    project::std::io::writei64ln((yield c));
+    project::std::io::writei64ln((yield c2));
+    project::std::io::writei64ln((yield c));
+    project::std::io::writei64ln((yield c2));
     return 0;
 }
 

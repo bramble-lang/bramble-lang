@@ -204,36 +204,6 @@ impl<M> Module<M> {
                 .or(self.externs.iter().find(|e| e.get_name() == name))))
     }
 
-    pub fn go_to(&self, path: &Path) -> Option<&Item<M>> {
-        // If the path is empty, then return None as it is not possible for
-        // anything to match
-        if path.len() == 0 {
-            None
-        }
-        // If path has one element, then that is the item name
-        // and return the matching item
-        else if path.len() == 1 {
-            path.item().and_then(|item| self.get_item(item))
-        } else {
-            // otherwise, get the parent of the path and traverse the
-            // module hierarchy by the parent, returning None if at
-            // any point no module matches the parent path
-
-            // If the parent path terminates on a module, then get
-            // the item from the path (the last element in teh path)
-            // and search the terminating module for that item and
-            // return the result
-            let parent_path = path.parent();
-            match self.go_to_module(&parent_path) {
-                Some(parent) => {
-                    let item = path.item().expect("Path with >1 length has no item");
-                    parent.get_item(item)
-                }
-                None => None,
-            }
-        }
-    }
-
     pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {
         if path.len() == 0 {
             None
@@ -402,7 +372,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_go_to_item_does_not_exist() {
+    pub fn test_get_item_that_does_not_exist() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
             annotations: 1,
@@ -413,12 +383,12 @@ mod test {
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["test", "nothing"].into());
+        let f = module.get_item("nothing");
         assert_eq!(f, None);
     }
 
     #[test]
-    pub fn test_go_to_root_does_not_match() {
+    pub fn test_get_function() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
             annotations: 1,
@@ -429,28 +399,12 @@ mod test {
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["bad", "func"].into());
-        assert_eq!(f, None);
-    }
-
-    #[test]
-    pub fn test_go_to_function() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            annotations: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["test", "func"].into());
+        let f = module.get_item("func");
         assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 
     #[test]
-    pub fn test_go_to_coroutine() {
+    pub fn test_get_coroutine() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
             annotations: 1,
@@ -461,13 +415,13 @@ mod test {
             body: vec![],
         };
         module.add_coroutine(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["test", "co"].into());
+        let f = module.get_item("co");
         assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 
     #[test]
     pub fn test_go_to_nested() {
-        let mut module = Module::new("inner", 1);
+        let mut inner = Module::new("inner", 1);
         let fdef = RoutineDef {
             annotations: 1,
             name: "co".into(),
@@ -476,10 +430,11 @@ mod test {
             ty: Type::I64,
             body: vec![],
         };
-        module.add_coroutine(fdef.clone()).unwrap();
+        inner.add_coroutine(fdef.clone()).unwrap();
         let mut outer = Module::new("outer", 2);
-        outer.add_module(module.clone());
-        let f = outer.go_to(&vec!["outer", "inner", "co"].into());
+        outer.add_module(inner.clone());
+        let m = outer.go_to_module(&vec!["outer", "inner"].into()).unwrap();
+        let f = m.get_item("co");
         assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 

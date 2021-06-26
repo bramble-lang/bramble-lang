@@ -16,9 +16,9 @@ fn tower(n: i64, from: i64, to: i64, aux: i64) {
 }
 
 fn print_move(from: i64, to: i64) {
-    root::std::io::writei64(from);
-    root::std::io::write(" -> ");
-    root::std::io::writei64ln(to);
+    project::std::io::writei64(from);
+    project::std::io::write(" -> ");
+    project::std::io::writei64ln(to);
 
     return;
 }

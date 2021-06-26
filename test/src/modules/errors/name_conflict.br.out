@@ -1,1 +1,1 @@
-Error: Semantic: L3: Bind expected root::name_conflict::MyStruct but got root::name_conflict::my_mod::MyStruct
+Error: Semantic: L3: Bind expected $name_conflict::name_conflict::MyStruct but got $name_conflict::name_conflict::my_mod::MyStruct
