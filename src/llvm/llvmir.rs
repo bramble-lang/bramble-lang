@@ -400,7 +400,14 @@ impl<'ctx> IrGen<'ctx> {
     /// Convert the ID of a string to the name of the global variable that
     /// references that string
     fn id_to_str_pool_var(&self, id: usize) -> String {
-        format!("str_{}_{}", self.module.get_name().to_str().unwrap(), id)
+        format!(
+            "str_{}_{}",
+            self.module
+                .get_name()
+                .to_str()
+                .expect("Expected a valid UTF string for the Module name"),
+            id
+        )
     }
 }
 
