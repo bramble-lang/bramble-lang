@@ -60,7 +60,7 @@ impl<'a> TypeResolver<'a> {
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
-            main_fn: vec![CANONICAL_ROOT, MAIN_MODULE, "my_main"].into(), // TODO: should get rid of this
+            main_fn: vec![PROJECT_ROOT, MAIN_MODULE, "my_main"].into(), // TODO: should get rid of this
         }
     }
 
@@ -1443,7 +1443,7 @@ mod tests {
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
-                        let expected: Path = vec![CANONICAL_ROOT, "test", "test"].into();
+                        let expected: Path = vec![PROJECT_ROOT, "test", "test"].into();
                         assert_eq!(struct_name, &expected)
                     } else {
                         panic!("Not a struct expression")
@@ -1550,7 +1550,7 @@ mod tests {
                     ..
                 } = &params[0]
                 {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path = vec![PROJECT_ROOT, MAIN_MODULE, "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -1587,7 +1587,7 @@ mod tests {
             .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path = vec![PROJECT_ROOT, MAIN_MODULE, "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -1623,7 +1623,7 @@ mod tests {
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path = vec![PROJECT_ROOT, MAIN_MODULE, "test"].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -4069,7 +4069,7 @@ mod tests {
             let mut semantic = TypeResolver::new(&sm_ast);
 
             semantic.import_function(
-                vec![CANONICAL_ROOT, "std", "test"].into(),
+                vec![PROJECT_ROOT, "std", "test"].into(),
                 import_func.0, import_func.1,
             );
 
