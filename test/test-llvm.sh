@@ -23,7 +23,7 @@ run_test() {
     input="./src/${test}.in"
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/debug/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
+        ../target/debug/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj > ./target/stdout
         ../target/debug/braid-lang --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         ../target/debug/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
