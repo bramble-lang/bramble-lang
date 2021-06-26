@@ -204,38 +204,6 @@ impl<M> Module<M> {
                 .or(self.externs.iter().find(|e| e.get_name() == name))))
     }
 
-    // TODO: This function appears to only be used in tests, so I believe it can be
-    // deleted
-    /*pub fn go_to(&self, path: &Path) -> Option<&Item<M>> {
-        // If the path is empty, then return None as it is not possible for
-        // anything to match
-        if path.len() == 0 {
-            None
-        }
-        // If path has one element, then that is the item name
-        // and return the matching item
-        else if path.len() == 1 {
-            path.item().and_then(|item| self.get_item(item))
-        } else {
-            // otherwise, get the parent of the path and traverse the
-            // module hierarchy by the parent, returning None if at
-            // any point no module matches the parent path
-
-            // If the parent path terminates on a module, then get
-            // the item from the path (the last element in teh path)
-            // and search the terminating module for that item and
-            // return the result
-            let parent_path = path.parent();
-            match self.go_to_module(&parent_path) {
-                Some(parent) => {
-                    let item = path.item().expect("Path with >1 length has no item");
-                    parent.get_item(item)
-                }
-                None => None,
-            }
-        }
-    }*/
-
     pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {
         if path.len() == 0 {
             None
