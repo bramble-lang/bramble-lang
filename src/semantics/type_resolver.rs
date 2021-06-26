@@ -1056,20 +1056,18 @@ impl<'a> TypeResolver<'a> {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if def != &RoutineDefType::Function {
-            return Err(format!(
-                "$root::my_main must be a function of type () -> i64"
-            ));
+            return Err(format!("my_main must be a function of type () -> i64",));
         }
 
         if params.len() > 0 {
             return Err(format!(
-                "$root::my_main must take no parameters. It must be of type () -> i64"
+                "my_main must take no parameters. It must be of type () -> i64",
             ));
         }
 
         if p != Type::I64 {
             return Err(format!(
-                "$root::my_main must return an i64. It must be of type () -> i64"
+                "my_main must return an i64. It must be of type () -> i64",
             ));
         }
 
@@ -1486,21 +1484,21 @@ mod tests {
                 "fn my_main() -> i32 {
                     return 0i32;
                 }",
-                Err("Semantic: L1: $root::my_main must return an i64. It must be of type () -> i64"),
+                Err("Semantic: L1: my_main must return an i64. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "fn my_main(i: i32) -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: $root::my_main must take no parameters. It must be of type () -> i64"),
+                Err("Semantic: L1: my_main must take no parameters. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "co my_main() -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: $root::my_main must be a function of type () -> i64"),
+                Err("Semantic: L1: my_main must be a function of type () -> i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -1509,7 +1507,13 @@ mod tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, "my_main", TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
+            let module = resolve_types(
+                &ast,
+                "my_main",
+                TracingConfig::Off,
+                TracingConfig::Off,
+                TracingConfig::Off,
+            );
             match (expected, module) {
                 (Ok(expected_ty), Ok(actual)) => {
                     let fn_main = actual.get_functions()[0].to_routine().unwrap();
