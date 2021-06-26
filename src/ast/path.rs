@@ -1,7 +1,7 @@
 use braid_lang::result::Result;
 
 pub const CANONICAL_ROOT: &str = "project";
-pub const ROOT_SUGAR: &str = "root";
+pub const ROOT_PATH: &str = "root";
 pub const SELF: &str = "self";
 
 #[derive(Clone, Debug, PartialEq)]
@@ -89,7 +89,7 @@ impl Path {
             let mut uses_root = false;
             let path = if self.path[0] == SELF {
                 &self.path[1..]
-            } else if self.path[0] == ROOT_SUGAR {
+            } else if self.path[0] == ROOT_PATH {
                 uses_root = true;
                 &self.path[1..]
             } else {
@@ -181,7 +181,7 @@ mod test_path {
 
     #[test]
     fn test_canonical_to_canonical() {
-        let path: Path = vec![ROOT_SUGAR, "first"].into();
+        let path: Path = vec![ROOT_PATH, "first"].into();
         let current = vec![CANONICAL_ROOT, "current"].into();
         let canonized_path = path.to_canonical(&current);
         let expected = vec![CANONICAL_ROOT, "current", "first"].into();

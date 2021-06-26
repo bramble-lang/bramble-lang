@@ -502,7 +502,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
 
     // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
     if stream.next_if(&Lex::PathSeparator).is_some() {
-        path.push(ROOT_SUGAR.into());
+        path.push(ROOT_PATH.into());
     }
 
     match stream.next_if_id() {
@@ -782,7 +782,7 @@ pub mod tests {
     fn parse_path() {
         for (text, expected) in vec![
             ("thing", Ok(vec!["thing"])),
-            ("::thing", Ok(vec![ROOT_SUGAR, "thing"])),
+            ("::thing", Ok(vec![ROOT_PATH, "thing"])),
             ("thing::first", Ok(vec!["thing", "first"])),
             ("thing::first::second", Ok(vec!["thing", "first", "second"])),
             (
