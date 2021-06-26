@@ -22,10 +22,6 @@ impl Path {
         self.is_canonical
     }
 
-    pub fn set_canonical(&mut self, is: bool) {
-        self.is_canonical = is;
-    }
-
     pub fn len(&self) -> usize {
         self.path.len()
     }
@@ -83,7 +79,6 @@ impl Path {
     - occurances of `super` will move up the current path
     */
     pub fn to_canonical(&self, current_path: &Path) -> Result<Path> {
-        // println!("{} - {}", stdext::function_name!(), current_path);
         // TODO: make this method move "self"?
         if !current_path.is_canonical() {
             panic!("Current path is not canonical: {}", current_path);
