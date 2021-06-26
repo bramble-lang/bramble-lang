@@ -151,10 +151,6 @@ impl<'ctx> IrGen<'ctx> {
             Ok(Some(matches[0].clone()))
         } else if matches.len() == 0 {
             Ok(None)
-            /*Err(format!(
-                "Could not find the user defined {} function in any source file.",
-                user_main,
-            ))*/
         } else {
             Err(format!(
                 "Found multiple {} functions in the project",
