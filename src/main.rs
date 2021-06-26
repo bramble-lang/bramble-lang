@@ -60,6 +60,7 @@ fn main() {
 
     let semantic_ast = match resolve_types_with_imports(
         &root,
+        USER_MAIN_FN,
         &imported,
         trace_semantic_node,
         trace_type_resolver,
