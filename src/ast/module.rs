@@ -371,8 +371,8 @@ mod test {
         assert_eq!(result, Err("dupe already exists in module".into()));
     }
 
-    /*#[test]
-    pub fn test_go_to_item_does_not_exist() {
+    #[test]
+    pub fn test_get_item_that_does_not_exist() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
             annotations: 1,
@@ -383,12 +383,12 @@ mod test {
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["test", "nothing"].into());
+        let f = module.get_item("nothing");
         assert_eq!(f, None);
     }
 
     #[test]
-    pub fn test_go_to_root_does_not_match() {
+    pub fn test_get_function() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
             annotations: 1,
@@ -399,28 +399,12 @@ mod test {
             body: vec![],
         };
         module.add_function(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["bad", "func"].into());
-        assert_eq!(f, None);
-    }
-
-    #[test]
-    pub fn test_go_to_function() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            annotations: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["test", "func"].into());
+        let f = module.get_item("func");
         assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 
     #[test]
-    pub fn test_go_to_coroutine() {
+    pub fn test_get_coroutine() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
             annotations: 1,
@@ -431,13 +415,13 @@ mod test {
             body: vec![],
         };
         module.add_coroutine(fdef.clone()).unwrap();
-        let f = module.go_to(&vec!["test", "co"].into());
+        let f = module.get_item("co");
         assert_eq!(f, Some(&Item::Routine(fdef)));
     }
 
     #[test]
     pub fn test_go_to_nested() {
-        let mut module = Module::new("inner", 1);
+        let mut inner = Module::new("inner", 1);
         let fdef = RoutineDef {
             annotations: 1,
             name: "co".into(),
@@ -446,12 +430,13 @@ mod test {
             ty: Type::I64,
             body: vec![],
         };
-        module.add_coroutine(fdef.clone()).unwrap();
+        inner.add_coroutine(fdef.clone()).unwrap();
         let mut outer = Module::new("outer", 2);
-        outer.add_module(module.clone());
-        let f = outer.go_to(&vec!["outer", "inner", "co"].into());
+        outer.add_module(inner.clone());
+        let m = outer.go_to_module(&vec!["outer", "inner"].into()).unwrap();
+        let f = m.get_item("co");
         assert_eq!(f, Some(&Item::Routine(fdef)));
-    }*/
+    }
 
     #[test]
     pub fn test_add_extern() {
