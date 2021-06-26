@@ -360,7 +360,7 @@ impl<'ctx> IrGen<'ctx> {
             let g = self.module.add_global(
                 self.context.i8_type().array_type(len_w_null as u32),
                 Some(AddressSpace::Local),
-                &self.id_to_str_pool_var(*id),
+                &self.get_stringpool_label(*id),
             );
             g.set_initializer(&self.context.const_string(escaped_s.as_bytes(), true));
         }
@@ -394,12 +394,12 @@ impl<'ctx> IrGen<'ctx> {
     fn get_str_var(&self, s: &str) -> Option<String> {
         self.string_pool
             .get(s)
-            .map(|id| self.id_to_str_pool_var(*id))
+            .map(|id| self.get_stringpool_label(*id))
     }
 
     /// Convert the ID of a string to the name of the global variable that
     /// references that string
-    fn id_to_str_pool_var(&self, id: usize) -> String {
+    fn get_stringpool_label(&self, id: usize) -> String {
         format!(
             "str_{}_{}",
             self.module
