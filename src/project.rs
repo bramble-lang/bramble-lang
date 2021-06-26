@@ -11,6 +11,21 @@ use crate::{
 
 use braid_lang::result::{NResult, Result};
 
+/// Given the path to a source, return the name that should be used
+/// for the project.
+/// If the path is a file, then return the file name (without extension)
+/// If the path is a directory, then return the name of the directory
+pub fn get_project_name(src: &Path) -> Result<&str> {
+    if src.is_file() || src.is_dir() {
+        src.file_stem()
+            .map(|name| name.to_str())
+            .flatten()
+            .ok_or("Could not extract name from given path".into())
+    } else {
+        Err("Given path is neither a directory or a file".into())
+    }
+}
+
 fn create_module_path<'a>(
     module: &'a mut Module<u32>,
     path: &[String],
