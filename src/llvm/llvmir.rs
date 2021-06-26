@@ -359,7 +359,7 @@ impl<'ctx> IrGen<'ctx> {
             let len_w_null = escaped_s.len() + 1;
             let g = self.module.add_global(
                 self.context.i8_type().array_type(len_w_null as u32),
-                Some(AddressSpace::Local),
+                None,
                 &self.get_stringpool_label(*id),
             );
             g.set_initializer(&self.context.const_string(escaped_s.as_bytes(), true));
