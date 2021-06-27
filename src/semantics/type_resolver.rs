@@ -4079,23 +4079,6 @@ mod tests {
                 (vec![Type::I64, Type::Bool], (Type::I64)),
                 Err("Semantic: L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
-            /*
-            Delete at code review, this test is no longer valid with the updates to path semantics
-            (
-                " 
-                fn main() {
-                    let k: i64 := project::std::test(5);
-                    return;
-                }
-                mod std {
-                    fn test(x: i64) -> i64 {
-                        return x;
-                    }
-                }
-                ",
-                (vec![Type::I64], (Type::I64)),
-                Err("Semantic: L3: Found multiple definitions of $std::test ($std::test)"),
-            ),*/
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
