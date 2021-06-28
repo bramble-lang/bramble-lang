@@ -48,11 +48,9 @@ pub fn read_manifests(args: &ArgMatches) -> NResult<Vec<Manifest>> {
         .into_iter()
         .map(|im| {
             std::fs::File::open(im)
-                .map_err(|e| format!("Failed to import given project: {}", e))
-                .and_then(|mut f| {
-                    Manifest::read(&mut f)
-                        .map_err(|e| format!("Failed to import given project: {}", e))
-                })
+                .map_err(|e| format!("{}", e))
+                .and_then(|mut f| Manifest::read(&mut f).map_err(|e| format!("{}", e)))
+                .map_err(|e| format!("Failed to import {}: {}", im, e))
         })
         .collect();
 
