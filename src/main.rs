@@ -104,8 +104,15 @@ fn main() {
 
     if config.is_present("manifest") {
         let manifest = Manifest::extract(&semantic_ast);
-        let mut file =
-            std::fs::File::create(format!("./target/{}.manifest", project_name)).unwrap();
-        manifest.write(&mut file).unwrap();
+        match std::fs::File::create(format!("./target/{}.manifest", project_name))
+            .map_err(|e| format!("{}", e))
+            .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
+        {
+            Ok(()) => (),
+            Err(e) => {
+                println!("Failed to write manifest file: {}", e);
+                exit(ERR_MANIFEST_WRITE_ERROR)
+            }
+        }
     }
 }
