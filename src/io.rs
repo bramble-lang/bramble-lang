@@ -54,20 +54,17 @@ pub fn read_manifests(
 ) -> Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)> {
     get_imports(&args)
         .into_iter()
-        .map(|im| {
-            println!("Importing: {}", im);
-            match std::fs::File::open(im) {
-                Ok(mut file) => match Manifest::read(&mut file) {
-                    Ok(manifest) => manifest.get_items(),
-                    Err(e) => {
-                        println!("Failed to import given project: {}", e);
-                        exit(ERR_IMPORT_ERROR)
-                    }
-                },
+        .map(|im| match std::fs::File::open(im) {
+            Ok(mut file) => match Manifest::read(&mut file) {
+                Ok(manifest) => manifest.get_items(),
                 Err(e) => {
                     println!("Failed to import given project: {}", e);
                     exit(ERR_IMPORT_ERROR)
                 }
+            },
+            Err(e) => {
+                println!("Failed to import given project: {}", e);
+                exit(ERR_IMPORT_ERROR)
             }
         })
         .flatten()
