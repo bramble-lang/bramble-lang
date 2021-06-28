@@ -42,6 +42,13 @@ impl Manifest {
         Manifest { items }
     }
 
+    pub fn get_items(&self) -> Vec<(Path, Vec<Type>, Type)> {
+        self.items
+            .iter()
+            .map(|i| (i.path.clone(), i.params.clone(), i.ty.clone()))
+            .collect()
+    }
+
     /// Loads a manifest from the given file.
     pub fn read(file: &mut std::fs::File) -> Result<Manifest, serde_yaml::Error> {
         let manifest: Manifest = serde_yaml::from_reader(file)?;

@@ -1,4 +1,4 @@
-use clap::{App, Arg};
+use clap::{App, Arg, ArgMatches};
 
 // Exit Codes for different types of errors
 pub const ERR_TYPE_CHECK: i32 = 1;
@@ -25,6 +25,14 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .takes_value(true)
                 .required(true)
                 .help("Source code file to compile"),
+        )
+        .arg(
+            Arg::with_name("import")
+                .short("m")
+                .long("import")
+                .takes_value(true)
+                .required(false)
+                .help("Comma separated list of projects that this project is dependent upon."),
         )
         .arg(
             Arg::with_name("output")
@@ -100,4 +108,11 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Prints out the current module path at the current line of code.")
         );
     app
+}
+
+pub fn get_imports<'a>(args: &'a ArgMatches) -> Vec<&'a str> {
+    match args.value_of("import") {
+        None => vec![],
+        Some(imports) => imports.split(",").collect(),
+    }
 }
