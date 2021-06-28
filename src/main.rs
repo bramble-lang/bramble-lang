@@ -41,8 +41,19 @@ fn main() {
         .map(|im| {
             let filename = format!("./target/{}.manifest", im);
             println!("Importing: {}", filename);
-            let mut file = std::fs::File::open(filename).unwrap();
-            Manifest::read(&mut file).unwrap().get_items()
+            match std::fs::File::open(filename) {
+                Ok(mut file) => match Manifest::read(&mut file) {
+                    Ok(manifest) => manifest.get_items(),
+                    Err(e) => {
+                        println!("Failed to import given project: {}", e);
+                        exit(ERR_IMPORT_ERROR)
+                    }
+                },
+                Err(e) => {
+                    println!("Failed to import given project: {}", e);
+                    exit(ERR_IMPORT_ERROR)
+                }
+            }
         })
         .flatten()
         .collect();
@@ -69,9 +80,6 @@ fn main() {
     let trace_semantic_node = TracingConfig::parse(config.value_of("trace-semantic-node"));
     let trace_type_resolver = TracingConfig::parse(config.value_of("trace-type-resolver"));
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
-    //let imported = configure_imported_functions();
-    //let mut std_file = std::fs::File::open("./target/std.manifest").unwrap();
-    //let std_manifest = Manifest::read(&mut std_file).unwrap();
 
     let semantic_ast = match resolve_types_with_imports(
         &root,
