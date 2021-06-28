@@ -18,6 +18,7 @@ use std::{path::Path, process::exit};
 use cli::*;
 use diagnostics::config::TracingConfig;
 use inkwell::context::Context;
+use io::read_manifests;
 use manifest::Manifest;
 use project::*;
 use semantics::type_resolver::*;
@@ -36,26 +37,7 @@ fn main() {
     let project_name = get_project_name(&src_path).unwrap();
     let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
 
-    let imports: Vec<_> = get_imports(&config)
-        .into_iter()
-        .map(|im| {
-            println!("Importing: {}", im);
-            match std::fs::File::open(im) {
-                Ok(mut file) => match Manifest::read(&mut file) {
-                    Ok(manifest) => manifest.get_items(),
-                    Err(e) => {
-                        println!("Failed to import given project: {}", e);
-                        exit(ERR_IMPORT_ERROR)
-                    }
-                },
-                Err(e) => {
-                    println!("Failed to import given project: {}", e);
-                    exit(ERR_IMPORT_ERROR)
-                }
-            }
-        })
-        .flatten()
-        .collect();
+    let imports: Vec<_> = read_manifests(&config);
 
     let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
     let token_sets = match tokenize_project(src_input, trace_lexer) {
