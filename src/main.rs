@@ -37,7 +37,13 @@ fn main() {
     let project_name = get_project_name(&src_path).unwrap();
     let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
 
-    let imports: Vec<_> = read_manifests(&config);
+    let imports: Vec<_> = match read_manifests(&config) {
+        Ok(imports) => imports,
+        Err(errs) => {
+            print_errs(&errs);
+            exit(ERR_IMPORT_ERROR)
+        }
+    };
 
     let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
     let token_sets = match tokenize_project(src_input, trace_lexer) {

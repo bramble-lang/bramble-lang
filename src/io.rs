@@ -1,15 +1,9 @@
-use std::{
-    path::{Path, PathBuf},
-    process::exit,
-};
+use std::path::{Path, PathBuf};
 
+use braid_lang::result::NResult;
 use clap::ArgMatches;
 
-use crate::{
-    cli::{get_imports, ERR_IMPORT_ERROR},
-    manifest::Manifest,
-    BRAID_FILE_EXT,
-};
+use crate::{cli::get_imports, manifest::Manifest, BRAID_FILE_EXT};
 
 pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error> {
     let mut files = vec![];
@@ -51,22 +45,31 @@ pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error>
 
 pub fn read_manifests(
     args: &ArgMatches,
-) -> Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)> {
-    get_imports(&args)
+) -> NResult<Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>> {
+    let imports: Vec<_> = get_imports(&args)
         .into_iter()
         .map(|im| match std::fs::File::open(im) {
             Ok(mut file) => match Manifest::read(&mut file) {
-                Ok(manifest) => manifest.get_items(),
-                Err(e) => {
-                    println!("Failed to import given project: {}", e);
-                    exit(ERR_IMPORT_ERROR)
-                }
+                Ok(manifest) => Ok(manifest.get_items()),
+                Err(e) => Err(format!("Failed to import given project: {}", e)),
             },
-            Err(e) => {
-                println!("Failed to import given project: {}", e);
-                exit(ERR_IMPORT_ERROR)
-            }
+            Err(e) => Err(format!("Failed to import given project: {}", e)),
         })
-        .flatten()
-        .collect()
+        .collect();
+
+    let mut oks = vec![];
+    let mut errs = vec![];
+
+    for im in imports {
+        match im {
+            Ok(mut im) => oks.append(&mut im),
+            Err(e) => errs.push(e),
+        }
+    }
+
+    if errs.len() == 0 {
+        Ok(oks)
+    } else {
+        Err(errs)
+    }
 }
