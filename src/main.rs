@@ -7,6 +7,7 @@ mod diagnostics;
 mod io;
 mod lexer;
 mod llvm;
+mod manifest;
 mod parser;
 mod project;
 mod result;
@@ -17,6 +18,7 @@ use std::{path::Path, process::exit};
 use cli::*;
 use diagnostics::config::TracingConfig;
 use inkwell::context::Context;
+use manifest::Manifest;
 use project::*;
 use semantics::type_resolver::*;
 
@@ -57,6 +59,8 @@ fn main() {
     let trace_type_resolver = TracingConfig::parse(config.value_of("trace-type-resolver"));
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
     let imported = configure_imported_functions();
+    //let mut std_file = std::fs::File::open("./target/std.manifest").unwrap();
+    //let std_manifest = Manifest::read(&mut std_file).unwrap();
 
     let semantic_ast = match resolve_types_with_imports(
         &root,
@@ -91,4 +95,11 @@ fn main() {
     }
 
     llvm.emit_object_code(Path::new(output_target)).unwrap();
+
+    if config.is_present("manifest") {
+        let manifest = Manifest::from_module(&semantic_ast);
+        let mut file =
+            std::fs::File::create(format!("./target/{}.manifest", project_name)).unwrap();
+        manifest.write(&mut file).unwrap();
+    }
 }

@@ -1,10 +1,12 @@
+use serde::{Deserialize, Serialize};
+
 use braid_lang::result::Result;
 
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";
 pub const SELF: &str = "self";
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Path {
     path: Vec<String>,
     is_canonical: bool,

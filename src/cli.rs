@@ -47,6 +47,12 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
         )
         .arg(
+            Arg::with_name("manifest")
+                .long("manifest")
+                .takes_value(false)
+                .help("Write a manifest file for this project. The manifest can then be used by other projects to import items from this project.")
+        )
+        .arg(
             Arg::with_name("platform")
                 .short("p")
                 .long("platform")
