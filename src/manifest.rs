@@ -18,7 +18,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    pub fn from_module(module: &Module<SemanticAnnotations>) -> Manifest {
+    pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
         // Get list of all functions contained within a module and their paths
         let funcs = module.deep_get_functions();
 
@@ -29,7 +29,10 @@ impl Manifest {
                 path: f.annotation().get_canonical_path().clone(),
                 params: f
                     .to_routine()
-                    .unwrap()
+                    .expect(&format!(
+                        "Unexpected item type: a non-function was returned by deep_get_functions: {}",
+                        f.get_name(),
+                    ))
                     .params
                     .iter()
                     .map(|p| p.ty.clone())

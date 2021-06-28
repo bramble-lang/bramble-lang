@@ -103,7 +103,7 @@ fn main() {
     llvm.emit_object_code(Path::new(output_target)).unwrap();
 
     if config.is_present("manifest") {
-        let manifest = Manifest::from_module(&semantic_ast);
+        let manifest = Manifest::extract(&semantic_ast);
         let mut file =
             std::fs::File::create(format!("./target/{}.manifest", project_name)).unwrap();
         manifest.write(&mut file).unwrap();
