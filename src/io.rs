@@ -43,9 +43,7 @@ pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error>
     Ok(files)
 }
 
-pub fn read_manifests(
-    args: &ArgMatches,
-) -> NResult<Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>> {
+pub fn read_manifests(args: &ArgMatches) -> NResult<Vec<Manifest>> {
     let imports: Vec<_> = get_imports(&args)
         .into_iter()
         .map(|im| {
@@ -55,7 +53,6 @@ pub fn read_manifests(
                     Manifest::read(&mut f)
                         .map_err(|e| format!("Failed to import given project: {}", e))
                 })
-                .map(|m| m.get_items())
         })
         .collect();
 
@@ -64,7 +61,7 @@ pub fn read_manifests(
 
     for im in imports {
         match im {
-            Ok(mut im) => oks.append(&mut im),
+            Ok(im) => oks.push(im),
             Err(e) => errs.push(e),
         }
     }

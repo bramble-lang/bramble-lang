@@ -30,6 +30,7 @@ use braid_lang::result::Result;
 use crate::{
     ast,
     ast::{BinaryOperator, Extern, Node, Parameter, Path, RoutineDef, StructDef},
+    manifest::Manifest,
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -43,7 +44,7 @@ pub struct IrGen<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
-    externs: &'ctx Vec<(ast::Path, Vec<ast::Type>, ast::Type)>,
+    externs: &'ctx [Manifest],
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, &'ctx StructDef<SemanticAnnotations>>,
@@ -51,11 +52,7 @@ pub struct IrGen<'ctx> {
 }
 
 impl<'ctx> IrGen<'ctx> {
-    pub fn new(
-        ctx: &'ctx Context,
-        module: &str,
-        externs: &'ctx Vec<(ast::Path, Vec<ast::Type>, ast::Type)>,
-    ) -> IrGen<'ctx> {
+    pub fn new(ctx: &'ctx Context, module: &str, externs: &'ctx [Manifest]) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
@@ -212,8 +209,10 @@ impl<'ctx> IrGen<'ctx> {
     /// Add the list of external function declarations to the function table
     /// in the LLVM module
     fn add_externs(&mut self) {
-        for (path, params, ty) in self.externs {
-            self.add_fn_decl(&path.to_label(), params, false, ty)
+        for manifest in self.externs {
+            for (path, params, ty) in &manifest.get_items() {
+                self.add_fn_decl(&path.to_label(), params, false, ty)
+            }
         }
     }
 
