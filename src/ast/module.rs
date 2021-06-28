@@ -160,6 +160,24 @@ impl<M> Module<M> {
         &mut self.functions
     }
 
+    /// Gets all the functions in this module and its submodules
+    pub fn deep_get_functions(&self) -> Vec<&Item<M>> {
+        let mut funcs = vec![];
+
+        // Add all my functions to the vector
+        for f in self.get_functions() {
+            funcs.push(f);
+        }
+
+        // Get all the functions from my submodules and add them to the vector
+        for m in self.get_modules() {
+            let mut subfuncs = m.deep_get_functions();
+            funcs.append(&mut subfuncs);
+        }
+
+        funcs
+    }
+
     pub fn get_coroutines(&self) -> &Vec<Item<M>> {
         &self.coroutines
     }

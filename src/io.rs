@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use crate::BRAID_FILE_EXT;
+use braid_lang::result::NResult;
+use clap::ArgMatches;
+
+use crate::{cli::get_imports, manifest::Manifest, BRAID_FILE_EXT};
 
 pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error> {
     let mut files = vec![];
@@ -38,4 +41,32 @@ pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error>
         }
     }
     Ok(files)
+}
+
+pub fn read_manifests(args: &ArgMatches) -> NResult<Vec<Manifest>> {
+    let imports: Vec<_> = get_imports(&args)
+        .into_iter()
+        .map(|im| {
+            std::fs::File::open(im)
+                .map_err(|e| format!("{}", e))
+                .and_then(|mut f| Manifest::read(&mut f).map_err(|e| format!("{}", e)))
+                .map_err(|e| format!("Failed to import {}: {}", im, e))
+        })
+        .collect();
+
+    let mut oks = vec![];
+    let mut errs = vec![];
+
+    for im in imports {
+        match im {
+            Ok(im) => oks.push(im),
+            Err(e) => errs.push(e),
+        }
+    }
+
+    if errs.len() == 0 {
+        Ok(oks)
+    } else {
+        Err(errs)
+    }
 }

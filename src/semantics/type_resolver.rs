@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::ast::*;
 use crate::diagnostics::config::{Tracing, TracingConfig};
+use crate::manifest::Manifest;
 use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
 use crate::{parser::parser::ParserInfo, semantics::symbol_table::*};
 use braid_lang::result::Result;
@@ -28,7 +29,7 @@ pub fn resolve_types(
 pub fn resolve_types_with_imports(
     ast: &Module<ParserInfo>,
     main_fn: &str,
-    imported_functions: &Vec<(Path, Vec<Type>, Type)>,
+    imported_functions: &[Manifest],
     trace_semantic_node: TracingConfig,
     trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
@@ -39,8 +40,10 @@ pub fn resolve_types_with_imports(
 
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
-    for (name, params, ret_ty) in imported_functions.into_iter() {
-        semantic.import_function(name.clone(), params.clone(), ret_ty.clone());
+    for manifest in imported_functions.into_iter() {
+        for (path, params, ret_ty) in manifest.get_items().iter() {
+            semantic.import_function(path.clone(), params.clone(), ret_ty.clone());
+        }
     }
 
     semantic.set_tracing(trace_type_resolver);

@@ -1,4 +1,4 @@
-use clap::{App, Arg};
+use clap::{App, Arg, ArgMatches};
 
 // Exit Codes for different types of errors
 pub const ERR_TYPE_CHECK: i32 = 1;
@@ -6,6 +6,8 @@ pub const ERR_NO_AST: i32 = 2;
 pub const ERR_PARSER_ERROR: i32 = 3;
 pub const ERR_LLVM_IR_ERROR: i32 = 4;
 pub const ERR_LEXER_ERROR: i32 = 5;
+pub const ERR_IMPORT_ERROR: i32 = 6;
+pub const ERR_MANIFEST_WRITE_ERROR: i32 = 7;
 
 pub fn print_errs(errs: &[String]) {
     for e in errs {
@@ -27,6 +29,14 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Source code file to compile"),
         )
         .arg(
+            Arg::with_name("import")
+                .short("m")
+                .long("import")
+                .takes_value(true)
+                .required(false)
+                .help("Comma separated list of projects that this project is dependent upon."),
+        )
+        .arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
@@ -45,6 +55,12 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .possible_values(&["llvm-ir"])
                 .takes_value(true)
                 .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
+        )
+        .arg(
+            Arg::with_name("manifest")
+                .long("manifest")
+                .takes_value(false)
+                .help("Write a manifest file for this project. The manifest can then be used by other projects to import items from this project.")
         )
         .arg(
             Arg::with_name("platform")
@@ -94,4 +110,11 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Prints out the current module path at the current line of code.")
         );
     app
+}
+
+pub fn get_imports<'a>(args: &'a ArgMatches) -> Vec<&'a str> {
+    match args.value_of("import") {
+        None => vec![],
+        Some(imports) => imports.split(",").collect(),
+    }
 }

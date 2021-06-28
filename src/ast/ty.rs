@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use super::{path::Path, HasVarArgs};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Type {
     U8,
     U16,
