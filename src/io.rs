@@ -48,12 +48,14 @@ pub fn read_manifests(
 ) -> NResult<Vec<(crate::ast::Path, Vec<crate::ast::Type>, crate::ast::Type)>> {
     let imports: Vec<_> = get_imports(&args)
         .into_iter()
-        .map(|im| match std::fs::File::open(im) {
-            Ok(mut file) => match Manifest::read(&mut file) {
-                Ok(manifest) => Ok(manifest.get_items()),
-                Err(e) => Err(format!("Failed to import given project: {}", e)),
-            },
-            Err(e) => Err(format!("Failed to import given project: {}", e)),
+        .map(|im| {
+            std::fs::File::open(im)
+                .map_err(|e| format!("Failed to import given project: {}", e))
+                .and_then(|mut f| {
+                    Manifest::read(&mut f)
+                        .map_err(|e| format!("Failed to import given project: {}", e))
+                })
+                .map(|m| m.get_items())
         })
         .collect();
 
