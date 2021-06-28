@@ -1,0 +1,4 @@
+fn my_main() -> i64 {
+    project::std::io::writei64ln(project::shared::stuff::double(2));
+    return 0;
+}
