@@ -39,9 +39,8 @@ fn main() {
     let imports: Vec<_> = get_imports(&config)
         .into_iter()
         .map(|im| {
-            let filename = format!("./target/{}.manifest", im);
-            println!("Importing: {}", filename);
-            match std::fs::File::open(filename) {
+            println!("Importing: {}", im);
+            match std::fs::File::open(im) {
                 Ok(mut file) => match Manifest::read(&mut file) {
                     Ok(manifest) => manifest.get_items(),
                     Err(e) => {

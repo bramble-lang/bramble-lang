@@ -19,7 +19,7 @@ run() {
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         echo "Compiling"
         cargo run -- --llvm -p machos --input "../braid/std" -o ./target/std.obj --manifest
-        cargo run -- --llvm -p machos --import std "$@" -o ./target/output.obj
+        cargo run -- --llvm -p machos --import ./target/std.manifest "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
         nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
