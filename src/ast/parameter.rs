@@ -30,7 +30,7 @@ impl<M: Annotation> Node<M> for Parameter<M> {
     }
 
     fn name(&self) -> Option<&str> {
-        None
+        Some(&self.name)
     }
 
     fn iter_postorder(&self) -> PostOrderIter<M> {

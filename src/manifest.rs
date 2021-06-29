@@ -6,47 +6,78 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Item {
+struct Routine {
     path: Path,
     params: Vec<Type>,
     ty: Type,
 }
 
+impl Routine {
+    fn from_ast(r: &crate::ast::Item<SemanticAnnotations>) -> Routine {
+        Routine {
+            path: r.annotation().get_canonical_path().clone(),
+            params: r
+                .to_routine()
+                .expect(&format!(
+                    "Unexpected item type: a non-function was returned by deep_get_functions: {}",
+                    r.get_name(),
+                ))
+                .params
+                .iter()
+                .map(|p| p.ty.clone())
+                .collect(),
+            ty: r.annotation().ty().clone(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct StructDef {
+    path: Path,
+    fields: Vec<(String, Type)>,
+}
+
+impl StructDef {
+    fn from_ast(s: &crate::ast::StructDef<SemanticAnnotations>) -> StructDef {
+        StructDef {
+            path: s.annotation().get_canonical_path().clone(),
+            fields: s
+                .get_fields()
+                .iter()
+                .map(|fld| (fld.name.clone(), fld.ty.clone()))
+                .collect(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
-    items: Vec<Item>,
+    routines: Vec<Routine>,
+    structs: Vec<StructDef>,
 }
 
 impl Manifest {
     pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
         // Get list of all functions contained within a module and their paths
         let funcs = module.deep_get_functions();
+        let items = funcs.iter().map(|f| Routine::from_ast(f)).collect();
 
-        // map to a Vector of manifest items
-        let items = funcs
+        // Get list of all structures contained within the module
+        let structs = module
+            .deep_get_structs()
             .iter()
-            .map(|f| Item {
-                path: f.annotation().get_canonical_path().clone(),
-                params: f
-                    .to_routine()
-                    .expect(&format!(
-                        "Unexpected item type: a non-function was returned by deep_get_functions: {}",
-                        f.get_name(),
-                    ))
-                    .params
-                    .iter()
-                    .map(|p| p.ty.clone())
-                    .collect(),
-                ty: f.annotation().ty().clone(),
-            })
+            .map(|s| StructDef::from_ast(s))
             .collect();
 
         // Create the manifest
-        Manifest { items }
+        Manifest {
+            routines: items,
+            structs,
+        }
     }
 
     pub fn get_items(&self) -> Vec<(Path, Vec<Type>, Type)> {
-        self.items
+        self.routines
             .iter()
             .map(|i| (i.path.clone(), i.params.clone(), i.ty.clone()))
             .collect()

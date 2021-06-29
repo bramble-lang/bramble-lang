@@ -194,6 +194,27 @@ impl<M> Module<M> {
         &mut self.structs
     }
 
+    /// Gets all the functions in this module and its submodules
+    pub fn deep_get_structs(&self) -> Vec<&StructDef<M>> {
+        let mut structs = vec![];
+
+        // Add all my functions to the vector
+        for s in self.get_structs() {
+            match s {
+                Item::Struct(sd) => structs.push(sd),
+                _ => panic!("Non StructDef returned by get_structs"),
+            }
+        }
+
+        // Get all the functions from my submodules and add them to the vector
+        for m in self.get_modules() {
+            let mut substructs = m.deep_get_structs();
+            structs.append(&mut substructs);
+        }
+
+        structs
+    }
+
     pub fn get_externs(&self) -> &Vec<Item<M>> {
         &self.externs
     }
