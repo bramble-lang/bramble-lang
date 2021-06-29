@@ -76,7 +76,7 @@ impl Manifest {
         }
     }
 
-    pub fn get_items(&self) -> Vec<(Path, Vec<Type>, Type)> {
+    pub fn get_functions(&self) -> Vec<(Path, Vec<Type>, Type)> {
         self.routines
             .iter()
             .map(|i| (i.path.clone(), i.params.clone(), i.ty.clone()))

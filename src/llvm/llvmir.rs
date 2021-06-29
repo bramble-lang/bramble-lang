@@ -210,9 +210,13 @@ impl<'ctx> IrGen<'ctx> {
     /// in the LLVM module
     fn add_imports(&mut self) {
         for manifest in self.imports {
-            for (path, params, ty) in &manifest.get_items() {
+            // Add imported functions to the LLVM Module
+            for (path, params, ty) in &manifest.get_functions() {
                 self.add_fn_decl(&path.to_label(), params, false, ty);
             }
+
+            // Add imported structures to the LLVM Module
+            for (path, fields) in &manifest.get_structs() {}
         }
     }
 

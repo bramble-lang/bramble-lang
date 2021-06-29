@@ -41,7 +41,7 @@ pub fn resolve_types_with_imports(
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
     for manifest in imported_functions.into_iter() {
-        for (path, params, ret_ty) in manifest.get_items().iter() {
+        for (path, params, ret_ty) in manifest.get_functions().iter() {
             semantic.import_function(path.clone(), params.clone(), ret_ty.clone());
         }
     }
