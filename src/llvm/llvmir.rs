@@ -209,14 +209,21 @@ impl<'ctx> IrGen<'ctx> {
     /// Add the list of external function declarations to the function table
     /// in the LLVM module
     fn add_imports(&mut self) {
+        // Add struct definitions first in case there are any function declarations that depend
+        // upon these types
+        for manifest in self.imports {
+            // Add imported structures to the LLVM Module
+            for sd in manifest.get_structs() {
+                self.add_struct_def(sd)
+            }
+        }
+
+        // Add all function definitions that are imported from other projects
         for manifest in self.imports {
             // Add imported functions to the LLVM Module
             for (path, params, ty) in &manifest.get_functions() {
                 self.add_fn_decl(&path.to_label(), params, false, ty);
             }
-
-            // Add imported structures to the LLVM Module
-            for (path, fields) in &manifest.get_structs() {}
         }
     }
 

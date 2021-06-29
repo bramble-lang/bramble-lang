@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use super::{
     node::{
         Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
@@ -7,7 +9,7 @@ use super::{
 };
 use braid_lang::result::Result;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StructDef<M> {
     annotations: M,
     name: String,

@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::semantics::symbol_table::*;
 use crate::{
     ast::*,
@@ -5,7 +7,7 @@ use crate::{
 };
 use crate::{diagnostics::config::TracingConfig, parser::parser::ParserInfo};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SemanticAnnotations {
     pub id: u32,
     pub ln: u32,

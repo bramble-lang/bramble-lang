@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use super::{
     node::{
         Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
@@ -5,7 +7,7 @@ use super::{
     ty::Type,
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Parameter<M> {
     pub annotation: M,
     pub name: String,

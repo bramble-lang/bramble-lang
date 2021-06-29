@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ast::{Module, Node, Path, Type},
+    ast::{Module, Node, Path, StructDef, Type},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -32,28 +32,9 @@ impl Routine {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct StructDef {
-    path: Path,
-    fields: Vec<(String, Type)>,
-}
-
-impl StructDef {
-    fn from_ast(s: &crate::ast::StructDef<SemanticAnnotations>) -> StructDef {
-        StructDef {
-            path: s.annotation().get_canonical_path().clone(),
-            fields: s
-                .get_fields()
-                .iter()
-                .map(|fld| (fld.name.clone(), fld.ty.clone()))
-                .collect(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
     routines: Vec<Routine>,
-    structs: Vec<StructDef>,
+    structs: Vec<StructDef<SemanticAnnotations>>,
 }
 
 impl Manifest {
@@ -65,8 +46,8 @@ impl Manifest {
         // Get list of all structures contained within the module
         let structs = module
             .deep_get_structs()
-            .iter()
-            .map(|s| StructDef::from_ast(s))
+            .into_iter()
+            .map(|s| s.clone())
             .collect();
 
         // Create the manifest
@@ -83,11 +64,8 @@ impl Manifest {
             .collect()
     }
 
-    pub fn get_structs(&self) -> Vec<(Path, Vec<(String, Type)>)> {
-        self.structs
-            .iter()
-            .map(|s| (s.path.clone(), s.fields.clone()))
-            .collect()
+    pub fn get_structs(&self) -> &Vec<StructDef<SemanticAnnotations>> {
+        &self.structs
     }
 
     /// Loads a manifest from the given file.

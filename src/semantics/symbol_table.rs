@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::ast::*;
 use crate::semantics::semanticnode::SemanticAnnotations;
 use braid_lang::result::Result;
@@ -25,7 +27,7 @@ use braid_lang::result::Result;
  * know about are the ones in the `SymbolTable`s of the nodes that comprise the path from
  * the root of the AST to the given node.
  */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SymbolTable {
     ty: ScopeType,
     sym: Vec<Symbol>,
@@ -200,7 +202,7 @@ impl std::fmt::Display for SymbolTable {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Symbol {
     pub name: String,
     pub ty: Type,
@@ -217,7 +219,7 @@ impl std::fmt::Display for Symbol {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) enum ScopeType {
     Local,
     Routine,
