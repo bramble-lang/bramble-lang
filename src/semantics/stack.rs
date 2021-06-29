@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Module, Node, Path, Type, CANONICAL_ROOT};
+use crate::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT};
 use braid_lang::result::Result;
 
 use super::{
@@ -53,6 +53,29 @@ impl<'a> SymbolTableScopeStack<'a> {
                 Symbol {
                     name: item.into(),
                     ty: Type::FunctionDef(params, Box::new(return_ty)),
+                    mutable: false,
+                    is_extern: false,
+                },
+            ),
+            None => None,
+        }
+    }
+
+    /// Add a function from another module to this symbol table
+    /// So that calls to external functions can be type checked.
+    pub fn import_structdef(&mut self, sd: &StructDef<SemanticAnnotations>) -> Option<Symbol> {
+        let canon_path = sd.annotation().get_canonical_path();
+        match canon_path.item() {
+            Some(item) => self.imported_symbols.insert(
+                canon_path.to_string(),
+                Symbol {
+                    name: item.into(),
+                    ty: Type::StructDef(
+                        sd.get_fields()
+                            .iter()
+                            .map(|p| (p.name.clone(), p.ty.clone()))
+                            .collect(),
+                    ),
                     mutable: false,
                     is_extern: false,
                 },
