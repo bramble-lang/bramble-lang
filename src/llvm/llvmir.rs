@@ -44,7 +44,7 @@ pub struct IrGen<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
-    externs: &'ctx [Manifest],
+    imports: &'ctx [Manifest],
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, &'ctx StructDef<SemanticAnnotations>>,
@@ -57,7 +57,7 @@ impl<'ctx> IrGen<'ctx> {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
-            externs,
+            imports: externs,
             string_pool: StringPool::new(),
             registers: RegisterLookup::new(),
             struct_table: HashMap::new(),
@@ -121,7 +121,7 @@ impl<'ctx> IrGen<'ctx> {
         user_main: &str,
     ) -> Result<()> {
         self.compile_string_pool(m);
-        self.add_externs();
+        self.add_imports();
 
         self.add_mod_items(m);
 
@@ -208,8 +208,8 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Add the list of external function declarations to the function table
     /// in the LLVM module
-    fn add_externs(&mut self) {
-        for manifest in self.externs {
+    fn add_imports(&mut self) {
+        for manifest in self.imports {
             for (path, params, ty) in &manifest.get_items() {
                 self.add_fn_decl(&path.to_label(), params, false, ty);
             }
