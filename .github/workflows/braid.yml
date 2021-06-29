@@ -52,4 +52,4 @@ jobs:
         run: |
           cd test
           bash ./test-llvm.sh
-          bash ./test-import.sh
+          bash ./test-imports.sh
