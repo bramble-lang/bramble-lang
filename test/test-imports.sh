@@ -22,7 +22,7 @@ run_test() {
     test=$1
     built=1
 
-    ./make-import_test.sh --input ./import/$test
+    bash ./make-import_test.sh --input ./import/$test
     echo "Running"
     ./target/output > ./target/stdout
 
