@@ -29,7 +29,7 @@ pub fn resolve_types(
 pub fn resolve_types_with_imports(
     ast: &Module<ParserInfo>,
     main_fn: &str,
-    imported_functions: &[Manifest],
+    imports: &[Manifest],
     trace_semantic_node: TracingConfig,
     trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
@@ -40,7 +40,7 @@ pub fn resolve_types_with_imports(
 
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
-    for manifest in imported_functions.into_iter() {
+    for manifest in imports.into_iter() {
         for (path, params, ret_ty) in manifest.get_functions().iter() {
             semantic.import_function(path.clone(), params.clone(), ret_ty.clone());
         }
