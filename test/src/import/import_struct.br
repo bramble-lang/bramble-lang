@@ -1,6 +1,6 @@
 fn my_main() -> i64 {
     let s: project::shared::stuff::Data :=  project::shared::stuff::Data{i: 5, b: false};
-    project::std::io::writei64ln(s.i);
+    project::std::io::writei64ln(project::shared::stuff::get_i(s));
     project::std::io::writeboolln(s.b);
 
     return 0;

@@ -14,10 +14,10 @@ fn new(i: i64, b: bool) -> Data {
     };
 }
 
-/*fn get_i(d: Data) -> i64 {
+fn get_i(d: Data) -> i64 {
     return d.i;
 }
 
 fn get_b(d: Data) -> bool {
     return d.b;
-}*/
+}
