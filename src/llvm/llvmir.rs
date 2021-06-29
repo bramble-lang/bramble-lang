@@ -211,7 +211,7 @@ impl<'ctx> IrGen<'ctx> {
     fn add_externs(&mut self) {
         for manifest in self.externs {
             for (path, params, ty) in &manifest.get_items() {
-                self.add_fn_decl(&path.to_label(), params, false, ty)
+                self.add_fn_decl(&path.to_label(), params, false, ty);
             }
         }
     }
