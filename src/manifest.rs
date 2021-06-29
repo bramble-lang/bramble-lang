@@ -1,7 +1,10 @@
-use serde::{Deserialize, Serialize};
+use std::fmt;
+
+use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
+use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
 use crate::{
-    ast::{Module, Node, Path, StructDef, Type},
+    ast::{Module, Node, Path, RoutineDef, StructDef, Type},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -33,7 +36,7 @@ impl Routine {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
-    routines: Vec<Routine>,
+    routines: Vec<RoutineDef<SemanticAnnotations>>,
     structs: Vec<StructDef<SemanticAnnotations>>,
 }
 
@@ -41,7 +44,13 @@ impl Manifest {
     pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
         // Get list of all functions contained within a module and their paths
         let funcs = module.deep_get_functions();
-        let items = funcs.iter().map(|f| Routine::from_ast(f)).collect();
+        let items = funcs
+            .iter()
+            .map(|f| match f {
+                crate::ast::Item::Routine(rd) => rd.clone(),
+                _ => panic!("Unexpected: got an Item that was not a RoutineDef"),
+            })
+            .collect();
 
         // Get list of all structures contained within the module
         let structs = module
@@ -60,7 +69,13 @@ impl Manifest {
     pub fn get_functions(&self) -> Vec<(Path, Vec<Type>, Type)> {
         self.routines
             .iter()
-            .map(|i| (i.path.clone(), i.params.clone(), i.ty.clone()))
+            .map(|i| {
+                (
+                    i.annotation().get_canonical_path().clone(),
+                    i.params.iter().map(|p| p.ty.clone()).clone().collect(),
+                    i.ty.clone(),
+                )
+            })
             .collect()
     }
 
@@ -78,5 +93,122 @@ impl Manifest {
     pub fn write(&self, file: &mut std::fs::File) -> Result<(), serde_yaml::Error> {
         // Write manifest to file
         serde_yaml::to_writer(file, self)
+    }
+}
+
+impl Serialize for RoutineDef<SemanticAnnotations> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("RoutineDef", 3)?;
+        state.serialize_field("name", self.get_name())?;
+        state.serialize_field("params", self.get_params())?;
+        state.serialize_field("ty", self.get_return_type())?;
+        state.serialize_field("annotations", self.annotation())?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        #[serde(field_identifier, rename_all = "lowercase")]
+        enum Field {
+            Name,
+            Params,
+            Ty,
+            Annotations,
+        }
+
+        struct RoutineDefVisitor;
+
+        impl<'de> Visitor<'de> for RoutineDefVisitor {
+            type Value = RoutineDef<SemanticAnnotations>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct RoutineDef")
+            }
+
+            fn visit_seq<V>(self, mut seq: V) -> Result<RoutineDef<SemanticAnnotations>, V::Error>
+            where
+                V: SeqAccess<'de>,
+            {
+                let name: String = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                let params = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                let ret_ty = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                let annotations = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+
+                let rd = RoutineDef::new_function(&name, annotations, params, ret_ty, vec![]);
+                Ok(rd)
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<RoutineDef<SemanticAnnotations>, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut name: Option<String> = None;
+                let mut params = None;
+                let mut ret_ty = None;
+                let mut annotations = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Name => {
+                            if name.is_some() {
+                                return Err(de::Error::duplicate_field("name"));
+                            }
+                            name = Some(map.next_value()?);
+                        }
+                        Field::Params => {
+                            if params.is_some() {
+                                return Err(de::Error::duplicate_field("params"));
+                            }
+                            params = Some(map.next_value()?);
+                        }
+                        Field::Ty => {
+                            if ret_ty.is_some() {
+                                return Err(de::Error::duplicate_field("ty"));
+                            }
+                            ret_ty = Some(map.next_value()?);
+                        }
+                        Field::Annotations => {
+                            if annotations.is_some() {
+                                return Err(de::Error::duplicate_field("annotations"));
+                            }
+                            annotations = Some(map.next_value()?);
+                        }
+                    }
+                }
+
+                let name = name.ok_or_else(|| de::Error::missing_field("name"))?;
+                let params = params.ok_or_else(|| de::Error::missing_field("params"))?;
+                let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field("ty"))?;
+                let annotations =
+                    annotations.ok_or_else(|| de::Error::missing_field("annotations"))?;
+
+                Ok(RoutineDef::new_function(
+                    &name,
+                    annotations,
+                    params,
+                    ret_ty,
+                    vec![],
+                ))
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &["name", "params", "ty", "annotations"];
+        deserializer.deserialize_struct("RoutineDef", FIELDS, RoutineDefVisitor)
     }
 }
