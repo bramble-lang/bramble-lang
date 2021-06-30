@@ -52,12 +52,12 @@ pub struct IrGen<'ctx> {
 }
 
 impl<'ctx> IrGen<'ctx> {
-    pub fn new(ctx: &'ctx Context, module: &str, externs: &'ctx [Manifest]) -> IrGen<'ctx> {
+    pub fn new(ctx: &'ctx Context, module: &str, imports: &'ctx [Manifest]) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
-            imports: externs,
+            imports,
             string_pool: StringPool::new(),
             registers: RegisterLookup::new(),
             struct_table: HashMap::new(),
