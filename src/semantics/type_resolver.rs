@@ -73,6 +73,8 @@ impl<'a> TypeResolver<'a> {
     }
 
     pub fn add_imports(&mut self, manifests: &[Manifest]) {
+        // Load all struct imports first because imported functions may depend upon
+        // imported structures (If any semantic analysis is done on functions)
         for manifest in manifests.into_iter() {
             for sd in manifest.get_structs().iter() {
                 self.import_structdef(sd);
