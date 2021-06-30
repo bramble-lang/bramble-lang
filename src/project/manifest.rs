@@ -184,7 +184,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["name", "params", "ty", "annotations"];
+        const FIELDS: &'static [&'static str] = &[NAME, PARAMS, TY, ANNOTATIONS];
         deserializer.deserialize_struct("RoutineDef", FIELDS, RoutineDefVisitor)
     }
 }
