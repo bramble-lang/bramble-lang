@@ -63,7 +63,7 @@ impl<M> std::fmt::Display for RoutineDef<M> {
 
 impl<M> RoutineDef<M> {
     pub fn new_function(
-        name: &str, // TODO: Change this to take a moved string, so its clear to the user that this is not creating a borrow
+        name: &str,
         annotations: M,
         params: Vec<Parameter<M>>,
         ty: Type,
