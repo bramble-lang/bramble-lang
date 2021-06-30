@@ -198,7 +198,7 @@ impl<M> Module<M> {
     pub fn deep_get_structs(&self) -> Vec<&StructDef<M>> {
         let mut structs = vec![];
 
-        // Add all my functions to the vector
+        // Add all my structures to the vector
         for s in self.get_structs() {
             match s {
                 Item::Struct(sd) => structs.push(sd),
@@ -206,7 +206,7 @@ impl<M> Module<M> {
             }
         }
 
-        // Get all the functions from my submodules and add them to the vector
+        // Get all the structures from my submodules and add them to the vector
         for m in self.get_modules() {
             let mut substructs = m.deep_get_structs();
             structs.append(&mut substructs);
