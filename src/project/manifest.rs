@@ -14,6 +14,12 @@ pub struct Manifest {
     structs: Vec<StructDef<SemanticAnnotations>>,
 }
 
+const ROUTINE_DEF: &'static str = "RoutineDef";
+const NAME: &'static str = "name";
+const PARAMS: &'static str = "params";
+const TY: &'static str = "ty";
+const ANNOTATIONS: &'static str = "annotations";
+
 impl Manifest {
     pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
         // Get list of all functions contained within a module and their paths
@@ -72,11 +78,11 @@ impl Serialize for RoutineDef<SemanticAnnotations> {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("RoutineDef", 3)?;
-        state.serialize_field("name", self.get_name())?;
-        state.serialize_field("params", self.get_params())?;
-        state.serialize_field("ty", self.get_return_type())?;
-        state.serialize_field("annotations", self.annotation())?;
+        let mut state = serializer.serialize_struct(ROUTINE_DEF, 3)?;
+        state.serialize_field(NAME, self.get_name())?;
+        state.serialize_field(PARAMS, self.get_params())?;
+        state.serialize_field(TY, self.get_return_type())?;
+        state.serialize_field(ANNOTATIONS, self.annotation())?;
         state.end()
     }
 }
@@ -86,12 +92,6 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
     where
         D: Deserializer<'de>,
     {
-        const ROUTINE_DEF: &str = "RoutineDef";
-        const NAME: &str = "name";
-        const PARAMS: &str = "params";
-        const TY: &str = "ty";
-        const ANNOTATIONS: &str = "annotations";
-
         #[derive(serde::Deserialize)]
         #[serde(field_identifier, rename_all = "lowercase")]
         enum Field {
