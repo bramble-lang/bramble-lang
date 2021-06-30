@@ -14,11 +14,11 @@ pub struct Manifest {
     structs: Vec<StructDef<SemanticAnnotations>>,
 }
 
-const ROUTINE_DEF: &'static str = "RoutineDef";
-const NAME: &'static str = "name";
-const PARAMS: &'static str = "params";
-const TY: &'static str = "ty";
-const ANNOTATIONS: &'static str = "annotations";
+const ROUTINE_DEF_FIELD: &'static str = "RoutineDef";
+const NAME_FIELD: &'static str = "name";
+const PARAMS_FIELD: &'static str = "params";
+const TY_FIELD: &'static str = "ty";
+const ANNOTATIONS_FIELD: &'static str = "annotations";
 
 impl Manifest {
     pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
@@ -78,11 +78,11 @@ impl Serialize for RoutineDef<SemanticAnnotations> {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct(ROUTINE_DEF, 3)?;
-        state.serialize_field(NAME, self.get_name())?;
-        state.serialize_field(PARAMS, self.get_params())?;
-        state.serialize_field(TY, self.get_return_type())?;
-        state.serialize_field(ANNOTATIONS, self.annotation())?;
+        let mut state = serializer.serialize_struct(ROUTINE_DEF_FIELD, 3)?;
+        state.serialize_field(NAME_FIELD, self.get_name())?;
+        state.serialize_field(PARAMS_FIELD, self.get_params())?;
+        state.serialize_field(TY_FIELD, self.get_return_type())?;
+        state.serialize_field(ANNOTATIONS_FIELD, self.annotation())?;
         state.end()
     }
 }
@@ -107,7 +107,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
             type Value = RoutineDef<SemanticAnnotations>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_fmt(format_args!("struct {}", ROUTINE_DEF))
+                formatter.write_fmt(format_args!("struct {}", ROUTINE_DEF_FIELD))
             }
 
             fn visit_seq<V>(self, mut seq: V) -> Result<RoutineDef<SemanticAnnotations>, V::Error>
@@ -144,36 +144,36 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
                     match key {
                         Field::Name => {
                             if name.is_some() {
-                                return Err(de::Error::duplicate_field(NAME));
+                                return Err(de::Error::duplicate_field(NAME_FIELD));
                             }
                             name = Some(map.next_value()?);
                         }
                         Field::Params => {
                             if params.is_some() {
-                                return Err(de::Error::duplicate_field(PARAMS));
+                                return Err(de::Error::duplicate_field(PARAMS_FIELD));
                             }
                             params = Some(map.next_value()?);
                         }
                         Field::Ty => {
                             if ret_ty.is_some() {
-                                return Err(de::Error::duplicate_field(TY));
+                                return Err(de::Error::duplicate_field(TY_FIELD));
                             }
                             ret_ty = Some(map.next_value()?);
                         }
                         Field::Annotations => {
                             if annotations.is_some() {
-                                return Err(de::Error::duplicate_field(ANNOTATIONS));
+                                return Err(de::Error::duplicate_field(ANNOTATIONS_FIELD));
                             }
                             annotations = Some(map.next_value()?);
                         }
                     }
                 }
 
-                let name = name.ok_or_else(|| de::Error::missing_field(NAME))?;
-                let params = params.ok_or_else(|| de::Error::missing_field(PARAMS))?;
-                let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field(TY))?;
+                let name = name.ok_or_else(|| de::Error::missing_field(NAME_FIELD))?;
+                let params = params.ok_or_else(|| de::Error::missing_field(PARAMS_FIELD))?;
+                let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field(TY_FIELD))?;
                 let annotations =
-                    annotations.ok_or_else(|| de::Error::missing_field(ANNOTATIONS))?;
+                    annotations.ok_or_else(|| de::Error::missing_field(ANNOTATIONS_FIELD))?;
 
                 Ok(RoutineDef::new_function(
                     &name,
@@ -185,7 +185,8 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
             }
         }
 
-        const FIELDS: &'static [&'static str] = &[NAME, PARAMS, TY, ANNOTATIONS];
-        deserializer.deserialize_struct(ROUTINE_DEF, FIELDS, RoutineDefVisitor)
+        const FIELDS: &'static [&'static str] =
+            &[NAME_FIELD, PARAMS_FIELD, TY_FIELD, ANNOTATIONS_FIELD];
+        deserializer.deserialize_struct(ROUTINE_DEF_FIELD, FIELDS, RoutineDefVisitor)
     }
 }
