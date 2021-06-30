@@ -1,0 +1,14 @@
+fn my_main() -> i64 {
+    let sd: project::indirect::second::SecondData := project::indirect::second::SecondData {
+        sd: project::shared::stuff::Data {
+            i: 15,
+            b: true,
+        },
+    };
+
+    let d: project::shared::stuff::Data := project::indirect::second::get_data(sd);
+    project::std::io::writei64ln(project::shared::stuff::get_i(d));
+    project::std::io::writeboolln(d.b);
+
+    return 0;
+}

@@ -1,0 +1,7 @@
+struct SecondData {
+    sd: project::shared::stuff::Data,
+}
+
+fn get_data(s: SecondData) -> project::shared::stuff::Data {
+    return s.sd;
+}

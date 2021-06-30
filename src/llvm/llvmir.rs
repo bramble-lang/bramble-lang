@@ -44,7 +44,7 @@ pub struct IrGen<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
-    externs: &'ctx [Manifest],
+    imports: &'ctx [Manifest],
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, &'ctx StructDef<SemanticAnnotations>>,
@@ -52,12 +52,12 @@ pub struct IrGen<'ctx> {
 }
 
 impl<'ctx> IrGen<'ctx> {
-    pub fn new(ctx: &'ctx Context, module: &str, externs: &'ctx [Manifest]) -> IrGen<'ctx> {
+    pub fn new(ctx: &'ctx Context, module: &str, imports: &'ctx [Manifest]) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
-            externs,
+            imports,
             string_pool: StringPool::new(),
             registers: RegisterLookup::new(),
             struct_table: HashMap::new(),
@@ -121,7 +121,7 @@ impl<'ctx> IrGen<'ctx> {
         user_main: &str,
     ) -> Result<()> {
         self.compile_string_pool(m);
-        self.add_externs();
+        self.add_imports();
 
         self.add_mod_items(m);
 
@@ -208,10 +208,21 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Add the list of external function declarations to the function table
     /// in the LLVM module
-    fn add_externs(&mut self) {
-        for manifest in self.externs {
-            for (path, params, ty) in &manifest.get_items() {
-                self.add_fn_decl(&path.to_label(), params, false, ty)
+    fn add_imports(&mut self) {
+        // Add struct definitions first in case there are any function declarations that depend
+        // upon these types
+        for manifest in self.imports {
+            // Add imported structures to the LLVM Module
+            for sd in manifest.get_structs() {
+                self.add_struct_def(sd)
+            }
+        }
+
+        // Add all function definitions that are imported from other projects
+        for manifest in self.imports {
+            // Add imported functions to the LLVM Module
+            for (path, params, ty) in &manifest.get_functions() {
+                self.add_fn_decl(&path.to_label(), params, false, ty);
             }
         }
     }

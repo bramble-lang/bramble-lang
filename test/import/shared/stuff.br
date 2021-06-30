@@ -1,0 +1,23 @@
+struct Data {
+    i: i64,
+    b: bool,
+}
+
+fn double(a: i64) -> i64 {
+    return 2 * a;
+}
+
+fn new(i: i64, b: bool) -> Data {
+    return Data{
+        i: i,
+        b: b,
+    };
+}
+
+fn get_i(d: Data) -> i64 {
+    return d.i;
+}
+
+fn get_b(d: Data) -> bool {
+    return d.b;
+}

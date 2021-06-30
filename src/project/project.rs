@@ -96,10 +96,10 @@ pub fn parse_project(
             Err(e) => errors.push(e),
         }
     }
-    if errors.len() > 0 {
-        Err(errors)
-    } else {
+    if errors.len() == 0 {
         Ok(root)
+    } else {
+        Err(errors)
     }
 }
 
@@ -116,10 +116,10 @@ pub fn tokenize_project(
         }
     }
 
-    if errors.len() > 0 {
-        Err(errors)
-    } else {
+    if errors.len() == 0 {
         Ok(token_sets)
+    } else {
+        Err(errors)
     }
 }
 
@@ -133,16 +133,7 @@ fn tokenize_src_file(
     let (tokens, errors): (Vec<Result<Token>>, Vec<Result<Token>>) =
         tokens.into_iter().partition(|t| t.is_ok());
 
-    if errors.len() > 0 {
-        let errors: Vec<String> = errors
-            .into_iter()
-            .filter_map(|t| match t {
-                Ok(_) => None,
-                Err(msg) => Some(msg),
-            })
-            .collect();
-        Err(errors)
-    } else {
+    if errors.len() == 0 {
         let tokens: Vec<Token> = tokens
             .into_iter()
             .filter_map(|t| match t {
@@ -154,6 +145,15 @@ fn tokenize_src_file(
             path: src.path,
             data: tokens,
         })
+    } else {
+        let errors: Vec<String> = errors
+            .into_iter()
+            .filter_map(|t| match t {
+                Ok(_) => None,
+                Err(msg) => Some(msg),
+            })
+            .collect();
+        Err(errors)
     }
 }
 

@@ -29,7 +29,7 @@ pub fn resolve_types(
 pub fn resolve_types_with_imports(
     ast: &Module<ParserInfo>,
     main_fn: &str,
-    imported_functions: &[Manifest],
+    imports: &[Manifest],
     trace_semantic_node: TracingConfig,
     trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
@@ -40,11 +40,7 @@ pub fn resolve_types_with_imports(
 
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
-    for manifest in imported_functions.into_iter() {
-        for (path, params, ret_ty) in manifest.get_items().iter() {
-            semantic.import_function(path.clone(), params.clone(), ret_ty.clone());
-        }
-    }
+    semantic.add_imports(imports);
 
     semantic.set_tracing(trace_type_resolver);
     semantic.path_tracing = trace_path;
@@ -76,6 +72,22 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
+    pub fn add_imports(&mut self, manifests: &[Manifest]) {
+        // Load all struct imports first because imported functions may depend upon
+        // imported structures (If any semantic analysis is done on functions)
+        for manifest in manifests.into_iter() {
+            for sd in manifest.get_structs().iter() {
+                self.import_structdef(sd);
+            }
+        }
+
+        for manifest in manifests.into_iter() {
+            for (path, params, ret_ty) in manifest.get_functions().iter() {
+                self.import_function(path.clone(), params.clone(), ret_ty.clone());
+            }
+        }
+    }
+
     pub fn import_function(
         &mut self,
         canonical_name: Path,
@@ -84,6 +96,10 @@ impl<'a> TypeResolver<'a> {
     ) -> Option<Symbol> {
         self.symbols
             .import_function(canonical_name, params, return_ty)
+    }
+
+    pub fn import_structdef(&mut self, sd: &StructDef<SemanticAnnotations>) -> Option<Symbol> {
+        self.symbols.import_structdef(sd)
     }
 
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
