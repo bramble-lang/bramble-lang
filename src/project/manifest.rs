@@ -86,6 +86,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
     where
         D: Deserializer<'de>,
     {
+        const ROUTINE_DEF: &str = "RoutineDef";
         const NAME: &str = "name";
         const PARAMS: &str = "params";
         const TY: &str = "ty";
@@ -106,7 +107,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
             type Value = RoutineDef<SemanticAnnotations>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct RoutineDef")
+                formatter.write_fmt(format_args!("struct {}", ROUTINE_DEF))
             }
 
             fn visit_seq<V>(self, mut seq: V) -> Result<RoutineDef<SemanticAnnotations>, V::Error>
@@ -185,6 +186,6 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
         }
 
         const FIELDS: &'static [&'static str] = &[NAME, PARAMS, TY, ANNOTATIONS];
-        deserializer.deserialize_struct("RoutineDef", FIELDS, RoutineDefVisitor)
+        deserializer.deserialize_struct(ROUTINE_DEF, FIELDS, RoutineDefVisitor)
     }
 }
