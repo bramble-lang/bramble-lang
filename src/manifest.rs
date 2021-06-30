@@ -86,6 +86,11 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
     where
         D: Deserializer<'de>,
     {
+        const NAME: &str = "name";
+        const PARAMS: &str = "params";
+        const TY: &str = "ty";
+        const ANNOTATIONS: &str = "annotations";
+
         #[derive(serde::Deserialize)]
         #[serde(field_identifier, rename_all = "lowercase")]
         enum Field {
@@ -138,36 +143,36 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
                     match key {
                         Field::Name => {
                             if name.is_some() {
-                                return Err(de::Error::duplicate_field("name"));
+                                return Err(de::Error::duplicate_field(NAME));
                             }
                             name = Some(map.next_value()?);
                         }
                         Field::Params => {
                             if params.is_some() {
-                                return Err(de::Error::duplicate_field("params"));
+                                return Err(de::Error::duplicate_field(PARAMS));
                             }
                             params = Some(map.next_value()?);
                         }
                         Field::Ty => {
                             if ret_ty.is_some() {
-                                return Err(de::Error::duplicate_field("ty"));
+                                return Err(de::Error::duplicate_field(TY));
                             }
                             ret_ty = Some(map.next_value()?);
                         }
                         Field::Annotations => {
                             if annotations.is_some() {
-                                return Err(de::Error::duplicate_field("annotations"));
+                                return Err(de::Error::duplicate_field(ANNOTATIONS));
                             }
                             annotations = Some(map.next_value()?);
                         }
                     }
                 }
 
-                let name = name.ok_or_else(|| de::Error::missing_field("name"))?;
-                let params = params.ok_or_else(|| de::Error::missing_field("params"))?;
-                let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field("ty"))?;
+                let name = name.ok_or_else(|| de::Error::missing_field(NAME))?;
+                let params = params.ok_or_else(|| de::Error::missing_field(PARAMS))?;
+                let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field(TY))?;
                 let annotations =
-                    annotations.ok_or_else(|| de::Error::missing_field("annotations"))?;
+                    annotations.ok_or_else(|| de::Error::missing_field(ANNOTATIONS))?;
 
                 Ok(RoutineDef::new_function(
                     &name,
