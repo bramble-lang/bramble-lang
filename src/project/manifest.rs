@@ -8,17 +8,17 @@ use crate::{
     semantics::semanticnode::SemanticAnnotations,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Manifest {
-    routines: Vec<RoutineDef<SemanticAnnotations>>,
-    structs: Vec<StructDef<SemanticAnnotations>>,
-}
-
 const ROUTINE_DEF_FIELD: &'static str = "RoutineDef";
 const NAME_FIELD: &'static str = "name";
 const PARAMS_FIELD: &'static str = "params";
 const TY_FIELD: &'static str = "ty";
 const ANNOTATIONS_FIELD: &'static str = "annotations";
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Manifest {
+    routines: Vec<RoutineDef<SemanticAnnotations>>,
+    structs: Vec<StructDef<SemanticAnnotations>>,
+}
 
 impl Manifest {
     pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
