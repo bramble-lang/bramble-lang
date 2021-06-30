@@ -7,7 +7,6 @@ mod diagnostics;
 mod io;
 mod lexer;
 mod llvm;
-mod manifest;
 mod parser;
 mod project;
 mod result;
