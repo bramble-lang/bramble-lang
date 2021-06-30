@@ -14,7 +14,7 @@ pub struct SymbolTableScopeStack<'a> {
 
     stack: Vec<SymbolTable>,
     head: SymbolTable,
-    imported_symbols: HashMap<String, Symbol>,
+    imported_symbols: HashMap<String, Symbol>, // TODO: change this to a SymbolTable?
 }
 
 impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
