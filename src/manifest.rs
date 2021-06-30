@@ -9,32 +9,6 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Routine {
-    path: Path,
-    params: Vec<Type>,
-    ty: Type,
-}
-
-impl Routine {
-    fn from_ast(r: &crate::ast::Item<SemanticAnnotations>) -> Routine {
-        Routine {
-            path: r.annotation().get_canonical_path().clone(),
-            params: r
-                .to_routine()
-                .expect(&format!(
-                    "Unexpected item type: a non-function was returned by deep_get_functions: {}",
-                    r.get_name(),
-                ))
-                .params
-                .iter()
-                .map(|p| p.ty.clone())
-                .collect(),
-            ty: r.annotation().ty().clone(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
     routines: Vec<RoutineDef<SemanticAnnotations>>,
     structs: Vec<StructDef<SemanticAnnotations>>,
