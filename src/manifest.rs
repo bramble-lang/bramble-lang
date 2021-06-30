@@ -43,8 +43,8 @@ pub struct Manifest {
 impl Manifest {
     pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
         // Get list of all functions contained within a module and their paths
-        let funcs = module.deep_get_functions();
-        let items = funcs
+        let routines = module
+            .deep_get_functions()
             .iter()
             .map(|f| match f {
                 crate::ast::Item::Routine(rd) => rd.clone(),
@@ -60,10 +60,7 @@ impl Manifest {
             .collect();
 
         // Create the manifest
-        Manifest {
-            routines: items,
-            structs,
-        }
+        Manifest { routines, structs }
     }
 
     pub fn get_functions(&self) -> Vec<(Path, Vec<Type>, Type)> {
