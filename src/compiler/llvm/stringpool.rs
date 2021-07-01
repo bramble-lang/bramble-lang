@@ -1,7 +1,6 @@
-use crate::ast::Expression;
 use std::collections::HashMap;
 
-use crate::ast::*;
+use super::ast::*;
 
 #[derive(Debug, PartialEq)]
 pub struct StringPool {
@@ -38,7 +37,7 @@ impl StringPool {
     /// Traverse through all the nodes in an AST and find any occurances of
     /// String Literals and will add them to the string pool.
     pub fn extract_from<A>(&mut self, ast: &Expression<A>) {
-        use crate::ast::Expression::*;
+        use Expression::*;
 
         match ast {
             ExpressionBlock(_, body, final_exp) => {
@@ -177,10 +176,11 @@ impl StringPool {
 
 #[cfg(test)]
 mod test {
-    use crate::lexer::lexer::Lexer;
-    use crate::lexer::tokens::Token;
-    use crate::parser::parser;
-    use crate::{diagnostics::config::TracingConfig, resolve_types};
+    use super::super::super::lexer::tokens::Token;
+    use super::super::super::parser::parser;
+    use super::super::super::semantics::type_resolver::resolve_types;
+    use crate::compiler::Lexer;
+    use crate::diagnostics::config::TracingConfig;
 
     use super::*;
 

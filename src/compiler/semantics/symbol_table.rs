@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ast::*;
-use crate::semantics::semanticnode::SemanticAnnotations;
+use crate::compiler::{ast::*, semantics::semanticnode::SemanticAnnotations};
+
 use braid_lang::result::Result;
 
 /**

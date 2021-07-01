@@ -1,4 +1,4 @@
-use crate::lexer::tokens::{Lex, Token};
+use crate::compiler::lexer::tokens::{Lex, Token};
 use braid_lang::result::Result;
 
 pub struct TokenStream<'a> {
@@ -128,10 +128,8 @@ impl<'a> TokenStream<'a> {
 #[cfg(test)]
 mod test_tokenstream {
     use super::TokenStream;
-    use crate::lexer::{
-        lexer::Lexer,
-        tokens::{Lex, Token},
-    };
+    use crate::compiler::lexer::tokens::{Lex, Token};
+    use crate::compiler::Lexer;
 
     #[test]
     fn test_peek() {

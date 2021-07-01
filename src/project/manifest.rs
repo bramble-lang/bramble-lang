@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    ast::{Module, Node, Path, RoutineDef, StructDef, Type},
+use crate::compiler::{
+    ast::{Item, Module, Node, Path, RoutineDef, StructDef, Type},
     semantics::semanticnode::SemanticAnnotations,
 };
 
@@ -18,7 +18,7 @@ impl Manifest {
             .deep_get_functions()
             .iter()
             .map(|f| match f {
-                crate::ast::Item::Routine(rd) => rd.clone(),
+                Item::Routine(rd) => rd.clone(),
                 _ => panic!("Unexpected: got an Item that was not a RoutineDef"),
             })
             .collect();

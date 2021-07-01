@@ -1,4 +1,4 @@
-use crate::ast::node::Node;
+use crate::compiler::ast::node::Node;
 
 use super::Annotation;
 
@@ -111,8 +111,8 @@ where
 #[cfg(test)]
 mod test_preorder {
     use super::*;
-    use crate::ast::{
-        expression::{Expression, UnaryOperator},
+    use crate::compiler::ast::{
+        expression::{self, Expression, UnaryOperator},
         module::Module,
         parameter::Parameter,
         routinedef::RoutineDef,
@@ -194,7 +194,7 @@ mod test_preorder {
                 annotation: 3,
                 cond: box Expression::BinaryOp(
                     4,
-                    crate::ast::expression::BinaryOperator::Eq,
+                    crate::compiler::ast::expression::BinaryOperator::Eq,
                     box Expression::I64(5, 1),
                     box Expression::I64(6, 1),
                 ),
@@ -215,7 +215,7 @@ mod test_preorder {
                     ))],
                     Some(box Expression::RoutineCall(
                         14,
-                        crate::ast::expression::RoutineCall::Function,
+                        expression::RoutineCall::Function,
                         vec!["test"].into(),
                         vec![Expression::Identifier(15, "p".into())],
                     )),
@@ -232,7 +232,7 @@ mod test_preorder {
 #[cfg(test)]
 mod test_postorder {
     use super::*;
-    use crate::ast::{
+    use crate::compiler::ast::{
         expression::{Expression, UnaryOperator},
         module::Module,
         parameter::Parameter,
@@ -240,6 +240,7 @@ mod test_postorder {
         statement::{Bind, Statement, YieldReturn},
         structdef::StructDef,
         ty::Type,
+        BinaryOperator, RoutineCall,
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
@@ -315,7 +316,7 @@ mod test_postorder {
                 annotation: 3,
                 cond: box Expression::BinaryOp(
                     4,
-                    crate::ast::expression::BinaryOperator::Eq,
+                    BinaryOperator::Eq,
                     box Expression::I64(5, 1),
                     box Expression::I64(6, 1),
                 ),
@@ -336,7 +337,7 @@ mod test_postorder {
                     ))],
                     Some(box Expression::RoutineCall(
                         14,
-                        crate::ast::expression::RoutineCall::Function,
+                        RoutineCall::Function,
                         vec!["test"].into(),
                         vec![Expression::Identifier(15, "p".into())],
                     )),

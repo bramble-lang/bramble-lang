@@ -12,7 +12,6 @@ use std::{
     error::Error,
 };
 
-use ast::Expression;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -28,11 +27,14 @@ use inkwell::{
 use braid_lang::result::Result;
 
 use crate::{
-    ast,
-    ast::{BinaryOperator, Extern, Node, Parameter, Path, RoutineDef, StructDef},
-    manifest::Manifest,
-    semantics::semanticnode::SemanticAnnotations,
+    compiler::{
+        ast::{Node, Path},
+        semantics::semanticnode::SemanticAnnotations,
+    },
+    project::manifest::Manifest,
 };
+
+use super::ast;
 
 use super::{scopestack::RegisterLookup, stringpool::StringPool};
 
@@ -47,7 +49,7 @@ pub struct IrGen<'ctx> {
     imports: &'ctx [Manifest],
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
-    struct_table: HashMap<String, &'ctx StructDef<SemanticAnnotations>>,
+    struct_table: HashMap<String, &'ctx ast::StructDef<SemanticAnnotations>>,
     fn_use_out_param: HashSet<String>,
 }
 
@@ -261,7 +263,7 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_def_decl(&mut self, rd: &'ctx RoutineDef<SemanticAnnotations>) {
+    fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticAnnotations>) {
         let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
             &rd.annotations.get_canonical_path().to_label(),
@@ -271,7 +273,7 @@ impl<'ctx> IrGen<'ctx> {
         )
     }
 
-    fn add_extern_fn_decl(&mut self, ex: &'ctx Extern<SemanticAnnotations>) {
+    fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticAnnotations>) {
         // Delcare external function
         let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
@@ -336,7 +338,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Add a struct definition to the LLVM context and module.
-    fn add_struct_def(&mut self, sd: &'ctx StructDef<SemanticAnnotations>) {
+    fn add_struct_def(&mut self, sd: &'ctx ast::StructDef<SemanticAnnotations>) {
         self.struct_table
             .insert(sd.annotation().get_canonical_path().to_label(), sd);
         let name = sd.annotation().get_canonical_path().to_label();

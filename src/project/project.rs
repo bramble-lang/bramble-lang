@@ -1,8 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use crate::{
-    ast::Module, diagnostics::config::TracingConfig, io::get_files, lexer::tokens::Token, parser,
-};
+use crate::compiler::{ast::Module, lexer::tokens::Token, parser};
+use crate::{diagnostics::config::TracingConfig, io::get_files};
 
 use braid_lang::result::{NResult, Result};
 
@@ -127,7 +126,7 @@ fn tokenize_src_file(
     src: CompilationUnit<String>,
     trace_lexer: TracingConfig,
 ) -> NResult<CompilationUnit<Vec<Token>>> {
-    let mut lexer = crate::lexer::lexer::Lexer::new(&src.data);
+    let mut lexer = crate::compiler::Lexer::new(&src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let (tokens, errors): (Vec<Result<Token>>, Vec<Result<Token>>) =

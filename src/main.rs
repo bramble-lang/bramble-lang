@@ -1,26 +1,22 @@
 #![allow(dead_code)]
 #![feature(box_syntax, box_patterns)]
 
-mod ast;
 mod cli;
+mod compiler;
 mod diagnostics;
 mod io;
-mod lexer;
-mod llvm;
-mod parser;
 mod project;
 mod result;
-mod semantics;
 
 use std::{path::Path, process::exit};
 
 use cli::*;
+use compiler::{llvm, semantics::type_resolver::*};
 use diagnostics::config::TracingConfig;
 use inkwell::context::Context;
 use io::read_manifests;
 use manifest::Manifest;
 use project::*;
-use semantics::type_resolver::*;
 
 const BRAID_FILE_EXT: &str = "br";
 const ROOT_MODULE_NAME: &str = "root";
