@@ -1099,9 +1099,9 @@ impl<'a> TypeResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compiler::lexer::lexer::Lexer;
     use crate::compiler::lexer::tokens::Token;
     use crate::compiler::parser::parser;
+    use crate::compiler::Lexer;
 
     #[test]
     pub fn test_identifiers() {

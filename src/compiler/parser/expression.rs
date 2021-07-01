@@ -535,7 +535,7 @@ mod test {
     use super::*;
     use crate::compiler::{
         ast::{Statement, Type},
-        lexer::lexer::Lexer,
+        Lexer,
     };
     use braid_lang::result::Result;
 

@@ -176,10 +176,10 @@ impl StringPool {
 
 #[cfg(test)]
 mod test {
-    use super::super::super::lexer::lexer::Lexer;
     use super::super::super::lexer::tokens::Token;
     use super::super::super::parser::parser;
     use super::super::super::semantics::type_resolver::resolve_types;
+    use crate::compiler::Lexer;
     use crate::diagnostics::config::TracingConfig;
 
     use super::*;

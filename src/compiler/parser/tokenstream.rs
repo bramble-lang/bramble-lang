@@ -128,10 +128,8 @@ impl<'a> TokenStream<'a> {
 #[cfg(test)]
 mod test_tokenstream {
     use super::TokenStream;
-    use crate::compiler::lexer::{
-        lexer::Lexer,
-        tokens::{Lex, Token},
-    };
+    use crate::compiler::lexer::tokens::{Lex, Token};
+    use crate::compiler::Lexer;
 
     #[test]
     fn test_peek() {

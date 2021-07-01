@@ -126,7 +126,7 @@ fn tokenize_src_file(
     src: CompilationUnit<String>,
     trace_lexer: TracingConfig,
 ) -> NResult<CompilationUnit<Vec<Token>>> {
-    let mut lexer = crate::compiler::lexer::lexer::Lexer::new(&src.data);
+    let mut lexer = crate::compiler::Lexer::new(&src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let (tokens, errors): (Vec<Result<Token>>, Vec<Result<Token>>) =
