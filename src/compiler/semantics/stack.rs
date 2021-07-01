@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT};
+use crate::compiler::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT};
 use braid_lang::result::Result;
 
 use super::{

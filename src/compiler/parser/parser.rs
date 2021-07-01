@@ -4,9 +4,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use stdext::function_name;
 
 use crate::{
-    ast::*,
+    compiler::{
+        ast::*,
+        lexer::tokens::{Lex, Primitive, Token},
+    },
     diagnostics::{config::TracingConfig, Diag, DiagData},
-    lexer::tokens::{Lex, Primitive, Token},
 };
 use braid_lang::result::Result;
 
@@ -626,7 +628,7 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::lexer::lexer::Lexer;
+    use crate::compiler::lexer::lexer::Lexer;
 
     #[test]
     fn parse_unary_operators() {

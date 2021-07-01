@@ -1,10 +1,9 @@
 use std::fmt::Debug;
 
-use crate::diagnostics::config::TracingConfig;
-use crate::{
-    ast::{extern_decl::Extern, module::*, routinedef::*, statement::*, structdef::*, Expression},
-    diagnostics::{Diag, DiagRecorder},
+use crate::compiler::ast::{
+    extern_decl::Extern, module::*, routinedef::*, statement::*, structdef::*, Expression,
 };
+use crate::diagnostics::{config::TracingConfig, Diag, DiagRecorder};
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
@@ -388,7 +387,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{module::Module, ty::Type};
+    use crate::compiler::ast::{module::Module, ty::Type};
 
     #[test]
     fn empty_module() {

@@ -6,8 +6,10 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use crate::{
-    ast::*,
-    lexer::tokens::{Lex, Token},
+    compiler::{
+        ast::*,
+        lexer::tokens::{Lex, Token},
+    },
     trace,
 };
 

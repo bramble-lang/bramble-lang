@@ -1,15 +1,13 @@
 use fmt::Debug;
 use std::{fmt, marker::PhantomData};
 
-use crate::ast::routinedef::*;
-use crate::ast::statement::*;
-use crate::ast::structdef::*;
-use crate::ast::Expression;
-use crate::ast::Extern;
-use crate::{
-    ast::module::*,
-    diagnostics::{config::TracingConfig, Diag, DiagRecorder},
-};
+use crate::compiler::ast::module::*;
+use crate::compiler::ast::routinedef::*;
+use crate::compiler::ast::statement::*;
+use crate::compiler::ast::structdef::*;
+use crate::compiler::ast::Expression;
+use crate::compiler::ast::Extern;
+use crate::diagnostics::{config::TracingConfig, Diag, DiagRecorder};
 
 use super::{super::node::Node, super::parameter::Parameter, Annotation};
 
@@ -376,10 +374,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        ast::{module::Module, ty::Type},
-        diagnostics::DiagData,
-    };
+    use crate::compiler::ast::{module::Module, ty::Type};
+    use crate::diagnostics::DiagData;
 
     impl Annotation for i32 {
         fn id(&self) -> u32 {

@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::semantics::symbol_table::*;
+use crate::diagnostics::config::TracingConfig;
 use crate::{
-    ast::*,
+    compiler::{ast::*, parser::parser::ParserInfo},
     diagnostics::{Diag, DiagData},
 };
-use crate::{diagnostics::config::TracingConfig, parser::parser::ParserInfo};
+
+use super::symbol_table::SymbolTable;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SemanticAnnotations {

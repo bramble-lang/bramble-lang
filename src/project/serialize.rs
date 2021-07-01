@@ -3,7 +3,7 @@ use std::fmt;
 use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
-use crate::{
+use crate::compiler::{
     ast::{Node, RoutineDef},
     semantics::semanticnode::SemanticAnnotations,
 };

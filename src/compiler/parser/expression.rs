@@ -7,8 +7,10 @@ use super::{
     tokenstream::TokenStream,
 };
 use crate::{
-    ast::*,
-    lexer::tokens::{Lex, Token},
+    compiler::{
+        ast::*,
+        lexer::tokens::{Lex, Token},
+    },
     trace,
 };
 
@@ -531,7 +533,7 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserInf
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
+    use crate::compiler::{
         ast::{Statement, Type},
         lexer::lexer::Lexer,
     };

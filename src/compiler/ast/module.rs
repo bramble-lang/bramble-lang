@@ -268,8 +268,8 @@ impl<M> Module<M> {
 
 #[cfg(test)]
 mod test {
-    use crate::ast::routinedef::{RoutineDef, RoutineDefType};
-    use crate::ast::ty::Type;
+    use crate::compiler::ast::routinedef::{RoutineDef, RoutineDefType};
+    use crate::compiler::ast::ty::Type;
 
     use super::*;
 

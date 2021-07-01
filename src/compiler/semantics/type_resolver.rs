@@ -1,11 +1,13 @@
-use std::collections::HashMap;
-
-use crate::ast::*;
+use crate::compiler::{
+    ast::*,
+    parser::parser::ParserInfo,
+    semantics::semanticnode::{SemanticAst, SemanticNode},
+    semantics::symbol_table::*,
+};
 use crate::diagnostics::config::{Tracing, TracingConfig};
 use crate::manifest::Manifest;
-use crate::semantics::semanticnode::{SemanticAst, SemanticNode};
-use crate::{parser::parser::ParserInfo, semantics::symbol_table::*};
 use braid_lang::result::Result;
+use std::collections::HashMap;
 
 use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
@@ -1097,9 +1099,9 @@ impl<'a> TypeResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::lexer::Lexer;
-    use crate::lexer::tokens::Token;
-    use crate::parser::parser;
+    use crate::compiler::lexer::lexer::Lexer;
+    use crate::compiler::lexer::tokens::Token;
+    use crate::compiler::parser::parser;
 
     #[test]
     pub fn test_identifiers() {
