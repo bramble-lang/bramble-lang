@@ -155,12 +155,12 @@ impl Parser {
 
 pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
-    let start_index = stream.index();
 
     let module_line = stream.peek().map_or(1, |t| t.l);
     let mut module = Module::new(&name, module_line);
 
     while stream.peek().is_some() {
+        let start_index = stream.index();
         parse_items_into(&mut stream, &mut module).map_err(|e| format!("Parser: {}", e))?;
 
         if stream.index() == start_index {
@@ -236,7 +236,11 @@ fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<
         }
     }
 
-    Ok(Some((modules, items)))
+    if modules.len() == 0 && items.len() == 0 {
+        Ok(None)
+    } else {
+        Ok(Some((modules, items)))
+    }
 }
 
 fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
@@ -1240,6 +1244,26 @@ pub mod tests {
         } else {
             panic!("No nodes returned by parser")
         }
+    }
+
+    #[test]
+    fn parse_missing_fn_token() {
+        // This tests that the parser will terminate if it reaches a point
+        // where it cannot advance while parsing a set of items.
+        let text = "
+        struct Test {
+        }
+
+        get_data() {
+            return;
+        }
+        ";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_>>()
+            .unwrap();
+        parse("test", &tokens).expect_err("This should fail");
     }
 
     #[test]
