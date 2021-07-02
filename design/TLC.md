@@ -76,4 +76,4 @@ paths that are relative or have not been confirmed to be canonical.
 3. Why?  Because that's what I learned from the Rust book
 4. What should I do? Look at other projects and do some research into Rust testing idioms, maybe the
 book is wrong.  Also, regardless, just move the tests to another file, the big problem is access privs.
-
+5. To do: move the tests out to separate files or a separate directory: (/test)
