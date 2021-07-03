@@ -1,5 +1,7 @@
 #[cfg(test)]
 pub mod tests {
+    use core::panic;
+
     use super::super::parser::*;
     use crate::compiler::{
         ast::*,
@@ -363,7 +365,11 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        if let Some(m) = parse("test", &tokens).unwrap() {
+        if let Some(m) = parse("test", &tokens)
+            .unwrap()
+            .unwrap()
+            .get_module("test_mod")
+        {
             assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_mod");
         } else {
@@ -432,8 +438,11 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap() {
+        if let Some(m) = parse("test", &tokens)
+            .unwrap()
+            .unwrap()
+            .get_module("test_co_mod")
+        {
             assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_co_mod");
 
@@ -477,8 +486,11 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap() {
+        if let Some(m) = parse("test", &tokens)
+            .unwrap()
+            .unwrap()
+            .get_module("test_struct_mod")
+        {
             assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_struct_mod");
 
@@ -505,8 +517,11 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap() {
+        if let Some(m) = parse("test", &tokens)
+            .unwrap()
+            .unwrap()
+            .get_module("test_extern_mod")
+        {
             assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_extern_mod");
 
@@ -535,8 +550,11 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(m) = module(&mut iter).unwrap() {
+        if let Some(m) = parse("test", &tokens)
+            .unwrap()
+            .unwrap()
+            .get_module("test_extern_mod")
+        {
             assert_eq!(*m.annotation(), 1);
             assert_eq!(m.get_name(), "test_extern_mod");
 
@@ -566,8 +584,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(RoutineDef {
+        if let Some(Item::Routine(RoutineDef {
             annotations: l,
             def: RoutineDefType::Function,
             name,
@@ -575,11 +592,11 @@ pub mod tests {
             ty,
             body,
             ..
-        }) = function_def(&mut iter).unwrap()
+        })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
         {
-            assert_eq!(l, 1);
+            assert_eq!(*l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![Parameter::new(1, "x", &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(1, "x", &Type::I64)]);
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -599,8 +616,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(RoutineDef {
+        if let Some(Item::Routine(RoutineDef {
             annotations: l,
             def: RoutineDefType::Function,
             name,
@@ -608,11 +624,11 @@ pub mod tests {
             ty,
             body,
             ..
-        }) = function_def(&mut iter).unwrap()
+        })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
         {
-            assert_eq!(l, 1);
+            assert_eq!(*l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![Parameter::new(1, "x", &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(1, "x", &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -797,8 +813,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
-        if let Some(RoutineDef {
+        if let Some(Item::Routine(RoutineDef {
             annotations: l,
             def: RoutineDefType::Function,
             name,
@@ -806,11 +821,11 @@ pub mod tests {
             ty,
             body,
             ..
-        }) = function_def(&mut iter).unwrap()
+        })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
         {
-            assert_eq!(l, 1);
+            assert_eq!(*l, 1);
             assert_eq!(name, "test");
-            assert_eq!(params, vec![Parameter::new(1, "x", &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(1, "x", &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -960,7 +975,7 @@ pub mod tests {
             ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
             (
                 "struct MyStruct {x: i64}",
-                StructDef::new("MyStruct", 1, vec![Parameter::new(0, "x", &Type::I64)]),
+                StructDef::new("MyStruct", 1, vec![Parameter::new(1, "x", &Type::I64)]),
             ),
             (
                 "struct MyStruct {x: i64, y: bool}",
@@ -968,8 +983,8 @@ pub mod tests {
                     "MyStruct",
                     1,
                     vec![
-                        Parameter::new(0, "x", &Type::I64),
-                        Parameter::new(0, "y", &Type::Bool),
+                        Parameter::new(1, "x", &Type::I64),
+                        Parameter::new(1, "y", &Type::Bool),
                     ],
                 ),
             ),
@@ -979,8 +994,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
-            if let Some(m) = module(&mut stream).unwrap() {
+            if let Some(m) = parse("test", &tokens).unwrap() {
                 assert_eq!(m.get_structs()[0], Item::Struct(expected), "{:?}", text);
             }
         }
