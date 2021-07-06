@@ -61,6 +61,11 @@ Deserialize creates dependencies and adds a lot of trait restrictions that have 
 be addressed by making a Path arena and all paths are stored there?  Item 2 could probably be addressed by moving
 Serde to just be within the Project module and manually implementing the serde.
 10. What's the lesson that can be learned from this?
+     - It took about 4 hours for me to realize that this would be such a huge problem.  Should have started by testing
+     out the basic structures in Braid and seeing if they would all allow copy to be implemented.
+     - There's a deep level of tight coupling here in the Path structure that runs throughout the whole program.
+     Is this good or bad?
+     - Is this still worthwhile?  Can my goal of reducing the `clones` possible?
 
 # Canonical Path are critical make them obvious when needed
 1. In my code, its critical to know if a path is canonical or not and many parts of logic require canonical
@@ -75,6 +80,9 @@ right now is the presence of a boolean flag.  So when looking at the code there'
 a call to a function that deals with canonical behavior.
 5. What can I do?  Create a CanonicalPath type that reprsents the canonical paths and the "Path" types represent
 paths that are relative or have not been confirmed to be canonical.
+6. Implementing this: I think the best way to implement this is to create the Stack aware map operator that keeps
+a stack of node ancestors that the transform function can reference.  This is required for handling the conversion
+of relative paths to canonical paths.
 
 # Code files are Too Big
 1. Some of my code files are thousands of lines long
