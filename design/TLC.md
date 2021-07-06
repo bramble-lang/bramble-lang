@@ -80,3 +80,4 @@ book is wrong.  Also, regardless, just move the tests to another file, the big p
 for integration tests.
 6. I see the cpython project puts a `tests.rs` file in the module directories for unit tests. Tokio puts
 a `tests` directory under module directories to include unit (I think) tests.
+7. Done.  type_resolver.rs is now 1000ln down from 4000 :D
