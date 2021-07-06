@@ -55,6 +55,12 @@ borrow checker and how hard it is to write code and if I can get rid of all the 
 8. Conclusion: check if I can copy a struct with &str then try a 1hr timebox to change AST nodes from String to &str
 and see how far I can get.  Otherwise, use the string arena (which is what Rust uses).  Also take some time to
 think about the pros and cons.
+9. Did a quick test this morning to see how much work it would be and it's quite a bit of work making the changes.
+A couple things: 1. Vecs still are not copyable so everything with a Path would still need to be cloned. 2.
+Deserialize creates dependencies and adds a lot of trait restrictions that have to be written out.  Item 1 could
+be addressed by making a Path arena and all paths are stored there?  Item 2 could probably be addressed by moving
+Serde to just be within the Project module and manually implementing the serde.
+10. What's the lesson that can be learned from this?
 
 # Canonical Path are critical make them obvious when needed
 1. In my code, its critical to know if a path is canonical or not and many parts of logic require canonical
