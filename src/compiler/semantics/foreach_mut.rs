@@ -36,7 +36,7 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
         self.annotation_mut().ty = ctype;
     }
 
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) {}
+    fn canonize_type_refs(&mut self, _stack: &SymbolTableScopeStack) {}
 }
 
 impl SemanticNode for Expression<SemanticAnnotations> {}
