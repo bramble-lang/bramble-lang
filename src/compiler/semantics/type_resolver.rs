@@ -173,7 +173,6 @@ impl TypeResolver {
             def,
             params,
             body,
-            ty: p,
             ..
         } = routine;
 
@@ -186,7 +185,7 @@ impl TypeResolver {
 
         // canonize routine parameter types
         let canonical_params = self.params_to_canonical(&params)?;
-        meta.ty = self.symbols.canonize_local_type_ref(p)?;
+        //meta.ty = self.symbols.canonize_local_type_ref(ret_ty)?;
 
         // Add parameters to symbol table
         for p in canonical_params.iter() {
@@ -271,12 +270,13 @@ impl TypeResolver {
         let canonical_params = self.params_to_canonical(params)?;
 
         // Update the annotations with canonical path information and set the type to Type::Unit
+        let name = ex.name().expect("Externs must have a name");
         let mut meta = ex.annotation().clone();
         meta.ty = self.symbols.canonize_local_type_ref(ex.get_return_type())?;
-        meta.set_canonical_path(vec![ex.get_name().clone()].into());
+        //meta.set_canonical_path(vec![name].into());
 
         Ok(Extern::new(
-            ex.get_name().clone(),
+            name,
             meta.clone(),
             canonical_params,
             ex.has_varargs,

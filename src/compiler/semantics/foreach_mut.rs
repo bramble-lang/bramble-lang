@@ -15,10 +15,13 @@ use super::stack::SymbolTableScopeStack;
 /// Because contextual information is need for semantic analysis
 /// operations, the scope stack is passed into these functions.
 pub trait SemanticNode: Node<SemanticAnnotations> {
+    // TODO: make one canonize function that handles everything and then the special cases
+    // do their own thing.  I think that will be easier than 3 separate functions
     fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
+        println!("test: {:?}", self.node_type());
         match self.name() {
             // Set SemanticAnnotation::canonical_path to CanonicalPath
             // Addresses RoutineDefs and StructDefs (for LLVM IR)
@@ -52,11 +55,23 @@ impl SemanticNode for RoutineDef<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let ctype = stack.canonize_local_type_ref(&self.ty)?;
         self.ty = ctype;
+        self.annotation_mut().ty = self.ty.clone();
         Ok(())
     }
 }
 impl SemanticNode for Extern<SemanticAnnotations> {
+    fn canonize_annotation_path(&mut self, _: &SymbolTableScopeStack) {
+        println!("EXTERN: {:?}", self.node_type());
+        let name = match self.name() {
+            Some(name) => name,
+            None => panic!("Externs must have a name"),
+        };
+        let cpath = vec![name].into();
+        println!("Extern: {:?}", cpath);
+        self.annotation_mut().set_canonical_path(cpath);
+    }
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        println!("EXTERN: {:?}", self.node_type());
         let ctype = stack.canonize_local_type_ref(&self.ty)?;
         self.ty = ctype;
         Ok(())

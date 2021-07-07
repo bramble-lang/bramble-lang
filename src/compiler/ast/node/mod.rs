@@ -19,6 +19,7 @@ pub trait Node<M: Annotation> {
     fn iter_preorder(&self) -> PreOrderIter<M>;
 }
 
+#[derive(Debug)]
 pub enum NodeType {
     Module,
     RoutineDef(RoutineDefType),
