@@ -1,10 +1,8 @@
 use std::fmt::Display;
 
-mod foreach_mut;
 mod iter;
 mod map;
 
-pub use self::foreach_mut::ForEachPreOrderMut;
 pub use self::iter::{PostOrderIter, PreOrderIter};
 pub use self::map::MapPreOrder;
 

@@ -73,6 +73,10 @@ impl<M> StructDef<M> {
         &self.fields
     }
 
+    pub fn get_fields_mut(&mut self) -> &mut Vec<Parameter<M>> {
+        &mut self.fields
+    }
+
     pub fn get_field(&self, field: &str) -> Option<&Type> {
         self.fields.iter().find(|f| f.name == field).map(|f| &f.ty)
     }

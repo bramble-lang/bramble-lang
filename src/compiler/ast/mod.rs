@@ -12,9 +12,7 @@ mod ty;
 pub use self::expression::{BinaryOperator, Expression, RoutineCall, UnaryOperator};
 pub use self::extern_decl::{Extern, HasVarArgs};
 pub use self::module::{Item, Module};
-pub use self::node::{
-    Annotation, ForEachPreOrderMut, MapPreOrder, Node, NodeType, PostOrderIter, PreOrderIter,
-};
+pub use self::node::{Annotation, MapPreOrder, Node, NodeType, PostOrderIter, PreOrderIter};
 pub use self::parameter::Parameter;
 pub use self::path::{Path, CANONICAL_ROOT, ROOT_PATH, SELF};
 pub use self::routinedef::{RoutineDef, RoutineDefType};
