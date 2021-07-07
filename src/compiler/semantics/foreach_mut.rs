@@ -36,7 +36,7 @@ where
 {
     pub fn new(
         name: &str,
-        root: &'a Module<SemanticAnnotations>,
+        root: &'a mut Module<SemanticAnnotations>,
         tracing: TracingConfig,
         format: T,
     ) -> ForEachPreOrderMut<'a, T> {
@@ -396,19 +396,37 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::compiler::{
+        lexer::tokens::Token, parser::parser, semantics::semanticnode::SemanticAst, Lexer,
+    };
+    use braid_lang::result::Result;
+
     use super::*;
 
-    /*#[test]
+    #[test]
     fn empty_module() {
-        let mut m = Module::new("m", 1);
+        let text = "fn main() -> i64 {
+                    let k: i64 := 5;
+                    return k;
+                }";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_>>()
+            .unwrap();
+        let ast = parser::parse("test", &tokens)
+            .expect(&format!("{}", text))
+            .unwrap();
+        let mut sa = SemanticAst::new();
+        let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
-        let t = ForEachPreOrderMut::new("test", TracingConfig::Off, |_| "test".into());
-        t.for_module(&mut m, |n| *n = 2);
+        //let mut t = ForEachPreOrderMut::new("test", &sm_ast, TracingConfig::Off, |_| "test".into());
+        //t.for_module(&mut sm_ast, |stack, n| n.ln *= 4);
 
-        assert_eq!(*m.annotation(), 2);
+        assert_eq!(sm_ast.annotation().ln, 4);
     }
 
-    #[test]
+    /*#[test]
     fn module_with_items() {
         let mut m = Module::new("m", 1);
         m.add_function(RoutineDef::new_coroutine(
