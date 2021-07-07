@@ -18,7 +18,6 @@ fn canonize_paths(module: &mut Module<SemanticAnnotations>) {
 }
 
 fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn Node<SemanticAnnotations>) {
-    //node.test();
     match node.name() {
         // Set SemanticAnnotation::canonical_path to CanonicalPath
         // Addresses RoutineDefs and StructDefs (for LLVM IR)
@@ -38,8 +37,4 @@ fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn Node<SemanticAnnotatio
     // Or, can I make the trait a type Parameter and then define relevant traits within the process step scope
     //     e.g. a ToCanonical trait here with default impl for everything except Expression and Type.
     // Looks like the best option I have is to add a method to Node that will do to_canonical
-}
-
-impl dyn Node<SemanticAnnotations> {
-    pub fn test(&self) {}
 }
