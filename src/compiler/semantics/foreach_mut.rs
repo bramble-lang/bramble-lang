@@ -446,37 +446,39 @@ mod tests {
         );
     }
 
-    /*#[test]
-    fn module_with_items() {
-        let mut m = Module::new("m", 1);
-        m.add_function(RoutineDef::new_coroutine(
-            "cor",
-            1,
-            vec![],
-            Type::Unit,
-            vec![Statement::Expression(box Expression::I64(1, 2))],
-        ))
-        .unwrap();
-        m.add_function(RoutineDef::new_function(
-            "func",
-            1,
-            vec![Parameter {
-                annotation: 1,
-                name: "p".into(),
-                ty: Type::Bool,
-            }],
-            Type::Unit,
-            vec![Statement::Expression(box Expression::I64(1, 2))],
-        ))
-        .unwrap();
-        m.add_module(Module::new("m2", 1));
-        m.add_struct(StructDef::new("sd", 1, vec![])).unwrap();
+    #[test]
+    fn canonize_structdef() {
+        let text = "mod m{ struct MyStruct {}}";
+        let tokens: Vec<Token> = Lexer::new(&text)
+            .tokenize()
+            .into_iter()
+            .collect::<Result<_>>()
+            .unwrap();
+        let ast = parser::parse("test", &tokens)
+            .expect(&format!("{}", text))
+            .unwrap();
+        let mut sa = SemanticAst::new();
+        let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
-        let t = ForEachPreOrderMut::new("test", TracingConfig::Off, |_| "test".into());
-        t.for_module(&mut m, |n| *n = 2);
+        let mut t =
+            ForEachPreOrderMut::new("test", &mut sm_ast, TracingConfig::Off, |_| "test".into());
+        t.for_module(&mut sm_ast, |stack, n| match n.name() {
+            Some(name) => {
+                let cpath = stack.to_canonical(&vec![name].into()).unwrap();
+                n.annotation_mut().set_canonical_path(cpath);
+            }
+            None => (),
+        });
 
-        for n in m.iter_preorder() {
-            assert_eq!(*n.annotation(), 2);
-        }
-    }*/
+        assert_eq!(
+            *sm_ast
+                .get_module("m")
+                .unwrap()
+                .get_item("MyStruct")
+                .unwrap()
+                .annotation()
+                .get_canonical_path(),
+            vec!["project", "test", "m", "MyStruct"].into()
+        );
+    }
 }
