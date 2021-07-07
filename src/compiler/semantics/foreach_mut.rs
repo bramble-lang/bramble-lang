@@ -4,7 +4,49 @@ use crate::diagnostics::{config::TracingConfig, DiagRecorder};
 use super::semanticnode::SemanticAnnotations;
 use super::stack::SymbolTableScopeStack;
 
-type SemanticNode = dyn Node<SemanticAnnotations>;
+/// A collection of functions that are specific to Semantic Analysis
+/// on the AST. Moving Semantic Analysis functions to a trait allows
+/// the structural operations (traversal, scope stack) to be managed
+/// by operators (e.g. ForEach) which can then apply transformations
+/// that use the SemanticNode information
+///
+/// Because contextual information is need for semantic analysis
+/// operations, the scope stack is passed into these functions.
+pub trait SemanticNode: Node<SemanticAnnotations> {
+    fn to_canonical(&mut self, stack: &SymbolTableScopeStack) {
+        // If this node has a name, then use the current stack to construct
+        // a canonical path from the root of the AST to the current node
+        // (this is for routine definitions, modules, and structure definitions)
+        match self.name() {
+            // Set SemanticAnnotation::canonical_path to CanonicalPath
+            // Addresses RoutineDefs and StructDefs (for LLVM IR)
+            Some(name) => {
+                let cpath = stack.to_canonical(&vec![name].into()).unwrap();
+                self.annotation_mut().set_canonical_path(cpath);
+            }
+            None => (),
+        }
+
+        // Update the Type information in the annotation data
+        let cpath = stack
+            .canonize_local_type_ref(self.annotation().ty())
+            .unwrap();
+        self.annotation_mut().ty = cpath;
+    }
+}
+
+impl SemanticNode for Expression<SemanticAnnotations> {}
+impl SemanticNode for Statement<SemanticAnnotations> {}
+impl SemanticNode for Bind<SemanticAnnotations> {}
+impl SemanticNode for Mutate<SemanticAnnotations> {}
+impl SemanticNode for Module<SemanticAnnotations> {}
+impl SemanticNode for StructDef<SemanticAnnotations> {}
+impl SemanticNode for RoutineDef<SemanticAnnotations> {}
+impl SemanticNode for Extern<SemanticAnnotations> {}
+impl SemanticNode for Parameter<SemanticAnnotations> {}
+impl SemanticNode for YieldReturn<SemanticAnnotations> {}
+impl SemanticNode for Return<SemanticAnnotations> {}
+
 /**
 Traverse through each node, in pre-order DFS, and apply a function to mutate the
 annotation on that node.
@@ -48,9 +90,9 @@ where
         }
     }
 
-    fn transform<F>(&self, a: &mut SemanticNode, mut f: F)
+    fn transform<F>(&self, a: &mut dyn SemanticNode, mut f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.diag.begin(a.annotation());
         f(&self.symbols, a);
@@ -59,7 +101,7 @@ where
 
     pub fn for_each<F>(&mut self, m: &mut Module<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.diag.start_trace();
         self.for_module(m, f);
@@ -68,7 +110,7 @@ where
 
     fn for_module<F>(&mut self, m: &mut Module<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         if self.tracing != TracingConfig::Off {
             println!("{}", self.name);
@@ -91,7 +133,7 @@ where
 
     fn for_items<F>(&mut self, items: &mut Vec<Item<SemanticAnnotations>>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         for i in items.iter_mut() {
             match i {
@@ -108,7 +150,7 @@ where
 
     fn for_structdef<F>(&mut self, sd: &mut StructDef<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(sd, f);
         self.for_parameters(&mut sd.get_fields_mut(), f);
@@ -116,7 +158,7 @@ where
 
     fn for_routinedef<F>(&mut self, rd: &mut RoutineDef<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(rd, f);
         // loop through all the params
@@ -132,7 +174,7 @@ where
 
     fn for_extern<F>(&mut self, ex: &mut Extern<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(ex, f);
         self.for_parameters(&mut ex.params, f);
@@ -140,7 +182,7 @@ where
 
     fn for_parameters<F>(&mut self, params: &mut Vec<Parameter<SemanticAnnotations>>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         for p in params {
             self.transform(p, f);
@@ -149,7 +191,7 @@ where
 
     fn for_statement<F>(&mut self, statement: &mut Statement<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         match statement {
             Statement::Bind(b) => {
@@ -172,7 +214,7 @@ where
 
     fn for_bind<F>(&mut self, bind: &mut Bind<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(bind, f);
         self.for_expression(bind.get_rhs_mut(), f)
@@ -180,7 +222,7 @@ where
 
     fn for_mutate<F>(&mut self, mutate: &mut Mutate<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(mutate, f);
         self.for_expression(mutate.get_rhs_mut(), f);
@@ -188,7 +230,7 @@ where
 
     fn for_yieldreturn<F>(&mut self, yr: &mut YieldReturn<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(yr, f);
         yr.get_value_mut()
@@ -198,7 +240,7 @@ where
 
     fn for_return<F>(&mut self, r: &mut Return<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(r, f);
         r.get_value_mut()
@@ -208,7 +250,7 @@ where
 
     fn for_expression<F>(&mut self, exp: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         use Expression::*;
 
@@ -252,7 +294,7 @@ where
 
     fn for_expression_block<F>(&mut self, block: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(block, f);
         if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) =
@@ -272,7 +314,7 @@ where
 
     fn for_member_access<F>(&mut self, access: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(access, f);
         if let Expression::MemberAccess(_, src, _member) = access {
@@ -284,7 +326,7 @@ where
 
     fn for_unary_op<F>(&mut self, un_op: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(un_op, f);
         if let Expression::UnaryOp(_, _op, operand) = un_op {
@@ -296,7 +338,7 @@ where
 
     fn for_binary_op<F>(&mut self, bin_op: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(bin_op, f);
         if let Expression::BinaryOp(_, _op, l, r) = bin_op {
@@ -309,7 +351,7 @@ where
 
     fn for_if<F>(&mut self, if_exp: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(if_exp, f);
         if let Expression::If {
@@ -329,7 +371,7 @@ where
 
     fn for_while<F>(&mut self, while_exp: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(while_exp, f);
         if let Expression::While { cond, body, .. } = while_exp {
@@ -342,7 +384,7 @@ where
 
     fn for_routine_call<F>(&mut self, rc: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(rc, f);
         if let Expression::RoutineCall(_, _call, _name, params) = rc {
@@ -356,7 +398,7 @@ where
 
     fn for_yield<F>(&mut self, yield_exp: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(yield_exp, f);
         if let Expression::Yield(_, e) = yield_exp {
@@ -368,7 +410,7 @@ where
 
     fn for_struct_expression<F>(&mut self, se: &mut Expression<SemanticAnnotations>, f: F)
     where
-        F: FnMut(&SymbolTableScopeStack, &mut SemanticNode) + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) + Copy,
     {
         self.transform(se, f);
         if let Expression::StructExpression(_, _struct_name, fields) = se {

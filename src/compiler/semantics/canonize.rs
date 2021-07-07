@@ -1,10 +1,8 @@
-use crate::{
-    compiler::ast::{Module, Node},
-    diagnostics::config::TracingConfig,
-};
+use crate::{compiler::ast::Module, diagnostics::config::TracingConfig};
 
 use super::{
-    foreach_mut::ForEachPreOrderMut, semanticnode::SemanticAnnotations,
+    foreach_mut::{ForEachPreOrderMut, SemanticNode},
+    semanticnode::SemanticAnnotations,
     stack::SymbolTableScopeStack,
 };
 
@@ -12,21 +10,13 @@ use super::{
 Canonize all the paths in the AST
  */
 
-fn canonize_paths(module: &mut Module<SemanticAnnotations>) {
+pub fn canonize_paths(module: &mut Module<SemanticAnnotations>) {
     let mut t = ForEachPreOrderMut::new("test", module, TracingConfig::Off, |_| "test".into());
     t.for_each(module, |s, n| canonize(s, n));
 }
 
-fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn Node<SemanticAnnotations>) {
-    match node.name() {
-        // Set SemanticAnnotation::canonical_path to CanonicalPath
-        // Addresses RoutineDefs and StructDefs (for LLVM IR)
-        Some(name) => {
-            let cpath = stack.to_canonical(&vec![name].into()).unwrap();
-            node.annotation_mut().set_canonical_path(cpath);
-        }
-        None => (),
-    }
+fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn SemanticNode) {
+    node.to_canonical(stack);
 
     // What about Expression::CustomType, Path, RoutineCall, StructExpression?
     // What about SemanticAnnotations::Type => This will be a path to the TypeDefinition
