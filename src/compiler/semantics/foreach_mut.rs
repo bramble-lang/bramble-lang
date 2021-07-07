@@ -405,10 +405,7 @@ mod tests {
 
     #[test]
     fn empty_module() {
-        let text = "fn main() -> i64 {
-                    let k: i64 := 5;
-                    return k;
-                }";
+        let text = "mod m{}";
         let tokens: Vec<Token> = Lexer::new(&text)
             .tokenize()
             .into_iter()
