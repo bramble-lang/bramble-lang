@@ -1,3 +1,5 @@
+use braid_lang::result::Result;
+
 use crate::{compiler::ast::Module, diagnostics::config::TracingConfig};
 
 use super::{
@@ -21,8 +23,9 @@ pub fn canonize_paths(module: &mut Module<SemanticAnnotations>) {
     t.for_each(module, |s, n| n.canonize_type_refs(s));
 }
 
-fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn SemanticNode) {
+fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn SemanticNode) -> Result<()> {
     node.canonize_annotation_path(stack);
+    Ok(())
 
     // What about Expression::CustomType, Path, RoutineCall, StructExpression?
     // What about SemanticAnnotations::Type => This will be a path to the TypeDefinition
