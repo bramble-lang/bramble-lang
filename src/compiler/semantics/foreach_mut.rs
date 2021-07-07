@@ -1,7 +1,5 @@
-use std::fmt::Debug;
-
 use crate::compiler::ast::*;
-use crate::diagnostics::{config::TracingConfig, Diag, DiagRecorder};
+use crate::diagnostics::{config::TracingConfig, DiagRecorder};
 
 use super::semanticnode::SemanticAnnotations;
 use super::stack::SymbolTableScopeStack;
@@ -419,7 +417,7 @@ mod tests {
 
         let mut t =
             ForEachPreOrderMut::new("test", &mut sm_ast, TracingConfig::Off, |_| "test".into());
-        t.for_module(&mut sm_ast, |stack, n| n.ln *= 4);
+        t.for_module(&mut sm_ast, |_stack, n| n.ln *= 4);
 
         assert_eq!(sm_ast.annotation().ln, 4);
     }
