@@ -37,6 +37,7 @@ fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn Node<SemanticAnnotatio
     //     and then, similar to Serde, define the implementation of the trait locally to the use of ForEach.
     // Or, can I make the trait a type Parameter and then define relevant traits within the process step scope
     //     e.g. a ToCanonical trait here with default impl for everything except Expression and Type.
+    // Looks like the best option I have is to add a method to Node that will do to_canonical
 }
 
 impl dyn Node<SemanticAnnotations> {
