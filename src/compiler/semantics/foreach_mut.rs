@@ -44,14 +44,7 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
     }
 }
 
-impl SemanticNode for Expression<SemanticAnnotations> {
-    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) {
-        match self {
-            Expression::MemberAccess(..) => {}
-            _ => (),
-        }
-    }
-}
+impl SemanticNode for Expression<SemanticAnnotations> {}
 impl SemanticNode for Statement<SemanticAnnotations> {}
 impl SemanticNode for Bind<SemanticAnnotations> {}
 impl SemanticNode for Mutate<SemanticAnnotations> {}
