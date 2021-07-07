@@ -49,22 +49,22 @@ pub fn resolve_types_with_imports(
     semantic.resolve_types()
 }
 
-pub struct TypeResolver<'a> {
-    symbols: SymbolTableScopeStack<'a>, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
+pub struct TypeResolver {
+    symbols: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
     main_fn: Path,
 }
 
-impl<'a> Tracing for TypeResolver<'a> {
+impl Tracing for TypeResolver {
     fn set_tracing(&mut self, config: TracingConfig) {
         self.tracing = config;
     }
 }
 
-impl<'a> TypeResolver<'a> {
-    pub fn new(root: &'a Module<SemanticAnnotations>, main_fn: &'a str) -> TypeResolver<'a> {
+impl TypeResolver {
+    pub fn new(root: &Module<SemanticAnnotations>, main_fn: &str) -> TypeResolver {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root),
             tracing: TracingConfig::Off,

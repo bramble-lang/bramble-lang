@@ -9,15 +9,15 @@ use super::{
 };
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SymbolTableScopeStack<'a> {
-    root: &'a Module<SemanticAnnotations>,
+pub struct SymbolTableScopeStack {
+    root: *const Module<SemanticAnnotations>,
 
     stack: Vec<SymbolTable>,
     head: SymbolTable,
     imported_symbols: HashMap<String, Symbol>, // TODO: change this to a SymbolTable?
 }
 
-impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
+impl<'a> std::fmt::Display for SymbolTableScopeStack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut i = 0;
         f.write_fmt(format_args!("{}: {}\n", i, self.head))?;
@@ -29,7 +29,7 @@ impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
     }
 }
 
-impl<'a> SymbolTableScopeStack<'a> {
+impl<'a> SymbolTableScopeStack {
     pub fn new(root: &'a Module<SemanticAnnotations>) -> SymbolTableScopeStack {
         SymbolTableScopeStack {
             stack: vec![],
@@ -40,7 +40,7 @@ impl<'a> SymbolTableScopeStack<'a> {
     }
 
     pub fn get_root(&self) -> &'a Module<SemanticAnnotations> {
-        self.root
+        unsafe { self.root.as_ref().unwrap() }
     }
 
     /// Add a function from another module to this symbol table
@@ -254,14 +254,16 @@ impl<'a> SymbolTableScopeStack<'a> {
         let mut current = self.root;
         // Follow the path, up to, but not including the final element of the path
         // (which is the item being looked for);
-        for idx in 1..canon_path.len() - 1 {
-            match current.get_module(&canon_path[idx]) {
-                Some(m) => current = m,
-                None => return None,
+        unsafe {
+            for idx in 1..canon_path.len() - 1 {
+                match (*current).get_module(&canon_path[idx]) {
+                    Some(m) => current = m,
+                    None => return None,
+                }
             }
-        }
 
-        current.annotation().sym.get(item)
+            (*current).annotation().sym.get(item)
+        }
     }
 
     /**
