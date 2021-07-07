@@ -604,7 +604,7 @@ impl TypeResolver {
                         meta.ty = self
                             .symbols
                             .canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
-                        meta.set_canonical_path(canonical_path);
+
                         Ok(Expression::MemberAccess(
                             meta,
                             Box::new(src),
