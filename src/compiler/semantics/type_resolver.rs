@@ -9,7 +9,9 @@ use crate::manifest::Manifest;
 use braid_lang::result::Result;
 use std::collections::HashMap;
 
-use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
+use super::{
+    canonize::canonize_paths, semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack,
+};
 
 pub fn resolve_types(
     ast: &Module<ParserInfo>,
@@ -39,6 +41,7 @@ pub fn resolve_types_with_imports(
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
+    canonize_paths(&mut sm_ast);
 
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
@@ -173,17 +176,9 @@ impl TypeResolver {
             ty: p,
             ..
         } = routine;
-        let canon_path = self
-            .symbols
-            .to_path()
-            .map(|mut p| {
-                p.push(name);
-                p
-            })
-            .expect("Failed to create canonical path for function");
 
         // If routine is root::my_main it must be a function type and have type () -> i64
-        if canon_path == self.main_fn {
+        if annotations.get_canonical_path() == &self.main_fn {
             Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", annotations.ln, e))?;
         }
 
@@ -192,7 +187,6 @@ impl TypeResolver {
         // canonize routine parameter types
         let canonical_params = self.params_to_canonical(&params)?;
         meta.ty = self.symbols.canonize_local_type_ref(p)?;
-        meta.set_canonical_path(canon_path);
 
         // Add parameters to symbol table
         for p in canonical_params.iter() {
@@ -253,10 +247,6 @@ impl TypeResolver {
         // Update the annotations with canonical path information and set the type to Type::Unit
         let mut meta = struct_def.annotation().clone();
         meta.ty = Type::Unit;
-        meta.set_canonical_path(
-            self.symbols
-                .to_canonical(&vec![struct_def.get_name().clone()].into())?,
-        );
 
         Ok(StructDef::new(
             struct_def.get_name().clone(),

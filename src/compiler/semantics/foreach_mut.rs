@@ -285,7 +285,7 @@ where
             UnaryOp(..) => self.for_unary_op(exp, f),
             BinaryOp(..) => self.for_binary_op(exp, f),
             If { .. } => self.for_if(exp, f),
-            While { .. } => todo!(),
+            While { .. } => self.for_while(exp, f),
             Yield(..) => self.for_yield(exp, f),
             RoutineCall(..) => self.for_routine_call(exp, f),
             StructExpression(..) => self.for_struct_expression(exp, f),
