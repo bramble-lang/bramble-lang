@@ -13,7 +13,7 @@ use super::stack::SymbolTableScopeStack;
 /// Because contextual information is need for semantic analysis
 /// operations, the scope stack is passed into these functions.
 pub trait SemanticNode: Node<SemanticAnnotations> {
-    fn to_canonical(&mut self, stack: &SymbolTableScopeStack) {
+    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
@@ -26,13 +26,17 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
             }
             None => (),
         }
+    }
 
+    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) {
         // Update the Type information in the annotation data
-        let cpath = stack
+        let ctype = stack
             .canonize_local_type_ref(self.annotation().ty())
             .unwrap();
-        self.annotation_mut().ty = cpath;
+        self.annotation_mut().ty = ctype;
     }
+
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) {}
 }
 
 impl SemanticNode for Expression<SemanticAnnotations> {}
@@ -41,9 +45,24 @@ impl SemanticNode for Bind<SemanticAnnotations> {}
 impl SemanticNode for Mutate<SemanticAnnotations> {}
 impl SemanticNode for Module<SemanticAnnotations> {}
 impl SemanticNode for StructDef<SemanticAnnotations> {}
-impl SemanticNode for RoutineDef<SemanticAnnotations> {}
-impl SemanticNode for Extern<SemanticAnnotations> {}
-impl SemanticNode for Parameter<SemanticAnnotations> {}
+impl SemanticNode for RoutineDef<SemanticAnnotations> {
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) {
+        let ctype = stack.canonize_local_type_ref(&self.ty).unwrap();
+        self.ty = ctype;
+    }
+}
+impl SemanticNode for Extern<SemanticAnnotations> {
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) {
+        let ctype = stack.canonize_local_type_ref(&self.ty).unwrap();
+        self.ty = ctype;
+    }
+}
+impl SemanticNode for Parameter<SemanticAnnotations> {
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) {
+        let ctype = stack.canonize_local_type_ref(&self.ty).unwrap();
+        self.ty = ctype;
+    }
+}
 impl SemanticNode for YieldReturn<SemanticAnnotations> {}
 impl SemanticNode for Return<SemanticAnnotations> {}
 

@@ -1524,8 +1524,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_bind_statement() {
-        for (text, expected) in vec![
+        for (ln, text, expected) in vec![
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5;
                     return k;
@@ -1533,6 +1534,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5i64;
                     return k;
@@ -1540,6 +1542,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := 5i32;
                     return k;
@@ -1547,6 +1550,7 @@ mod type_resolver_tests {
                 Ok(Type::I32),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5i64;
                     return k;
@@ -1554,6 +1558,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := 5i32;
                     return k;
@@ -1561,6 +1566,7 @@ mod type_resolver_tests {
                 Ok(Type::I32),
             ),
             (
+                line!(),
                 "fn main() -> [i64;5] {
                     let k: [i64;5] := [1, 2, 3, 4, 5];
                     return k;
@@ -1568,6 +1574,7 @@ mod type_resolver_tests {
                 Ok(Type::Array(Box::new(Type::I64), 5)),
             ),
             (
+                line!(),
                 "fn main() -> [i32;5] {
                     let k: [i64;5] := [1, 2, 3, 4, 5];
                     return k;
@@ -1575,6 +1582,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Return expected [i32; 5] but got [i64; 5]"),
             ),
             (
+                line!(),
                 "fn main() -> [i32;0] {
                     let k: [i64;0] := [];
                     return k;
@@ -1582,6 +1590,7 @@ mod type_resolver_tests {
                 Err("Semantic: Expected length > 0 for array, but found 0"),
             ),
             (
+                line!(),
                 "fn main() -> [i32;1] {
                     [];
                     let k: [i64;1] := [1];
@@ -1590,6 +1599,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Arrays with 0 length are not allowed"),
             ),
             (
+                line!(),
                 "fn main() -> [i32;5] {
                     let k: [i32;5] := [1, 2, 3, 4, 5];
                     return k;
@@ -1597,6 +1607,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected [i32; 5] but got [i64; 5]"),
             ),
             (
+                line!(),
                 "fn main() -> [i64;5] {
                     let k: [i64;5] := [1, 2i32, 3, 4, 5];
                     return k;
@@ -1604,6 +1615,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Inconsistent types in array value"),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i32 := 5;
                     return k;
@@ -1611,6 +1623,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected i32 but got i64"),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5i32;
                     return k;
@@ -1618,6 +1631,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected i64 but got i32"),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: bool := 5;
                     return k;
@@ -1625,6 +1639,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected bool but got i64"),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k;
@@ -1632,6 +1647,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Return expected bool but got i64"),
             ),
             (
+                line!(),
                 // Test recursive definition
                 "fn main() -> bool {
                     let k: bool := k;
@@ -1640,6 +1656,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: k is not defined"),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let k: bool := x;
                     return k;
@@ -1647,6 +1664,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: x is not defined"),
             ),
         ] {
+            println!("Test Line: {}", ln);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()

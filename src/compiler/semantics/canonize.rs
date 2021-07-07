@@ -13,10 +13,16 @@ Canonize all the paths in the AST
 pub fn canonize_paths(module: &mut Module<SemanticAnnotations>) {
     let mut t = ForEachPreOrderMut::new("test", module, TracingConfig::Off, |_| "test".into());
     t.for_each(module, |s, n| canonize(s, n));
+
+    let mut t = ForEachPreOrderMut::new("test", module, TracingConfig::Off, |_| "test".into());
+    t.for_each(module, |s, n| n.canonize_annotation_type(s));
+
+    let mut t = ForEachPreOrderMut::new("test", module, TracingConfig::Off, |_| "test".into());
+    t.for_each(module, |s, n| n.canonize_type_refs(s));
 }
 
 fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn SemanticNode) {
-    node.to_canonical(stack);
+    node.canonize_annotation_path(stack);
 
     // What about Expression::CustomType, Path, RoutineCall, StructExpression?
     // What about SemanticAnnotations::Type => This will be a path to the TypeDefinition
