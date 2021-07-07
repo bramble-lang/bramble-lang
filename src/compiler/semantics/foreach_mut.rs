@@ -73,9 +73,9 @@ where
             println!("{}", self.name);
         }
 
-        self.symbols.enter_scope(&m.annotation().sym);
         self.transform(m.annotation_mut(), f);
 
+        self.symbols.enter_scope(&m.annotation().sym);
         for child_module in m.get_modules_mut().iter_mut() {
             self.for_module(child_module, f);
         }
@@ -262,9 +262,9 @@ where
         if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) =
             block
         {
-            self.symbols.enter_scope(&annotation.sym);
             self.transform(annotation, f);
 
+            self.symbols.enter_scope(&annotation.sym);
             for e in body.iter_mut() {
                 self.for_statement(e, f);
             }
@@ -439,11 +439,22 @@ mod tests {
         let mut t =
             ForEachPreOrderMut::new("test", &mut sm_ast, TracingConfig::Off, |_| "test".into());
         t.for_module(&mut sm_ast, |stack, n| {
-            let cpath = stack.to_canonical(&n.canonical_path).unwrap();
+            let cpath = stack.to_canonical(&vec!["annotation"].into()).unwrap();
             n.set_canonical_path(cpath);
         });
 
-        assert_eq!(*sm_ast.annotation().get_canonical_path(), vec![""].into());
+        assert_eq!(
+            *sm_ast.annotation().get_canonical_path(),
+            vec!["project", "test", "annotation"].into()
+        );
+        assert_eq!(
+            *sm_ast
+                .get_module("m")
+                .unwrap()
+                .annotation()
+                .get_canonical_path(),
+            vec!["project", "test", "m", "annotation"].into()
+        );
     }
 
     /*#[test]
