@@ -10,7 +10,7 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTableScopeStack<'a> {
-    pub(super) root: &'a Module<SemanticAnnotations>,
+    root: &'a Module<SemanticAnnotations>,
 
     stack: Vec<SymbolTable>,
     head: SymbolTable,
@@ -37,6 +37,10 @@ impl<'a> SymbolTableScopeStack<'a> {
             root,
             imported_symbols: HashMap::new(),
         }
+    }
+
+    pub fn get_root(&self) -> &'a Module<SemanticAnnotations> {
+        self.root
     }
 
     /// Add a function from another module to this symbol table

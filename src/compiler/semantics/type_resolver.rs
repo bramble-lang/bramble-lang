@@ -107,7 +107,7 @@ impl<'a> TypeResolver<'a> {
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
         // TODO: I think that this is the problem, perhaps I should get rid of the concept
         // of the stack root?  I need root to be able to find items using the stack.
-        self.analyze_module(self.symbols.root)
+        self.analyze_module(self.symbols.get_root())
             .map_err(|e| format!("Semantic: {}", e))
     }
 
