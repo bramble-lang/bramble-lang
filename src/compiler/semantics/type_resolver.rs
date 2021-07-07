@@ -41,7 +41,7 @@ pub fn resolve_types_with_imports(
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
-    canonize_paths(&mut sm_ast);
+    canonize_paths(&mut sm_ast)?;
 
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
