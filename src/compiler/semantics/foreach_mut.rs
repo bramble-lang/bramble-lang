@@ -445,7 +445,7 @@ mod tests {
 
         assert_eq!(
             *sm_ast.annotation().get_canonical_path(),
-            vec!["project", "test", "annotation"].into()
+            vec!["project", "annotation"].into()
         );
         assert_eq!(
             *sm_ast
@@ -453,7 +453,7 @@ mod tests {
                 .unwrap()
                 .annotation()
                 .get_canonical_path(),
-            vec!["project", "test", "m", "annotation"].into()
+            vec!["project", "test", "annotation"].into()
         );
     }
 
