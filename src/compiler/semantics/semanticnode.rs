@@ -72,6 +72,16 @@ impl SemanticAnnotations {
         }
     }
 
+    pub fn new_routine(id: u32, ln: u32, name: &str, ty: Type) -> SemanticAnnotations {
+        SemanticAnnotations {
+            id,
+            ln,
+            ty,
+            sym: SymbolTable::new_routine(name),
+            canonical_path: Path::new(),
+        }
+    }
+
     pub fn new_module(id: u32, ln: u32, name: &str, ty: Type) -> SemanticAnnotations {
         SemanticAnnotations {
             id,
@@ -118,6 +128,11 @@ impl SemanticAst {
                 let name = n.name().unwrap();
                 self.module_semantic_annotations_from(*n.annotation(), name)
             }
+            // TODO: Create RoutineScope for RoutineDef nodes
+            NodeType::RoutineDef(_) => {
+                let name = n.name().expect("RoutineDefs must have a name");
+                self.routine_semantic_annotations_from(*n.annotation(), name)
+            }
             _ => self.semantic_annotations_from(*n.annotation()),
         };
         let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);
@@ -126,6 +141,12 @@ impl SemanticAst {
 
     fn semantic_annotations_from(&mut self, ln: u32) -> SemanticAnnotations {
         let sm_data = SemanticAnnotations::new(self.next_id, ln, Type::Unknown);
+        self.next_id += 1;
+        sm_data
+    }
+
+    fn routine_semantic_annotations_from(&mut self, ln: u32, name: &str) -> SemanticAnnotations {
+        let sm_data = SemanticAnnotations::new_routine(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }

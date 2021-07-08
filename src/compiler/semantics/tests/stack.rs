@@ -78,6 +78,40 @@ mod stack_tests {
     }
 
     #[test]
+    fn test_get_current_fn() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
+        let sym = SymbolTable::new_module("test_mod");
+        stack.enter_scope(&sym);
+        let current = SymbolTable::new_routine("inner");
+        stack.enter_scope(&current);
+        let current_fn = stack.get_current_fn();
+        let expected = Some("inner");
+        assert_eq!(current_fn, expected);
+    }
+
+    #[test]
+    fn test_get_current_fn_none() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
+        let sym = SymbolTable::new_module("test_mod");
+        stack.enter_scope(&sym);
+        let current_fn = stack.get_current_fn();
+        let expected = None;
+        assert_eq!(current_fn, expected);
+    }
+
+    #[test]
     fn test_local_then_one_module_stack_to_path() {
         let m = Module::new(
             "test",

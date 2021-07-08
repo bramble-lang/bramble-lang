@@ -106,6 +106,21 @@ impl<'a> SymbolTableScopeStack {
         tmp
     }
 
+    pub fn get_current_fn(&self) -> Option<&str> {
+        // Check if the top of the stack is a routine
+        if let ScopeType::Routine { name } = self.head.scope_type() {
+            return Some(name);
+        } else {
+            // Search through the rest of the stack for the Routine closest to the top
+            for scope in self.stack.iter().rev() {
+                if let ScopeType::Routine { name } = scope.scope_type() {
+                    return Some(name);
+                }
+            }
+        }
+        None
+    }
+
     /// Searches SymbolStack, starting at the top of the stack and moving down,
     /// for a symbol that matches `name`.
     ///

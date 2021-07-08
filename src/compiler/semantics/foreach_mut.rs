@@ -93,11 +93,11 @@ impl SemanticNode for Parameter<SemanticAnnotations> {
     }
 }
 impl SemanticNode for YieldReturn<SemanticAnnotations> {
-    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
         self.set_type(self.annotation().ty.clone());
         Ok(())
-    }
+    }*/
 }
 impl SemanticNode for Return<SemanticAnnotations> {}
 

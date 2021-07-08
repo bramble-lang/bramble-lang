@@ -41,6 +41,13 @@ impl SymbolTable {
         }
     }
 
+    pub fn new_routine(name: &str) -> Self {
+        SymbolTable {
+            ty: ScopeType::Routine { name: name.into() },
+            sym: vec![],
+        }
+    }
+
     pub fn new_module(name: &str) -> Self {
         SymbolTable {
             ty: ScopeType::Module { name: name.into() },
@@ -222,7 +229,7 @@ impl std::fmt::Display for Symbol {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) enum ScopeType {
     Local,
-    Routine,
+    Routine { name: String },
     Module { name: String },
 }
 
@@ -230,7 +237,7 @@ impl ScopeType {
     pub fn is_boundary(&self) -> bool {
         match self {
             Self::Local => false,
-            Self::Routine | Self::Module { .. } => true,
+            Self::Routine { .. } | Self::Module { .. } => true,
         }
     }
 }
