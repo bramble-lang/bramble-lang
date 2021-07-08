@@ -24,11 +24,11 @@ run_test() {
     built=1
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/debug/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj --manifest > ./target/stdout
-        ../target/debug/braid-lang --llvm -p linux --import ./target/std.manifest -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj --manifest > ./target/stdout
+        ../target/release/braid-lang --llvm -p linux --import ./target/std.manifest -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/debug/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj --manifest > ./target/stdout
-        ../target/debug/braid-lang --llvm -p machos --import ./target/std.manifest -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj --manifest > ./target/stdout
+        ../target/release/braid-lang --llvm -p machos --import ./target/std.manifest -i ./src/${test} -o ./target/output.obj > ./target/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
@@ -89,11 +89,11 @@ run_fail_test() {
     input="./src/${test}.in"
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/debug/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj > ./target/stdout
-        ../target/debug/braid-lang --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/debug/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
-        ../target/debug/braid-lang --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
@@ -123,7 +123,7 @@ run_fail_test() {
     fi
 }
 
-cargo build
+cargo build --release
 if [ $? -eq 0 ]
 then
     start_time=$SECONDS
