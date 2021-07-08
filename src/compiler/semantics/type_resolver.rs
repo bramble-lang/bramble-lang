@@ -307,7 +307,7 @@ impl TypeResolver {
         let rhs = bind.get_rhs();
         let result = {
             let meta = meta.clone();
-            //meta.ty = self.symbols.canonize_local_type_ref(bind.get_type())?;
+            //meta.ty = bind.get_type().clone();
             let rhs = self.traverse(rhs, current_func)?;
             if meta.ty == rhs.get_type() {
                 match self
