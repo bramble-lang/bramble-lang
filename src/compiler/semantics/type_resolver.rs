@@ -380,17 +380,17 @@ impl TypeResolver {
                     }
                 }
                 Some(val) => {
-                    let exp = self.traverse(val, current_func)?;
+                    let expr = self.traverse(val, current_func)?;
                     let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
-                    let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
-                    if ret_ty == exp.get_type() {
-                        //meta.ty = ret_ty;
-                        Ok(YieldReturn::new(meta, Some(exp)))
+                    println!("ret_ty: {:?}", ret_ty);
+                    //let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
+                    if ret_ty == expr.get_type() {
+                        Ok(YieldReturn::new(meta, Some(expr)))
                     } else {
                         Err(format!(
                             "Yield return expected {} but got {}",
                             ret_ty,
-                            exp.get_type(),
+                            expr.get_type(),
                         ))
                     }
                 }

@@ -324,6 +324,22 @@ impl<'a> SymbolTableScopeStack {
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
                 self.canonize_local_type_ref(&ty)?,
             ))),
+            Type::CoroutineDef(params, ret_ty) => {
+                let cparams = params
+                    .iter()
+                    .map(|pty| self.canonize_local_type_ref(pty))
+                    .collect::<Result<Vec<Type>>>()?;
+                let cret_ty = self.canonize_local_type_ref(ret_ty)?;
+                Ok(Type::CoroutineDef(cparams, Box::new(cret_ty)))
+            }
+            Type::FunctionDef(params, ret_ty) => {
+                let cparams = params
+                    .iter()
+                    .map(|pty| self.canonize_local_type_ref(pty))
+                    .collect::<Result<Vec<Type>>>()?;
+                let cret_ty = self.canonize_local_type_ref(ret_ty)?;
+                Ok(Type::FunctionDef(cparams, Box::new(cret_ty)))
+            }
             Type::Array(el_ty, len) => {
                 if *len <= 0 {
                     Err(format!("Expected length > 0 for array, but found {}", *len))

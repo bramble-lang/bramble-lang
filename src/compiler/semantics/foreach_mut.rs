@@ -54,7 +54,31 @@ impl SemanticNode for Bind<SemanticAnnotations> {
     }
 }
 impl SemanticNode for Mutate<SemanticAnnotations> {}
-impl SemanticNode for Module<SemanticAnnotations> {}
+impl SemanticNode for Module<SemanticAnnotations> {
+    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) {
+        // If this node has a name, then use the current stack to construct
+        // a canonical path from the root of the AST to the current node
+        // (this is for routine definitions, modules, and structure definitions)
+        match self.name() {
+            // Set SemanticAnnotation::canonical_path to CanonicalPath
+            // Addresses RoutineDefs and StructDefs (for LLVM IR)
+            Some(name) => {
+                let cpath = stack.to_canonical(&vec![name].into()).unwrap();
+                self.annotation_mut().set_canonical_path(cpath);
+            }
+            None => (),
+        }
+
+        // Canonize Symbol Table
+        let sym = &mut self.annotation_mut().sym;
+        for s in sym.table_mut().iter_mut() {
+            let cty = stack.canonize_local_type_ref(&s.ty).unwrap();
+            print!("SYM fn {} -> {} =>", s.name, s.ty);
+            s.ty = cty;
+            println!("SYM fn {} -> {}", s.name, s.ty);
+        }
+    }
+}
 impl SemanticNode for StructDef<SemanticAnnotations> {}
 impl SemanticNode for RoutineDef<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {

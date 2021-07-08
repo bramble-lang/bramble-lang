@@ -2906,6 +2906,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
         ] {
+            println!("L{}", line);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()

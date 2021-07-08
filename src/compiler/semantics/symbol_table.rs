@@ -172,6 +172,10 @@ impl SymbolTable {
         &self.sym
     }
 
+    pub fn table_mut(&mut self) -> &mut Vec<Symbol> {
+        &mut self.sym
+    }
+
     pub fn get(&self, name: &str) -> Option<&Symbol> {
         self.sym.iter().find(|s| s.name == name)
     }
