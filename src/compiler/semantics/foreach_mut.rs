@@ -70,6 +70,9 @@ impl SemanticNode for Expression<SemanticAnnotations> {
                     ann.ty = stack.canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;
                 }
             }
+            Expression::StructExpression(ref mut ann, struct_def, _) => {
+                ann.ty = Type::Custom(struct_def.clone())
+            }
 
             Expression::I8(ref mut ann, ..) => ann.ty = Type::I8,
             Expression::I16(ref mut ann, ..) => ann.ty = Type::I16,
@@ -79,9 +82,8 @@ impl SemanticNode for Expression<SemanticAnnotations> {
             Expression::U16(ref mut ann, ..) => ann.ty = Type::U16,
             Expression::U32(ref mut ann, ..) => ann.ty = Type::U32,
             Expression::U64(ref mut ann, ..) => ann.ty = Type::U64,
-            Expression::StructExpression(ref mut ann, struct_def, _) => {
-                ann.ty = Type::Custom(struct_def.clone())
-            }
+            Expression::Boolean(ref mut ann, _) => ann.ty = Type::Bool,
+            Expression::StringLiteral(ref mut ann, _) => ann.ty = Type::StringLiteral,
             _ => default_canonize_annotation_type(self, stack)?,
         }
         Ok(())
