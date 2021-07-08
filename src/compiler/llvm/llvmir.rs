@@ -944,10 +944,16 @@ impl ast::RoutineCall {
         ret_ty: &ast::Type,
     ) -> Option<BasicValueEnum<'ctx>> {
         match self {
-            ast::RoutineCall::Function => {
+            ast::RoutineCall::Function | ast::RoutineCall::Extern => {
                 // Check if the function returns a struct, if it does then create a local struct
                 // and pass that as the first parameter
-                let fn_name = name.to_label();
+                let fn_name = if self == &ast::RoutineCall::Extern {
+                    name.item()
+                        .expect("Extern call must have a target path")
+                        .into()
+                } else {
+                    name.to_label()
+                };
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
                 let out_param = if llvm.fn_use_out_param.contains(&fn_name) {

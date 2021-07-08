@@ -1953,6 +1953,7 @@ mod type_resolver_tests {
             );
             match expected {
                 Ok(expected_ty) => {
+                    println!("{}", text);
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 

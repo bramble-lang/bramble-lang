@@ -302,6 +302,7 @@ impl std::fmt::Display for UnaryOperator {
 pub enum RoutineCall {
     Function,
     CoroutineInit,
+    Extern,
 }
 
 impl std::fmt::Display for RoutineCall {
@@ -310,6 +311,7 @@ impl std::fmt::Display for RoutineCall {
         match self {
             CoroutineInit => f.write_str("init"),
             Function => f.write_str("call"),
+            Extern => f.write_str("call extern"),
         }
     }
 }

@@ -381,7 +381,7 @@ impl TypeResolver {
                 Some(val) => {
                     let expr = self.traverse(val, current_func)?;
                     let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
-                    println!("ret_ty: {:?}", ret_ty);
+                    //println!("ret_ty: {:?}", ret_ty);
                     //let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
                     if ret_ty == expr.get_type() {
                         Ok(YieldReturn::new(meta, Some(expr)))
@@ -723,7 +723,7 @@ impl TypeResolver {
                 }
 
                 // Check that the function being called exists
-                println!("L{}: Call {}", meta.line(), routine_path);
+                //println!("L{}: Call {}", meta.line(), routine_path);
                 let (symbol, routine_canon_path) =
                     self.symbols.lookup_symbol_by_path(routine_path)?;
 
@@ -997,7 +997,7 @@ impl TypeResolver {
             Symbol {
                 ty: Type::ExternDecl(pty, has_varargs, rty),
                 ..
-            } if *call == RoutineCall::Function => (
+            } if *call == RoutineCall::Extern => (
                 pty,
                 *has_varargs,
                 self.symbols
@@ -1018,6 +1018,7 @@ impl TypeResolver {
                 let expected = match call {
                     RoutineCall::Function => "function",
                     RoutineCall::CoroutineInit => "coroutine",
+                    RoutineCall::Extern => "extern",
                 };
                 return Err(format!(
                     "Expected {0} but {1} is a {2}",
