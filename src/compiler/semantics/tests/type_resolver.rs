@@ -1909,7 +1909,7 @@ mod type_resolver_tests {
                     return number(5i32, 10, 15i32, 8u8, \"hello\");
                 }
                 ",
-                Err("Semantic: L4: One or more parameters have mismatching types for function number: parameter 1 expected i64 but got i32"),
+                Err("Semantic: L4: One or more parameters have mismatching types for function $main::number: parameter 1 expected i64 but got i32"),
             ),
             (
                 "
@@ -1918,7 +1918,7 @@ mod type_resolver_tests {
                     return number();
                 }
                 ",
-                Err("Semantic: L4: Function number expects at least 1 parameters, but got 0"),
+                Err("Semantic: L4: Function $main::number expects at least 1 parameters, but got 0"),
             ),
             (
                 "
@@ -1927,7 +1927,7 @@ mod type_resolver_tests {
                     return number(5);
                 }
                 ",
-                Err("Semantic: L4: Function number expects at least 2 parameters, but got 1"),
+                Err("Semantic: L4: Function $main::number expects at least 2 parameters, but got 1"),
             ),
             (
                 "fn main() -> bool {
