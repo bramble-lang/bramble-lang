@@ -5,10 +5,14 @@ mod type_resolver_tests {
             ast::*,
             lexer::tokens::Token,
             parser::parser,
-            semantics::{semanticnode::SemanticAst, symbol_table::SymbolTable},
+            semantics::{
+                semanticnode::{SemanticAnnotations, SemanticAst},
+                symbol_table::SymbolTable,
+            },
             Lexer,
         },
         diagnostics::config::{Tracing, TracingConfig},
+        project::manifest::Manifest,
     };
 
     use super::super::super::type_resolver::*;
@@ -3042,20 +3046,18 @@ mod type_resolver_tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse("std",&tokens).unwrap().unwrap();
-            let mut sa = SemanticAst::new();
-            let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
-            SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
 
-            let mut semantic = TypeResolver::new(&sm_ast, "my_main");
-            semantic.set_tracing(TracingConfig::All);
-
-            semantic.import_function(
-                vec![CANONICAL_ROOT, "std", "test"].into(),
-                import_func.0, import_func.1,
-            );
-
-            let result = semantic
-                .resolve_types();
+            let mut import_annotation = SemanticAnnotations::new(0, 0, Type::Unit);
+            import_annotation.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
+            let imports = Manifest::new(&vec![RoutineDef{
+                annotations: import_annotation,
+                def: RoutineDefType::Function,
+                name: "test".into(),
+                ty: import_func.1.clone(),
+                params: import_func.0.iter().map(|p| Parameter::new(SemanticAnnotations::new(0, 0, p.clone()), "a", p)).collect(),
+                body: vec![],
+            }], &vec![]);
+            let result = resolve_types_with_imports(&ast, "my_main", &vec![imports], TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
                 Ok(_) => assert!(result.is_ok(), "L{}: {:?} got {:?}", line, expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
