@@ -17,7 +17,7 @@ use super::stack::SymbolTableScopeStack;
 pub trait SemanticNode: Node<SemanticAnnotations> {
     // TODO: make one canonize function that handles everything and then the special cases
     // do their own thing.  I think that will be easier than 3 separate functions
-    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) {
+    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
@@ -25,11 +25,12 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
             // Set SemanticAnnotation::canonical_path to CanonicalPath
             // Addresses RoutineDefs and StructDefs (for LLVM IR)
             Some(name) => {
-                let cpath = stack.to_canonical(&vec![name].into()).unwrap();
+                let cpath = stack.to_canonical(&vec![name].into())?;
                 self.annotation_mut().set_canonical_path(cpath);
             }
             None => (),
         }
+        Ok(())
     }
 
     fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
@@ -55,7 +56,7 @@ impl SemanticNode for Bind<SemanticAnnotations> {
 }
 impl SemanticNode for Mutate<SemanticAnnotations> {}
 impl SemanticNode for Module<SemanticAnnotations> {
-    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) {
+    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
@@ -63,7 +64,7 @@ impl SemanticNode for Module<SemanticAnnotations> {
             // Set SemanticAnnotation::canonical_path to CanonicalPath
             // Addresses RoutineDefs and StructDefs (for LLVM IR)
             Some(name) => {
-                let cpath = stack.to_canonical(&vec![name].into()).unwrap();
+                let cpath = stack.to_canonical(&vec![name].into())?;
                 self.annotation_mut().set_canonical_path(cpath);
             }
             None => (),
@@ -72,11 +73,13 @@ impl SemanticNode for Module<SemanticAnnotations> {
         // Canonize Symbol Table
         let sym = &mut self.annotation_mut().sym;
         for s in sym.table_mut().iter_mut() {
-            let cty = stack.canonize_local_type_ref(&s.ty).unwrap();
+            let cty = stack.canonize_local_type_ref(&s.ty)?;
             print!("SYM fn {} -> {} =>", s.name, s.ty);
             s.ty = cty;
             println!("SYM fn {} -> {}", s.name, s.ty);
         }
+
+        Ok(())
     }
 }
 impl SemanticNode for StructDef<SemanticAnnotations> {}
@@ -89,13 +92,14 @@ impl SemanticNode for RoutineDef<SemanticAnnotations> {
     }
 }
 impl SemanticNode for Extern<SemanticAnnotations> {
-    fn canonize_annotation_path(&mut self, _: &SymbolTableScopeStack) {
+    fn canonize_annotation_path(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
         let name = match self.name() {
             Some(name) => name,
             None => panic!("Externs must have a name"),
         };
         let cpath = vec![name].into();
         self.annotation_mut().set_canonical_path(cpath);
+        Ok(())
     }
 
     fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
@@ -199,9 +203,9 @@ where
             println!("{}", self.name);
         }
 
+        self.symbols.enter_scope(&m.annotation().sym);
         let r = self.transform(m, f);
 
-        self.symbols.enter_scope(&m.annotation().sym);
         for child_module in m.get_modules_mut().iter_mut() {
             self.for_module(child_module, f)?;
         }
@@ -613,7 +617,7 @@ mod tests {
 
         assert_eq!(
             *sm_ast.annotation().get_canonical_path(),
-            vec!["project", "annotation"].into()
+            vec!["project", "test", "annotation"].into()
         );
         assert_eq!(
             *sm_ast
@@ -621,7 +625,7 @@ mod tests {
                 .unwrap()
                 .annotation()
                 .get_canonical_path(),
-            vec!["project", "test", "annotation"].into()
+            vec!["project", "test", "m", "annotation"].into()
         );
     }
 
