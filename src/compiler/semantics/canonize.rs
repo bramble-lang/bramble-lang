@@ -28,8 +28,7 @@ pub fn canonize_paths(
 }
 
 fn canonize(stack: &SymbolTableScopeStack, node: &mut dyn SemanticNode) -> Result<()> {
-    node.canonize_annotation_path(stack);
-    Ok(())
+    node.canonize_annotation_path(stack)
 
     // What about Expression::CustomType, Path, RoutineCall, StructExpression?
     // What about SemanticAnnotations::Type => This will be a path to the TypeDefinition

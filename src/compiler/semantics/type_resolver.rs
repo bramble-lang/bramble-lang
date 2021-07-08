@@ -802,7 +802,7 @@ impl TypeResolver {
                 ))
             }
             Expression::StructExpression(meta, struct_name, params) => {
-                let mut meta = meta.clone();
+                let meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
                 let (struct_def, canonical_path) =
