@@ -48,20 +48,47 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
 impl SemanticNode for Expression<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         match self {
+            Expression::Path(ref mut ann, ref mut path) => {
+                if !path.is_canonical() {
+                    stack
+                        .lookup_symbol_by_path(path)
+                        .and_then(|(_, canonical_path)| {
+                            *path = canonical_path;
+                            ann.ty = Type::Custom(path.clone());
+                            Ok(())
+                        })
+                } else {
+                    Ok(())
+                }
+            }
             Expression::StructExpression(ref mut ann, ref mut path, _) => {
-                let (_, canonical_path) = stack.lookup_symbol_by_path(path)?;
-                *path = canonical_path;
-                ann.ty = Type::Custom(path.clone());
+                if !path.is_canonical() {
+                    stack
+                        .lookup_symbol_by_path(path)
+                        .and_then(|(_, canonical_path)| {
+                            *path = canonical_path;
+                            ann.ty = Type::Custom(path.clone());
+                            Ok(())
+                        })
+                } else {
+                    Ok(())
+                }
             }
             Expression::RoutineCall(_, _, ref mut path, _) => {
                 if !path.is_canonical() {
-                    let (_, canonical_path) = stack.lookup_symbol_by_path(path)?;
-                    *path = canonical_path;
+                    stack
+                        .lookup_symbol_by_path(path)
+                        .and_then(|(_, canonical_path)| {
+                            *path = canonical_path;
+                            Ok(())
+                        })
+                } else {
+                    Ok(())
                 }
             }
-            _ => (),
+            _ => Ok(()),
         }
-        Ok(())
+        .map_err(|e| format!("L{}: {}", self.annotation().line(), e))
     }
 }
 impl SemanticNode for Statement<SemanticAnnotations> {}

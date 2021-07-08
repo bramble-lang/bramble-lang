@@ -2051,7 +2051,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got i64"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i32 but got i64"),
             ),
             (
                 "fn main() -> i64 {
@@ -2067,7 +2067,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i64 but got bool"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2075,7 +2075,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i64 but got bool"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 2 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2083,7 +2083,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
             (
                 "fn main() -> i64 {
@@ -2091,7 +2091,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 3"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 3"),
             ),
             (
                 "fn main() -> i64 {
@@ -2099,7 +2099,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2150,7 +2150,7 @@ mod type_resolver_tests {
                 }
                 co number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 0 but got 1"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 0 but got 1"),
             ),
             (
                 "fn main() {
@@ -2168,7 +2168,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 0"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 0"),
             ),
             (
                 "fn main() {
@@ -2177,7 +2177,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 2"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 2"),
             ),
             (
                 "fn main() {
@@ -2204,7 +2204,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i32) -> i32 {return i;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function number: parameter 1 expected i32 but got i64"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2872,7 +2872,7 @@ mod type_resolver_tests {
                     let y: i64 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
+                Err("Semantic: L7: One or more parameters have mismatching types for function $main::test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
