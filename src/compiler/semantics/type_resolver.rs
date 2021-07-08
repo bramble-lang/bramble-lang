@@ -841,12 +841,12 @@ impl TypeResolver {
                     resolved_params.push((pn.clone(), param));
                 }
 
-                println!(
+                /*println!(
                     "L{} ForEach: {}, TR: {}",
                     meta.line(),
                     meta.ty,
                     canonical_path
-                );
+                );*/
                 //meta.ty = Type::Custom(canonical_path.clone());
                 Ok(Expression::StructExpression(
                     meta.clone(),

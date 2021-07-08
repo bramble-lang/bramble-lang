@@ -66,7 +66,9 @@ impl SemanticNode for Expression<SemanticAnnotations> {
                     stack
                         .lookup_symbol_by_path(path)
                         .and_then(|(_, canonical_path)| {
+                            //print!("L{}: Before: {}\t", ann.line(), path);
                             *path = canonical_path;
+                            //println!("After: {}", path);
                             ann.ty = Type::Custom(path.clone());
                             Ok(())
                         })
@@ -419,7 +421,8 @@ where
             Expression::StringLiteral(..) => self.transform(exp, f),
             Expression::ArrayValue(_, el, _) => {
                 for e in el {
-                    self.transform(e, f)?;
+                    self.for_expression(e, f)?;
+                    //println!("L{}: for_exp {}", e.annotation().line(), e);
                 }
                 self.transform(exp, f)
             }
@@ -439,7 +442,11 @@ where
             While { .. } => self.for_while(exp, f),
             Yield(..) => self.for_yield(exp, f),
             RoutineCall(..) => self.for_routine_call(exp, f),
-            StructExpression(..) => self.for_struct_expression(exp, f),
+            StructExpression(..) => {
+                let r = self.for_struct_expression(exp, f);
+                //println!("L{}: for_exp {}", exp.annotation().line(), exp);
+                r
+            }
         }
     }
 
