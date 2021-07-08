@@ -383,11 +383,11 @@ impl<'a> SymbolTableScopeStack {
         let mut steps: Vec<String> = vec![CANONICAL_ROOT.into()];
 
         for node in self.stack.iter() {
-            match node.scope_type() {
-                ScopeType::Module { name } | ScopeType::Routine { name } => {
-                    steps.push(name.clone());
+            if node.scope_type().is_boundary() {
+                match node.scope_type().get_name() {
+                    Some(name) => steps.push(name.into()),
+                    None => panic!("A scope must have a name to be pushed onto a path"),
                 }
-                _ => (),
             }
         }
 

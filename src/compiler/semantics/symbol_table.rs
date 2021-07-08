@@ -241,8 +241,15 @@ pub(super) enum ScopeType {
 impl ScopeType {
     pub fn is_boundary(&self) -> bool {
         match self {
-            Self::Local => false,
-            Self::Routine { .. } | Self::Module { .. } => true,
+            Self::Routine { .. } | Self::Local => false,
+            Self::Module { .. } => true,
+        }
+    }
+
+    pub fn get_name(&self) -> Option<&str> {
+        match self {
+            Self::Local => None,
+            Self::Routine { name } | Self::Module { name } => Some(name),
         }
     }
 }
