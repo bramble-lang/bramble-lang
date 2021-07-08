@@ -62,7 +62,7 @@ fn default_canonize_annotation_type<T: SemanticNode + ?Sized>(
 impl SemanticNode for Expression<SemanticAnnotations> {
     fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let canon_ty = match self {
-            Expression::ArrayValue(ref mut ann, elements, len) => {
+            Expression::ArrayValue(_, elements, len) => {
                 if elements.len() == 0 {
                     return Err("Arrays with 0 length are not allowed".into());
                 } else {
@@ -70,10 +70,7 @@ impl SemanticNode for Expression<SemanticAnnotations> {
                     stack.canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?
                 }
             }
-            Expression::StructExpression(ref mut ann, struct_def, _) => {
-                Type::Custom(struct_def.clone())
-            }
-
+            Expression::StructExpression(_, struct_def, _) => Type::Custom(struct_def.clone()),
             Expression::I8(..) => Type::I8,
             Expression::I16(..) => Type::I16,
             Expression::I32(..) => Type::I32,
