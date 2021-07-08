@@ -28,7 +28,7 @@ use braid_lang::result::Result;
 
 use crate::{
     compiler::{
-        ast::{Node, Path},
+        ast::{Node, Path, Type},
         semantics::semanticnode::SemanticAnnotations,
     },
     project::manifest::Manifest,
@@ -936,10 +936,45 @@ impl ast::BinaryOperator {
 }
 
 impl ast::RoutineCall {
+    fn to_label(&self, target: &ast::Path) -> String {
+        if self == &ast::RoutineCall::Extern {
+            target
+                .item()
+                .expect("Extern call must have a target path")
+                .into()
+        } else {
+            target.to_label()
+        }
+    }
+
+    /// Determines if the given ReturnType should be converted to an out
+    /// parameter (This will be the case for structs).  If the return value
+    /// should be returned via out param, then this will return a Some value
+    /// with the out param pointer.  If not, this will return None.
+    fn to_out_param<'ctx>(
+        llvm: &mut IrGen<'ctx>,
+        target: &str,
+        ret_ty: &Type,
+    ) -> Option<PointerValue<'ctx>> {
+        if llvm.fn_use_out_param.contains(target) {
+            let out_ty = ret_ty.to_llvm_ir(llvm).into_basic_type().unwrap();
+            if !out_ty.is_aggregate_type() {
+                panic!("Expected an aggregate type but got {}", ret_ty);
+            }
+
+            let ptr = llvm
+                .builder
+                .build_alloca(out_ty, &format!("_out_{}", target));
+            Some(ptr)
+        } else {
+            None
+        }
+    }
+
     fn to_llvm_ir<'ctx>(
         &self,
         llvm: &mut IrGen<'ctx>,
-        name: &ast::Path,
+        target: &ast::Path,
         params: &Vec<ast::Expression<SemanticAnnotations>>,
         ret_ty: &ast::Type,
     ) -> Option<BasicValueEnum<'ctx>> {
@@ -947,29 +982,14 @@ impl ast::RoutineCall {
             ast::RoutineCall::Function | ast::RoutineCall::Extern => {
                 // Check if the function returns a struct, if it does then create a local struct
                 // and pass that as the first parameter
-                let fn_name = if self == &ast::RoutineCall::Extern {
-                    name.item()
-                        .expect("Extern call must have a target path")
-                        .into()
-                } else {
-                    name.to_label()
-                };
+                let fn_name = self.to_label(target);
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
-                let out_param = if llvm.fn_use_out_param.contains(&fn_name) {
-                    let out_ty = ret_ty.to_llvm_ir(llvm).into_basic_type().unwrap();
-                    if !out_ty.is_aggregate_type() {
-                        panic!("Expected an aggregate type but got {}", ret_ty);
-                    }
+                let out_param = Self::to_out_param(llvm, &fn_name, ret_ty);
 
-                    let ptr = llvm
-                        .builder
-                        .build_alloca(out_ty, &format!("_out_{}", fn_name));
-                    llvm_params.push(ptr.into());
-                    Some(ptr)
-                } else {
-                    None
-                };
+                // If this will use an out param to return the result then
+                // add it to the list of parameters for this function.
+                out_param.map(|out_ptr| llvm_params.push(out_ptr.into()));
 
                 for p in params {
                     let p_llvm = p.to_llvm_ir(llvm).unwrap();
