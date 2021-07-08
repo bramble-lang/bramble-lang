@@ -21,7 +21,7 @@ impl<'a> std::fmt::Display for SymbolTableScopeStack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut i = 0;
         f.write_fmt(format_args!("{}: {}\n", i, self.head))?;
-        for scope in self.stack.iter() {
+        for scope in self.stack.iter().rev() {
             i += 1;
             f.write_fmt(format_args!("{}: {}\n", i, scope))?;
         }
@@ -255,7 +255,6 @@ impl<'a> SymbolTableScopeStack {
     }
 
     fn get_item(&self, canon_path: &Path) -> Option<&Symbol> {
-        //println!("get_item: {}", canon_path);
         // If the path contains more than just the item's name then
         // traverse the parent path to find the specified item
         let item = canon_path
@@ -271,6 +270,22 @@ impl<'a> SymbolTableScopeStack {
         // (which is the item being looked for);
         unsafe {
             for idx in 1..canon_path.len() - 1 {
+                println!(
+                    "[{}] {:?}: {:?}",
+                    canon_path,
+                    (*current).get_name(),
+                    (*current)
+                        .get_modules()
+                        .iter()
+                        .map(|m| (
+                            m.get_name(),
+                            m.get_functions()
+                                .iter()
+                                .map(|f| f.name().unwrap())
+                                .collect::<Vec<&str>>()
+                        ))
+                        .collect::<Vec<_>>()
+                );
                 match (*current).get_module(&canon_path[idx]) {
                     Some(m) => current = m,
                     None => return None,

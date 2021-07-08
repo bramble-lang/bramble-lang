@@ -205,6 +205,7 @@ impl SymbolTable {
 
 impl std::fmt::Display for SymbolTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}\n", self.ty))?;
         f.write_str("\tName | Type | Mutable\n")?;
         for symbol in self.sym.iter() {
             f.write_fmt(format_args!("\t{}\n", symbol))?;
@@ -242,6 +243,16 @@ impl ScopeType {
         match self {
             Self::Local => false,
             Self::Routine { .. } | Self::Module { .. } => true,
+        }
+    }
+}
+
+impl std::fmt::Display for ScopeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScopeType::Local => f.write_str("Local"),
+            ScopeType::Routine { name } => f.write_fmt(format_args!("Routine({})", name)),
+            ScopeType::Module { name } => f.write_fmt(format_args!("Module({})", name)),
         }
     }
 }
