@@ -45,7 +45,25 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
     }
 }
 
-impl SemanticNode for Expression<SemanticAnnotations> {}
+impl SemanticNode for Expression<SemanticAnnotations> {
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        match self {
+            Expression::StructExpression(ref mut ann, ref mut path, _) => {
+                let (_, canonical_path) = stack.lookup_symbol_by_path(path)?;
+                *path = canonical_path;
+                ann.ty = Type::Custom(path.clone());
+            }
+            Expression::RoutineCall(_, _, ref mut path, _) => {
+                if !path.is_canonical() {
+                    let (_, canonical_path) = stack.lookup_symbol_by_path(path)?;
+                    *path = canonical_path;
+                }
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+}
 impl SemanticNode for Statement<SemanticAnnotations> {}
 impl SemanticNode for Bind<SemanticAnnotations> {
     fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {

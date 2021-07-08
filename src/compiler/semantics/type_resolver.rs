@@ -44,7 +44,6 @@ pub fn resolve_types_with_imports(
     canonize_paths(&mut sm_ast, trace_type_resolver)?; //TODO: Add a trace for this step
 
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
-
     semantic.add_imports(imports);
 
     semantic.set_tracing(trace_type_resolver);
@@ -842,7 +841,7 @@ impl TypeResolver {
                     resolved_params.push((pn.clone(), param));
                 }
 
-                meta.ty = Type::Custom(canonical_path.clone());
+                //meta.ty = Type::Custom(canonical_path.clone());
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
