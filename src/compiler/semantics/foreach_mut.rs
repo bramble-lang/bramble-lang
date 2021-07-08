@@ -61,31 +61,33 @@ fn default_canonize_annotation_type<T: SemanticNode + ?Sized>(
 
 impl SemanticNode for Expression<SemanticAnnotations> {
     fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        match self {
+        let canon_ty = match self {
             Expression::ArrayValue(ref mut ann, elements, len) => {
                 if elements.len() == 0 {
                     return Err("Arrays with 0 length are not allowed".into());
                 } else {
                     let el_ty = elements[0].annotation().ty.clone();
-                    ann.ty = stack.canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;
+                    stack.canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?
                 }
             }
             Expression::StructExpression(ref mut ann, struct_def, _) => {
-                ann.ty = Type::Custom(struct_def.clone())
+                Type::Custom(struct_def.clone())
             }
 
-            Expression::I8(ref mut ann, ..) => ann.ty = Type::I8,
-            Expression::I16(ref mut ann, ..) => ann.ty = Type::I16,
-            Expression::I32(ref mut ann, ..) => ann.ty = Type::I32,
-            Expression::I64(ref mut ann, ..) => ann.ty = Type::I64,
-            Expression::U8(ref mut ann, ..) => ann.ty = Type::U8,
-            Expression::U16(ref mut ann, ..) => ann.ty = Type::U16,
-            Expression::U32(ref mut ann, ..) => ann.ty = Type::U32,
-            Expression::U64(ref mut ann, ..) => ann.ty = Type::U64,
-            Expression::Boolean(ref mut ann, _) => ann.ty = Type::Bool,
-            Expression::StringLiteral(ref mut ann, _) => ann.ty = Type::StringLiteral,
-            _ => default_canonize_annotation_type(self, stack)?,
-        }
+            Expression::I8(..) => Type::I8,
+            Expression::I16(..) => Type::I16,
+            Expression::I32(..) => Type::I32,
+            Expression::I64(..) => Type::I64,
+            Expression::U8(..) => Type::U8,
+            Expression::U16(..) => Type::U16,
+            Expression::U32(..) => Type::U32,
+            Expression::U64(..) => Type::U64,
+            Expression::Boolean(..) => Type::Bool,
+            Expression::StringLiteral(..) => Type::StringLiteral,
+            _ => Type::Unknown,
+            //_ => default_canonize_annotation_type(self, stack)?,
+        };
+        self.annotation_mut().ty = canon_ty;
         Ok(())
     }
 
