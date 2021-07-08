@@ -523,9 +523,9 @@ impl TypeResolver {
                 }
 
                 let mut meta = meta.clone();
-                meta.ty = self
-                    .symbols
-                    .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;
+                /*meta.ty = self
+                .symbols
+                .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;*/
 
                 // Use the size of the array and the type to define the array type
                 Ok(Expression::ArrayValue(meta, nelements, *len))

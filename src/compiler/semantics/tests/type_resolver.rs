@@ -1418,8 +1418,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_array_at_index() {
-        for (text, expected) in vec![
+        for (line, text, expected) in vec![
             (
+                line!(),
                 "fn main() -> i64 {
                     let a: [i64; 5] := [1, 2, 3, 4, 5];
                     let k: i64 := a[0];
@@ -1428,6 +1429,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let a: [i64; 5] := [[1, 2, 3, 4, 5]][0];
                     let k: i64 := a[0];
@@ -1436,6 +1438,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let a: [[i64; 1]; 1] := [[1]];
                     let k: i64 := a[0][0];
@@ -1444,6 +1447,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i8 {
                     let a: [i8; 5] := [1i8, 2i8, 3i8, 4i8, 5i8];
                     let k: i8 := a[0];
@@ -1452,6 +1456,7 @@ mod type_resolver_tests {
                 Ok(Type::I8),
             ),
             (
+                line!(),
                 "fn main() -> u8 {
                     let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
                     let k: u8 := a[0i8];
@@ -1460,6 +1465,7 @@ mod type_resolver_tests {
                 Ok(Type::U8),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let a: [i64; 5] := [1, 2, 3, 4, 5];
                     let k: i64 := a[false];
@@ -1468,6 +1474,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Expected integral type for index but found bool"),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let a: i64 := 1;
                     let k: i64 := a[0];
@@ -1476,6 +1483,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Expected array type on LHS of [] but found i64"),
             ),
         ] {
+            println!("Test L{}", line);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -1585,7 +1593,7 @@ mod type_resolver_tests {
                     let k: [i64;0] := [];
                     return k;
                 }",
-                Err("Semantic: Expected length > 0 for array, but found 0"),
+                Err("Semantic: L1: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1662,6 +1670,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: x is not defined"),
             ),
         ] {
+            println!("Test L{}", ln);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()

@@ -16,13 +16,17 @@ pub fn canonize_paths(
     module: &mut Module<SemanticAnnotations>,
     tracing: TracingConfig,
 ) -> Result<()> {
-    let mut t = ForEachPreOrderMut::new("test", module, tracing, |_| "test".into());
+    let mut t = ForEachPreOrderMut::new("annotation path", module, tracing, |_| {
+        "annotation path".into()
+    });
     t.for_each(module, |s, n| canonize(s, n))?;
 
-    let mut t = ForEachPreOrderMut::new("test", module, tracing, |_| "test".into());
+    let mut t = ForEachPreOrderMut::new("annotation type", module, tracing, |_| {
+        "annotation type".into()
+    });
     t.for_each(module, |s, n| n.canonize_annotation_type(s))?;
 
-    let mut t = ForEachPreOrderMut::new("test", module, tracing, |_| "test".into());
+    let mut t = ForEachPreOrderMut::new("type refs", module, tracing, |_| "test".into());
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;
     Ok(())
 }

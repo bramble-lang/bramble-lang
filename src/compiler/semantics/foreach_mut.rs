@@ -18,26 +18,11 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
     // TODO: make one canonize function that handles everything and then the special cases
     // do their own thing.  I think that will be easier than 3 separate functions
     fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        // If this node has a name, then use the current stack to construct
-        // a canonical path from the root of the AST to the current node
-        // (this is for routine definitions, modules, and structure definitions)
-        match self.name() {
-            // Set SemanticAnnotation::canonical_path to CanonicalPath
-            // Addresses RoutineDefs and StructDefs (for LLVM IR)
-            Some(name) => {
-                let cpath = stack.to_canonical(&vec![name].into())?;
-                self.annotation_mut().set_canonical_path(cpath);
-            }
-            None => (),
-        }
-        Ok(())
+        default_canonize_annotation_path(self, stack)
     }
 
     fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        // Update the Type information in the annotation data
-        let ctype = stack.canonize_local_type_ref(self.annotation().ty())?;
-        self.annotation_mut().ty = ctype;
-        Ok(())
+        default_canonize_annotation_type(self, stack)
     }
 
     fn canonize_type_refs(&mut self, _stack: &SymbolTableScopeStack) -> Result<()> {
@@ -45,7 +30,60 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
     }
 }
 
+fn default_canonize_annotation_path<T: SemanticNode + ?Sized>(
+    node: &mut T,
+    stack: &SymbolTableScopeStack,
+) -> Result<()> {
+    // If this node has a name, then use the current stack to construct
+    // a canonical path from the root of the AST to the current node
+    // (this is for routine definitions, modules, and structure definitions)
+    match node.name() {
+        // Set SemanticAnnotation::canonical_path to CanonicalPath
+        // Addresses RoutineDefs and StructDefs (for LLVM IR)
+        Some(name) => {
+            let cpath = stack.to_canonical(&vec![name].into())?;
+            node.annotation_mut().set_canonical_path(cpath);
+        }
+        None => (),
+    }
+    Ok(())
+}
+
+fn default_canonize_annotation_type<T: SemanticNode + ?Sized>(
+    node: &mut T,
+    stack: &SymbolTableScopeStack,
+) -> Result<()> {
+    // Update the Type information in the annotation data
+    let ctype = stack.canonize_local_type_ref(node.annotation().ty())?;
+    node.annotation_mut().ty = ctype;
+    Ok(())
+}
+
 impl SemanticNode for Expression<SemanticAnnotations> {
+    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        match self {
+            Expression::ArrayValue(ref mut ann, elements, len) => {
+                if elements.len() == 0 {
+                    return Err("Arrays with 0 length are not allowed".into());
+                } else {
+                    let el_ty = elements[0].annotation().ty.clone();
+                    ann.ty = stack.canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;
+                }
+            }
+
+            Expression::I8(ref mut ann, ..) => ann.ty = Type::I8,
+            Expression::I16(ref mut ann, ..) => ann.ty = Type::I16,
+            Expression::I32(ref mut ann, ..) => ann.ty = Type::I32,
+            Expression::I64(ref mut ann, ..) => ann.ty = Type::I64,
+            Expression::U8(ref mut ann, ..) => ann.ty = Type::U8,
+            Expression::U16(ref mut ann, ..) => ann.ty = Type::U16,
+            Expression::U32(ref mut ann, ..) => ann.ty = Type::U32,
+            Expression::U64(ref mut ann, ..) => ann.ty = Type::U64,
+            _ => default_canonize_annotation_type(self, stack)?,
+        }
+        Ok(())
+    }
+
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         match self {
             Expression::Path(ref mut ann, ref mut path) => {
@@ -61,34 +99,28 @@ impl SemanticNode for Expression<SemanticAnnotations> {
                     Ok(())
                 }
             }
-            Expression::StructExpression(ref mut ann, ref mut path, _) => {
+            Expression::RoutineCall(_, ref mut call_target, ref mut path, _) => {
                 if !path.is_canonical() {
                     stack
                         .lookup_symbol_by_path(path)
-                        .and_then(|(_, canonical_path)| {
-                            //print!("L{}: Before: {}\t", ann.line(), path);
+                        .and_then(|(sym, canonical_path)| {
                             *path = canonical_path;
-                            //println!("After: {}", path);
-                            ann.ty = Type::Custom(path.clone());
+                            if sym.is_extern {
+                                *call_target = RoutineCall::Extern;
+                            }
                             Ok(())
                         })
                 } else {
                     Ok(())
                 }
             }
-            Expression::RoutineCall(_, ref mut call_target, ref mut path, _) => {
+            Expression::StructExpression(ref mut ann, ref mut path, _) => {
                 if !path.is_canonical() {
-                    //println!("call: {}", path);
                     stack
                         .lookup_symbol_by_path(path)
-                        .and_then(|(sym, canonical_path)| {
-                            //println!("CC: {}", canonical_path);
-                            //print!("L{} {} => ", ann.line(), path);
+                        .and_then(|(_, canonical_path)| {
                             *path = canonical_path;
-                            if sym.is_extern {
-                                *call_target = RoutineCall::Extern;
-                            }
-                            //println!("{}", path);
+                            ann.ty = Type::Custom(path.clone());
                             Ok(())
                         })
                 } else {
@@ -97,7 +129,6 @@ impl SemanticNode for Expression<SemanticAnnotations> {
             }
             _ => Ok(()),
         }
-        .map_err(|e| format!("L{}: {}", self.annotation().line(), e))
     }
 }
 impl SemanticNode for Statement<SemanticAnnotations> {}
@@ -114,23 +145,13 @@ impl SemanticNode for Module<SemanticAnnotations> {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
-        match self.name() {
-            // Set SemanticAnnotation::canonical_path to CanonicalPath
-            // Addresses RoutineDefs and StructDefs (for LLVM IR)
-            Some(name) => {
-                let cpath = stack.to_canonical(&vec![name].into())?;
-                self.annotation_mut().set_canonical_path(cpath);
-            }
-            None => (),
-        }
+        default_canonize_annotation_path(self, stack)?;
 
         // Canonize Symbol Table
         let sym = &mut self.annotation_mut().sym;
         for s in sym.table_mut().iter_mut() {
             let cty = stack.canonize_local_type_ref(&s.ty)?;
-            //print!("SYM fn {} -> {} =>", s.name, s.ty);
             s.ty = cty;
-            //println!("SYM fn {} -> {}", s.name, s.ty);
         }
 
         Ok(())
@@ -234,7 +255,7 @@ where
         F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) -> Result<()> + Copy,
     {
         self.diag.begin(a.annotation());
-        let r = f(&self.symbols, a);
+        let r = f(&self.symbols, a).map_err(|e| format!("L{}: {}", a.annotation().line(), e));
         self.diag.end(a.annotation());
         r
     }
@@ -429,8 +450,9 @@ where
             Expression::ArrayValue(_, el, _) => {
                 for e in el {
                     self.for_expression(e, f)?;
-                    //println!("L{}: for_exp {}", e.annotation().line(), e);
+                    //println!("{} Checking Elements => {}", self.name, e.annotation().ty);
                 }
+                //println!("{} Checking ArrayValue", self.name);
                 self.transform(exp, f)
             }
             Expression::ArrayAt { array, index, .. } => {
