@@ -128,6 +128,7 @@ impl<'a> SymbolTableScopeStack {
     /// Returns `None` if no matching symbol was found.
     fn get_symbol(&self, name: &str) -> Option<(&Symbol, Path)> {
         let mut cpath = self.to_path()?;
+        //println!("get_symbol: cpath: {}", cpath);
         let s = self.head.get(name).or_else(|| {
             self.stack.iter().rev().find_map(|scope| {
                 let s = scope.get(name);
@@ -270,7 +271,7 @@ impl<'a> SymbolTableScopeStack {
         // (which is the item being looked for);
         unsafe {
             for idx in 1..canon_path.len() - 1 {
-                println!(
+                /*(println!(
                     "[{}] {:?}: {:?}",
                     canon_path,
                     (*current).get_name(),
@@ -285,7 +286,7 @@ impl<'a> SymbolTableScopeStack {
                                 .collect::<Vec<&str>>()
                         ))
                         .collect::<Vec<_>>()
-                );
+                );*/
                 match (*current).get_module(&canon_path[idx]) {
                     Some(m) => current = m,
                     None => return None,
@@ -381,7 +382,7 @@ impl<'a> SymbolTableScopeStack {
 
         for node in self.stack.iter() {
             match node.scope_type() {
-                ScopeType::Module { name } => {
+                ScopeType::Module { name } | ScopeType::Routine { name } => {
                     steps.push(name.clone());
                 }
                 _ => (),

@@ -206,6 +206,31 @@ mod stack_tests {
     }
 
     #[test]
+    fn test_get_symbol_in_routine() {
+        let m = Module::new(
+            "test",
+            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+        );
+        let mut stack = SymbolTableScopeStack::new(&m);
+        let sym = SymbolTable::new_module("test");
+        stack.enter_scope(&sym);
+
+        // Module 1
+        let module = SymbolTable::new_module("first");
+        stack.enter_scope(&module);
+        stack.add("x", Type::I8, false, false).unwrap();
+
+        let func = SymbolTable::new_routine("my_func");
+        stack.enter_scope(&func);
+
+        let local2 = SymbolTable::new();
+        stack.enter_scope(&local2);
+
+        let (_s, p) = stack.lookup_symbol_by_path(&vec!["x"].into()).unwrap();
+        assert_eq!(p, vec!["project", "test", "first", "x"].into());
+    }
+
+    #[test]
     fn test_local_get_symbol_across_boundary() {
         let m = Module::new(
             "test",
