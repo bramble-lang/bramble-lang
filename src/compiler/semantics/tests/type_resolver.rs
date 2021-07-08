@@ -2,16 +2,10 @@
 mod type_resolver_tests {
     use crate::{
         compiler::{
-            ast::*,
-            lexer::tokens::Token,
-            parser::parser,
-            semantics::{
-                semanticnode::{SemanticAnnotations, SemanticAst},
-                symbol_table::SymbolTable,
-            },
-            Lexer,
+            ast::*, lexer::tokens::Token, parser::parser,
+            semantics::semanticnode::SemanticAnnotations, Lexer,
         },
-        diagnostics::config::{Tracing, TracingConfig},
+        diagnostics::config::TracingConfig,
         project::manifest::Manifest,
     };
 
