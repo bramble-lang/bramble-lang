@@ -79,6 +79,9 @@ impl SemanticNode for Expression<SemanticAnnotations> {
             Expression::U16(ref mut ann, ..) => ann.ty = Type::U16,
             Expression::U32(ref mut ann, ..) => ann.ty = Type::U32,
             Expression::U64(ref mut ann, ..) => ann.ty = Type::U64,
+            Expression::StructExpression(ref mut ann, struct_def, _) => {
+                ann.ty = Type::Custom(struct_def.clone())
+            }
             _ => default_canonize_annotation_type(self, stack)?,
         }
         Ok(())
