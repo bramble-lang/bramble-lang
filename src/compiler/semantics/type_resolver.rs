@@ -522,7 +522,7 @@ impl TypeResolver {
                     }
                 }
 
-                let mut meta = meta.clone();
+                let meta = meta.clone();
                 /*meta.ty = self
                 .symbols
                 .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;*/
