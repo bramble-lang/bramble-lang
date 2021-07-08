@@ -81,10 +81,7 @@ impl SemanticNode for Expression<SemanticAnnotations> {
                     stack
                         .lookup_symbol_by_path(path)
                         .and_then(|(_, canonical_path)| {
-                            //println!("Before: {}", path);
                             *path = canonical_path;
-                            //println!("ForEach: {}", path);
-                            //println!("Stack: \n{}", stack);
                             Ok(())
                         })
                 } else {

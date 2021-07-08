@@ -336,7 +336,9 @@ impl<'a> SymbolTableScopeStack {
      */
     pub fn canonize_local_type_ref(&self, ty: &Type) -> Result<Type> {
         match ty {
-            Type::Custom(path) => Ok(Type::Custom(self.to_canonical(path)?)),
+            Type::Custom(path) => self
+                .lookup_symbol_by_path(path)
+                .map(|(_, p)| Type::Custom(p)),
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
                 self.canonize_local_type_ref(&ty)?,
             ))),
