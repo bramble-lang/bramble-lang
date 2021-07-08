@@ -74,9 +74,9 @@ impl SemanticNode for Module<SemanticAnnotations> {
         let sym = &mut self.annotation_mut().sym;
         for s in sym.table_mut().iter_mut() {
             let cty = stack.canonize_local_type_ref(&s.ty)?;
-            print!("SYM fn {} -> {} =>", s.name, s.ty);
+            //print!("SYM fn {} -> {} =>", s.name, s.ty);
             s.ty = cty;
-            println!("SYM fn {} -> {}", s.name, s.ty);
+            //println!("SYM fn {} -> {}", s.name, s.ty);
         }
 
         Ok(())
@@ -246,11 +246,11 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) -> Result<()> + Copy,
     {
+        self.symbols.enter_scope(&rd.annotation().sym);
         let r = self.transform(rd, f);
         // loop through all the params
         self.for_parameters(&mut rd.params, f)?;
 
-        self.symbols.enter_scope(&rd.annotation().sym);
         // loop through every statement and analyze the child nodes of the routine definition
         for e in rd.get_body_mut().iter_mut() {
             self.for_statement(e, f)?;
@@ -406,11 +406,11 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn SemanticNode) -> Result<()> + Copy,
     {
+        self.symbols.enter_scope(&block.annotation().sym);
         let r = self.transform(block, f);
-        if let Expression::ExpressionBlock(ref mut annotation, ref mut body, ref mut final_exp) =
+        if let Expression::ExpressionBlock(ref mut _annotation, ref mut body, ref mut final_exp) =
             block
         {
-            self.symbols.enter_scope(&annotation.sym);
             for e in body.iter_mut() {
                 self.for_statement(e, f)?;
             }
