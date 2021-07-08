@@ -12,14 +12,17 @@ use super::{
 Canonize all the paths in the AST
  */
 
-pub fn canonize_paths(module: &mut Module<SemanticAnnotations>) -> Result<()> {
-    let mut t = ForEachPreOrderMut::new("test", module, TracingConfig::Off, |_| "test".into());
+pub fn canonize_paths(
+    module: &mut Module<SemanticAnnotations>,
+    tracing: TracingConfig,
+) -> Result<()> {
+    let mut t = ForEachPreOrderMut::new("test", module, tracing, |_| "test".into());
     t.for_each(module, |s, n| canonize(s, n))?;
 
-    let mut t = ForEachPreOrderMut::new("test", module, TracingConfig::Off, |_| "test".into());
+    let mut t = ForEachPreOrderMut::new("test", module, tracing, |_| "test".into());
     t.for_each(module, |s, n| n.canonize_annotation_type(s))?;
 
-    let mut t = ForEachPreOrderMut::new("test", module, TracingConfig::Off, |_| "test".into());
+    let mut t = ForEachPreOrderMut::new("test", module, tracing, |_| "test".into());
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;
     Ok(())
 }

@@ -46,7 +46,13 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
 
 impl SemanticNode for Expression<SemanticAnnotations> {}
 impl SemanticNode for Statement<SemanticAnnotations> {}
-impl SemanticNode for Bind<SemanticAnnotations> {}
+impl SemanticNode for Bind<SemanticAnnotations> {
+    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
+        self.set_type(self.annotation().ty.clone());
+        Ok(())
+    }
+}
 impl SemanticNode for Mutate<SemanticAnnotations> {}
 impl SemanticNode for Module<SemanticAnnotations> {}
 impl SemanticNode for StructDef<SemanticAnnotations> {}
@@ -67,6 +73,12 @@ impl SemanticNode for Extern<SemanticAnnotations> {
         let cpath = vec![name].into();
         self.annotation_mut().set_canonical_path(cpath);
     }
+
+    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_return_type())?;
+        Ok(())
+    }
+
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let ctype = stack.canonize_local_type_ref(&self.ty)?;
         self.ty = ctype;
@@ -80,7 +92,13 @@ impl SemanticNode for Parameter<SemanticAnnotations> {
         Ok(())
     }
 }
-impl SemanticNode for YieldReturn<SemanticAnnotations> {}
+impl SemanticNode for YieldReturn<SemanticAnnotations> {
+    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
+        self.set_type(self.annotation().ty.clone());
+        Ok(())
+    }
+}
 impl SemanticNode for Return<SemanticAnnotations> {}
 
 /**

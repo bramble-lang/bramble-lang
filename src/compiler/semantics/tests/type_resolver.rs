@@ -8,7 +8,7 @@ mod type_resolver_tests {
             semantics::{semanticnode::SemanticAst, symbol_table::SymbolTable},
             Lexer,
         },
-        diagnostics::config::TracingConfig,
+        diagnostics::config::{Tracing, TracingConfig},
     };
 
     use super::super::super::type_resolver::*;
@@ -2958,8 +2958,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_imported_functions() {
-        for (text, import_func, expected) in vec![
+        for (line, text, import_func, expected) in vec![
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test();
@@ -2970,6 +2971,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     return project::std::test();
@@ -2979,6 +2981,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5);
@@ -2989,6 +2992,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5, true);
@@ -2999,6 +3003,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test2();
@@ -3009,6 +3014,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Could not find item with the given path: $std::test2 ($std::test2)"),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5);
@@ -3019,6 +3025,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5, 2);
@@ -3040,6 +3047,7 @@ mod type_resolver_tests {
             SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
 
             let mut semantic = TypeResolver::new(&sm_ast, "my_main");
+            semantic.set_tracing(TracingConfig::All);
 
             semantic.import_function(
                 vec![CANONICAL_ROOT, "std", "test"].into(),
@@ -3049,7 +3057,7 @@ mod type_resolver_tests {
             let result = semantic
                 .resolve_types();
             match expected {
-                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Ok(_) => assert!(result.is_ok(), "L{}: {:?} got {:?}", line, expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
             }
         }

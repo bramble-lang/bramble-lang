@@ -181,6 +181,10 @@ impl<M> Bind<M> {
         &self.ty
     }
 
+    pub fn set_type(&mut self, ty: Type) {
+        self.ty = ty;
+    }
+
     pub fn root_str(&self) -> String {
         format!("bind {}", self.id)
     }

@@ -41,7 +41,7 @@ pub fn resolve_types_with_imports(
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
-    canonize_paths(&mut sm_ast)?;
+    canonize_paths(&mut sm_ast, trace_type_resolver)?; //TODO: Add a trace for this step
 
     let mut semantic = TypeResolver::new(&sm_ast, main_fn);
 
@@ -271,9 +271,7 @@ impl TypeResolver {
 
         // Update the annotations with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
-        let mut meta = ex.annotation().clone();
-        meta.ty = self.symbols.canonize_local_type_ref(ex.get_return_type())?;
-        //meta.set_canonical_path(vec![name].into());
+        let meta = ex.annotation().clone();
 
         Ok(Extern::new(
             name,
@@ -309,8 +307,8 @@ impl TypeResolver {
         let meta = bind.annotation();
         let rhs = bind.get_rhs();
         let result = {
-            let mut meta = meta.clone();
-            meta.ty = self.symbols.canonize_local_type_ref(bind.get_type())?;
+            let meta = meta.clone();
+            //meta.ty = self.symbols.canonize_local_type_ref(bind.get_type())?;
             let rhs = self.traverse(rhs, current_func)?;
             if meta.ty == rhs.get_type() {
                 match self
