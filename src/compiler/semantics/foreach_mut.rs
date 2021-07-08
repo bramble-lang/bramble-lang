@@ -76,12 +76,16 @@ impl SemanticNode for Expression<SemanticAnnotations> {
                     Ok(())
                 }
             }
-            Expression::RoutineCall(_, _, ref mut path, _) => {
+            Expression::RoutineCall(ann, _, ref mut path, _) => {
                 if !path.is_canonical() {
+                    println!("call: {}", path);
                     stack
                         .lookup_symbol_by_path(path)
                         .and_then(|(_, canonical_path)| {
+                            println!("CC: {}", canonical_path);
+                            print!("L{} {} => ", ann.line(), path);
                             *path = canonical_path;
+                            println!("{}", path);
                             Ok(())
                         })
                 } else {

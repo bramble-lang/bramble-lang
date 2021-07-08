@@ -723,6 +723,7 @@ impl TypeResolver {
                 }
 
                 // Check that the function being called exists
+                println!("L{}: Call {}", meta.line(), routine_path);
                 let (symbol, routine_canon_path) =
                     self.symbols.lookup_symbol_by_path(routine_path)?;
 

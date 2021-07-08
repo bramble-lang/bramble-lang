@@ -220,6 +220,7 @@ impl<'a> SymbolTableScopeStack {
         //println!("{} - {}", stdext::function_name!(), path);
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
+            println!("lookup: {}", canon_path);
 
             // Look in the project being compiled
             let project_symbol = self.get_item(&canon_path);
@@ -227,6 +228,7 @@ impl<'a> SymbolTableScopeStack {
             // look in any imported symbols
             let imported_symbol = self.get_imported_symbol(&canon_path);
 
+            println!("lookup: {}", canon_path);
             // Make sure that there is no ambiguity about what is being referenced
             match (project_symbol, imported_symbol) {
                 (Some(ps), None) => Ok((ps, canon_path)),
