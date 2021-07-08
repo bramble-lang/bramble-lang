@@ -93,11 +93,14 @@ impl SemanticNode for Parameter<SemanticAnnotations> {
     }
 }
 impl SemanticNode for YieldReturn<SemanticAnnotations> {
-    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
-        self.set_type(self.annotation().ty.clone());
+    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        let current_fn = stack
+            .get_current_fn()
+            .ok_or("YieldReturn must appear within a function")?;
+        let (_, ret_ty) = stack.lookup_coroutine(current_fn)?;
+        self.annotation_mut().ty = stack.canonize_local_type_ref(ret_ty)?;
         Ok(())
-    }*/
+    }
 }
 impl SemanticNode for Return<SemanticAnnotations> {}
 

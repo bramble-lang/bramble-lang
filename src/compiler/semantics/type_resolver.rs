@@ -384,13 +384,13 @@ impl TypeResolver {
                     let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
                     let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
                     if ret_ty == exp.get_type() {
-                        meta.ty = ret_ty;
+                        //meta.ty = ret_ty;
                         Ok(YieldReturn::new(meta, Some(exp)))
                     } else {
                         Err(format!(
                             "Yield return expected {} but got {}",
                             ret_ty,
-                            exp.get_type()
+                            exp.get_type(),
                         ))
                     }
                 }
