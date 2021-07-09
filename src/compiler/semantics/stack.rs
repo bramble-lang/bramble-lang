@@ -271,22 +271,6 @@ impl<'a> SymbolTableScopeStack {
         // (which is the item being looked for);
         unsafe {
             for idx in 1..canon_path.len() - 1 {
-                /*(println!(
-                    "[{}] {:?}: {:?}",
-                    canon_path,
-                    (*current).get_name(),
-                    (*current)
-                        .get_modules()
-                        .iter()
-                        .map(|m| (
-                            m.get_name(),
-                            m.get_functions()
-                                .iter()
-                                .map(|f| f.name().unwrap())
-                                .collect::<Vec<&str>>()
-                        ))
-                        .collect::<Vec<_>>()
-                );*/
                 match (*current).get_module(&canon_path[idx]) {
                     Some(m) => current = m,
                     None => return None,
@@ -306,18 +290,18 @@ impl<'a> SymbolTableScopeStack {
     call, to canonize the routine definition's parameter types, this function would be used: as
     they are in the RoutineDef node not the RoutineCall node.
      */
-    pub fn canonize_nonlocal_type_ref(&self, parent_path: &Path, ty: &Type) -> Result<Type> {
+    pub fn canonize_out_of_scope_type_ref(&self, parent_path: &Path, ty: &Type) -> Result<Type> {
         match ty {
             Type::Custom(path) => Ok(Type::Custom(path.to_canonical(parent_path)?)),
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
-                self.canonize_nonlocal_type_ref(parent_path, &ty)?,
+                self.canonize_out_of_scope_type_ref(parent_path, &ty)?,
             ))),
             Type::Array(el_ty, len) => {
                 if *len <= 0 {
                     Err(format!("Expected length > 0 for array, but found {}", *len))
                 } else {
                     Ok(Type::Array(
-                        box self.canonize_nonlocal_type_ref(parent_path, el_ty)?,
+                        box self.canonize_out_of_scope_type_ref(parent_path, el_ty)?,
                         *len,
                     ))
                 }

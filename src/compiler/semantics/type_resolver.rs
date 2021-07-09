@@ -597,9 +597,11 @@ impl TypeResolver {
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
+                        println!("Member type: {}", member_ty);
                         meta.ty = self
                             .symbols
-                            .canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
+                            .canonize_out_of_scope_type_ref(&canonical_path.parent(), member_ty)?;
+                        println!("Member Access type: {}", meta.ty);
 
                         Ok(Expression::MemberAccess(
                             meta,
@@ -732,7 +734,7 @@ impl TypeResolver {
                     .iter()
                     .map(|pty| {
                         self.symbols
-                            .canonize_nonlocal_type_ref(&routine_canon_path.parent(), pty)
+                            .canonize_out_of_scope_type_ref(&routine_canon_path.parent(), pty)
                     })
                     .collect::<Result<Vec<Type>>>()?;
 
@@ -826,7 +828,7 @@ impl TypeResolver {
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
                     let member_ty_canon = self
                         .symbols
-                        .canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
+                        .canonize_out_of_scope_type_ref(&canonical_path.parent(), member_ty)?;
                     let param = self.traverse(pv, current_func)?;
                     if param.get_type() != member_ty_canon {
                         return Err(format!(
@@ -977,7 +979,7 @@ impl TypeResolver {
                 pty,
                 false,
                 self.symbols
-                    .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
+                    .canonize_out_of_scope_type_ref(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::ExternDecl(pty, has_varargs, rty),
@@ -986,7 +988,7 @@ impl TypeResolver {
                 pty,
                 *has_varargs,
                 self.symbols
-                    .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
+                    .canonize_out_of_scope_type_ref(&routine_path_parent, rty)?,
             ),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
@@ -996,7 +998,7 @@ impl TypeResolver {
                 false,
                 Type::Coroutine(Box::new(
                     self.symbols
-                        .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
+                        .canonize_out_of_scope_type_ref(&routine_path_parent, rty)?,
                 )),
             ),
             _ => {
