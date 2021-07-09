@@ -341,6 +341,14 @@ impl<'a> SymbolTableScopeStack {
                     .collect::<Result<Vec<(String, Type)>>>()?;
                 Ok(Type::StructDef(cparams))
             }
+            Type::ExternDecl(params, has_varargs, ret_ty) => {
+                let cparams = params
+                    .iter()
+                    .map(|pty| self.canonize_type(pty))
+                    .collect::<Result<Vec<Type>>>()?;
+                let cret_ty = self.canonize_type(ret_ty)?;
+                Ok(Type::ExternDecl(cparams, *has_varargs, Box::new(cret_ty)))
+            }
             Type::Array(el_ty, len) => {
                 if *len <= 0 {
                     Err(format!("Expected length > 0 for array, but found {}", *len))
