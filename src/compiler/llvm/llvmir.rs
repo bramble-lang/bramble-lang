@@ -359,8 +359,8 @@ impl<'ctx> IrGen<'ctx> {
             .filter_map(|f| {
                 // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
                 match f.ty {
-                    ast::Type::Custom(_) => f.ty.to_llvm_ir(self), //.into_basic_type(),
-                    _ => f.ty.to_llvm_ir(self),                    //.into_basic_type(),
+                    ast::Type::Custom(_) => f.ty.to_llvm_ir(self),
+                    _ => f.ty.to_llvm_ir(self),
                 }
                 .map_err(|e| format!("L{}: {}", f.annotation().ln, e))
                 .unwrap()
@@ -963,13 +963,12 @@ impl ast::BinaryOperator {
 
 impl ast::RoutineCall {
     fn to_label(&self, target: &ast::Path) -> String {
-        if self == &ast::RoutineCall::Extern {
-            target
+        match self {
+            ast::RoutineCall::Function | ast::RoutineCall::CoroutineInit => target.to_label(),
+            ast::RoutineCall::Extern => target
                 .item()
                 .expect("Extern call must have a target path")
-                .into()
-        } else {
-            target.to_label()
+                .into(),
         }
     }
 
