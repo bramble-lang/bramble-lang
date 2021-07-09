@@ -596,9 +596,6 @@ impl TypeResolver {
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
-                        /*meta.ty = self
-                        .symbols
-                        .canonize_out_of_scope_type_ref(&canonical_path.parent(), member_ty)?;*/
                         meta.ty = member_ty.clone();
 
                         Ok(Expression::MemberAccess(
@@ -951,37 +948,19 @@ impl TypeResolver {
         call: &RoutineCall,
         routine_path: &Path,
     ) -> Result<(&'b Vec<Type>, HasVarArgs, Type)> {
-        let routine_path_parent = routine_path.parent();
         let (expected_param_tys, has_varargs, ret_ty) = match symbol {
             Symbol {
-                ty: Type::FunctionDef(pty, rty),
+                ty: Type::FunctionDef(pty, box rty),
                 ..
-            } if *call == RoutineCall::Function => (
-                pty,
-                false,
-                self.symbols
-                    .canonize_out_of_scope_type_ref(&routine_path_parent, rty)?,
-            ),
+            } if *call == RoutineCall::Function => (pty, false, rty.clone()),
             Symbol {
-                ty: Type::ExternDecl(pty, has_varargs, rty),
+                ty: Type::ExternDecl(pty, has_varargs, box rty),
                 ..
-            } if *call == RoutineCall::Extern => (
-                pty,
-                *has_varargs,
-                self.symbols
-                    .canonize_out_of_scope_type_ref(&routine_path_parent, rty)?,
-            ),
+            } if *call == RoutineCall::Extern => (pty, *has_varargs, rty.clone()),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..
-            } if *call == RoutineCall::CoroutineInit => (
-                pty,
-                false,
-                Type::Coroutine(Box::new(
-                    self.symbols
-                        .canonize_out_of_scope_type_ref(&routine_path_parent, rty)?,
-                )),
-            ),
+            } if *call == RoutineCall::CoroutineInit => (pty, false, Type::Coroutine(rty.clone())),
             _ => {
                 let expected = match call {
                     RoutineCall::Function => "function",
