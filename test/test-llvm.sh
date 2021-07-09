@@ -16,8 +16,8 @@
 num_tests=0
 num_pass=0
 
-std_dir=./target/std/
-build_dir=./target/build/
+std_dir=./target/std
+build_dir=./target/build
 
 build_std() {
     rm -rf ${std_dir}
@@ -50,7 +50,7 @@ run_test() {
     if [ -f "${build_dir}/output.obj" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  .${std_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
+            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  ${std_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
             built=$?
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             gcc -w ${std_dir}/std.obj ${std_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2> ${build_dir}/stdout
