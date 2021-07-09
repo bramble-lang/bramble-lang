@@ -576,7 +576,7 @@ impl TypeResolver {
             Expression::Identifier(meta, id) => {
                 let mut meta = meta.clone();
                 match self.symbols.lookup_var(&id)? {
-                    Symbol { ty: p, .. } => meta.ty = self.symbols.canonize_local_type_ref(p)?,
+                    Symbol { ty: p, .. } => meta.ty = p.clone(), //self.symbols.canonize_local_type_ref(p)?,
                 };
                 Ok(Expression::Identifier(meta.clone(), id.clone()))
             }
