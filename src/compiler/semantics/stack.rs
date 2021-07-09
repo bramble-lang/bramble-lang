@@ -138,12 +138,12 @@ impl<'a> SymbolTableScopeStack {
 
     pub fn get_current_fn(&self) -> Option<&str> {
         // Check if the top of the stack is a routine
-        if let ScopeType::Routine { name } = self.head.scope_type() {
+        if let ScopeType::Routine(name) = self.head.scope_type() {
             return Some(name);
         } else {
             // Search through the rest of the stack for the Routine closest to the top
             for scope in self.stack.iter().rev() {
-                if let ScopeType::Routine { name } = scope.scope_type() {
+                if let ScopeType::Routine(name) = scope.scope_type() {
                     return Some(name);
                 }
             }
@@ -383,7 +383,7 @@ impl<'a> SymbolTableScopeStack {
         }
 
         match self.head.scope_type() {
-            ScopeType::Module { name } => steps.push(name.clone()),
+            ScopeType::Module(name) => steps.push(name.clone()),
             _ => (),
         }
 

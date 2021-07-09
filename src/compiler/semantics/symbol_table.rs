@@ -43,14 +43,14 @@ impl SymbolTable {
 
     pub fn new_routine(name: &str) -> Self {
         SymbolTable {
-            ty: ScopeType::Routine { name: name.into() },
+            ty: ScopeType::Routine(name.into()),
             sym: vec![],
         }
     }
 
     pub fn new_module(name: &str) -> Self {
         SymbolTable {
-            ty: ScopeType::Module { name: name.into() },
+            ty: ScopeType::Module(name.into()),
             sym: vec![],
         }
     }
@@ -234,22 +234,22 @@ impl std::fmt::Display for Symbol {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) enum ScopeType {
     Local,
-    Routine { name: String },
-    Module { name: String },
+    Routine(String),
+    Module(String),
 }
 
 impl ScopeType {
     pub fn is_boundary(&self) -> bool {
         match self {
-            Self::Routine { .. } | Self::Local => false,
-            Self::Module { .. } => true,
+            Self::Routine(..) | Self::Local => false,
+            Self::Module(..) => true,
         }
     }
 
     pub fn get_name(&self) -> Option<&str> {
         match self {
             Self::Local => None,
-            Self::Routine { name } | Self::Module { name } => Some(name),
+            Self::Routine(name) | Self::Module(name) => Some(name),
         }
     }
 }
@@ -258,8 +258,8 @@ impl std::fmt::Display for ScopeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ScopeType::Local => f.write_str("Local"),
-            ScopeType::Routine { name } => f.write_fmt(format_args!("Routine({})", name)),
-            ScopeType::Module { name } => f.write_fmt(format_args!("Module({})", name)),
+            ScopeType::Routine(name) => f.write_fmt(format_args!("Routine({})", name)),
+            ScopeType::Module(name) => f.write_fmt(format_args!("Module({})", name)),
         }
     }
 }
