@@ -168,7 +168,7 @@ impl TypeResolver {
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
-            let exp = self.analyze_statement(stmt, &name)?;
+            let exp = self.analyze_statement(stmt)?;
             resolved_body.push(exp);
         }
 
@@ -252,15 +252,14 @@ impl TypeResolver {
     fn analyze_statement(
         &mut self,
         stmt: &Statement<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Statement<SemanticAnnotations>> {
         use Statement::*;
         let inner = match stmt {
-            Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func)?)),
-            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func)?)),
-            Return(box x) => Return(Box::new(self.analyze_return(x, current_func)?)),
-            YieldReturn(box x) => YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func)?)),
-            Expression(box e) => Expression(Box::new(self.traverse(e, current_func)?)),
+            Bind(box b) => Bind(Box::new(self.analyze_bind(b)?)),
+            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b)?)),
+            Return(box x) => Return(Box::new(self.analyze_return(x)?)),
+            YieldReturn(box x) => YieldReturn(Box::new(self.analyze_yieldreturn(x)?)),
+            Expression(box e) => Expression(Box::new(self.traverse(e)?)),
         };
 
         Ok(inner)
@@ -269,14 +268,13 @@ impl TypeResolver {
     fn analyze_bind(
         &mut self,
         bind: &Bind<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Bind<SemanticAnnotations>> {
         let meta = bind.annotation();
         let rhs = bind.get_rhs();
         let result = {
             let mut meta = meta.clone();
             meta.ty = bind.get_type().clone();
-            let rhs = self.traverse(rhs, current_func)?;
+            let rhs = self.traverse(rhs)?;
             if meta.ty == rhs.get_type() {
                 match self
                     .symbols
@@ -302,10 +300,9 @@ impl TypeResolver {
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Mutate<SemanticAnnotations>> {
         let mut meta = mutate.annotation().clone();
-        let rhs = self.traverse(mutate.get_rhs(), current_func)?;
+        let rhs = self.traverse(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
             Ok(symbol) => {
                 if symbol.mutable {
@@ -332,11 +329,14 @@ impl TypeResolver {
     fn analyze_yieldreturn(
         &mut self,
         yr: &YieldReturn<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<YieldReturn<SemanticAnnotations>> {
         let result = {
             match yr.get_value() {
                 None => {
+                    let current_func = self
+                        .symbols
+                        .get_current_fn()
+                        .ok_or(format!("Return must occur inside of a function"))?;
                     let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
                     if *ret_ty == Type::Unit {
                         let mut meta = yr.annotation().clone();
@@ -347,7 +347,11 @@ impl TypeResolver {
                     }
                 }
                 Some(val) => {
-                    let expr = self.traverse(val, current_func)?;
+                    let expr = self.traverse(val)?;
+                    let current_func = self
+                        .symbols
+                        .get_current_fn()
+                        .ok_or(format!("Return must occur inside of a function"))?;
                     let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
 
                     if ret_ty == expr.get_type() {
@@ -370,11 +374,14 @@ impl TypeResolver {
     fn analyze_return(
         &mut self,
         r: &Return<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Return<SemanticAnnotations>> {
         let result = {
             match r.get_value() {
                 None => {
+                    let current_func = self
+                        .symbols
+                        .get_current_fn()
+                        .ok_or(format!("Return must occur inside of a function"))?;
                     let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
                     if *ret_ty == Type::Unit {
                         let mut meta = r.annotation().clone();
@@ -385,7 +392,11 @@ impl TypeResolver {
                     }
                 }
                 Some(val) => {
-                    let exp = self.traverse(val, current_func)?;
+                    let exp = self.traverse(val)?;
+                    let current_func = self
+                        .symbols
+                        .get_current_fn()
+                        .ok_or(format!("Return must occur inside of a function"))?;
                     let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
 
                     if ret_ty == exp.get_type() {
@@ -405,8 +416,8 @@ impl TypeResolver {
         result.map_err(|e| format!("L{}: {}", r.annotation().ln, e))
     }
 
-    fn traverse(&mut self, ast: &SemanticNode, current_func: &str) -> Result<SemanticNode> {
-        self.analyze_expression(ast, current_func).map_err(|e| {
+    fn traverse(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
+        self.analyze_expression(ast).map_err(|e| {
             if !e.starts_with("L") {
                 format!("L{}: {}", ast.annotation().ln, e)
             } else {
@@ -415,11 +426,7 @@ impl TypeResolver {
         })
     }
 
-    fn analyze_expression(
-        &mut self,
-        ast: &SemanticNode,
-        current_func: &str,
-    ) -> Result<SemanticNode> {
+    fn analyze_expression(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
         match &ast {
             &Expression::U8(meta, v) => {
                 let mut meta = meta.clone();
@@ -473,10 +480,8 @@ impl TypeResolver {
             }
             Expression::ArrayValue(meta, elements, len) => {
                 // Resolve the types for each element in the array value
-                let nelements: Result<Vec<Expression<SemanticAnnotations>>> = elements
-                    .iter()
-                    .map(|e| self.traverse(e, current_func))
-                    .collect();
+                let nelements: Result<Vec<Expression<SemanticAnnotations>>> =
+                    elements.iter().map(|e| self.traverse(e)).collect();
                 let nelements = nelements?;
 
                 // Check that they are homogenous
@@ -503,14 +508,14 @@ impl TypeResolver {
                 index,
             } => {
                 //  Check that the array value is an array type
-                let n_array = self.traverse(array, current_func)?;
+                let n_array = self.traverse(array)?;
                 let el_ty = match n_array.annotation().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(format!("Expected array type on LHS of [] but found {}", ty)),
                 }?;
 
                 // Check that the index is an i64 type
-                let n_index = self.traverse(index, current_func)?;
+                let n_index = self.traverse(index)?;
                 if !n_index.annotation().ty().is_integral() {
                     return Err(format!(
                         "Expected integral type for index but found {}",
@@ -556,7 +561,7 @@ impl TypeResolver {
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
                 // if it exists, if it does not exist then return an error
-                let src = self.traverse(&src, current_func)?;
+                let src = self.traverse(&src)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
                         let (struct_def, _) = self.symbols.lookup_symbol_by_path(&struct_name)?;
@@ -577,7 +582,7 @@ impl TypeResolver {
             }
             Expression::BinaryOp(meta, op, l, r) => {
                 let mut meta = meta.clone();
-                let (ty, l, r) = self.binary_op(*op, &l, &r, current_func)?;
+                let (ty, l, r) = self.binary_op(*op, &l, &r)?;
                 meta.ty = ty;
                 Ok(Expression::BinaryOp(
                     meta.clone(),
@@ -588,7 +593,7 @@ impl TypeResolver {
             }
             Expression::UnaryOp(meta, op, operand) => {
                 let mut meta = meta.clone();
-                let (ty, operand) = self.unary_op(*op, &operand, current_func)?;
+                let (ty, operand) = self.unary_op(*op, &operand)?;
                 meta.ty = ty;
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
@@ -599,13 +604,13 @@ impl TypeResolver {
                 else_arm,
             } => {
                 let mut meta = meta.clone();
-                let cond = self.traverse(&cond, current_func)?;
+                let cond = self.traverse(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let if_arm = self.traverse(&if_arm, current_func)?;
+                    let if_arm = self.traverse(&if_arm)?;
 
                     let else_arm = else_arm
                         .as_ref()
-                        .map(|e| self.traverse(&e, current_func))
+                        .map(|e| self.traverse(&e))
                         .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
 
                     let else_arm_ty = else_arm
@@ -642,9 +647,9 @@ impl TypeResolver {
                 ..
             } => {
                 let mut meta = meta.clone();
-                let cond = self.traverse(&cond, current_func)?;
+                let cond = self.traverse(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let body = self.traverse(&body, current_func)?;
+                    let body = self.traverse(&body)?;
 
                     if body.get_type() == Type::Unit {
                         meta.ty = Type::Unit;
@@ -668,7 +673,7 @@ impl TypeResolver {
             }
             Expression::Yield(meta, exp) => {
                 let mut meta = meta.clone();
-                let exp = self.traverse(&exp, current_func)?;
+                let exp = self.traverse(&exp)?;
                 meta.ty = match exp.get_type() {
                     Type::Coroutine(box ret_ty) => ret_ty.clone(),
                     _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
@@ -681,7 +686,7 @@ impl TypeResolver {
                 // parameter types
                 let mut resolved_params = vec![];
                 for param in params.iter() {
-                    let ty = self.traverse(param, current_func)?;
+                    let ty = self.traverse(param)?;
 
                     resolved_params.push(ty);
                 }
@@ -735,14 +740,14 @@ impl TypeResolver {
                 self.symbols.enter_scope(&meta.sym);
 
                 for stmt in body.iter() {
-                    let exp = self.analyze_statement(stmt, current_func)?;
+                    let exp = self.analyze_statement(stmt)?;
                     resolved_body.push(exp);
                 }
 
                 let (final_exp, block_ty) = match final_exp {
                     None => (None, Type::Unit),
                     Some(fe) => {
-                        let fe = self.traverse(fe, current_func)?;
+                        let fe = self.traverse(fe)?;
                         let ty = fe.get_type().clone();
                         (Some(Box::new(fe)), ty)
                     }
@@ -781,7 +786,7 @@ impl TypeResolver {
                     let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
-                    let param = self.traverse(pv, current_func)?;
+                    let param = self.traverse(pv)?;
                     if param.get_type() != member_ty {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
@@ -809,11 +814,10 @@ impl TypeResolver {
         &mut self,
         op: UnaryOperator,
         operand: &SemanticNode,
-        current_func: &str,
     ) -> Result<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
-        let operand = self.traverse(operand, current_func)?;
+        let operand = self.traverse(operand)?;
 
         match op {
             Negate => {
@@ -846,12 +850,11 @@ impl TypeResolver {
         op: BinaryOperator,
         l: &SemanticNode,
         r: &SemanticNode,
-        current_func: &str,
     ) -> Result<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
-        let l = self.traverse(l, current_func)?;
-        let r = self.traverse(r, current_func)?;
+        let l = self.traverse(l)?;
+        let r = self.traverse(r)?;
 
         match op {
             Add | Sub | Mul | Div => {
