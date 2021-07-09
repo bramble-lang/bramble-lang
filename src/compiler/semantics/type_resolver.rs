@@ -330,90 +330,74 @@ impl TypeResolver {
         &mut self,
         yr: &YieldReturn<SemanticAnnotations>,
     ) -> Result<YieldReturn<SemanticAnnotations>> {
-        let result = {
-            match yr.get_value() {
-                None => {
-                    let current_func = self
-                        .symbols
-                        .get_current_fn()
-                        .ok_or(format!("Return must occur inside of a function"))?;
-                    let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
-                    if *ret_ty == Type::Unit {
-                        let mut meta = yr.annotation().clone();
-                        meta.ty = Type::Unit;
-                        Ok(YieldReturn::new(meta, None))
-                    } else {
-                        Err(format!("Yield return expected {} but got unit", ret_ty))
-                    }
-                }
-                Some(val) => {
-                    let expr = self.traverse(val)?;
-                    let current_func = self
-                        .symbols
-                        .get_current_fn()
-                        .ok_or(format!("Return must occur inside of a function"))?;
-                    let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
-
-                    if ret_ty == expr.get_type() {
-                        let mut meta = yr.annotation().clone();
-                        meta.ty = ret_ty.clone();
-                        Ok(YieldReturn::new(meta, Some(expr)))
-                    } else {
-                        Err(format!(
-                            "Yield return expected {} but got {}",
-                            ret_ty,
-                            expr.get_type(),
-                        ))
-                    }
-                }
+        // Get the actual expression and its type as it comes from the
+        // source code written by the user.
+        let (actual_ret_exp, actual_ret_ty) = match yr.get_value() {
+            None => (None, Type::Unit),
+            Some(exp) => {
+                let exp = self.traverse(exp)?;
+                let exp_ty = exp.get_type().clone();
+                (Some(exp), exp_ty)
             }
         };
-        result.map_err(|e| format!("L{}: {}", yr.annotation().ln, e))
+
+        // Get the expected yield return type of the coroutine that the yield return
+        // occurs within.
+        let current_func = self
+            .symbols
+            .get_current_fn()
+            .ok_or(format!("Yield return must occur inside of a function"))?;
+        let (_, expected_ret_ty) = self.symbols.lookup_coroutine(current_func)?;
+
+        if actual_ret_ty == expected_ret_ty {
+            let mut meta = yr.annotation().clone();
+            meta.ty = actual_ret_ty;
+            Ok(YieldReturn::new(meta, actual_ret_exp))
+        } else {
+            Err(format!(
+                "Yield return expected {} but got {}",
+                expected_ret_ty, actual_ret_ty,
+            ))
+        }
+        .map_err(|e| format!("L{}: {}", yr.annotation().ln, e))
     }
 
     fn analyze_return(
         &mut self,
         r: &Return<SemanticAnnotations>,
     ) -> Result<Return<SemanticAnnotations>> {
-        let result = {
-            match r.get_value() {
-                None => {
-                    let current_func = self
-                        .symbols
-                        .get_current_fn()
-                        .ok_or(format!("Return must occur inside of a function"))?;
-                    let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
-                    if *ret_ty == Type::Unit {
-                        let mut meta = r.annotation().clone();
-                        meta.ty = Type::Unit;
-                        Ok(Return::new(meta, None))
-                    } else {
-                        Err(format!("Return expected {} but got unit", ret_ty))
-                    }
-                }
-                Some(val) => {
-                    let exp = self.traverse(val)?;
-                    let current_func = self
-                        .symbols
-                        .get_current_fn()
-                        .ok_or(format!("Return must occur inside of a function"))?;
-                    let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
-
-                    if ret_ty == exp.get_type() {
-                        let mut meta = r.annotation().clone();
-                        meta.ty = ret_ty.clone();
-                        Ok(Return::new(meta, Some(exp)))
-                    } else {
-                        Err(format!(
-                            "Return expected {} but got {}",
-                            ret_ty,
-                            exp.get_type()
-                        ))
-                    }
-                }
+        // Get the actual expression and its type as it comes from the
+        // source code written by the user.
+        let (actual_ret_exp, actual_ret_ty) = match r.get_value() {
+            None => (None, Type::Unit),
+            Some(exp) => {
+                let exp = self.traverse(exp)?;
+                let exp_ty = exp.get_type().clone();
+                (Some(exp), exp_ty)
             }
         };
-        result.map_err(|e| format!("L{}: {}", r.annotation().ln, e))
+
+        // Get the expected return type of the function that the return
+        // occurs within.
+        let current_func = self
+            .symbols
+            .get_current_fn()
+            .ok_or(format!("Return must occur inside of a function"))?;
+        let (_, expected_ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
+
+        // Check that the actual expression matches the expected return type
+        // of the function
+        if actual_ret_ty == expected_ret_ty {
+            let mut meta = r.annotation().clone();
+            meta.ty = actual_ret_ty;
+            Ok(Return::new(meta, actual_ret_exp))
+        } else {
+            Err(format!(
+                "Return expected {} but got {}",
+                expected_ret_ty, actual_ret_ty,
+            ))
+        }
+        .map_err(|e| format!("L{}: {}", r.annotation().ln, e))
     }
 
     fn traverse(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
