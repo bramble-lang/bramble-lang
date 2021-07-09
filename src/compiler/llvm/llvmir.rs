@@ -224,7 +224,7 @@ impl<'ctx> IrGen<'ctx> {
         for manifest in self.imports {
             // Add imported functions to the LLVM Module
             for (path, params, ty) in &manifest.get_functions() {
-                self.add_fn_decl(&path.to_label(), params, false, ty);
+                self.add_fn_decl(&path.to_label(), params, false, ty, 0);
             }
         }
     }
@@ -270,6 +270,7 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             false,
             &rd.ty,
+            rd.annotation().ln,
         )
     }
 
@@ -281,6 +282,7 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             ex.has_varargs,
             ex.get_return_type(),
+            ex.annotation().ln,
         );
     }
 
@@ -295,6 +297,7 @@ impl<'ctx> IrGen<'ctx> {
         params: &Vec<ast::Type>,
         has_var_arg: bool,
         ret_ty: &ast::Type,
+        line: u32,
     ) {
         let mut llvm_params = vec![];
 
@@ -306,6 +309,8 @@ impl<'ctx> IrGen<'ctx> {
 
                 let ptr_ty = ret_ty
                     .to_llvm_ir(self)
+                    .map_err(|e| format!("L{}: {}", line, e))
+                    .unwrap()
                     .into_basic_type()
                     .unwrap()
                     .ptr_type(AddressSpace::Generic)
@@ -315,10 +320,16 @@ impl<'ctx> IrGen<'ctx> {
                 ast::Type::Unit.to_llvm_ir(self)
             }
             _ => ret_ty.to_llvm_ir(self),
-        };
+        }
+        .map_err(|e| format!("L{}: {}", line, e))
+        .unwrap();
 
         for p in params {
-            let ty_llvm = p.to_llvm_ir(self).into_basic_type();
+            let ty_llvm = p
+                .to_llvm_ir(self)
+                .map_err(|e| format!("L{}: {}", line, e))
+                .unwrap()
+                .into_basic_type();
             match ty_llvm {
                 Ok(ty_llvm) if ty_llvm.is_aggregate_type() => {
                     llvm_params.push(ty_llvm.ptr_type(AddressSpace::Generic).into())
@@ -348,9 +359,12 @@ impl<'ctx> IrGen<'ctx> {
             .filter_map(|f| {
                 // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
                 match f.ty {
-                    ast::Type::Custom(_) => f.ty.to_llvm_ir(self).into_basic_type(),
-                    _ => f.ty.to_llvm_ir(self).into_basic_type(),
+                    ast::Type::Custom(_) => f.ty.to_llvm_ir(self), //.into_basic_type(),
+                    _ => f.ty.to_llvm_ir(self),                    //.into_basic_type(),
                 }
+                .map_err(|e| format!("L{}: {}", f.annotation().ln, e))
+                .unwrap()
+                .into_basic_type()
                 .ok()
             })
             .collect();
@@ -517,7 +531,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
 
-        match self.get_type().to_llvm_ir(llvm).into_basic_type() {
+        match self
+            .get_type()
+            .to_llvm_ir(llvm)
+            .map_err(|e| format!("L{}: {}", self.annotation().ln, e))
+            .unwrap()
+            .into_basic_type()
+        {
             Ok(ty) if ty.is_aggregate_type() => {
                 let ptr = llvm.builder.build_alloca(ty, self.get_id());
                 let rhs_ptr = rhs.into_pointer_value();
@@ -648,9 +668,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             }
             ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp)),
             ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r)),
-            ast::Expression::RoutineCall(_, call, name, params) => {
-                call.to_llvm_ir(llvm, name, params, self.get_type())
-            }
+            ast::Expression::RoutineCall(meta, call, name, params) => call
+                .to_llvm_ir(llvm, name, params, self.get_type())
+                .map_err(|e| format!("L{}: {}", meta.ln, e))
+                .unwrap(),
             ast::Expression::ExpressionBlock(_, stmts, exp) => {
                 llvm.registers.open_local().unwrap();
                 for stmt in stmts {
@@ -789,7 +810,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
             }
             ast::Expression::ArrayValue(meta, elements, len) => {
                 let a_ty = meta.ty();
-                let a_llvm_ty = a_ty.to_llvm_ir(llvm).into_basic_type().unwrap();
+                let a_llvm_ty = a_ty
+                    .to_llvm_ir(llvm)
+                    .map_err(|e| format!("L{}: {}", meta.ln, e))
+                    .unwrap()
+                    .into_basic_type()
+                    .unwrap();
                 let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
 
                 // Compute the results for each element of the array value
@@ -955,9 +981,9 @@ impl ast::RoutineCall {
         llvm: &mut IrGen<'ctx>,
         target: &str,
         ret_ty: &Type,
-    ) -> Option<PointerValue<'ctx>> {
+    ) -> Result<Option<PointerValue<'ctx>>> {
         if llvm.fn_use_out_param.contains(target) {
-            let out_ty = ret_ty.to_llvm_ir(llvm).into_basic_type().unwrap();
+            let out_ty = ret_ty.to_llvm_ir(llvm)?.into_basic_type().unwrap();
             if !out_ty.is_aggregate_type() {
                 panic!("Expected an aggregate type but got {}", ret_ty);
             }
@@ -965,9 +991,9 @@ impl ast::RoutineCall {
             let ptr = llvm
                 .builder
                 .build_alloca(out_ty, &format!("_out_{}", target));
-            Some(ptr)
+            Ok(Some(ptr))
         } else {
-            None
+            Ok(None)
         }
     }
 
@@ -977,7 +1003,7 @@ impl ast::RoutineCall {
         target: &ast::Path,
         params: &Vec<ast::Expression<SemanticAnnotations>>,
         ret_ty: &ast::Type,
-    ) -> Option<BasicValueEnum<'ctx>> {
+    ) -> Result<Option<BasicValueEnum<'ctx>>> {
         match self {
             ast::RoutineCall::Function | ast::RoutineCall::Extern => {
                 // Check if the function returns a struct, if it does then create a local struct
@@ -985,7 +1011,7 @@ impl ast::RoutineCall {
                 let fn_name = self.to_label(target);
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
-                let out_param = Self::to_out_param(llvm, &fn_name, ret_ty);
+                let out_param = Self::to_out_param(llvm, &fn_name, ret_ty)?;
 
                 // If this will use an out param to return the result then
                 // add it to the list of parameters for this function.
@@ -1002,8 +1028,8 @@ impl ast::RoutineCall {
                     .expect(&format!("Could not find function {}", fn_name));
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
                 match out_param {
-                    Some(ptr) => Some(ptr.into()),
-                    None => result.try_as_basic_value().left(),
+                    Some(ptr) => Ok(Some(ptr.into())),
+                    None => Ok(result.try_as_basic_value().left()),
                 }
             }
             ast::RoutineCall::CoroutineInit => todo!("Not yet implemented"),
@@ -1012,8 +1038,8 @@ impl ast::RoutineCall {
 }
 
 impl ast::Type {
-    fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> AnyTypeEnum<'ctx> {
-        match self {
+    fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> Result<AnyTypeEnum<'ctx>> {
+        let llvm_ty = match self {
             ast::Type::U8 | ast::Type::I8 => llvm.context.i8_type().into(),
             ast::Type::U16 | ast::Type::I16 => llvm.context.i16_type().into(),
             ast::Type::U32 | ast::Type::I32 => llvm.context.i32_type().into(),
@@ -1032,7 +1058,7 @@ impl ast::Type {
                 .expect(&format!("Could not find struct {}", name))
                 .into(),
             ast::Type::Array(a, len) => {
-                let el_ty = a.to_llvm_ir(llvm);
+                let el_ty = a.to_llvm_ir(llvm)?;
                 let len = *len as u32;
                 el_ty.into_basic_type().unwrap().array_type(len).into()
             }
@@ -1041,8 +1067,9 @@ impl ast::Type {
             | ast::Type::CoroutineDef(_, _)
             | ast::Type::Coroutine(_)
             | ast::Type::ExternDecl(..)
-            | ast::Type::Unknown => panic!("Can't convert type to LLVM: {}", self),
-        }
+            | ast::Type::Unknown => return Err(format!("Can't convert type to LLVM: {}", self)),
+        };
+        Ok(llvm_ty)
     }
 }
 
