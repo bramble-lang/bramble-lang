@@ -416,9 +416,9 @@ impl TypeResolver {
                 Some(val) => {
                     let exp = self.traverse(val, current_func)?;
                     let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
-                    let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
+
                     if ret_ty == exp.get_type() {
-                        meta.ty = ret_ty;
+                        meta.ty = ret_ty.clone();
                         Ok(Return::new(meta, Some(exp)))
                     } else {
                         Err(format!(
