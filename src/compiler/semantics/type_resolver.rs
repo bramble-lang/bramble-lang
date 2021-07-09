@@ -728,13 +728,6 @@ impl TypeResolver {
 
                 let (expected_param_tys, has_varargs, ret_ty) =
                     self.extract_routine_type_info(symbol, call, &routine_canon_path)?;
-                let expected_param_tys = expected_param_tys
-                    .iter()
-                    .map(|pty| {
-                        self.symbols
-                            .canonize_out_of_scope_type_ref(&routine_canon_path.parent(), pty)
-                    })
-                    .collect::<Result<Vec<Type>>>()?;
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
