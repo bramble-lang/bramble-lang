@@ -984,7 +984,7 @@ impl ast::RoutineCall {
         if llvm.fn_use_out_param.contains(target) {
             let out_ty = ret_ty.to_llvm_ir(llvm)?.into_basic_type().unwrap();
             if !out_ty.is_aggregate_type() {
-                panic!("Expected an aggregate type but got {}", ret_ty);
+                panic!("Expected an aggregate type but got {}. Out parameters should only be used with LLVM Aggregate Types (arrays, structs).", ret_ty);
             }
 
             let ptr = llvm

@@ -125,16 +125,16 @@ impl SemanticAst {
     ) -> Module<SemanticAnnotations> {
         let f = |n: &dyn Node<u32>| match n.node_type() {
             NodeType::Module => {
-                let name = n.name().unwrap();
+                let name = n.name().expect("Modules must have a name");
                 self.module_semantic_annotations_from(*n.annotation(), name)
             }
-            // TODO: Create RoutineScope for RoutineDef nodes
             NodeType::RoutineDef(_) => {
                 let name = n.name().expect("RoutineDefs must have a name");
                 self.routine_semantic_annotations_from(*n.annotation(), name)
             }
             _ => self.semantic_annotations_from(*n.annotation()),
         };
+
         let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);
         mapper.apply(m)
     }

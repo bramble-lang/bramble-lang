@@ -276,13 +276,6 @@ impl<'a> SymbolTableScopeStack {
         } else {
             Err("empty path passed to lookup_path".into())
         }
-        /* .map(|(s, p)| {
-            if s.is_extern {
-                (s, vec![s.name.clone()].into())
-            } else {
-                (s, p)
-            }
-        })*/
     }
 
     fn get_item(&self, canon_path: &Path) -> Option<&Symbol> {
