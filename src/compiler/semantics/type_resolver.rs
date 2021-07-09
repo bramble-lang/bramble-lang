@@ -705,7 +705,7 @@ impl TypeResolver {
                 let mut meta = meta.clone();
                 let exp = self.traverse(&exp, current_func)?;
                 meta.ty = match exp.get_type() {
-                    Type::Coroutine(ret_ty) => self.symbols.canonize_in_scope_type_ref(ret_ty)?,
+                    Type::Coroutine(box ret_ty) => ret_ty.clone(),
                     _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                 };
                 Ok(Expression::Yield(meta, Box::new(exp)))
@@ -761,7 +761,7 @@ impl TypeResolver {
                     ) {
                         Err(msg) => Err(msg),
                         Ok(()) => {
-                            meta.ty = self.symbols.canonize_in_scope_type_ref(&ret_ty)?;
+                            meta.ty = ret_ty.clone();
                             Ok(Expression::RoutineCall(
                                 meta.clone(),
                                 *call,
