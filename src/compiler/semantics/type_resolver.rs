@@ -272,7 +272,8 @@ impl TypeResolver {
 
         // Update the annotations with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
-        let meta = ex.annotation().clone();
+        let mut meta = ex.annotation().clone();
+        meta.ty = ex.get_return_type().clone();
 
         Ok(Extern::new(
             name,
