@@ -16,55 +16,68 @@
 num_tests=0
 num_pass=0
 
+std_dir=./target/std/
+build_dir=./target/build/
+
+build_std() {
+    rm -rf ${std_dir}
+    mkdir -p ${std_dir}
+
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ${std_dir}/std_input.lst -o ${std_dir}/std_input.obj > ${std_dir}/assembler.log
+        ../target/release/braid-lang --llvm -p linux -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ${std_dir}/std_input.lst -o ${std_dir}/std_input.obj > ${std_dir}/assembler.log
+        ../target/release/braid-lang --llvm -p machos -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout
+    fi
+    mv ./target/std.manifest ./target/std/.
+}
+
 run_test() {
-    rm -rf ./target
-    mkdir -p ./target
+    rm -rf ${build_dir}
+    mkdir -p ${build_dir}
     test=$1
     input="./src/${test}.in"
     built=1
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/release/braid-lang --llvm -p linux -i ../braid/std -o ./target/std.obj --manifest > ./target/stdout
-        ../target/release/braid-lang --llvm -p linux --import ./target/std.manifest -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p linux --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/release/braid-lang --llvm -p machos -i ../braid/std -o ./target/std.obj --manifest > ./target/stdout
-        ../target/release/braid-lang --llvm -p machos --import ./target/std.manifest -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/release/braid-lang --llvm -p machos --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
-    if [ -f "./target/output.obj" ]
+    if [ -f "${build_dir}/output.obj" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/std.obj  ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  .${std_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
             built=$?
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
-            gcc -w ./target/std.obj ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
+            gcc -w ${std_dir}/std.obj ${std_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2> ${build_dir}/stdout
             built=$?
         else
             # If we can't figure out the OS, then just try the Linux build steps
-            nasm -g -f elf64 ../braid/linux/llvm/std/io.asm -l ./target/std_io_llvm.lst -o ./target/std_io_llvm.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/std_io_llvm.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ${build_dir}/std_input.lst -o ${build_dir}/std_input.obj > assembler.log
+            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  .${build_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
             built=$?
         fi
     
         if [[ $built -eq 0 ]]; then
             if [[ -f $input ]]; then
-                timeout 5s "./target/output" < $input >> ./target/stdout
+                timeout 5s "${build_dir}/output" < $input >> ${build_dir}/stdout
             else
-                timeout 5s "./target/output" >> ./target/stdout
+                timeout 5s "${build_dir}/output" >> ${build_dir}/stdout
             fi
             if [[ $? -eq 124 ]]; then
                 echo "Timed out"
-                echo "Timed out" >> ./target/stdout
+                echo "Timed out" >> ${build_dir}/stdout
             fi
         else 
             echo "Build failed"
         fi
     fi
 
-    result=$(diff ./target/stdout ./src/${test}.out)
+    result=$(diff ${build_dir}/stdout ./src/${test}.out)
     if [ $? -eq 0 ]
     then
         ((num_pass=num_pass+1))
@@ -74,7 +87,7 @@ run_test() {
         echo ${result}
         echo ""
         echo "Actual:"
-        cat ./target/stdout
+        cat ${build_dir}/stdout
         echo "\n-------------"
         echo "Expected:"
         cat ./src/${test}.out
@@ -130,6 +143,10 @@ then
 
     mkdir -p ./target
 
+    echo "Building STD Library"
+    build_std
+
+    echo "Running Tests"
     tests=`find ./src | grep "\.out" | grep -v "coroutine" | sort | sed 's/\.\/src\/\(.*\)\.out/\1/'`
     for test in ${tests[@]}; do
         ((num_tests=num_tests+1))
