@@ -21,10 +21,12 @@ pub fn canonize_paths(
     });
     t.for_each(module, |s, n| canonize(s, n))?;
 
+    /*
     let mut t = ForEachPreOrderMut::new("annotation type", module, tracing, |_| {
         "annotation type".into()
     });
     t.for_each(module, |s, n| n.canonize_annotation_type(s))?;
+    */
 
     let mut t = ForEachPreOrderMut::new("type refs", module, tracing, |_| "test".into());
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;
