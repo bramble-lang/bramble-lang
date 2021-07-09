@@ -137,7 +137,7 @@ impl SemanticNode for Bind<SemanticAnnotations> {
     }*/
 
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let canon_type = stack.canonize_in_scope_type_ref(self.get_type())?;
+        let canon_type = stack.canonize_type(self.get_type())?;
         self.set_type(canon_type);
         Ok(())
     }
@@ -153,7 +153,7 @@ impl SemanticNode for Module<SemanticAnnotations> {
         // Canonize Symbol Table
         let sym = &mut self.annotation_mut().sym;
         for s in sym.table_mut().iter_mut() {
-            let cty = stack.canonize_in_scope_type_ref(&s.ty)?;
+            let cty = stack.canonize_type(&s.ty)?;
             s.ty = cty;
         }
 
@@ -163,7 +163,7 @@ impl SemanticNode for Module<SemanticAnnotations> {
 impl SemanticNode for StructDef<SemanticAnnotations> {}
 impl SemanticNode for RoutineDef<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let ctype = stack.canonize_in_scope_type_ref(&self.ty)?;
+        let ctype = stack.canonize_type(&self.ty)?;
         self.ty = ctype;
         Ok(())
     }
@@ -185,14 +185,14 @@ impl SemanticNode for Extern<SemanticAnnotations> {
     }*/
 
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let ctype = stack.canonize_in_scope_type_ref(&self.ty)?;
+        let ctype = stack.canonize_type(&self.ty)?;
         self.ty = ctype;
         Ok(())
     }
 }
 impl SemanticNode for Parameter<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let ctype = stack.canonize_in_scope_type_ref(&self.ty)?;
+        let ctype = stack.canonize_type(&self.ty)?;
         self.ty = ctype;
         Ok(())
     }

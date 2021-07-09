@@ -282,35 +282,6 @@ impl<'a> SymbolTableScopeStack {
     }
 
     /**
-    Given a type reference that appears in a node that is not the current node, will convert
-    that type reference to a canonical path from a relative path.  If the type reference is
-    already an absolute path then no change is made.  This is used for indirect type reference
-    look ups: for example, if the current node is a routine call and the routine definition is
-    looked up to validate the parameter types in the definition agains the parameters in the
-    call, to canonize the routine definition's parameter types, this function would be used: as
-    they are in the RoutineDef node not the RoutineCall node.
-     */
-    pub fn canonize_out_of_scope_type_ref(&self, parent_path: &Path, ty: &Type) -> Result<Type> {
-        match ty {
-            Type::Custom(path) => Ok(Type::Custom(path.to_canonical(parent_path)?)),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
-                self.canonize_out_of_scope_type_ref(parent_path, &ty)?,
-            ))),
-            Type::Array(el_ty, len) => {
-                if *len <= 0 {
-                    Err(format!("Expected length > 0 for array, but found {}", *len))
-                } else {
-                    Ok(Type::Array(
-                        box self.canonize_out_of_scope_type_ref(parent_path, el_ty)?,
-                        *len,
-                    ))
-                }
-            }
-            _ => Ok(ty.clone()),
-        }
-    }
-
-    /**
     Given a type reference that appears in the current node, will convert that type reference
     to a canonical path from a relative path.  If the type reference is already an absolute
     path then no change is made.
@@ -318,37 +289,32 @@ impl<'a> SymbolTableScopeStack {
     For example, the path `super::MyStruct` would be converted to `root::my_module::MyStruct`
     if the current node were in a module contained within `my_module`.
      */
-    pub fn canonize_in_scope_type_ref(&self, ty: &Type) -> Result<Type> {
+    pub fn canonize_type(&self, ty: &Type) -> Result<Type> {
         match ty {
             Type::Custom(path) => self
                 .lookup_symbol_by_path(path)
                 .map(|(_, p)| Type::Custom(p)),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
-                self.canonize_in_scope_type_ref(&ty)?,
-            ))),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.canonize_type(&ty)?))),
             Type::CoroutineDef(params, ret_ty) => {
                 let cparams = params
                     .iter()
-                    .map(|pty| self.canonize_in_scope_type_ref(pty))
+                    .map(|pty| self.canonize_type(pty))
                     .collect::<Result<Vec<Type>>>()?;
-                let cret_ty = self.canonize_in_scope_type_ref(ret_ty)?;
+                let cret_ty = self.canonize_type(ret_ty)?;
                 Ok(Type::CoroutineDef(cparams, Box::new(cret_ty)))
             }
             Type::FunctionDef(params, ret_ty) => {
                 let cparams = params
                     .iter()
-                    .map(|pty| self.canonize_in_scope_type_ref(pty))
+                    .map(|pty| self.canonize_type(pty))
                     .collect::<Result<Vec<Type>>>()?;
-                let cret_ty = self.canonize_in_scope_type_ref(ret_ty)?;
+                let cret_ty = self.canonize_type(ret_ty)?;
                 Ok(Type::FunctionDef(cparams, Box::new(cret_ty)))
             }
             Type::StructDef(params) => {
                 let cparams = params
                     .iter()
-                    .map(|(name, ty)| {
-                        self.canonize_in_scope_type_ref(ty)
-                            .map(|ty| (name.into(), ty))
-                    })
+                    .map(|(name, ty)| self.canonize_type(ty).map(|ty| (name.into(), ty)))
                     .collect::<Result<Vec<(String, Type)>>>()?;
                 Ok(Type::StructDef(cparams))
             }
@@ -356,10 +322,7 @@ impl<'a> SymbolTableScopeStack {
                 if *len <= 0 {
                     Err(format!("Expected length > 0 for array, but found {}", *len))
                 } else {
-                    Ok(Type::Array(
-                        box self.canonize_in_scope_type_ref(el_ty)?,
-                        *len,
-                    ))
+                    Ok(Type::Array(box self.canonize_type(el_ty)?, *len))
                 }
             }
             _ => Ok(ty.clone()),
