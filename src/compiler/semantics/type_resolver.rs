@@ -373,11 +373,11 @@ impl TypeResolver {
         current_func: &str,
     ) -> Result<Return<SemanticAnnotations>> {
         let result = {
-            let mut meta = r.annotation().clone();
             match r.get_value() {
                 None => {
                     let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
                     if *ret_ty == Type::Unit {
+                        let mut meta = r.annotation().clone();
                         meta.ty = Type::Unit;
                         Ok(Return::new(meta, None))
                     } else {
@@ -389,6 +389,7 @@ impl TypeResolver {
                     let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
 
                     if ret_ty == exp.get_type() {
+                        let mut meta = r.annotation().clone();
                         meta.ty = ret_ty.clone();
                         Ok(Return::new(meta, Some(exp)))
                     } else {
