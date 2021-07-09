@@ -591,17 +591,15 @@ impl TypeResolver {
                 let src = self.traverse(&src, current_func)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
-                        let (struct_def, canonical_path) =
-                            self.symbols.lookup_symbol_by_path(&struct_name)?;
+                        let (struct_def, _) = self.symbols.lookup_symbol_by_path(&struct_name)?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
-                        println!("Member type: {}", member_ty);
-                        meta.ty = self
-                            .symbols
-                            .canonize_out_of_scope_type_ref(&canonical_path.parent(), member_ty)?;
-                        println!("Member Access type: {}", meta.ty);
+                        /*meta.ty = self
+                        .symbols
+                        .canonize_out_of_scope_type_ref(&canonical_path.parent(), member_ty)?;*/
+                        meta.ty = member_ty.clone();
 
                         Ok(Expression::MemberAccess(
                             meta,

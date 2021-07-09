@@ -342,6 +342,16 @@ impl<'a> SymbolTableScopeStack {
                 let cret_ty = self.canonize_in_scope_type_ref(ret_ty)?;
                 Ok(Type::FunctionDef(cparams, Box::new(cret_ty)))
             }
+            Type::StructDef(params) => {
+                let cparams = params
+                    .iter()
+                    .map(|(name, ty)| {
+                        self.canonize_in_scope_type_ref(ty)
+                            .map(|ty| (name.into(), ty))
+                    })
+                    .collect::<Result<Vec<(String, Type)>>>()?;
+                Ok(Type::StructDef(cparams))
+            }
             Type::Array(el_ty, len) => {
                 if *len <= 0 {
                     Err(format!("Expected length > 0 for array, but found {}", *len))
