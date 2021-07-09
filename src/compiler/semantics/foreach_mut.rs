@@ -90,13 +90,12 @@ impl SemanticNode for Expression<SemanticAnnotations> {
 
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         match self {
-            Expression::Path(ref mut ann, ref mut path) => {
+            Expression::Path(_, ref mut path) => {
                 if !path.is_canonical() {
                     stack
                         .lookup_symbol_by_path(path)
                         .and_then(|(_, canonical_path)| {
                             *path = canonical_path;
-                            ann.ty = Type::Custom(path.clone());
                             Ok(())
                         })
                 } else {
@@ -118,13 +117,12 @@ impl SemanticNode for Expression<SemanticAnnotations> {
                     Ok(())
                 }
             }
-            Expression::StructExpression(ref mut ann, ref mut path, _) => {
+            Expression::StructExpression(_, ref mut path, _) => {
                 if !path.is_canonical() {
                     stack
                         .lookup_symbol_by_path(path)
                         .and_then(|(_, canonical_path)| {
                             *path = canonical_path;
-                            ann.ty = Type::Custom(path.clone());
                             Ok(())
                         })
                 } else {
@@ -139,7 +137,12 @@ impl SemanticNode for Statement<SemanticAnnotations> {}
 impl SemanticNode for Bind<SemanticAnnotations> {
     fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
-        self.set_type(self.annotation().ty.clone());
+        Ok(())
+    }
+
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        let canon_type = stack.canonize_local_type_ref(self.get_type())?;
+        self.set_type(canon_type);
         Ok(())
     }
 }
@@ -166,7 +169,7 @@ impl SemanticNode for RoutineDef<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let ctype = stack.canonize_local_type_ref(&self.ty)?;
         self.ty = ctype;
-        self.annotation_mut().ty = self.ty.clone();
+        //self.annotation_mut().ty = self.ty.clone();
         Ok(())
     }
 }
@@ -181,8 +184,8 @@ impl SemanticNode for Extern<SemanticAnnotations> {
         Ok(())
     }
 
-    fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_return_type())?;
+    fn canonize_annotation_type(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
+        self.annotation_mut().ty = self.get_return_type().clone();
         Ok(())
     }
 

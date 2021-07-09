@@ -334,7 +334,7 @@ mod type_resolver_tests {
                 TracingConfig::Off,
             );
             match expected {
-                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Ok(_) => assert!(result.is_ok(), "Expected Ok got {:?}", result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
             }
         }
@@ -342,6 +342,7 @@ mod type_resolver_tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_struct_expression_renamed_with_canonical_path() {
+        let mut test_id = 0;
         for text in vec![
             "
                 struct test{i: i64}
@@ -368,6 +369,9 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
+            test_id += 1;
+            println!("Test: {}", test_id);
+
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -2248,8 +2252,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_yield_return_statement() {
-        for (text, expected) in vec![
+        for (line, text, expected) in vec![
             (
+                line!(),
                 "fn main() {
                     let c: co i64 := init number();
                     return;
@@ -2262,6 +2267,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() {
                     let c: co i64 := init number();
                     return;
@@ -2274,6 +2280,7 @@ mod type_resolver_tests {
                 Err("Semantic: L6: Yield return expected i64 but got bool"),
             ),
             (
+                line!(),
                 "fn main() {
                     let c: co i64 := init number();
                     return;
@@ -2288,6 +2295,7 @@ mod type_resolver_tests {
             /*
                 Need to add a symbol for the unit type
             (
+                line!(),
                 "fn main() {
                     let c: co := init number();
                     return;
@@ -2300,6 +2308,7 @@ mod type_resolver_tests {
                 Err("Semantic: L6: Yield return expected unit but got i64"),
             ),*/
         ] {
+            println!("Test L{}", line);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()

@@ -172,6 +172,7 @@ impl TypeResolver {
             def,
             params,
             body,
+            ty: ret_ty,
             ..
         } = routine;
 
@@ -184,6 +185,7 @@ impl TypeResolver {
 
         // canonize routine parameter types
         let canonical_params = self.params_to_canonical(&params)?;
+        meta.ty = ret_ty.clone();
         //meta.ty = self.symbols.canonize_local_type_ref(ret_ty)?;
 
         // Add parameters to symbol table
@@ -306,8 +308,8 @@ impl TypeResolver {
         let meta = bind.annotation();
         let rhs = bind.get_rhs();
         let result = {
-            let meta = meta.clone();
-            //meta.ty = bind.get_type().clone();
+            let mut meta = meta.clone();
+            meta.ty = bind.get_type().clone();
             let rhs = self.traverse(rhs, current_func)?;
             if meta.ty == rhs.get_type() {
                 match self
@@ -367,11 +369,11 @@ impl TypeResolver {
         current_func: &str,
     ) -> Result<YieldReturn<SemanticAnnotations>> {
         let result = {
-            let mut meta = yr.annotation().clone();
             match yr.get_value() {
                 None => {
                     let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
                     if *ret_ty == Type::Unit {
+                        let mut meta = yr.annotation().clone();
                         meta.ty = Type::Unit;
                         Ok(YieldReturn::new(meta, None))
                     } else {
@@ -384,6 +386,8 @@ impl TypeResolver {
                     //println!("ret_ty: {:?}", ret_ty);
                     //let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
                     if ret_ty == expr.get_type() {
+                        let mut meta = yr.annotation().clone();
+                        meta.ty = ret_ty.clone();
                         Ok(YieldReturn::new(meta, Some(expr)))
                     } else {
                         Err(format!(
@@ -522,7 +526,8 @@ impl TypeResolver {
                     }
                 }
 
-                let meta = meta.clone();
+                let mut meta = meta.clone();
+                meta.ty = Type::Array(Box::new(el_ty), *len);
                 /*meta.ty = self
                 .symbols
                 .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;*/
@@ -803,7 +808,6 @@ impl TypeResolver {
                 ))
             }
             Expression::StructExpression(meta, struct_name, params) => {
-                let meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
                 let (struct_def, canonical_path) =
@@ -849,6 +853,8 @@ impl TypeResolver {
                     canonical_path
                 );*/
                 //meta.ty = Type::Custom(canonical_path.clone());
+                let mut meta = meta.clone();
+                meta.ty = Type::Custom(struct_name.clone());
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
