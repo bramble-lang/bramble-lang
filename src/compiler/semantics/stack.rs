@@ -50,7 +50,7 @@ impl<'a> SymbolTableScopeStack {
     }
 
     pub fn get_root(&self) -> &'a Module<SemanticAnnotations> {
-        unsafe { self.root.as_ref().unwrap() }
+        unsafe { self.root.as_ref().expect("Root has does not exist") }
     }
 
     fn add_imports(&mut self, manifests: &[Manifest]) {
