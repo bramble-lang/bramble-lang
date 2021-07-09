@@ -22,7 +22,7 @@ run_test() {
     test=$1
     built=1
 
-    bash ./make-import_test.sh --input ./import/$test 2> ./target/compiler.stderr 1> ./target/compiler.stdout
+    bash ./make-import_test.sh --input ./import/$test # 2> ./target/compiler.stderr 1> ./target/compiler.stdout
     echo "Running"
     ./target/output > ./target/stdout
 
@@ -44,7 +44,7 @@ run_test() {
     fi
 }
 
-cargo build
+cargo build --release
 if [ $? -eq 0 ]
 then
     start_time=$SECONDS
