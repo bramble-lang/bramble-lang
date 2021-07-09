@@ -269,7 +269,7 @@ impl<'ctx> IrGen<'ctx> {
             &rd.annotations.get_canonical_path().to_label(),
             &params,
             false,
-            &rd.ty,
+            &rd.ret_ty,
             rd.annotation().ln,
         )
     }

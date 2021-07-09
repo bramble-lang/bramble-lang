@@ -164,8 +164,8 @@ impl SemanticNode for Module<SemanticAnnotations> {
 impl SemanticNode for StructDef<SemanticAnnotations> {}
 impl SemanticNode for RoutineDef<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let ctype = stack.canonize_type(&self.ty)?;
-        self.ty = ctype;
+        let ctype = stack.canonize_type(&self.ret_ty)?;
+        self.ret_ty = ctype;
         Ok(())
     }
 }

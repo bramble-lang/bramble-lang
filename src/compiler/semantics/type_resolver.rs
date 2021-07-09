@@ -145,7 +145,7 @@ impl TypeResolver {
             def,
             params,
             body,
-            ty: ret_ty,
+            ret_ty,
             ..
         } = routine;
 
@@ -181,7 +181,7 @@ impl TypeResolver {
             def: def.clone(),
             name: name.clone(),
             params: params.clone(),
-            ty: canonical_ret_ty,
+            ret_ty: canonical_ret_ty,
             body: resolved_body,
         })
     }
@@ -987,7 +987,10 @@ impl TypeResolver {
 
     fn validate_main_fn(routine: &RoutineDef<SemanticAnnotations>) -> Result<()> {
         let RoutineDef {
-            def, params, ty: p, ..
+            def,
+            params,
+            ret_ty: p,
+            ..
         } = routine;
 
         // If routine is root::my_main it must be a function type and have type () -> i64

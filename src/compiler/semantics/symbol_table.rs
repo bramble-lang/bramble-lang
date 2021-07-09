@@ -144,7 +144,7 @@ impl SymbolTable {
             def,
             name,
             params,
-            ty,
+            ret_ty: ty,
             ..
         } = routine;
 

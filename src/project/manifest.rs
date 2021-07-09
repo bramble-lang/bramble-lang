@@ -51,7 +51,7 @@ impl Manifest {
                 (
                     i.annotation().get_canonical_path().clone(),
                     i.params.iter().map(|p| p.ty.clone()).clone().collect(),
-                    i.ty.clone(),
+                    i.ret_ty.clone(),
                 )
             })
             .collect()

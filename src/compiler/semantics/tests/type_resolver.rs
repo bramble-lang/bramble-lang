@@ -3067,7 +3067,7 @@ mod type_resolver_tests {
                 annotations: import_annotation,
                 def: RoutineDefType::Function,
                 name: "test".into(),
-                ty: import_func.1.clone(),
+                ret_ty: import_func.1.clone(),
                 params: import_func.0.iter().map(|p| Parameter::new(SemanticAnnotations::new(0, 0, p.clone()), "a", p)).collect(),
                 body: vec![],
             }], &vec![]);

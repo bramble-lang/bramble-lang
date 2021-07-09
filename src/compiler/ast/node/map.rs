@@ -132,7 +132,7 @@ where
             def: rd.def,
             annotations: b,
             params,
-            ty: rd.ty.clone(),
+            ret_ty: rd.ret_ty.clone(),
             body,
         }
     }

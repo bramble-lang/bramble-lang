@@ -338,7 +338,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         def: RoutineDefType::Function,
         name: fn_name,
         params,
-        ty: fn_type,
+        ret_ty: fn_type,
         body: stmts,
     }))
 }
@@ -382,7 +382,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
-        ty: co_type,
+        ret_ty: co_type,
         body: stmts,
     }))
 }
