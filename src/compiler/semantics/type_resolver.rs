@@ -817,29 +817,19 @@ impl TypeResolver {
                     let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
-                    let member_ty_canon = self
-                        .symbols
-                        .canonize_out_of_scope_type_ref(&canonical_path.parent(), member_ty)?;
                     let param = self.traverse(pv, current_func)?;
-                    if param.get_type() != member_ty_canon {
+                    if param.get_type() != member_ty {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
                             canonical_path,
                             pn,
-                            member_ty_canon,
+                            member_ty,
                             param.get_type()
                         ));
                     }
                     resolved_params.push((pn.clone(), param));
                 }
 
-                /*println!(
-                    "L{} ForEach: {}, TR: {}",
-                    meta.line(),
-                    meta.ty,
-                    canonical_path
-                );*/
-                //meta.ty = Type::Custom(canonical_path.clone());
                 let mut meta = meta.clone();
                 meta.ty = Type::Custom(struct_name.clone());
                 Ok(Expression::StructExpression(
