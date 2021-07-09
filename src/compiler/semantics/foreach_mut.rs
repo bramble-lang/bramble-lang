@@ -2,6 +2,7 @@ use braid_lang::result::Result;
 
 use crate::compiler::ast::*;
 use crate::diagnostics::{config::TracingConfig, DiagRecorder};
+use crate::project::manifest::Manifest;
 
 use super::semanticnode::SemanticAnnotations;
 use super::stack::SymbolTableScopeStack;
@@ -240,6 +241,7 @@ where
     pub fn new(
         name: &str,
         root: &'a mut Module<SemanticAnnotations>,
+        imports: &[Manifest],
         tracing: TracingConfig,
         format: T,
     ) -> ForEachPreOrderMut<T> {
@@ -248,7 +250,7 @@ where
             tracing,
             format,
             diag: DiagRecorder::new(name, tracing),
-            symbols: SymbolTableScopeStack::new(root),
+            symbols: SymbolTableScopeStack::new(root, imports),
         }
     }
 
@@ -665,7 +667,9 @@ mod tests {
         let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
         let mut t =
-            ForEachPreOrderMut::new("test", &mut sm_ast, TracingConfig::Off, |_| "test".into());
+            ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off, |_| {
+                "test".into()
+            });
         t.for_module(&mut sm_ast, |_stack, n| {
             n.annotation_mut().ln *= 4;
             Ok(())
@@ -690,7 +694,9 @@ mod tests {
         let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
         let mut t =
-            ForEachPreOrderMut::new("test", &mut sm_ast, TracingConfig::Off, |_| "test".into());
+            ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off, |_| {
+                "test".into()
+            });
         t.for_module(&mut sm_ast, |stack, n| {
             let cpath = stack.to_canonical(&vec!["annotation"].into()).unwrap();
             n.annotation_mut().set_canonical_path(cpath);
@@ -727,7 +733,9 @@ mod tests {
         let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
         let mut t =
-            ForEachPreOrderMut::new("test", &mut sm_ast, TracingConfig::Off, |_| "test".into());
+            ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off, |_| {
+                "test".into()
+            });
         t.for_module(&mut sm_ast, |stack, n| match n.name() {
             Some(name) => {
                 let cpath = stack.to_canonical(&vec![name].into()).unwrap();

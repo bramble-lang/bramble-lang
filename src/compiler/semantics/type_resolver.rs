@@ -41,10 +41,9 @@ pub fn resolve_types_with_imports(
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
-    canonize_paths(&mut sm_ast, trace_type_resolver)?; //TODO: Add a trace for this step
+    canonize_paths(&mut sm_ast, imports, trace_type_resolver)?; //TODO: Add a trace for this step
 
-    let mut semantic = TypeResolver::new(&sm_ast, main_fn);
-    semantic.add_imports(imports);
+    let mut semantic = TypeResolver::new(&sm_ast, imports, main_fn);
 
     semantic.set_tracing(trace_type_resolver);
     semantic.path_tracing = trace_path;
@@ -66,44 +65,18 @@ impl Tracing for TypeResolver {
 }
 
 impl TypeResolver {
-    pub fn new(root: &Module<SemanticAnnotations>, main_fn: &str) -> TypeResolver {
+    pub fn new(
+        root: &Module<SemanticAnnotations>,
+        imports: &[Manifest],
+        main_fn: &str,
+    ) -> TypeResolver {
         TypeResolver {
-            symbols: SymbolTableScopeStack::new(root),
+            symbols: SymbolTableScopeStack::new(root, imports),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
             main_fn: vec![CANONICAL_ROOT, MAIN_MODULE, main_fn.into()].into(), // TODO: should get rid of this
         }
-    }
-
-    pub fn add_imports(&mut self, manifests: &[Manifest]) {
-        // Load all struct imports first because imported functions may depend upon
-        // imported structures (If any semantic analysis is done on functions)
-        for manifest in manifests.into_iter() {
-            for sd in manifest.get_structs().iter() {
-                self.import_structdef(sd);
-            }
-        }
-
-        for manifest in manifests.into_iter() {
-            for (path, params, ret_ty) in manifest.get_functions().iter() {
-                self.import_function(path.clone(), params.clone(), ret_ty.clone());
-            }
-        }
-    }
-
-    pub fn import_function(
-        &mut self,
-        canonical_name: Path,
-        params: Vec<Type>,
-        return_ty: Type,
-    ) -> Option<Symbol> {
-        self.symbols
-            .import_function(canonical_name, params, return_ty)
-    }
-
-    pub fn import_structdef(&mut self, sd: &StructDef<SemanticAnnotations>) -> Option<Symbol> {
-        self.symbols.import_structdef(sd)
     }
 
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {

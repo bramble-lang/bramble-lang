@@ -1,6 +1,8 @@
 use braid_lang::result::Result;
 
-use crate::{compiler::ast::Module, diagnostics::config::TracingConfig};
+use crate::{
+    compiler::ast::Module, diagnostics::config::TracingConfig, project::manifest::Manifest,
+};
 
 use super::{
     foreach_mut::{ForEachPreOrderMut, SemanticNode},
@@ -14,9 +16,10 @@ Canonize all the paths in the AST
 
 pub fn canonize_paths(
     module: &mut Module<SemanticAnnotations>,
+    imports: &[Manifest],
     tracing: TracingConfig,
 ) -> Result<()> {
-    let mut t = ForEachPreOrderMut::new("annotation path", module, tracing, |_| {
+    let mut t = ForEachPreOrderMut::new("annotation path", module, imports, tracing, |_| {
         "annotation path".into()
     });
     t.for_each(module, |s, n| canonize(s, n))?;
@@ -28,7 +31,7 @@ pub fn canonize_paths(
     t.for_each(module, |s, n| n.canonize_annotation_type(s))?;
     */
 
-    let mut t = ForEachPreOrderMut::new("type refs", module, tracing, |_| "test".into());
+    let mut t = ForEachPreOrderMut::new("type refs", module, imports, tracing, |_| "test".into());
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;
     Ok(())
 }

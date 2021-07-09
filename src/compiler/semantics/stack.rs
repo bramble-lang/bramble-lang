@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::compiler::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT};
+use crate::{
+    compiler::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT},
+    project::manifest::Manifest,
+};
 use braid_lang::result::Result;
 
 use super::{
@@ -30,17 +33,43 @@ impl<'a> std::fmt::Display for SymbolTableScopeStack {
 }
 
 impl<'a> SymbolTableScopeStack {
-    pub fn new(root: &'a Module<SemanticAnnotations>) -> SymbolTableScopeStack {
-        SymbolTableScopeStack {
+    pub fn new(
+        root: &'a Module<SemanticAnnotations>,
+        imports: &[Manifest],
+    ) -> SymbolTableScopeStack {
+        let mut ss = SymbolTableScopeStack {
             stack: vec![],
             head: SymbolTable::new(),
             root,
             imported_symbols: HashMap::new(),
-        }
+        };
+
+        ss.add_imports(imports);
+
+        ss
     }
 
     pub fn get_root(&self) -> &'a Module<SemanticAnnotations> {
         unsafe { self.root.as_ref().unwrap() }
+    }
+
+    fn add_imports(&mut self, manifests: &[Manifest]) {
+        //println!("Adding Imports");
+        // Load all struct imports first because imported functions may depend upon
+        // imported structures (If any semantic analysis is done on functions)
+        for manifest in manifests.into_iter() {
+            for sd in manifest.get_structs().iter() {
+                //println!("Import {}", sd);
+                self.import_structdef(sd);
+            }
+        }
+
+        for manifest in manifests.into_iter() {
+            for (path, params, ret_ty) in manifest.get_functions().iter() {
+                //println!("Import {}", path);
+                self.import_function(path.clone(), params.clone(), ret_ty.clone());
+            }
+        }
     }
 
     /// Add a function from another module to this symbol table
@@ -89,6 +118,7 @@ impl<'a> SymbolTableScopeStack {
     }
 
     fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
+        //println!("Get: {} From: {:?}", canonical_name, self.imported_symbols);
         self.imported_symbols.get(&canonical_name.to_string())
     }
 
