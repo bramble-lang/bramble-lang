@@ -158,7 +158,6 @@ impl TypeResolver {
 
         // canonize routine parameter types
         meta.ty = ret_ty.clone();
-        //meta.ty = self.symbols.canonize_local_type_ref(ret_ty)?;
 
         // Add parameters to symbol table
         for p in params.iter() {
@@ -350,8 +349,7 @@ impl TypeResolver {
                 Some(val) => {
                     let expr = self.traverse(val, current_func)?;
                     let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
-                    //println!("ret_ty: {:?}", ret_ty);
-                    //let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
+
                     if ret_ty == expr.get_type() {
                         let mut meta = yr.annotation().clone();
                         meta.ty = ret_ty.clone();
@@ -493,13 +491,9 @@ impl TypeResolver {
                     }
                 }
 
+                // Use the size of the array and the type to define the array type
                 let mut meta = meta.clone();
                 meta.ty = Type::Array(Box::new(el_ty), *len);
-                /*meta.ty = self
-                .symbols
-                .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;*/
-
-                // Use the size of the array and the type to define the array type
                 Ok(Expression::ArrayValue(meta, nelements, *len))
             }
             Expression::ArrayAt {
@@ -549,7 +543,7 @@ impl TypeResolver {
             Expression::Identifier(meta, id) => {
                 let mut meta = meta.clone();
                 match self.symbols.lookup_var(&id)? {
-                    Symbol { ty: p, .. } => meta.ty = p.clone(), //self.symbols.canonize_local_type_ref(p)?,
+                    Symbol { ty: p, .. } => meta.ty = p.clone(),
                 };
                 Ok(Expression::Identifier(meta.clone(), id.clone()))
             }
@@ -692,7 +686,6 @@ impl TypeResolver {
                 }
 
                 // Check that the function being called exists
-                //println!("L{}: Call {}", meta.line(), routine_path);
                 let (symbol, routine_canon_path) =
                     self.symbols.lookup_symbol_by_path(routine_path)?;
 
