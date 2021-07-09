@@ -1,4 +1,5 @@
 use braid_lang::result::Result;
+use log::debug;
 
 use crate::{
     compiler::ast::Module, diagnostics::config::TracingConfig, project::manifest::Manifest,
@@ -14,6 +15,8 @@ pub fn canonize_paths(
     imports: &[Manifest],
     tracing: TracingConfig,
 ) -> Result<()> {
+    debug!("Start canonization of paths");
+
     let mut t = ForEachPreOrderMut::new("annotation path", module, imports, tracing, |_| {
         "annotation path".into()
     });
@@ -21,5 +24,7 @@ pub fn canonize_paths(
 
     let mut t = ForEachPreOrderMut::new("type refs", module, imports, tracing, |_| "test".into());
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;
+
+    debug!("Finished canonization of paths");
     Ok(())
 }

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use log::*;
+
 use crate::{
     compiler::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT},
     project::manifest::Manifest,
@@ -54,19 +56,19 @@ impl<'a> SymbolTableScopeStack {
     }
 
     fn add_imports(&mut self, manifests: &[Manifest]) {
-        //println!("Adding Imports");
+        debug!("Adding Imports");
         // Load all struct imports first because imported functions may depend upon
         // imported structures (If any semantic analysis is done on functions)
         for manifest in manifests.into_iter() {
             for sd in manifest.get_structs().iter() {
-                //println!("Import {}", sd);
+                debug!("Import struct {}", sd);
                 self.import_structdef(sd);
             }
         }
 
         for manifest in manifests.into_iter() {
             for (path, params, ret_ty) in manifest.get_functions().iter() {
-                //println!("Import {}", path);
+                debug!("Import function {}", path);
                 self.import_function(path.clone(), params.clone(), ret_ty.clone());
             }
         }
@@ -118,7 +120,6 @@ impl<'a> SymbolTableScopeStack {
     }
 
     fn get_imported_symbol(&self, canonical_name: &Path) -> Option<&Symbol> {
-        //println!("Get: {} From: {:?}", canonical_name, self.imported_symbols);
         self.imported_symbols.get(&canonical_name.to_string())
     }
 
@@ -158,7 +159,6 @@ impl<'a> SymbolTableScopeStack {
     /// Returns `None` if no matching symbol was found.
     fn get_symbol(&self, name: &str) -> Option<(&Symbol, Path)> {
         let mut cpath = self.to_path()?;
-        //println!("get_symbol: cpath: {}", cpath);
         let s = self.head.get(name).or_else(|| {
             self.stack.iter().rev().find_map(|scope| {
                 let s = scope.get(name);
@@ -247,7 +247,6 @@ impl<'a> SymbolTableScopeStack {
     ///
     /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
-        //println!("{} - {}", stdext::function_name!(), path);
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
 
