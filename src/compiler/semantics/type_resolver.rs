@@ -184,12 +184,11 @@ impl TypeResolver {
         let mut meta = annotations.clone();
 
         // canonize routine parameter types
-        let canonical_params = self.params_to_canonical(&params)?;
         meta.ty = ret_ty.clone();
         //meta.ty = self.symbols.canonize_local_type_ref(ret_ty)?;
 
         // Add parameters to symbol table
-        for p in canonical_params.iter() {
+        for p in params.iter() {
             meta.sym.add(&p.name, p.ty.clone(), false, false)?;
         }
 
@@ -208,7 +207,7 @@ impl TypeResolver {
             annotations: meta,
             def: def.clone(),
             name: name.clone(),
-            params: canonical_params,
+            params: params.clone(),
             ty: canonical_ret_ty,
             body: resolved_body,
         })
@@ -241,9 +240,6 @@ impl TypeResolver {
             }
         }
 
-        // Update all fields so that their types use the full canonical path of the type
-        let canonical_fields = self.params_to_canonical(fields)?;
-
         // Update the annotations with canonical path information and set the type to Type::Unit
         let mut meta = struct_def.annotation().clone();
         meta.ty = Type::Unit;
@@ -251,7 +247,7 @@ impl TypeResolver {
         Ok(StructDef::new(
             struct_def.get_name().clone(),
             meta.clone(),
-            canonical_fields,
+            fields.clone(),
         ))
     }
 
@@ -267,9 +263,6 @@ impl TypeResolver {
             }
         }
 
-        // Update all fields so that their types use the full canonical path of the type
-        let canonical_params = self.params_to_canonical(params)?;
-
         // Update the annotations with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
         let mut meta = ex.annotation().clone();
@@ -278,7 +271,7 @@ impl TypeResolver {
         Ok(Extern::new(
             name,
             meta.clone(),
-            canonical_params,
+            params.clone(),
             ex.has_varargs,
             meta.ty.clone(),
         ))
@@ -967,21 +960,6 @@ impl TypeResolver {
         self.symbols
             .to_path()
             .ok_or("A valid path is expected".into())
-    }
-
-    /// Convert any parameter that is a custom type, to its canonical form.
-    fn params_to_canonical(
-        &self,
-        params: &Vec<Parameter<SemanticAnnotations>>,
-    ) -> Result<Vec<Parameter<SemanticAnnotations>>> {
-        let mut canonical_params = vec![];
-        for p in params.iter() {
-            let mut p2 = p.clone();
-            p2.ty = self.symbols.canonize_local_type_ref(&p.ty)?;
-            p2.annotation_mut().ty = p2.ty.clone();
-            canonical_params.push(p2);
-        }
-        Ok(canonical_params)
     }
 
     fn extract_routine_type_info<'b>(
