@@ -1,5 +1,6 @@
 use clap::{App, Arg, ArgMatches};
 use log::LevelFilter;
+use simplelog::*;
 
 // Exit Codes for different types of errors
 pub const ERR_TYPE_CHECK: i32 = 1;
@@ -137,4 +138,13 @@ pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
             _ => None,
         },
     }
+}
+
+pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> {
+    CombinedLogger::init(vec![TermLogger::new(
+        level,
+        Config::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )])
 }

@@ -4,8 +4,6 @@
 extern crate log;
 extern crate simplelog;
 
-use simplelog::*;
-
 mod cli;
 mod compiler;
 mod diagnostics;
@@ -120,13 +118,4 @@ fn main() {
             }
         }
     }
-}
-
-fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> {
-    CombinedLogger::init(vec![TermLogger::new(
-        level,
-        Config::default(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )])
 }

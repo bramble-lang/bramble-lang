@@ -51,7 +51,7 @@ pub fn resolve_types_with_imports(
 }
 
 pub struct TypeResolver {
-    symbols: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
+    symbols: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,

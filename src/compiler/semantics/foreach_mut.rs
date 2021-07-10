@@ -504,7 +504,7 @@ where
                 Some(fe) => self.for_expression(fe, f)?,
                 None => (),
             }
-            //final_exp.as_mut().map(|fe| self.for_expression(fe, f));
+
             self.symbols.leave_scope();
         } else {
             panic!("Expected ExpressionBlock, but got {:?}", block)
