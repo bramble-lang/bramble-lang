@@ -5,7 +5,7 @@ use crate::{
     compiler::ast::Module, diagnostics::config::TracingConfig, project::manifest::Manifest,
 };
 
-use super::{foreach_mut::ForEachPreOrderMut, semanticnode::SemanticAnnotations};
+use super::{super::semanticnode::SemanticAnnotations, foreach_mut::ForEachPreOrderMut};
 
 /**
 Canonize all the paths in the AST

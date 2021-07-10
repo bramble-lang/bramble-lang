@@ -9,7 +9,6 @@
  * with SemanticAnnotations (including the type of each node and the symbol tables).
  */
 mod canonize;
-mod foreach_mut;
 mod stack;
 mod tests;
 

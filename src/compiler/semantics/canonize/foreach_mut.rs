@@ -4,8 +4,7 @@ use crate::compiler::ast::*;
 use crate::diagnostics::{config::TracingConfig, DiagRecorder};
 use crate::project::manifest::Manifest;
 
-use super::semanticnode::SemanticAnnotations;
-use super::stack::SymbolTableScopeStack;
+use super::super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
 
 /// A collection of functions that are specific to Semantic Analysis
 /// on the AST. Moving Semantic Analysis functions to a trait allows
