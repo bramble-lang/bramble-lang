@@ -12,6 +12,16 @@ pub struct Manifest {
 }
 
 impl Manifest {
+    pub fn new(
+        routines: &[RoutineDef<SemanticAnnotations>],
+        structs: &[StructDef<SemanticAnnotations>],
+    ) -> Manifest {
+        Manifest {
+            routines: routines.into(),
+            structs: structs.into(),
+        }
+    }
+
     pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
         // Get list of all functions contained within a module and their paths
         let routines = module
@@ -41,7 +51,7 @@ impl Manifest {
                 (
                     i.annotation().get_canonical_path().clone(),
                     i.params.iter().map(|p| p.ty.clone()).clone().collect(),
-                    i.ty.clone(),
+                    i.ret_ty.clone(),
                 )
             })
             .collect()

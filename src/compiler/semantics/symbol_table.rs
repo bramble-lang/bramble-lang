@@ -41,9 +41,16 @@ impl SymbolTable {
         }
     }
 
+    pub fn new_routine(name: &str) -> Self {
+        SymbolTable {
+            ty: ScopeType::Routine(name.into()),
+            sym: vec![],
+        }
+    }
+
     pub fn new_module(name: &str) -> Self {
         SymbolTable {
-            ty: ScopeType::Module { name: name.into() },
+            ty: ScopeType::Module(name.into()),
             sym: vec![],
         }
     }
@@ -137,7 +144,7 @@ impl SymbolTable {
             def,
             name,
             params,
-            ty,
+            ret_ty: ty,
             ..
         } = routine;
 
@@ -163,6 +170,10 @@ impl SymbolTable {
 
     pub fn table(&self) -> &Vec<Symbol> {
         &self.sym
+    }
+
+    pub fn table_mut(&mut self) -> &mut Vec<Symbol> {
+        &mut self.sym
     }
 
     pub fn get(&self, name: &str) -> Option<&Symbol> {
@@ -194,6 +205,7 @@ impl SymbolTable {
 
 impl std::fmt::Display for SymbolTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}\n", self.ty))?;
         f.write_str("\tName | Type | Mutable\n")?;
         for symbol in self.sym.iter() {
             f.write_fmt(format_args!("\t{}\n", symbol))?;
@@ -222,15 +234,32 @@ impl std::fmt::Display for Symbol {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) enum ScopeType {
     Local,
-    Routine,
-    Module { name: String },
+    Routine(String),
+    Module(String),
 }
 
 impl ScopeType {
     pub fn is_boundary(&self) -> bool {
         match self {
-            Self::Local => false,
-            Self::Routine | Self::Module { .. } => true,
+            Self::Routine(..) | Self::Local => false,
+            Self::Module(..) => true,
+        }
+    }
+
+    pub fn get_name(&self) -> Option<&str> {
+        match self {
+            Self::Local => None,
+            Self::Routine(name) | Self::Module(name) => Some(name),
+        }
+    }
+}
+
+impl std::fmt::Display for ScopeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScopeType::Local => f.write_str("Local"),
+            ScopeType::Routine(name) => f.write_fmt(format_args!("Routine({})", name)),
+            ScopeType::Module(name) => f.write_fmt(format_args!("Module({})", name)),
         }
     }
 }

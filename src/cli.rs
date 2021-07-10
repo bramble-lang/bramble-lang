@@ -1,4 +1,6 @@
 use clap::{App, Arg, ArgMatches};
+use log::LevelFilter;
+use simplelog::*;
 
 // Exit Codes for different types of errors
 pub const ERR_TYPE_CHECK: i32 = 1;
@@ -72,6 +74,13 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("The target Operation System that this will be compiled for: Linux or Mac (Mac is still unreliable and being worked on)"),
         )
         .arg(
+            Arg::with_name("log")
+                .long("log")
+                .possible_values(&["debug", "info", "error"])
+                .takes_value(true)
+                .help("Set the logging filter (default level is error) to gain insight into what the compiler is doing."),
+        )
+        .arg(
             Arg::with_name("trace-parser")
                 .long("trace-parser")
                 .takes_value(true)
@@ -117,4 +126,25 @@ pub fn get_imports<'a>(args: &'a ArgMatches) -> Vec<&'a str> {
         None => vec![],
         Some(imports) => imports.split(",").collect(),
     }
+}
+
+pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
+    match args.value_of("log") {
+        None => None,
+        Some(level) => match level.to_lowercase().as_str() {
+            "debug" => Some(LevelFilter::Debug),
+            "info" => Some(LevelFilter::Info),
+            "error" => Some(LevelFilter::Error),
+            _ => None,
+        },
+    }
+}
+
+pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> {
+    CombinedLogger::init(vec![TermLogger::new(
+        level,
+        Config::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )])
 }

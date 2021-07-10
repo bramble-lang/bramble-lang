@@ -408,7 +408,7 @@ pub mod tests {
                 def: RoutineDefType::Function,
                 name,
                 params,
-                ty,
+                ret_ty: ty,
                 body,
                 ..
             }) = &m.get_functions()[0]
@@ -456,7 +456,7 @@ pub mod tests {
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
-                ty,
+                ret_ty: ty,
                 body,
                 ..
             })) = m.get_item("test")
@@ -589,7 +589,7 @@ pub mod tests {
             def: RoutineDefType::Function,
             name,
             params,
-            ty,
+            ret_ty: ty,
             body,
             ..
         })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
@@ -621,7 +621,7 @@ pub mod tests {
             def: RoutineDefType::Function,
             name,
             params,
-            ty,
+            ret_ty: ty,
             body,
             ..
         })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
@@ -728,7 +728,7 @@ pub mod tests {
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
-                ty,
+                ret_ty: ty,
                 body,
                 ..
             })) = m.get_item("test")
@@ -818,7 +818,7 @@ pub mod tests {
             def: RoutineDefType::Function,
             name,
             params,
-            ty,
+            ret_ty: ty,
             body,
             ..
         })) = parse("test", &tokens).unwrap().unwrap().get_item("test")

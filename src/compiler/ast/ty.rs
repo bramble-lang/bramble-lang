@@ -147,7 +147,7 @@ impl std::fmt::Display for Type {
                     .map(|m| format!("{}: {}", m.0, m.1))
                     .collect::<Vec<String>>()
                     .join(",");
-                f.write_str(&members)
+                f.write_fmt(format_args!("StructDef({})", &members))
             }
             Type::CoroutineDef(params, ret_ty) => {
                 let params = params

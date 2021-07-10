@@ -8,6 +8,7 @@
  * These functions will take an AST that has ParserInfo annotations and will output the AST updated
  * with SemanticAnnotations (including the type of each node and the symbol tables).
  */
+mod canonize;
 mod stack;
 mod tests;
 

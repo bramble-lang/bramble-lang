@@ -2,13 +2,11 @@
 mod type_resolver_tests {
     use crate::{
         compiler::{
-            ast::*,
-            lexer::tokens::Token,
-            parser::parser,
-            semantics::{semanticnode::SemanticAst, symbol_table::SymbolTable},
-            Lexer,
+            ast::*, lexer::tokens::Token, parser::parser,
+            semantics::semanticnode::SemanticAnnotations, Lexer,
         },
         diagnostics::config::TracingConfig,
+        project::manifest::Manifest,
     };
 
     use super::super::super::type_resolver::*;
@@ -336,7 +334,7 @@ mod type_resolver_tests {
                 TracingConfig::Off,
             );
             match expected {
-                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Ok(_) => assert!(result.is_ok(), "Expected Ok got {:?}", result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
             }
         }
@@ -344,6 +342,7 @@ mod type_resolver_tests {
 
     #[test] // this test currently is not working, because Structs have not been updated to use paths.  Will do so after functions are finished
     pub fn test_struct_expression_renamed_with_canonical_path() {
+        let mut test_id = 0;
         for text in vec![
             "
                 struct test{i: i64}
@@ -370,6 +369,9 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
+            test_id += 1;
+            println!("Test: {}", test_id);
+
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -1420,8 +1422,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_array_at_index() {
-        for (text, expected) in vec![
+        for (line, text, expected) in vec![
             (
+                line!(),
                 "fn main() -> i64 {
                     let a: [i64; 5] := [1, 2, 3, 4, 5];
                     let k: i64 := a[0];
@@ -1430,6 +1433,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let a: [i64; 5] := [[1, 2, 3, 4, 5]][0];
                     let k: i64 := a[0];
@@ -1438,6 +1442,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let a: [[i64; 1]; 1] := [[1]];
                     let k: i64 := a[0][0];
@@ -1446,6 +1451,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i8 {
                     let a: [i8; 5] := [1i8, 2i8, 3i8, 4i8, 5i8];
                     let k: i8 := a[0];
@@ -1454,6 +1460,7 @@ mod type_resolver_tests {
                 Ok(Type::I8),
             ),
             (
+                line!(),
                 "fn main() -> u8 {
                     let a: [u8; 5] := [1u8, 2u8, 3u8, 4u8, 5u8];
                     let k: u8 := a[0i8];
@@ -1462,6 +1469,7 @@ mod type_resolver_tests {
                 Ok(Type::U8),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let a: [i64; 5] := [1, 2, 3, 4, 5];
                     let k: i64 := a[false];
@@ -1470,6 +1478,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Expected integral type for index but found bool"),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let a: i64 := 1;
                     let k: i64 := a[0];
@@ -1478,6 +1487,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Expected array type on LHS of [] but found i64"),
             ),
         ] {
+            println!("Test L{}", line);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -1524,8 +1534,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_bind_statement() {
-        for (text, expected) in vec![
+        for (ln, text, expected) in vec![
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5;
                     return k;
@@ -1533,6 +1544,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5i64;
                     return k;
@@ -1540,6 +1552,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := 5i32;
                     return k;
@@ -1547,6 +1560,7 @@ mod type_resolver_tests {
                 Ok(Type::I32),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5i64;
                     return k;
@@ -1554,6 +1568,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() -> i32 {
                     let k: i32 := 5i32;
                     return k;
@@ -1561,6 +1576,7 @@ mod type_resolver_tests {
                 Ok(Type::I32),
             ),
             (
+                line!(),
                 "fn main() -> [i64;5] {
                     let k: [i64;5] := [1, 2, 3, 4, 5];
                     return k;
@@ -1568,6 +1584,7 @@ mod type_resolver_tests {
                 Ok(Type::Array(Box::new(Type::I64), 5)),
             ),
             (
+                line!(),
                 "fn main() -> [i32;5] {
                     let k: [i64;5] := [1, 2, 3, 4, 5];
                     return k;
@@ -1575,13 +1592,15 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Return expected [i32; 5] but got [i64; 5]"),
             ),
             (
+                line!(),
                 "fn main() -> [i32;0] {
                     let k: [i64;0] := [];
                     return k;
                 }",
-                Err("Semantic: Expected length > 0 for array, but found 0"),
+                Err("Semantic: L1: Expected length > 0 for array, but found 0"),
             ),
             (
+                line!(),
                 "fn main() -> [i32;1] {
                     [];
                     let k: [i64;1] := [1];
@@ -1590,6 +1609,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Arrays with 0 length are not allowed"),
             ),
             (
+                line!(),
                 "fn main() -> [i32;5] {
                     let k: [i32;5] := [1, 2, 3, 4, 5];
                     return k;
@@ -1597,6 +1617,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected [i32; 5] but got [i64; 5]"),
             ),
             (
+                line!(),
                 "fn main() -> [i64;5] {
                     let k: [i64;5] := [1, 2i32, 3, 4, 5];
                     return k;
@@ -1604,6 +1625,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Inconsistent types in array value"),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i32 := 5;
                     return k;
@@ -1611,6 +1633,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected i32 but got i64"),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: i64 := 5i32;
                     return k;
@@ -1618,6 +1641,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected i64 but got i32"),
             ),
             (
+                line!(),
                 "fn main() -> i64 {
                     let k: bool := 5;
                     return k;
@@ -1625,6 +1649,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected bool but got i64"),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k;
@@ -1632,6 +1657,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Return expected bool but got i64"),
             ),
             (
+                line!(),
                 // Test recursive definition
                 "fn main() -> bool {
                     let k: bool := k;
@@ -1640,6 +1666,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: k is not defined"),
             ),
             (
+                line!(),
                 "fn main() -> bool {
                     let k: bool := x;
                     return k;
@@ -1647,6 +1674,7 @@ mod type_resolver_tests {
                 Err("Semantic: L2: x is not defined"),
             ),
         ] {
+            println!("Test L{}", ln);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -1667,7 +1695,7 @@ mod type_resolver_tests {
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), expected_ty);
+                    assert_eq!(bind_stm.get_type(), expected_ty, "L{}", ln);
                     if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
@@ -1894,7 +1922,7 @@ mod type_resolver_tests {
                     return number(5i32, 10, 15i32, 8u8, \"hello\");
                 }
                 ",
-                Err("Semantic: L4: One or more parameters have mismatching types for function number: parameter 1 expected i64 but got i32"),
+                Err("Semantic: L4: One or more parameters have mismatching types for function $main::number: parameter 1 expected i64 but got i32"),
             ),
             (
                 "
@@ -1903,7 +1931,7 @@ mod type_resolver_tests {
                     return number();
                 }
                 ",
-                Err("Semantic: L4: Function number expects at least 1 parameters, but got 0"),
+                Err("Semantic: L4: Function $main::number expects at least 1 parameters, but got 0"),
             ),
             (
                 "
@@ -1912,7 +1940,7 @@ mod type_resolver_tests {
                     return number(5);
                 }
                 ",
-                Err("Semantic: L4: Function number expects at least 2 parameters, but got 1"),
+                Err("Semantic: L4: Function $main::number expects at least 2 parameters, but got 1"),
             ),
             (
                 "fn main() -> bool {
@@ -1938,6 +1966,7 @@ mod type_resolver_tests {
             );
             match expected {
                 Ok(expected_ty) => {
+                    println!("{}", text);
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
@@ -2036,7 +2065,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i32 but got i64"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i32 but got i64"),
             ),
             (
                 "fn main() -> i64 {
@@ -2052,7 +2081,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 1 expected i64 but got bool"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2060,7 +2089,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function add: parameter 2 expected i64 but got bool"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 2 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2068,7 +2097,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
             (
                 "fn main() -> i64 {
@@ -2076,7 +2105,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 3"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 3"),
             ),
             (
                 "fn main() -> i64 {
@@ -2084,7 +2113,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: add. Expected 2 but got 1"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2135,7 +2164,7 @@ mod type_resolver_tests {
                 }
                 co number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 0 but got 1"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 0 but got 1"),
             ),
             (
                 "fn main() {
@@ -2153,7 +2182,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 0"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 0"),
             ),
             (
                 "fn main() {
@@ -2162,7 +2191,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: number. Expected 1 but got 2"),
+                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 2"),
             ),
             (
                 "fn main() {
@@ -2189,7 +2218,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i32) -> i32 {return i;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function number: parameter 1 expected i32 but got i64"),
+                Err("Semantic: L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
             let tokens: Vec<Token> = Lexer::new(&text)
@@ -2223,8 +2252,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_yield_return_statement() {
-        for (text, expected) in vec![
+        for (line, text, expected) in vec![
             (
+                line!(),
                 "fn main() {
                     let c: co i64 := init number();
                     return;
@@ -2237,6 +2267,7 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
+                line!(),
                 "fn main() {
                     let c: co i64 := init number();
                     return;
@@ -2249,6 +2280,7 @@ mod type_resolver_tests {
                 Err("Semantic: L6: Yield return expected i64 but got bool"),
             ),
             (
+                line!(),
                 "fn main() {
                     let c: co i64 := init number();
                     return;
@@ -2263,6 +2295,7 @@ mod type_resolver_tests {
             /*
                 Need to add a symbol for the unit type
             (
+                line!(),
                 "fn main() {
                     let c: co := init number();
                     return;
@@ -2275,6 +2308,7 @@ mod type_resolver_tests {
                 Err("Semantic: L6: Yield return expected unit but got i64"),
             ),*/
         ] {
+            println!("Test L{}", line);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -2857,7 +2891,7 @@ mod type_resolver_tests {
                     let y: i64 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
+                Err("Semantic: L7: One or more parameters have mismatching types for function $main::test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
@@ -2891,6 +2925,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
         ] {
+            println!("L{}", line);
             let tokens: Vec<Token> = Lexer::new(&text)
                 .tokenize()
                 .into_iter()
@@ -2941,8 +2976,9 @@ mod type_resolver_tests {
 
     #[test]
     pub fn test_imported_functions() {
-        for (text, import_func, expected) in vec![
+        for (line, text, import_func, expected) in vec![
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test();
@@ -2953,6 +2989,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     return project::std::test();
@@ -2962,6 +2999,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5);
@@ -2972,6 +3010,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5, true);
@@ -2982,6 +3021,7 @@ mod type_resolver_tests {
                 Ok(()),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test2();
@@ -2992,6 +3032,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Could not find item with the given path: $std::test2 ($std::test2)"),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5);
@@ -3002,6 +3043,7 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
             ),
             (
+                line!(),
                 " 
                 fn main() {
                     let k: i64 := project::std::test(5, 2);
@@ -3018,21 +3060,20 @@ mod type_resolver_tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse("std",&tokens).unwrap().unwrap();
-            let mut sa = SemanticAst::new();
-            let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
-            SymbolTable::add_item_defs_to_table(&mut sm_ast).unwrap();
 
-            let mut semantic = TypeResolver::new(&sm_ast, "my_main");
-
-            semantic.import_function(
-                vec![CANONICAL_ROOT, "std", "test"].into(),
-                import_func.0, import_func.1,
-            );
-
-            let result = semantic
-                .resolve_types();
+            let mut import_annotation = SemanticAnnotations::new(0, 0, Type::Unit);
+            import_annotation.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
+            let imports = Manifest::new(&vec![RoutineDef{
+                annotations: import_annotation,
+                def: RoutineDefType::Function,
+                name: "test".into(),
+                ret_ty: import_func.1.clone(),
+                params: import_func.0.iter().map(|p| Parameter::new(SemanticAnnotations::new(0, 0, p.clone()), "a", p)).collect(),
+                body: vec![],
+            }], &vec![]);
+            let result = resolve_types_with_imports(&ast, "my_main", &vec![imports], TracingConfig::Off, TracingConfig::Off, TracingConfig::Off);
             match expected {
-                Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
+                Ok(_) => assert!(result.is_ok(), "L{}: {:?} got {:?}", line, expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
             }
         }

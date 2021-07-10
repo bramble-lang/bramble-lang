@@ -1,6 +1,11 @@
 use std::collections::HashMap;
 
-use crate::compiler::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT};
+use log::*;
+
+use crate::{
+    compiler::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT},
+    project::manifest::Manifest,
+};
 use braid_lang::result::Result;
 
 use super::{
@@ -9,19 +14,19 @@ use super::{
 };
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SymbolTableScopeStack<'a> {
-    pub(super) root: &'a Module<SemanticAnnotations>,
+pub struct SymbolTableScopeStack {
+    root: *const Module<SemanticAnnotations>,
 
     stack: Vec<SymbolTable>,
     head: SymbolTable,
     imported_symbols: HashMap<String, Symbol>, // TODO: change this to a SymbolTable?
 }
 
-impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
+impl<'a> std::fmt::Display for SymbolTableScopeStack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut i = 0;
         f.write_fmt(format_args!("{}: {}\n", i, self.head))?;
-        for scope in self.stack.iter() {
+        for scope in self.stack.iter().rev() {
             i += 1;
             f.write_fmt(format_args!("{}: {}\n", i, scope))?;
         }
@@ -29,13 +34,43 @@ impl<'a> std::fmt::Display for SymbolTableScopeStack<'a> {
     }
 }
 
-impl<'a> SymbolTableScopeStack<'a> {
-    pub fn new(root: &'a Module<SemanticAnnotations>) -> SymbolTableScopeStack {
-        SymbolTableScopeStack {
+impl<'a> SymbolTableScopeStack {
+    pub fn new(
+        root: &'a Module<SemanticAnnotations>,
+        imports: &[Manifest],
+    ) -> SymbolTableScopeStack {
+        let mut ss = SymbolTableScopeStack {
             stack: vec![],
             head: SymbolTable::new(),
             root,
             imported_symbols: HashMap::new(),
+        };
+
+        ss.add_imports(imports);
+
+        ss
+    }
+
+    pub fn get_root(&self) -> &'a Module<SemanticAnnotations> {
+        unsafe { self.root.as_ref().expect("Root has does not exist") }
+    }
+
+    fn add_imports(&mut self, manifests: &[Manifest]) {
+        debug!("Adding Imports");
+        // Load all struct imports first because imported functions may depend upon
+        // imported structures (If any semantic analysis is done on functions)
+        for manifest in manifests.into_iter() {
+            for sd in manifest.get_structs().iter() {
+                debug!("Import struct {}", sd);
+                self.import_structdef(sd);
+            }
+        }
+
+        for manifest in manifests.into_iter() {
+            for (path, params, ret_ty) in manifest.get_functions().iter() {
+                debug!("Import function {}", path);
+                self.import_function(path.clone(), params.clone(), ret_ty.clone());
+            }
         }
     }
 
@@ -102,6 +137,21 @@ impl<'a> SymbolTableScopeStack<'a> {
         tmp
     }
 
+    pub fn get_current_fn(&self) -> Option<&str> {
+        // Check if the top of the stack is a routine
+        if let ScopeType::Routine(name) = self.head.scope_type() {
+            return Some(name);
+        } else {
+            // Search through the rest of the stack for the Routine closest to the top
+            for scope in self.stack.iter().rev() {
+                if let ScopeType::Routine(name) = scope.scope_type() {
+                    return Some(name);
+                }
+            }
+        }
+        None
+    }
+
     /// Searches SymbolStack, starting at the top of the stack and moving down,
     /// for a symbol that matches `name`.
     ///
@@ -111,13 +161,13 @@ impl<'a> SymbolTableScopeStack<'a> {
         let mut cpath = self.to_path()?;
         let s = self.head.get(name).or_else(|| {
             self.stack.iter().rev().find_map(|scope| {
-                let s = scope.get(name);
-                if s.is_none() && scope.scope_type().is_boundary() {
+                let sym = scope.get(name);
+                if sym.is_none() && scope.scope_type().is_boundary() {
                     // If we reach the end of the canonical path, there can be no more locations
                     // for the symbol to exist and so we should return None
                     cpath.pop()?;
                 }
-                s
+                sym
             })
         });
 
@@ -197,7 +247,6 @@ impl<'a> SymbolTableScopeStack<'a> {
     ///
     /// This function will work with relative and canonical paths.
     pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
-        //println!("{} - {}", stdext::function_name!(), path);
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
 
@@ -226,17 +275,9 @@ impl<'a> SymbolTableScopeStack<'a> {
         } else {
             Err("empty path passed to lookup_path".into())
         }
-        .map(|(s, p)| {
-            if s.is_extern {
-                (s, vec![s.name.clone()].into())
-            } else {
-                (s, p)
-            }
-        })
     }
 
     fn get_item(&self, canon_path: &Path) -> Option<&Symbol> {
-        //println!("get_item: {}", canon_path);
         // If the path contains more than just the item's name then
         // traverse the parent path to find the specified item
         let item = canon_path
@@ -250,42 +291,15 @@ impl<'a> SymbolTableScopeStack<'a> {
         let mut current = self.root;
         // Follow the path, up to, but not including the final element of the path
         // (which is the item being looked for);
-        for idx in 1..canon_path.len() - 1 {
-            match current.get_module(&canon_path[idx]) {
-                Some(m) => current = m,
-                None => return None,
-            }
-        }
-
-        current.annotation().sym.get(item)
-    }
-
-    /**
-    Given a type reference that appears in a node that is not the current node, will convert
-    that type reference to a canonical path from a relative path.  If the type reference is
-    already an absolute path then no change is made.  This is used for indirect type reference
-    look ups: for example, if the current node is a routine call and the routine definition is
-    looked up to validate the parameter types in the definition agains the parameters in the
-    call, to canonize the routine definition's parameter types, this function would be used: as
-    they are in the RoutineDef node not the RoutineCall node.
-     */
-    pub fn canonize_nonlocal_type_ref(&self, parent_path: &Path, ty: &Type) -> Result<Type> {
-        match ty {
-            Type::Custom(path) => Ok(Type::Custom(path.to_canonical(parent_path)?)),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
-                self.canonize_nonlocal_type_ref(parent_path, &ty)?,
-            ))),
-            Type::Array(el_ty, len) => {
-                if *len <= 0 {
-                    Err(format!("Expected length > 0 for array, but found {}", *len))
-                } else {
-                    Ok(Type::Array(
-                        box self.canonize_nonlocal_type_ref(parent_path, el_ty)?,
-                        *len,
-                    ))
+        unsafe {
+            for idx in 1..canon_path.len() - 1 {
+                match (*current).get_module(&canon_path[idx]) {
+                    Some(m) => current = m,
+                    None => return None,
                 }
             }
-            _ => Ok(ty.clone()),
+
+            (*current).annotation().sym.get(item)
         }
     }
 
@@ -297,17 +311,48 @@ impl<'a> SymbolTableScopeStack<'a> {
     For example, the path `super::MyStruct` would be converted to `root::my_module::MyStruct`
     if the current node were in a module contained within `my_module`.
      */
-    pub fn canonize_local_type_ref(&self, ty: &Type) -> Result<Type> {
+    pub fn canonize_type(&self, ty: &Type) -> Result<Type> {
         match ty {
-            Type::Custom(path) => Ok(Type::Custom(self.to_canonical(path)?)),
-            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(
-                self.canonize_local_type_ref(&ty)?,
-            ))),
+            Type::Custom(path) => self
+                .lookup_symbol_by_path(path)
+                .map(|(_, p)| Type::Custom(p)),
+            Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.canonize_type(&ty)?))),
+            Type::CoroutineDef(params, ret_ty) => {
+                let cparams = params
+                    .iter()
+                    .map(|pty| self.canonize_type(pty))
+                    .collect::<Result<Vec<Type>>>()?;
+                let cret_ty = self.canonize_type(ret_ty)?;
+                Ok(Type::CoroutineDef(cparams, Box::new(cret_ty)))
+            }
+            Type::FunctionDef(params, ret_ty) => {
+                let cparams = params
+                    .iter()
+                    .map(|pty| self.canonize_type(pty))
+                    .collect::<Result<Vec<Type>>>()?;
+                let cret_ty = self.canonize_type(ret_ty)?;
+                Ok(Type::FunctionDef(cparams, Box::new(cret_ty)))
+            }
+            Type::StructDef(params) => {
+                let cparams = params
+                    .iter()
+                    .map(|(name, ty)| self.canonize_type(ty).map(|ty| (name.into(), ty)))
+                    .collect::<Result<Vec<(String, Type)>>>()?;
+                Ok(Type::StructDef(cparams))
+            }
+            Type::ExternDecl(params, has_varargs, ret_ty) => {
+                let cparams = params
+                    .iter()
+                    .map(|pty| self.canonize_type(pty))
+                    .collect::<Result<Vec<Type>>>()?;
+                let cret_ty = self.canonize_type(ret_ty)?;
+                Ok(Type::ExternDecl(cparams, *has_varargs, Box::new(cret_ty)))
+            }
             Type::Array(el_ty, len) => {
                 if *len <= 0 {
                     Err(format!("Expected length > 0 for array, but found {}", *len))
                 } else {
-                    Ok(Type::Array(box self.canonize_local_type_ref(el_ty)?, *len))
+                    Ok(Type::Array(box self.canonize_type(el_ty)?, *len))
                 }
             }
             _ => Ok(ty.clone()),
@@ -329,16 +374,14 @@ impl<'a> SymbolTableScopeStack<'a> {
 
         for node in self.stack.iter() {
             match node.scope_type() {
-                ScopeType::Module { name } => {
-                    steps.push(name.clone());
-                }
-                _ => (),
+                ScopeType::Module(name) => steps.push(name.into()),
+                ScopeType::Local | ScopeType::Routine(_) => (),
             }
         }
 
         match self.head.scope_type() {
-            ScopeType::Module { name } => steps.push(name.clone()),
-            _ => (),
+            ScopeType::Module(name) => steps.push(name.clone()),
+            ScopeType::Local | ScopeType::Routine(_) => (),
         }
 
         if steps.len() > 0 {

@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 #![feature(box_syntax, box_patterns)]
 
+extern crate log;
+extern crate simplelog;
+
 mod cli;
 mod compiler;
 mod diagnostics;
@@ -24,6 +27,11 @@ const USER_MAIN_FN: &str = "my_main";
 
 fn main() {
     let config = configure_cli().get_matches();
+
+    match get_log_level(&config) {
+        Some(level) => configure_logging(level).expect("Failed to configure logger."),
+        None => (),
+    }
 
     let input = config
         .value_of("input")

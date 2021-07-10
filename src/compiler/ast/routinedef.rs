@@ -13,7 +13,7 @@ pub struct RoutineDef<M> {
     pub def: RoutineDefType,
     pub name: String,
     pub params: Vec<Parameter<M>>,
-    pub ty: Type,
+    pub ret_ty: Type,
     pub body: Vec<Statement<M>>,
 }
 
@@ -74,7 +74,7 @@ impl<M> RoutineDef<M> {
             def: RoutineDefType::Function,
             name: name.into(),
             params,
-            ty,
+            ret_ty: ty,
             body,
         }
     }
@@ -91,7 +91,7 @@ impl<M> RoutineDef<M> {
             def: RoutineDefType::Coroutine,
             name: name.into(),
             params,
-            ty,
+            ret_ty: ty,
             body,
         }
     }
@@ -113,7 +113,7 @@ impl<M> RoutineDef<M> {
     }
 
     pub fn get_return_type(&self) -> &Type {
-        &self.ty
+        &self.ret_ty
     }
 
     pub fn get_body(&self) -> &Vec<Statement<M>> {

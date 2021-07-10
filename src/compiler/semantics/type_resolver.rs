@@ -9,7 +9,9 @@ use crate::manifest::Manifest;
 use braid_lang::result::Result;
 use std::collections::HashMap;
 
-use super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
+use super::{
+    canonize::canonize_paths, semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack,
+};
 
 pub fn resolve_types(
     ast: &Module<ParserInfo>,
@@ -39,34 +41,37 @@ pub fn resolve_types_with_imports(
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
+    canonize_paths(&mut sm_ast, imports, trace_type_resolver)?; //TODO: Add a trace for this step
 
-    let mut semantic = TypeResolver::new(&sm_ast, main_fn);
-
-    semantic.add_imports(imports);
+    let mut semantic = TypeResolver::new(&sm_ast, imports, main_fn);
 
     semantic.set_tracing(trace_type_resolver);
     semantic.path_tracing = trace_path;
     semantic.resolve_types()
 }
 
-pub struct TypeResolver<'a> {
-    symbols: SymbolTableScopeStack<'a>, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
+pub struct TypeResolver {
+    symbols: SymbolTableScopeStack,
     tracing: TracingConfig,
     path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
     main_fn: Path,
 }
 
-impl<'a> Tracing for TypeResolver<'a> {
+impl Tracing for TypeResolver {
     fn set_tracing(&mut self, config: TracingConfig) {
         self.tracing = config;
     }
 }
 
-impl<'a> TypeResolver<'a> {
-    pub fn new(root: &'a Module<SemanticAnnotations>, main_fn: &'a str) -> TypeResolver<'a> {
+impl TypeResolver {
+    pub fn new(
+        root: &Module<SemanticAnnotations>,
+        imports: &[Manifest],
+        main_fn: &str,
+    ) -> TypeResolver {
         TypeResolver {
-            symbols: SymbolTableScopeStack::new(root),
+            symbols: SymbolTableScopeStack::new(root, imports),
             tracing: TracingConfig::Off,
             path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
@@ -74,40 +79,10 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
-    pub fn add_imports(&mut self, manifests: &[Manifest]) {
-        // Load all struct imports first because imported functions may depend upon
-        // imported structures (If any semantic analysis is done on functions)
-        for manifest in manifests.into_iter() {
-            for sd in manifest.get_structs().iter() {
-                self.import_structdef(sd);
-            }
-        }
-
-        for manifest in manifests.into_iter() {
-            for (path, params, ret_ty) in manifest.get_functions().iter() {
-                self.import_function(path.clone(), params.clone(), ret_ty.clone());
-            }
-        }
-    }
-
-    pub fn import_function(
-        &mut self,
-        canonical_name: Path,
-        params: Vec<Type>,
-        return_ty: Type,
-    ) -> Option<Symbol> {
-        self.symbols
-            .import_function(canonical_name, params, return_ty)
-    }
-
-    pub fn import_structdef(&mut self, sd: &StructDef<SemanticAnnotations>) -> Option<Symbol> {
-        self.symbols.import_structdef(sd)
-    }
-
     pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
         // TODO: I think that this is the problem, perhaps I should get rid of the concept
         // of the stack root?  I need root to be able to find items using the stack.
-        self.analyze_module(self.symbols.root)
+        self.analyze_module(self.symbols.get_root())
             .map_err(|e| format!("Semantic: {}", e))
     }
 
@@ -170,32 +145,22 @@ impl<'a> TypeResolver<'a> {
             def,
             params,
             body,
-            ty: p,
+            ret_ty,
             ..
         } = routine;
-        let canon_path = self
-            .symbols
-            .to_path()
-            .map(|mut p| {
-                p.push(name);
-                p
-            })
-            .expect("Failed to create canonical path for function");
 
         // If routine is root::my_main it must be a function type and have type () -> i64
-        if canon_path == self.main_fn {
+        if annotations.get_canonical_path() == &self.main_fn {
             Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", annotations.ln, e))?;
         }
 
         let mut meta = annotations.clone();
 
         // canonize routine parameter types
-        let canonical_params = self.params_to_canonical(&params)?;
-        meta.ty = self.symbols.canonize_local_type_ref(p)?;
-        meta.set_canonical_path(canon_path);
+        meta.ty = ret_ty.clone();
 
         // Add parameters to symbol table
-        for p in canonical_params.iter() {
+        for p in params.iter() {
             meta.sym.add(&p.name, p.ty.clone(), false, false)?;
         }
 
@@ -203,7 +168,7 @@ impl<'a> TypeResolver<'a> {
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
-            let exp = self.analyze_statement(stmt, &name)?;
+            let exp = self.analyze_statement(stmt)?;
             resolved_body.push(exp);
         }
 
@@ -214,8 +179,8 @@ impl<'a> TypeResolver<'a> {
             annotations: meta,
             def: def.clone(),
             name: name.clone(),
-            params: canonical_params,
-            ty: canonical_ret_ty,
+            params: params.clone(),
+            ret_ty: canonical_ret_ty,
             body: resolved_body,
         })
     }
@@ -247,21 +212,14 @@ impl<'a> TypeResolver<'a> {
             }
         }
 
-        // Update all fields so that their types use the full canonical path of the type
-        let canonical_fields = self.params_to_canonical(fields)?;
-
         // Update the annotations with canonical path information and set the type to Type::Unit
         let mut meta = struct_def.annotation().clone();
         meta.ty = Type::Unit;
-        meta.set_canonical_path(
-            self.symbols
-                .to_canonical(&vec![struct_def.get_name().clone()].into())?,
-        );
 
         Ok(StructDef::new(
             struct_def.get_name().clone(),
             meta.clone(),
-            canonical_fields,
+            fields.clone(),
         ))
     }
 
@@ -277,18 +235,15 @@ impl<'a> TypeResolver<'a> {
             }
         }
 
-        // Update all fields so that their types use the full canonical path of the type
-        let canonical_params = self.params_to_canonical(params)?;
-
         // Update the annotations with canonical path information and set the type to Type::Unit
+        let name = ex.name().expect("Externs must have a name");
         let mut meta = ex.annotation().clone();
-        meta.ty = self.symbols.canonize_local_type_ref(ex.get_return_type())?;
-        meta.set_canonical_path(vec![ex.get_name().clone()].into());
+        meta.ty = ex.get_return_type().clone();
 
         Ok(Extern::new(
-            ex.get_name().clone(),
+            name,
             meta.clone(),
-            canonical_params,
+            params.clone(),
             ex.has_varargs,
             meta.ty.clone(),
         ))
@@ -297,15 +252,14 @@ impl<'a> TypeResolver<'a> {
     fn analyze_statement(
         &mut self,
         stmt: &Statement<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Statement<SemanticAnnotations>> {
         use Statement::*;
         let inner = match stmt {
-            Bind(box b) => Bind(Box::new(self.analyze_bind(b, current_func)?)),
-            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b, current_func)?)),
-            Return(box x) => Return(Box::new(self.analyze_return(x, current_func)?)),
-            YieldReturn(box x) => YieldReturn(Box::new(self.analyze_yieldreturn(x, current_func)?)),
-            Expression(box e) => Expression(Box::new(self.traverse(e, current_func)?)),
+            Bind(box b) => Bind(Box::new(self.analyze_bind(b)?)),
+            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b)?)),
+            Return(box x) => Return(Box::new(self.analyze_return(x)?)),
+            YieldReturn(box x) => YieldReturn(Box::new(self.analyze_yieldreturn(x)?)),
+            Expression(box e) => Expression(Box::new(self.traverse(e)?)),
         };
 
         Ok(inner)
@@ -314,14 +268,13 @@ impl<'a> TypeResolver<'a> {
     fn analyze_bind(
         &mut self,
         bind: &Bind<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Bind<SemanticAnnotations>> {
         let meta = bind.annotation();
         let rhs = bind.get_rhs();
         let result = {
             let mut meta = meta.clone();
-            meta.ty = self.symbols.canonize_local_type_ref(bind.get_type())?;
-            let rhs = self.traverse(rhs, current_func)?;
+            meta.ty = bind.get_type().clone();
+            let rhs = self.traverse(rhs)?;
             if meta.ty == rhs.get_type() {
                 match self
                     .symbols
@@ -347,10 +300,9 @@ impl<'a> TypeResolver<'a> {
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Mutate<SemanticAnnotations>> {
         let mut meta = mutate.annotation().clone();
-        let rhs = self.traverse(mutate.get_rhs(), current_func)?;
+        let rhs = self.traverse(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
             Ok(symbol) => {
                 if symbol.mutable {
@@ -377,79 +329,79 @@ impl<'a> TypeResolver<'a> {
     fn analyze_yieldreturn(
         &mut self,
         yr: &YieldReturn<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<YieldReturn<SemanticAnnotations>> {
-        let result = {
-            let mut meta = yr.annotation().clone();
-            match yr.get_value() {
-                None => {
-                    let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
-                    if *ret_ty == Type::Unit {
-                        meta.ty = Type::Unit;
-                        Ok(YieldReturn::new(meta, None))
-                    } else {
-                        Err(format!("Yield return expected {} but got unit", ret_ty))
-                    }
-                }
-                Some(val) => {
-                    let exp = self.traverse(val, current_func)?;
-                    let (_, ret_ty) = self.symbols.lookup_coroutine(current_func)?;
-                    let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
-                    if ret_ty == exp.get_type() {
-                        meta.ty = ret_ty;
-                        Ok(YieldReturn::new(meta, Some(exp)))
-                    } else {
-                        Err(format!(
-                            "Yield return expected {} but got {}",
-                            ret_ty,
-                            exp.get_type()
-                        ))
-                    }
-                }
+        // Get the actual expression and its type as it comes from the
+        // source code written by the user.
+        let (actual_ret_exp, actual_ret_ty) = match yr.get_value() {
+            None => (None, Type::Unit),
+            Some(exp) => {
+                let exp = self.traverse(exp)?;
+                let exp_ty = exp.get_type().clone();
+                (Some(exp), exp_ty)
             }
         };
-        result.map_err(|e| format!("L{}: {}", yr.annotation().ln, e))
+
+        // Get the expected yield return type of the coroutine that the yield return
+        // occurs within.
+        let current_func = self
+            .symbols
+            .get_current_fn()
+            .ok_or(format!("Yield return must occur inside of a function"))?;
+        let (_, expected_ret_ty) = self.symbols.lookup_coroutine(current_func)?;
+
+        if actual_ret_ty == expected_ret_ty {
+            let mut meta = yr.annotation().clone();
+            meta.ty = actual_ret_ty;
+            Ok(YieldReturn::new(meta, actual_ret_exp))
+        } else {
+            Err(format!(
+                "Yield return expected {} but got {}",
+                expected_ret_ty, actual_ret_ty,
+            ))
+        }
+        .map_err(|e| format!("L{}: {}", yr.annotation().ln, e))
     }
 
     fn analyze_return(
         &mut self,
         r: &Return<SemanticAnnotations>,
-        current_func: &str,
     ) -> Result<Return<SemanticAnnotations>> {
-        let result = {
-            let mut meta = r.annotation().clone();
-            match r.get_value() {
-                None => {
-                    let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
-                    if *ret_ty == Type::Unit {
-                        meta.ty = Type::Unit;
-                        Ok(Return::new(meta, None))
-                    } else {
-                        Err(format!("Return expected {} but got unit", ret_ty))
-                    }
-                }
-                Some(val) => {
-                    let exp = self.traverse(val, current_func)?;
-                    let (_, ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
-                    let ret_ty = self.symbols.canonize_local_type_ref(ret_ty)?;
-                    if ret_ty == exp.get_type() {
-                        meta.ty = ret_ty;
-                        Ok(Return::new(meta, Some(exp)))
-                    } else {
-                        Err(format!(
-                            "Return expected {} but got {}",
-                            ret_ty,
-                            exp.get_type()
-                        ))
-                    }
-                }
+        // Get the actual expression and its type as it comes from the
+        // source code written by the user.
+        let (actual_ret_exp, actual_ret_ty) = match r.get_value() {
+            None => (None, Type::Unit),
+            Some(exp) => {
+                let exp = self.traverse(exp)?;
+                let exp_ty = exp.get_type().clone();
+                (Some(exp), exp_ty)
             }
         };
-        result.map_err(|e| format!("L{}: {}", r.annotation().ln, e))
+
+        // Get the expected return type of the function that the return
+        // occurs within.
+        let current_func = self
+            .symbols
+            .get_current_fn()
+            .ok_or(format!("Return must occur inside of a function"))?;
+        let (_, expected_ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
+
+        // Check that the actual expression matches the expected return type
+        // of the function
+        if actual_ret_ty == expected_ret_ty {
+            let mut meta = r.annotation().clone();
+            meta.ty = actual_ret_ty;
+            Ok(Return::new(meta, actual_ret_exp))
+        } else {
+            Err(format!(
+                "Return expected {} but got {}",
+                expected_ret_ty, actual_ret_ty,
+            ))
+        }
+        .map_err(|e| format!("L{}: {}", r.annotation().ln, e))
     }
 
-    fn traverse(&mut self, ast: &SemanticNode, current_func: &str) -> Result<SemanticNode> {
-        self.analyze_expression(ast, current_func).map_err(|e| {
+    fn traverse(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
+        self.analyze_expression(ast).map_err(|e| {
             if !e.starts_with("L") {
                 format!("L{}: {}", ast.annotation().ln, e)
             } else {
@@ -458,11 +410,7 @@ impl<'a> TypeResolver<'a> {
         })
     }
 
-    fn analyze_expression(
-        &mut self,
-        ast: &SemanticNode,
-        current_func: &str,
-    ) -> Result<SemanticNode> {
+    fn analyze_expression(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
         match &ast {
             &Expression::U8(meta, v) => {
                 let mut meta = meta.clone();
@@ -516,10 +464,8 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::ArrayValue(meta, elements, len) => {
                 // Resolve the types for each element in the array value
-                let nelements: Result<Vec<Expression<SemanticAnnotations>>> = elements
-                    .iter()
-                    .map(|e| self.traverse(e, current_func))
-                    .collect();
+                let nelements: Result<Vec<Expression<SemanticAnnotations>>> =
+                    elements.iter().map(|e| self.traverse(e)).collect();
                 let nelements = nelements?;
 
                 // Check that they are homogenous
@@ -535,12 +481,9 @@ impl<'a> TypeResolver<'a> {
                     }
                 }
 
-                let mut meta = meta.clone();
-                meta.ty = self
-                    .symbols
-                    .canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?;
-
                 // Use the size of the array and the type to define the array type
+                let mut meta = meta.clone();
+                meta.ty = Type::Array(Box::new(el_ty), *len);
                 Ok(Expression::ArrayValue(meta, nelements, *len))
             }
             Expression::ArrayAt {
@@ -549,14 +492,14 @@ impl<'a> TypeResolver<'a> {
                 index,
             } => {
                 //  Check that the array value is an array type
-                let n_array = self.traverse(array, current_func)?;
+                let n_array = self.traverse(array)?;
                 let el_ty = match n_array.annotation().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(format!("Expected array type on LHS of [] but found {}", ty)),
                 }?;
 
                 // Check that the index is an i64 type
-                let n_index = self.traverse(index, current_func)?;
+                let n_index = self.traverse(index)?;
                 if !n_index.annotation().ty().is_integral() {
                     return Err(format!(
                         "Expected integral type for index but found {}",
@@ -590,7 +533,7 @@ impl<'a> TypeResolver<'a> {
             Expression::Identifier(meta, id) => {
                 let mut meta = meta.clone();
                 match self.symbols.lookup_var(&id)? {
-                    Symbol { ty: p, .. } => meta.ty = self.symbols.canonize_local_type_ref(p)?,
+                    Symbol { ty: p, .. } => meta.ty = p.clone(),
                 };
                 Ok(Expression::Identifier(meta.clone(), id.clone()))
             }
@@ -602,19 +545,16 @@ impl<'a> TypeResolver<'a> {
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
                 // if it exists, if it does not exist then return an error
-                let src = self.traverse(&src, current_func)?;
+                let src = self.traverse(&src)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
-                        let (struct_def, canonical_path) =
-                            self.symbols.lookup_symbol_by_path(&struct_name)?;
+                        let (struct_def, _) = self.symbols.lookup_symbol_by_path(&struct_name)?;
                         let member_ty = struct_def
                             .ty
                             .get_member(&member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
-                        meta.ty = self
-                            .symbols
-                            .canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
-                        meta.set_canonical_path(canonical_path);
+                        meta.ty = member_ty.clone();
+
                         Ok(Expression::MemberAccess(
                             meta,
                             Box::new(src),
@@ -626,7 +566,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::BinaryOp(meta, op, l, r) => {
                 let mut meta = meta.clone();
-                let (ty, l, r) = self.binary_op(*op, &l, &r, current_func)?;
+                let (ty, l, r) = self.binary_op(*op, &l, &r)?;
                 meta.ty = ty;
                 Ok(Expression::BinaryOp(
                     meta.clone(),
@@ -637,7 +577,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::UnaryOp(meta, op, operand) => {
                 let mut meta = meta.clone();
-                let (ty, operand) = self.unary_op(*op, &operand, current_func)?;
+                let (ty, operand) = self.unary_op(*op, &operand)?;
                 meta.ty = ty;
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
@@ -648,13 +588,13 @@ impl<'a> TypeResolver<'a> {
                 else_arm,
             } => {
                 let mut meta = meta.clone();
-                let cond = self.traverse(&cond, current_func)?;
+                let cond = self.traverse(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let if_arm = self.traverse(&if_arm, current_func)?;
+                    let if_arm = self.traverse(&if_arm)?;
 
                     let else_arm = else_arm
                         .as_ref()
-                        .map(|e| self.traverse(&e, current_func))
+                        .map(|e| self.traverse(&e))
                         .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
 
                     let else_arm_ty = else_arm
@@ -691,9 +631,9 @@ impl<'a> TypeResolver<'a> {
                 ..
             } => {
                 let mut meta = meta.clone();
-                let cond = self.traverse(&cond, current_func)?;
+                let cond = self.traverse(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let body = self.traverse(&body, current_func)?;
+                    let body = self.traverse(&body)?;
 
                     if body.get_type() == Type::Unit {
                         meta.ty = Type::Unit;
@@ -717,9 +657,9 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::Yield(meta, exp) => {
                 let mut meta = meta.clone();
-                let exp = self.traverse(&exp, current_func)?;
+                let exp = self.traverse(&exp)?;
                 meta.ty = match exp.get_type() {
-                    Type::Coroutine(ret_ty) => self.symbols.canonize_local_type_ref(ret_ty)?,
+                    Type::Coroutine(box ret_ty) => ret_ty.clone(),
                     _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
                 };
                 Ok(Expression::Yield(meta, Box::new(exp)))
@@ -730,7 +670,7 @@ impl<'a> TypeResolver<'a> {
                 // parameter types
                 let mut resolved_params = vec![];
                 for param in params.iter() {
-                    let ty = self.traverse(param, current_func)?;
+                    let ty = self.traverse(param)?;
 
                     resolved_params.push(ty);
                 }
@@ -741,13 +681,6 @@ impl<'a> TypeResolver<'a> {
 
                 let (expected_param_tys, has_varargs, ret_ty) =
                     self.extract_routine_type_info(symbol, call, &routine_canon_path)?;
-                let expected_param_tys = expected_param_tys
-                    .iter()
-                    .map(|pty| {
-                        self.symbols
-                            .canonize_nonlocal_type_ref(&routine_canon_path.parent(), pty)
-                    })
-                    .collect::<Result<Vec<Type>>>()?;
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
@@ -774,7 +707,7 @@ impl<'a> TypeResolver<'a> {
                     ) {
                         Err(msg) => Err(msg),
                         Ok(()) => {
-                            meta.ty = self.symbols.canonize_local_type_ref(&ret_ty)?;
+                            meta.ty = ret_ty.clone();
                             Ok(Expression::RoutineCall(
                                 meta.clone(),
                                 *call,
@@ -791,14 +724,14 @@ impl<'a> TypeResolver<'a> {
                 self.symbols.enter_scope(&meta.sym);
 
                 for stmt in body.iter() {
-                    let exp = self.analyze_statement(stmt, current_func)?;
+                    let exp = self.analyze_statement(stmt)?;
                     resolved_body.push(exp);
                 }
 
                 let (final_exp, block_ty) = match final_exp {
                     None => (None, Type::Unit),
                     Some(fe) => {
-                        let fe = self.traverse(fe, current_func)?;
+                        let fe = self.traverse(fe)?;
                         let ty = fe.get_type().clone();
                         (Some(Box::new(fe)), ty)
                     }
@@ -815,7 +748,6 @@ impl<'a> TypeResolver<'a> {
                 ))
             }
             Expression::StructExpression(meta, struct_name, params) => {
-                let mut meta = meta.clone();
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
                 let (struct_def, canonical_path) =
@@ -838,23 +770,21 @@ impl<'a> TypeResolver<'a> {
                     let member_ty = struct_def_ty
                         .get_member(pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
-                    let member_ty_canon = self
-                        .symbols
-                        .canonize_nonlocal_type_ref(&canonical_path.parent(), member_ty)?;
-                    let param = self.traverse(pv, current_func)?;
-                    if param.get_type() != member_ty_canon {
+                    let param = self.traverse(pv)?;
+                    if param.get_type() != member_ty {
                         return Err(format!(
                             "{}.{} expects {} but got {}",
                             canonical_path,
                             pn,
-                            member_ty_canon,
+                            member_ty,
                             param.get_type()
                         ));
                     }
                     resolved_params.push((pn.clone(), param));
                 }
 
-                meta.ty = Type::Custom(canonical_path.clone());
+                let mut meta = meta.clone();
+                meta.ty = Type::Custom(struct_name.clone());
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
@@ -868,11 +798,10 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         op: UnaryOperator,
         operand: &SemanticNode,
-        current_func: &str,
     ) -> Result<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
-        let operand = self.traverse(operand, current_func)?;
+        let operand = self.traverse(operand)?;
 
         match op {
             Negate => {
@@ -905,12 +834,11 @@ impl<'a> TypeResolver<'a> {
         op: BinaryOperator,
         l: &SemanticNode,
         r: &SemanticNode,
-        current_func: &str,
     ) -> Result<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
-        let l = self.traverse(l, current_func)?;
-        let r = self.traverse(r, current_func)?;
+        let l = self.traverse(l)?;
+        let r = self.traverse(r)?;
 
         match op {
             Add | Sub | Mul | Div => {
@@ -968,62 +896,30 @@ impl<'a> TypeResolver<'a> {
             .ok_or("A valid path is expected".into())
     }
 
-    /// Convert any parameter that is a custom type, to its canonical form.
-    fn params_to_canonical(
-        &self,
-        params: &Vec<Parameter<SemanticAnnotations>>,
-    ) -> Result<Vec<Parameter<SemanticAnnotations>>> {
-        let mut canonical_params = vec![];
-        for p in params.iter() {
-            let mut p2 = p.clone();
-            p2.ty = self.symbols.canonize_local_type_ref(&p.ty)?;
-            p2.annotation_mut().ty = p2.ty.clone();
-            canonical_params.push(p2);
-        }
-        Ok(canonical_params)
-    }
-
     fn extract_routine_type_info<'b>(
         &self,
         symbol: &'b Symbol,
         call: &RoutineCall,
         routine_path: &Path,
     ) -> Result<(&'b Vec<Type>, HasVarArgs, Type)> {
-        let routine_path_parent = routine_path.parent();
         let (expected_param_tys, has_varargs, ret_ty) = match symbol {
             Symbol {
-                ty: Type::FunctionDef(pty, rty),
+                ty: Type::FunctionDef(pty, box rty),
                 ..
-            } if *call == RoutineCall::Function => (
-                pty,
-                false,
-                self.symbols
-                    .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
-            ),
+            } if *call == RoutineCall::Function => (pty, false, rty.clone()),
             Symbol {
-                ty: Type::ExternDecl(pty, has_varargs, rty),
+                ty: Type::ExternDecl(pty, has_varargs, box rty),
                 ..
-            } if *call == RoutineCall::Function => (
-                pty,
-                *has_varargs,
-                self.symbols
-                    .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
-            ),
+            } if *call == RoutineCall::Extern => (pty, *has_varargs, rty.clone()),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..
-            } if *call == RoutineCall::CoroutineInit => (
-                pty,
-                false,
-                Type::Coroutine(Box::new(
-                    self.symbols
-                        .canonize_nonlocal_type_ref(&routine_path_parent, rty)?,
-                )),
-            ),
+            } if *call == RoutineCall::CoroutineInit => (pty, false, Type::Coroutine(rty.clone())),
             _ => {
                 let expected = match call {
                     RoutineCall::Function => "function",
                     RoutineCall::CoroutineInit => "coroutine",
+                    RoutineCall::Extern => "extern",
                 };
                 return Err(format!(
                     "Expected {0} but {1} is a {2}",
@@ -1072,7 +968,10 @@ impl<'a> TypeResolver<'a> {
 
     fn validate_main_fn(routine: &RoutineDef<SemanticAnnotations>) -> Result<()> {
         let RoutineDef {
-            def, params, ty: p, ..
+            def,
+            params,
+            ret_ty: p,
+            ..
         } = routine;
 
         // If routine is root::my_main it must be a function type and have type () -> i64

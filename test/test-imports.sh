@@ -44,7 +44,7 @@ run_test() {
     fi
 }
 
-cargo build
+cargo build --release
 if [ $? -eq 0 ]
 then
     start_time=$SECONDS
