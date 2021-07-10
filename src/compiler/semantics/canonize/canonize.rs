@@ -39,7 +39,7 @@ pub fn canonize_paths(
 ///
 /// Because contextual information is need for semantic analysis
 /// operations, the scope stack is passed into these functions.
-pub trait SemanticNode: Node<SemanticAnnotations> {
+pub trait Canonizable: Node<SemanticAnnotations> {
     // TODO: make one canonize function that handles everything and then the special cases
     // do their own thing.  I think that will be easier than 3 separate functions
     fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
@@ -51,7 +51,7 @@ pub trait SemanticNode: Node<SemanticAnnotations> {
     }
 }
 
-fn default_canonize_annotation_path<T: SemanticNode + ?Sized>(
+fn default_canonize_annotation_path<T: Canonizable + ?Sized>(
     node: &mut T,
     stack: &SymbolTableScopeStack,
 ) -> Result<()> {
@@ -80,7 +80,7 @@ fn default_canonize_annotation_path<T: SemanticNode + ?Sized>(
     Ok(())
 }*/
 
-impl SemanticNode for Expression<SemanticAnnotations> {
+impl Canonizable for Expression<SemanticAnnotations> {
     /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let canon_ty = match self {
             Expression::ArrayValue(_, elements, len) => {
@@ -154,8 +154,8 @@ impl SemanticNode for Expression<SemanticAnnotations> {
         }
     }
 }
-impl SemanticNode for Statement<SemanticAnnotations> {}
-impl SemanticNode for Bind<SemanticAnnotations> {
+impl Canonizable for Statement<SemanticAnnotations> {}
+impl Canonizable for Bind<SemanticAnnotations> {
     /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
         Ok(())
@@ -167,8 +167,8 @@ impl SemanticNode for Bind<SemanticAnnotations> {
         Ok(())
     }
 }
-impl SemanticNode for Mutate<SemanticAnnotations> {}
-impl SemanticNode for Module<SemanticAnnotations> {
+impl Canonizable for Mutate<SemanticAnnotations> {}
+impl Canonizable for Module<SemanticAnnotations> {
     fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
@@ -185,15 +185,15 @@ impl SemanticNode for Module<SemanticAnnotations> {
         Ok(())
     }
 }
-impl SemanticNode for StructDef<SemanticAnnotations> {}
-impl SemanticNode for RoutineDef<SemanticAnnotations> {
+impl Canonizable for StructDef<SemanticAnnotations> {}
+impl Canonizable for RoutineDef<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let ctype = stack.canonize_type(&self.ret_ty)?;
         self.ret_ty = ctype;
         Ok(())
     }
 }
-impl SemanticNode for Extern<SemanticAnnotations> {
+impl Canonizable for Extern<SemanticAnnotations> {
     fn canonize_annotation_path(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
         let name = match self.name() {
             Some(name) => name,
@@ -215,14 +215,14 @@ impl SemanticNode for Extern<SemanticAnnotations> {
         Ok(())
     }
 }
-impl SemanticNode for Parameter<SemanticAnnotations> {
+impl Canonizable for Parameter<SemanticAnnotations> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let ctype = stack.canonize_type(&self.ty)?;
         self.ty = ctype;
         Ok(())
     }
 }
-impl SemanticNode for YieldReturn<SemanticAnnotations> {
+impl Canonizable for YieldReturn<SemanticAnnotations> {
     /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         let current_fn = stack
             .get_current_fn()
@@ -232,4 +232,4 @@ impl SemanticNode for YieldReturn<SemanticAnnotations> {
         Ok(())
     }*/
 }
-impl SemanticNode for Return<SemanticAnnotations> {}
+impl Canonizable for Return<SemanticAnnotations> {}
