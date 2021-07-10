@@ -161,13 +161,13 @@ impl<'a> SymbolTableScopeStack {
         let mut cpath = self.to_path()?;
         let s = self.head.get(name).or_else(|| {
             self.stack.iter().rev().find_map(|scope| {
-                let s = scope.get(name);
-                if s.is_none() && scope.scope_type().is_boundary() {
+                let sym = scope.get(name);
+                if sym.is_none() && scope.scope_type().is_boundary() {
                     // If we reach the end of the canonical path, there can be no more locations
                     // for the symbol to exist and so we should return None
                     cpath.pop()?;
                 }
-                s
+                sym
             })
         });
 
@@ -373,17 +373,15 @@ impl<'a> SymbolTableScopeStack {
         let mut steps: Vec<String> = vec![CANONICAL_ROOT.into()];
 
         for node in self.stack.iter() {
-            if node.scope_type().is_boundary() {
-                match node.scope_type().get_name() {
-                    Some(name) => steps.push(name.into()),
-                    None => panic!("A scope must have a name to be pushed onto a path"),
-                }
+            match node.scope_type() {
+                ScopeType::Module(name) => steps.push(name.into()),
+                ScopeType::Local | ScopeType::Routine(_) => (),
             }
         }
 
         match self.head.scope_type() {
             ScopeType::Module(name) => steps.push(name.clone()),
-            _ => (),
+            ScopeType::Local | ScopeType::Routine(_) => (),
         }
 
         if steps.len() > 0 {
