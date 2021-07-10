@@ -275,7 +275,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticAnnotations>) {
-        // Delcare external function
+        // Declare external function
         let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
             &ex.annotation().get_canonical_path().to_label(),
