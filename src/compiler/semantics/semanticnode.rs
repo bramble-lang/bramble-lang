@@ -30,7 +30,15 @@ impl Annotation for SemanticAnnotations {
 impl Diag for SemanticAnnotations {
     fn diag(&self) -> DiagData {
         let mut dd = DiagData::new(self.ln, self.id);
-        dd.add("sym", &format!("{}", self.sym));
+
+        if self.sym.size() > 0 {
+            dd.add("sym", &format!("{}", self.sym));
+        }
+
+        if self.canonical_path.len() > 0 {
+            dd.add("canon path", &format!("{}", self.canonical_path));
+        }
+
         dd
     }
 }

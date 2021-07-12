@@ -201,6 +201,10 @@ impl SymbolTable {
             Ok(())
         }
     }
+
+    pub fn size(&self) -> usize {
+        self.sym.len()
+    }
 }
 
 impl std::fmt::Display for SymbolTable {

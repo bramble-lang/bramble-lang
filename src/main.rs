@@ -76,7 +76,7 @@ fn main() {
         USER_MAIN_FN,
         &imports,
         trace_semantic_node,
-        TracingConfig::Off,
+        TracingConfig::All,
         trace_type_resolver,
         trace_path,
     ) {
