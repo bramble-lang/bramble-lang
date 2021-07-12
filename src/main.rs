@@ -67,10 +67,10 @@ fn main() {
     };
 
     // Type Check
-    let trace_semantic_node = TracingConfig::parse(config.value_of("trace-semantic-node"));
-    let trace_canonization = TracingConfig::parse(config.value_of("trace-canonization"));
-    let trace_type_resolver = TracingConfig::parse(config.value_of("trace-type-resolver"));
-    let trace_path = TracingConfig::parse(config.value_of("trace-path"));
+    let trace_semantic_node = get_semantic_node_tracing(&config);
+    let trace_canonization = get_canonization_tracing(&config);
+    let trace_type_resolver = get_type_resolver_tracing(&config);
+    let trace_path = get_path_tracing(&config);
 
     let semantic_ast = match resolve_types_with_imports(
         &root,

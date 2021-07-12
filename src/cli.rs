@@ -2,6 +2,8 @@ use clap::{App, Arg, ArgMatches};
 use log::LevelFilter;
 use simplelog::*;
 
+use crate::diagnostics::config::TracingConfig;
+
 // Exit Codes for different types of errors
 pub const ERR_TYPE_CHECK: i32 = 1;
 pub const ERR_NO_AST: i32 = 2;
@@ -144,6 +146,22 @@ pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
             _ => None,
         },
     }
+}
+
+pub fn get_semantic_node_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
+    TracingConfig::parse(args.value_of("trace-semantic-node"))
+}
+
+pub fn get_canonization_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
+    TracingConfig::parse(args.value_of("trace-canonization"))
+}
+
+pub fn get_type_resolver_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
+    TracingConfig::parse(args.value_of("trace-type-resolver"))
+}
+
+pub fn get_path_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
+    TracingConfig::parse(args.value_of("trace-path"))
 }
 
 pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> {
