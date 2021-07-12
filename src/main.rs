@@ -68,6 +68,7 @@ fn main() {
 
     // Type Check
     let trace_semantic_node = TracingConfig::parse(config.value_of("trace-semantic-node"));
+    let trace_canonization = TracingConfig::parse(config.value_of("trace-canonization"));
     let trace_type_resolver = TracingConfig::parse(config.value_of("trace-type-resolver"));
     let trace_path = TracingConfig::parse(config.value_of("trace-path"));
 
@@ -76,7 +77,7 @@ fn main() {
         USER_MAIN_FN,
         &imports,
         trace_semantic_node,
-        TracingConfig::All,
+        trace_canonization,
         trace_type_resolver,
         trace_path,
     ) {

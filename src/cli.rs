@@ -107,6 +107,12 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Traces the transformation from Parser AST to Semantic AST")
         )
         .arg(
+            Arg::with_name("trace-canonization")
+                .long("trace-canonization")
+                .takes_value(true)
+                .help("Shows the transformation of relative paths to canonized/absolute paths.")
+        )
+        .arg(
             Arg::with_name("trace-type-resolver")
                 .long("trace-type-resolver")
                 .takes_value(true)
