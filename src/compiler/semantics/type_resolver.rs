@@ -18,6 +18,7 @@ pub fn resolve_types(
     main_fn: &str,
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
+    trace_canonization: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
     resolve_types_with_imports(
@@ -25,6 +26,7 @@ pub fn resolve_types(
         main_fn,
         &vec![],
         trace_semantic_node,
+        trace_canonization,
         trace,
         trace_path,
     )
@@ -35,13 +37,14 @@ pub fn resolve_types_with_imports(
     main_fn: &str,
     imports: &[Manifest],
     trace_semantic_node: TracingConfig,
+    trace_canonization: TracingConfig,
     trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
 ) -> Result<Module<SemanticAnnotations>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
-    canonize_paths(&mut sm_ast, imports, trace_type_resolver)?; //TODO: Add a trace for this step
+    canonize_paths(&mut sm_ast, imports, trace_canonization)?; //TODO: Add a trace for this step
 
     let mut semantic = TypeResolver::new(&sm_ast, imports, main_fn);
 
