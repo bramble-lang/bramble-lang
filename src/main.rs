@@ -48,7 +48,7 @@ fn main() {
         }
     };
 
-    let trace_lexer = TracingConfig::parse(config.value_of("trace-lexer"));
+    let trace_lexer = get_lexer_tracing(&config);
     let token_sets = match tokenize_project(src_input, trace_lexer) {
         Ok(ts) => ts,
         Err(errs) => {
@@ -57,7 +57,7 @@ fn main() {
         }
     };
 
-    let trace_parser = TracingConfig::parse(config.value_of("trace-parser"));
+    let trace_parser = get_parser_tracing(&config);
     let root = match parse_project(project_name, token_sets, trace_parser) {
         Ok(root) => root,
         Err(errs) => {

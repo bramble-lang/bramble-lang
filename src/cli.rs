@@ -90,12 +90,6 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 This is for debugging the parser when adding new syntactical elements.")
         )
         .arg(
-            Arg::with_name("trace-reg-assigner")
-                .long("trace-reg-assigner")
-                .takes_value(true)
-                .help("Prints out a trace of all the nodes in the AST and their register assignment annotation data.")
-        )
-        .arg(
             Arg::with_name("trace-lexer")
                 .long("trace-lexer")
                 .takes_value(true)
@@ -146,6 +140,14 @@ pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
             _ => None,
         },
     }
+}
+
+pub fn get_lexer_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
+    TracingConfig::parse(args.value_of("trace-lexer"))
+}
+
+pub fn get_parser_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
+    TracingConfig::parse(args.value_of("trace-parser"))
 }
 
 pub fn get_semantic_node_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
