@@ -236,9 +236,14 @@ mod test {
                 .collect::<Result<_, _>>()
                 .unwrap();
             let ast = parser::parse("test_mod", &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, "my_main", TracingConfig::Off,
+            let module = resolve_types(
+                &ast, 
+                "my_main", 
                 TracingConfig::Off,
-             TracingConfig::Off, TracingConfig::Off).unwrap();
+                TracingConfig::Off,
+                TracingConfig::Off, 
+                TracingConfig::Off
+            ).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from_module(&module);
 

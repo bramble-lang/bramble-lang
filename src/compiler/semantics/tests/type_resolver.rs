@@ -3001,9 +3001,14 @@ mod type_resolver_tests {
                     .collect::<Result<_>>()
                     .unwrap();
                 let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
-                let result = resolve_types(&ast, "my_main", TracingConfig::Off,
-                TracingConfig::Off,
-                 TracingConfig::Off, TracingConfig::Off);
+                let result = resolve_types(
+                    &ast, 
+                    "my_main", 
+                    TracingConfig::Off,
+                    TracingConfig::Off,
+                    TracingConfig::Off, 
+                    TracingConfig::Off
+                );
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
                     Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -3108,9 +3113,15 @@ mod type_resolver_tests {
                 params: import_func.0.iter().map(|p| Parameter::new(SemanticAnnotations::new(0, 0, p.clone()), "a", p)).collect(),
                 body: vec![],
             }], &vec![]);
-            let result = resolve_types_with_imports(&ast, "my_main", &vec![imports], TracingConfig::Off,
+            let result = resolve_types_with_imports(
+                &ast, 
+                "my_main", 
+                &vec![imports], 
                 TracingConfig::Off,
-             TracingConfig::Off, TracingConfig::Off);
+                TracingConfig::Off,
+                TracingConfig::Off, 
+                TracingConfig::Off
+            );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "L{}: {:?} got {:?}", line, expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
