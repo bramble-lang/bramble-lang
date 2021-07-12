@@ -15,7 +15,6 @@ use std::{path::Path, process::exit};
 
 use cli::*;
 use compiler::{llvm, semantics::type_resolver::*};
-use diagnostics::config::TracingConfig;
 use inkwell::context::Context;
 use io::read_manifests;
 use manifest::Manifest;
