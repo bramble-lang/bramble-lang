@@ -66,16 +66,16 @@ where
     Completes a diagnostic unit.
      */
     pub fn end(&mut self, annotation: &B) {
-        let d = annotation.diag();
-        if self.config.trace(d.ln as usize) {
+        let after_transform = annotation.diag();
+        if self.config.trace(after_transform.ln as usize) {
             match self.before_transform.take() {
                 Some(before_diag) if before_diag.data.len() > 0 => {
                     print!("{} ", before_diag);
                 }
                 _ => (),
             };
-            if d.data.len() > 0 {
-                println!("=> {}", d);
+            if after_transform.data.len() > 0 {
+                println!("=> {}", after_transform);
             }
         }
     }
