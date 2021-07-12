@@ -11,6 +11,7 @@ where
 {
     src: String,
     config: TracingConfig,
+    before_transform: Option<DiagData>,
     ph_a: PhantomData<A>,
     ph_b: PhantomData<B>,
 }
@@ -24,6 +25,7 @@ where
         DiagRecorder {
             src: src.into(),
             config,
+            before_transform: None,
             ph_a: PhantomData,
             ph_b: PhantomData,
         }
@@ -53,20 +55,28 @@ where
     Then immediately after the transformation, run `end` on the result. This will print
     diagnostic output to the screen.
      */
-    pub fn begin(&self, annotation: &A) {
+    pub fn begin(&mut self, annotation: &A) {
         let d = annotation.diag();
         if self.config.trace(d.ln as usize) {
-            print!("{} => ", d);
+            self.before_transform = Some(d);
         }
     }
 
     /**
     Completes a diagnostic unit.
      */
-    pub fn end(&self, annotation: &B) {
+    pub fn end(&mut self, annotation: &B) {
         let d = annotation.diag();
         if self.config.trace(d.ln as usize) {
-            println!("{}", d);
+            match self.before_transform.take() {
+                Some(before_diag) if before_diag.data.len() > 0 => {
+                    print!("{} ", before_diag);
+                }
+                _ => (),
+            };
+            if d.data.len() > 0 {
+                println!("=> {}", d);
+            }
         }
     }
 }

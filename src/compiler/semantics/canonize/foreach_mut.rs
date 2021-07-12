@@ -51,7 +51,7 @@ where
         }
     }
 
-    fn transform<F>(&self, a: &mut dyn Canonizable, mut f: F) -> Result<()>
+    fn transform<F>(&mut self, a: &mut dyn Canonizable, mut f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
