@@ -456,7 +456,7 @@ mod tests {
                 "test".into()
             });
         t.for_module(&mut sm_ast, |_stack, n| {
-            n.annotation_mut().ln *= 4;
+            n.get_context_mut().ln *= 4;
             Ok(())
         })
         .unwrap();
@@ -484,7 +484,7 @@ mod tests {
             });
         t.for_module(&mut sm_ast, |stack, n| {
             let cpath = stack.to_canonical(&vec!["annotation"].into()).unwrap();
-            n.annotation_mut().set_canonical_path(cpath);
+            n.get_context_mut().set_canonical_path(cpath);
             Ok(())
         })
         .unwrap();
@@ -524,7 +524,7 @@ mod tests {
         t.for_module(&mut sm_ast, |stack, n| match n.name() {
             Some(name) => {
                 let cpath = stack.to_canonical(&vec![name].into()).unwrap();
-                n.annotation_mut().set_canonical_path(cpath);
+                n.get_context_mut().set_canonical_path(cpath);
                 Ok(())
             }
             None => Ok(()),

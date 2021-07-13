@@ -120,7 +120,7 @@ impl TypeResolver {
             .map(|e| self.analyze_item(e))
             .collect::<Result<Vec<Item<SemanticContext>>>>()?;
 
-        let mut meta = nmodule.annotation_mut();
+        let mut meta = nmodule.get_context_mut();
         meta.ty = Type::Unit;
         meta.sym = self.symbols.leave_scope();
 

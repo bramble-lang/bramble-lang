@@ -25,7 +25,7 @@ impl<M: Context> Node<M> for Module<M> {
         &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         &mut self.context
     }
 
@@ -548,11 +548,11 @@ impl<M: Context> Node<M> for Item<M> {
         }
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         match self {
-            Item::Routine(r) => r.annotation_mut(),
-            Item::Struct(s) => s.annotation_mut(),
-            Item::Extern(e) => e.annotation_mut(),
+            Item::Routine(r) => r.get_context_mut(),
+            Item::Struct(s) => s.get_context_mut(),
+            Item::Extern(e) => e.get_context_mut(),
         }
     }
 

@@ -83,7 +83,7 @@ impl<M: Context> Node<M> for Expression<M> {
         }
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
             U8(m, ..)

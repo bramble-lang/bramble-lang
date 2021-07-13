@@ -30,15 +30,15 @@ impl<M: Context> Node<M> for Statement<M> {
         }
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         use Statement::*;
 
         match self {
-            Return(x) => x.annotation_mut(),
-            YieldReturn(x) => x.annotation_mut(),
-            Expression(e) => e.annotation_mut(),
-            Bind(b) => b.annotation_mut(),
-            Mutate(m) => m.annotation_mut(),
+            Return(x) => x.get_context_mut(),
+            YieldReturn(x) => x.get_context_mut(),
+            Expression(e) => e.get_context_mut(),
+            Bind(b) => b.get_context_mut(),
+            Mutate(m) => m.get_context_mut(),
         }
     }
 
@@ -119,7 +119,7 @@ impl<M: Context> Node<M> for Bind<M> {
         &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         &mut self.context
     }
 
@@ -202,7 +202,7 @@ impl<M: Context> Node<M> for Mutate<M> {
         &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         &mut self.context
     }
 
@@ -270,7 +270,7 @@ impl<M: Context> Node<M> for YieldReturn<M> {
         &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         &mut self.context
     }
 
@@ -336,7 +336,7 @@ impl<M: Context> Node<M> for Return<M> {
         &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         &mut self.context
     }
 

@@ -22,7 +22,7 @@ impl<M: Context> Node<M> for RoutineDef<M> {
         &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         &mut self.context
     }
 

@@ -88,7 +88,7 @@ impl SymbolTable {
             SymbolTable::add_item_defs_to_table(m)?;
         }
 
-        *module.annotation_mut() = annotations;
+        *module.get_context_mut() = annotations;
 
         Ok(())
     }

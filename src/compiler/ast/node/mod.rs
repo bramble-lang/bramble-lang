@@ -11,7 +11,7 @@ use super::routinedef::RoutineDefType;
 pub trait Node<M: Context> {
     fn node_type(&self) -> NodeType;
     fn get_context(&self) -> &M;
-    fn annotation_mut(&mut self) -> &mut M;
+    fn get_context_mut(&mut self) -> &mut M;
     fn children(&self) -> Vec<&dyn Node<M>>;
     fn name(&self) -> Option<&str>;
 

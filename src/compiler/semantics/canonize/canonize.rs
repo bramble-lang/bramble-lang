@@ -61,7 +61,7 @@ fn default_canonize_annotation_path<T: Canonizable + ?Sized>(
         // Addresses RoutineDefs and StructDefs (for LLVM IR)
         Some(name) => {
             let cpath = stack.to_canonical(&vec![name].into())?;
-            node.annotation_mut().set_canonical_path(cpath);
+            node.get_context_mut().set_canonical_path(cpath);
         }
         None => (),
     }
@@ -174,7 +174,7 @@ impl Canonizable for Module<SemanticContext> {
         default_canonize_annotation_path(self, stack)?;
 
         // Canonize Symbol Table
-        let sym = &mut self.annotation_mut().sym;
+        let sym = &mut self.get_context_mut().sym;
         for s in sym.table_mut().iter_mut() {
             let cty = stack.canonize_type(&s.ty)?;
             s.ty = cty;
@@ -198,7 +198,7 @@ impl Canonizable for Extern<SemanticContext> {
             None => panic!("Externs must have a name"),
         };
         let cpath = vec![name].into();
-        self.annotation_mut().set_canonical_path(cpath);
+        self.get_context_mut().set_canonical_path(cpath);
         Ok(())
     }
 
