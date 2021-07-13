@@ -39,7 +39,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
             Name,
             Params,
             Ty,
-            Annotations,
+            Context,
         }
 
         struct RoutineDefVisitor;
@@ -101,7 +101,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                             }
                             ret_ty = Some(map.next_value()?);
                         }
-                        Field::Annotations => {
+                        Field::Context => {
                             if context.is_some() {
                                 return Err(de::Error::duplicate_field(CONTEXT_FIELD));
                             }
