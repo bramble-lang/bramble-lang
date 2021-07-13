@@ -1,6 +1,6 @@
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     path::Path,
     statement::Statement,
@@ -19,9 +19,9 @@ pub enum Expression<I> {
     I64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
-    ArrayValue(I, Vec<Expression<I>>, usize),
+    ArrayExpression(I, Vec<Expression<I>>, usize),
     ArrayAt {
-        annotation: I,
+        context: I,
         array: Box<Expression<I>>,
         index: Box<Expression<I>>,
     },
@@ -33,13 +33,13 @@ pub enum Expression<I> {
     RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
     StructExpression(I, Path, Vec<(String, Expression<I>)>),
     If {
-        annotation: I,
+        context: I,
         cond: Box<Expression<I>>,
         if_arm: Box<Expression<I>>,
         else_arm: Option<Box<Expression<I>>>,
     },
     While {
-        annotation: I,
+        context: I,
         cond: Box<Expression<I>>,
         body: Box<Expression<I>>,
     },
@@ -51,8 +51,8 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
-impl<M: Annotation> Node<M> for Expression<M> {
-    fn annotation(&self) -> &M {
+impl<M: Context> Node<M> for Expression<M> {
+    fn get_context(&self) -> &M {
         use Expression::*;
         match self {
             U8(m, ..)
@@ -72,18 +72,18 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | While { annotation: m, .. }
+            | If { context: m, .. }
+            | While { context: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
-            ArrayValue(m, _, _) => m,
-            ArrayAt { annotation: m, .. } => m,
+            ArrayExpression(m, _, _) => m,
+            ArrayAt { context: m, .. } => m,
         }
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
+    fn get_context_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
             U8(m, ..)
@@ -103,14 +103,14 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | While { annotation: m, .. }
+            | If { context: m, .. }
+            | While { context: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
-            ArrayValue(m, _, _) => m,
-            ArrayAt { annotation: m, .. } => m,
+            ArrayExpression(m, _, _) => m,
+            ArrayAt { context: m, .. } => m,
         }
     }
 
@@ -180,7 +180,7 @@ impl<M: Annotation> Node<M> for Expression<M> {
             | I64(..)
             | Boolean(..)
             | StringLiteral(..)
-            | ArrayValue(_, _, _)
+            | ArrayExpression(_, _, _)
             | CustomType(..)
             | Identifier(..)
             | IdentifierDeclare(..)
@@ -221,7 +221,7 @@ impl<I> Expression<I> {
             I64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
-            ArrayValue(_, v, _) => format!(
+            ArrayExpression(_, v, _) => format!(
                 "[{}]",
                 v.iter()
                     .map(|e| format!("{}", e))

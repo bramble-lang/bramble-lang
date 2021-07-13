@@ -1,6 +1,6 @@
 use crate::compiler::{
     ast::*,
-    parser::parser::ParserInfo,
+    parser::parser::ParserContext,
     semantics::semanticnode::{SemanticAst, SemanticNode},
     semantics::symbol_table::*,
 };
@@ -10,17 +10,17 @@ use braid_lang::result::Result;
 use std::collections::HashMap;
 
 use super::{
-    canonize::canonize_paths, semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack,
+    canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
 };
 
 pub fn resolve_types(
-    ast: &Module<ParserInfo>,
+    ast: &Module<ParserContext>,
     main_fn: &str,
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<Module<SemanticAnnotations>> {
+) -> Result<Module<SemanticContext>> {
     resolve_types_with_imports(
         ast,
         main_fn,
@@ -33,14 +33,14 @@ pub fn resolve_types(
 }
 
 pub fn resolve_types_with_imports(
-    ast: &Module<ParserInfo>,
+    ast: &Module<ParserContext>,
     main_fn: &str,
     imports: &[Manifest],
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
     trace_type_resolver: TracingConfig,
     trace_path: TracingConfig,
-) -> Result<Module<SemanticAnnotations>> {
+) -> Result<Module<SemanticContext>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
@@ -69,7 +69,7 @@ impl Tracing for TypeResolver {
 
 impl TypeResolver {
     pub fn new(
-        root: &Module<SemanticAnnotations>,
+        root: &Module<SemanticContext>,
         imports: &[Manifest],
         main_fn: &str,
     ) -> TypeResolver {
@@ -82,55 +82,52 @@ impl TypeResolver {
         }
     }
 
-    pub fn resolve_types(&mut self) -> Result<Module<SemanticAnnotations>> {
+    pub fn resolve_types(&mut self) -> Result<Module<SemanticContext>> {
         // TODO: I think that this is the problem, perhaps I should get rid of the concept
         // of the stack root?  I need root to be able to find items using the stack.
         self.analyze_module(self.symbols.get_root())
             .map_err(|e| format!("Semantic: {}", e))
     }
 
-    fn analyze_module(
-        &mut self,
-        m: &Module<SemanticAnnotations>,
-    ) -> Result<Module<SemanticAnnotations>> {
-        let mut nmodule = Module::new(m.get_name(), m.annotation().clone());
+    fn analyze_module(&mut self, m: &Module<SemanticContext>) -> Result<Module<SemanticContext>> {
+        let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
 
-        self.symbols.enter_scope(&nmodule.annotation().sym);
+        self.symbols.enter_scope(&nmodule.get_context().sym);
 
         *nmodule.get_modules_mut() = m
             .get_modules()
             .iter()
             .map(|m| self.analyze_module(m))
-            .collect::<Result<Vec<Module<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Module<SemanticContext>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
             .map(|f| self.analyze_item(f))
-            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c))
-            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
             .map(|s| self.analyze_item(s))
-            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_externs_mut() = m
             .get_externs()
             .iter()
             .map(|e| self.analyze_item(e))
-            .collect::<Result<Vec<Item<SemanticAnnotations>>>>()?;
+            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
 
-        let mut meta = nmodule.annotation_mut();
+        let mut meta = nmodule.get_context_mut();
         meta.ty = Type::Unit;
         meta.sym = self.symbols.leave_scope();
 
         Ok(nmodule)
     }
 
-    fn analyze_item(&mut self, i: &Item<SemanticAnnotations>) -> Result<Item<SemanticAnnotations>> {
+    fn analyze_item(&mut self, i: &Item<SemanticContext>) -> Result<Item<SemanticContext>> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r).map(|r2| Item::Routine(r2)),
@@ -140,10 +137,10 @@ impl TypeResolver {
 
     fn analyze_routine(
         &mut self,
-        routine: &RoutineDef<SemanticAnnotations>,
-    ) -> Result<RoutineDef<SemanticAnnotations>> {
+        routine: &RoutineDef<SemanticContext>,
+    ) -> Result<RoutineDef<SemanticContext>> {
         let RoutineDef {
-            annotations,
+            context,
             name,
             def,
             params,
@@ -153,11 +150,11 @@ impl TypeResolver {
         } = routine;
 
         // If routine is root::my_main it must be a function type and have type () -> i64
-        if annotations.get_canonical_path() == &self.main_fn {
-            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", annotations.ln, e))?;
+        if context.get_canonical_path() == &self.main_fn {
+            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", context.line(), e))?;
         }
 
-        let mut meta = annotations.clone();
+        let mut meta = context.clone();
 
         // canonize routine parameter types
         meta.ty = ret_ty.clone();
@@ -179,7 +176,7 @@ impl TypeResolver {
 
         let canonical_ret_ty = meta.ty.clone();
         Ok(RoutineDef {
-            annotations: meta,
+            context: meta,
             def: def.clone(),
             name: name.clone(),
             params: params.clone(),
@@ -190,8 +187,8 @@ impl TypeResolver {
 
     fn analyze_structdef(
         &mut self,
-        struct_def: &StructDef<SemanticAnnotations>,
-    ) -> Result<StructDef<SemanticAnnotations>> {
+        struct_def: &StructDef<SemanticContext>,
+    ) -> Result<StructDef<SemanticContext>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
         for Parameter {
@@ -215,8 +212,8 @@ impl TypeResolver {
             }
         }
 
-        // Update the annotations with canonical path information and set the type to Type::Unit
-        let mut meta = struct_def.annotation().clone();
+        // Update the context with canonical path information and set the type to Type::Unit
+        let mut meta = struct_def.get_context().clone();
         meta.ty = Type::Unit;
 
         Ok(StructDef::new(
@@ -226,10 +223,7 @@ impl TypeResolver {
         ))
     }
 
-    fn analyze_extern(
-        &mut self,
-        ex: &Extern<SemanticAnnotations>,
-    ) -> Result<Extern<SemanticAnnotations>> {
+    fn analyze_extern(&mut self, ex: &Extern<SemanticContext>) -> Result<Extern<SemanticContext>> {
         // Check the type of each member
         let params = ex.get_params();
         for Parameter { ty: field_type, .. } in params.iter() {
@@ -238,9 +232,9 @@ impl TypeResolver {
             }
         }
 
-        // Update the annotations with canonical path information and set the type to Type::Unit
+        // Update the context with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
-        let mut meta = ex.annotation().clone();
+        let mut meta = ex.get_context().clone();
         meta.ty = ex.get_return_type().clone();
 
         Ok(Extern::new(
@@ -254,8 +248,8 @@ impl TypeResolver {
 
     fn analyze_statement(
         &mut self,
-        stmt: &Statement<SemanticAnnotations>,
-    ) -> Result<Statement<SemanticAnnotations>> {
+        stmt: &Statement<SemanticContext>,
+    ) -> Result<Statement<SemanticContext>> {
         use Statement::*;
         let inner = match stmt {
             Bind(box b) => Bind(Box::new(self.analyze_bind(b)?)),
@@ -268,11 +262,8 @@ impl TypeResolver {
         Ok(inner)
     }
 
-    fn analyze_bind(
-        &mut self,
-        bind: &Bind<SemanticAnnotations>,
-    ) -> Result<Bind<SemanticAnnotations>> {
-        let meta = bind.annotation();
+    fn analyze_bind(&mut self, bind: &Bind<SemanticContext>) -> Result<Bind<SemanticContext>> {
+        let meta = bind.get_context();
         let rhs = bind.get_rhs();
         let result = {
             let mut meta = meta.clone();
@@ -297,14 +288,14 @@ impl TypeResolver {
                 ))
             }
         };
-        result.map_err(|e| format!("L{}: {}", bind.annotation().ln, e))
+        result.map_err(|e| format!("L{}: {}", bind.get_context().line(), e))
     }
 
     fn analyze_mutate(
         &mut self,
-        mutate: &Mutate<SemanticAnnotations>,
-    ) -> Result<Mutate<SemanticAnnotations>> {
-        let mut meta = mutate.annotation().clone();
+        mutate: &Mutate<SemanticContext>,
+    ) -> Result<Mutate<SemanticContext>> {
+        let mut meta = mutate.get_context().clone();
         let rhs = self.traverse(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
             Ok(symbol) => {
@@ -326,13 +317,13 @@ impl TypeResolver {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| format!("L{}: {}", mutate.annotation().ln, e))
+        result.map_err(|e| format!("L{}: {}", mutate.get_context().line(), e))
     }
 
     fn analyze_yieldreturn(
         &mut self,
-        yr: &YieldReturn<SemanticAnnotations>,
-    ) -> Result<YieldReturn<SemanticAnnotations>> {
+        yr: &YieldReturn<SemanticContext>,
+    ) -> Result<YieldReturn<SemanticContext>> {
         // Get the actual expression and its type as it comes from the
         // source code written by the user.
         let (actual_ret_exp, actual_ret_ty) = match yr.get_value() {
@@ -353,7 +344,7 @@ impl TypeResolver {
         let (_, expected_ret_ty) = self.symbols.lookup_coroutine(current_func)?;
 
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = yr.annotation().clone();
+            let mut meta = yr.get_context().clone();
             meta.ty = actual_ret_ty;
             Ok(YieldReturn::new(meta, actual_ret_exp))
         } else {
@@ -362,13 +353,10 @@ impl TypeResolver {
                 expected_ret_ty, actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", yr.annotation().ln, e))
+        .map_err(|e| format!("L{}: {}", yr.get_context().line(), e))
     }
 
-    fn analyze_return(
-        &mut self,
-        r: &Return<SemanticAnnotations>,
-    ) -> Result<Return<SemanticAnnotations>> {
+    fn analyze_return(&mut self, r: &Return<SemanticContext>) -> Result<Return<SemanticContext>> {
         // Get the actual expression and its type as it comes from the
         // source code written by the user.
         let (actual_ret_exp, actual_ret_ty) = match r.get_value() {
@@ -391,7 +379,7 @@ impl TypeResolver {
         // Check that the actual expression matches the expected return type
         // of the function
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = r.annotation().clone();
+            let mut meta = r.get_context().clone();
             meta.ty = actual_ret_ty;
             Ok(Return::new(meta, actual_ret_exp))
         } else {
@@ -400,13 +388,13 @@ impl TypeResolver {
                 expected_ret_ty, actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", r.annotation().ln, e))
+        .map_err(|e| format!("L{}: {}", r.get_context().line(), e))
     }
 
     fn traverse(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
         self.analyze_expression(ast).map_err(|e| {
             if !e.starts_with("L") {
-                format!("L{}: {}", ast.annotation().ln, e)
+                format!("L{}: {}", ast.get_context().line(), e)
             } else {
                 e
             }
@@ -465,9 +453,9 @@ impl TypeResolver {
                 meta.ty = Type::StringLiteral;
                 Ok(Expression::StringLiteral(meta.clone(), v.clone()))
             }
-            Expression::ArrayValue(meta, elements, len) => {
+            Expression::ArrayExpression(meta, elements, len) => {
                 // Resolve the types for each element in the array value
-                let nelements: Result<Vec<Expression<SemanticAnnotations>>> =
+                let nelements: Result<Vec<Expression<SemanticContext>>> =
                     elements.iter().map(|e| self.traverse(e)).collect();
                 let nelements = nelements?;
 
@@ -476,9 +464,9 @@ impl TypeResolver {
                 if nelements.len() == 0 {
                     return Err("Arrays with 0 length are not allowed".into());
                 } else {
-                    el_ty = nelements[0].annotation().ty.clone();
+                    el_ty = nelements[0].get_context().ty.clone();
                     for e in &nelements {
-                        if e.annotation().ty != el_ty {
+                        if e.get_context().ty != el_ty {
                             return Err("Inconsistent types in array value".into());
                         }
                     }
@@ -487,26 +475,26 @@ impl TypeResolver {
                 // Use the size of the array and the type to define the array type
                 let mut meta = meta.clone();
                 meta.ty = Type::Array(Box::new(el_ty), *len);
-                Ok(Expression::ArrayValue(meta, nelements, *len))
+                Ok(Expression::ArrayExpression(meta, nelements, *len))
             }
             Expression::ArrayAt {
-                annotation: meta,
+                context: meta,
                 array,
                 index,
             } => {
                 //  Check that the array value is an array type
                 let n_array = self.traverse(array)?;
-                let el_ty = match n_array.annotation().ty() {
+                let el_ty = match n_array.get_context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(format!("Expected array type on LHS of [] but found {}", ty)),
                 }?;
 
                 // Check that the index is an i64 type
                 let n_index = self.traverse(index)?;
-                if !n_index.annotation().ty().is_integral() {
+                if !n_index.get_context().ty().is_integral() {
                     return Err(format!(
                         "Expected integral type for index but found {}",
-                        n_index.annotation().ty()
+                        n_index.get_context().ty()
                     ));
                 }
 
@@ -514,7 +502,7 @@ impl TypeResolver {
                 meta.ty = el_ty.clone();
 
                 Ok(Expression::ArrayAt {
-                    annotation: meta,
+                    context: meta,
                     array: box n_array,
                     index: box n_index,
                 })
@@ -585,7 +573,7 @@ impl TypeResolver {
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
             Expression::If {
-                annotation: meta,
+                context: meta,
                 cond,
                 if_arm,
                 else_arm,
@@ -608,7 +596,7 @@ impl TypeResolver {
                     if if_arm.get_type() == else_arm_ty {
                         meta.ty = if_arm.get_type().clone();
                         Ok(Expression::If {
-                            annotation: meta.clone(),
+                            context: meta.clone(),
                             cond: box cond,
                             if_arm: box if_arm,
                             else_arm: else_arm,
@@ -628,7 +616,7 @@ impl TypeResolver {
                 }
             }
             Expression::While {
-                annotation: meta,
+                context: meta,
                 cond,
                 body,
                 ..
@@ -641,7 +629,7 @@ impl TypeResolver {
                     if body.get_type() == Type::Unit {
                         meta.ty = Type::Unit;
                         Ok(Expression::While {
-                            annotation: meta.clone(),
+                            context: meta.clone(),
                             cond: box cond,
                             body: box body,
                         })
@@ -969,7 +957,7 @@ impl TypeResolver {
         }
     }
 
-    fn validate_main_fn(routine: &RoutineDef<SemanticAnnotations>) -> Result<()> {
+    fn validate_main_fn(routine: &RoutineDef<SemanticContext>) -> Result<()> {
         let RoutineDef {
             def,
             params,

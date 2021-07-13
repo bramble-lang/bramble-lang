@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{ast::*, semantics::semanticnode::SemanticAnnotations};
+use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
 
 use braid_lang::result::Result;
 
 /**
- * `SymbolTable` is an AST node annotation that contains information about symbols that
+ * `SymbolTable` is an AST node context that contains information about symbols that
  * are defined by immediate children of this node. For example:
  *
  *```
@@ -18,7 +18,7 @@ use braid_lang::result::Result;
  *```
  *
  * The node representing `my_mod` would have a child node representing the definition of
- * `hello`; the `SymbolTable` annotation on `my_mod`'s node would contain information for
+ * `hello`; the `SymbolTable` context on `my_mod`'s node would contain information for
  * the symbol `hello`, but it would _not_ contain the symbol for `x` which is whithin the
  * body of `hello`.
  *
@@ -63,37 +63,37 @@ impl SymbolTable {
      *
      * This function is recursively applied to child modules.
      */
-    pub fn add_item_defs_to_table(module: &mut Module<SemanticAnnotations>) -> Result<()> {
-        let mut annotations = module.annotation().clone();
+    pub fn add_item_defs_to_table(module: &mut Module<SemanticContext>) -> Result<()> {
+        let mut context = module.get_context().clone();
 
         let fm = module.get_functions_mut();
         for f in fm.iter_mut() {
-            SymbolTable::for_item(f, &mut annotations)?;
+            SymbolTable::for_item(f, &mut context)?;
         }
 
         let cm = module.get_coroutines_mut();
         for co in cm.iter_mut() {
-            SymbolTable::for_item(co, &mut annotations)?;
+            SymbolTable::for_item(co, &mut context)?;
         }
 
         for st in module.get_structs_mut().iter_mut() {
-            SymbolTable::for_item(st, &mut annotations)?;
+            SymbolTable::for_item(st, &mut context)?;
         }
 
         for e in module.get_externs_mut().iter_mut() {
-            SymbolTable::for_item(e, &mut annotations)?;
+            SymbolTable::for_item(e, &mut context)?;
         }
 
         for m in module.get_modules_mut().iter_mut() {
             SymbolTable::add_item_defs_to_table(m)?;
         }
 
-        *module.annotation_mut() = annotations;
+        *module.get_context_mut() = context;
 
         Ok(())
     }
 
-    fn for_item(item: &mut Item<SemanticAnnotations>, sym: &mut SemanticAnnotations) -> Result<()> {
+    fn for_item(item: &mut Item<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
         match item {
             Item::Routine(rd) => SymbolTable::add_routine_parameters(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
@@ -102,8 +102,8 @@ impl SymbolTable {
     }
 
     fn add_structdef(
-        structdef: &mut StructDef<SemanticAnnotations>,
-        sym: &mut SemanticAnnotations,
+        structdef: &mut StructDef<SemanticContext>,
+        sym: &mut SemanticContext,
     ) -> Result<()> {
         sym.sym.add(
             structdef.get_name(),
@@ -119,10 +119,7 @@ impl SymbolTable {
         )
     }
 
-    fn add_extern(
-        ex: &mut Extern<SemanticAnnotations>,
-        sym: &mut SemanticAnnotations,
-    ) -> Result<()> {
+    fn add_extern(ex: &mut Extern<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
         let Extern {
             name, params, ty, ..
         } = ex;
@@ -137,8 +134,8 @@ impl SymbolTable {
     }
 
     fn add_routine_parameters(
-        routine: &mut RoutineDef<SemanticAnnotations>,
-        sym: &mut SemanticAnnotations,
+        routine: &mut RoutineDef<SemanticContext>,
+        sym: &mut SemanticContext,
     ) -> Result<()> {
         let RoutineDef {
             def,
@@ -160,7 +157,7 @@ impl SymbolTable {
         sym.sym.add(name, def, false, false)
     }
 
-    fn get_types_for_params(params: &Vec<Parameter<SemanticAnnotations>>) -> Vec<Type> {
+    fn get_types_for_params(params: &Vec<Parameter<SemanticContext>>) -> Vec<Type> {
         params.iter().map(|p| p.ty.clone()).collect::<Vec<Type>>()
     }
 

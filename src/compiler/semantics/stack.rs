@@ -9,13 +9,13 @@ use crate::{
 use braid_lang::result::Result;
 
 use super::{
-    semanticnode::SemanticAnnotations,
+    semanticnode::SemanticContext,
     symbol_table::{ScopeType, Symbol, SymbolTable},
 };
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTableScopeStack {
-    root: *const Module<SemanticAnnotations>,
+    root: *const Module<SemanticContext>,
 
     stack: Vec<SymbolTable>,
     head: SymbolTable,
@@ -35,10 +35,7 @@ impl<'a> std::fmt::Display for SymbolTableScopeStack {
 }
 
 impl<'a> SymbolTableScopeStack {
-    pub fn new(
-        root: &'a Module<SemanticAnnotations>,
-        imports: &[Manifest],
-    ) -> SymbolTableScopeStack {
+    pub fn new(root: &'a Module<SemanticContext>, imports: &[Manifest]) -> SymbolTableScopeStack {
         let mut ss = SymbolTableScopeStack {
             stack: vec![],
             head: SymbolTable::new(),
@@ -51,7 +48,7 @@ impl<'a> SymbolTableScopeStack {
         ss
     }
 
-    pub fn get_root(&self) -> &'a Module<SemanticAnnotations> {
+    pub fn get_root(&self) -> &'a Module<SemanticContext> {
         unsafe { self.root.as_ref().expect("Root has does not exist") }
     }
 
@@ -98,8 +95,8 @@ impl<'a> SymbolTableScopeStack {
 
     /// Add a function from another module to this symbol table
     /// So that calls to external functions can be type checked.
-    pub fn import_structdef(&mut self, sd: &StructDef<SemanticAnnotations>) -> Option<Symbol> {
-        let canon_path = sd.annotation().get_canonical_path();
+    pub fn import_structdef(&mut self, sd: &StructDef<SemanticContext>) -> Option<Symbol> {
+        let canon_path = sd.get_context().get_canonical_path();
         match canon_path.item() {
             Some(item) => self.imported_symbols.insert(
                 canon_path.to_string(),
@@ -299,7 +296,7 @@ impl<'a> SymbolTableScopeStack {
                 }
             }
 
-            (*current).annotation().sym.get(item)
+            (*current).get_context().sym.get(item)
         }
     }
 

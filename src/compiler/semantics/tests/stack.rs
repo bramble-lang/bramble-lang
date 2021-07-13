@@ -3,7 +3,7 @@ mod stack_tests {
     use super::super::super::*;
     use crate::compiler::{
         ast::{Module, Type, CANONICAL_ROOT},
-        semantics::{semanticnode::SemanticAnnotations, symbol_table::SymbolTable},
+        semantics::{semanticnode::SemanticContext, symbol_table::SymbolTable},
     };
     use stack::*;
 
@@ -11,7 +11,7 @@ mod stack_tests {
     fn test_empty_stack_to_path() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -27,7 +27,7 @@ mod stack_tests {
     fn to_path_is_canonical() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -44,7 +44,7 @@ mod stack_tests {
     fn test_one_module_stack_to_path() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -63,7 +63,7 @@ mod stack_tests {
     fn test_one_module_stack_module_current_to_path() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -81,7 +81,7 @@ mod stack_tests {
     fn test_get_current_fn() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -99,7 +99,7 @@ mod stack_tests {
     fn test_get_current_fn_none() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -115,7 +115,7 @@ mod stack_tests {
     fn test_local_then_one_module_stack_to_path() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -135,7 +135,7 @@ mod stack_tests {
     fn test_local_then_two_module_stack_to_path() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -162,7 +162,7 @@ mod stack_tests {
     fn test_local_get_symbol() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -184,7 +184,7 @@ mod stack_tests {
     fn test_local_get_symbol_in_parent_scope() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -209,7 +209,7 @@ mod stack_tests {
     fn test_get_symbol_in_routine() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");
@@ -234,7 +234,7 @@ mod stack_tests {
     fn test_local_get_symbol_across_boundary() {
         let m = Module::new(
             "test",
-            SemanticAnnotations::new_module(1, 1, "test", Type::Unit),
+            SemanticContext::new_module(1, 1, "test", Type::Unit),
         );
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module("test");

@@ -1,10 +1,10 @@
 use crate::compiler::ast::node::Node;
 
-use super::Annotation;
+use super::Context;
 
 pub struct PostOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     out: Vec<&'a dyn Node<A>>,
 }
@@ -20,7 +20,7 @@ For Compiler transformations, use the `MapPostOrder` construct.
 */
 impl<'a, A> PostOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     /**
     Create a new Iterator which will perform a PostOrder DFS traversal of an AST
@@ -45,7 +45,7 @@ where
 
 impl<'a, A> Iterator for PostOrderIter<'a, A>
 where
-    A: std::fmt::Debug + Annotation,
+    A: std::fmt::Debug + Context,
 {
     type Item = &'a dyn Node<A>;
 
@@ -65,14 +65,14 @@ For Compiler transformations, use the `MapPostOrder` construct.
 */
 pub struct PreOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     out: Vec<&'a dyn Node<A>>,
 }
 
 impl<'a, A> PreOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     /**
     Create a new Iterator which will perform a PreOrder DFS traversal of an AST
@@ -99,7 +99,7 @@ where
 
 impl<'a, A> Iterator for PreOrderIter<'a, A>
 where
-    A: std::fmt::Debug + Annotation,
+    A: std::fmt::Debug + Context,
 {
     type Item = &'a dyn Node<A>;
 
@@ -122,7 +122,7 @@ mod test_preorder {
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
-        let i = n.annotation();
+        let i = n.get_context();
         2 * (*i as i64)
     }
 
@@ -134,7 +134,7 @@ mod test_preorder {
         let mut iter = module1.iter_preorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -147,7 +147,7 @@ mod test_preorder {
         let mut iter = module1.iter_preorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -166,7 +166,7 @@ mod test_preorder {
             "func",
             4,
             vec![Parameter {
-                annotation: 5,
+                context: 5,
                 name: "p".into(),
                 ty: Type::Bool,
             }],
@@ -178,7 +178,7 @@ mod test_preorder {
         m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
 
         let expected = vec![1, 7, 4, 5, 6, 2, 3, 8];
-        let test: Vec<i64> = m.iter_preorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = m.iter_preorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 
@@ -191,7 +191,7 @@ mod test_preorder {
             Type::I32,
             false,
             Expression::If {
-                annotation: 3,
+                context: 3,
                 cond: box Expression::BinaryOp(
                     4,
                     crate::compiler::ast::expression::BinaryOperator::Eq,
@@ -224,7 +224,7 @@ mod test_preorder {
         )));
 
         let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        let test: Vec<i64> = f.iter_preorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = f.iter_preorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 }
@@ -244,7 +244,7 @@ mod test_postorder {
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
-        let i = n.annotation();
+        let i = n.get_context();
         2 * (*i as i64)
     }
 
@@ -256,7 +256,7 @@ mod test_postorder {
         let mut iter = module1.iter_postorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -269,7 +269,7 @@ mod test_postorder {
         let mut iter = module1.iter_postorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -288,7 +288,7 @@ mod test_postorder {
             "func",
             4,
             vec![Parameter {
-                annotation: 5,
+                context: 5,
                 name: "p".into(),
                 ty: Type::Bool,
             }],
@@ -300,7 +300,7 @@ mod test_postorder {
         m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
 
         let expected = vec![7, 5, 6, 4, 3, 2, 8, 1];
-        let test: Vec<i64> = m.iter_postorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = m.iter_postorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 
@@ -313,7 +313,7 @@ mod test_postorder {
             Type::I32,
             false,
             Expression::If {
-                annotation: 3,
+                context: 3,
                 cond: box Expression::BinaryOp(
                     4,
                     BinaryOperator::Eq,
@@ -346,7 +346,7 @@ mod test_postorder {
         )));
 
         let expected = vec![5, 6, 4, 7, 8, 3, 2, 13, 12, 15, 14, 11, 10, 9, 1];
-        let test: Vec<i64> = f.iter_postorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = f.iter_postorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 }

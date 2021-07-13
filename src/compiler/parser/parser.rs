@@ -22,10 +22,10 @@ use super::{
     statement::{return_stmt, statement, statement_or_yield_return},
 };
 
-pub type ParserInfo = u32;
+pub type ParserContext = u32;
 type HasVarArgs = bool;
 
-impl Annotation for ParserInfo {
+impl Context for ParserContext {
     fn id(&self) -> u32 {
         0
     }
@@ -35,7 +35,7 @@ impl Annotation for ParserInfo {
     }
 }
 
-impl Diag for ParserInfo {
+impl Diag for ParserContext {
     fn diag(&self) -> DiagData {
         DiagData::new(*self, 0)
     }
@@ -326,7 +326,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Function must end with a return statement, got {:?}",
-                stmts.last().map_or(fn_line, |s| *s.annotation()),
+                stmts.last().map_or(fn_line, |s| *s.get_context()),
                 stream.peek(),
             ))
         }
@@ -334,7 +334,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        annotations: fn_line,
+        context: fn_line,
         def: RoutineDefType::Function,
         name: fn_name,
         params,
@@ -371,14 +371,14 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Coroutine must end with a return statement",
-                stmts.last().map_or(co_line, |s| *s.annotation()),
+                stmts.last().map_or(co_line, |s| *s.get_context()),
             ))
         }
     }
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        annotations: co_line,
+        context: co_line,
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
@@ -387,7 +387,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     }))
 }
 
-pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
+pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserContext>>> {
     trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
@@ -396,7 +396,7 @@ pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo
     Ok(stmts)
 }
 
-fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
+fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserContext>>> {
     trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement_or_yield_return(stream)? {
@@ -408,7 +408,7 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserInfo>>> {
 fn fn_def_params(
     stream: &mut TokenStream,
     allow_var_args: bool,
-) -> Result<(Vec<Parameter<ParserInfo>>, HasVarArgs)> {
+) -> Result<(Vec<Parameter<ParserContext>>, HasVarArgs)> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
     let params = parameter_list(stream)?;
@@ -424,14 +424,14 @@ fn fn_def_params(
     Ok((params, has_varargs))
 }
 
-fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserInfo>>> {
+fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserContext>>> {
     let params = id_declaration_list(stream)?;
 
     // Convert tuples into parameters
     let params = params
         .iter()
         .map(|(line, name, ty)| Parameter {
-            annotation: *line,
+            context: *line,
             name: name.clone(),
             ty: ty.clone(),
         })
@@ -457,7 +457,7 @@ pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(u32, 
     Ok(decls)
 }
 
-fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
         let (line, fn_name) = stream
@@ -478,7 +478,7 @@ fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
 
 pub(super) fn routine_call_params(
     stream: &mut TokenStream,
-) -> ParserResult<Vec<Expression<ParserInfo>>> {
+) -> ParserResult<Vec<Expression<ParserContext>>> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(_) => {
@@ -528,7 +528,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     }
 }
 
-fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if_id() {
         Some((line, id)) => Ok(Some(Expression::Identifier(line, id))),
@@ -606,7 +606,7 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
     }
 }
 
-pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
         Some(t) => {

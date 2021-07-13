@@ -55,8 +55,8 @@ where
     Then immediately after the transformation, run `end` on the result. This will print
     diagnostic output to the screen.
      */
-    pub fn begin(&mut self, annotation: &A) {
-        let d = annotation.diag();
+    pub fn begin(&mut self, context: &A) {
+        let d = context.diag();
         if self.config.trace(d.ln as usize) {
             self.before_transform = Some(d);
         }
@@ -65,8 +65,8 @@ where
     /**
     Completes a diagnostic unit.
      */
-    pub fn end(&mut self, annotation: &B) {
-        let after_transform = annotation.diag();
+    pub fn end(&mut self, context: &B) {
+        let after_transform = context.diag();
         if self.config.trace(after_transform.ln as usize) {
             match self.before_transform.take() {
                 Some(before_diag) if before_diag.data.len() > 0 => {
@@ -100,7 +100,7 @@ pub struct DiagData {
 impl DiagData {
     /**
     Create a new unit of DiagData. Each unit of DiagData is associated with
-    the annotation on a single node of the AST.
+    the context on a single node of the AST.
      */
     pub fn new(ln: u32, node_id: u32) -> DiagData {
         DiagData {

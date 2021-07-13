@@ -9,7 +9,7 @@ use crate::compiler::ast::Expression;
 use crate::compiler::ast::Extern;
 use crate::diagnostics::{config::TracingConfig, Diag, DiagRecorder};
 
-use super::{super::node::Node, super::parameter::Parameter, Annotation};
+use super::{super::node::Node, super::parameter::Parameter, Context};
 
 /**
 Traverses an AST in using a PreOrder Depth First Search and transforms the AST by
@@ -25,7 +25,7 @@ Compiler UI.
 */
 pub struct MapPreOrder<A, B, F>
 where
-    A: Debug + Annotation + Diag,
+    A: Debug + Context + Diag,
     B: Diag,
     F: FnMut(&dyn Node<A>) -> B,
 {
@@ -38,7 +38,7 @@ where
 
 impl<A, B, F> MapPreOrder<A, B, F>
 where
-    A: Debug + Annotation + Diag,
+    A: Debug + Context + Diag,
     F: FnMut(&dyn Node<A>) -> B,
     B: Diag,
 {
@@ -53,7 +53,7 @@ where
     }
 
     fn transform(&mut self, n: &dyn Node<A>) -> B {
-        self.diag.begin(n.annotation());
+        self.diag.begin(n.get_context());
         let b = (self.f)(n);
         self.diag.end(&b);
         b
@@ -62,7 +62,7 @@ where
     /**
     Applies the transformation function given to the constructor to each
     node in the given AST, in PreOrder DFS ordering, and creates a new
-    AST using the output of the transformation function as the annotation
+    AST using the output of the transformation function as the context
     of the new nodes.
     */
     pub fn apply(&mut self, m: &Module<A>) -> Module<B> {
@@ -130,7 +130,7 @@ where
         RoutineDef {
             name: rd.name.clone(),
             def: rd.def,
-            annotations: b,
+            context: b,
             params,
             ret_ty: rd.ret_ty.clone(),
             body,
@@ -201,7 +201,7 @@ where
             I64(_, i) => I64(self.transform(exp), *i),
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
-            ArrayValue(_, _, _) => self.for_array_value(exp),
+            ArrayExpression(_, _, _) => self.for_array_expression(exp),
             ArrayAt { .. } => self.for_array_at(exp),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
@@ -281,7 +281,7 @@ where
             let if_arm = self.for_expression(if_arm);
             let else_arm = else_arm.as_ref().map(|ea| box self.for_expression(ea));
             Expression::If {
-                annotation: b,
+                context: b,
                 cond: box cond,
                 if_arm: box if_arm,
                 else_arm,
@@ -297,7 +297,7 @@ where
             let cond = self.for_expression(cond);
             let body = self.for_expression(body);
             Expression::While {
-                annotation: b,
+                context: b,
                 cond: box cond,
                 body: box body,
             }
@@ -342,14 +342,14 @@ where
         }
     }
 
-    fn for_array_value(&mut self, av: &Expression<A>) -> Expression<B> {
-        if let Expression::ArrayValue(_, elements, len) = av {
+    fn for_array_expression(&mut self, av: &Expression<A>) -> Expression<B> {
+        if let Expression::ArrayExpression(_, elements, len) = av {
             let b = self.transform(av);
             let mut nelements = vec![];
             for e in elements {
                 nelements.push(self.for_expression(e));
             }
-            Expression::ArrayValue(b, nelements, *len)
+            Expression::ArrayExpression(b, nelements, *len)
         } else {
             panic!("Expected ArrayValue but got {:?}", av)
         }
@@ -361,7 +361,7 @@ where
             let array = self.for_expression(array);
             let index = self.for_expression(index);
             Expression::ArrayAt {
-                annotation: b,
+                context: b,
                 array: box array,
                 index: box index,
             }
@@ -377,7 +377,7 @@ mod test {
     use crate::compiler::ast::{module::Module, ty::Type};
     use crate::diagnostics::DiagData;
 
-    impl Annotation for i32 {
+    impl Context for i32 {
         fn id(&self) -> u32 {
             0
         }
@@ -395,7 +395,7 @@ mod test {
         }
     }
 
-    impl Annotation for i64 {
+    impl Context for i64 {
         fn id(&self) -> u32 {
             0
         }
@@ -413,7 +413,7 @@ mod test {
         }
     }
 
-    impl Annotation for String {
+    impl Context for String {
         fn id(&self) -> u32 {
             0
         }
@@ -432,7 +432,7 @@ mod test {
     }
 
     fn convert(n: &dyn Node<i32>) -> i64 {
-        let i = n.annotation();
+        let i = n.get_context();
         2 * (*i as i64)
     }
 
@@ -448,7 +448,7 @@ mod test {
         let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
         let module2 = mp.apply(&module1);
 
-        assert_eq!(*module2.annotation(), 2i64);
+        assert_eq!(*module2.get_context(), 2i64);
         assert_eq!(count, 1);
     }
 
@@ -466,8 +466,8 @@ mod test {
         let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
         let module2 = mp.apply(&module1);
 
-        assert_eq!(*module2.annotation(), 2i64);
-        assert_eq!(*module2.get_module("m2").unwrap().annotation(), 4i64);
+        assert_eq!(*module2.get_context(), 2i64);
+        assert_eq!(*module2.get_module("m2").unwrap().get_context(), 4i64);
         assert_eq!(count, 2);
     }
 
@@ -486,7 +486,7 @@ mod test {
             "func",
             1,
             vec![Parameter {
-                annotation: 1,
+                context: 1,
                 name: "p".into(),
                 ty: Type::Bool,
             }],
@@ -501,14 +501,14 @@ mod test {
         let mut count = 0;
         let f = |n: &dyn Node<i64>| {
             count += 1;
-            format!("{}", n.annotation())
+            format!("{}", n.get_context())
         };
         let mut mapper = MapPreOrder::new("test", f, TracingConfig::Off);
 
         let m_prime = mapper.apply(&m);
 
         for n in m_prime.iter_preorder() {
-            assert_eq!(*n.annotation(), "1");
+            assert_eq!(*n.get_context(), "1");
         }
         assert_eq!(count, 8);
     }

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     parameter::Parameter,
     ty::Type,
@@ -11,18 +11,18 @@ use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StructDef<M> {
-    annotations: M,
+    context: M,
     name: String,
     pub(super) fields: Vec<Parameter<M>>,
 }
 
-impl<M: Annotation> Node<M> for StructDef<M> {
-    fn annotation(&self) -> &M {
-        &self.annotations
+impl<M: Context> Node<M> for StructDef<M> {
+    fn get_context(&self) -> &M {
+        &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+    fn get_context_mut(&mut self) -> &mut M {
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -57,9 +57,9 @@ impl<M> std::fmt::Display for StructDef<M> {
 }
 
 impl<M> StructDef<M> {
-    pub fn new(name: &str, annotations: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
+    pub fn new(name: &str, context: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
         StructDef {
-            annotations,
+            context,
             name: name.into(),
             fields,
         }

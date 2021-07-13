@@ -4,12 +4,12 @@ use crate::compiler::ast::*;
 use crate::diagnostics::{config::TracingConfig, DiagRecorder};
 use crate::project::manifest::Manifest;
 
-use super::super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
+use super::super::{semanticnode::SemanticContext, stack::SymbolTableScopeStack};
 use super::Canonizable;
 
 /**
 Traverse through each node, in pre-order DFS, and apply a function to mutate the
-annotation on that node.
+context on that node.
 
 This does not mutate or alter the topology of the AST nor does it mutate the
 AST node or its immediate value, only the Annotation on the visted nodes may
@@ -22,22 +22,22 @@ new Annotation type.
 */
 pub struct ForEachPreOrderMut<T>
 where
-    T: Fn(&SemanticAnnotations) -> String,
+    T: Fn(&SemanticContext) -> String,
 {
     pub name: String,
     pub tracing: TracingConfig,
     pub format: T,
-    diag: DiagRecorder<SemanticAnnotations, SemanticAnnotations>,
+    diag: DiagRecorder<SemanticContext, SemanticContext>,
     symbols: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
 }
 
 impl<'a, T> ForEachPreOrderMut<T>
 where
-    T: Fn(&SemanticAnnotations) -> String,
+    T: Fn(&SemanticContext) -> String,
 {
     pub fn new(
         name: &str,
-        root: &'a mut Module<SemanticAnnotations>,
+        root: &'a mut Module<SemanticContext>,
         imports: &[Manifest],
         tracing: TracingConfig,
         format: T,
@@ -55,13 +55,13 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
-        self.diag.begin(a.annotation());
-        let r = f(&self.symbols, a).map_err(|e| format!("L{}: {}", a.annotation().line(), e));
-        self.diag.end(a.annotation());
+        self.diag.begin(a.get_context());
+        let r = f(&self.symbols, a).map_err(|e| format!("L{}: {}", a.get_context().line(), e));
+        self.diag.end(a.get_context());
         r
     }
 
-    pub fn for_each<F>(&mut self, m: &mut Module<SemanticAnnotations>, f: F) -> Result<()>
+    pub fn for_each<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -71,7 +71,7 @@ where
         r.map_err(|e| format!("Semantic: {}", e))
     }
 
-    fn for_module<F>(&mut self, m: &mut Module<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_module<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -79,7 +79,7 @@ where
             println!("{}", self.name);
         }
 
-        self.symbols.enter_scope(&m.annotation().sym);
+        self.symbols.enter_scope(&m.get_context().sym);
         let r = self.transform(m, f);
 
         for child_module in m.get_modules_mut().iter_mut() {
@@ -95,7 +95,7 @@ where
         r
     }
 
-    fn for_items<F>(&mut self, items: &mut Vec<Item<SemanticAnnotations>>, f: F) -> Result<()>
+    fn for_items<F>(&mut self, items: &mut Vec<Item<SemanticContext>>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -109,7 +109,7 @@ where
         Ok(())
     }
 
-    fn for_structdef<F>(&mut self, sd: &mut StructDef<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_structdef<F>(&mut self, sd: &mut StructDef<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -118,11 +118,11 @@ where
         r
     }
 
-    fn for_routinedef<F>(&mut self, rd: &mut RoutineDef<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_routinedef<F>(&mut self, rd: &mut RoutineDef<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
-        self.symbols.enter_scope(&rd.annotation().sym);
+        self.symbols.enter_scope(&rd.get_context().sym);
         let r = self.transform(rd, f);
         // loop through all the params
         self.for_parameters(&mut rd.params, f)?;
@@ -135,7 +135,7 @@ where
         r
     }
 
-    fn for_extern<F>(&mut self, ex: &mut Extern<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_extern<F>(&mut self, ex: &mut Extern<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -146,7 +146,7 @@ where
 
     fn for_parameters<F>(
         &mut self,
-        params: &mut Vec<Parameter<SemanticAnnotations>>,
+        params: &mut Vec<Parameter<SemanticContext>>,
         f: F,
     ) -> Result<()>
     where
@@ -158,11 +158,7 @@ where
         Ok(())
     }
 
-    fn for_statement<F>(
-        &mut self,
-        statement: &mut Statement<SemanticAnnotations>,
-        f: F,
-    ) -> Result<()>
+    fn for_statement<F>(&mut self, statement: &mut Statement<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -186,7 +182,7 @@ where
         Ok(())
     }
 
-    fn for_bind<F>(&mut self, bind: &mut Bind<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_bind<F>(&mut self, bind: &mut Bind<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -195,7 +191,7 @@ where
         r
     }
 
-    fn for_mutate<F>(&mut self, mutate: &mut Mutate<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_mutate<F>(&mut self, mutate: &mut Mutate<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -204,7 +200,7 @@ where
         r
     }
 
-    fn for_yieldreturn<F>(&mut self, yr: &mut YieldReturn<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_yieldreturn<F>(&mut self, yr: &mut YieldReturn<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -216,7 +212,7 @@ where
         r
     }
 
-    fn for_return<F>(&mut self, ret: &mut Return<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_return<F>(&mut self, ret: &mut Return<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -230,7 +226,7 @@ where
         r
     }
 
-    fn for_expression<F>(&mut self, exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_expression<F>(&mut self, exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -248,7 +244,7 @@ where
             Expression::I64(..) => self.transform(exp, f),
             Expression::Boolean(..) => self.transform(exp, f),
             Expression::StringLiteral(..) => self.transform(exp, f),
-            Expression::ArrayValue(_, el, _) => {
+            Expression::ArrayExpression(_, el, _) => {
                 for e in el {
                     self.for_expression(e, f)?;
                     //println!("{} Checking Elements => {}", self.name, e.annotation().ty);
@@ -272,27 +268,21 @@ where
             While { .. } => self.for_while(exp, f),
             Yield(..) => self.for_yield(exp, f),
             RoutineCall(..) => self.for_routine_call(exp, f),
-            StructExpression(..) => {
-                let r = self.for_struct_expression(exp, f);
-                //println!("L{}: for_exp {}", exp.annotation().line(), exp);
-                r
-            }
+            StructExpression(..) => self.for_struct_expression(exp, f),
         }
     }
 
     fn for_expression_block<F>(
         &mut self,
-        block: &mut Expression<SemanticAnnotations>,
+        block: &mut Expression<SemanticContext>,
         f: F,
     ) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
-        self.symbols.enter_scope(&block.annotation().sym);
+        self.symbols.enter_scope(&block.get_context().sym);
         let r = self.transform(block, f);
-        if let Expression::ExpressionBlock(ref mut _annotation, ref mut body, ref mut final_exp) =
-            block
-        {
+        if let Expression::ExpressionBlock(_, ref mut body, ref mut final_exp) = block {
             for e in body.iter_mut() {
                 self.for_statement(e, f)?;
             }
@@ -309,11 +299,7 @@ where
         r
     }
 
-    fn for_member_access<F>(
-        &mut self,
-        access: &mut Expression<SemanticAnnotations>,
-        f: F,
-    ) -> Result<()>
+    fn for_member_access<F>(&mut self, access: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -326,7 +312,7 @@ where
         r
     }
 
-    fn for_unary_op<F>(&mut self, un_op: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_unary_op<F>(&mut self, un_op: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -339,7 +325,7 @@ where
         r
     }
 
-    fn for_binary_op<F>(&mut self, bin_op: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_binary_op<F>(&mut self, bin_op: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -353,7 +339,7 @@ where
         r
     }
 
-    fn for_if<F>(&mut self, if_exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_if<F>(&mut self, if_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -378,7 +364,7 @@ where
         r
     }
 
-    fn for_while<F>(&mut self, while_exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_while<F>(&mut self, while_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -392,7 +378,7 @@ where
         r
     }
 
-    fn for_routine_call<F>(&mut self, rc: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_routine_call<F>(&mut self, rc: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -407,7 +393,7 @@ where
         r
     }
 
-    fn for_yield<F>(&mut self, yield_exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_yield<F>(&mut self, yield_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -420,11 +406,7 @@ where
         r
     }
 
-    fn for_struct_expression<F>(
-        &mut self,
-        se: &mut Expression<SemanticAnnotations>,
-        f: F,
-    ) -> Result<()>
+    fn for_struct_expression<F>(&mut self, se: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -468,12 +450,12 @@ mod tests {
                 "test".into()
             });
         t.for_module(&mut sm_ast, |_stack, n| {
-            n.annotation_mut().ln *= 4;
+            n.get_context_mut().ty = Type::I64;
             Ok(())
         })
         .unwrap();
 
-        assert_eq!(sm_ast.annotation().ln, 4);
+        assert_eq!(sm_ast.get_context().ty, Type::I64);
     }
 
     #[test]
@@ -496,20 +478,20 @@ mod tests {
             });
         t.for_module(&mut sm_ast, |stack, n| {
             let cpath = stack.to_canonical(&vec!["annotation"].into()).unwrap();
-            n.annotation_mut().set_canonical_path(cpath);
+            n.get_context_mut().set_canonical_path(cpath);
             Ok(())
         })
         .unwrap();
 
         assert_eq!(
-            *sm_ast.annotation().get_canonical_path(),
+            *sm_ast.get_context().get_canonical_path(),
             vec!["project", "test", "annotation"].into()
         );
         assert_eq!(
             *sm_ast
                 .get_module("m")
                 .unwrap()
-                .annotation()
+                .get_context()
                 .get_canonical_path(),
             vec!["project", "test", "m", "annotation"].into()
         );
@@ -536,7 +518,7 @@ mod tests {
         t.for_module(&mut sm_ast, |stack, n| match n.name() {
             Some(name) => {
                 let cpath = stack.to_canonical(&vec![name].into()).unwrap();
-                n.annotation_mut().set_canonical_path(cpath);
+                n.get_context_mut().set_canonical_path(cpath);
                 Ok(())
             }
             None => Ok(()),
@@ -549,7 +531,7 @@ mod tests {
                 .unwrap()
                 .get_item("MyStruct")
                 .unwrap()
-                .annotation()
+                .get_context()
                 .get_canonical_path(),
             vec!["project", "test", "m", "MyStruct"].into()
         );

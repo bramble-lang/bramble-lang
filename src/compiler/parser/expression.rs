@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use super::{
-    parser::{block, path, routine_call_params, ParserInfo, ParserResult},
+    parser::{block, path, routine_call_params, ParserContext, ParserResult},
     tokenstream::TokenStream,
 };
 use crate::{
@@ -14,14 +14,14 @@ use crate::{
     trace,
 };
 
-impl ParserCombinator<ParserResult<Expression<ParserInfo>>>
-    for ParserResult<Expression<ParserInfo>>
+impl ParserCombinator<ParserResult<Expression<ParserContext>>>
+    for ParserResult<Expression<ParserContext>>
 {
     fn por(
         &self,
-        f: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>,
+        f: fn(&mut TokenStream) -> ParserResult<Expression<ParserContext>>,
         ts: &mut TokenStream,
-    ) -> ParserResult<Expression<ParserInfo>> {
+    ) -> ParserResult<Expression<ParserContext>> {
         match self {
             Ok(Some(s)) => Ok(Some(s.clone())),
             Ok(None) => f(ts),
@@ -33,12 +33,12 @@ impl ParserCombinator<ParserResult<Expression<ParserInfo>>>
         &self,
         cond: Vec<Lex>,
         then: fn(
-            Expression<ParserInfo>,
+            Expression<ParserContext>,
             Token,
             &mut TokenStream,
-        ) -> ParserResult<Expression<ParserInfo>>,
+        ) -> ParserResult<Expression<ParserContext>>,
         ts: &mut TokenStream,
-    ) -> ParserResult<Expression<ParserInfo>> {
+    ) -> ParserResult<Expression<ParserContext>> {
         match self {
             Ok(Some(s)) => match ts.next_if_one_of(cond) {
                 Some(result) => then(s.clone(), result, ts),
@@ -55,16 +55,16 @@ pub trait ParserCombinator<R> {
     fn pif_then(
         &self,
         cond: Vec<Lex>,
-        f: fn(Expression<ParserInfo>, Token, &mut TokenStream) -> R,
+        f: fn(Expression<ParserContext>, Token, &mut TokenStream) -> R,
         ts: &mut TokenStream,
     ) -> R;
 }
 
-impl Expression<ParserInfo> {
+impl Expression<ParserContext> {
     pub fn new_yield(
         line: u32,
         coroutine_value: Box<Self>,
-    ) -> ParserResult<Expression<ParserInfo>> {
+    ) -> ParserResult<Expression<ParserContext>> {
         let i = line; //ParserInfo{l: line};
         Ok(Some(Expression::Yield(i, coroutine_value)))
     }
@@ -73,7 +73,7 @@ impl Expression<ParserInfo> {
         line: u32,
         op: &Lex,
         operand: Box<Self>,
-    ) -> ParserResult<Expression<ParserInfo>> {
+    ) -> ParserResult<Expression<ParserContext>> {
         match op {
             Lex::Minus => Ok(Some(Expression::UnaryOp(
                 line,
@@ -90,7 +90,7 @@ impl Expression<ParserInfo> {
         op: &Lex,
         left: Box<Self>,
         right: Box<Self>,
-    ) -> ParserResult<Expression<ParserInfo>> {
+    ) -> ParserResult<Expression<ParserContext>> {
         let i = line; //ParserInfo{l: line};
         match op {
             Lex::Eq => Ok(Some(Expression::BinaryOp(
@@ -170,7 +170,7 @@ impl Expression<ParserInfo> {
     }
 }
 
-fn expression_block(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn expression_block(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(token) => {
@@ -185,22 +185,22 @@ fn expression_block(stream: &mut TokenStream) -> ParserResult<Expression<ParserI
     }
 }
 
-pub(super) fn expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+pub(super) fn expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     logical_or(stream)
 }
 
-fn logical_or(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn logical_or(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::BOr], logical_and)
 }
 
-fn logical_and(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn logical_and(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::BAnd], comparison)
 }
 
-fn comparison(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn comparison(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     binary_op(
         stream,
@@ -209,12 +209,12 @@ fn comparison(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> 
     )
 }
 
-fn sum(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn sum(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::Add, Lex::Minus], term)
 }
 
-fn term(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn term(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     binary_op(stream, &vec![Lex::Mul, Lex::Div], negate)
 }
@@ -222,8 +222,8 @@ fn term(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
 pub fn binary_op(
     stream: &mut TokenStream,
     test: &Vec<Lex>,
-    left_pattern: fn(&mut TokenStream) -> ParserResult<Expression<ParserInfo>>,
-) -> ParserResult<Expression<ParserInfo>> {
+    left_pattern: fn(&mut TokenStream) -> ParserResult<Expression<ParserContext>>,
+) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match left_pattern(stream)? {
         Some(left) => match stream.next_if_one_of(test.clone()) {
@@ -238,7 +238,7 @@ pub fn binary_op(
     }
 }
 
-fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
@@ -250,7 +250,7 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     }
 }
 
-fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match factor(stream)? {
         Some(f) => {
@@ -273,7 +273,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
                             stream
                                 .next_must_be(&Lex::RBracket)
                                 .map(|_| Expression::ArrayAt {
-                                    annotation: token.l,
+                                    context: token.l,
                                     array: box ma,
                                     index: box index,
                                 })
@@ -293,7 +293,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
     }
 }
 
-fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.peek() {
         Some(Token {
@@ -315,7 +315,7 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     }
 }
 
-fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::If) {
         Some(token) => {
@@ -353,7 +353,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
             };
 
             Some(Expression::If {
-                annotation: token.l,
+                context: token.l,
                 cond: Box::new(cond),
                 if_arm: Box::new(if_arm),
                 else_arm: else_arm.map(|f| box f),
@@ -363,7 +363,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo
     })
 }
 
-fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::While) {
         Some(token) => {
@@ -378,7 +378,7 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserI
                 expression_block(stream)?.ok_or(format!("L{}: Expression in body", token.l))?;
 
             Some(Expression::While {
-                annotation: token.l,
+                context: token.l,
                 cond: Box::new(cond),
                 body: Box::new(body),
             })
@@ -387,7 +387,7 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserI
     })
 }
 
-fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     let s: Option<Expression<u32>> = match path(stream)? {
         Some((line, path)) => match routine_call_params(stream)? {
@@ -414,14 +414,14 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
     Ok(s)
 }
 
-fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Yield) {
         Some(token) => {
             let line = token.l;
             match expression(stream)? {
                 Some(coroutine) => {
-                    Expression::new_yield(*coroutine.annotation(), Box::new(coroutine))
+                    Expression::new_yield(*coroutine.get_context(), Box::new(coroutine))
                 }
                 None => Err(format!("L{}: expected an identifier after yield", line)),
             }
@@ -432,7 +432,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
 
 fn struct_init_params(
     stream: &mut TokenStream,
-) -> ParserResult<Vec<(String, Expression<ParserInfo>)>> {
+) -> ParserResult<Vec<(String, Expression<ParserContext>)>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
@@ -457,7 +457,7 @@ fn struct_init_params(
     }
 }
 
-fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::LBracket) {
         Some(token) => {
@@ -473,20 +473,20 @@ fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>>
             stream.next_must_be(&Lex::RBracket)?;
 
             let len = elements.len();
-            Ok(Some(Expression::ArrayValue(token.l, elements, len)))
+            Ok(Some(Expression::ArrayExpression(token.l, elements, len)))
         }
         None => Ok(None),
     }
 }
 
-fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn constant(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     number(stream)
         .por(boolean, stream)
         .por(string_literal, stream)
 }
 
-fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if_one_of(vec![
         Lex::U8(0),
@@ -511,7 +511,7 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     }
 }
 
-fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
         Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Expression::Boolean(l, b))),
@@ -519,7 +519,7 @@ fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     }
 }
 
-fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::StringLiteral("".into())) {
         Some(Token {
@@ -571,19 +571,19 @@ mod test {
         for (text, expected) in vec![
             (
                 "[1]",
-                Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
+                Expression::ArrayExpression(1, vec![Expression::I64(1, 1)], 1),
             ),
             (
                 "[1u8]",
-                Expression::ArrayValue(1, vec![Expression::U8(1, 1)], 1),
+                Expression::ArrayExpression(1, vec![Expression::U8(1, 1)], 1),
             ),
             (
                 "[1,]",
-                Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
+                Expression::ArrayExpression(1, vec![Expression::I64(1, 1)], 1),
             ),
             (
                 "[1, 2, 3]",
-                Expression::ArrayValue(
+                Expression::ArrayExpression(
                     1,
                     vec![
                         Expression::I64(1, 1),
@@ -595,7 +595,7 @@ mod test {
             ),
             (
                 "[1, 2i8, 3]", // This is legal at the parser level (it is illegal semantically)
-                Expression::ArrayValue(
+                Expression::ArrayExpression(
                     1,
                     vec![
                         Expression::I64(1, 1),
@@ -607,9 +607,13 @@ mod test {
             ),
             (
                 "[[1,],]",
-                Expression::ArrayValue(
+                Expression::ArrayExpression(
                     1,
-                    vec![Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1)],
+                    vec![Expression::ArrayExpression(
+                        1,
+                        vec![Expression::I64(1, 1)],
+                        1,
+                    )],
                     1,
                 ),
             ),
@@ -653,7 +657,7 @@ mod test {
             (
                 "a[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::Identifier(1, "a".into()),
                     index: box Expression::I64(1, 1),
                 },
@@ -661,7 +665,7 @@ mod test {
             (
                 "(a)[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::Identifier(1, "a".into()),
                     index: box Expression::I64(1, 1),
                 },
@@ -669,7 +673,7 @@ mod test {
             (
                 "a.b[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::MemberAccess(
                         1,
                         box Expression::Identifier(1, "a".into()),
@@ -683,7 +687,7 @@ mod test {
                 Expression::MemberAccess(
                     1,
                     box Expression::ArrayAt {
-                        annotation: 1,
+                        context: 1,
                         array: box Expression::Identifier(1, "a".into()),
                         index: box Expression::I64(1, 1),
                     },
@@ -693,11 +697,11 @@ mod test {
             (
                 "a[0].b[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::MemberAccess(
                         1,
                         box Expression::ArrayAt {
-                            annotation: 1,
+                            context: 1,
                             array: box Expression::Identifier(1, "a".into()),
                             index: box Expression::I64(1, 0),
                         },
@@ -709,9 +713,9 @@ mod test {
             (
                 "a[1][2]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::ArrayAt {
-                        annotation: 1,
+                        context: 1,
                         array: box Expression::Identifier(1, "a".into()),
                         index: box Expression::I64(1, 1),
                     },
@@ -721,9 +725,9 @@ mod test {
             (
                 "((a)[1])[2]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::ArrayAt {
-                        annotation: 1,
+                        context: 1,
                         array: box Expression::Identifier(1, "a".into()),
                         index: box Expression::I64(1, 1),
                     },

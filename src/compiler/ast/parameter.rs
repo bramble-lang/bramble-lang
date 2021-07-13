@@ -2,25 +2,25 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     ty::Type,
 };
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Parameter<M> {
-    pub annotation: M,
+    pub context: M,
     pub name: String,
     pub ty: Type,
 }
 
-impl<M: Annotation> Node<M> for Parameter<M> {
-    fn annotation(&self) -> &M {
-        &self.annotation
+impl<M: Context> Node<M> for Parameter<M> {
+    fn get_context(&self) -> &M {
+        &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotation
+    fn get_context_mut(&mut self) -> &mut M {
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -47,7 +47,7 @@ impl<M: Annotation> Node<M> for Parameter<M> {
 impl<M> Parameter<M> {
     pub fn new(a: M, name: &str, ty: &Type) -> Parameter<M> {
         Parameter {
-            annotation: a,
+            context: a,
             name: name.into(),
             ty: ty.clone(),
         }
@@ -57,12 +57,12 @@ impl<M> Parameter<M> {
         format!("{}:{}", self.name, self.ty)
     }
 
-    pub fn map_annotation<F, N>(&self, mut f: F) -> Parameter<N>
+    pub fn map_context<F, N>(&self, mut f: F) -> Parameter<N>
     where
         F: FnMut(&M) -> N,
     {
         Parameter {
-            annotation: f(&self.annotation),
+            context: f(&self.context),
             name: self.name.clone(),
             ty: self.ty.clone(),
         }

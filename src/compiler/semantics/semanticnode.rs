@@ -2,22 +2,22 @@ use serde::{Deserialize, Serialize};
 
 use crate::diagnostics::config::TracingConfig;
 use crate::{
-    compiler::{ast::*, parser::parser::ParserInfo},
+    compiler::{ast::*, parser::parser::ParserContext},
     diagnostics::{Diag, DiagData},
 };
 
 use super::symbol_table::SymbolTable;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct SemanticAnnotations {
-    pub id: u32,
-    pub ln: u32,
-    pub ty: Type,
-    pub sym: SymbolTable,
-    pub canonical_path: Path,
+pub struct SemanticContext {
+    id: u32,
+    ln: u32,
+    pub(super) ty: Type,
+    pub(super) sym: SymbolTable,
+    pub(super) canonical_path: Path,
 }
 
-impl Annotation for SemanticAnnotations {
+impl Context for SemanticContext {
     fn id(&self) -> u32 {
         self.id
     }
@@ -27,7 +27,7 @@ impl Annotation for SemanticAnnotations {
     }
 }
 
-impl Diag for SemanticAnnotations {
+impl Diag for SemanticContext {
     fn diag(&self) -> DiagData {
         let mut dd = DiagData::new(self.ln, self.id);
 
@@ -43,7 +43,7 @@ impl Diag for SemanticAnnotations {
     }
 }
 
-impl SemanticAnnotations {
+impl SemanticContext {
     pub fn anonymous_name(&self) -> String {
         format!("!{}_{}", self.canonical_path, self.id)
     }
@@ -53,25 +53,25 @@ impl SemanticAnnotations {
     }
 }
 
-pub type SemanticNode = Expression<SemanticAnnotations>;
+pub type SemanticNode = Expression<SemanticContext>;
 
 impl SemanticNode {
     pub fn get_type(&self) -> &Type {
-        let meta = self.annotation();
+        let meta = self.get_context();
         &meta.ty
     }
 }
 
-impl Statement<SemanticAnnotations> {
+impl Statement<SemanticContext> {
     pub fn get_type(&self) -> &Type {
-        let m = self.annotation();
+        let m = self.get_context();
         &m.ty
     }
 }
 
-impl SemanticAnnotations {
-    pub fn new(id: u32, ln: u32, ty: Type) -> SemanticAnnotations {
-        SemanticAnnotations {
+impl SemanticContext {
+    pub fn new(id: u32, ln: u32, ty: Type) -> SemanticContext {
+        SemanticContext {
             id,
             ln,
             ty,
@@ -80,8 +80,8 @@ impl SemanticAnnotations {
         }
     }
 
-    pub fn new_routine(id: u32, ln: u32, name: &str, ty: Type) -> SemanticAnnotations {
-        SemanticAnnotations {
+    pub fn new_routine(id: u32, ln: u32, name: &str, ty: Type) -> SemanticContext {
+        SemanticContext {
             id,
             ln,
             ty,
@@ -90,8 +90,8 @@ impl SemanticAnnotations {
         }
     }
 
-    pub fn new_module(id: u32, ln: u32, name: &str, ty: Type) -> SemanticAnnotations {
-        SemanticAnnotations {
+    pub fn new_module(id: u32, ln: u32, name: &str, ty: Type) -> SemanticContext {
+        SemanticContext {
             id,
             ln,
             ty,
@@ -104,12 +104,8 @@ impl SemanticAnnotations {
         &self.canonical_path
     }
 
-    pub fn set_canonical_path(&mut self, path: Path) {
+    pub(super) fn set_canonical_path(&mut self, path: Path) {
         self.canonical_path = path;
-    }
-
-    pub fn id(&self) -> u32 {
-        self.id
     }
 }
 
@@ -128,39 +124,39 @@ impl SemanticAst {
 
     pub fn from_module(
         &mut self,
-        m: &Module<ParserInfo>,
+        m: &Module<ParserContext>,
         tracing: TracingConfig,
-    ) -> Module<SemanticAnnotations> {
+    ) -> Module<SemanticContext> {
         let f = |n: &dyn Node<u32>| match n.node_type() {
             NodeType::Module => {
                 let name = n.name().expect("Modules must have a name");
-                self.module_semantic_annotations_from(*n.annotation(), name)
+                self.module_semantic_context_from(*n.get_context(), name)
             }
             NodeType::RoutineDef(_) => {
                 let name = n.name().expect("RoutineDefs must have a name");
-                self.routine_semantic_annotations_from(*n.annotation(), name)
+                self.routine_semantic_context_from(*n.get_context(), name)
             }
-            _ => self.semantic_annotations_from(*n.annotation()),
+            _ => self.semantic_context_from(*n.get_context()),
         };
 
         let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);
         mapper.apply(m)
     }
 
-    fn semantic_annotations_from(&mut self, ln: u32) -> SemanticAnnotations {
-        let sm_data = SemanticAnnotations::new(self.next_id, ln, Type::Unknown);
+    fn semantic_context_from(&mut self, ln: u32) -> SemanticContext {
+        let sm_data = SemanticContext::new(self.next_id, ln, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn routine_semantic_annotations_from(&mut self, ln: u32, name: &str) -> SemanticAnnotations {
-        let sm_data = SemanticAnnotations::new_routine(self.next_id, ln, name, Type::Unknown);
+    fn routine_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+        let sm_data = SemanticContext::new_routine(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn module_semantic_annotations_from(&mut self, ln: u32, name: &str) -> SemanticAnnotations {
-        let sm_data = SemanticAnnotations::new_module(self.next_id, ln, name, Type::Unknown);
+    fn module_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+        let sm_data = SemanticContext::new_module(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }

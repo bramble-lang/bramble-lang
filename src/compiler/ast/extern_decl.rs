@@ -1,6 +1,6 @@
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     parameter::Parameter,
     ty::Type,
@@ -10,20 +10,20 @@ pub type HasVarArgs = bool;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Extern<M> {
-    pub annotations: M,
+    pub context: M,
     pub name: String,
     pub params: Vec<Parameter<M>>,
     pub has_varargs: HasVarArgs,
     pub ty: Type,
 }
 
-impl<M: Annotation> Node<M> for Extern<M> {
-    fn annotation(&self) -> &M {
-        &self.annotations
+impl<M: Context> Node<M> for Extern<M> {
+    fn get_context(&self) -> &M {
+        &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+    fn get_context_mut(&mut self) -> &mut M {
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -56,13 +56,13 @@ impl<M> std::fmt::Display for Extern<M> {
 impl<M> Extern<M> {
     pub fn new(
         name: &str,
-        annotations: M,
+        context: M,
         params: Vec<Parameter<M>>,
         has_varargs: bool,
         ty: Type,
     ) -> Extern<M> {
         Extern {
-            annotations,
+            context,
             name: name.into(),
             params,
             has_varargs,

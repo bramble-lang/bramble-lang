@@ -1,6 +1,6 @@
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     parameter::Parameter,
     statement::Statement,
@@ -9,7 +9,7 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoutineDef<M> {
-    pub annotations: M,
+    pub context: M,
     pub def: RoutineDefType,
     pub name: String,
     pub params: Vec<Parameter<M>>,
@@ -17,13 +17,13 @@ pub struct RoutineDef<M> {
     pub body: Vec<Statement<M>>,
 }
 
-impl<M: Annotation> Node<M> for RoutineDef<M> {
-    fn annotation(&self) -> &M {
-        &self.annotations
+impl<M: Context> Node<M> for RoutineDef<M> {
+    fn get_context(&self) -> &M {
+        &self.context
     }
 
-    fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+    fn get_context_mut(&mut self) -> &mut M {
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -64,13 +64,13 @@ impl<M> std::fmt::Display for RoutineDef<M> {
 impl<M> RoutineDef<M> {
     pub fn new_function(
         name: &str,
-        annotations: M,
+        context: M,
         params: Vec<Parameter<M>>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
         RoutineDef {
-            annotations,
+            context,
             def: RoutineDefType::Function,
             name: name.into(),
             params,
@@ -81,13 +81,13 @@ impl<M> RoutineDef<M> {
 
     pub fn new_coroutine(
         name: &str,
-        annotations: M,
+        context: M,
         params: Vec<Parameter<M>>,
         ty: Type,
         body: Vec<Statement<M>>,
     ) -> RoutineDef<M> {
         RoutineDef {
-            annotations,
+            context,
             def: RoutineDefType::Coroutine,
             name: name.into(),
             params,

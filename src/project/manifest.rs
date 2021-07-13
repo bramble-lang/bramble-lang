@@ -2,19 +2,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     ast::{Item, Module, Node, Path, RoutineDef, StructDef, Type},
-    semantics::semanticnode::SemanticAnnotations,
+    semantics::semanticnode::SemanticContext,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
-    routines: Vec<RoutineDef<SemanticAnnotations>>,
-    structs: Vec<StructDef<SemanticAnnotations>>,
+    routines: Vec<RoutineDef<SemanticContext>>,
+    structs: Vec<StructDef<SemanticContext>>,
 }
 
 impl Manifest {
     pub fn new(
-        routines: &[RoutineDef<SemanticAnnotations>],
-        structs: &[StructDef<SemanticAnnotations>],
+        routines: &[RoutineDef<SemanticContext>],
+        structs: &[StructDef<SemanticContext>],
     ) -> Manifest {
         Manifest {
             routines: routines.into(),
@@ -22,7 +22,7 @@ impl Manifest {
         }
     }
 
-    pub fn extract(module: &Module<SemanticAnnotations>) -> Manifest {
+    pub fn extract(module: &Module<SemanticContext>) -> Manifest {
         // Get list of all functions contained within a module and their paths
         let routines = module
             .deep_get_functions()
@@ -49,7 +49,7 @@ impl Manifest {
             .iter()
             .map(|i| {
                 (
-                    i.annotation().get_canonical_path().clone(),
+                    i.get_context().get_canonical_path().clone(),
                     i.params.iter().map(|p| p.ty.clone()).clone().collect(),
                     i.ret_ty.clone(),
                 )
@@ -57,7 +57,7 @@ impl Manifest {
             .collect()
     }
 
-    pub fn get_structs(&self) -> &Vec<StructDef<SemanticAnnotations>> {
+    pub fn get_structs(&self) -> &Vec<StructDef<SemanticContext>> {
         &self.structs
     }
 

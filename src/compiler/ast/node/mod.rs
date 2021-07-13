@@ -8,10 +8,10 @@ pub use self::map::MapPreOrder;
 
 use super::routinedef::RoutineDefType;
 
-pub trait Node<M: Annotation> {
+pub trait Node<M: Context> {
     fn node_type(&self) -> NodeType;
-    fn annotation(&self) -> &M;
-    fn annotation_mut(&mut self) -> &mut M;
+    fn get_context(&self) -> &M;
+    fn get_context_mut(&mut self) -> &mut M;
     fn children(&self) -> Vec<&dyn Node<M>>;
     fn name(&self) -> Option<&str>;
 
@@ -49,7 +49,7 @@ impl Display for NodeType {
     }
 }
 
-pub trait Annotation {
+pub trait Context {
     fn id(&self) -> u32;
     fn line(&self) -> u32;
 }
