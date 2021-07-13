@@ -450,12 +450,12 @@ mod tests {
                 "test".into()
             });
         t.for_module(&mut sm_ast, |_stack, n| {
-            n.get_context_mut().ln *= 4;
+            n.get_context_mut().ty = Type::I64;
             Ok(())
         })
         .unwrap();
 
-        assert_eq!(sm_ast.get_context().ln, 4);
+        assert_eq!(sm_ast.get_context().ty, Type::I64);
     }
 
     #[test]

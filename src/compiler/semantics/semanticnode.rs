@@ -10,8 +10,8 @@ use super::symbol_table::SymbolTable;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SemanticContext {
-    pub id: u32,
-    pub ln: u32,
+    id: u32,
+    ln: u32,
     pub ty: Type,
     pub sym: SymbolTable,
     pub canonical_path: Path,

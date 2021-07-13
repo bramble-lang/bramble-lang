@@ -151,7 +151,7 @@ impl TypeResolver {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if context.get_canonical_path() == &self.main_fn {
-            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", context.ln, e))?;
+            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", context.line(), e))?;
         }
 
         let mut meta = context.clone();
@@ -288,7 +288,7 @@ impl TypeResolver {
                 ))
             }
         };
-        result.map_err(|e| format!("L{}: {}", bind.get_context().ln, e))
+        result.map_err(|e| format!("L{}: {}", bind.get_context().line(), e))
     }
 
     fn analyze_mutate(
@@ -317,7 +317,7 @@ impl TypeResolver {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| format!("L{}: {}", mutate.get_context().ln, e))
+        result.map_err(|e| format!("L{}: {}", mutate.get_context().line(), e))
     }
 
     fn analyze_yieldreturn(
@@ -353,7 +353,7 @@ impl TypeResolver {
                 expected_ret_ty, actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", yr.get_context().ln, e))
+        .map_err(|e| format!("L{}: {}", yr.get_context().line(), e))
     }
 
     fn analyze_return(&mut self, r: &Return<SemanticContext>) -> Result<Return<SemanticContext>> {
@@ -388,13 +388,13 @@ impl TypeResolver {
                 expected_ret_ty, actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", r.get_context().ln, e))
+        .map_err(|e| format!("L{}: {}", r.get_context().line(), e))
     }
 
     fn traverse(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
         self.analyze_expression(ast).map_err(|e| {
             if !e.starts_with("L") {
-                format!("L{}: {}", ast.get_context().ln, e)
+                format!("L{}: {}", ast.get_context().line(), e)
             } else {
                 e
             }

@@ -14,7 +14,7 @@ use std::{
 
 use inkwell::{
     builder::Builder,
-    context::Context,
+    context,
     execution_engine::{ExecutionEngine, JitFunction},
     module::Module,
     passes::PassManager,
@@ -28,7 +28,7 @@ use braid_lang::result::Result;
 
 use crate::{
     compiler::{
-        ast::{Node, Path, Type},
+        ast::{Context, Node, Path, Type},
         semantics::semanticnode::SemanticContext,
     },
     project::manifest::Manifest,
@@ -43,7 +43,7 @@ const MEM_ALIGNMENT: u64 = 8;
 /// A LLVM IR generator which can be used to generate all the code
 /// for a single LLVM Module.
 pub struct IrGen<'ctx> {
-    context: &'ctx Context,
+    context: &'ctx context::Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
     imports: &'ctx [Manifest],
@@ -54,7 +54,11 @@ pub struct IrGen<'ctx> {
 }
 
 impl<'ctx> IrGen<'ctx> {
-    pub fn new(ctx: &'ctx Context, module: &str, imports: &'ctx [Manifest]) -> IrGen<'ctx> {
+    pub fn new(
+        ctx: &'ctx context::Context,
+        module: &str,
+        imports: &'ctx [Manifest],
+    ) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
@@ -266,7 +270,7 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             false,
             &rd.ret_ty,
-            rd.get_context().ln,
+            rd.get_context().line(),
         )
     }
 
@@ -278,7 +282,7 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             ex.has_varargs,
             ex.get_return_type(),
-            ex.get_context().ln,
+            ex.get_context().line(),
         );
     }
 
@@ -358,7 +362,7 @@ impl<'ctx> IrGen<'ctx> {
                     ast::Type::Custom(_) => f.ty.to_llvm_ir(self),
                     _ => f.ty.to_llvm_ir(self),
                 }
-                .map_err(|e| format!("L{}: {}", f.get_context().ln, e))
+                .map_err(|e| format!("L{}: {}", f.get_context().line(), e))
                 .unwrap()
                 .into_basic_type()
                 .ok()
@@ -530,7 +534,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
         match self
             .get_type()
             .to_llvm_ir(llvm)
-            .map_err(|e| format!("L{}: {}", self.get_context().ln, e))
+            .map_err(|e| format!("L{}: {}", self.get_context().line(), e))
             .unwrap()
             .into_basic_type()
         {
@@ -666,7 +670,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r)),
             ast::Expression::RoutineCall(meta, call, name, params) => call
                 .to_llvm_ir(llvm, name, params, self.get_type())
-                .map_err(|e| format!("L{}: {}", meta.ln, e))
+                .map_err(|e| format!("L{}: {}", meta.line(), e))
                 .unwrap(),
             ast::Expression::ExpressionBlock(_, stmts, exp) => {
                 llvm.registers.open_local().unwrap();
@@ -808,7 +812,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let a_ty = meta.ty();
                 let a_llvm_ty = a_ty
                     .to_llvm_ir(llvm)
-                    .map_err(|e| format!("L{}: {}", meta.ln, e))
+                    .map_err(|e| format!("L{}: {}", meta.line(), e))
                     .unwrap()
                     .into_basic_type()
                     .unwrap();
