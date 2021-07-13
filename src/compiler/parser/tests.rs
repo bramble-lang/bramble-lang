@@ -404,7 +404,7 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 0);
             if let Item::Routine(RoutineDef {
-                context: annotations,
+                context,
                 def: RoutineDefType::Function,
                 name,
                 params,
@@ -413,7 +413,7 @@ pub mod tests {
                 ..
             }) = &m.get_functions()[0]
             {
-                assert_eq!(*annotations, 1);
+                assert_eq!(*context, 1);
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
@@ -452,7 +452,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             if let Some(Item::Routine(RoutineDef {
-                context: annotations,
+                context,
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
@@ -461,7 +461,7 @@ pub mod tests {
                 ..
             })) = m.get_item("test")
             {
-                assert_eq!(*annotations, 1);
+                assert_eq!(*context, 1);
                 assert_eq!(name, "test");
                 assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);

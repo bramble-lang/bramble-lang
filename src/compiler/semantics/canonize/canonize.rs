@@ -22,7 +22,7 @@ pub fn canonize_paths(
     let mut t = ForEachPreOrderMut::new("Canonize Paths", module, imports, tracing, |a| {
         format!("Path: {}", a.get_canonical_path())
     });
-    t.for_each(module, |stack, node| node.canonize_annotation_path(stack))?;
+    t.for_each(module, |stack, node| node.canonize_context_path(stack))?;
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;
 
     debug!("Finished canonization of paths");
@@ -40,8 +40,8 @@ pub fn canonize_paths(
 pub trait Canonizable: Node<SemanticContext> {
     // TODO: make one canonize function that handles everything and then the special cases
     // do their own thing.  I think that will be easier than 3 separate functions
-    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        default_canonize_annotation_path(self, stack)
+    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+        default_canonize_context_path(self, stack)
     }
 
     fn canonize_type_refs(&mut self, _stack: &SymbolTableScopeStack) -> Result<()> {
@@ -49,7 +49,7 @@ pub trait Canonizable: Node<SemanticContext> {
     }
 }
 
-fn default_canonize_annotation_path<T: Canonizable + ?Sized>(
+fn default_canonize_context_path<T: Canonizable + ?Sized>(
     node: &mut T,
     stack: &SymbolTableScopeStack,
 ) -> Result<()> {
@@ -167,11 +167,11 @@ impl Canonizable for Bind<SemanticContext> {
 }
 impl Canonizable for Mutate<SemanticContext> {}
 impl Canonizable for Module<SemanticContext> {
-    fn canonize_annotation_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
-        default_canonize_annotation_path(self, stack)?;
+        default_canonize_context_path(self, stack)?;
 
         // Canonize Symbol Table
         let sym = &mut self.get_context_mut().sym;
@@ -192,7 +192,7 @@ impl Canonizable for RoutineDef<SemanticContext> {
     }
 }
 impl Canonizable for Extern<SemanticContext> {
-    fn canonize_annotation_path(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
+    fn canonize_context_path(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
         let name = match self.name() {
             Some(name) => name,
             None => panic!("Externs must have a name"),

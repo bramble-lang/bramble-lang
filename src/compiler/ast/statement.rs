@@ -151,9 +151,9 @@ impl<M> std::fmt::Display for Bind<M> {
 }
 
 impl<M> Bind<M> {
-    pub fn new(annotations: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
+    pub fn new(context: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
         Bind {
-            context: annotations,
+            context,
             id: id.into(),
             ty,
             mutable,
@@ -234,9 +234,9 @@ impl<M> std::fmt::Display for Mutate<M> {
 }
 
 impl<M> Mutate<M> {
-    pub fn new(annotations: M, id: &str, rhs: Expression<M>) -> Self {
+    pub fn new(context: M, id: &str, rhs: Expression<M>) -> Self {
         Mutate {
-            context: annotations,
+            context,
             id: id.into(),
             rhs,
         }
@@ -305,11 +305,8 @@ impl<M> std::fmt::Display for YieldReturn<M> {
 }
 
 impl<M> YieldReturn<M> {
-    pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
-        Self {
-            context: annotations,
-            value,
-        }
+    pub fn new(context: M, value: Option<Expression<M>>) -> Self {
+        Self { context, value }
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {
@@ -371,11 +368,8 @@ impl<M> std::fmt::Display for Return<M> {
 }
 
 impl<M> Return<M> {
-    pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
-        Self {
-            context: annotations,
-            value,
-        }
+    pub fn new(context: M, value: Option<Expression<M>>) -> Self {
+        Self { context, value }
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {

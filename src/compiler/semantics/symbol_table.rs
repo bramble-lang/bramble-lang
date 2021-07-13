@@ -5,7 +5,7 @@ use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
 use braid_lang::result::Result;
 
 /**
- * `SymbolTable` is an AST node annotation that contains information about symbols that
+ * `SymbolTable` is an AST node context that contains information about symbols that
  * are defined by immediate children of this node. For example:
  *
  *```
@@ -18,7 +18,7 @@ use braid_lang::result::Result;
  *```
  *
  * The node representing `my_mod` would have a child node representing the definition of
- * `hello`; the `SymbolTable` annotation on `my_mod`'s node would contain information for
+ * `hello`; the `SymbolTable` context on `my_mod`'s node would contain information for
  * the symbol `hello`, but it would _not_ contain the symbol for `x` which is whithin the
  * body of `hello`.
  *
@@ -64,31 +64,31 @@ impl SymbolTable {
      * This function is recursively applied to child modules.
      */
     pub fn add_item_defs_to_table(module: &mut Module<SemanticContext>) -> Result<()> {
-        let mut annotations = module.get_context().clone();
+        let mut context = module.get_context().clone();
 
         let fm = module.get_functions_mut();
         for f in fm.iter_mut() {
-            SymbolTable::for_item(f, &mut annotations)?;
+            SymbolTable::for_item(f, &mut context)?;
         }
 
         let cm = module.get_coroutines_mut();
         for co in cm.iter_mut() {
-            SymbolTable::for_item(co, &mut annotations)?;
+            SymbolTable::for_item(co, &mut context)?;
         }
 
         for st in module.get_structs_mut().iter_mut() {
-            SymbolTable::for_item(st, &mut annotations)?;
+            SymbolTable::for_item(st, &mut context)?;
         }
 
         for e in module.get_externs_mut().iter_mut() {
-            SymbolTable::for_item(e, &mut annotations)?;
+            SymbolTable::for_item(e, &mut context)?;
         }
 
         for m in module.get_modules_mut().iter_mut() {
             SymbolTable::add_item_defs_to_table(m)?;
         }
 
-        *module.get_context_mut() = annotations;
+        *module.get_context_mut() = context;
 
         Ok(())
     }

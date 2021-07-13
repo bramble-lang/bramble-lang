@@ -9,7 +9,7 @@ use super::Canonizable;
 
 /**
 Traverse through each node, in pre-order DFS, and apply a function to mutate the
-annotation on that node.
+context on that node.
 
 This does not mutate or alter the topology of the AST nor does it mutate the
 AST node or its immediate value, only the Annotation on the visted nodes may
@@ -268,11 +268,7 @@ where
             While { .. } => self.for_while(exp, f),
             Yield(..) => self.for_yield(exp, f),
             RoutineCall(..) => self.for_routine_call(exp, f),
-            StructExpression(..) => {
-                let r = self.for_struct_expression(exp, f);
-                //println!("L{}: for_exp {}", exp.annotation().line(), exp);
-                r
-            }
+            StructExpression(..) => self.for_struct_expression(exp, f),
         }
     }
 
@@ -286,9 +282,7 @@ where
     {
         self.symbols.enter_scope(&block.get_context().sym);
         let r = self.transform(block, f);
-        if let Expression::ExpressionBlock(ref mut _annotation, ref mut body, ref mut final_exp) =
-            block
-        {
+        if let Expression::ExpressionBlock(_, ref mut body, ref mut final_exp) = block {
             for e in body.iter_mut() {
                 self.for_statement(e, f)?;
             }

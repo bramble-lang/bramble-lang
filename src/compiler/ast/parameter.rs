@@ -57,7 +57,7 @@ impl<M> Parameter<M> {
         format!("{}:{}", self.name, self.ty)
     }
 
-    pub fn map_annotation<F, N>(&self, mut f: F) -> Parameter<N>
+    pub fn map_context<F, N>(&self, mut f: F) -> Parameter<N>
     where
         F: FnMut(&M) -> N,
     {

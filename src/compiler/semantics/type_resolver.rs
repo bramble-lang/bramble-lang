@@ -140,7 +140,7 @@ impl TypeResolver {
         routine: &RoutineDef<SemanticContext>,
     ) -> Result<RoutineDef<SemanticContext>> {
         let RoutineDef {
-            context: annotations,
+            context,
             name,
             def,
             params,
@@ -150,11 +150,11 @@ impl TypeResolver {
         } = routine;
 
         // If routine is root::my_main it must be a function type and have type () -> i64
-        if annotations.get_canonical_path() == &self.main_fn {
-            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", annotations.ln, e))?;
+        if context.get_canonical_path() == &self.main_fn {
+            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", context.ln, e))?;
         }
 
-        let mut meta = annotations.clone();
+        let mut meta = context.clone();
 
         // canonize routine parameter types
         meta.ty = ret_ty.clone();
@@ -212,7 +212,7 @@ impl TypeResolver {
             }
         }
 
-        // Update the annotations with canonical path information and set the type to Type::Unit
+        // Update the context with canonical path information and set the type to Type::Unit
         let mut meta = struct_def.get_context().clone();
         meta.ty = Type::Unit;
 
@@ -232,7 +232,7 @@ impl TypeResolver {
             }
         }
 
-        // Update the annotations with canonical path information and set the type to Type::Unit
+        // Update the context with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
         let mut meta = ex.get_context().clone();
         meta.ty = ex.get_return_type().clone();

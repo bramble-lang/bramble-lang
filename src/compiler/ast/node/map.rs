@@ -62,7 +62,7 @@ where
     /**
     Applies the transformation function given to the constructor to each
     node in the given AST, in PreOrder DFS ordering, and creates a new
-    AST using the output of the transformation function as the annotation
+    AST using the output of the transformation function as the context
     of the new nodes.
     */
     pub fn apply(&mut self, m: &Module<A>) -> Module<B> {

@@ -70,9 +70,9 @@ impl<M> std::fmt::Display for Module<M> {
 }
 
 impl<M> Module<M> {
-    pub fn new(name: &str, annotation: M) -> Module<M> {
+    pub fn new(name: &str, context: M) -> Module<M> {
         Module {
-            context: annotation,
+            context,
             name: name.into(),
             modules: Vec::new(),
             functions: Vec::new(),

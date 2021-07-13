@@ -57,9 +57,9 @@ impl<M> std::fmt::Display for StructDef<M> {
 }
 
 impl<M> StructDef<M> {
-    pub fn new(name: &str, annotations: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
+    pub fn new(name: &str, context: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
         StructDef {
-            context: annotations,
+            context,
             name: name.into(),
             fields,
         }

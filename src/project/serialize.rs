@@ -12,7 +12,7 @@ const ROUTINE_DEF_FIELD: &'static str = "RoutineDef";
 const NAME_FIELD: &'static str = "name";
 const PARAMS_FIELD: &'static str = "params";
 const TY_FIELD: &'static str = "ty";
-const ANNOTATIONS_FIELD: &'static str = "annotations";
+const CONTEXT_FIELD: &'static str = "context";
 
 impl Serialize for RoutineDef<SemanticContext> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -23,7 +23,7 @@ impl Serialize for RoutineDef<SemanticContext> {
         state.serialize_field(NAME_FIELD, self.get_name())?;
         state.serialize_field(PARAMS_FIELD, self.get_params())?;
         state.serialize_field(TY_FIELD, self.get_return_type())?;
-        state.serialize_field(ANNOTATIONS_FIELD, self.get_context())?;
+        state.serialize_field(CONTEXT_FIELD, self.get_context())?;
         state.end()
     }
 }
@@ -64,11 +64,11 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                 let ret_ty = seq
                     .next_element()?
                     .ok_or_else(|| de::Error::invalid_length(0, &self))?;
-                let annotations = seq
+                let context = seq
                     .next_element()?
                     .ok_or_else(|| de::Error::invalid_length(0, &self))?;
 
-                let rd = RoutineDef::new_function(&name, annotations, params, ret_ty, vec![]);
+                let rd = RoutineDef::new_function(&name, context, params, ret_ty, vec![]);
                 Ok(rd)
             }
 
@@ -79,7 +79,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                 let mut name: Option<String> = None;
                 let mut params = None;
                 let mut ret_ty = None;
-                let mut annotations = None;
+                let mut context = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -102,10 +102,10 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                             ret_ty = Some(map.next_value()?);
                         }
                         Field::Annotations => {
-                            if annotations.is_some() {
-                                return Err(de::Error::duplicate_field(ANNOTATIONS_FIELD));
+                            if context.is_some() {
+                                return Err(de::Error::duplicate_field(CONTEXT_FIELD));
                             }
-                            annotations = Some(map.next_value()?);
+                            context = Some(map.next_value()?);
                         }
                     }
                 }
@@ -113,12 +113,11 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                 let name = name.ok_or_else(|| de::Error::missing_field(NAME_FIELD))?;
                 let params = params.ok_or_else(|| de::Error::missing_field(PARAMS_FIELD))?;
                 let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field(TY_FIELD))?;
-                let annotations =
-                    annotations.ok_or_else(|| de::Error::missing_field(ANNOTATIONS_FIELD))?;
+                let context = context.ok_or_else(|| de::Error::missing_field(CONTEXT_FIELD))?;
 
                 Ok(RoutineDef::new_function(
                     &name,
-                    annotations,
+                    context,
                     params,
                     ret_ty,
                     vec![],
@@ -127,7 +126,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
         }
 
         const FIELDS: &'static [&'static str] =
-            &[NAME_FIELD, PARAMS_FIELD, TY_FIELD, ANNOTATIONS_FIELD];
+            &[NAME_FIELD, PARAMS_FIELD, TY_FIELD, CONTEXT_FIELD];
         deserializer.deserialize_struct(ROUTINE_DEF_FIELD, FIELDS, RoutineDefVisitor)
     }
 }

@@ -3103,10 +3103,10 @@ mod type_resolver_tests {
                 .unwrap();
             let ast = parser::parse("std",&tokens).unwrap().unwrap();
 
-            let mut import_annotation = SemanticContext::new(0, 0, Type::Unit);
-            import_annotation.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
+            let mut import_context = SemanticContext::new(0, 0, Type::Unit);
+            import_context.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
             let imports = Manifest::new(&vec![RoutineDef{
-                context: import_annotation,
+                context: import_context,
                 def: RoutineDefType::Function,
                 name: "test".into(),
                 ret_ty: import_func.1.clone(),

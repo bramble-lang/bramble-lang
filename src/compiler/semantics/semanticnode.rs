@@ -134,32 +134,32 @@ impl SemanticAst {
         let f = |n: &dyn Node<u32>| match n.node_type() {
             NodeType::Module => {
                 let name = n.name().expect("Modules must have a name");
-                self.module_semantic_annotations_from(*n.get_context(), name)
+                self.module_semantic_context_from(*n.get_context(), name)
             }
             NodeType::RoutineDef(_) => {
                 let name = n.name().expect("RoutineDefs must have a name");
-                self.routine_semantic_annotations_from(*n.get_context(), name)
+                self.routine_semantic_context_from(*n.get_context(), name)
             }
-            _ => self.semantic_annotations_from(*n.get_context()),
+            _ => self.semantic_context_from(*n.get_context()),
         };
 
         let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);
         mapper.apply(m)
     }
 
-    fn semantic_annotations_from(&mut self, ln: u32) -> SemanticContext {
+    fn semantic_context_from(&mut self, ln: u32) -> SemanticContext {
         let sm_data = SemanticContext::new(self.next_id, ln, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn routine_semantic_annotations_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+    fn routine_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
         let sm_data = SemanticContext::new_routine(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn module_semantic_annotations_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+    fn module_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
         let sm_data = SemanticContext::new_module(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
