@@ -1,7 +1,7 @@
 use super::{
     extern_decl::Extern,
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     path::Path,
     routinedef::{RoutineDef, RoutineDefType},
@@ -20,7 +20,7 @@ pub struct Module<M> {
     externs: Vec<Item<M>>,
 }
 
-impl<M: Annotation> Node<M> for Module<M> {
+impl<M: Context> Node<M> for Module<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -539,7 +539,7 @@ pub enum Item<M> {
     Extern(Extern<M>),
 }
 
-impl<M: Annotation> Node<M> for Item<M> {
+impl<M: Context> Node<M> for Item<M> {
     fn annotation(&self) -> &M {
         match self {
             Item::Routine(r) => r.annotation(),

@@ -17,7 +17,7 @@ pub struct SemanticAnnotations {
     pub canonical_path: Path,
 }
 
-impl Annotation for SemanticAnnotations {
+impl Context for SemanticAnnotations {
     fn id(&self) -> u32 {
         self.id
     }

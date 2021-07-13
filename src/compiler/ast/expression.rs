@@ -1,6 +1,6 @@
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     path::Path,
     statement::Statement,
@@ -51,7 +51,7 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
-impl<M: Annotation> Node<M> for Expression<M> {
+impl<M: Context> Node<M> for Expression<M> {
     fn annotation(&self) -> &M {
         use Expression::*;
         match self {

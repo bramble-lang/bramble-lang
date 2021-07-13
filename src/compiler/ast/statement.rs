@@ -1,7 +1,7 @@
 use super::{
     expression::Expression,
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     ty::Type,
 };
@@ -17,7 +17,7 @@ pub enum Statement<M> {
     Return(Box<Return<M>>),
 }
 
-impl<M: Annotation> Node<M> for Statement<M> {
+impl<M: Context> Node<M> for Statement<M> {
     fn annotation(&self) -> &M {
         use Statement::*;
 
@@ -114,7 +114,7 @@ pub struct Bind<M> {
     rhs: Expression<M>,
 }
 
-impl<M: Annotation> Node<M> for Bind<M> {
+impl<M: Context> Node<M> for Bind<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -197,7 +197,7 @@ pub struct Mutate<M> {
     rhs: Expression<M>,
 }
 
-impl<M: Annotation> Node<M> for Mutate<M> {
+impl<M: Context> Node<M> for Mutate<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -265,7 +265,7 @@ pub struct YieldReturn<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M: Annotation> Node<M> for YieldReturn<M> {
+impl<M: Context> Node<M> for YieldReturn<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }
@@ -328,7 +328,7 @@ pub struct Return<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M: Annotation> Node<M> for Return<M> {
+impl<M: Context> Node<M> for Return<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }

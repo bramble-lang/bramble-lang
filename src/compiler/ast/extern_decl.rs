@@ -1,6 +1,6 @@
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     parameter::Parameter,
     ty::Type,
@@ -17,7 +17,7 @@ pub struct Extern<M> {
     pub ty: Type,
 }
 
-impl<M: Annotation> Node<M> for Extern<M> {
+impl<M: Context> Node<M> for Extern<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }

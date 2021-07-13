@@ -9,7 +9,7 @@ use crate::compiler::ast::Expression;
 use crate::compiler::ast::Extern;
 use crate::diagnostics::{config::TracingConfig, Diag, DiagRecorder};
 
-use super::{super::node::Node, super::parameter::Parameter, Annotation};
+use super::{super::node::Node, super::parameter::Parameter, Context};
 
 /**
 Traverses an AST in using a PreOrder Depth First Search and transforms the AST by
@@ -25,7 +25,7 @@ Compiler UI.
 */
 pub struct MapPreOrder<A, B, F>
 where
-    A: Debug + Annotation + Diag,
+    A: Debug + Context + Diag,
     B: Diag,
     F: FnMut(&dyn Node<A>) -> B,
 {
@@ -38,7 +38,7 @@ where
 
 impl<A, B, F> MapPreOrder<A, B, F>
 where
-    A: Debug + Annotation + Diag,
+    A: Debug + Context + Diag,
     F: FnMut(&dyn Node<A>) -> B,
     B: Diag,
 {
@@ -377,7 +377,7 @@ mod test {
     use crate::compiler::ast::{module::Module, ty::Type};
     use crate::diagnostics::DiagData;
 
-    impl Annotation for i32 {
+    impl Context for i32 {
         fn id(&self) -> u32 {
             0
         }
@@ -395,7 +395,7 @@ mod test {
         }
     }
 
-    impl Annotation for i64 {
+    impl Context for i64 {
         fn id(&self) -> u32 {
             0
         }
@@ -413,7 +413,7 @@ mod test {
         }
     }
 
-    impl Annotation for String {
+    impl Context for String {
         fn id(&self) -> u32 {
             0
         }

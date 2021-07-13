@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     ty::Type,
 };
@@ -14,7 +14,7 @@ pub struct Parameter<M> {
     pub ty: Type,
 }
 
-impl<M: Annotation> Node<M> for Parameter<M> {
+impl<M: Context> Node<M> for Parameter<M> {
     fn annotation(&self) -> &M {
         &self.annotation
     }

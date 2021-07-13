@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     parameter::Parameter,
     ty::Type,
@@ -16,7 +16,7 @@ pub struct StructDef<M> {
     pub(super) fields: Vec<Parameter<M>>,
 }
 
-impl<M: Annotation> Node<M> for StructDef<M> {
+impl<M: Context> Node<M> for StructDef<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }

@@ -1,10 +1,10 @@
 use crate::compiler::ast::node::Node;
 
-use super::Annotation;
+use super::Context;
 
 pub struct PostOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     out: Vec<&'a dyn Node<A>>,
 }
@@ -20,7 +20,7 @@ For Compiler transformations, use the `MapPostOrder` construct.
 */
 impl<'a, A> PostOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     /**
     Create a new Iterator which will perform a PostOrder DFS traversal of an AST
@@ -45,7 +45,7 @@ where
 
 impl<'a, A> Iterator for PostOrderIter<'a, A>
 where
-    A: std::fmt::Debug + Annotation,
+    A: std::fmt::Debug + Context,
 {
     type Item = &'a dyn Node<A>;
 
@@ -65,14 +65,14 @@ For Compiler transformations, use the `MapPostOrder` construct.
 */
 pub struct PreOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     out: Vec<&'a dyn Node<A>>,
 }
 
 impl<'a, A> PreOrderIter<'a, A>
 where
-    A: Annotation,
+    A: Context,
 {
     /**
     Create a new Iterator which will perform a PreOrder DFS traversal of an AST
@@ -99,7 +99,7 @@ where
 
 impl<'a, A> Iterator for PreOrderIter<'a, A>
 where
-    A: std::fmt::Debug + Annotation,
+    A: std::fmt::Debug + Context,
 {
     type Item = &'a dyn Node<A>;
 

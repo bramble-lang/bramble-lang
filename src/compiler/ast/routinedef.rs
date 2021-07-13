@@ -1,6 +1,6 @@
 use super::{
     node::{
-        Annotation, Node, NodeType, {PostOrderIter, PreOrderIter},
+        Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
     parameter::Parameter,
     statement::Statement,
@@ -17,7 +17,7 @@ pub struct RoutineDef<M> {
     pub body: Vec<Statement<M>>,
 }
 
-impl<M: Annotation> Node<M> for RoutineDef<M> {
+impl<M: Context> Node<M> for RoutineDef<M> {
     fn annotation(&self) -> &M {
         &self.annotations
     }

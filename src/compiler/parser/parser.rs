@@ -25,7 +25,7 @@ use super::{
 pub type ParserInfo = u32;
 type HasVarArgs = bool;
 
-impl Annotation for ParserInfo {
+impl Context for ParserInfo {
     fn id(&self) -> u32 {
         0
     }
