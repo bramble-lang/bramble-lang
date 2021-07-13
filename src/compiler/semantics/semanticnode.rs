@@ -12,9 +12,9 @@ use super::symbol_table::SymbolTable;
 pub struct SemanticContext {
     id: u32,
     ln: u32,
-    pub ty: Type,
-    pub sym: SymbolTable,
-    pub canonical_path: Path,
+    pub(super) ty: Type,
+    pub(super) sym: SymbolTable,
+    pub(super) canonical_path: Path,
 }
 
 impl Context for SemanticContext {
@@ -104,12 +104,8 @@ impl SemanticContext {
         &self.canonical_path
     }
 
-    pub fn set_canonical_path(&mut self, path: Path) {
+    pub(super) fn set_canonical_path(&mut self, path: Path) {
         self.canonical_path = path;
-    }
-
-    pub fn id(&self) -> u32 {
-        self.id
     }
 }
 
