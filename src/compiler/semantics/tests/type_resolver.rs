@@ -3,7 +3,7 @@ mod type_resolver_tests {
     use crate::{
         compiler::{
             ast::*, lexer::tokens::Token, parser::parser,
-            semantics::semanticnode::SemanticAnnotations, Lexer,
+            semantics::semanticnode::SemanticContext, Lexer,
         },
         diagnostics::config::TracingConfig,
         project::manifest::Manifest,
@@ -3103,14 +3103,14 @@ mod type_resolver_tests {
                 .unwrap();
             let ast = parser::parse("std",&tokens).unwrap().unwrap();
 
-            let mut import_annotation = SemanticAnnotations::new(0, 0, Type::Unit);
+            let mut import_annotation = SemanticContext::new(0, 0, Type::Unit);
             import_annotation.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
             let imports = Manifest::new(&vec![RoutineDef{
                 annotations: import_annotation,
                 def: RoutineDefType::Function,
                 name: "test".into(),
                 ret_ty: import_func.1.clone(),
-                params: import_func.0.iter().map(|p| Parameter::new(SemanticAnnotations::new(0, 0, p.clone()), "a", p)).collect(),
+                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), "a", p)).collect(),
                 body: vec![],
             }], &vec![]);
             let result = resolve_types_with_imports(

@@ -14,13 +14,13 @@ use crate::{
 };
 
 use super::{
-    parser::{ParserInfo, ParserResult},
+    parser::{ParserContext, ParserResult},
     tokenstream::TokenStream,
 };
 
 pub(super) fn statement_or_yield_return(
     stream: &mut TokenStream,
-) -> ParserResult<Statement<ParserInfo>> {
+) -> ParserResult<Statement<ParserContext>> {
     let stm = match statement(stream)? {
         Some(n) => Some(n),
         None => match yield_return_stmt(stream)? {
@@ -32,7 +32,7 @@ pub(super) fn statement_or_yield_return(
     Ok(stm)
 }
 
-pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
+pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<ParserContext>> {
     trace!(stream);
     let start_index = stream.index();
     let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
@@ -73,7 +73,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
     }
 }
 
-fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserInfo>> {
+fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Let) {
         Some(token) => {
@@ -104,7 +104,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserInfo>> {
     }
 }
 
-fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserInfo>> {
+fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
         None => Ok(None),
@@ -123,7 +123,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserInfo>> {
     }
 }
 
-fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
+fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Init) {
         Some(token) => match path(stream)? {
@@ -143,7 +143,7 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserInfo>> {
     }
 }
 
-pub(super) fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<ParserInfo>> {
+pub(super) fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<ParserContext>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::Return) {
         Some(token) => {
@@ -158,7 +158,7 @@ pub(super) fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<Parse
     })
 }
 
-fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserInfo>> {
+fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserContext>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::YieldReturn) {
         Some(token) => {

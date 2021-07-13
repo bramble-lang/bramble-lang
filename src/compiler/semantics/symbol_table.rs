@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{ast::*, semantics::semanticnode::SemanticAnnotations};
+use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
 
 use braid_lang::result::Result;
 
@@ -63,7 +63,7 @@ impl SymbolTable {
      *
      * This function is recursively applied to child modules.
      */
-    pub fn add_item_defs_to_table(module: &mut Module<SemanticAnnotations>) -> Result<()> {
+    pub fn add_item_defs_to_table(module: &mut Module<SemanticContext>) -> Result<()> {
         let mut annotations = module.annotation().clone();
 
         let fm = module.get_functions_mut();
@@ -93,7 +93,7 @@ impl SymbolTable {
         Ok(())
     }
 
-    fn for_item(item: &mut Item<SemanticAnnotations>, sym: &mut SemanticAnnotations) -> Result<()> {
+    fn for_item(item: &mut Item<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
         match item {
             Item::Routine(rd) => SymbolTable::add_routine_parameters(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
@@ -102,8 +102,8 @@ impl SymbolTable {
     }
 
     fn add_structdef(
-        structdef: &mut StructDef<SemanticAnnotations>,
-        sym: &mut SemanticAnnotations,
+        structdef: &mut StructDef<SemanticContext>,
+        sym: &mut SemanticContext,
     ) -> Result<()> {
         sym.sym.add(
             structdef.get_name(),
@@ -119,10 +119,7 @@ impl SymbolTable {
         )
     }
 
-    fn add_extern(
-        ex: &mut Extern<SemanticAnnotations>,
-        sym: &mut SemanticAnnotations,
-    ) -> Result<()> {
+    fn add_extern(ex: &mut Extern<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
         let Extern {
             name, params, ty, ..
         } = ex;
@@ -137,8 +134,8 @@ impl SymbolTable {
     }
 
     fn add_routine_parameters(
-        routine: &mut RoutineDef<SemanticAnnotations>,
-        sym: &mut SemanticAnnotations,
+        routine: &mut RoutineDef<SemanticContext>,
+        sym: &mut SemanticContext,
     ) -> Result<()> {
         let RoutineDef {
             def,
@@ -160,7 +157,7 @@ impl SymbolTable {
         sym.sym.add(name, def, false, false)
     }
 
-    fn get_types_for_params(params: &Vec<Parameter<SemanticAnnotations>>) -> Vec<Type> {
+    fn get_types_for_params(params: &Vec<Parameter<SemanticContext>>) -> Vec<Type> {
         params.iter().map(|p| p.ty.clone()).collect::<Vec<Type>>()
     }
 

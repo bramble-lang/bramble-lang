@@ -4,7 +4,7 @@ use crate::compiler::ast::*;
 use crate::diagnostics::{config::TracingConfig, DiagRecorder};
 use crate::project::manifest::Manifest;
 
-use super::super::{semanticnode::SemanticAnnotations, stack::SymbolTableScopeStack};
+use super::super::{semanticnode::SemanticContext, stack::SymbolTableScopeStack};
 use super::Canonizable;
 
 /**
@@ -22,22 +22,22 @@ new Annotation type.
 */
 pub struct ForEachPreOrderMut<T>
 where
-    T: Fn(&SemanticAnnotations) -> String,
+    T: Fn(&SemanticContext) -> String,
 {
     pub name: String,
     pub tracing: TracingConfig,
     pub format: T,
-    diag: DiagRecorder<SemanticAnnotations, SemanticAnnotations>,
+    diag: DiagRecorder<SemanticContext, SemanticContext>,
     symbols: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
 }
 
 impl<'a, T> ForEachPreOrderMut<T>
 where
-    T: Fn(&SemanticAnnotations) -> String,
+    T: Fn(&SemanticContext) -> String,
 {
     pub fn new(
         name: &str,
-        root: &'a mut Module<SemanticAnnotations>,
+        root: &'a mut Module<SemanticContext>,
         imports: &[Manifest],
         tracing: TracingConfig,
         format: T,
@@ -61,7 +61,7 @@ where
         r
     }
 
-    pub fn for_each<F>(&mut self, m: &mut Module<SemanticAnnotations>, f: F) -> Result<()>
+    pub fn for_each<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -71,7 +71,7 @@ where
         r.map_err(|e| format!("Semantic: {}", e))
     }
 
-    fn for_module<F>(&mut self, m: &mut Module<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_module<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -95,7 +95,7 @@ where
         r
     }
 
-    fn for_items<F>(&mut self, items: &mut Vec<Item<SemanticAnnotations>>, f: F) -> Result<()>
+    fn for_items<F>(&mut self, items: &mut Vec<Item<SemanticContext>>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -109,7 +109,7 @@ where
         Ok(())
     }
 
-    fn for_structdef<F>(&mut self, sd: &mut StructDef<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_structdef<F>(&mut self, sd: &mut StructDef<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -118,7 +118,7 @@ where
         r
     }
 
-    fn for_routinedef<F>(&mut self, rd: &mut RoutineDef<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_routinedef<F>(&mut self, rd: &mut RoutineDef<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -135,7 +135,7 @@ where
         r
     }
 
-    fn for_extern<F>(&mut self, ex: &mut Extern<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_extern<F>(&mut self, ex: &mut Extern<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -146,7 +146,7 @@ where
 
     fn for_parameters<F>(
         &mut self,
-        params: &mut Vec<Parameter<SemanticAnnotations>>,
+        params: &mut Vec<Parameter<SemanticContext>>,
         f: F,
     ) -> Result<()>
     where
@@ -158,11 +158,7 @@ where
         Ok(())
     }
 
-    fn for_statement<F>(
-        &mut self,
-        statement: &mut Statement<SemanticAnnotations>,
-        f: F,
-    ) -> Result<()>
+    fn for_statement<F>(&mut self, statement: &mut Statement<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -186,7 +182,7 @@ where
         Ok(())
     }
 
-    fn for_bind<F>(&mut self, bind: &mut Bind<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_bind<F>(&mut self, bind: &mut Bind<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -195,7 +191,7 @@ where
         r
     }
 
-    fn for_mutate<F>(&mut self, mutate: &mut Mutate<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_mutate<F>(&mut self, mutate: &mut Mutate<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -204,7 +200,7 @@ where
         r
     }
 
-    fn for_yieldreturn<F>(&mut self, yr: &mut YieldReturn<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_yieldreturn<F>(&mut self, yr: &mut YieldReturn<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -216,7 +212,7 @@ where
         r
     }
 
-    fn for_return<F>(&mut self, ret: &mut Return<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_return<F>(&mut self, ret: &mut Return<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -230,7 +226,7 @@ where
         r
     }
 
-    fn for_expression<F>(&mut self, exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_expression<F>(&mut self, exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -282,7 +278,7 @@ where
 
     fn for_expression_block<F>(
         &mut self,
-        block: &mut Expression<SemanticAnnotations>,
+        block: &mut Expression<SemanticContext>,
         f: F,
     ) -> Result<()>
     where
@@ -309,11 +305,7 @@ where
         r
     }
 
-    fn for_member_access<F>(
-        &mut self,
-        access: &mut Expression<SemanticAnnotations>,
-        f: F,
-    ) -> Result<()>
+    fn for_member_access<F>(&mut self, access: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -326,7 +318,7 @@ where
         r
     }
 
-    fn for_unary_op<F>(&mut self, un_op: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_unary_op<F>(&mut self, un_op: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -339,7 +331,7 @@ where
         r
     }
 
-    fn for_binary_op<F>(&mut self, bin_op: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_binary_op<F>(&mut self, bin_op: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -353,7 +345,7 @@ where
         r
     }
 
-    fn for_if<F>(&mut self, if_exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_if<F>(&mut self, if_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -378,7 +370,7 @@ where
         r
     }
 
-    fn for_while<F>(&mut self, while_exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_while<F>(&mut self, while_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -392,7 +384,7 @@ where
         r
     }
 
-    fn for_routine_call<F>(&mut self, rc: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_routine_call<F>(&mut self, rc: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -407,7 +399,7 @@ where
         r
     }
 
-    fn for_yield<F>(&mut self, yield_exp: &mut Expression<SemanticAnnotations>, f: F) -> Result<()>
+    fn for_yield<F>(&mut self, yield_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
@@ -420,11 +412,7 @@ where
         r
     }
 
-    fn for_struct_expression<F>(
-        &mut self,
-        se: &mut Expression<SemanticAnnotations>,
-        f: F,
-    ) -> Result<()>
+    fn for_struct_expression<F>(&mut self, se: &mut Expression<SemanticContext>, f: F) -> Result<()>
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {

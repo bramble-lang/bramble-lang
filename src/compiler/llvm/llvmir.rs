@@ -29,7 +29,7 @@ use braid_lang::result::Result;
 use crate::{
     compiler::{
         ast::{Node, Path, Type},
-        semantics::semanticnode::SemanticAnnotations,
+        semantics::semanticnode::SemanticContext,
     },
     project::manifest::Manifest,
 };
@@ -49,7 +49,7 @@ pub struct IrGen<'ctx> {
     imports: &'ctx [Manifest],
     string_pool: StringPool,
     registers: RegisterLookup<'ctx>,
-    struct_table: HashMap<String, &'ctx ast::StructDef<SemanticAnnotations>>,
+    struct_table: HashMap<String, &'ctx ast::StructDef<SemanticContext>>,
     fn_use_out_param: HashSet<String>,
 }
 
@@ -117,11 +117,7 @@ impl<'ctx> IrGen<'ctx> {
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
-    pub fn ingest(
-        &mut self,
-        m: &'ctx ast::Module<SemanticAnnotations>,
-        user_main: &str,
-    ) -> Result<()> {
+    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticContext>, user_main: &str) -> Result<()> {
         self.compile_string_pool(m);
         self.add_imports();
 
@@ -140,7 +136,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     fn find_distinct_user_main(
-        m: &'ctx ast::Module<SemanticAnnotations>,
+        m: &'ctx ast::Module<SemanticContext>,
         user_main: &str,
     ) -> Result<Option<Path>> {
         let mut matches = vec![];
@@ -159,7 +155,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     fn find_user_main(
-        module: &'ctx ast::Module<SemanticAnnotations>,
+        module: &'ctx ast::Module<SemanticContext>,
         user_main: &str,
         mut path: Path,
         matches: &mut Vec<Path>,
@@ -232,7 +228,7 @@ impl<'ctx> IrGen<'ctx> {
     /// Take the given AST and add declarations for every function to the
     /// LLVM module. This is required so that the FunctionValue can be looked
     /// up when generating code for function calls.
-    fn add_mod_items(&mut self, m: &'ctx ast::Module<SemanticAnnotations>) {
+    fn add_mod_items(&mut self, m: &'ctx ast::Module<SemanticContext>) {
         for s in m.get_structs() {
             if let ast::Item::Struct(sd) = s {
                 self.add_struct_def(sd);
@@ -263,7 +259,7 @@ impl<'ctx> IrGen<'ctx> {
     /// looked up through `self.module` for function calls
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
-    fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticAnnotations>) {
+    fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticContext>) {
         let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
             &rd.annotations.get_canonical_path().to_label(),
@@ -274,7 +270,7 @@ impl<'ctx> IrGen<'ctx> {
         )
     }
 
-    fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticAnnotations>) {
+    fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticContext>) {
         // Declare external function
         let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
@@ -349,7 +345,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Add a struct definition to the LLVM context and module.
-    fn add_struct_def(&mut self, sd: &'ctx ast::StructDef<SemanticAnnotations>) {
+    fn add_struct_def(&mut self, sd: &'ctx ast::StructDef<SemanticContext>) {
         self.struct_table
             .insert(sd.annotation().get_canonical_path().to_label(), sd);
         let name = sd.annotation().get_canonical_path().to_label();
@@ -373,7 +369,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Add all string literals to the data section of the assemby output
-    fn compile_string_pool(&mut self, m: &ast::Module<SemanticAnnotations>) {
+    fn compile_string_pool(&mut self, m: &ast::Module<SemanticContext>) {
         self.string_pool.extract_from_module(m);
 
         for (s, id) in self.string_pool.pool.iter() {
@@ -441,7 +437,7 @@ trait ToLlvmIr<'ctx> {
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value>;
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticContext> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -465,7 +461,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -511,7 +507,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for ast::Statement<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Statement<SemanticContext> {
     type Value = AnyValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -525,7 +521,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Statement<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
     type Value = PointerValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -557,7 +553,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
     type Value = PointerValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -572,7 +568,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
     type Value = InstructionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -602,7 +598,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticAnnotations> {
     }
 }
 
-impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
+impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
     type Value = BasicValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
@@ -785,7 +781,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticAnnotations> {
 
                 // convert field names to field indexes (order of fields in expression may not
                 // be the same as in the defintion)
-                let idx_fields: Vec<(usize, &ast::Expression<SemanticAnnotations>)> = fields
+                let idx_fields: Vec<(usize, &ast::Expression<SemanticContext>)> = fields
                     .iter()
                     .map(|(n, v)| (sdef.get_field_idx(n).unwrap(), v))
                     .collect();
@@ -895,7 +891,7 @@ impl ast::UnaryOperator {
     fn to_llvm_ir<'ctx>(
         &self,
         llvm: &mut IrGen<'ctx>,
-        right: &ast::Expression<SemanticAnnotations>,
+        right: &ast::Expression<SemanticContext>,
     ) -> BasicValueEnum<'ctx> {
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let rv = r.into_int_value();
@@ -910,8 +906,8 @@ impl ast::BinaryOperator {
     fn to_llvm_ir<'ctx>(
         &self,
         llvm: &mut IrGen<'ctx>,
-        left: &ast::Expression<SemanticAnnotations>,
-        right: &ast::Expression<SemanticAnnotations>,
+        left: &ast::Expression<SemanticContext>,
+        right: &ast::Expression<SemanticContext>,
     ) -> BasicValueEnum<'ctx> {
         let l = left.to_llvm_ir(llvm).expect("Expected a value");
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
@@ -1000,7 +996,7 @@ impl ast::RoutineCall {
         &self,
         llvm: &mut IrGen<'ctx>,
         target: &ast::Path,
-        params: &Vec<ast::Expression<SemanticAnnotations>>,
+        params: &Vec<ast::Expression<SemanticContext>>,
         ret_ty: &ast::Type,
     ) -> Result<Option<BasicValueEnum<'ctx>>> {
         match self {

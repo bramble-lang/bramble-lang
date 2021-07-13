@@ -5,7 +5,7 @@ use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
 use crate::compiler::{
     ast::{Node, RoutineDef},
-    semantics::semanticnode::SemanticAnnotations,
+    semantics::semanticnode::SemanticContext,
 };
 
 const ROUTINE_DEF_FIELD: &'static str = "RoutineDef";
@@ -14,7 +14,7 @@ const PARAMS_FIELD: &'static str = "params";
 const TY_FIELD: &'static str = "ty";
 const ANNOTATIONS_FIELD: &'static str = "annotations";
 
-impl Serialize for RoutineDef<SemanticAnnotations> {
+impl Serialize for RoutineDef<SemanticContext> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -28,7 +28,7 @@ impl Serialize for RoutineDef<SemanticAnnotations> {
     }
 }
 
-impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
+impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -45,13 +45,13 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
         struct RoutineDefVisitor;
 
         impl<'de> Visitor<'de> for RoutineDefVisitor {
-            type Value = RoutineDef<SemanticAnnotations>;
+            type Value = RoutineDef<SemanticContext>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_fmt(format_args!("struct {}", ROUTINE_DEF_FIELD))
             }
 
-            fn visit_seq<V>(self, mut seq: V) -> Result<RoutineDef<SemanticAnnotations>, V::Error>
+            fn visit_seq<V>(self, mut seq: V) -> Result<RoutineDef<SemanticContext>, V::Error>
             where
                 V: SeqAccess<'de>,
             {
@@ -72,7 +72,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticAnnotations> {
                 Ok(rd)
             }
 
-            fn visit_map<V>(self, mut map: V) -> Result<RoutineDef<SemanticAnnotations>, V::Error>
+            fn visit_map<V>(self, mut map: V) -> Result<RoutineDef<SemanticContext>, V::Error>
             where
                 V: MapAccess<'de>,
             {
