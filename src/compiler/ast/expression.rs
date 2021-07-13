@@ -19,7 +19,7 @@ pub enum Expression<I> {
     I64(I, i64),
     Boolean(I, bool),
     StringLiteral(I, String),
-    ArrayValue(I, Vec<Expression<I>>, usize),
+    ArrayExpression(I, Vec<Expression<I>>, usize),
     ArrayAt {
         context: I,
         array: Box<Expression<I>>,
@@ -78,7 +78,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
-            ArrayValue(m, _, _) => m,
+            ArrayExpression(m, _, _) => m,
             ArrayAt { context: m, .. } => m,
         }
     }
@@ -109,7 +109,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
-            ArrayValue(m, _, _) => m,
+            ArrayExpression(m, _, _) => m,
             ArrayAt { context: m, .. } => m,
         }
     }
@@ -180,7 +180,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | I64(..)
             | Boolean(..)
             | StringLiteral(..)
-            | ArrayValue(_, _, _)
+            | ArrayExpression(_, _, _)
             | CustomType(..)
             | Identifier(..)
             | IdentifierDeclare(..)
@@ -221,7 +221,7 @@ impl<I> Expression<I> {
             I64(_, v) => format!("i64({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
-            ArrayValue(_, v, _) => format!(
+            ArrayExpression(_, v, _) => format!(
                 "[{}]",
                 v.iter()
                     .map(|e| format!("{}", e))

@@ -201,7 +201,7 @@ where
             I64(_, i) => I64(self.transform(exp), *i),
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
-            ArrayValue(_, _, _) => self.for_array_value(exp),
+            ArrayExpression(_, _, _) => self.for_array_expression(exp),
             ArrayAt { .. } => self.for_array_at(exp),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
@@ -342,14 +342,14 @@ where
         }
     }
 
-    fn for_array_value(&mut self, av: &Expression<A>) -> Expression<B> {
-        if let Expression::ArrayValue(_, elements, len) = av {
+    fn for_array_expression(&mut self, av: &Expression<A>) -> Expression<B> {
+        if let Expression::ArrayExpression(_, elements, len) = av {
             let b = self.transform(av);
             let mut nelements = vec![];
             for e in elements {
                 nelements.push(self.for_expression(e));
             }
-            Expression::ArrayValue(b, nelements, *len)
+            Expression::ArrayExpression(b, nelements, *len)
         } else {
             panic!("Expected ArrayValue but got {:?}", av)
         }

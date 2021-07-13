@@ -473,7 +473,7 @@ fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserContex
             stream.next_must_be(&Lex::RBracket)?;
 
             let len = elements.len();
-            Ok(Some(Expression::ArrayValue(token.l, elements, len)))
+            Ok(Some(Expression::ArrayExpression(token.l, elements, len)))
         }
         None => Ok(None),
     }
@@ -571,19 +571,19 @@ mod test {
         for (text, expected) in vec![
             (
                 "[1]",
-                Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
+                Expression::ArrayExpression(1, vec![Expression::I64(1, 1)], 1),
             ),
             (
                 "[1u8]",
-                Expression::ArrayValue(1, vec![Expression::U8(1, 1)], 1),
+                Expression::ArrayExpression(1, vec![Expression::U8(1, 1)], 1),
             ),
             (
                 "[1,]",
-                Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1),
+                Expression::ArrayExpression(1, vec![Expression::I64(1, 1)], 1),
             ),
             (
                 "[1, 2, 3]",
-                Expression::ArrayValue(
+                Expression::ArrayExpression(
                     1,
                     vec![
                         Expression::I64(1, 1),
@@ -595,7 +595,7 @@ mod test {
             ),
             (
                 "[1, 2i8, 3]", // This is legal at the parser level (it is illegal semantically)
-                Expression::ArrayValue(
+                Expression::ArrayExpression(
                     1,
                     vec![
                         Expression::I64(1, 1),
@@ -607,9 +607,13 @@ mod test {
             ),
             (
                 "[[1,],]",
-                Expression::ArrayValue(
+                Expression::ArrayExpression(
                     1,
-                    vec![Expression::ArrayValue(1, vec![Expression::I64(1, 1)], 1)],
+                    vec![Expression::ArrayExpression(
+                        1,
+                        vec![Expression::I64(1, 1)],
+                        1,
+                    )],
                     1,
                 ),
             ),

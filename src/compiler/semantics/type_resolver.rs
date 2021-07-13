@@ -453,7 +453,7 @@ impl TypeResolver {
                 meta.ty = Type::StringLiteral;
                 Ok(Expression::StringLiteral(meta.clone(), v.clone()))
             }
-            Expression::ArrayValue(meta, elements, len) => {
+            Expression::ArrayExpression(meta, elements, len) => {
                 // Resolve the types for each element in the array value
                 let nelements: Result<Vec<Expression<SemanticContext>>> =
                     elements.iter().map(|e| self.traverse(e)).collect();
@@ -475,7 +475,7 @@ impl TypeResolver {
                 // Use the size of the array and the type to define the array type
                 let mut meta = meta.clone();
                 meta.ty = Type::Array(Box::new(el_ty), *len);
-                Ok(Expression::ArrayValue(meta, nelements, *len))
+                Ok(Expression::ArrayExpression(meta, nelements, *len))
             }
             Expression::ArrayAt {
                 context: meta,

@@ -808,7 +808,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 }
                 Some(s_ptr.into())
             }
-            ast::Expression::ArrayValue(meta, elements, len) => {
+            ast::Expression::ArrayExpression(meta, elements, len) => {
                 let a_ty = meta.ty();
                 let a_llvm_ty = a_ty
                     .to_llvm_ir(llvm)

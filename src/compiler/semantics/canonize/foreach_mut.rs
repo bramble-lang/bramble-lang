@@ -244,7 +244,7 @@ where
             Expression::I64(..) => self.transform(exp, f),
             Expression::Boolean(..) => self.transform(exp, f),
             Expression::StringLiteral(..) => self.transform(exp, f),
-            Expression::ArrayValue(_, el, _) => {
+            Expression::ArrayExpression(_, el, _) => {
                 for e in el {
                     self.for_expression(e, f)?;
                     //println!("{} Checking Elements => {}", self.name, e.annotation().ty);
