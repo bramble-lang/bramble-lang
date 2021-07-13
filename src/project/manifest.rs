@@ -49,7 +49,7 @@ impl Manifest {
             .iter()
             .map(|i| {
                 (
-                    i.annotation().get_canonical_path().clone(),
+                    i.get_context().get_canonical_path().clone(),
                     i.params.iter().map(|p| p.ty.clone()).clone().collect(),
                     i.ret_ty.clone(),
                 )

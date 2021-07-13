@@ -18,7 +18,7 @@ pub struct Extern<M> {
 }
 
 impl<M: Context> Node<M> for Extern<M> {
-    fn annotation(&self) -> &M {
+    fn get_context(&self) -> &M {
         &self.context
     }
 

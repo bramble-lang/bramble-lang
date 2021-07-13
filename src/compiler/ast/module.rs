@@ -21,7 +21,7 @@ pub struct Module<M> {
 }
 
 impl<M: Context> Node<M> for Module<M> {
-    fn annotation(&self) -> &M {
+    fn get_context(&self) -> &M {
         &self.context
     }
 
@@ -277,7 +277,7 @@ mod test {
     pub fn test_new_module() {
         let module = Module::new("test", 1);
         assert_eq!(module.get_name(), "test");
-        assert_eq!(*module.annotation(), 1);
+        assert_eq!(*module.get_context(), 1);
     }
 
     #[test]
@@ -540,11 +540,11 @@ pub enum Item<M> {
 }
 
 impl<M: Context> Node<M> for Item<M> {
-    fn annotation(&self) -> &M {
+    fn get_context(&self) -> &M {
         match self {
-            Item::Routine(r) => r.annotation(),
-            Item::Struct(s) => s.annotation(),
-            Item::Extern(e) => e.annotation(),
+            Item::Routine(r) => r.get_context(),
+            Item::Struct(s) => s.get_context(),
+            Item::Extern(e) => e.get_context(),
         }
     }
 

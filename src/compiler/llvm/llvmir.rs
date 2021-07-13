@@ -266,7 +266,7 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             false,
             &rd.ret_ty,
-            rd.annotation().ln,
+            rd.get_context().ln,
         )
     }
 
@@ -274,11 +274,11 @@ impl<'ctx> IrGen<'ctx> {
         // Declare external function
         let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
-            &ex.annotation().get_canonical_path().to_label(),
+            &ex.get_context().get_canonical_path().to_label(),
             &params,
             ex.has_varargs,
             ex.get_return_type(),
-            ex.annotation().ln,
+            ex.get_context().ln,
         );
     }
 
@@ -347,8 +347,8 @@ impl<'ctx> IrGen<'ctx> {
     /// Add a struct definition to the LLVM context and module.
     fn add_struct_def(&mut self, sd: &'ctx ast::StructDef<SemanticContext>) {
         self.struct_table
-            .insert(sd.annotation().get_canonical_path().to_label(), sd);
-        let name = sd.annotation().get_canonical_path().to_label();
+            .insert(sd.get_context().get_canonical_path().to_label(), sd);
+        let name = sd.get_context().get_canonical_path().to_label();
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
             .iter()
@@ -358,7 +358,7 @@ impl<'ctx> IrGen<'ctx> {
                     ast::Type::Custom(_) => f.ty.to_llvm_ir(self),
                     _ => f.ty.to_llvm_ir(self),
                 }
-                .map_err(|e| format!("L{}: {}", f.annotation().ln, e))
+                .map_err(|e| format!("L{}: {}", f.get_context().ln, e))
                 .unwrap()
                 .into_basic_type()
                 .ok()
@@ -530,7 +530,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
         match self
             .get_type()
             .to_llvm_ir(llvm)
-            .map_err(|e| format!("L{}: {}", self.annotation().ln, e))
+            .map_err(|e| format!("L{}: {}", self.get_context().ln, e))
             .unwrap()
             .into_basic_type()
         {
@@ -771,7 +771,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 }
             }
             ast::Expression::StructExpression(_, name, fields) => {
-                let sname = self.annotation().ty().get_path().unwrap().to_label();
+                let sname = self.get_context().ty().get_path().unwrap().to_label();
                 let sdef = llvm
                     .struct_table
                     .get(&sname)

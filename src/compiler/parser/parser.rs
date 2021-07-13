@@ -326,7 +326,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Function must end with a return statement, got {:?}",
-                stmts.last().map_or(fn_line, |s| *s.annotation()),
+                stmts.last().map_or(fn_line, |s| *s.get_context()),
                 stream.peek(),
             ))
         }
@@ -371,7 +371,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => {
             return Err(format!(
                 "L{}: Coroutine must end with a return statement",
-                stmts.last().map_or(co_line, |s| *s.annotation()),
+                stmts.last().map_or(co_line, |s| *s.get_context()),
             ))
         }
     }

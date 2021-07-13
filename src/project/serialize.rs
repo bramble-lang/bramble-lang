@@ -23,7 +23,7 @@ impl Serialize for RoutineDef<SemanticContext> {
         state.serialize_field(NAME_FIELD, self.get_name())?;
         state.serialize_field(PARAMS_FIELD, self.get_params())?;
         state.serialize_field(TY_FIELD, self.get_return_type())?;
-        state.serialize_field(ANNOTATIONS_FIELD, self.annotation())?;
+        state.serialize_field(ANNOTATIONS_FIELD, self.get_context())?;
         state.end()
     }
 }

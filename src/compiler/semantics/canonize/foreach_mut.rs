@@ -55,9 +55,9 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
-        self.diag.begin(a.annotation());
-        let r = f(&self.symbols, a).map_err(|e| format!("L{}: {}", a.annotation().line(), e));
-        self.diag.end(a.annotation());
+        self.diag.begin(a.get_context());
+        let r = f(&self.symbols, a).map_err(|e| format!("L{}: {}", a.get_context().line(), e));
+        self.diag.end(a.get_context());
         r
     }
 
@@ -79,7 +79,7 @@ where
             println!("{}", self.name);
         }
 
-        self.symbols.enter_scope(&m.annotation().sym);
+        self.symbols.enter_scope(&m.get_context().sym);
         let r = self.transform(m, f);
 
         for child_module in m.get_modules_mut().iter_mut() {
@@ -122,7 +122,7 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
-        self.symbols.enter_scope(&rd.annotation().sym);
+        self.symbols.enter_scope(&rd.get_context().sym);
         let r = self.transform(rd, f);
         // loop through all the params
         self.for_parameters(&mut rd.params, f)?;
@@ -284,7 +284,7 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
-        self.symbols.enter_scope(&block.annotation().sym);
+        self.symbols.enter_scope(&block.get_context().sym);
         let r = self.transform(block, f);
         if let Expression::ExpressionBlock(ref mut _annotation, ref mut body, ref mut final_exp) =
             block
@@ -461,7 +461,7 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(sm_ast.annotation().ln, 4);
+        assert_eq!(sm_ast.get_context().ln, 4);
     }
 
     #[test]
@@ -490,14 +490,14 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            *sm_ast.annotation().get_canonical_path(),
+            *sm_ast.get_context().get_canonical_path(),
             vec!["project", "test", "annotation"].into()
         );
         assert_eq!(
             *sm_ast
                 .get_module("m")
                 .unwrap()
-                .annotation()
+                .get_context()
                 .get_canonical_path(),
             vec!["project", "test", "m", "annotation"].into()
         );
@@ -537,7 +537,7 @@ mod tests {
                 .unwrap()
                 .get_item("MyStruct")
                 .unwrap()
-                .annotation()
+                .get_context()
                 .get_canonical_path(),
             vec!["project", "test", "m", "MyStruct"].into()
         );

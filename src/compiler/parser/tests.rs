@@ -370,7 +370,7 @@ pub mod tests {
             .unwrap()
             .get_module("test_mod")
         {
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             assert_eq!(m.get_name(), "test_mod");
         } else {
             panic!("No nodes returned by parser")
@@ -387,7 +387,7 @@ pub mod tests {
             .unwrap();
 
         if let Some(m) = parse("test", &tokens).unwrap() {
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             assert_eq!(m.get_name(), "test");
 
             assert_eq!(m.get_modules().len(), 1);
@@ -396,7 +396,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             let m = &m.get_modules()[0];
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             assert_eq!(m.get_name(), "test_fn_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -443,7 +443,7 @@ pub mod tests {
             .unwrap()
             .get_module("test_co_mod")
         {
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             assert_eq!(m.get_name(), "test_co_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -491,7 +491,7 @@ pub mod tests {
             .unwrap()
             .get_module("test_struct_mod")
         {
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             assert_eq!(m.get_name(), "test_struct_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -500,7 +500,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 1);
 
             if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
-                assert_eq!(*sd.annotation(), 1);
+                assert_eq!(*sd.get_context(), 1);
                 assert_eq!(sd.get_name(), "my_struct");
                 assert_eq!(sd.get_fields(), &vec![Parameter::new(1, "x", &Type::I64)]);
             }
@@ -522,7 +522,7 @@ pub mod tests {
             .unwrap()
             .get_module("test_extern_mod")
         {
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             assert_eq!(m.get_name(), "test_extern_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -532,7 +532,7 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item("my_fn") {
-                assert_eq!(*e.annotation(), 1);
+                assert_eq!(*e.get_context(), 1);
                 assert_eq!(e.get_name(), "my_fn");
                 assert_eq!(e.get_params(), &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(e.get_return_type(), Type::I32);
@@ -555,7 +555,7 @@ pub mod tests {
             .unwrap()
             .get_module("test_extern_mod")
         {
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             assert_eq!(m.get_name(), "test_extern_mod");
 
             assert_eq!(m.get_modules().len(), 0);
@@ -565,7 +565,7 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item("my_fn") {
-                assert_eq!(*e.annotation(), 1);
+                assert_eq!(*e.get_context(), 1);
                 assert_eq!(e.get_name(), "my_fn");
                 assert_eq!(e.get_params(), &vec![Parameter::new(1, "x", &Type::I64)]);
                 assert_eq!(e.get_return_type(), Type::I32);
@@ -723,7 +723,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         if let Some(m) = parse("test_mod", &tokens).unwrap() {
-            assert_eq!(*m.annotation(), 1);
+            assert_eq!(*m.get_context(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
                 name,

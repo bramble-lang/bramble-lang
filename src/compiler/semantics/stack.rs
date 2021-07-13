@@ -96,7 +96,7 @@ impl<'a> SymbolTableScopeStack {
     /// Add a function from another module to this symbol table
     /// So that calls to external functions can be type checked.
     pub fn import_structdef(&mut self, sd: &StructDef<SemanticContext>) -> Option<Symbol> {
-        let canon_path = sd.annotation().get_canonical_path();
+        let canon_path = sd.get_context().get_canonical_path();
         match canon_path.item() {
             Some(item) => self.imported_symbols.insert(
                 canon_path.to_string(),
@@ -296,7 +296,7 @@ impl<'a> SymbolTableScopeStack {
                 }
             }
 
-            (*current).annotation().sym.get(item)
+            (*current).get_context().sym.get(item)
         }
     }
 

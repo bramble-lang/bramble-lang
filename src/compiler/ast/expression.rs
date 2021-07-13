@@ -52,7 +52,7 @@ pub enum Expression<I> {
 }
 
 impl<M: Context> Node<M> for Expression<M> {
-    fn annotation(&self) -> &M {
+    fn get_context(&self) -> &M {
         use Expression::*;
         match self {
             U8(m, ..)

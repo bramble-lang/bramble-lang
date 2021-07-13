@@ -421,7 +421,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
             let line = token.l;
             match expression(stream)? {
                 Some(coroutine) => {
-                    Expression::new_yield(*coroutine.annotation(), Box::new(coroutine))
+                    Expression::new_yield(*coroutine.get_context(), Box::new(coroutine))
                 }
                 None => Err(format!("L{}: expected an identifier after yield", line)),
             }

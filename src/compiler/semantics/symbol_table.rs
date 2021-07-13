@@ -64,7 +64,7 @@ impl SymbolTable {
      * This function is recursively applied to child modules.
      */
     pub fn add_item_defs_to_table(module: &mut Module<SemanticContext>) -> Result<()> {
-        let mut annotations = module.annotation().clone();
+        let mut annotations = module.get_context().clone();
 
         let fm = module.get_functions_mut();
         for f in fm.iter_mut() {

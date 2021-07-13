@@ -90,9 +90,9 @@ impl TypeResolver {
     }
 
     fn analyze_module(&mut self, m: &Module<SemanticContext>) -> Result<Module<SemanticContext>> {
-        let mut nmodule = Module::new(m.get_name(), m.annotation().clone());
+        let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
 
-        self.symbols.enter_scope(&nmodule.annotation().sym);
+        self.symbols.enter_scope(&nmodule.get_context().sym);
 
         *nmodule.get_modules_mut() = m
             .get_modules()
@@ -213,7 +213,7 @@ impl TypeResolver {
         }
 
         // Update the annotations with canonical path information and set the type to Type::Unit
-        let mut meta = struct_def.annotation().clone();
+        let mut meta = struct_def.get_context().clone();
         meta.ty = Type::Unit;
 
         Ok(StructDef::new(
@@ -234,7 +234,7 @@ impl TypeResolver {
 
         // Update the annotations with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
-        let mut meta = ex.annotation().clone();
+        let mut meta = ex.get_context().clone();
         meta.ty = ex.get_return_type().clone();
 
         Ok(Extern::new(
@@ -263,7 +263,7 @@ impl TypeResolver {
     }
 
     fn analyze_bind(&mut self, bind: &Bind<SemanticContext>) -> Result<Bind<SemanticContext>> {
-        let meta = bind.annotation();
+        let meta = bind.get_context();
         let rhs = bind.get_rhs();
         let result = {
             let mut meta = meta.clone();
@@ -288,14 +288,14 @@ impl TypeResolver {
                 ))
             }
         };
-        result.map_err(|e| format!("L{}: {}", bind.annotation().ln, e))
+        result.map_err(|e| format!("L{}: {}", bind.get_context().ln, e))
     }
 
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticContext>,
     ) -> Result<Mutate<SemanticContext>> {
-        let mut meta = mutate.annotation().clone();
+        let mut meta = mutate.get_context().clone();
         let rhs = self.traverse(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
             Ok(symbol) => {
@@ -317,7 +317,7 @@ impl TypeResolver {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| format!("L{}: {}", mutate.annotation().ln, e))
+        result.map_err(|e| format!("L{}: {}", mutate.get_context().ln, e))
     }
 
     fn analyze_yieldreturn(
@@ -344,7 +344,7 @@ impl TypeResolver {
         let (_, expected_ret_ty) = self.symbols.lookup_coroutine(current_func)?;
 
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = yr.annotation().clone();
+            let mut meta = yr.get_context().clone();
             meta.ty = actual_ret_ty;
             Ok(YieldReturn::new(meta, actual_ret_exp))
         } else {
@@ -353,7 +353,7 @@ impl TypeResolver {
                 expected_ret_ty, actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", yr.annotation().ln, e))
+        .map_err(|e| format!("L{}: {}", yr.get_context().ln, e))
     }
 
     fn analyze_return(&mut self, r: &Return<SemanticContext>) -> Result<Return<SemanticContext>> {
@@ -379,7 +379,7 @@ impl TypeResolver {
         // Check that the actual expression matches the expected return type
         // of the function
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = r.annotation().clone();
+            let mut meta = r.get_context().clone();
             meta.ty = actual_ret_ty;
             Ok(Return::new(meta, actual_ret_exp))
         } else {
@@ -388,13 +388,13 @@ impl TypeResolver {
                 expected_ret_ty, actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", r.annotation().ln, e))
+        .map_err(|e| format!("L{}: {}", r.get_context().ln, e))
     }
 
     fn traverse(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
         self.analyze_expression(ast).map_err(|e| {
             if !e.starts_with("L") {
-                format!("L{}: {}", ast.annotation().ln, e)
+                format!("L{}: {}", ast.get_context().ln, e)
             } else {
                 e
             }
@@ -464,9 +464,9 @@ impl TypeResolver {
                 if nelements.len() == 0 {
                     return Err("Arrays with 0 length are not allowed".into());
                 } else {
-                    el_ty = nelements[0].annotation().ty.clone();
+                    el_ty = nelements[0].get_context().ty.clone();
                     for e in &nelements {
-                        if e.annotation().ty != el_ty {
+                        if e.get_context().ty != el_ty {
                             return Err("Inconsistent types in array value".into());
                         }
                     }
@@ -484,17 +484,17 @@ impl TypeResolver {
             } => {
                 //  Check that the array value is an array type
                 let n_array = self.traverse(array)?;
-                let el_ty = match n_array.annotation().ty() {
+                let el_ty = match n_array.get_context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(format!("Expected array type on LHS of [] but found {}", ty)),
                 }?;
 
                 // Check that the index is an i64 type
                 let n_index = self.traverse(index)?;
-                if !n_index.annotation().ty().is_integral() {
+                if !n_index.get_context().ty().is_integral() {
                     return Err(format!(
                         "Expected integral type for index but found {}",
-                        n_index.annotation().ty()
+                        n_index.get_context().ty()
                     ));
                 }
 

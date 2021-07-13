@@ -122,7 +122,7 @@ mod test_preorder {
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
-        let i = n.annotation();
+        let i = n.get_context();
         2 * (*i as i64)
     }
 
@@ -134,7 +134,7 @@ mod test_preorder {
         let mut iter = module1.iter_preorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -147,7 +147,7 @@ mod test_preorder {
         let mut iter = module1.iter_preorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -178,7 +178,7 @@ mod test_preorder {
         m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
 
         let expected = vec![1, 7, 4, 5, 6, 2, 3, 8];
-        let test: Vec<i64> = m.iter_preorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = m.iter_preorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 
@@ -224,7 +224,7 @@ mod test_preorder {
         )));
 
         let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        let test: Vec<i64> = f.iter_preorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = f.iter_preorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 }
@@ -244,7 +244,7 @@ mod test_postorder {
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
-        let i = n.annotation();
+        let i = n.get_context();
         2 * (*i as i64)
     }
 
@@ -256,7 +256,7 @@ mod test_postorder {
         let mut iter = module1.iter_postorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -269,7 +269,7 @@ mod test_postorder {
         let mut iter = module1.iter_postorder();
         for e in expected {
             let t = iter.next().unwrap();
-            assert_eq!(*t.annotation(), e);
+            assert_eq!(*t.get_context(), e);
         }
     }
 
@@ -300,7 +300,7 @@ mod test_postorder {
         m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
 
         let expected = vec![7, 5, 6, 4, 3, 2, 8, 1];
-        let test: Vec<i64> = m.iter_postorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = m.iter_postorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 
@@ -346,7 +346,7 @@ mod test_postorder {
         )));
 
         let expected = vec![5, 6, 4, 7, 8, 3, 2, 13, 12, 15, 14, 11, 10, 9, 1];
-        let test: Vec<i64> = f.iter_postorder().map(|n| *n.annotation()).collect();
+        let test: Vec<i64> = f.iter_postorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
     }
 }

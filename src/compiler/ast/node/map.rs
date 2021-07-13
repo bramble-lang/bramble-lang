@@ -53,7 +53,7 @@ where
     }
 
     fn transform(&mut self, n: &dyn Node<A>) -> B {
-        self.diag.begin(n.annotation());
+        self.diag.begin(n.get_context());
         let b = (self.f)(n);
         self.diag.end(&b);
         b
@@ -432,7 +432,7 @@ mod test {
     }
 
     fn convert(n: &dyn Node<i32>) -> i64 {
-        let i = n.annotation();
+        let i = n.get_context();
         2 * (*i as i64)
     }
 
@@ -448,7 +448,7 @@ mod test {
         let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
         let module2 = mp.apply(&module1);
 
-        assert_eq!(*module2.annotation(), 2i64);
+        assert_eq!(*module2.get_context(), 2i64);
         assert_eq!(count, 1);
     }
 
@@ -466,8 +466,8 @@ mod test {
         let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
         let module2 = mp.apply(&module1);
 
-        assert_eq!(*module2.annotation(), 2i64);
-        assert_eq!(*module2.get_module("m2").unwrap().annotation(), 4i64);
+        assert_eq!(*module2.get_context(), 2i64);
+        assert_eq!(*module2.get_module("m2").unwrap().get_context(), 4i64);
         assert_eq!(count, 2);
     }
 
@@ -501,14 +501,14 @@ mod test {
         let mut count = 0;
         let f = |n: &dyn Node<i64>| {
             count += 1;
-            format!("{}", n.annotation())
+            format!("{}", n.get_context())
         };
         let mut mapper = MapPreOrder::new("test", f, TracingConfig::Off);
 
         let m_prime = mapper.apply(&m);
 
         for n in m_prime.iter_preorder() {
-            assert_eq!(*n.annotation(), "1");
+            assert_eq!(*n.get_context(), "1");
         }
         assert_eq!(count, 8);
     }
