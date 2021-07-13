@@ -262,7 +262,7 @@ impl<'ctx> IrGen<'ctx> {
     fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticContext>) {
         let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
-            &rd.annotations.get_canonical_path().to_label(),
+            &rd.context.get_canonical_path().to_label(),
             &params,
             false,
             &rd.ret_ty,
@@ -465,7 +465,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
-        let fn_name = self.annotations.get_canonical_path().to_label();
+        let fn_name = self.context.get_canonical_path().to_label();
         let fn_value = llvm
             .module
             .get_function(&fn_name)
@@ -841,7 +841,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(a_ptr.into())
             }
             ast::Expression::ArrayAt {
-                annotation: meta,
+                context: meta,
                 array,
                 index,
             } => {

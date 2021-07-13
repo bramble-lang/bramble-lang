@@ -334,7 +334,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        annotations: fn_line,
+        context: fn_line,
         def: RoutineDefType::Function,
         name: fn_name,
         params,
@@ -378,7 +378,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        annotations: co_line,
+        context: co_line,
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
@@ -431,7 +431,7 @@ fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserContex
     let params = params
         .iter()
         .map(|(line, name, ty)| Parameter {
-            annotation: *line,
+            context: *line,
             name: name.clone(),
             ty: ty.clone(),
         })

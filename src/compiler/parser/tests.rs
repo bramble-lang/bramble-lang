@@ -404,7 +404,7 @@ pub mod tests {
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 0);
             if let Item::Routine(RoutineDef {
-                annotations,
+                context: annotations,
                 def: RoutineDefType::Function,
                 name,
                 params,
@@ -452,7 +452,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             if let Some(Item::Routine(RoutineDef {
-                annotations,
+                context: annotations,
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
@@ -585,7 +585,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         if let Some(Item::Routine(RoutineDef {
-            annotations: l,
+            context: l,
             def: RoutineDefType::Function,
             name,
             params,
@@ -617,7 +617,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         if let Some(Item::Routine(RoutineDef {
-            annotations: l,
+            context: l,
             def: RoutineDefType::Function,
             name,
             params,
@@ -814,7 +814,7 @@ pub mod tests {
             .collect::<Result<_>>()
             .unwrap();
         if let Some(Item::Routine(RoutineDef {
-            annotations: l,
+            context: l,
             def: RoutineDefType::Function,
             name,
             params,
@@ -856,7 +856,7 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::If {
-            annotation: l,
+            context: l,
             cond,
             if_arm,
             else_arm,
@@ -891,7 +891,7 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::If {
-            annotation: l,
+            context: l,
             cond,
             if_arm,
             else_arm,
@@ -952,7 +952,7 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::While {
-            annotation: l,
+            context: l,
             cond,
             body,
         }) = exp

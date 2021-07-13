@@ -21,7 +21,7 @@ pub enum Expression<I> {
     StringLiteral(I, String),
     ArrayValue(I, Vec<Expression<I>>, usize),
     ArrayAt {
-        annotation: I,
+        context: I,
         array: Box<Expression<I>>,
         index: Box<Expression<I>>,
     },
@@ -33,13 +33,13 @@ pub enum Expression<I> {
     RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
     StructExpression(I, Path, Vec<(String, Expression<I>)>),
     If {
-        annotation: I,
+        context: I,
         cond: Box<Expression<I>>,
         if_arm: Box<Expression<I>>,
         else_arm: Option<Box<Expression<I>>>,
     },
     While {
-        annotation: I,
+        context: I,
         cond: Box<Expression<I>>,
         body: Box<Expression<I>>,
     },
@@ -72,14 +72,14 @@ impl<M: Context> Node<M> for Expression<M> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | While { annotation: m, .. }
+            | If { context: m, .. }
+            | While { context: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             ArrayValue(m, _, _) => m,
-            ArrayAt { annotation: m, .. } => m,
+            ArrayAt { context: m, .. } => m,
         }
     }
 
@@ -103,14 +103,14 @@ impl<M: Context> Node<M> for Expression<M> {
             | MemberAccess(m, ..)
             | BinaryOp(m, ..)
             | UnaryOp(m, ..)
-            | If { annotation: m, .. }
-            | While { annotation: m, .. }
+            | If { context: m, .. }
+            | While { context: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             ArrayValue(m, _, _) => m,
-            ArrayAt { annotation: m, .. } => m,
+            ArrayAt { context: m, .. } => m,
         }
     }
 

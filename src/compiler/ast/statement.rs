@@ -107,7 +107,7 @@ impl<M> Statement<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Bind<M> {
-    annotations: M,
+    context: M,
     id: String,
     ty: Type,
     mutable: bool,
@@ -116,11 +116,11 @@ pub struct Bind<M> {
 
 impl<M: Context> Node<M> for Bind<M> {
     fn annotation(&self) -> &M {
-        &self.annotations
+        &self.context
     }
 
     fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -153,7 +153,7 @@ impl<M> std::fmt::Display for Bind<M> {
 impl<M> Bind<M> {
     pub fn new(annotations: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
         Bind {
-            annotations,
+            context: annotations,
             id: id.into(),
             ty,
             mutable,
@@ -192,18 +192,18 @@ impl<M> Bind<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Mutate<M> {
-    annotations: M,
+    context: M,
     id: String,
     rhs: Expression<M>,
 }
 
 impl<M: Context> Node<M> for Mutate<M> {
     fn annotation(&self) -> &M {
-        &self.annotations
+        &self.context
     }
 
     fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -236,7 +236,7 @@ impl<M> std::fmt::Display for Mutate<M> {
 impl<M> Mutate<M> {
     pub fn new(annotations: M, id: &str, rhs: Expression<M>) -> Self {
         Mutate {
-            annotations,
+            context: annotations,
             id: id.into(),
             rhs,
         }
@@ -261,17 +261,17 @@ impl<M> Mutate<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct YieldReturn<M> {
-    annotations: M,
+    context: M,
     value: Option<Expression<M>>,
 }
 
 impl<M: Context> Node<M> for YieldReturn<M> {
     fn annotation(&self) -> &M {
-        &self.annotations
+        &self.context
     }
 
     fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -306,7 +306,10 @@ impl<M> std::fmt::Display for YieldReturn<M> {
 
 impl<M> YieldReturn<M> {
     pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
-        Self { annotations, value }
+        Self {
+            context: annotations,
+            value,
+        }
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {
@@ -324,17 +327,17 @@ impl<M> YieldReturn<M> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Return<M> {
-    annotations: M,
+    context: M,
     value: Option<Expression<M>>,
 }
 
 impl<M: Context> Node<M> for Return<M> {
     fn annotation(&self) -> &M {
-        &self.annotations
+        &self.context
     }
 
     fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -369,7 +372,10 @@ impl<M> std::fmt::Display for Return<M> {
 
 impl<M> Return<M> {
     pub fn new(annotations: M, value: Option<Expression<M>>) -> Self {
-        Self { annotations, value }
+        Self {
+            context: annotations,
+            value,
+        }
     }
 
     pub fn get_value(&self) -> &Option<Expression<M>> {

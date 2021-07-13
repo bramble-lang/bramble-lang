@@ -166,7 +166,7 @@ mod test_preorder {
             "func",
             4,
             vec![Parameter {
-                annotation: 5,
+                context: 5,
                 name: "p".into(),
                 ty: Type::Bool,
             }],
@@ -191,7 +191,7 @@ mod test_preorder {
             Type::I32,
             false,
             Expression::If {
-                annotation: 3,
+                context: 3,
                 cond: box Expression::BinaryOp(
                     4,
                     crate::compiler::ast::expression::BinaryOperator::Eq,
@@ -288,7 +288,7 @@ mod test_postorder {
             "func",
             4,
             vec![Parameter {
-                annotation: 5,
+                context: 5,
                 name: "p".into(),
                 ty: Type::Bool,
             }],
@@ -313,7 +313,7 @@ mod test_postorder {
             Type::I32,
             false,
             Expression::If {
-                annotation: 3,
+                context: 3,
                 cond: box Expression::BinaryOp(
                     4,
                     BinaryOperator::Eq,

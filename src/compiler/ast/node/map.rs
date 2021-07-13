@@ -130,7 +130,7 @@ where
         RoutineDef {
             name: rd.name.clone(),
             def: rd.def,
-            annotations: b,
+            context: b,
             params,
             ret_ty: rd.ret_ty.clone(),
             body,
@@ -281,7 +281,7 @@ where
             let if_arm = self.for_expression(if_arm);
             let else_arm = else_arm.as_ref().map(|ea| box self.for_expression(ea));
             Expression::If {
-                annotation: b,
+                context: b,
                 cond: box cond,
                 if_arm: box if_arm,
                 else_arm,
@@ -297,7 +297,7 @@ where
             let cond = self.for_expression(cond);
             let body = self.for_expression(body);
             Expression::While {
-                annotation: b,
+                context: b,
                 cond: box cond,
                 body: box body,
             }
@@ -361,7 +361,7 @@ where
             let array = self.for_expression(array);
             let index = self.for_expression(index);
             Expression::ArrayAt {
-                annotation: b,
+                context: b,
                 array: box array,
                 index: box index,
             }
@@ -486,7 +486,7 @@ mod test {
             "func",
             1,
             vec![Parameter {
-                annotation: 1,
+                context: 1,
                 name: "p".into(),
                 ty: Type::Bool,
             }],

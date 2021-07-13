@@ -3106,7 +3106,7 @@ mod type_resolver_tests {
             let mut import_annotation = SemanticContext::new(0, 0, Type::Unit);
             import_annotation.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
             let imports = Manifest::new(&vec![RoutineDef{
-                annotations: import_annotation,
+                context: import_annotation,
                 def: RoutineDefType::Function,
                 name: "test".into(),
                 ret_ty: import_func.1.clone(),

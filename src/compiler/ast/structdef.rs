@@ -11,18 +11,18 @@ use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StructDef<M> {
-    annotations: M,
+    context: M,
     name: String,
     pub(super) fields: Vec<Parameter<M>>,
 }
 
 impl<M: Context> Node<M> for StructDef<M> {
     fn annotation(&self) -> &M {
-        &self.annotations
+        &self.context
     }
 
     fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -59,7 +59,7 @@ impl<M> std::fmt::Display for StructDef<M> {
 impl<M> StructDef<M> {
     pub fn new(name: &str, annotations: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
         StructDef {
-            annotations,
+            context: annotations,
             name: name.into(),
             fields,
         }

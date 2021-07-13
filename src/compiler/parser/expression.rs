@@ -273,7 +273,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                             stream
                                 .next_must_be(&Lex::RBracket)
                                 .map(|_| Expression::ArrayAt {
-                                    annotation: token.l,
+                                    context: token.l,
                                     array: box ma,
                                     index: box index,
                                 })
@@ -353,7 +353,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
             };
 
             Some(Expression::If {
-                annotation: token.l,
+                context: token.l,
                 cond: Box::new(cond),
                 if_arm: Box::new(if_arm),
                 else_arm: else_arm.map(|f| box f),
@@ -378,7 +378,7 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
                 expression_block(stream)?.ok_or(format!("L{}: Expression in body", token.l))?;
 
             Some(Expression::While {
-                annotation: token.l,
+                context: token.l,
                 cond: Box::new(cond),
                 body: Box::new(body),
             })
@@ -653,7 +653,7 @@ mod test {
             (
                 "a[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::Identifier(1, "a".into()),
                     index: box Expression::I64(1, 1),
                 },
@@ -661,7 +661,7 @@ mod test {
             (
                 "(a)[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::Identifier(1, "a".into()),
                     index: box Expression::I64(1, 1),
                 },
@@ -669,7 +669,7 @@ mod test {
             (
                 "a.b[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::MemberAccess(
                         1,
                         box Expression::Identifier(1, "a".into()),
@@ -683,7 +683,7 @@ mod test {
                 Expression::MemberAccess(
                     1,
                     box Expression::ArrayAt {
-                        annotation: 1,
+                        context: 1,
                         array: box Expression::Identifier(1, "a".into()),
                         index: box Expression::I64(1, 1),
                     },
@@ -693,11 +693,11 @@ mod test {
             (
                 "a[0].b[1]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::MemberAccess(
                         1,
                         box Expression::ArrayAt {
-                            annotation: 1,
+                            context: 1,
                             array: box Expression::Identifier(1, "a".into()),
                             index: box Expression::I64(1, 0),
                         },
@@ -709,9 +709,9 @@ mod test {
             (
                 "a[1][2]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::ArrayAt {
-                        annotation: 1,
+                        context: 1,
                         array: box Expression::Identifier(1, "a".into()),
                         index: box Expression::I64(1, 1),
                     },
@@ -721,9 +721,9 @@ mod test {
             (
                 "((a)[1])[2]",
                 Expression::ArrayAt {
-                    annotation: 1,
+                    context: 1,
                     array: box Expression::ArrayAt {
-                        annotation: 1,
+                        context: 1,
                         array: box Expression::Identifier(1, "a".into()),
                         index: box Expression::I64(1, 1),
                     },

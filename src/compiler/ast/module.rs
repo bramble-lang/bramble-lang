@@ -11,7 +11,7 @@ use braid_lang::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module<M> {
-    annotations: M,
+    context: M,
     name: String,
     modules: Vec<Module<M>>,
     functions: Vec<Item<M>>,
@@ -22,11 +22,11 @@ pub struct Module<M> {
 
 impl<M: Context> Node<M> for Module<M> {
     fn annotation(&self) -> &M {
-        &self.annotations
+        &self.context
     }
 
     fn annotation_mut(&mut self) -> &mut M {
-        &mut self.annotations
+        &mut self.context
     }
 
     fn node_type(&self) -> NodeType {
@@ -72,7 +72,7 @@ impl<M> std::fmt::Display for Module<M> {
 impl<M> Module<M> {
     pub fn new(name: &str, annotation: M) -> Module<M> {
         Module {
-            annotations: annotation,
+            context: annotation,
             name: name.into(),
             modules: Vec::new(),
             functions: Vec::new(),
@@ -284,7 +284,7 @@ mod test {
     pub fn test_get_nonexistant_item() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -300,7 +300,7 @@ mod test {
     pub fn test_add_function() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -316,7 +316,7 @@ mod test {
     pub fn test_add_function_that_already_exists() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -332,7 +332,7 @@ mod test {
     pub fn test_add_coroutine() {
         let mut module = Module::new("test", 1);
         let cdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "cor".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
@@ -348,7 +348,7 @@ mod test {
     pub fn test_add_coroutine_that_already_exists() {
         let mut module = Module::new("test", 1);
         let cdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "cor".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
@@ -364,7 +364,7 @@ mod test {
     pub fn test_add_coroutine_with_same_name_as_function() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -374,7 +374,7 @@ mod test {
         module.add_function(fdef.clone()).unwrap();
 
         let cdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "dupe".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
@@ -389,7 +389,7 @@ mod test {
     pub fn test_add_function_with_same_name_as_coroutine() {
         let mut module = Module::new("test", 1);
         let cdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "dupe".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
@@ -399,7 +399,7 @@ mod test {
         module.add_coroutine(cdef.clone()).unwrap();
 
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -414,7 +414,7 @@ mod test {
     pub fn test_get_item_that_does_not_exist() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -430,7 +430,7 @@ mod test {
     pub fn test_get_function() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "func".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -446,7 +446,7 @@ mod test {
     pub fn test_get_coroutine() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "co".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
@@ -462,7 +462,7 @@ mod test {
     pub fn test_go_to_nested() {
         let mut inner = Module::new("inner", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "co".into(),
             def: RoutineDefType::Coroutine,
             params: vec![],
@@ -499,7 +499,7 @@ mod test {
     pub fn test_add_extern_with_same_name_as_function() {
         let mut module = Module::new("test", 1);
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],
@@ -520,7 +520,7 @@ mod test {
         module.add_extern(edef.clone()).unwrap();
 
         let fdef = RoutineDef {
-            annotations: 1,
+            context: 1,
             name: "dupe".into(),
             def: RoutineDefType::Function,
             params: vec![],

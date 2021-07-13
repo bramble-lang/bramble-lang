@@ -140,7 +140,7 @@ impl TypeResolver {
         routine: &RoutineDef<SemanticContext>,
     ) -> Result<RoutineDef<SemanticContext>> {
         let RoutineDef {
-            annotations,
+            context: annotations,
             name,
             def,
             params,
@@ -176,7 +176,7 @@ impl TypeResolver {
 
         let canonical_ret_ty = meta.ty.clone();
         Ok(RoutineDef {
-            annotations: meta,
+            context: meta,
             def: def.clone(),
             name: name.clone(),
             params: params.clone(),
@@ -478,7 +478,7 @@ impl TypeResolver {
                 Ok(Expression::ArrayValue(meta, nelements, *len))
             }
             Expression::ArrayAt {
-                annotation: meta,
+                context: meta,
                 array,
                 index,
             } => {
@@ -502,7 +502,7 @@ impl TypeResolver {
                 meta.ty = el_ty.clone();
 
                 Ok(Expression::ArrayAt {
-                    annotation: meta,
+                    context: meta,
                     array: box n_array,
                     index: box n_index,
                 })
@@ -573,7 +573,7 @@ impl TypeResolver {
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
             Expression::If {
-                annotation: meta,
+                context: meta,
                 cond,
                 if_arm,
                 else_arm,
@@ -596,7 +596,7 @@ impl TypeResolver {
                     if if_arm.get_type() == else_arm_ty {
                         meta.ty = if_arm.get_type().clone();
                         Ok(Expression::If {
-                            annotation: meta.clone(),
+                            context: meta.clone(),
                             cond: box cond,
                             if_arm: box if_arm,
                             else_arm: else_arm,
@@ -616,7 +616,7 @@ impl TypeResolver {
                 }
             }
             Expression::While {
-                annotation: meta,
+                context: meta,
                 cond,
                 body,
                 ..
@@ -629,7 +629,7 @@ impl TypeResolver {
                     if body.get_type() == Type::Unit {
                         meta.ty = Type::Unit;
                         Ok(Expression::While {
-                            annotation: meta.clone(),
+                            context: meta.clone(),
                             cond: box cond,
                             body: box body,
                         })
