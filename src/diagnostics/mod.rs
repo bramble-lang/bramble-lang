@@ -68,14 +68,20 @@ where
     pub fn end(&mut self, context: &B) {
         let after_transform = context.diag();
         if self.config.trace(after_transform.ln as usize) {
-            match self.before_transform.take() {
+            // Format the diagnostics about the node before the transformation
+            let (before, has_before_data) = match self.before_transform.take() {
                 Some(before_diag) if before_diag.data.len() > 0 => {
-                    print!("{} ", before_diag);
+                    (format!("{}", before_diag), true)
                 }
-                _ => (),
+                Some(before_diag) if before_diag.data.len() == 0 => {
+                    (format!("{}()", before_diag), false)
+                }
+                _ => (format!(""), false),
             };
-            if after_transform.data.len() > 0 {
-                println!("=> {}", after_transform);
+
+            // If there is post transformation data then print out the transformation
+            if has_before_data || after_transform.data.len() > 0 {
+                println!("{} => {}", before, after_transform);
             }
         }
     }

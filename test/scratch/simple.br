@@ -1,3 +1,54 @@
-fn add(x: i64, y: i64) -> i64 {
-    return x + y;
+mod math {
+    mod arithmetic {
+        fn something(m: S) -> i64 {
+            let y: i64 := m.x;
+            return y;
+        }
+    }
+
+    struct S {
+        x: i64,
+    }
 }
+
+/*
+The following diagnostic data shows the canonization of paths from the root of a project to
+the item (module, structure, or function).  It also canonizes references to custom types so
+the path goes from a relative path to an absolute path.
+
+Canonization is the process of taking paths which are relative and turning them into absolute
+paths. The Braid compiler traverses the AST and for any node which has contains a path it 
+canonizes the path.  
+
+The nodes are identified in the trace with "L#n#", the refers to the 
+line of the source code is on and the unique identification number each node is given.
+So, "L1n1" refers to node 1 which is on line 1.
+
+Some nodes have symbol tables: this is the set of symbols that are defined within the scope
+of this node. If a node has a symbol table, then the diagnostic will print out the symbol table
+from before the canonization and from after the canonization.
+
+This is one of the first transformations applied to the AST after parsing, so most nodes have
+no context data.  Nodes without context data will be shown as `()`.
+
+L0n0: () => L0n0: {canon path}: $simple::simple
+L1n1: () => L1n1: {canon path}: $simple::simple::simple
+L1n2: {sym}: Module(math)
+        Name | Type | Mutable
+        S | StructDef(x: i64) | false
+ => L1n2: {canon path}: $simple::simple::math::math{sym}: Module(math)
+        Name | Type | Mutable
+        S | StructDef(x: i64) | false
+
+L2n3: {sym}: Module(arithmetic)
+        Name | Type | Mutable
+        something | fn (S) -> i64 | false
+ => L2n3: {canon path}: $simple::simple::math::arithmetic::arithmetic{sym}: Module(arithmetic)
+        Name | Type | Mutable
+        something | fn ($simple::simple::math::arithmetic::S) -> i64 | false
+
+L3n4: () => L3n4: {canon path}: $simple::simple::math::arithmetic::something
+L3n5: () => L3n5: {canon path}: $simple::simple::math::arithmetic::m
+L9n11: () => L9n11: {canon path}: $simple::simple::math::S
+L10n12: () => L10n12: {canon path}: $simple::simple::math::x
+*/

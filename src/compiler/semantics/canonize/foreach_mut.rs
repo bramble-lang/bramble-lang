@@ -65,9 +65,18 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
+        if self.tracing != TracingConfig::Off {
+            println!("ForEach: {}", self.name);
+        }
+
         self.diag.start_trace();
         let r = self.for_module(m, f);
         self.diag.end_trace();
+
+        if self.tracing != TracingConfig::Off {
+            println!("ForEach: {:?}", r);
+        }
+
         r.map_err(|e| format!("Semantic: {}", e))
     }
 
@@ -75,10 +84,6 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
     {
-        if self.tracing != TracingConfig::Off {
-            println!("{}", self.name);
-        }
-
         self.symbols.enter_scope(&m.get_context().sym);
         let r = self.transform(m, f);
 
