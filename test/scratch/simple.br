@@ -1,8 +1,3 @@
-extern fn puts(s: string);
-extern fn printf(fmt: string, ...);
-
-fn my_main() -> i64 {
-    let mut x: i64 := 0;
-    project::std::io::write("hello\n");
-    return 0;
+fn add(x: i64, y: i64) -> i64 {
+    return x + y;
 }

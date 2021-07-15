@@ -49,14 +49,12 @@ pub fn resolve_types_with_imports(
     let mut semantic = TypeResolver::new(&sm_ast, imports, main_fn);
 
     semantic.set_tracing(trace_type_resolver);
-    semantic.path_tracing = trace_path;
     semantic.resolve_types()
 }
 
 pub struct TypeResolver {
     symbols: SymbolTableScopeStack,
     tracing: TracingConfig,
-    path_tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
     main_fn: Path,
 }
@@ -76,7 +74,6 @@ impl TypeResolver {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root, imports),
             tracing: TracingConfig::Off,
-            path_tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
             main_fn: vec![CANONICAL_ROOT, MAIN_MODULE, main_fn.into()].into(), // TODO: should get rid of this
         }
