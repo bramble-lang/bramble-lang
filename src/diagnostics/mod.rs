@@ -81,7 +81,7 @@ where
 
             // If there is post transformation data then print out the transformation
             if has_before_data || after_transform.data.len() > 0 {
-                println!("{} => {}", before, after_transform);
+                println!("[\n{}\n=>\n{}\n]", before, after_transform);
             }
         }
     }
@@ -141,6 +141,7 @@ impl std::fmt::Display for DiagData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("L{}n{}: ", self.ln, self.node_id))?;
         for (k, values) in self.data.iter() {
+            f.write_str("\n");
             let values_text: String = values
                 .iter()
                 .map(|v| format!("{}", v))
