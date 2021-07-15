@@ -113,12 +113,6 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .long("trace-type-resolver")
                 .takes_value(true)
                 .help("Traces the type resolution unit")
-        )
-        .arg(
-            Arg::with_name("trace-path")
-                .long("trace-path")
-                .takes_value(true)
-                .help("Prints out the current module path at the current line of code.")
         );
     app
 }
@@ -160,10 +154,6 @@ pub fn get_canonization_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
 
 pub fn get_type_resolver_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
     TracingConfig::parse(args.value_of("trace-type-resolver"))
-}
-
-pub fn get_path_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
-    TracingConfig::parse(args.value_of("trace-path"))
 }
 
 pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> {

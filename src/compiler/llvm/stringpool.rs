@@ -242,7 +242,6 @@ mod test {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off, 
-                TracingConfig::Off
             ).unwrap();
             let mut sp = StringPool::new();
             sp.extract_from_module(&module);

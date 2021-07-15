@@ -69,7 +69,6 @@ fn main() {
     let trace_semantic_node = get_semantic_node_tracing(&config);
     let trace_canonization = get_canonization_tracing(&config);
     let trace_type_resolver = get_type_resolver_tracing(&config);
-    let trace_path = get_path_tracing(&config);
 
     let semantic_ast = match resolve_types_with_imports(
         &root,
@@ -78,7 +77,6 @@ fn main() {
         trace_semantic_node,
         trace_canonization,
         trace_type_resolver,
-        trace_path,
     ) {
         Ok(ast) => ast,
         Err(msg) => {

@@ -142,7 +142,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -232,7 +231,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
@@ -290,7 +288,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             assert!(result.is_ok());
         }
@@ -332,7 +329,6 @@ mod type_resolver_tests {
             let result = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -385,7 +381,6 @@ mod type_resolver_tests {
             let result = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -452,7 +447,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match (expected, module) {
                 (Ok(expected_ty), Ok(actual)) => {
@@ -501,7 +495,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             )
             .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_functions()[0] {
@@ -544,7 +537,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             )
             .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
@@ -578,7 +570,6 @@ mod type_resolver_tests {
             let result = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -774,7 +765,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -894,7 +884,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -956,7 +945,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1032,7 +1020,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1112,7 +1099,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -1186,7 +1172,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1275,7 +1260,6 @@ mod type_resolver_tests {
                     TracingConfig::Off,
                     TracingConfig::Off,
                     TracingConfig::Off,
-                    TracingConfig::Off,
                 );
                 match expected {
                     Ok(expected_ty) => {
@@ -1328,7 +1312,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1402,7 +1385,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1515,7 +1497,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1706,7 +1687,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -1794,7 +1774,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -1876,7 +1855,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1982,7 +1960,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2145,9 +2122,13 @@ mod type_resolver_tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, "my_main", TracingConfig::Off,
+            let module = resolve_types(
+                &ast, 
+                "my_main", 
                 TracingConfig::Off,
-             TracingConfig::Off, TracingConfig::Off);
+                TracingConfig::Off, 
+                TracingConfig::Off,
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2252,9 +2233,13 @@ mod type_resolver_tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, "my_main", TracingConfig::Off,
+            let module = resolve_types(
+                &ast, 
+                "my_main", 
                 TracingConfig::Off,
-             TracingConfig::Off, TracingConfig::Off);
+                TracingConfig::Off,
+                TracingConfig::Off
+            );
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2348,7 +2333,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2430,7 +2414,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2495,7 +2478,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2567,7 +2549,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2670,7 +2651,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2741,7 +2721,6 @@ mod type_resolver_tests {
             let module = resolve_types(
                 &ast,
                 "my_main",
-                TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2965,9 +2944,13 @@ mod type_resolver_tests {
                 .collect::<Result<_>>()
                 .unwrap();
             let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, "my_main", TracingConfig::Off,
+            let result = resolve_types(
+                &ast, 
+                "my_main", 
                 TracingConfig::Off,
-             TracingConfig::Off, TracingConfig::Off);
+                TracingConfig::Off,
+                TracingConfig::Off, 
+            );
             match expected {
                 Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
@@ -3007,7 +2990,6 @@ mod type_resolver_tests {
                     TracingConfig::Off,
                     TracingConfig::Off,
                     TracingConfig::Off, 
-                    TracingConfig::Off
                 );
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
@@ -3120,7 +3102,6 @@ mod type_resolver_tests {
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off, 
-                TracingConfig::Off
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "L{}: {:?} got {:?}", line, expected, result),

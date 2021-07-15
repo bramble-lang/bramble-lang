@@ -19,7 +19,6 @@ pub fn resolve_types(
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
-    trace_path: TracingConfig,
 ) -> Result<Module<SemanticContext>> {
     resolve_types_with_imports(
         ast,
@@ -28,7 +27,6 @@ pub fn resolve_types(
         trace_semantic_node,
         trace_canonization,
         trace,
-        trace_path,
     )
 }
 
@@ -39,7 +37,6 @@ pub fn resolve_types_with_imports(
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
     trace_type_resolver: TracingConfig,
-    trace_path: TracingConfig,
 ) -> Result<Module<SemanticContext>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
