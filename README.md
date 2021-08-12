@@ -43,7 +43,7 @@ cargo build
 ```
 
 ## Compiling a Braid File
-The `make-llvm.sh` script file will compile a given Braid project.
+The `./test/make-llvm.sh` script file will compile a given Braid project.
 
 ## Testing
 There are two sets of tests for Braid
