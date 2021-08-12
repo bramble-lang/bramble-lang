@@ -2,7 +2,7 @@
 ![Braid](https://github.com/erichgess/braid-lang/workflows/Braid/badge.svg)
 
 # Braid Language
-A language I am creating as a learning tool.
+The foundation steps for a programming language.
 
 ## Building the Compiler
 ### Docker
@@ -29,35 +29,21 @@ machine will be reflected in the container, thus creating an effective dev envir
 for any host that can run docker.
 
 ### Locally
-1. You will need to install Rust and Cargo: https://www.rust-lang.org/tools/install
-
-2. Braid needs the `nightly` toolchain to build, so after Rust has been installed
+1. Install LLVM: https://llvm.org/
+2. NASM needs to be installed in order to compile the Input functions.
+3. Install Rust and Cargo: https://www.rust-lang.org/tools/install
+4. Braid needs the `nightly` toolchain to build, so after Rust has been installed
 go to the Braid repo directory and run:
 ```
 rustup default nightly
 ```
-3. Build Braid by running:
+5. Build Braid by running:
 ```
 cargo build
 ```
 
 ## Compiling a Braid File
-Right now, the Braid compiler only generates x64 assembly output. There are two
-steps that have to be done after to arrive at an executable:
-
-1. Run the `nasm` assembler, which converts the assembly code into an object file.
-2. Run `gcc` to do the final compilation and linking.  This will output the actual
-executable.
-
-To assist with this, I have written a `make.sh` script which will compile and input
-Braid source file, then run `nasm` and `gcc` for you.
-
-`make.sh` is located in `./test` and can be used to build a Braid file with the
-following command:
-
-```
-./make.sh -i <path to source code>
-```
+The `make-llvm.sh` script file will compile a given Braid project.
 
 ## Testing
 There are two sets of tests for Braid
