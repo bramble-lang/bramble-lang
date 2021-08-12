@@ -62,6 +62,9 @@ These options are primarily useful when directly working on the compiler itself.
 - `trace-canonization`: When enabled, the compiler will emit a trace showing the canonization of each node in the AST.
 - `trace-type-resolver`: When enabled, the copmiler will emit a trace showing how each line of code in the input source code is assigned a type.
 
+#### Compiler Tracing
+Compiler traces provide a way to see exactly what the compiler is doing with a given input source code. This exists for debugging the compiler and validating in progress development. The output expects a lot of contextual knowledge and is not the most user friendly. One goal of Braid is to change that and generate an output that any user of the language can use to understand how their code is being converted into assembly.
+
 All `trace-<stage>` options allow you to specify a filter so that only a subset of the input source file will emit tracing information, the format of the range option is: 
 ```
 all - Trace the entire input file
