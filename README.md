@@ -121,7 +121,7 @@ From the project directory run:
  cargo test
  ```
 
-This will run all unit tests and output the results to teh console.
+This will run all unit tests and output the results to the console.
 
 #### Braid Tests
 From within the `./test` directory, run: 
