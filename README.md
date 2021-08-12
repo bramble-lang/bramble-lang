@@ -137,7 +137,10 @@ Directories and what they contain
 - `braid` - This contains the implementations of `std` libraries.  Most of these are written in
 Braid but some files are written in platform appropriate assembly.
 - `design` - Design documents and notes for various features. These provide insight into how many
-features were investigated and designed.
+features were investigated and designed.  Currently, these are probably best viewed as a diary.  
+There is no formal definition of what needs to be in these docs and many of them are a running log
+of thoughts, ideas, and research; rather than an RFC or design doc meant to be reviewed by other
+developers.
 - `docker` - Docker setup files for spinning up a docker container to run the Braid compiler tests.
 This is to allow for testing Braid on Linux while working on another OS.
 - `src` - The compiler source code.
