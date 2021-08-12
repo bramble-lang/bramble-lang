@@ -6,6 +6,20 @@ The foundation steps for a programming language. More will be added here once th
 language moves beyond the primordial stage.
 
 ## Building the Compiler
+### Locally
+1. Install LLVM: https://llvm.org/
+2. NASM needs to be installed in order to compile the Input functions.
+3. Install Rust and Cargo: https://www.rust-lang.org/tools/install
+4. Braid needs the `nightly` toolchain to build, so after Rust has been installed
+go to the Braid repo directory and run:
+```
+rustup default nightly
+```
+5. Build Braid by running:
+```
+cargo build
+```
+
 ### Docker
 To aid with development on other machines, there is a Docker configuration that
 will spin up a container and build Braid and run the unit and Braid tests. The
@@ -29,19 +43,6 @@ under a Linux OS. And any changes that you make to the Braid source code on the 
 machine will be reflected in the container, thus creating an effective dev environment
 for any host that can run docker.
 
-### Locally
-1. Install LLVM: https://llvm.org/
-2. NASM needs to be installed in order to compile the Input functions.
-3. Install Rust and Cargo: https://www.rust-lang.org/tools/install
-4. Braid needs the `nightly` toolchain to build, so after Rust has been installed
-go to the Braid repo directory and run:
-```
-rustup default nightly
-```
-5. Build Braid by running:
-```
-cargo build
-```
 
 ## Compiling a Braid File
 The `./test/make-llvm.sh` script file will compile a given Braid project.
