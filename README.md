@@ -131,3 +131,25 @@ From within the `./test` directory, run:
 
 This will run through every Braid test and test that the source code compiles and 
 executes correctly.
+
+## Project Layout
+Directories and what they contain
+- `braid` - This contains the implementations of `std` libraries.  Most of these are written in
+Braid but some files are written in platform appropriate assembly.
+- `design` - Design documents and notes for various features. These provide insight into how many
+features were investigated and designed.
+- `docker` - Docker setup files for spinning up a docker container to run the Braid compiler tests.
+This is to allow for testing Braid on Linux while working on another OS.
+- `src` - The compiler source code.
+- `test` - All the Braid integration tests and test scripts.  These are source code file and
+projects, written in Braid, used to test that the compiler works correctly.  The tests are compiled
+from Braid to the platform specific binary executable then run. The output from the compiled code is
+compared against the expected output to verify if the test passed or not.
+
+### src
+A break down of what's in the `src` directory:
+- `compiler` - The module containing the compiler.
+- `diagnostics` - Tools used to collect diagnostic data as the compiler runs (e.g. tracing)
+- `project` - The abstraction of a Braid "project".  This is used for managing the files in a
+project and orchestrating the compilation.
+- The files in the root of `./src` are primarily concerned with the CLI for the braid compiler.
