@@ -46,11 +46,15 @@ cargo build
 The `./test/make-llvm.sh` script file will compile a given Braid project.
 
 ### Compiler Options
+#### Main Options
 - `input`: this is the location of a file or project directory that will be compiled.
 - `import`: specifies one or more Braid library projects to import for compiling the `input` project.
 - `output`: The name of the output binary file.
-- `emit`: Set this value to `llvm-ir` to emit the LLVM IR code as part of compilation.
 - `manifest`: This will generate a manifest file, which will be used for importing the items defined in `input` project into other projects.
+- `emit`: Set this value to `llvm-ir` to emit the LLVM IR code as part of compilation. This is useful for looking at how code you have written is being compiled, for investigation, debugging, or optimization.  It is also essential as an aid to working on the compiler itself, to verify that new language or compiler features are being correctly translated into LLVM IR.
+
+#### Compiler Developer Options:
+These options are primarily useful when directly working on the compiler itself. They allow you to gain insight into exactly what is happening in the compiler, how it is interpreting input source code, and what decisions it's making.
 - `log`: Set to `debug|info|error` to turn on logging during compilation.  This is primarily used during compiler development.
 - `trace-lexer`: When enabled, the compiler will emit a describing how an input source code file is converted from text to tokens.
 - `trace-parser`: This will enable tracing during the parsing. Tracing allows you to see how the Parser stage is converting the input source code into an AST.
