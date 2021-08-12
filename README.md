@@ -126,7 +126,7 @@ This will run all unit tests and output the results to teh console.
 #### Braid Tests
 From within the `./test` directory, run: 
 ```
-./test.sh
+./test-llvm.sh
 ```
 
 This will run through every Braid test and test that the source code compiles and 
