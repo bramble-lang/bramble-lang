@@ -2,7 +2,8 @@
 ![Braid](https://github.com/erichgess/braid-lang/workflows/Braid/badge.svg)
 
 # Braid Language
-The foundation steps for a programming language.
+The foundation steps for a programming language. More will be added here once the
+language moves beyond the primordial stage.
 
 ## Building the Compiler
 ### Docker
@@ -47,35 +48,60 @@ The `./test/make-llvm.sh` script file will compile a given Braid project.
 
 ### Compiler Options
 #### Main Options
-- `input`: this is the location of a file or project directory that will be compiled.
-- `import`: specifies one or more Braid library projects to import for compiling the `input` project.
+- `input`: this is the location of a file or project directory that will be 
+compiled.
+- `import`: specifies one or more Braid library projects to import for compiling
+ the `input` project.
 - `output`: The name of the output binary file.
-- `manifest`: This will generate a manifest file, which will be used for importing the items defined in `input` project into other projects.
-- `emit`: Set this value to `llvm-ir` to emit the LLVM IR code as part of compilation. This is useful for looking at how code you have written is being compiled, for investigation, debugging, or optimization.  It is also essential as an aid to working on the compiler itself, to verify that new language or compiler features are being correctly translated into LLVM IR.
+- `manifest`: This will generate a manifest file, which will be used for 
+importing the items defined in `input` project into other projects.
+- `emit`: Set this value to `llvm-ir` to emit the LLVM IR code as part of 
+compilation. This is useful for looking at how code you have written is being 
+compiled, for investigation, debugging, or optimization.  It is also essential 
+as an aid to working on the compiler itself, to verify that new language or 
+compiler features are being correctly translated into LLVM IR.
 
 #### Compiler Developer Options:
-These options are primarily useful when directly working on the compiler itself. They allow you to gain insight into exactly what is happening in the compiler, how it is interpreting input source code, and what decisions it's making.
-- `log`: Set to `debug|info|error` to turn on logging during compilation.  This is primarily used during compiler development.
-- `trace-lexer`: When enabled, the compiler will emit a describing how an input source code file is converted from text to tokens.
-- `trace-parser`: This will enable tracing during the parsing. Tracing allows you to see how the Parser stage is converting the input source code into an AST.
-- `trace-semantic-node`: When enabled, the compiler will emit a trace of the semantic analysis of the input source code.
-- `trace-canonization`: When enabled, the compiler will emit a trace showing the canonization of each node in the AST.
-- `trace-type-resolver`: When enabled, the copmiler will emit a trace showing how each line of code in the input source code is assigned a type.
+These options are primarily useful when directly working on the compiler itself. 
+They allow you to gain insight into exactly what is happening in the compiler, 
+how it is interpreting input source code, and what decisions it's making.
+- `log`: Set to `debug|info|error` to turn on logging during compilation.  This 
+is primarily used during compiler development.
+- `trace-lexer`: When enabled, the compiler will emit a describing how an input 
+source code file is converted from text to tokens.
+- `trace-parser`: This will enable tracing during the parsing. Tracing allows 
+you to see how the Parser stage is converting the input source code into an AST.
+- `trace-semantic-node`: When enabled, the compiler will emit a trace of the 
+semantic analysis of the input source code.
+- `trace-canonization`: When enabled, the compiler will emit a trace showing the 
+canonization of each node in the AST.
+- `trace-type-resolver`: When enabled, the copmiler will emit a trace showing 
+how each line of code in the input source code is assigned a type.
 
 #### Compiler Tracing
-Compiler traces provide a way to see exactly what the compiler is doing with a given input source code. This exists for debugging the compiler and validating in progress development. The output expects a lot of contextual knowledge and is not the most user friendly. One goal of Braid is to change that and generate an output that any user of the language can use to understand how their code is being converted into assembly.
+Compiler traces provide a way to see exactly what the compiler is doing with a 
+given input source code. This exists for debugging the compiler and validating 
+in progress development. The output expects a lot of contextual knowledge and 
+is not the most user friendly. One goal of Braid is to change that and generate 
+an output that any user of the language can use to understand how their code is 
+being converted into assembly.
 
-All `trace-<stage>` options allow you to specify a filter so that only a subset of the input source file will emit tracing information, the format of the range option is: 
+All `trace-<stage>` options allow you to specify a filter so that only a subset 
+of the input source file will emit tracing information, the format of the range 
+option is: 
 ```
 all - Trace the entire input file
 : - Trace the entire input file
 <line> - Trace only this line of the input file
 :<before line> - Trace every line up to and including <before line>
 <after line>: - Trace every line from <after line> on.
-<from line>:<to line> - Trace every line between <from line> and <to line> (inclusive)
+<from line>:<to line> - Trace every line between <from line> and <to line> 
+(inclusive)
 ```
 
-Currently, this does not specify a file, so it will apply the filter to each file within a project. It's primary purpose was for debugging new language and compiler features on single file test inputs. This will change soon.
+Currently, this does not specify a file, so it will apply the filter to each 
+file within a project. It's primary purpose was for debugging new language and 
+compiler features on single file test inputs. This will change soon.
 
 ## Testing
 There are two sets of tests for Braid
