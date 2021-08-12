@@ -45,6 +45,19 @@ cargo build
 ## Compiling a Braid File
 The `./test/make-llvm.sh` script file will compile a given Braid project.
 
+### Compiler Options
+- `input`: this is the location of a file or project directory that will be compiled.
+- `import`: specifies one or more Braid library projects to import for compiling the `input` project.
+- `output`: The name of the output binary file.
+- `emit`: Set this value to `llvm-ir` to emit the LLVM IR code as part of compilation.
+- `manifest`: This will generate a manifest file, which will be used for importing the items defined in `input` project into other projects.
+- `log`: Set to `debug|info|error` to turn on logging during compilation.  This is primarily used during compiler development.
+- `trace-lexer`: When enabled, the compiler will emit a describing how an input source code file is converted from text to tokens.
+- `trace-parser`: This will enable tracing during the parsing. Tracing allows you to see how the Parser stage is converting the input source code into an AST.
+- `trace-semantic-node`: When enabled, the compiler will emit a trace of the semantic analysis of the input source code.
+- `trace-canonization`: When enabled, the compiler will emit a trace showing the canonization of each node in the AST.
+- `trace-type-resolver`: When enabled, the copmiler will emit a trace showing how each line of code in the input source code is assigned a type.
+
 ## Testing
 There are two sets of tests for Braid
 1. Unit tests - These are all the unit tests which test that each component, type, and
