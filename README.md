@@ -62,6 +62,18 @@ These options are primarily useful when directly working on the compiler itself.
 - `trace-canonization`: When enabled, the compiler will emit a trace showing the canonization of each node in the AST.
 - `trace-type-resolver`: When enabled, the copmiler will emit a trace showing how each line of code in the input source code is assigned a type.
 
+All `trace-<stage>` options allow you to specify a filter so that only a subset of the input source file will emit tracing information, the format of the range option is: 
+```
+all - Trace the entire input file
+: - Trace the entire input file
+<line> - Trace only this line of the input file
+:<before line> - Trace every line up to and including <before line>
+<after line>: - Trace every line from <after line> on.
+<from line>:<to line> - Trace every line between <from line> and <to line> (inclusive)
+```
+
+Currently, this does not specify a file, so it will apply the filter to each file within a project. It's primary purpose was for debugging new language and compiler features on single file test inputs. This will change soon.
+
 ## Testing
 There are two sets of tests for Braid
 1. Unit tests - These are all the unit tests which test that each component, type, and
