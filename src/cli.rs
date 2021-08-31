@@ -19,6 +19,13 @@ pub fn print_errs(errs: &[String]) {
     }
 }
 
+#[derive(PartialEq)]
+pub enum Stage {
+    Lexer,
+    Parser,
+    Semantic,
+}
+
 pub fn configure_cli() -> clap::App<'static, 'static> {
     let app = App::new("Braid Compiler")
         .version("0.1.0")
@@ -113,6 +120,13 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .long("trace-type-resolver")
                 .takes_value(true)
                 .help("Traces the type resolution unit")
+        )
+        .arg(
+            Arg::with_name("stage")
+            .long("stage")
+            .takes_value(true)
+            .help("Will run the compiler to the given stage (lexer, parser, semantic).  This is \
+            is used for validating source code files. No assembly or LLVM IR will be emitted.")
         );
     app
 }
@@ -154,6 +168,19 @@ pub fn get_canonization_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
 
 pub fn get_type_resolver_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
     TracingConfig::parse(args.value_of("trace-type-resolver"))
+}
+
+pub fn get_stage<'a>(args: &'a ArgMatches) -> Result<Option<Stage>, String> {
+    if let Some(stage) = args.value_of("stage") {
+        match stage {
+            "lexer" => Ok(Some(Stage::Lexer)),
+            "parser" => Ok(Some(Stage::Parser)),
+            "semantic" => Ok(Some(Stage::Semantic)),
+            _ => Err(format!("Unrecognized stage: {}", stage)),
+        }
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> {

@@ -47,6 +47,8 @@ fn main() {
         }
     };
 
+    let stop_stage = get_stage(&config).unwrap();
+
     let trace_lexer = get_lexer_tracing(&config);
     let token_sets = match tokenize_project(src_input, trace_lexer) {
         Ok(ts) => ts,
@@ -56,6 +58,10 @@ fn main() {
         }
     };
 
+    if stop_stage == Some(Stage::Lexer) {
+        return;
+    }
+
     let trace_parser = get_parser_tracing(&config);
     let root = match parse_project(project_name, token_sets, trace_parser) {
         Ok(root) => root,
@@ -64,6 +70,10 @@ fn main() {
             exit(ERR_PARSER_ERROR)
         }
     };
+
+    if stop_stage == Some(Stage::Parser) {
+        return;
+    }
 
     // Type Check
     let trace_semantic_node = get_semantic_node_tracing(&config);
@@ -84,6 +94,10 @@ fn main() {
             std::process::exit(ERR_TYPE_CHECK);
         }
     };
+
+    if stop_stage == Some(Stage::Semantic) {
+        return;
+    }
 
     // Configure the compiler
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
