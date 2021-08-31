@@ -5,6 +5,7 @@ if [ -z "$1" ]
     exit 1
 fi
 
+echo "Random Syntax Check: Running $1 Iterations"
 cargo build --release
 COUNTER=0
 until [ $COUNTER -ge $1 ]; do
