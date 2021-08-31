@@ -8,7 +8,7 @@ use crate::result::Result;
  * `SymbolTable` is an AST node context that contains information about symbols that
  * are defined by immediate children of this node. For example:
  *
- *```
+ *``` ignore
  * mod my_mod {
  *      fn hello(i: i64) {
  *          let x: i64 := i * i;
