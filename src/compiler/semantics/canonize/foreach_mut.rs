@@ -1,4 +1,4 @@
-use braid_lang::result::Result;
+use crate::result::Result;
 
 use crate::compiler::ast::*;
 use crate::diagnostics::{config::TracingConfig, DiagRecorder};
@@ -432,7 +432,7 @@ mod tests {
     use crate::compiler::{
         lexer::tokens::Token, parser::parser, semantics::semanticnode::SemanticAst, Lexer,
     };
-    use braid_lang::result::Result;
+    use crate::result::Result;
 
     use super::*;
 

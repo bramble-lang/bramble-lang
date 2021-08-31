@@ -537,7 +537,7 @@ mod test {
         ast::{Statement, Type},
         Lexer,
     };
-    use braid_lang::result::Result;
+    use crate::result::Result;
 
     #[test]
     fn parse_number() {

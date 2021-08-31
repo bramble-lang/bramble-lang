@@ -1,24 +1,13 @@
 #![allow(dead_code)]
-#![feature(box_syntax, box_patterns)]
 
 extern crate log;
 extern crate simplelog;
 
-mod cli;
-mod compiler;
-mod diagnostics;
-mod io;
-mod project;
-mod result;
-
 use std::{path::Path, process::exit};
 
-use cli::*;
-use compiler::{llvm, semantics::type_resolver::*};
 use inkwell::context::Context;
-use io::read_manifests;
-use manifest::Manifest;
-use project::*;
+
+use braid_lang::*;
 
 const BRAID_FILE_EXT: &str = "br";
 const ROOT_MODULE_NAME: &str = "root";

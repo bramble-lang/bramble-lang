@@ -24,7 +24,7 @@ use inkwell::{
     AddressSpace, IntPredicate, OptimizationLevel,
 };
 
-use braid_lang::result::Result;
+use crate::result::Result;
 
 use crate::{
     compiler::{

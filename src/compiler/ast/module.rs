@@ -7,7 +7,7 @@ use super::{
     routinedef::{RoutineDef, RoutineDefType},
     structdef::StructDef,
 };
-use braid_lang::result::Result;
+use crate::result::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module<M> {

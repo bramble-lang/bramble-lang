@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
+use crate::result::Result;
 use crate::{
     compiler::{
         ast::*,
@@ -10,7 +11,6 @@ use crate::{
     },
     diagnostics::{config::TracingConfig, Diag, DiagData},
 };
-use braid_lang::result::Result;
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program

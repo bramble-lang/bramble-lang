@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
 
-use braid_lang::result::Result;
+use crate::result::Result;
 
 /**
  * `SymbolTable` is an AST node context that contains information about symbols that

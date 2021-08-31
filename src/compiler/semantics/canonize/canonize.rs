@@ -1,4 +1,4 @@
-use braid_lang::result::Result;
+use crate::result::Result;
 use log::debug;
 
 use crate::{

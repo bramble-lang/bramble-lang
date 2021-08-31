@@ -9,7 +9,7 @@ pub mod tests {
         parser::{expression::*, statement::*, tokenstream::TokenStream},
         Lexer,
     };
-    use braid_lang::result::Result;
+    use crate::result::Result;
 
     #[test]
     fn parse_unary_operators() {

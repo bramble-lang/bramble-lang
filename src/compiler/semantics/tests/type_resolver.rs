@@ -10,7 +10,7 @@ mod type_resolver_tests {
     };
 
     use super::super::super::type_resolver::*;
-    use braid_lang::result::Result;
+    use crate::result::Result;
 
     #[test]
     pub fn test_identifiers() {

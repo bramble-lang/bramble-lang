@@ -4,7 +4,7 @@ while preserving the scope hierarchy.
 */
 use std::collections::HashMap;
 
-use braid_lang::result::Result;
+use crate::result::Result;
 use inkwell::values::AnyValueEnum;
 
 struct IdToValueMap<'ctx> {
