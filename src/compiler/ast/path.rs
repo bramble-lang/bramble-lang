@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use braid_lang::result::Result;
+use crate::result::Result;
 
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";

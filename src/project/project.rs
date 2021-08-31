@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::compiler::{ast::Module, lexer::tokens::Token, parser};
 use crate::{diagnostics::config::TracingConfig, io::get_files};
 
-use braid_lang::result::{NResult, Result};
+use crate::result::{NResult, Result};
 
 /// Given the path to a source, return the name that should be used
 /// for the project.

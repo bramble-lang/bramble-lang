@@ -6,7 +6,7 @@ use crate::compiler::{
 };
 use crate::diagnostics::config::{Tracing, TracingConfig};
 use crate::manifest::Manifest;
-use braid_lang::result::Result;
+use crate::result::Result;
 use std::collections::HashMap;
 
 use super::{

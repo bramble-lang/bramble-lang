@@ -53,3 +53,4 @@ jobs:
           cd test
           bash ./test-llvm.sh
           bash ./test-imports.sh
+          bash ./syntax-test.sh 100

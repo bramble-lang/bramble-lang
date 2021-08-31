@@ -4,7 +4,7 @@ while preserving the scope hierarchy.
 */
 use std::collections::HashMap;
 
-use braid_lang::result::Result;
+use crate::result::Result;
 use inkwell::values::AnyValueEnum;
 
 struct IdToValueMap<'ctx> {
@@ -68,7 +68,7 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// an `Err` if a function scope is already open.
     ///
     /// # Examples
-    /// ```
+    /// ``` ignore
     /// let mut rl = RegisterLookup::new();
     /// let r = rl.open_fn();
     /// assert_eq!(r, Ok(()));
@@ -86,7 +86,7 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// an `Err` if there are still open local scopes.
     ///
     /// # Examples
-    /// ```
+    /// ``` ignore
     /// let mut rl = RegisterLookup::new();
     /// rl.open_fn().unwrap();
     /// let r = rl.close_fn()

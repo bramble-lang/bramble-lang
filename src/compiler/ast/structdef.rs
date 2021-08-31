@@ -7,7 +7,7 @@ use super::{
     parameter::Parameter,
     ty::Type,
 };
-use braid_lang::result::Result;
+use crate::result::Result;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StructDef<M> {

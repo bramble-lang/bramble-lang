@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use log::*;
 
+use crate::result::Result;
 use crate::{
     compiler::ast::{Module, Node, Path, StructDef, Type, CANONICAL_ROOT},
     project::manifest::Manifest,
 };
-use braid_lang::result::Result;
 
 use super::{
     semanticnode::SemanticContext,

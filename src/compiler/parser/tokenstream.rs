@@ -1,5 +1,5 @@
 use crate::compiler::lexer::tokens::{Lex, Token};
-use braid_lang::result::Result;
+use crate::result::Result;
 
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,

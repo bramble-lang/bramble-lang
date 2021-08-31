@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use braid_lang::result::NResult;
+use crate::result::NResult;
 use clap::ArgMatches;
 
-use crate::{cli::get_imports, manifest::Manifest, BRAID_FILE_EXT};
+use super::{cli::get_imports, manifest::Manifest};
 
 pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error> {
     let mut files = vec![];
@@ -34,7 +34,7 @@ pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error>
                 std::io::ErrorKind::InvalidInput,
                 format!(
                     "Is not a Braid language file, expected extension {} but got {}",
-                    BRAID_FILE_EXT,
+                    ext,
                     ex.to_str().unwrap()
                 ),
             ));
