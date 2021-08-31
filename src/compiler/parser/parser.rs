@@ -250,7 +250,9 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
         Some(token) => match function_decl(stream, true)? {
             Some((fn_line, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    return Err("An extern declaration must have at least one parameter before a VarArgs (...) parameter".into());
+                    return Err("An extern declaration must have at least one \
+                     parameter before a VarArgs (...) parameter"
+                        .into());
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
@@ -284,29 +286,6 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
         None => Ok(None),
     }
 }
-
-fn function_decl(
-    stream: &mut TokenStream,
-    allow_var_args: bool,
-) -> ParserResult<(u32, String, Vec<Parameter<u32>>, HasVarArgs, Type)> {
-    let fn_line = match stream.next_if(&Lex::FunctionDef) {
-        Some(co) => co.l,
-        None => return Ok(None),
-    };
-
-    let (fn_line, fn_name) = stream
-        .next_if_id()
-        .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
-    let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
-    let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
-    } else {
-        Type::Unit
-    };
-
-    Ok(Some((fn_line, fn_name, params, has_varargs, fn_type)))
-}
-
 fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
         Some((l, n, p, v, t)) => {
@@ -341,6 +320,28 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         ret_ty: fn_type,
         body: stmts,
     }))
+}
+
+fn function_decl(
+    stream: &mut TokenStream,
+    allow_var_args: bool,
+) -> ParserResult<(u32, String, Vec<Parameter<u32>>, HasVarArgs, Type)> {
+    let fn_line = match stream.next_if(&Lex::FunctionDef) {
+        Some(co) => co.l,
+        None => return Ok(None),
+    };
+
+    let (fn_line, fn_name) = stream
+        .next_if_id()
+        .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
+    let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
+    let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
+        consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
+    } else {
+        Type::Unit
+    };
+
+    Ok(Some((fn_line, fn_name, params, has_varargs, fn_type)))
 }
 
 fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
