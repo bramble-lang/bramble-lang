@@ -8,7 +8,6 @@ use inkwell::context::Context;
 use braid_lang::*;
 
 const BRAID_FILE_EXT: &str = "br";
-const ROOT_MODULE_NAME: &str = "root";
 const USER_MAIN_FN: &str = "my_main";
 
 fn main() {
