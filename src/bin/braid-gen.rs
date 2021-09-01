@@ -1,8 +1,6 @@
-use std::{process::exit, sync::atomic::AtomicU64};
+use std::process::exit;
 
 use rand::prelude::*;
-
-static ITEM_ID: AtomicU64 = AtomicU64::new(0);
 
 /**
 A tool for generating random, syntactically correct Braid source code. For the
@@ -18,7 +16,9 @@ fn main() {
 
     let max_breadth: u32 = args[1].parse::<u32>().unwrap();
     let max_depth: u32 = args[1].parse::<u32>().unwrap();
-    module(max_breadth, max_depth, 0);
+
+    let mut gen = SyntaxGenerator::new();
+    gen.module(max_breadth, max_depth, 0);
 }
 
 macro_rules! tprint {
@@ -28,6 +28,10 @@ macro_rules! tprint {
         }
         (print!($($arg)*))
     };
+}
+
+struct SyntaxGenerator {
+    next_id: u32,
 }
 
 /*
@@ -46,185 +50,197 @@ IdDeclaration => Identifier: Type
 Expression
 Statement => LetBind | Mutate | Expression | Return
 */
-fn module(max_breadth: u32, max_depth: u32, depth: u32) {
-    if depth >= max_depth {
-        return;
+impl SyntaxGenerator {
+    fn new() -> SyntaxGenerator {
+        SyntaxGenerator { next_id: 0 }
     }
 
-    tprint!(depth, "mod test {{\n");
-    for _ in 0..breadth(max_breadth) {
-        let max_depth = new_max_depth(depth, max_depth);
+    fn module(&mut self, max_breadth: u32, max_depth: u32, depth: u32) {
+        if depth >= max_depth {
+            return;
+        }
+
+        tprint!(depth, "mod test {{\n");
+        for _ in 0..breadth(max_breadth) {
+            let max_depth = new_max_depth(depth, max_depth);
+            match choice(3) {
+                0 => self.func(max_breadth, max_depth, depth + 1),
+                1 => self.structure(max_breadth, max_depth, depth + 1),
+                2 => self.module(max_breadth, max_depth, depth + 1),
+                _ => panic!("Invalid choice"),
+            }
+        }
+        tprint!(depth, "}}\n");
+    }
+
+    fn func(&mut self, max_breadth: u32, max_depth: u32, depth: u32) {
+        if depth >= max_depth {
+            return;
+        }
+
+        let id = self.get_id();
+        tprint!(depth, "fn func{}(", id);
+        self.parameter_list(max_breadth);
+        print!(")");
+
+        if choice(2) == 1 {
+            print!(" -> ");
+            self.ty();
+        }
+
+        print!(" {{\n");
+        for _ in 0..breadth(max_breadth) {
+            let max_depth = new_max_depth(depth, max_depth);
+            self.statement(max_depth, depth + 1);
+        }
+        tprint!(depth, "return;");
+        tprint!(depth, "}}\n");
+    }
+
+    fn structure(&mut self, max_breadth: u32, max_depth: u32, depth: u32) {
+        if depth >= max_depth {
+            return;
+        }
+
+        let id = self.get_id();
+        tprint!(depth, "struct MyStruct{}{{", id);
+        self.parameter_list(max_breadth);
+        tprint!(depth, "}}\n");
+    }
+
+    fn parameter_list(&mut self, max_breadth: u32) {
+        for _ in 0..breadth(max_breadth) {
+            print!("x: ");
+            self.ty();
+            print!(", ");
+        }
+    }
+
+    fn statement(&mut self, max_depth: u32, depth: u32) {
+        if depth >= max_depth {
+            return;
+        }
+
+        tprint!(depth, "let x: ");
+        self.ty();
+        print!(" := ");
+        self.expression(max_depth, depth);
+        print!(";\n");
+    }
+
+    fn expression(&mut self, max_depth: u32, depth: u32) {
+        self.or(max_depth, depth);
+    }
+
+    fn or(&mut self, max_depth: u32, depth: u32) {
+        self.and(max_depth, depth + 1);
+        if depth < max_depth && choice(2) == 0 {
+            print!("||");
+            self.expression(max_depth, depth + 1);
+        }
+    }
+
+    fn and(&mut self, max_depth: u32, depth: u32) {
+        self.comparison(max_depth, depth + 1);
+        if depth < max_depth && choice(2) == 0 {
+            print!("&&");
+            self.expression(max_depth, depth + 1);
+        }
+    }
+
+    fn comparison(&mut self, max_depth: u32, depth: u32) {
+        self.sum(max_depth, depth + 1);
+        if depth < max_depth && choice(2) == 0 {
+            pick_op(&["<", "<=", "==", "!=", ">", ">="]);
+            self.expression(max_depth, depth + 1);
+        }
+    }
+
+    fn sum(&mut self, max_depth: u32, depth: u32) {
+        self.term(max_depth, depth + 1);
+        if depth < max_depth && choice(2) == 0 {
+            pick_op(&["+", "-"]);
+            self.expression(max_depth, depth + 1);
+        }
+    }
+
+    fn term(&mut self, max_depth: u32, depth: u32) {
+        self.negate(max_depth, depth + 1);
+        if depth < max_depth && choice(2) == 0 {
+            pick_op(&["*", "/"]);
+            self.expression(max_depth, depth + 1);
+        }
+    }
+
+    fn negate(&mut self, max_depth: u32, depth: u32) {
+        pick_op(&["-", "!", ""]);
+        self.factor(max_depth, depth + 1);
+    }
+
+    fn factor(&mut self, max_depth: u32, depth: u32) {
         match choice(3) {
-            0 => func(max_breadth, max_depth, depth + 1),
-            1 => structure(max_breadth, max_depth, depth + 1),
-            2 => module(max_breadth, max_depth, depth + 1),
+            0 => pick_val(&["0", "10", "true", "false"]),
+            1 => {
+                print!("(");
+                self.expression(max_depth, depth);
+                print!(")");
+            }
+            2 => self.if_expr(max_depth, depth),
             _ => panic!("Invalid choice"),
         }
     }
-    tprint!(depth, "}}\n");
-}
 
-fn func(max_breadth: u32, max_depth: u32, depth: u32) {
-    if depth >= max_depth {
-        return;
-    }
-
-    let id = ITEM_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    tprint!(depth, "fn func{}(", id);
-    parameter_list(max_breadth);
-    print!(")");
-
-    if choice(2) == 1 {
-        print!(" -> ");
-        ty();
-    }
-
-    print!(" {{\n");
-    for _ in 0..breadth(max_breadth) {
-        let max_depth = new_max_depth(depth, max_depth);
-        statement(max_depth, depth + 1);
-    }
-    tprint!(depth, "return;");
-    tprint!(depth, "}}\n");
-}
-
-fn structure(max_breadth: u32, max_depth: u32, depth: u32) {
-    if depth >= max_depth {
-        return;
-    }
-
-    let id = ITEM_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    tprint!(depth, "struct MyStruct{}{{", id);
-    parameter_list(max_breadth);
-    tprint!(depth, "}}\n");
-}
-
-fn parameter_list(max_breadth: u32) {
-    for _ in 0..breadth(max_breadth) {
-        print!("x: ");
-        ty();
-        print!(", ");
-    }
-}
-
-fn statement(max_depth: u32, depth: u32) {
-    if depth >= max_depth {
-        return;
-    }
-
-    tprint!(depth, "let x: ");
-    ty();
-    print!(" := ");
-    expression(max_depth, depth);
-    print!(";\n");
-}
-
-fn expression(max_depth: u32, depth: u32) {
-    or(max_depth, depth);
-}
-
-fn or(max_depth: u32, depth: u32) {
-    and(max_depth, depth + 1);
-    if depth < max_depth && choice(2) == 0 {
-        print!("||");
-        expression(max_depth, depth + 1);
-    }
-}
-
-fn and(max_depth: u32, depth: u32) {
-    comparison(max_depth, depth + 1);
-    if depth < max_depth && choice(2) == 0 {
-        print!("&&");
-        expression(max_depth, depth + 1);
-    }
-}
-
-fn comparison(max_depth: u32, depth: u32) {
-    sum(max_depth, depth + 1);
-    if depth < max_depth && choice(2) == 0 {
-        pick_op(&["<", "<=", "==", "!=", ">", ">="]);
-        expression(max_depth, depth + 1);
-    }
-}
-
-fn sum(max_depth: u32, depth: u32) {
-    term(max_depth, depth + 1);
-    if depth < max_depth && choice(2) == 0 {
-        pick_op(&["+", "-"]);
-        expression(max_depth, depth + 1);
-    }
-}
-
-fn term(max_depth: u32, depth: u32) {
-    negate(max_depth, depth + 1);
-    if depth < max_depth && choice(2) == 0 {
-        pick_op(&["*", "/"]);
-        expression(max_depth, depth + 1);
-    }
-}
-
-fn negate(max_depth: u32, depth: u32) {
-    pick_op(&["-", "!", ""]);
-    factor(max_depth, depth + 1);
-}
-
-fn factor(max_depth: u32, depth: u32) {
-    match choice(3) {
-        0 => pick_val(&["0", "10", "true", "false"]),
-        1 => {
-            print!("(");
-            expression(max_depth, depth);
-            print!(")");
-        }
-        2 => if_expr(max_depth, depth),
-        _ => panic!("Invalid choice"),
-    }
-}
-
-fn if_expr(max_depth: u32, depth: u32) {
-    print!("if (");
-    expression(max_depth, depth);
-    print!(") {{");
-    statement(max_depth, depth + 1);
-    print!("}}");
-
-    if choice(2) == 0 {
-        print!(" else {{");
-        statement(max_depth, depth);
+    fn if_expr(&mut self, max_depth: u32, depth: u32) {
+        print!("if (");
+        self.expression(max_depth, depth);
+        print!(") {{");
+        self.statement(max_depth, depth + 1);
         print!("}}");
-    }
-}
 
-fn ty() {
-    if choice(2) == 0 {
-        let ty = match choice(10) {
-            0 => "u8",
-            1 => "u16",
-            2 => "u32",
-            3 => "u64",
-            4 => "i8",
-            5 => "i16",
-            6 => "i32",
-            7 => "i64",
-            8 => "bool",
-            9 => "string",
-            _ => panic!("Invalid choice"),
-        };
-        print!("{}", ty);
-    } else {
-        path()
-    }
-}
-
-fn path() {
-    if choice(2) == 0 {
-        print!("::");
+        if choice(2) == 0 {
+            print!(" else {{");
+            self.statement(max_depth, depth);
+            print!("}}");
+        }
     }
 
-    print!("test");
+    fn ty(&mut self) {
+        if choice(2) == 0 {
+            let ty = match choice(10) {
+                0 => "u8",
+                1 => "u16",
+                2 => "u32",
+                3 => "u64",
+                4 => "i8",
+                5 => "i16",
+                6 => "i32",
+                7 => "i64",
+                8 => "bool",
+                9 => "string",
+                _ => panic!("Invalid choice"),
+            };
+            print!("{}", ty);
+        } else {
+            self.path()
+        }
+    }
 
-    for _ in 0..choice(6) {
-        print!("::test");
+    fn path(&mut self) {
+        if choice(2) == 0 {
+            print!("::");
+        }
+
+        print!("test");
+
+        for _ in 0..choice(6) {
+            print!("::test");
+        }
+    }
+
+    fn get_id(&mut self) -> u32 {
+        let id = self.next_id;
+        self.next_id += 1;
+        id
     }
 }
 
