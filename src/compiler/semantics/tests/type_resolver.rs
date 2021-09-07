@@ -130,12 +130,14 @@ mod type_resolver_tests {
             ),
         ] {
             let mut table = StringTable::new();
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens)
+            let ast = parser::parse(test, &tokens)
                 .expect(&format!("{}", text))
                 .unwrap();
             let module = resolve_types(
@@ -221,13 +223,15 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test: {}", ln);
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 "my_main",
@@ -279,13 +283,15 @@ mod type_resolver_tests {
                     }
                 }",),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 "my_main",
@@ -324,13 +330,15 @@ mod type_resolver_tests {
                 Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 "my_main",
@@ -377,13 +385,15 @@ mod type_resolver_tests {
             test_id += 1;
             println!("Test: {}", test_id);
 
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 "my_main",
@@ -395,7 +405,7 @@ mod type_resolver_tests {
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
-                        let expected: Path = vec![CANONICAL_ROOT, "test", "test"].into();
+                        let expected: Path = vec![Element::CanonicalRoot, Element::Id(test), Element::Id(test)].into();
                         assert_eq!(struct_name, &expected)
                     } else {
                         panic!("Not a struct expression")
@@ -442,12 +452,13 @@ mod type_resolver_tests {
             ),
         ] {
                         let mut table = StringTable::new();
+            let main = table.insert("main".into());
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -490,13 +501,16 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 "my_main",
@@ -511,7 +525,7 @@ mod type_resolver_tests {
                     ..
                 } = &params[0]
                 {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path = vec![Element::CanonicalRoot, Element::Id(main), Element::Id(test)].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -533,13 +547,16 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 "my_main",
@@ -550,7 +567,7 @@ mod type_resolver_tests {
             .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path = vec![Element::CanonicalRoot, Element::Id(main), Element::Id(test)].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -570,13 +587,16 @@ mod type_resolver_tests {
                 struct test2{t: test}
                 ",
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 "my_main",
@@ -588,7 +608,7 @@ mod type_resolver_tests {
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path = vec![Element::CanonicalRoot, Element::Id(main), Element::Id(test)].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -763,13 +783,16 @@ mod type_resolver_tests {
                 Err("Semantic: L2: + expected i16 but found i16 and i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -883,13 +906,16 @@ mod type_resolver_tests {
                 Err("Semantic: L3: ! expected bool but found i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -948,13 +974,16 @@ mod type_resolver_tests {
                 Err("Semantic: L3: + expected i64 but found bool and i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1024,13 +1053,16 @@ mod type_resolver_tests {
                 Err("Semantic: L3: * expected i64 but found bool and i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1101,13 +1133,16 @@ mod type_resolver_tests {
                 Err("Semantic: L3: && expected bool but found i64 and bool"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1178,13 +1213,16 @@ mod type_resolver_tests {
                 Err("Semantic: L3: || expected bool but found i64 and bool"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1264,13 +1302,15 @@ mod type_resolver_tests {
                     )),
                 ),
             ] {
-                            let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
-                    .tokenize()
-                    .into_iter()
-                    .collect::<Result<_>>()
-                    .unwrap();
-                let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+                let mut table = StringTable::new();
+                let main = table.insert("main".into());
+                            
+                let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+                        .tokenize()
+                        .into_iter()
+                        .collect::<Result<_>>()
+                        .unwrap();
+                let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let module = resolve_types(
                     &ast,
                     "my_main",
@@ -1320,13 +1360,15 @@ mod type_resolver_tests {
                 }}",
                 ty
             );
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1394,13 +1436,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected [i16; 2] but got [i64; 2]"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1507,13 +1551,15 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", line);
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1695,13 +1741,15 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", ln);
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1783,13 +1831,15 @@ mod type_resolver_tests {
                 Err("Semantic: L3: x is not defined"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1868,13 +1918,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected unit but got i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -1974,13 +2026,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected bool but got i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -2140,13 +2194,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main,&tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast, 
                 "my_main", 
@@ -2252,13 +2308,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast, 
                 "my_main", 
@@ -2347,13 +2405,15 @@ mod type_resolver_tests {
             ),*/
         ] {
             println!("Test L{}", line);
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -2429,13 +2489,15 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Bind expected bool but got i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -2497,13 +2559,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected unit but got bool"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -2569,13 +2633,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected unit but got bool"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -2669,13 +2735,15 @@ mod type_resolver_tests {
                 Ok(Type::Unit),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -2743,13 +2811,15 @@ mod type_resolver_tests {
                 Err("Semantic: L2: The body of a while expression must resolve to a unit type, but got: i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 "my_main",
@@ -2970,13 +3040,15 @@ mod type_resolver_tests {
             ),
         ] {
             println!("L{}", line);
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast, 
                 "my_main", 
@@ -3011,13 +3083,15 @@ mod type_resolver_tests {
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i64")),
             ] {
-                            let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                     .tokenize()
                     .into_iter()
                     .collect::<Result<_>>()
                     .unwrap();
-                let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+                let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let result = resolve_types(
                     &ast, 
                     "my_main", 
@@ -3112,22 +3186,26 @@ mod type_resolver_tests {
                 Err("Semantic: L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
+            let std = table.insert("std".into());
+            let test = table.insert("test".into());
+            let a = table.insert("a".into());
+                            
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
                 .unwrap();
-            let ast = parser::parse("std",&tokens).unwrap().unwrap();
+            let ast = parser::parse(std, &tokens).unwrap().unwrap();
 
             let mut import_context = SemanticContext::new(0, 0, Type::Unit);
-            import_context.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
+            import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
             let imports = Manifest::new(&vec![RoutineDef{
                 context: import_context,
                 def: RoutineDefType::Function,
-                name: "test".into(),
+                name: test,
                 ret_ty: import_func.1.clone(),
-                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), "a", p)).collect(),
+                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), a, p)).collect(),
                 body: vec![],
             }], &vec![]);
             let result = resolve_types_with_imports(
