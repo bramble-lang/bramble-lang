@@ -1,5 +1,6 @@
 use crate::compiler::{
     ast::*,
+    lexer::stringtable::StringId,
     parser::parser::ParserContext,
     semantics::semanticnode::{SemanticAst, SemanticNode},
     semantics::symbol_table::*,
@@ -15,13 +16,15 @@ use super::{
 
 pub fn resolve_types(
     ast: &Module<ParserContext>,
-    main_fn: &str,
+    main_mod: StringId,
+    main_fn: StringId,
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
 ) -> Result<Module<SemanticContext>> {
     resolve_types_with_imports(
         ast,
+        main_mod,
         main_fn,
         &vec![],
         trace_semantic_node,
@@ -32,7 +35,8 @@ pub fn resolve_types(
 
 pub fn resolve_types_with_imports(
     ast: &Module<ParserContext>,
-    main_fn: &str,
+    main_mod: StringId,
+    main_fn: StringId,
     imports: &[Manifest],
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
@@ -43,7 +47,7 @@ pub fn resolve_types_with_imports(
     SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
     canonize_paths(&mut sm_ast, imports, trace_canonization)?; //TODO: Add a trace for this step
 
-    let mut semantic = TypeResolver::new(&sm_ast, imports, main_fn);
+    let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn);
 
     semantic.set_tracing(trace_type_resolver);
     semantic.resolve_types()
@@ -66,13 +70,19 @@ impl TypeResolver {
     pub fn new(
         root: &Module<SemanticContext>,
         imports: &[Manifest],
-        main_fn: &str,
+        main_mod: StringId,
+        main_fn: StringId,
     ) -> TypeResolver {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root, imports),
             tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
-            main_fn: vec![CANONICAL_ROOT, MAIN_MODULE, main_fn.into()].into(), // TODO: should get rid of this
+            main_fn: vec![
+                Element::CanonicalRoot,
+                Element::Id(main_mod),
+                Element::Id(main_fn),
+            ]
+            .into(), // TODO: should get rid of this
         }
     }
 
@@ -155,7 +165,7 @@ impl TypeResolver {
 
         // Add parameters to symbol table
         for p in params.iter() {
-            meta.sym.add(&p.name, p.ty.clone(), false, false)?;
+            meta.sym.add(p.name, p.ty.clone(), false, false)?;
         }
 
         self.symbols.enter_scope(&meta.sym);
@@ -517,7 +527,7 @@ impl TypeResolver {
             }
             Expression::Identifier(meta, id) => {
                 let mut meta = meta.clone();
-                match self.symbols.lookup_var(&id)? {
+                match self.symbols.lookup_var(*id)? {
                     Symbol { ty: p, .. } => meta.ty = p.clone(),
                 };
                 Ok(Expression::Identifier(meta.clone(), id.clone()))
@@ -536,7 +546,7 @@ impl TypeResolver {
                         let (struct_def, _) = self.symbols.lookup_symbol_by_path(&struct_name)?;
                         let member_ty = struct_def
                             .ty
-                            .get_member(&member)
+                            .get_member(*member)
                             .ok_or(format!("{} does not have member {}", struct_name, member))?;
                         meta.ty = member_ty.clone();
 
@@ -753,7 +763,7 @@ impl TypeResolver {
                 let mut resolved_params = vec![];
                 for (pn, pv) in params.iter() {
                     let member_ty = struct_def_ty
-                        .get_member(pn)
+                        .get_member(*pn)
                         .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
                     let param = self.traverse(pv)?;
                     if param.get_type() != member_ty {

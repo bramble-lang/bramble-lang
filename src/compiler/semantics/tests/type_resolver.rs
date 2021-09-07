@@ -131,6 +131,8 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -142,7 +144,7 @@ mod type_resolver_tests {
                 .unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -225,6 +227,8 @@ mod type_resolver_tests {
             println!("Test: {}", ln);
             let mut table = StringTable::new();
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -234,7 +238,7 @@ mod type_resolver_tests {
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -285,6 +289,8 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -294,7 +300,7 @@ mod type_resolver_tests {
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -332,6 +338,8 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -341,7 +349,7 @@ mod type_resolver_tests {
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -387,6 +395,8 @@ mod type_resolver_tests {
 
             let mut table = StringTable::new();
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -396,7 +406,7 @@ mod type_resolver_tests {
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -451,8 +461,11 @@ mod type_resolver_tests {
                 Err("Semantic: L1: my_main must be a function of type () -> i64"),
             ),
         ] {
-                        let mut table = StringTable::new();
+            let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
@@ -461,7 +474,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -504,6 +517,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -513,7 +529,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -550,6 +566,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -559,7 +578,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -590,6 +609,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -599,7 +621,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -786,6 +808,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -795,7 +820,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -909,6 +934,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -918,7 +946,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -977,6 +1005,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -986,7 +1017,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1056,6 +1087,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1065,7 +1099,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1136,6 +1170,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1145,7 +1182,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1216,6 +1253,9 @@ mod type_resolver_tests {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
 
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1225,7 +1265,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1304,6 +1344,9 @@ mod type_resolver_tests {
             ] {
                 let mut table = StringTable::new();
                 let main = table.insert("main".into());
+                let main_mod = table.insert(MAIN_MODULE.into());
+                let main_fn = table.insert("my_main".into());
+
                             
                 let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                         .tokenize()
@@ -1313,7 +1356,7 @@ mod type_resolver_tests {
                 let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let module = resolve_types(
                     &ast,
-                    "my_main",
+                    main_mod, main_fn,
                     TracingConfig::Off,
                     TracingConfig::Off,
                     TracingConfig::Off,
@@ -1362,6 +1405,9 @@ mod type_resolver_tests {
             );
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1371,7 +1417,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1438,6 +1484,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1447,7 +1496,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1553,6 +1602,9 @@ mod type_resolver_tests {
             println!("Test L{}", line);
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1562,7 +1614,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1743,6 +1795,9 @@ mod type_resolver_tests {
             println!("Test L{}", ln);
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1752,7 +1807,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1833,6 +1888,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1842,7 +1900,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1920,6 +1978,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -1929,7 +1990,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2028,6 +2089,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2037,7 +2101,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2196,6 +2260,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2205,7 +2272,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main,&tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast, 
-                "my_main", 
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off, 
                 TracingConfig::Off,
@@ -2310,6 +2377,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2319,7 +2389,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast, 
-                "my_main", 
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off
@@ -2407,6 +2477,9 @@ mod type_resolver_tests {
             println!("Test L{}", line);
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2416,7 +2489,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2491,6 +2564,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2500,7 +2576,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2561,6 +2637,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2570,7 +2649,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2635,6 +2714,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2644,7 +2726,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2737,6 +2819,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2746,7 +2831,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2813,6 +2898,9 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -2822,7 +2910,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -3042,6 +3130,9 @@ mod type_resolver_tests {
             println!("L{}", line);
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -3051,7 +3142,7 @@ mod type_resolver_tests {
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast, 
-                "my_main", 
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off, 
@@ -3085,6 +3176,9 @@ mod type_resolver_tests {
             ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                     .tokenize()
@@ -3094,7 +3188,7 @@ mod type_resolver_tests {
                 let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let result = resolve_types(
                     &ast, 
-                    "my_main", 
+                    main_mod, main_fn,
                     TracingConfig::Off,
                     TracingConfig::Off,
                     TracingConfig::Off, 
@@ -3190,6 +3284,9 @@ mod type_resolver_tests {
             let std = table.insert("std".into());
             let test = table.insert("test".into());
             let a = table.insert("a".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
                             
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
@@ -3210,7 +3307,7 @@ mod type_resolver_tests {
             }], &vec![]);
             let result = resolve_types_with_imports(
                 &ast, 
-                "my_main", 
+                main_mod, main_fn,
                 &vec![imports], 
                 TracingConfig::Off,
                 TracingConfig::Off,
