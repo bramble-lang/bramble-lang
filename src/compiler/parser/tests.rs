@@ -5,6 +5,7 @@ pub mod tests {
     use super::super::parser::*;
     use crate::compiler::{
         ast::*,
+        lexer::stringtable::StringTable,
         lexer::tokens::Token,
         parser::{expression::*, statement::*, tokenstream::TokenStream},
         Lexer,
@@ -16,7 +17,8 @@ pub mod tests {
         for (text, expected) in
             vec![("-a", UnaryOperator::Negate), ("!a", UnaryOperator::Not)].iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -38,7 +40,8 @@ pub mod tests {
         for (text, expected) in
             vec![("--a", UnaryOperator::Negate), ("!!a", UnaryOperator::Not)].iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -75,7 +78,8 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -101,7 +105,8 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -122,7 +127,8 @@ pub mod tests {
     #[test]
     fn parse_nested_arithmetic_expression() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -148,7 +154,8 @@ pub mod tests {
     #[test]
     fn parse_boolean_expression() {
         let text = "true || false";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -181,7 +188,8 @@ pub mod tests {
                 Err("L1: expect identifier after path separator '::'"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -224,7 +232,8 @@ pub mod tests {
             "((thing.first).second)",
             "(thing.first.second)",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -255,7 +264,8 @@ pub mod tests {
     #[test]
     fn parse_bind() {
         let text = "let x:i64 := 5;";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -276,7 +286,8 @@ pub mod tests {
     #[test]
     fn parse_mut_bind() {
         let text = "let mut x:i64 := 5;";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -317,7 +328,8 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -341,7 +353,8 @@ pub mod tests {
     #[test]
     fn parse_mutation() {
         let text = "mut x := 5;";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -360,7 +373,8 @@ pub mod tests {
     #[test]
     fn parse_module_empty() {
         let text = "mod test_mod {}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -380,7 +394,8 @@ pub mod tests {
     #[test]
     fn parse_module_with_function() {
         let text = "mod test_fn_mod { fn test(x:i64) {return;} }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -433,7 +448,8 @@ pub mod tests {
     #[test]
     fn parse_module_with_coroutine() {
         let text = "mod test_co_mod { co test(x:i64) {return;} }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -481,7 +497,8 @@ pub mod tests {
     #[test]
     fn parse_module_with_struct() {
         let text = "mod test_struct_mod { struct my_struct{x: i64} }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -512,7 +529,8 @@ pub mod tests {
     #[test]
     fn parse_module_with_extern() {
         let text = "mod test_extern_mod { extern fn my_fn(x: i64) -> i32; }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -545,7 +563,8 @@ pub mod tests {
     #[test]
     fn parse_module_with_extern_with_varargs() {
         let text = "mod test_extern_mod { extern fn my_fn(x: i64, ...) -> i32; }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -579,7 +598,8 @@ pub mod tests {
     #[test]
     fn parse_unit_function_def() {
         let text = "fn test(x:i64) {return;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -611,7 +631,8 @@ pub mod tests {
     #[test]
     fn parse_function_def() {
         let text = "fn test(x:i64) -> bool {return true;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -654,7 +675,8 @@ pub mod tests {
             return;
         }
         ";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -665,7 +687,8 @@ pub mod tests {
     #[test]
     fn parse_routine_call() {
         let text = "test(x, y)";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -691,7 +714,8 @@ pub mod tests {
     #[test]
     fn parse_routine_by_path_call() {
         let text = "self::test(x, y)";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -717,7 +741,8 @@ pub mod tests {
     #[test]
     fn parse_coroutine_def() {
         let text = "co test(x:i64) -> bool {return true;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -752,7 +777,8 @@ pub mod tests {
     #[test]
     fn parse_coroutine_init() {
         let text = "let x:co i64 := init c(1, 2);";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -780,7 +806,8 @@ pub mod tests {
     #[test]
     fn parse_coroutine_path_init() {
         let text = "let x:co i64 := init a::b::c(1, 2);";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -808,7 +835,8 @@ pub mod tests {
     #[test]
     fn parse_yield() {
         let text = "fn test(x:i64) -> bool {return yield cor;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -848,7 +876,8 @@ pub mod tests {
     #[test]
     fn parse_if_expression() {
         let text = "if (x) {5} else {7}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -883,7 +912,8 @@ pub mod tests {
     #[test]
     fn parse_if_else_if_expression() {
         let text = "if (x) {5} else if (y && z) {7} else {8}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -944,7 +974,8 @@ pub mod tests {
     #[test]
     fn parse_while_expression() {
         let text = "while (x) {5;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -989,7 +1020,8 @@ pub mod tests {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1045,7 +1077,8 @@ pub mod tests {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1062,7 +1095,8 @@ pub mod tests {
             ("fn test() -> String {return \"test\";}", "test"),
             ("fn test() -> String {return \"test 2\";}", "test 2"),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()

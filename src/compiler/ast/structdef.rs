@@ -7,12 +7,12 @@ use super::{
     parameter::Parameter,
     ty::Type,
 };
-use crate::result::Result;
+use crate::{compiler::lexer::stringtable::StringId, result::Result};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StructDef<M> {
     context: M,
-    name: String,
+    name: StringId,
     pub(super) fields: Vec<Parameter<M>>,
 }
 
@@ -37,8 +37,8 @@ impl<M: Context> Node<M> for StructDef<M> {
         v
     }
 
-    fn name(&self) -> Option<&str> {
-        Some(&self.name)
+    fn name(&self) -> Option<StringId> {
+        Some(self.name)
     }
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
@@ -52,21 +52,21 @@ impl<M: Context> Node<M> for StructDef<M> {
 
 impl<M> std::fmt::Display for StructDef<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        f.write_str(self.get_name())
+        f.write_fmt(format_args!("{}", self.get_name()))
     }
 }
 
 impl<M> StructDef<M> {
-    pub fn new(name: &str, context: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
+    pub fn new(name: StringId, context: M, fields: Vec<Parameter<M>>) -> StructDef<M> {
         StructDef {
             context,
-            name: name.into(),
+            name,
             fields,
         }
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> StringId {
+        self.name
     }
 
     pub fn get_fields(&self) -> &Vec<Parameter<M>> {
@@ -77,11 +77,11 @@ impl<M> StructDef<M> {
         &mut self.fields
     }
 
-    pub fn get_field(&self, field: &str) -> Option<&Type> {
+    pub fn get_field(&self, field: StringId) -> Option<&Type> {
         self.fields.iter().find(|f| f.name == field).map(|f| &f.ty)
     }
 
-    pub fn get_field_idx(&self, field: &str) -> Option<usize> {
+    pub fn get_field_idx(&self, field: StringId) -> Option<usize> {
         self.fields
             .iter()
             .enumerate()
@@ -90,7 +90,7 @@ impl<M> StructDef<M> {
     }
 
     pub fn add_field(&mut self, field: Parameter<M>) -> Result<()> {
-        if self.get_field(&field.name).is_none() {
+        if self.get_field(field.name).is_none() {
             self.fields.push(field);
             Ok(())
         } else {

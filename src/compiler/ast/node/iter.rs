@@ -111,14 +111,17 @@ where
 #[cfg(test)]
 mod test_preorder {
     use super::*;
-    use crate::compiler::ast::{
-        expression::{self, Expression, UnaryOperator},
-        module::Module,
-        parameter::Parameter,
-        routinedef::RoutineDef,
-        statement::{Bind, Statement, YieldReturn},
-        structdef::StructDef,
-        ty::Type,
+    use crate::compiler::{
+        ast::{
+            expression::{self, Expression, UnaryOperator},
+            module::Module,
+            parameter::Parameter,
+            routinedef::RoutineDef,
+            statement::{Bind, Statement, YieldReturn},
+            structdef::StructDef,
+            ty::Type,
+        },
+        lexer::stringtable::StringId,
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
@@ -199,7 +202,7 @@ mod test_preorder {
                     box Expression::I64(6, 1),
                 ),
                 if_arm: box Expression::Identifier(7, "y".into()),
-                else_arm: Some(box Expression::StringLiteral(8, "h".into())),
+                else_arm: Some(box Expression::StringLiteral(8, StringId::new())),
             },
         )));
         f.body.push(Statement::YieldReturn(box YieldReturn::new(
@@ -232,15 +235,18 @@ mod test_preorder {
 #[cfg(test)]
 mod test_postorder {
     use super::*;
-    use crate::compiler::ast::{
-        expression::{Expression, UnaryOperator},
-        module::Module,
-        parameter::Parameter,
-        routinedef::RoutineDef,
-        statement::{Bind, Statement, YieldReturn},
-        structdef::StructDef,
-        ty::Type,
-        BinaryOperator, RoutineCall,
+    use crate::compiler::{
+        ast::{
+            expression::{Expression, UnaryOperator},
+            module::Module,
+            parameter::Parameter,
+            routinedef::RoutineDef,
+            statement::{Bind, Statement, YieldReturn},
+            structdef::StructDef,
+            ty::Type,
+            BinaryOperator, RoutineCall,
+        },
+        lexer::stringtable::StringId,
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
@@ -321,7 +327,7 @@ mod test_postorder {
                     box Expression::I64(6, 1),
                 ),
                 if_arm: box Expression::Identifier(7, "y".into()),
-                else_arm: Some(box Expression::StringLiteral(8, "h".into())),
+                else_arm: Some(box Expression::StringLiteral(8, StringId::new())),
             },
         )));
         f.body.push(Statement::YieldReturn(box YieldReturn::new(

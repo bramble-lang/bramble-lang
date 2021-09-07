@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::result::Result;
+use crate::{compiler::lexer::stringtable::StringId, result::Result};
 use crate::{
     compiler::{
         ast::*,
@@ -433,7 +433,7 @@ fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserContex
         .iter()
         .map(|(line, name, ty)| Parameter {
             context: *line,
-            name: name.clone(),
+            name: *name,
             ty: ty.clone(),
         })
         .collect();
@@ -441,7 +441,7 @@ fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserContex
     Ok(params)
 }
 
-pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(u32, String, Type)>> {
+pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(u32, StringId, Type)>> {
     trace!(stream);
     let mut decls = vec![];
 
@@ -460,7 +460,7 @@ pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(u32, 
 
 fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
-    if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
+    if stream.test_ifn(vec![Lex::Identifier(StringId::new()), Lex::LParen]) {
         let (line, fn_name) = stream
             .next_if_id()
             .expect("CRITICAL: failed to get identifier");
@@ -610,7 +610,7 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
 
 pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
-    match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
+    match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
         Some(t) => {
             let line_id = t[0].l;
             let line_value = t[1].l;

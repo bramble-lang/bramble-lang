@@ -7,12 +7,12 @@ use super::{
     routinedef::{RoutineDef, RoutineDefType},
     structdef::StructDef,
 };
-use crate::result::Result;
+use crate::{compiler::lexer::stringtable::StringId, result::Result};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module<M> {
     context: M,
-    name: String,
+    name: StringId,
     modules: Vec<Module<M>>,
     functions: Vec<Item<M>>,
     coroutines: Vec<Item<M>>,
@@ -50,8 +50,8 @@ impl<M: Context> Node<M> for Module<M> {
         v
     }
 
-    fn name(&self) -> Option<&str> {
-        Some(&self.name)
+    fn name(&self) -> Option<StringId> {
+        Some(self.name)
     }
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
@@ -65,15 +65,15 @@ impl<M: Context> Node<M> for Module<M> {
 
 impl<M> std::fmt::Display for Module<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        f.write_str(self.get_name())
+        f.write_fmt(format_args!("{}", self.get_name()))
     }
 }
 
 impl<M> Module<M> {
-    pub fn new(name: &str, context: M) -> Module<M> {
+    pub fn new(name: StringId, context: M) -> Module<M> {
         Module {
             context,
-            name: name.into(),
+            name: name,
             modules: Vec::new(),
             functions: Vec::new(),
             coroutines: Vec::new(),
@@ -140,8 +140,8 @@ impl<M> Module<M> {
         }
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> StringId {
+        self.name
     }
 
     pub fn get_modules(&self) -> &Vec<Module<M>> {
@@ -223,15 +223,15 @@ impl<M> Module<M> {
         &mut self.externs
     }
 
-    pub fn get_module(&self, name: &str) -> Option<&Module<M>> {
+    pub fn get_module(&self, name: StringId) -> Option<&Module<M>> {
         self.modules.iter().find(|m| m.name == name)
     }
 
-    pub fn get_module_mut(&mut self, name: &str) -> Option<&mut Module<M>> {
+    pub fn get_module_mut(&mut self, name: StringId) -> Option<&mut Module<M>> {
         self.modules.iter_mut().find(|m| m.name == name)
     }
 
-    pub fn get_item(&self, name: &str) -> Option<&Item<M>> {
+    pub fn get_item(&self, name: StringId) -> Option<&Item<M>> {
         self.functions.iter().find(|f| f.get_name() == name).or(self
             .coroutines
             .iter()
@@ -596,7 +596,7 @@ impl<M> std::fmt::Display for Item<M> {
 }
 
 impl<M> Item<M> {
-    pub fn get_name(&self) -> &str {
+    pub fn get_name(&self) -> StringId {
         match self {
             Item::Routine(r) => r.get_name(),
             Item::Struct(s) => s.get_name(),

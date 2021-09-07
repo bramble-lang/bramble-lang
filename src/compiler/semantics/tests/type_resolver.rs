@@ -4,6 +4,7 @@ mod type_resolver_tests {
         compiler::{
             ast::*, lexer::tokens::Token, parser::parser,
             semantics::semanticnode::SemanticContext, Lexer,
+            lexer::stringtable::StringTable,
         },
         diagnostics::config::TracingConfig,
         project::manifest::Manifest,
@@ -128,7 +129,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Return expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -219,7 +221,8 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test: {}", ln);
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -276,7 +279,8 @@ mod type_resolver_tests {
                     }
                 }",),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -320,7 +324,8 @@ mod type_resolver_tests {
                 Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -372,7 +377,8 @@ mod type_resolver_tests {
             test_id += 1;
             println!("Test: {}", test_id);
 
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -435,7 +441,8 @@ mod type_resolver_tests {
                 Err("Semantic: L1: my_main must be a function of type () -> i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -483,7 +490,8 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -525,7 +533,8 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -561,7 +570,8 @@ mod type_resolver_tests {
                 struct test2{t: test}
                 ",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -753,7 +763,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: + expected i16 but found i16 and i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -872,7 +883,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: ! expected bool but found i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -936,7 +948,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: + expected i64 but found bool and i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1011,7 +1024,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: * expected i64 but found bool and i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1087,7 +1101,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: && expected bool but found i64 and bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1163,7 +1178,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: || expected bool but found i64 and bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1248,7 +1264,8 @@ mod type_resolver_tests {
                     )),
                 ),
             ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
+                            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                     .tokenize()
                     .into_iter()
                     .collect::<Result<_>>()
@@ -1303,7 +1320,8 @@ mod type_resolver_tests {
                 }}",
                 ty
             );
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1376,7 +1394,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Bind expected [i16; 2] but got [i64; 2]"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1488,7 +1507,8 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", line);
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1675,7 +1695,8 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", ln);
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1762,7 +1783,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: x is not defined"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1846,7 +1868,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected unit but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -1951,7 +1974,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2116,7 +2140,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2227,7 +2252,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2321,7 +2347,8 @@ mod type_resolver_tests {
             ),*/
         ] {
             println!("Test L{}", line);
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2402,7 +2429,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: Bind expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2469,7 +2497,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected unit but got bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2540,7 +2569,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: Return expected unit but got bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2639,7 +2669,8 @@ mod type_resolver_tests {
                 Ok(Type::Unit),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2712,7 +2743,8 @@ mod type_resolver_tests {
                 Err("Semantic: L2: The body of a while expression must resolve to a unit type, but got: i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2938,7 +2970,8 @@ mod type_resolver_tests {
             ),
         ] {
             println!("L{}", line);
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -2978,7 +3011,8 @@ mod type_resolver_tests {
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("Semantic: L1: Return expected bool but got i64")),
             ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
+                            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                     .tokenize()
                     .into_iter()
                     .collect::<Result<_>>()
@@ -3078,7 +3112,8 @@ mod type_resolver_tests {
                 Err("Semantic: L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+                        let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()

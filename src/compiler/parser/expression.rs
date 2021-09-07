@@ -9,7 +9,10 @@ use super::{
 use crate::{
     compiler::{
         ast::*,
-        lexer::tokens::{Lex, Token},
+        lexer::{
+            stringtable::StringId,
+            tokens::{Lex, Token},
+        },
     },
     trace,
 };
@@ -562,7 +565,7 @@ fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
 
 fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
-    match stream.next_if(&Lex::StringLiteral("".into())) {
+    match stream.next_if(&Lex::StringLiteral(StringId::new())) {
         Some(Token {
             l,
             o: _,
@@ -577,6 +580,7 @@ mod test {
     use super::*;
     use crate::compiler::{
         ast::{Statement, Type},
+        lexer::stringtable::StringTable,
         Lexer,
     };
     use crate::result::Result;
@@ -594,7 +598,8 @@ mod test {
             ("64i64", Expression::I64(1, 64)),
             ("64", Expression::I64(1, 64)),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -660,7 +665,8 @@ mod test {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -682,7 +688,8 @@ mod test {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -777,7 +784,8 @@ mod test {
                 },
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -801,7 +809,8 @@ mod test {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -814,7 +823,8 @@ mod test {
     #[test]
     fn parse_member_access() {
         for text in vec!["thing.first", "(thing).first", "(thing.first)"] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -841,7 +851,8 @@ mod test {
     #[test]
     fn parse_expression_block_oneline() {
         let text = "{5}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -871,7 +882,8 @@ mod test {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_>>()
@@ -889,7 +901,8 @@ mod test {
     #[test]
     fn parse_expression_block_multiline() {
         let text = "{let x:i64 := 5; f(x); x * x}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()

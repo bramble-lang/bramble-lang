@@ -1,3 +1,5 @@
+use crate::compiler::lexer::stringtable::StringId;
+
 use super::{
     expression::Expression,
     node::{
@@ -58,7 +60,7 @@ impl<M: Context> Node<M> for Statement<M> {
         }
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         use Statement::*;
 
         match self {
@@ -108,7 +110,7 @@ impl<M> Statement<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Bind<M> {
     context: M,
-    id: String,
+    id: StringId,
     ty: Type,
     mutable: bool,
     rhs: Expression<M>,
@@ -131,7 +133,7 @@ impl<M: Context> Node<M> for Bind<M> {
         vec![&self.rhs]
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         None
     }
 
@@ -151,18 +153,18 @@ impl<M> std::fmt::Display for Bind<M> {
 }
 
 impl<M> Bind<M> {
-    pub fn new(context: M, id: &str, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
+    pub fn new(context: M, id: StringId, ty: Type, mutable: bool, rhs: Expression<M>) -> Bind<M> {
         Bind {
             context,
-            id: id.into(),
+            id,
             ty,
             mutable,
             rhs,
         }
     }
 
-    pub fn get_id(&self) -> &str {
-        &self.id
+    pub fn get_id(&self) -> StringId {
+        self.id
     }
 
     pub fn is_mutable(&self) -> bool {
@@ -214,7 +216,7 @@ impl<M: Context> Node<M> for Mutate<M> {
         vec![&self.rhs]
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         None
     }
 
@@ -285,7 +287,7 @@ impl<M: Context> Node<M> for YieldReturn<M> {
         }
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         None
     }
 
@@ -348,7 +350,7 @@ impl<M: Context> Node<M> for Return<M> {
         }
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         None
     }
 

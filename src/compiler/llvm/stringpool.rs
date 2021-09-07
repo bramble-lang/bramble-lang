@@ -179,7 +179,7 @@ mod test {
     use super::super::super::lexer::tokens::Token;
     use super::super::super::parser::parser;
     use super::super::super::semantics::type_resolver::resolve_types;
-    use crate::compiler::Lexer;
+    use crate::compiler::{Lexer, lexer::stringtable::StringTable};
     use crate::diagnostics::config::TracingConfig;
 
     use super::*;
@@ -230,7 +230,8 @@ mod test {
                 vec!["hello", "world", "test2"],
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()

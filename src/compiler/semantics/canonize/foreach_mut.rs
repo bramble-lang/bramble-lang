@@ -430,7 +430,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::compiler::{
-        lexer::tokens::Token, parser::parser, semantics::semanticnode::SemanticAst, Lexer,
+        lexer::stringtable::StringTable, lexer::tokens::Token, parser::parser,
+        semantics::semanticnode::SemanticAst, Lexer,
     };
     use crate::result::Result;
 
@@ -439,7 +440,8 @@ mod tests {
     #[test]
     fn empty_module_ignore_stack() {
         let text = "mod m{}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -466,7 +468,8 @@ mod tests {
     #[test]
     fn empty_module_use_stack() {
         let text = "mod m{}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
@@ -505,7 +508,8 @@ mod tests {
     #[test]
     fn canonize_structdef() {
         let text = "mod m{ struct MyStruct {}}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()

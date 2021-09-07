@@ -91,7 +91,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
 
             match id_decl {
                 Expression::IdentifierDeclare(_, id, ty) => {
-                    Ok(Some(Bind::new(token.l, &id, ty.clone(), is_mutable, exp)))
+                    Ok(Some(Bind::new(token.l, id, ty.clone(), is_mutable, exp)))
                 }
                 _ => Err(format!(
                     "L{}: Expected type specification after {}",

@@ -3,6 +3,8 @@ use std::fmt::Display;
 mod iter;
 mod map;
 
+use crate::compiler::lexer::stringtable::StringId;
+
 pub use self::iter::{PostOrderIter, PreOrderIter};
 pub use self::map::MapPreOrder;
 
@@ -13,7 +15,7 @@ pub trait Node<M: Context> {
     fn get_context(&self) -> &M;
     fn get_context_mut(&mut self) -> &mut M;
     fn children(&self) -> Vec<&dyn Node<M>>;
-    fn name(&self) -> Option<&str>;
+    fn name(&self) -> Option<StringId>;
 
     fn iter_postorder(&self) -> PostOrderIter<M>;
     fn iter_preorder(&self) -> PreOrderIter<M>;

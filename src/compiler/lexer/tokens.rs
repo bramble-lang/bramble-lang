@@ -1,3 +1,5 @@
+use super::stringtable::StringId;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Primitive {
     U8,
@@ -40,8 +42,8 @@ pub enum Lex {
     I32(i32),
     I64(i64),
     Bool(bool),
-    Identifier(String),
-    StringLiteral(String),
+    Identifier(StringId),
+    StringLiteral(StringId),
     VarArgs,
     Mul,
     Div,
@@ -87,9 +89,9 @@ pub enum Lex {
 }
 
 impl Lex {
-    pub fn get_str(&self) -> Option<String> {
+    pub fn get_str(&self) -> Option<StringId> {
         match self {
-            Lex::StringLiteral(s) | Lex::Identifier(s) => Some(s.clone()),
+            Lex::StringLiteral(s) | Lex::Identifier(s) => Some(*s),
             _ => None,
         }
     }

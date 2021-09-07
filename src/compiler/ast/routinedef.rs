@@ -1,3 +1,5 @@
+use crate::compiler::lexer::stringtable::StringId;
+
 use super::{
     node::{
         Context, Node, NodeType, {PostOrderIter, PreOrderIter},
@@ -11,7 +13,7 @@ use super::{
 pub struct RoutineDef<M> {
     pub context: M,
     pub def: RoutineDefType,
-    pub name: String,
+    pub name: StringId,
     pub params: Vec<Parameter<M>>,
     pub ret_ty: Type,
     pub body: Vec<Statement<M>>,
@@ -42,8 +44,8 @@ impl<M: Context> Node<M> for RoutineDef<M> {
         v
     }
 
-    fn name(&self) -> Option<&str> {
-        Some(&self.name)
+    fn name(&self) -> Option<StringId> {
+        Some(self.name)
     }
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
@@ -57,13 +59,13 @@ impl<M: Context> Node<M> for RoutineDef<M> {
 
 impl<M> std::fmt::Display for RoutineDef<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        f.write_str(self.get_name())
+        f.write_fmt(format_args!("{}", self.get_name()))
     }
 }
 
 impl<M> RoutineDef<M> {
     pub fn new_function(
-        name: &str,
+        name: StringId,
         context: M,
         params: Vec<Parameter<M>>,
         ty: Type,
@@ -72,7 +74,7 @@ impl<M> RoutineDef<M> {
         RoutineDef {
             context,
             def: RoutineDefType::Function,
-            name: name.into(),
+            name,
             params,
             ret_ty: ty,
             body,
@@ -80,7 +82,7 @@ impl<M> RoutineDef<M> {
     }
 
     pub fn new_coroutine(
-        name: &str,
+        name: StringId,
         context: M,
         params: Vec<Parameter<M>>,
         ty: Type,
@@ -89,15 +91,15 @@ impl<M> RoutineDef<M> {
         RoutineDef {
             context,
             def: RoutineDefType::Coroutine,
-            name: name.into(),
+            name,
             params,
             ret_ty: ty,
             body,
         }
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> StringId {
+        self.name
     }
 
     pub fn get_params(&self) -> &Vec<Parameter<M>> {

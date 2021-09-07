@@ -128,13 +128,15 @@ impl<'a> TokenStream<'a> {
 #[cfg(test)]
 mod test_tokenstream {
     use super::TokenStream;
+    use crate::compiler::lexer::stringtable::StringTable;
     use crate::compiler::lexer::tokens::{Lex, Token};
     use crate::compiler::Lexer;
 
     #[test]
     fn test_peek() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -163,7 +165,8 @@ mod test_tokenstream {
     #[test]
     fn test_peek_at() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -197,7 +200,8 @@ mod test_tokenstream {
     #[test]
     fn test_next() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -281,7 +285,8 @@ mod test_tokenstream {
     #[test]
     fn test_next_if() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -325,7 +330,8 @@ mod test_tokenstream {
     #[test]
     fn test_next_ifn() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -363,7 +369,8 @@ mod test_tokenstream {
     #[test]
     fn test_if_one_of() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -380,7 +387,8 @@ mod test_tokenstream {
     #[test]
     fn test_next_if_on_of() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()

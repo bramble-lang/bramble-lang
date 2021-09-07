@@ -7,6 +7,8 @@ use super::{
     ty::Type,
 };
 
+use crate::compiler::lexer::stringtable::StringId;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
     U8(I, u8),
@@ -18,7 +20,7 @@ pub enum Expression<I> {
     I32(I, i32),
     I64(I, i64),
     Boolean(I, bool),
-    StringLiteral(I, String),
+    StringLiteral(I, StringId),
     ArrayExpression(I, Vec<Expression<I>>, usize),
     ArrayAt {
         context: I,
@@ -29,7 +31,7 @@ pub enum Expression<I> {
     Identifier(I, String),
     Path(I, Path),
     MemberAccess(I, Box<Expression<I>>, String),
-    IdentifierDeclare(I, String, Type),
+    IdentifierDeclare(I, StringId, Type),
     RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
     StructExpression(I, Path, Vec<(String, Expression<I>)>),
     If {
@@ -188,7 +190,7 @@ impl<M: Context> Node<M> for Expression<M> {
         }
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         None
     }
 

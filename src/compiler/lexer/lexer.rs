@@ -5,7 +5,10 @@ use stdext::function_name;
 
 use crate::diagnostics::config::TracingConfig;
 
-use super::tokens::{Lex, Primitive, Token};
+use super::{
+    stringtable::{StringId, StringTable},
+    tokens::{Lex, Primitive, Token},
+};
 use Lex::*;
 
 macro_rules! trace {
@@ -31,15 +34,15 @@ macro_rules! trace {
     };
 }
 
-struct LexerBranch<'a> {
-    lexer: &'a mut Lexer,
+struct LexerBranch<'a, 'st> {
+    lexer: &'a mut Lexer<'st>,
     index: usize,
     line: u32,
     offset: u32,
 }
 
-impl<'a> LexerBranch<'a> {
-    pub fn from(l: &mut Lexer) -> LexerBranch {
+impl<'a, 'st> LexerBranch<'a, 'st> {
+    pub fn from(l: &'a mut Lexer<'st>) -> LexerBranch<'a, 'st> {
         LexerBranch {
             index: l.index,
             line: l.line,
@@ -48,7 +51,7 @@ impl<'a> LexerBranch<'a> {
         }
     }
 
-    pub fn merge(&mut self) -> (String, u32) {
+    pub fn merge(&mut self) -> (Option<StringId>, u32) {
         let s = self.cut();
 
         self.lexer.index = self.index;
@@ -63,7 +66,7 @@ impl<'a> LexerBranch<'a> {
     /// Then advance the start point of the next token in this
     /// branch.  This will NOT update the source.  That must be
     /// done with `merge`.
-    pub fn cut(&mut self) -> (String, u32) {
+    pub fn cut(&mut self) -> (Option<StringId>, u32) {
         let start = self.lexer.index;
         let offset = self.lexer.offset;
         let stop = self.index;
@@ -73,7 +76,13 @@ impl<'a> LexerBranch<'a> {
             s.push(self.lexer.chars[i]);
         }
 
-        (s, offset)
+        let id = if s.len() == 0 {
+            None
+        } else {
+            Some(self.lexer.string_table.insert(s))
+        };
+
+        (id, offset)
     }
 
     pub fn next(&mut self) -> Option<char> {
@@ -144,22 +153,24 @@ impl<'a> LexerBranch<'a> {
     }
 }
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     chars: Vec<char>,
     index: usize,
     line: u32,
     offset: u32,
     tracing: TracingConfig,
+    string_table: &'a StringTable,
 }
 
-impl Lexer {
-    pub fn new(text: &str) -> Lexer {
+impl<'a> Lexer<'a> {
+    pub fn new(string_table: &'a StringTable, text: &str) -> Lexer<'a> {
         Lexer {
             chars: text.chars().collect(),
             index: 0,
             line: 1,
             offset: 0,
             tracing: TracingConfig::Off,
+            string_table,
         }
     }
 
@@ -268,10 +279,9 @@ impl Lexer {
         }
 
         let (id, offset) = branch.merge();
-        if id.len() == 0 {
-            Ok(None)
-        } else {
-            Ok(Some(Token::new(self.line, offset, Lex::Identifier(id))))
+        match id {
+            None => Ok(None),
+            Some(id) => Ok(Some(Token::new(self.line, offset, Lex::Identifier(id)))),
         }
     }
 
@@ -294,13 +304,15 @@ impl Lexer {
                     }
                 }
             }
-            let (mut s, offset) = branch.merge();
+            let (s, offset) = branch.merge();
 
             // Remove the quotes from the string
+            let mut s: String = self.string_table.get(s.unwrap()).unwrap().into();
             s.remove(0);
             s.pop();
+            let id = self.string_table.insert(s);
 
-            Ok(Some(Token::new(self.line, offset, Lex::StringLiteral(s))))
+            Ok(Some(Token::new(self.line, offset, Lex::StringLiteral(id))))
         } else {
             Ok(None)
         }
@@ -343,7 +355,8 @@ impl Lexer {
         }
 
         branch.merge();
-        Self::create_int_literal(self.line, offset, &int_token, type_suffix)
+        let int_text = self.string_table.get(int_token.unwrap()).unwrap();
+        Self::create_int_literal(self.line, offset, int_text, type_suffix)
     }
 
     fn create_int_literal(
@@ -499,7 +512,7 @@ impl Lexer {
                 l,
                 o,
                 s: Identifier(id),
-            } => match id.as_str() {
+            } => match self.string_table.get(*id).unwrap() {
                 "true" => Token::new(*l, *o, Bool(true)),
                 "false" => Token::new(*l, *o, Bool(false)),
                 _ => token,
@@ -515,7 +528,7 @@ impl Lexer {
                 l,
                 o,
                 s: Identifier(ref id),
-            } => match id.as_str() {
+            } => match self.string_table.get(*id).unwrap() {
                 "u8" => Token::new(l, o, Primitive(Primitive::U8)),
                 "u16" => Token::new(l, o, Primitive(Primitive::U16)),
                 "u32" => Token::new(l, o, Primitive(Primitive::U32)),
@@ -539,7 +552,7 @@ impl Lexer {
                 l,
                 o,
                 s: Identifier(ref id),
-            } => match id.as_str() {
+            } => match self.string_table.get(*id).unwrap() {
                 "let" => Token::new(l, o, Let),
                 "mut" => Token::new(l, o, Mut),
                 "return" => Token::new(l, o, Return),

@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::result::Result;
+use crate::{
+    compiler::lexer::stringtable::{StringId, StringTable},
+    result::Result,
+};
 
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";
@@ -8,7 +11,7 @@ pub const SELF: &str = "self";
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Path {
-    path: Vec<String>,
+    path: Vec<StringId>,
     is_canonical: bool,
 }
 
@@ -28,38 +31,38 @@ impl Path {
         self.path.len()
     }
 
-    pub fn first(&self) -> Option<&String> {
+    pub fn first(&self) -> Option<&StringId> {
         self.path.first()
     }
 
-    pub fn last(&self) -> Option<&String> {
+    pub fn last(&self) -> Option<&StringId> {
         self.path.last()
     }
 
-    pub fn push(&mut self, step: &str) {
-        self.path.push(step.into())
+    pub fn push(&mut self, step: StringId) {
+        self.path.push(step)
     }
 
-    pub fn pop(&mut self) -> Option<String> {
+    pub fn pop(&mut self) -> Option<StringId> {
         self.path.pop()
     }
 
     pub fn append(&mut self, p: &Path) {
         for s in p.iter() {
-            self.path.push(s.into());
+            self.path.push(*s);
         }
     }
 
-    pub fn iter(&self) -> std::slice::Iter<String> {
+    pub fn iter(&self) -> std::slice::Iter<StringId> {
         self.path.iter()
     }
 
-    pub fn item(&self) -> Option<&str> {
+    pub fn item(&self) -> Option<StringId> {
         let l = self.path.len();
         if l == 0 {
             None
         } else {
-            Some(&self.path[l - 1])
+            Some(self.path[l - 1])
         }
     }
 
@@ -102,7 +105,7 @@ impl Path {
             } else {
                 &current_path.path
             };
-            let mut merged: Vec<String> = current_path.into();
+            let mut merged: Vec<StringId> = current_path.into();
             for step in path.iter() {
                 if step == "super" {
                     merged
@@ -124,12 +127,16 @@ impl Path {
         }
     }
 
-    pub fn to_label(&self) -> String {
-        self.path.join("_")
+    pub fn to_label(&self, table: &StringTable) -> String {
+        self.path
+            .iter()
+            .map(|id| table.get(*id).unwrap())
+            .collect::<Vec<&str>>()
+            .join("_")
     }
 }
 
-impl<I: std::slice::SliceIndex<[String]>> std::ops::Index<I> for Path {
+impl<I: std::slice::SliceIndex<[StringId]>> std::ops::Index<I> for Path {
     type Output = I::Output;
 
     #[inline]
@@ -143,12 +150,13 @@ impl std::fmt::Display for Path {
         if self.is_canonical() {
             f.write_str("$")?
         }
-        f.write_str(&self.path.join("::"))
+        let sv: Vec<String> = self.path.iter().map(|id| format!("{}", id)).collect();
+        f.write_str(&sv.join("::"))
     }
 }
 
-impl From<Vec<String>> for Path {
-    fn from(v: Vec<String>) -> Self {
+impl From<Vec<StringId>> for Path {
+    fn from(v: Vec<StringId>) -> Self {
         let is_canonical = v.first().map_or(false, |f| *f == CANONICAL_ROOT);
         let v = if is_canonical { &v[1..] } else { &v };
         Path {
