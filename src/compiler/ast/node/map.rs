@@ -141,7 +141,7 @@ where
         let mut nparams = vec![];
         for p in params {
             let b = self.transform(p);
-            nparams.push(Parameter::new(b, &p.name, &p.ty));
+            nparams.push(Parameter::new(b, p.name, &p.ty));
         }
         nparams
     }
@@ -374,7 +374,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::compiler::ast::{module::Module, ty::Type};
+    use crate::compiler::{
+        ast::{module::Module, ty::Type},
+        lexer::stringtable::StringTable,
+    };
     use crate::diagnostics::DiagData;
 
     impl Context for i32 {
@@ -438,7 +441,10 @@ mod test {
 
     #[test]
     fn empty_module() {
-        let module1 = Module::new("m", 1i32);
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+
+        let module1 = Module::new(m, 1i32);
         let mut count: i32 = 0;
         let f = |n: &dyn Node<i32>| {
             count += 1;
@@ -454,8 +460,12 @@ mod test {
 
     #[test]
     fn nested_module() {
-        let mut module1 = Module::new("m", 1i32);
-        module1.add_module(Module::new("m2", 2i32));
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+        let m2 = table.insert("m2".into());
+
+        let mut module1 = Module::new(m, 1i32);
+        module1.add_module(Module::new(m2, 2i32));
 
         let mut count: i32 = 0;
         let f = |n: &dyn Node<i32>| {
@@ -467,15 +477,23 @@ mod test {
         let module2 = mp.apply(&module1);
 
         assert_eq!(*module2.get_context(), 2i64);
-        assert_eq!(*module2.get_module("m2").unwrap().get_context(), 4i64);
+        assert_eq!(*module2.get_module(m2).unwrap().get_context(), 4i64);
         assert_eq!(count, 2);
     }
 
     #[test]
     fn module_with_items() {
-        let mut m = Module::new("m", 1);
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+        let m2 = table.insert("m2".into());
+        let p = table.insert("p".into());
+        let func = table.insert("func".into());
+        let cor = table.insert("cor".into());
+        let sd = table.insert("sd".into());
+
+        let mut m = Module::new(m, 1);
         m.add_function(RoutineDef::new_coroutine(
-            "cor",
+            cor,
             1,
             vec![],
             Type::Unit,
@@ -483,19 +501,19 @@ mod test {
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
-            "func",
+            func,
             1,
             vec![Parameter {
                 context: 1,
-                name: "p".into(),
+                name: p,
                 ty: Type::Bool,
             }],
             Type::Unit,
             vec![Statement::Expression(box Expression::I64(1, 2))],
         ))
         .unwrap();
-        m.add_module(Module::new("m2", 1));
-        m.add_struct(StructDef::new("sd", 1, vec![])).unwrap();
+        m.add_module(Module::new(m2, 1));
+        m.add_struct(StructDef::new(sd, 1, vec![])).unwrap();
 
         // test
         let mut count = 0;
