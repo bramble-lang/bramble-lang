@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::diagnostics::config::TracingConfig;
+use crate::{compiler::lexer::stringtable::StringId, diagnostics::config::TracingConfig};
 use crate::{
     compiler::{ast::*, parser::parser::ParserContext},
     diagnostics::{Diag, DiagData},
@@ -80,7 +80,7 @@ impl SemanticContext {
         }
     }
 
-    pub fn new_routine(id: u32, ln: u32, name: &str, ty: Type) -> SemanticContext {
+    pub fn new_routine(id: u32, ln: u32, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
             ln,
@@ -90,7 +90,7 @@ impl SemanticContext {
         }
     }
 
-    pub fn new_module(id: u32, ln: u32, name: &str, ty: Type) -> SemanticContext {
+    pub fn new_module(id: u32, ln: u32, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
             ln,
@@ -149,13 +149,13 @@ impl SemanticAst {
         sm_data
     }
 
-    fn routine_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+    fn routine_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
         let sm_data = SemanticContext::new_routine(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn module_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+    fn module_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
         let sm_data = SemanticContext::new_module(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
