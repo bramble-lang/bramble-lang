@@ -412,7 +412,7 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
                         Some(Expression::Path(line, path))
                     } else {
                         if let Element::Id(sid) = path.last().unwrap() {
-                            Some(Expression::Identifier(line, sid))
+                            Some(Expression::Identifier(line, *sid))
                         } else {
                             return Err("Expected identifier as last element of path".into());
                         }
@@ -444,7 +444,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
 
 fn struct_init_params(
     stream: &mut TokenStream,
-) -> ParserResult<Vec<(String, Expression<ParserContext>)>> {
+) -> ParserResult<Vec<(StringId, Expression<ParserContext>)>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
@@ -705,13 +705,17 @@ mod test {
 
     #[test]
     fn parse_array_at_index() {
+        let mut table = StringTable::new();
+        let a = table.insert("a".into());
+        let b = table.insert("b".into());
+
         for (text, expected) in vec![
             //
             (
                 "a[1]",
                 Expression::ArrayAt {
                     context: 1,
-                    array: box Expression::Identifier(1, "a".into()),
+                    array: box Expression::Identifier(1, a),
                     index: box Expression::I64(1, 1),
                 },
             ),
@@ -719,7 +723,7 @@ mod test {
                 "(a)[1]",
                 Expression::ArrayAt {
                     context: 1,
-                    array: box Expression::Identifier(1, "a".into()),
+                    array: box Expression::Identifier(1, a),
                     index: box Expression::I64(1, 1),
                 },
             ),
@@ -727,11 +731,7 @@ mod test {
                 "a.b[1]",
                 Expression::ArrayAt {
                     context: 1,
-                    array: box Expression::MemberAccess(
-                        1,
-                        box Expression::Identifier(1, "a".into()),
-                        "b".into(),
-                    ),
+                    array: box Expression::MemberAccess(1, box Expression::Identifier(1, a), b),
                     index: box Expression::I64(1, 1),
                 },
             ),
@@ -741,10 +741,10 @@ mod test {
                     1,
                     box Expression::ArrayAt {
                         context: 1,
-                        array: box Expression::Identifier(1, "a".into()),
+                        array: box Expression::Identifier(1, a),
                         index: box Expression::I64(1, 1),
                     },
-                    "b".into(),
+                    b,
                 ),
             ),
             (
@@ -755,10 +755,10 @@ mod test {
                         1,
                         box Expression::ArrayAt {
                             context: 1,
-                            array: box Expression::Identifier(1, "a".into()),
+                            array: box Expression::Identifier(1, a),
                             index: box Expression::I64(1, 0),
                         },
-                        "b".into(),
+                        b,
                     ),
                     index: box Expression::I64(1, 1),
                 },
@@ -769,7 +769,7 @@ mod test {
                     context: 1,
                     array: box Expression::ArrayAt {
                         context: 1,
-                        array: box Expression::Identifier(1, "a".into()),
+                        array: box Expression::Identifier(1, a),
                         index: box Expression::I64(1, 1),
                     },
                     index: box Expression::I64(1, 2),
@@ -781,7 +781,7 @@ mod test {
                     context: 1,
                     array: box Expression::ArrayAt {
                         context: 1,
-                        array: box Expression::Identifier(1, "a".into()),
+                        array: box Expression::Identifier(1, a),
                         index: box Expression::I64(1, 1),
                     },
                     index: box Expression::I64(1, 2),
@@ -828,6 +828,8 @@ mod test {
     fn parse_member_access() {
         for text in vec!["thing.first", "(thing).first", "(thing.first)"] {
             let mut table = StringTable::new();
+            let thing_id = table.insert("thing".into());
+            let first_id = table.insert("first".into());
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
@@ -839,11 +841,11 @@ mod test {
                     assert_eq!(l, 1);
                     assert_eq!(
                         *left,
-                        Expression::Identifier(1, "thing".into()),
+                        Expression::Identifier(1, thing_id),
                         "Input: {}",
                         text,
                     );
-                    assert_eq!(right, "first");
+                    assert_eq!(right, first_id);
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
                 Ok(None) => panic!("No node returned for {}", text),
@@ -906,6 +908,8 @@ mod test {
     fn parse_expression_block_multiline() {
         let text = "{let x:i64 := 5; f(x); x * x}";
         let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let f = table.insert("f".into());
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
@@ -919,7 +923,7 @@ mod test {
             assert_eq!(body.len(), 2);
             match &body[0] {
                 Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_id(), x);
                     assert_eq!(b.get_type(), Type::I64);
                     assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
                 }
@@ -932,15 +936,15 @@ mod test {
                     fn_name,
                     params,
                 )) => {
-                    assert_eq!(*fn_name, vec!["f"].into());
-                    assert_eq!(params[0], Expression::Identifier(1, "x".into()));
+                    assert_eq!(*fn_name, vec![Element::Id(f)].into());
+                    assert_eq!(params[0], Expression::Identifier(1, x));
                 }
                 _ => panic!("No body: {:?}", &body[1]),
             }
             match final_exp {
                 box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(*l.as_ref(), Expression::Identifier(1, "x".into()));
-                    assert_eq!(*r.as_ref(), Expression::Identifier(1, "x".into()));
+                    assert_eq!(*l.as_ref(), Expression::Identifier(1, x));
+                    assert_eq!(*r.as_ref(), Expression::Identifier(1, x));
                 }
                 _ => panic!("No body: {:?}", &body[2]),
             }

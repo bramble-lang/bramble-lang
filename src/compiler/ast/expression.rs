@@ -30,10 +30,10 @@ pub enum Expression<I> {
     CustomType(I, Path),
     Identifier(I, StringId),
     Path(I, Path),
-    MemberAccess(I, Box<Expression<I>>, String),
+    MemberAccess(I, Box<Expression<I>>, StringId),
     IdentifierDeclare(I, StringId, Type),
     RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
-    StructExpression(I, Path, Vec<(String, Expression<I>)>),
+    StructExpression(I, Path, Vec<(StringId, Expression<I>)>),
     If {
         context: I,
         cond: Box<Expression<I>>,

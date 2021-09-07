@@ -8,7 +8,10 @@ use stdext::function_name;
 use crate::{
     compiler::{
         ast::*,
-        lexer::tokens::{Lex, Token},
+        lexer::{
+            stringtable::StringId,
+            tokens::{Lex, Token},
+        },
     },
     trace,
 };
@@ -106,7 +109,11 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
 
 fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
     trace!(stream);
-    match stream.next_ifn(vec![Lex::Mut, Lex::Identifier("".into()), Lex::Assign]) {
+    match stream.next_ifn(vec![
+        Lex::Mut,
+        Lex::Identifier(StringId::new()),
+        Lex::Assign,
+    ]) {
         None => Ok(None),
         Some(tokens) => {
             let id = tokens[1]
@@ -118,7 +125,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 tokens[2].l
             ))?;
             //Expression::new_mutate(tokens[0].l, &id, Box::new(exp))
-            Ok(Some(Mutate::new(tokens[0].l, &id, exp)))
+            Ok(Some(Mutate::new(tokens[0].l, id, exp)))
         }
     }
 }

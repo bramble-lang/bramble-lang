@@ -14,7 +14,7 @@ pub use self::extern_decl::{Extern, HasVarArgs};
 pub use self::module::{Item, Module};
 pub use self::node::{Context, MapPreOrder, Node, NodeType, PostOrderIter, PreOrderIter};
 pub use self::parameter::Parameter;
-pub use self::path::{Path, CANONICAL_ROOT, ROOT_PATH, SELF};
+pub use self::path::{Element, Path, CANONICAL_ROOT, ROOT_PATH, SELF};
 pub use self::routinedef::{RoutineDef, RoutineDefType};
 pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;

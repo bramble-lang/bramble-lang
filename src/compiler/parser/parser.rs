@@ -155,11 +155,11 @@ impl Parser {
     }
 }
 
-pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
+pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
 
     let module_line = stream.peek().map_or(1, |t| t.l);
-    let mut module = Module::new(&name, module_line);
+    let mut module = Module::new(name, module_line);
 
     while stream.peek().is_some() {
         let start_index = stream.index();
@@ -177,7 +177,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
             Some((ln, module_name)) => {
-                let mut module = Module::new(&module_name, ln);
+                let mut module = Module::new(module_name, ln);
                 stream.next_must_be(&Lex::LBrace)?;
 
                 parse_items_into(stream, &mut module)?;
@@ -256,7 +256,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
-                    &fn_name,
+                    fn_name,
                     fn_line,
                     params,
                     has_varargs,
@@ -279,7 +279,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = parameter_list(stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
-                Ok(Some(StructDef::new(&id, line, fields)))
+                Ok(Some(StructDef::new(id, line, fields)))
             }
             None => Err(format!("L{}: expected identifer after struct", token.l)),
         },
@@ -325,7 +325,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
 fn function_decl(
     stream: &mut TokenStream,
     allow_var_args: bool,
-) -> ParserResult<(u32, String, Vec<Parameter<u32>>, HasVarArgs, Type)> {
+) -> ParserResult<(u32, StringId, Vec<Parameter<u32>>, HasVarArgs, Type)> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
@@ -469,7 +469,7 @@ fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
         Ok(Some(Expression::RoutineCall(
             line,
             RoutineCall::Function,
-            vec![fn_name].into(),
+            vec![Element::Id(fn_name)].into(),
             params,
         )))
     } else {
@@ -509,19 +509,19 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
 
     // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
     if stream.next_if(&Lex::PathSeparator).is_some() {
-        path.push(ROOT_PATH.into());
+        path.push(Element::FileRoot);
     }
 
     match stream.next_if_id() {
         Some((line, id)) => {
-            path.push(id);
+            path.push(Element::Id(id));
             while let Some(token) = stream.next_if(&Lex::PathSeparator) {
                 let line = token.l;
                 let (_, id) = stream.next_if_id().ok_or(format!(
                     "L{}: expect identifier after path separator '::'",
                     line
                 ))?;
-                path.push(id);
+                path.push(Element::Id(id));
             }
             Ok(Some((line, path.into())))
         }
