@@ -1,16 +1,20 @@
 use std::collections::HashMap;
 
+use crate::compiler::lexer::stringtable::StringTable;
+
 use super::ast::*;
 
-#[derive(Debug, PartialEq)]
-pub struct StringPool {
+#[derive(Debug)]
+pub struct StringPool<'a> {
     pub pool: HashMap<String, usize>,
+    string_table: &'a StringTable,
 }
 
-impl StringPool {
-    pub fn new() -> StringPool {
+impl<'a> StringPool<'a> {
+    pub fn new(string_table:&'a StringTable) -> StringPool<'a> {
         StringPool {
             pool: HashMap::new(),
+            string_table,
         }
     }
 
@@ -59,7 +63,8 @@ impl StringPool {
             I64(..) => {}
             Boolean(..) => {}
             StringLiteral(_, s) => {
-                self.insert(s);
+                let val = self.string_table.get(*s).unwrap();
+                self.insert(val);
             }
             ArrayExpression(_, elements, _) => {
                 for e in elements {
@@ -186,7 +191,8 @@ mod test {
 
     #[test]
     fn insert_string() {
-        let mut sp = StringPool::new();
+        let table = StringTable::new();
+        let mut sp = StringPool::new(&table);
         sp.insert("hello, world");
 
         assert!(sp.get("hello, world").is_some());
@@ -195,7 +201,8 @@ mod test {
 
     #[test]
     fn insert_duplicate() {
-        let mut sp = StringPool::new();
+        let table = StringTable::new();
+        let mut sp = StringPool::new(&table);
         sp.insert("test");
         let first_id = *sp.get("test").unwrap();
         sp.insert("test");
@@ -231,20 +238,24 @@ mod test {
             ),
         ] {
             let mut table = StringTable::new();
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+            let test_mod = table.insert("test_mod".into());
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let ast = parser::parse("test_mod", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test_mod, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast, 
-                "my_main", 
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off, 
             ).unwrap();
-            let mut sp = StringPool::new();
+            let mut sp = StringPool::new(&table);
             sp.extract_from_module(&module);
 
             assert!(cmp(&sp, &expected));

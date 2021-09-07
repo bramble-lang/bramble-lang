@@ -1,6 +1,13 @@
 use std::path::{Path, PathBuf};
 
-use crate::compiler::{ast::Module, lexer::tokens::Token, parser};
+use crate::compiler::{
+    ast::Module,
+    lexer::{
+        stringtable::{StringId, StringTable},
+        tokens::Token,
+    },
+    parser,
+};
 use crate::{diagnostics::config::TracingConfig, io::get_files};
 
 use crate::result::{NResult, Result};
@@ -22,17 +29,17 @@ pub fn get_project_name(src: &Path) -> Result<&str> {
 
 fn create_module_path<'a>(
     module: &'a mut Module<u32>,
-    path: &[String],
+    path: &[StringId],
 ) -> Option<&'a mut Module<u32>> {
     match path.split_first() {
         Some((head, rest)) => {
-            if module.get_module(head).is_none() {
-                let sub = Module::new(head, 0);
+            if module.get_module(*head).is_none() {
+                let sub = Module::new(*head, 0);
                 module.add_module(sub);
             }
 
             let sub = module
-                .get_module_mut(head)
+                .get_module_mut(*head)
                 .expect("A module with this name was just created and ought to be found");
 
             if rest.len() == 0 {
@@ -82,7 +89,8 @@ pub fn read_src_files(src_path: &std::path::Path, ext: &str) -> Vec<CompilationU
 /// path given in the CompilationUnit and all are added as child
 /// modules of a single "root" module.
 pub fn parse_project(
-    root_module: &str,
+    string_table: &StringTable,
+    root_module: StringId,
     token_sets: Project<Vec<Token>>,
     trace_parser: TracingConfig,
 ) -> NResult<Module<u32>> {
@@ -90,8 +98,8 @@ pub fn parse_project(
     let mut root = Module::new(root_module, 0);
     let mut errors = vec![];
     for src_tokens in token_sets {
-        match parse_src_tokens(src_tokens) {
-            Ok(ast) => append_module(&mut root, ast),
+        match parse_src_tokens(string_table, src_tokens) {
+            Ok(ast) => append_module(string_table, &mut root, ast),
             Err(e) => errors.push(e),
         }
     }
@@ -103,13 +111,14 @@ pub fn parse_project(
 }
 
 pub fn tokenize_project(
+    string_table: &mut StringTable,
     src_input: Project<String>,
     trace_lexer: TracingConfig,
 ) -> NResult<Vec<CompilationUnit<Vec<Token>>>> {
     let mut token_sets = vec![];
     let mut errors = vec![];
     for src in src_input {
-        match tokenize_src_file(src, trace_lexer) {
+        match tokenize_src_file(string_table, src, trace_lexer) {
             Ok(t) => token_sets.push(t),
             Err(mut e) => errors.append(&mut e),
         }
@@ -123,10 +132,11 @@ pub fn tokenize_project(
 }
 
 fn tokenize_src_file(
+    string_table: &mut StringTable,
     src: CompilationUnit<String>,
     trace_lexer: TracingConfig,
 ) -> NResult<CompilationUnit<Vec<Token>>> {
-    let mut lexer = crate::compiler::Lexer::new(&src.data);
+    let mut lexer = crate::compiler::Lexer::new(string_table, &src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let (tokens, errors): (Vec<Result<Token>>, Vec<Result<Token>>) =
@@ -164,9 +174,11 @@ fn tokenize_src_file(
 /// part of the data field (when a module is created with the same name that becomes the
 /// parent of all items within the source file).
 fn parse_src_tokens(
+    string_table: &StringTable,
     src_tokens: CompilationUnit<Vec<Token>>,
 ) -> Result<CompilationUnit<Module<u32>>> {
     if let Some((name, parent_path)) = src_tokens.path.split_last() {
+        let name = string_table.insert(name.into());
         match parser::parser::parse(name, &src_tokens.data) {
             Ok(Some(ast)) => Ok(CompilationUnit {
                 path: parent_path.to_owned(),
@@ -180,11 +192,20 @@ fn parse_src_tokens(
     }
 }
 
-fn append_module(root: &mut Module<u32>, src_ast: CompilationUnit<Module<u32>>) {
+fn append_module(
+    string_table: &StringTable,
+    root: &mut Module<u32>,
+    src_ast: CompilationUnit<Module<u32>>,
+) {
     let parent = if src_ast.path.len() == 0 {
         root
     } else {
-        create_module_path(root, &src_ast.path).unwrap()
+        let path: Vec<_> = src_ast
+            .path
+            .iter()
+            .map(|p| string_table.insert(p.into()))
+            .collect();
+        create_module_path(root, &path).unwrap()
     };
     parent.add_module(src_ast.data);
 }

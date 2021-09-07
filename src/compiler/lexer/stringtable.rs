@@ -16,7 +16,7 @@ value.
 The user can provide a string ID and get the assoicated string value
 in return.
  */
-
+#[derive(Debug)]
 pub struct StringTable {
     next_id: StringId,
     table: HashMap<String, StringId>,
