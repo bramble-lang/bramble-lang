@@ -411,7 +411,11 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
                     if path.len() > 1 {
                         Some(Expression::Path(line, path))
                     } else {
-                        Some(Expression::Identifier(line, path.last().unwrap().clone()))
+                        if let Element::Id(sid) = path.last().unwrap() {
+                            Some(Expression::Identifier(line, sid))
+                        } else {
+                            return Err("Expected identifier as last element of path".into());
+                        }
                     }
                 }
             },

@@ -11,7 +11,7 @@ pub const SELF: &str = "self";
 pub const SUPER: &str = "super";
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-enum Element {
+pub enum Element {
     FileRoot,
     CanonicalRoot,
     Selph,

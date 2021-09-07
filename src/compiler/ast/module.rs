@@ -3,7 +3,7 @@ use super::{
     node::{
         Context, Node, NodeType, {PostOrderIter, PreOrderIter},
     },
-    path::Path,
+    path::{Element, Path},
     routinedef::{RoutineDef, RoutineDefType},
     structdef::StructDef,
 };
@@ -250,12 +250,16 @@ impl<M> Module<M> {
             // check to make sure that the first step in the path
             // is this module, and then use the path to traverse
             // through descendent modules
-            if let Element::Id(self.name) == path[0] {
+            if Element::Id(self.name) == path[0] {
                 let mut current = self;
                 for idx in 1..path.len() {
-                    match current.get_module(&path[idx]) {
-                        Some(m) => current = m,
-                        None => return None,
+                    if let Element::Id(el) = path[idx] {
+                        match current.get_module(el) {
+                            Some(m) => current = m,
+                            None => return None,
+                        }
+                    } else {
+                        return None;
                     }
                 }
                 Some(current)
@@ -266,6 +270,7 @@ impl<M> Module<M> {
     }
 }
 
+/*
 #[cfg(test)]
 mod test {
     use crate::compiler::ast::routinedef::{RoutineDef, RoutineDefType};
@@ -530,7 +535,7 @@ mod test {
         let result = module.add_function(fdef.clone());
         assert_eq!(result, Err("dupe already exists in module".into()));
     }
-}
+}*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item<M> {
@@ -572,7 +577,7 @@ impl<M: Context> Node<M> for Item<M> {
         }
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         match self {
             Item::Routine(r) => r.name(),
             Item::Struct(s) => s.name(),
@@ -591,7 +596,7 @@ impl<M: Context> Node<M> for Item<M> {
 
 impl<M> std::fmt::Display for Item<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        f.write_str(self.get_name())
+        f.write_fmt(format_args!("{}", self.get_name()))
     }
 }
 
