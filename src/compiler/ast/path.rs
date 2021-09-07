@@ -8,10 +8,32 @@ use crate::{
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";
 pub const SELF: &str = "self";
+pub const SUPER: &str = "super";
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+enum Element {
+    FileRoot,
+    CanonicalRoot,
+    Selph,
+    Super,
+    Id(StringId),
+}
+
+impl std::fmt::Display for Element {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Element::FileRoot => f.write_str(ROOT_PATH),
+            Element::CanonicalRoot => f.write_str(CANONICAL_ROOT),
+            Element::Selph => f.write_str(SELF),
+            Element::Super => f.write_str(SUPER),
+            Element::Id(id) => f.write_fmt(format_args!("{}", id)),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Path {
-    path: Vec<StringId>,
+    path: Vec<Element>,
     is_canonical: bool,
 }
 
@@ -31,19 +53,19 @@ impl Path {
         self.path.len()
     }
 
-    pub fn first(&self) -> Option<&StringId> {
+    pub fn first(&self) -> Option<&Element> {
         self.path.first()
     }
 
-    pub fn last(&self) -> Option<&StringId> {
+    pub fn last(&self) -> Option<&Element> {
         self.path.last()
     }
 
-    pub fn push(&mut self, step: StringId) {
+    pub fn push(&mut self, step: Element) {
         self.path.push(step)
     }
 
-    pub fn pop(&mut self) -> Option<StringId> {
+    pub fn pop(&mut self) -> Option<Element> {
         self.path.pop()
     }
 
@@ -53,11 +75,11 @@ impl Path {
         }
     }
 
-    pub fn iter(&self) -> std::slice::Iter<StringId> {
+    pub fn iter(&self) -> std::slice::Iter<Element> {
         self.path.iter()
     }
 
-    pub fn item(&self) -> Option<StringId> {
+    pub fn item(&self) -> Option<Element> {
         let l = self.path.len();
         if l == 0 {
             None
@@ -92,9 +114,9 @@ impl Path {
             Ok(self.clone())
         } else {
             let mut uses_root = false;
-            let path = if self.path[0] == SELF {
+            let path = if self.path[0] == Element::Selph {
                 &self.path[1..]
-            } else if self.path[0] == ROOT_PATH {
+            } else if self.path[0] == Element::FileRoot {
                 uses_root = true;
                 &self.path[1..]
             } else {
@@ -105,9 +127,9 @@ impl Path {
             } else {
                 &current_path.path
             };
-            let mut merged: Vec<StringId> = current_path.into();
+            let mut merged: Vec<Element> = current_path.into();
             for step in path.iter() {
-                if step == "super" {
+                if *step == Element::Super {
                     merged
                         .pop()
                         .ok_or("Use of super in path exceeded the depth of the current path")?;
@@ -117,7 +139,7 @@ impl Path {
                         );
                     }
                 } else {
-                    merged.push(step.clone());
+                    merged.push(*step);
                 }
             }
             Ok(Path {
@@ -130,13 +152,23 @@ impl Path {
     pub fn to_label(&self, table: &StringTable) -> String {
         self.path
             .iter()
-            .map(|id| table.get(*id).unwrap())
+            .map(|element| Self::element_to_str(table, *element))
             .collect::<Vec<&str>>()
             .join("_")
     }
+
+    pub fn element_to_str(table: &StringTable, element: Element) -> &str {
+        match element {
+            Element::FileRoot => ROOT_PATH,
+            Element::CanonicalRoot => CANONICAL_ROOT,
+            Element::Selph => SELF,
+            Element::Super => SUPER,
+            Element::Id(id) => table.get(id).unwrap(),
+        }
+    }
 }
 
-impl<I: std::slice::SliceIndex<[StringId]>> std::ops::Index<I> for Path {
+impl<I: std::slice::SliceIndex<[Element]>> std::ops::Index<I> for Path {
     type Output = I::Output;
 
     #[inline]
@@ -155,9 +187,9 @@ impl std::fmt::Display for Path {
     }
 }
 
-impl From<Vec<StringId>> for Path {
-    fn from(v: Vec<StringId>) -> Self {
-        let is_canonical = v.first().map_or(false, |f| *f == CANONICAL_ROOT);
+impl From<Vec<Element>> for Path {
+    fn from(v: Vec<Element>) -> Self {
+        let is_canonical = v.first().map_or(false, |f| *f == Element::CanonicalRoot);
         let v = if is_canonical { &v[1..] } else { &v };
         Path {
             path: v.into(),
@@ -166,7 +198,7 @@ impl From<Vec<StringId>> for Path {
     }
 }
 
-impl From<Vec<&str>> for Path {
+/*impl From<Vec<&str>> for Path {
     fn from(v: Vec<&str>) -> Self {
         let is_canonical = v.first().map_or(false, |f| *f == CANONICAL_ROOT);
         let v = if is_canonical { &v[1..] } else { &v };
@@ -175,15 +207,15 @@ impl From<Vec<&str>> for Path {
             is_canonical,
         }
     }
-}
+}*/
 
-impl std::hash::Hash for Path {
+/*impl std::hash::Hash for Path {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         for s in self.path.iter() {
             s.hash(state);
         }
     }
-}
+}*/
 
 #[cfg(test)]
 mod test_path {
@@ -191,53 +223,88 @@ mod test_path {
 
     #[test]
     fn test_canonical_to_canonical() {
-        let path: Path = vec![ROOT_PATH, "first"].into();
-        let current = vec![CANONICAL_ROOT, "current"].into();
+        let mut table = StringTable::new();
+        let first_id = table.insert("first".into());
+        let current_id = table.insert("current".into());
+        let path: Path = vec![Element::FileRoot, Element::Id(first_id)].into();
+
+        let current = vec![Element::CanonicalRoot, Element::Id(current_id)].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec![CANONICAL_ROOT, "current", "first"].into();
+        let expected = vec![
+            Element::CanonicalRoot,
+            Element::Id(current_id),
+            Element::Id(first_id),
+        ]
+        .into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_relative_to_canonical() {
-        let path: Path = vec!["relative"].into();
-        let current = vec![CANONICAL_ROOT, "current"].into();
+        let mut table = StringTable::new();
+        let relative_id = table.insert("relative".into());
+        let current_id = table.insert("current".into());
+
+        let path: Path = vec![Element::Id(relative_id)].into();
+        let current = vec![Element::CanonicalRoot, Element::Id(current_id)].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec![CANONICAL_ROOT, "current", "relative"].into();
+        let expected = vec![
+            Element::CanonicalRoot,
+            Element::Id(current_id),
+            Element::Id(relative_id),
+        ]
+        .into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_self_to_canonical() {
-        let path: Path = vec![SELF, "relative"].into();
-        let current = vec![CANONICAL_ROOT, "current"].into();
+        let mut table = StringTable::new();
+        let relative_id = Element::Id(table.insert("relative".into()));
+        let current_id = Element::Id(table.insert("current".into()));
+
+        let path: Path = vec![Element::Selph, relative_id].into();
+        let current = vec![Element::CanonicalRoot, current_id].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec![CANONICAL_ROOT, "current", "relative"].into();
+        let expected = vec![Element::CanonicalRoot, current_id, relative_id].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_relative_with_super_to_canonical() {
-        let path: Path = vec!["super", "relative"].into();
-        let current = vec![CANONICAL_ROOT, "test", "current"].into();
+        let mut table = StringTable::new();
+        let relative_id = Element::Id(table.insert("relative".into()));
+        let current_id = Element::Id(table.insert("current".into()));
+        let test_id = Element::Id(table.insert("test".into()));
+
+        let path: Path = vec![Element::Super, relative_id].into();
+        let current = vec![Element::CanonicalRoot, test_id, current_id].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec![CANONICAL_ROOT, "test", "relative"].into();
+        let expected = vec![Element::CanonicalRoot, test_id, relative_id].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_relative_with_post_super_to_canonical() {
-        let path: Path = vec!["relative", "super"].into();
-        let current = vec![CANONICAL_ROOT, "current"].into();
+        let mut table = StringTable::new();
+        let relative_id = Element::Id(table.insert("relative".into()));
+        let current_id = Element::Id(table.insert("current".into()));
+
+        let path: Path = vec![relative_id, Element::Super].into();
+        let current = vec![Element::CanonicalRoot, current_id].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec![CANONICAL_ROOT, "current"].into();
+        let expected = vec![Element::CanonicalRoot, current_id].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_too_many_supers() {
-        let path: Path = vec!["super", "super", "relative"].into();
-        let current = vec![CANONICAL_ROOT, "current"].into();
+        let mut table = StringTable::new();
+        let relative_id = Element::Id(table.insert("relative".into()));
+        let current_id = Element::Id(table.insert("current".into()));
+
+        let path: Path = vec![Element::Super, Element::Super, relative_id].into();
+        let current = vec![Element::CanonicalRoot, current_id].into();
         let canonized_path = path.to_canonical(&current);
         let expected = "Use of super in path exceeded the depth of the current path".into();
         assert_eq!(canonized_path, Err(expected));
@@ -245,36 +312,50 @@ mod test_path {
 
     #[test]
     fn test_relative_with_scattered_super_to_canonical() {
-        let path: Path = vec!["super", "relative", "super"].into();
-        let current = vec![CANONICAL_ROOT, "test", "current"].into();
+        let mut table = StringTable::new();
+        let relative_id = Element::Id(table.insert("relative".into()));
+        let current_id = Element::Id(table.insert("current".into()));
+        let test_id = Element::Id(table.insert("test".into()));
+
+        let path: Path = vec![Element::Super, relative_id, Element::Super].into();
+        let current = vec![Element::CanonicalRoot, test_id, current_id].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = vec![CANONICAL_ROOT, "test"].into();
+        let expected = vec![Element::CanonicalRoot, test_id].into();
         assert_eq!(canonized_path, Ok(expected));
     }
 
     #[test]
     fn test_push_step() {
-        let mut path: Path = vec!["self", "item"].into();
-        path.push("test");
+        let mut table = StringTable::new();
+        let item_id = Element::Id(table.insert("item".into()));
+        let test_id = Element::Id(table.insert("test".into()));
 
-        let expected = vec!["self", "item", "test"].into();
+        let mut path: Path = vec![Element::Selph, item_id].into();
+        path.push(test_id);
+
+        let expected = vec![Element::Selph, item_id, test_id].into();
         assert_eq!(path, expected);
     }
 
     #[test]
     fn test_to_label() {
-        let path: Path = vec!["self", "item"].into();
+        let mut table = StringTable::new();
+        let item_id = Element::Id(table.insert("item".into()));
+
+        let path: Path = vec![Element::Selph, item_id].into();
 
         let expected = "self_item";
-        assert_eq!(path.to_label(), expected);
+        assert_eq!(path.to_label(&table), expected);
     }
 
     #[test]
     fn test_item() {
-        let path: Path = vec!["self", "item"].into();
+        let mut table = StringTable::new();
+        let item_id = Element::Id(table.insert("item".into()));
 
-        let expected = "item";
-        assert_eq!(path.item(), Some(expected));
+        let path: Path = vec![Element::Selph, item_id].into();
+
+        assert_eq!(path.item(), Some(item_id));
     }
 
     #[test]
@@ -286,9 +367,12 @@ mod test_path {
 
     #[test]
     fn test_parent() {
-        let path: Path = vec!["self", "item"].into();
+        let mut table = StringTable::new();
+        let item_id = Element::Id(table.insert("item".into()));
 
-        let expected = vec!["self"].into();
+        let path: Path = vec![Element::Selph, item_id].into();
+
+        let expected = vec![Element::Selph].into();
         assert_eq!(path.parent(), expected);
     }
 }

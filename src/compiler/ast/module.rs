@@ -250,7 +250,7 @@ impl<M> Module<M> {
             // check to make sure that the first step in the path
             // is this module, and then use the path to traverse
             // through descendent modules
-            if self.name == path[0] {
+            if let Element::Id(self.name) == path[0] {
                 let mut current = self;
                 for idx in 1..path.len() {
                     match current.get_module(&path[idx]) {
