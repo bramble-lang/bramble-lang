@@ -35,6 +35,7 @@ struct LexerBranch<'a> {
     lexer: &'a mut Lexer,
     index: usize,
     line: u32,
+    offset: u32,
 }
 
 impl<'a> LexerBranch<'a> {
@@ -42,15 +43,17 @@ impl<'a> LexerBranch<'a> {
         LexerBranch {
             index: l.index,
             line: l.line,
+            offset: l.offset,
             lexer: l,
         }
     }
 
-    pub fn merge(&mut self) -> String {
+    pub fn merge(&mut self) -> (String, u32) {
         let s = self.cut();
 
         self.lexer.index = self.index;
         self.lexer.line = self.line;
+        self.lexer.offset = self.offset;
 
         s
     }
@@ -60,8 +63,9 @@ impl<'a> LexerBranch<'a> {
     /// Then advance the start point of the next token in this
     /// branch.  This will NOT update the source.  That must be
     /// done with `merge`.
-    pub fn cut(&mut self) -> String {
+    pub fn cut(&mut self) -> (String, u32) {
         let start = self.lexer.index;
+        let offset = self.lexer.offset;
         let stop = self.index;
         let mut s = String::new();
 
@@ -69,15 +73,17 @@ impl<'a> LexerBranch<'a> {
             s.push(self.lexer.chars[i]);
         }
 
-        s
+        (s, offset)
     }
 
     pub fn next(&mut self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
             let c = self.lexer.chars[self.index];
             self.index += 1;
+            self.offset += 1;
             if c == '\n' {
                 self.line += 1;
+                self.offset = 0;
             }
             Some(c)
         } else {
@@ -99,8 +105,10 @@ impl<'a> LexerBranch<'a> {
     }
 
     pub fn next_ifn(&mut self, t: &str) -> bool {
+        // TODO: What if `t` contains a line break?
         if self.peek_ifn(t) {
             self.index += t.len();
+            self.offset += t.len() as u32;
             true
         } else {
             false
@@ -140,6 +148,7 @@ pub struct Lexer {
     chars: Vec<char>,
     index: usize,
     line: u32,
+    offset: u32,
     tracing: TracingConfig,
 }
 
@@ -149,6 +158,7 @@ impl Lexer {
             chars: text.chars().collect(),
             index: 0,
             line: 1,
+            offset: 0,
             tracing: TracingConfig::Off,
         }
     }
@@ -232,8 +242,10 @@ impl Lexer {
         while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
             if self.chars[self.index] == '\n' {
                 self.line += 1;
+                self.offset = 0;
             }
             self.index += 1;
+            self.offset += 1;
         }
     }
 
@@ -255,11 +267,11 @@ impl Lexer {
             }
         }
 
-        let id = branch.merge();
+        let (id, offset) = branch.merge();
         if id.len() == 0 {
             Ok(None)
         } else {
-            Ok(Some(Token::new(self.line, Lex::Identifier(id))))
+            Ok(Some(Token::new(self.line, offset, Lex::Identifier(id))))
         }
     }
 
@@ -282,13 +294,13 @@ impl Lexer {
                     }
                 }
             }
-            let mut s = branch.merge();
+            let (mut s, offset) = branch.merge();
 
             // Remove the quotes from the string
             s.remove(0);
             s.pop();
 
-            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
+            Ok(Some(Token::new(self.line, offset, Lex::StringLiteral(s))))
         } else {
             Ok(None)
         }
@@ -310,7 +322,7 @@ impl Lexer {
             branch.next();
         }
 
-        let int_token = branch.cut();
+        let (int_token, offset) = branch.cut();
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
         // no suffix then default to i64
@@ -331,35 +343,54 @@ impl Lexer {
         }
 
         branch.merge();
-        Self::create_int_literal(self.line, &int_token, type_suffix)
+        Self::create_int_literal(self.line, offset, &int_token, type_suffix)
     }
 
-    fn create_int_literal(line: u32, int_token: &str, prim: Primitive) -> Result<Option<Token>> {
+    fn create_int_literal(
+        line: u32,
+        offset: u32,
+        int_token: &str,
+        prim: Primitive,
+    ) -> Result<Option<Token>> {
         match prim {
-            Primitive::U8 => Ok(Some(Token::new(line, U8(int_token.parse::<u8>().unwrap())))),
+            Primitive::U8 => Ok(Some(Token::new(
+                line,
+                offset,
+                U8(int_token.parse::<u8>().unwrap()),
+            ))),
             Primitive::U16 => Ok(Some(Token::new(
                 line,
+                offset,
                 U16(int_token.parse::<u16>().unwrap()),
             ))),
             Primitive::U32 => Ok(Some(Token::new(
                 line,
+                offset,
                 U32(int_token.parse::<u32>().unwrap()),
             ))),
             Primitive::U64 => Ok(Some(Token::new(
                 line,
+                offset,
                 U64(int_token.parse::<u64>().unwrap()),
             ))),
-            Primitive::I8 => Ok(Some(Token::new(line, I8(int_token.parse::<i8>().unwrap())))),
+            Primitive::I8 => Ok(Some(Token::new(
+                line,
+                offset,
+                I8(int_token.parse::<i8>().unwrap()),
+            ))),
             Primitive::I16 => Ok(Some(Token::new(
                 line,
+                offset,
                 I16(int_token.parse::<i16>().unwrap()),
             ))),
             Primitive::I32 => Ok(Some(Token::new(
                 line,
+                offset,
                 I32(int_token.parse::<i32>().unwrap()),
             ))),
             Primitive::I64 => Ok(Some(Token::new(
                 line,
+                offset,
                 I64(int_token.parse::<i64>().unwrap()),
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
@@ -393,6 +424,7 @@ impl Lexer {
     pub fn consume_operator(&mut self) -> Result<Option<Token>> {
         trace!(self);
         let line = self.line;
+        let offset = self.offset;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
             ("...", VarArgs),
@@ -428,7 +460,7 @@ impl Lexer {
         let mut token = None;
         for (op, t) in operators.iter() {
             if branch.next_ifn(op) {
-                token = Some(Token::new(line, t.clone()));
+                token = Some(Token::new(line, offset, t.clone()));
                 break;
             }
         }
@@ -464,11 +496,12 @@ impl Lexer {
         trace!(self);
         match &token {
             Token {
-                l: _,
+                l,
+                o,
                 s: Identifier(id),
             } => match id.as_str() {
-                "true" => Token::new(self.line, Bool(true)),
-                "false" => Token::new(self.line, Bool(false)),
+                "true" => Token::new(*l, *o, Bool(true)),
+                "false" => Token::new(*l, *o, Bool(false)),
                 _ => token,
             },
             _ => token,
@@ -479,20 +512,21 @@ impl Lexer {
         trace!(self);
         match token {
             Token {
-                l: _,
+                l,
+                o,
                 s: Identifier(ref id),
             } => match id.as_str() {
-                "u8" => Token::new(self.line, Primitive(Primitive::U8)),
-                "u16" => Token::new(self.line, Primitive(Primitive::U16)),
-                "u32" => Token::new(self.line, Primitive(Primitive::U32)),
-                "u64" => Token::new(self.line, Primitive(Primitive::U64)),
-                "i8" => Token::new(self.line, Primitive(Primitive::I8)),
-                "i16" => Token::new(self.line, Primitive(Primitive::I16)),
-                "i32" => Token::new(self.line, Primitive(Primitive::I32)),
-                "i64" => Token::new(self.line, Primitive(Primitive::I64)),
-                "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
-                "string" => Token::new(self.line, Primitive(Primitive::StringLiteral)),
-                _ => Token::new(self.line, Identifier(id.clone())),
+                "u8" => Token::new(l, o, Primitive(Primitive::U8)),
+                "u16" => Token::new(l, o, Primitive(Primitive::U16)),
+                "u32" => Token::new(l, o, Primitive(Primitive::U32)),
+                "u64" => Token::new(l, o, Primitive(Primitive::U64)),
+                "i8" => Token::new(l, o, Primitive(Primitive::I8)),
+                "i16" => Token::new(l, o, Primitive(Primitive::I16)),
+                "i32" => Token::new(l, o, Primitive(Primitive::I32)),
+                "i64" => Token::new(l, o, Primitive(Primitive::I64)),
+                "bool" => Token::new(l, o, Primitive(Primitive::Bool)),
+                "string" => Token::new(l, o, Primitive(Primitive::StringLiteral)),
+                _ => Token::new(l, o, Identifier(id.clone())),
             },
             _ => token,
         }
@@ -502,24 +536,25 @@ impl Lexer {
         trace!(self);
         match token {
             Token {
-                l: _,
+                l,
+                o,
                 s: Identifier(ref id),
             } => match id.as_str() {
-                "let" => Token::new(self.line, Let),
-                "mut" => Token::new(self.line, Mut),
-                "return" => Token::new(self.line, Return),
-                "yield" => Token::new(self.line, Yield),
-                "yret" => Token::new(self.line, YieldReturn),
-                "fn" => Token::new(self.line, FunctionDef),
-                "co" => Token::new(self.line, CoroutineDef),
-                "mod" => Token::new(self.line, ModuleDef),
-                "struct" => Token::new(self.line, Struct),
-                "extern" => Token::new(self.line, Extern),
-                "init" => Token::new(self.line, Init),
-                "if" => Token::new(self.line, If),
-                "else" => Token::new(self.line, Else),
-                "while" => Token::new(self.line, While),
-                _ => Token::new(self.line, Identifier(id.clone())),
+                "let" => Token::new(l, o, Let),
+                "mut" => Token::new(l, o, Mut),
+                "return" => Token::new(l, o, Return),
+                "yield" => Token::new(l, o, Yield),
+                "yret" => Token::new(l, o, YieldReturn),
+                "fn" => Token::new(l, o, FunctionDef),
+                "co" => Token::new(l, o, CoroutineDef),
+                "mod" => Token::new(l, o, ModuleDef),
+                "struct" => Token::new(l, o, Struct),
+                "extern" => Token::new(l, o, Extern),
+                "init" => Token::new(l, o, Init),
+                "if" => Token::new(l, o, If),
+                "else" => Token::new(l, o, Else),
+                "while" => Token::new(l, o, While),
+                _ => Token::new(l, o, Identifier(id.clone())),
             },
             _ => token,
         }

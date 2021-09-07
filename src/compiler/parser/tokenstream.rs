@@ -146,6 +146,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::LParen
             }
         );
@@ -174,6 +175,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::LParen
             }
         );
@@ -183,6 +185,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::I64(2)
             }
         );
@@ -206,6 +209,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::LParen
             }
         );
@@ -215,18 +219,27 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::I64(2)
             }
         );
-
-        let p = ts.next().unwrap();
-        assert_eq!(p, Token { l: 1, s: Lex::Add });
 
         let p = ts.next().unwrap();
         assert_eq!(
             p,
             Token {
                 l: 1,
+                o: 0,
+                s: Lex::Add
+            }
+        );
+
+        let p = ts.next().unwrap();
+        assert_eq!(
+            p,
+            Token {
+                l: 1,
+                o: 0,
                 s: Lex::I64(4)
             }
         );
@@ -236,18 +249,27 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::RParen
             }
         );
-
-        let p = ts.next().unwrap();
-        assert_eq!(p, Token { l: 1, s: Lex::Mul });
 
         let p = ts.next().unwrap();
         assert_eq!(
             p,
             Token {
                 l: 1,
+                o: 0,
+                s: Lex::Mul
+            }
+        );
+
+        let p = ts.next().unwrap();
+        assert_eq!(
+            p,
+            Token {
+                l: 1,
+                o: 0,
                 s: Lex::I64(3)
             }
         );
@@ -271,6 +293,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::LParen
             }
         );
@@ -280,6 +303,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::I64(2)
             }
         );
@@ -292,6 +316,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::I64(2)
             }
         );
@@ -313,17 +338,26 @@ mod test_tokenstream {
             vec![
                 Token {
                     l: 1,
+                    o: 0,
                     s: Lex::LParen
                 },
                 Token {
                     l: 1,
+                    o: 0,
                     s: Lex::I64(2)
                 }
             ]
         );
 
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                o: 0,
+                s: Lex::Add
+            }
+        );
     }
 
     #[test]
@@ -358,6 +392,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::LParen
             }
         );
@@ -366,6 +401,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::I64(2)
             }
         );
@@ -375,15 +411,30 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                o: 0,
                 s: Lex::I64(2)
             }
         );
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                o: 0,
+                s: Lex::Add
+            }
+        );
 
         let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).is_none();
         assert_eq!(p, true);
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                o: 0,
+                s: Lex::Add
+            }
+        );
     }
 }

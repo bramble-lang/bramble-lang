@@ -298,6 +298,7 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     match stream.peek() {
         Some(Token {
             l: _,
+            o: _,
             s: Lex::LParen,
         }) => {
             stream.next();
@@ -334,7 +335,11 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
             // check for `else if`
             let else_arm = match stream.next_if(&Lex::Else) {
                 Some(_) => match stream.peek() {
-                    Some(Token { l, s: Lex::If }) => {
+                    Some(Token {
+                        l,
+                        o: _,
+                        s: Lex::If,
+                    }) => {
                         let l = *l;
                         Some(
                             if_expression(stream)?
@@ -498,14 +503,46 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         Lex::I32(0),
         Lex::I64(0),
     ]) {
-        Some(Token { l, s: Lex::U8(i) }) => Ok(Some(Expression::U8(l, i))),
-        Some(Token { l, s: Lex::U16(i) }) => Ok(Some(Expression::U16(l, i))),
-        Some(Token { l, s: Lex::U32(i) }) => Ok(Some(Expression::U32(l, i))),
-        Some(Token { l, s: Lex::U64(i) }) => Ok(Some(Expression::U64(l, i))),
-        Some(Token { l, s: Lex::I8(i) }) => Ok(Some(Expression::I8(l, i))),
-        Some(Token { l, s: Lex::I16(i) }) => Ok(Some(Expression::I16(l, i))),
-        Some(Token { l, s: Lex::I32(i) }) => Ok(Some(Expression::I32(l, i))),
-        Some(Token { l, s: Lex::I64(i) }) => Ok(Some(Expression::I64(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::U8(i),
+        }) => Ok(Some(Expression::U8(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::U16(i),
+        }) => Ok(Some(Expression::U16(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::U32(i),
+        }) => Ok(Some(Expression::U32(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::U64(i),
+        }) => Ok(Some(Expression::U64(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::I8(i),
+        }) => Ok(Some(Expression::I8(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::I16(i),
+        }) => Ok(Some(Expression::I16(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::I32(i),
+        }) => Ok(Some(Expression::I32(l, i))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::I64(i),
+        }) => Ok(Some(Expression::I64(l, i))),
         Some(t) => panic!("Unexpected token: {:?}", t),
         None => Ok(None),
     }
@@ -514,7 +551,11 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
 fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
-        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Expression::Boolean(l, b))),
+        Some(Token {
+            l,
+            o: _,
+            s: Lex::Bool(b),
+        }) => Ok(Some(Expression::Boolean(l, b))),
         _ => Ok(None),
     }
 }
@@ -524,6 +565,7 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserCon
     match stream.next_if(&Lex::StringLiteral("".into())) {
         Some(Token {
             l,
+            o: _,
             s: Lex::StringLiteral(s),
         }) => Ok(Some(Expression::StringLiteral(l, s))),
         _ => Ok(None),

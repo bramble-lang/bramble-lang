@@ -159,6 +159,7 @@ impl std::fmt::Display for Lex {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub l: u32,
+    pub o: u32,
     pub s: Lex,
 }
 
@@ -169,8 +170,8 @@ impl std::fmt::Display for Token {
 }
 
 impl Token {
-    pub fn new(l: u32, s: Lex) -> Token {
-        Token { l, s }
+    pub fn new(l: u32, o: u32, s: Lex) -> Token {
+        Token { l, o, s }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {

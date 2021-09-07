@@ -543,6 +543,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     let ty = match stream.peek() {
         Some(Token {
             l: _,
+            o: _,
             s: Lex::Primitive(primitive),
         }) => {
             let ty = match *primitive {
