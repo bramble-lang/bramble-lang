@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
+use crate::compiler::{
+    ast::*, lexer::stringtable::StringId, semantics::semanticnode::SemanticContext,
+};
 
 use crate::result::Result;
 
@@ -41,16 +43,16 @@ impl SymbolTable {
         }
     }
 
-    pub fn new_routine(name: &str) -> Self {
+    pub fn new_routine(name: StringId) -> Self {
         SymbolTable {
-            ty: ScopeType::Routine(name.into()),
+            ty: ScopeType::Routine(name),
             sym: vec![],
         }
     }
 
-    pub fn new_module(name: &str) -> Self {
+    pub fn new_module(name: StringId) -> Self {
         SymbolTable {
-            ty: ScopeType::Module(name.into()),
+            ty: ScopeType::Module(name),
             sym: vec![],
         }
     }
@@ -111,7 +113,7 @@ impl SymbolTable {
                 structdef
                     .get_fields()
                     .iter()
-                    .map(|f| (f.name.clone(), f.ty.clone()))
+                    .map(|f| (f.name, f.ty.clone()))
                     .collect(),
             ),
             false,
@@ -130,7 +132,7 @@ impl SymbolTable {
             Box::new(ty.clone()),
         );
 
-        sym.sym.add(name, def, false, true)
+        sym.sym.add(*name, def, false, true)
     }
 
     fn add_routine_parameters(
@@ -154,7 +156,7 @@ impl SymbolTable {
             }
         };
 
-        sym.sym.add(name, def, false, false)
+        sym.sym.add(*name, def, false, false)
     }
 
     fn get_types_for_params(params: &Vec<Parameter<SemanticContext>>) -> Vec<Type> {
@@ -173,24 +175,24 @@ impl SymbolTable {
         &mut self.sym
     }
 
-    pub fn get(&self, name: &str) -> Option<&Symbol> {
+    pub fn get(&self, name: StringId) -> Option<&Symbol> {
         self.sym.iter().find(|s| s.name == name)
     }
 
     pub fn get_path(&self, name: &Path) -> Option<&Symbol> {
         if name.len() == 1 {
-            self.sym.iter().find(|s| s.name == name[0])
+            self.sym.iter().find(|s| Element::Id(s.name) == name[0])
         } else {
             None
         }
     }
 
-    pub fn add(&mut self, name: &str, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
+    pub fn add(&mut self, name: StringId, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
         if self.get(name).is_some() {
             Err(format!("{} already declared", name))
         } else {
             self.sym.push(Symbol {
-                name: name.into(),
+                name,
                 ty,
                 mutable,
                 is_extern,
@@ -217,7 +219,7 @@ impl std::fmt::Display for SymbolTable {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Symbol {
-    pub name: String,
+    pub name: StringId,
     pub ty: Type,
     pub mutable: bool,
     pub is_extern: bool,
@@ -235,8 +237,8 @@ impl std::fmt::Display for Symbol {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) enum ScopeType {
     Local,
-    Routine(String),
-    Module(String),
+    Routine(StringId),
+    Module(StringId),
 }
 
 impl ScopeType {
@@ -247,10 +249,10 @@ impl ScopeType {
         }
     }
 
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn get_name(&self) -> Option<StringId> {
         match self {
             Self::Local => None,
-            Self::Routine(name) | Self::Module(name) => Some(name),
+            Self::Routine(name) | Self::Module(name) => Some(*name),
         }
     }
 }

@@ -60,7 +60,7 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
         // Set SemanticAnnotation::canonical_path to CanonicalPath
         // Addresses RoutineDefs and StructDefs (for LLVM IR)
         Some(name) => {
-            let cpath = stack.to_canonical(&vec![name].into())?;
+            let cpath = stack.to_canonical(&vec![Element::Id(name)].into())?;
             node.get_context_mut().set_canonical_path(cpath);
         }
         None => (),
@@ -197,7 +197,7 @@ impl Canonizable for Extern<SemanticContext> {
             Some(name) => name,
             None => panic!("Externs must have a name"),
         };
-        let cpath = vec![name].into();
+        let cpath = vec![Element::Id(name)].into();
         self.get_context_mut().set_canonical_path(cpath);
         Ok(())
     }

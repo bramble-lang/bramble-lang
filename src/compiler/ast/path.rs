@@ -79,12 +79,16 @@ impl Path {
         self.path.iter()
     }
 
-    pub fn item(&self) -> Option<Element> {
+    pub fn item(&self) -> Option<StringId> {
         let l = self.path.len();
         if l == 0 {
             None
         } else {
-            Some(self.path[l - 1])
+            if let Element::Id(id) = self.path[l - 1] {
+                Some(id)
+            } else {
+                None
+            }
         }
     }
 
@@ -351,9 +355,9 @@ mod test_path {
     #[test]
     fn test_item() {
         let mut table = StringTable::new();
-        let item_id = Element::Id(table.insert("item".into()));
+        let item_id = table.insert("item".into());
 
-        let path: Path = vec![Element::Selph, item_id].into();
+        let path: Path = vec![Element::Selph, Element::Id(item_id)].into();
 
         assert_eq!(path.item(), Some(item_id));
     }

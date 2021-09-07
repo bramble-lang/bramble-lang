@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::compiler::lexer::stringtable::StringId;
+
 use super::{path::Path, HasVarArgs};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -17,7 +19,7 @@ pub enum Type {
     Array(Box<Type>, usize),
     Unit,
     Custom(Path),
-    StructDef(Vec<(String, Type)>),
+    StructDef(Vec<(StringId, Type)>),
     FunctionDef(Vec<Type>, Box<Type>),
     CoroutineDef(Vec<Type>, Box<Type>),
     Coroutine(Box<Type>),
@@ -32,16 +34,16 @@ impl Type {
             _ => None,
         }
     }
-    pub fn get_members(&self) -> Option<&Vec<(String, Type)>> {
+    pub fn get_members(&self) -> Option<&Vec<(StringId, Type)>> {
         match self {
             Type::StructDef(members) => Some(members),
             _ => None,
         }
     }
 
-    pub fn get_member(&self, member: &str) -> Option<&Type> {
+    pub fn get_member(&self, member: StringId) -> Option<&Type> {
         self.get_members()
-            .map(|ms| ms.iter().find(|(n, _)| n == member).map(|m| &m.1))
+            .map(|ms| ms.iter().find(|(n, _)| *n == member).map(|m| &m.1))
             .flatten()
     }
 

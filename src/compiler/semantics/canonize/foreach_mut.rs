@@ -441,12 +441,14 @@ mod tests {
     fn empty_module_ignore_stack() {
         let text = "mod m{}";
         let mut table = StringTable::new();
+        let test = table.insert("test".into());
+
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let ast = parser::parse("test", &tokens)
+        let ast = parser::parse(test, &tokens)
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
@@ -469,12 +471,16 @@ mod tests {
     fn empty_module_use_stack() {
         let text = "mod m{}";
         let mut table = StringTable::new();
+        let test = table.insert("test".into());
+        let annotation = table.insert("annotation".into());
+        let m = table.insert("m".into());
+
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let ast = parser::parse("test", &tokens)
+        let ast = parser::parse(test, &tokens)
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
@@ -485,7 +491,9 @@ mod tests {
                 "test".into()
             });
         t.for_module(&mut sm_ast, |stack, n| {
-            let cpath = stack.to_canonical(&vec!["annotation"].into()).unwrap();
+            let cpath = stack
+                .to_canonical(&vec![Element::Id(annotation)].into())
+                .unwrap();
             n.get_context_mut().set_canonical_path(cpath);
             Ok(())
         })
@@ -493,15 +501,26 @@ mod tests {
 
         assert_eq!(
             *sm_ast.get_context().get_canonical_path(),
-            vec!["project", "test", "annotation"].into()
+            vec![
+                Element::CanonicalRoot,
+                Element::Id(test),
+                Element::Id(annotation)
+            ]
+            .into()
         );
         assert_eq!(
             *sm_ast
-                .get_module("m")
+                .get_module(m)
                 .unwrap()
                 .get_context()
                 .get_canonical_path(),
-            vec!["project", "test", "m", "annotation"].into()
+            vec![
+                Element::CanonicalRoot,
+                Element::Id(test),
+                Element::Id(m),
+                Element::Id(annotation)
+            ]
+            .into()
         );
     }
 
@@ -509,12 +528,17 @@ mod tests {
     fn canonize_structdef() {
         let text = "mod m{ struct MyStruct {}}";
         let mut table = StringTable::new();
+        let test = table.insert("test".into());
+        let annotation = table.insert("annotation".into());
+        let m = table.insert("m".into());
+        let my_struct = table.insert("MyStruct".into());
+
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
-        let ast = parser::parse("test", &tokens)
+        let ast = parser::parse(test, &tokens)
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
@@ -526,7 +550,7 @@ mod tests {
             });
         t.for_module(&mut sm_ast, |stack, n| match n.name() {
             Some(name) => {
-                let cpath = stack.to_canonical(&vec![name].into()).unwrap();
+                let cpath = stack.to_canonical(&vec![Element::Id(name)].into()).unwrap();
                 n.get_context_mut().set_canonical_path(cpath);
                 Ok(())
             }
@@ -536,13 +560,19 @@ mod tests {
 
         assert_eq!(
             *sm_ast
-                .get_module("m")
+                .get_module(m)
                 .unwrap()
-                .get_item("MyStruct")
+                .get_item(my_struct)
                 .unwrap()
                 .get_context()
                 .get_canonical_path(),
-            vec!["project", "test", "m", "MyStruct"].into()
+            vec![
+                Element::CanonicalRoot,
+                Element::Id(test),
+                Element::Id(m),
+                Element::Id(my_struct)
+            ]
+            .into()
         );
     }
 }
