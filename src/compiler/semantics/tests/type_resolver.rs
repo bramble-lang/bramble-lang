@@ -3078,6 +3078,11 @@ mod type_resolver_tests {
             ),
             (
                 line!(),
+                "struct MyStruct{x:co i64} fn test(c: co i64) -> MyStruct {return MyStruct{x: c};}",
+                Ok(()),
+            ),
+            (
+                line!(),
                 "struct MyStruct{x:i64}
                 struct MyStruct2{ms: MyStruct}
                 fn test2(ms2: MyStruct2) -> i64 {return ms2.ms.x;}
@@ -3115,11 +3120,6 @@ mod type_resolver_tests {
                 "struct MyStruct{x:i64} fn test() -> i64 {return MyStruct{x:5};}",
                 Err("Semantic: L1: Return expected i64 but got $main::MyStruct"),
             ),
-            (
-                line!(),
-                "struct MyStruct{x:co i64} fn test(c: co i64) -> MyStruct {return MyStruct{x: c};}",
-                Ok(()),
-            ),
         ] {
             println!("L{}", line);
             let mut table = StringTable::new();
@@ -3142,7 +3142,7 @@ mod type_resolver_tests {
                 TracingConfig::Off, 
             );
             match expected {
-                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
+                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\nST: {:?}", line, text, result, table)},
                 Err(msg) => assert_eq!(result.err().unwrap(), msg),
             }
         }

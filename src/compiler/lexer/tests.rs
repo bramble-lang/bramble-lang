@@ -117,7 +117,7 @@ mod tests {
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(
             token,
-            Token::new(1, 0, StringLiteral(table.insert("test".into())))
+            Token::new(1, 0, StringLiteral(table.insert("text".into())))
         );
     }
 

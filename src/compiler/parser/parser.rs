@@ -507,26 +507,46 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     trace!(stream);
     let mut path = vec![];
 
+    let line = stream.peek().map(|t| t.l).unwrap_or_default();
     // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
-    if stream.next_if(&Lex::PathSeparator).is_some() {
+    if stream.test_if(&Lex::PathSeparator) {
         path.push(Element::FileRoot);
+    } else if stream.next_if(&Lex::PathProjectRoot).is_some() {
+        path.push(Element::CanonicalRoot);
+    } else if stream.next_if(&Lex::PathFileRoot).is_some() {
+        path.push(Element::FileRoot);
+    } else if stream.next_if(&Lex::PathSelf).is_some() {
+        path.push(Element::Selph);
+    } else if stream.next_if(&Lex::PathSuper).is_some() {
+        path.push(Element::Super);
+    } else if let Some(id) = stream.next_if_id() {
+        path.push(Element::Id(id.1));
+    } else {
+        return Ok(None);
     }
 
-    match stream.next_if_id() {
-        Some((line, id)) => {
-            path.push(Element::Id(id));
-            while let Some(token) = stream.next_if(&Lex::PathSeparator) {
-                let line = token.l;
-                let (_, id) = stream.next_if_id().ok_or(format!(
+    while let Some(token) = stream.next_if(&Lex::PathSeparator) {
+        match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
+            Some(Token {
+                l,
+                o,
+                s: Lex::PathSuper,
+            }) => path.push(Element::Super),
+            Some(Token {
+                l,
+                o,
+                s: Lex::Identifier(id),
+            }) => path.push(Element::Id(id)),
+            _ => {
+                return Err(format!(
                     "L{}: expect identifier after path separator '::'",
-                    line
-                ))?;
-                path.push(Element::Id(id));
+                    token.l
+                ))
             }
-            Ok(Some((line, path.into())))
         }
-        None => Ok(None),
     }
+
+    Ok(Some((line, path.into())))
 }
 
 fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {

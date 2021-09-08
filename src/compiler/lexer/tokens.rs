@@ -86,6 +86,10 @@ pub enum Lex {
     PathSeparator,
     LArrow,
     Primitive(Primitive),
+    PathSelf,
+    PathSuper,
+    PathProjectRoot,
+    PathFileRoot,
 }
 
 impl Lex {
@@ -154,6 +158,10 @@ impl std::fmt::Display for Lex {
             PathSeparator => f.write_str("::"),
             LArrow => f.write_str("->"),
             Primitive(p) => f.write_str(&format!("{}", p)),
+            PathSelf => f.write_str("self"),
+            PathSuper => f.write_str("super"),
+            PathFileRoot => f.write_str("root"),
+            PathProjectRoot => f.write_str("project"),
         }
     }
 }
@@ -267,6 +275,10 @@ impl Token {
             | Lex::Colon
             | Lex::MemberAccess
             | Lex::PathSeparator
+            | Lex::PathSelf
+            | Lex::PathSuper
+            | Lex::PathFileRoot
+            | Lex::PathProjectRoot
             | Lex::LArrow => *a == self.s,
         }
     }

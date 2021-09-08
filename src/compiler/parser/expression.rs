@@ -788,7 +788,6 @@ mod test {
                 },
             ),
         ] {
-            let mut table = StringTable::new();
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()

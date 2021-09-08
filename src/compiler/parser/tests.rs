@@ -182,6 +182,7 @@ pub mod tests {
         let first = table.insert("first".into());
         let second = table.insert("second".into());
 
+        let mut test = 0;
         for (text, expected) in vec![
             ("thing", Ok(vec![Element::Id(thing)])),
             ("::thing", Ok(vec![Element::FileRoot, Element::Id(thing)])),
@@ -206,6 +207,8 @@ pub mod tests {
                 Err("L1: expect identifier after path separator '::'"),
             ),
         ] {
+            test += 1;
+            println!("Test #{}", test);
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
@@ -782,6 +785,7 @@ pub mod tests {
             .into_iter()
             .collect::<Result<_>>()
             .unwrap();
+        println!("{:?}", table);
         let mut iter = TokenStream::new(&tokens);
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
