@@ -528,14 +528,11 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     while let Some(token) = stream.next_if(&Lex::PathSeparator) {
         match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
             Some(Token {
-                l,
-                o,
-                s: Lex::PathSuper,
+                s: Lex::PathSuper, ..
             }) => path.push(Element::Super),
             Some(Token {
-                l,
-                o,
                 s: Lex::Identifier(id),
+                ..
             }) => path.push(Element::Id(id)),
             _ => {
                 return Err(format!(

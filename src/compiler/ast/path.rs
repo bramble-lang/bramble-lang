@@ -167,7 +167,9 @@ impl Path {
             Element::CanonicalRoot => CANONICAL_ROOT,
             Element::Selph => SELF,
             Element::Super => SUPER,
-            Element::Id(id) => table.get(id).unwrap(),
+            Element::Id(id) => table
+                .get(id)
+                .expect(&format!("Could not find Id {} in {:?}", id, table)),
         }
     }
 }
