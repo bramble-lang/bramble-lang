@@ -118,7 +118,6 @@ mod stack_tests {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
         let test_mod = table.insert("test_mod".into());
-        let inner = table.insert("inner".into());
 
         let m = Module::new(test, SemanticContext::new_module(1, 1, test, Type::Unit));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
@@ -135,7 +134,6 @@ mod stack_tests {
     fn test_local_then_one_module_stack_to_path() {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
-        let test_mod = table.insert("test_mod".into());
         let inner = table.insert("inner".into());
 
         let m = Module::new(test, SemanticContext::new_module(1, 1, test, Type::Unit));
@@ -162,8 +160,6 @@ mod stack_tests {
     fn test_local_then_two_module_stack_to_path() {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
-        let test_mod = table.insert("test_mod".into());
-        let inner = table.insert("inner".into());
         let first = table.insert("first".into());
         let second = table.insert("second".into());
 
@@ -199,8 +195,6 @@ mod stack_tests {
     fn test_local_get_symbol() {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
-        let test_mod = table.insert("test_mod".into());
-        let inner = table.insert("inner".into());
         let first = table.insert("first".into());
         let x = table.insert("x".into());
 
@@ -227,8 +221,6 @@ mod stack_tests {
     fn test_local_get_symbol_in_parent_scope() {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
-        let test_mod = table.insert("test_mod".into());
-        let inner = table.insert("inner".into());
         let first = table.insert("first".into());
         let x = table.insert("x".into());
 
@@ -258,8 +250,6 @@ mod stack_tests {
     fn test_get_symbol_in_routine() {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
-        let test_mod = table.insert("test_mod".into());
-        let inner = table.insert("inner".into());
         let first = table.insert("first".into());
         let x = table.insert("x".into());
         let my_func = table.insert("my_func".into());
@@ -299,8 +289,6 @@ mod stack_tests {
     fn test_local_get_symbol_across_boundary() {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
-        let test_mod = table.insert("test_mod".into());
-        let inner = table.insert("inner".into());
         let first = table.insert("first".into());
         let second = table.insert("second".into());
         let third = table.insert("third".into());

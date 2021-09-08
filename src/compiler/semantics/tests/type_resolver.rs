@@ -807,7 +807,6 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
-            let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
@@ -933,7 +932,6 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
-            let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
@@ -1004,7 +1002,6 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
-            let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
@@ -1086,7 +1083,6 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
-            let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
@@ -1169,7 +1165,6 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
-            let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
@@ -1252,7 +1247,6 @@ mod type_resolver_tests {
         ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
-            let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 

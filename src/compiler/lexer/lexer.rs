@@ -159,11 +159,11 @@ pub struct Lexer<'a> {
     line: u32,
     offset: u32,
     tracing: TracingConfig,
-    string_table: &'a StringTable,
+    string_table: &'a mut StringTable,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(string_table: &'a StringTable, text: &str) -> Lexer<'a> {
+    pub fn new(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
         Lexer {
             chars: text.chars().collect(),
             index: 0,

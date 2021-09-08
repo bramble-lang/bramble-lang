@@ -5,6 +5,7 @@ use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
 use crate::compiler::{
     ast::{Node, RoutineDef},
+    lexer::stringtable::StringId,
     semantics::semanticnode::SemanticContext,
 };
 
@@ -20,7 +21,7 @@ impl Serialize for RoutineDef<SemanticContext> {
         S: Serializer,
     {
         let mut state = serializer.serialize_struct(ROUTINE_DEF_FIELD, 3)?;
-        state.serialize_field(NAME_FIELD, self.get_name())?;
+        state.serialize_field(NAME_FIELD, &self.get_name())?;
         state.serialize_field(PARAMS_FIELD, self.get_params())?;
         state.serialize_field(TY_FIELD, self.get_return_type())?;
         state.serialize_field(CONTEXT_FIELD, self.get_context())?;
@@ -68,7 +69,9 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                     .next_element()?
                     .ok_or_else(|| de::Error::invalid_length(0, &self))?;
 
-                let rd = RoutineDef::new_function(&name, context, params, ret_ty, vec![]);
+                let sid = StringId::new();
+
+                let rd = RoutineDef::new_function(sid, context, params, ret_ty, vec![]);
                 Ok(rd)
             }
 
@@ -115,8 +118,9 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                 let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field(TY_FIELD))?;
                 let context = context.ok_or_else(|| de::Error::missing_field(CONTEXT_FIELD))?;
 
+                let sid = StringId::new();
                 Ok(RoutineDef::new_function(
-                    &name,
+                    sid,
                     context,
                     params,
                     ret_ty,

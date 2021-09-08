@@ -529,7 +529,6 @@ mod tests {
         let text = "mod m{ struct MyStruct {}}";
         let mut table = StringTable::new();
         let test = table.insert("test".into());
-        let annotation = table.insert("annotation".into());
         let m = table.insert("m".into());
         let my_struct = table.insert("MyStruct".into());
 

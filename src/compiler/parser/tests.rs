@@ -1126,7 +1126,6 @@ pub mod tests {
     #[test]
     fn parse_struct_init() {
         let mut table = StringTable::new();
-        let test = table.insert("test".into());
         let my_struct = table.insert("MyStruct".into());
         let my_struct2 = table.insert("MyStruct2".into());
         let x = table.insert("x".into());

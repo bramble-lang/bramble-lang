@@ -134,11 +134,6 @@ mod test_preorder {
     fn empty_module() {
         let mut table = StringTable::new();
         let m = table.insert("m".into());
-        let m2 = table.insert("m2".into());
-        let p = table.insert("p".into());
-        let func = table.insert("func".into());
-        let cor = table.insert("cor".into());
-        let sd = table.insert("sd".into());
 
         let module1 = Module::new(m, 1i32);
 
@@ -155,10 +150,6 @@ mod test_preorder {
         let mut table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
-        let p = table.insert("p".into());
-        let func = table.insert("func".into());
-        let cor = table.insert("cor".into());
-        let sd = table.insert("sd".into());
 
         let mut module1 = Module::new(m, 1i32);
         module1.add_module(Module::new(m2, 2i32));
@@ -213,15 +204,11 @@ mod test_preorder {
     #[test]
     fn function() {
         let mut table = StringTable::new();
-        let m = table.insert("m".into());
-        let m2 = table.insert("m2".into());
         let p = table.insert("p".into());
         let x = table.insert("x".into());
         let y = table.insert("y".into());
         let c = table.insert("c".into());
         let func = table.insert("func".into());
-        let cor = table.insert("cor".into());
-        let sd = table.insert("sd".into());
         let test = table.insert("test".into());
 
         let mut f = RoutineDef::new_function(func, 1, vec![], Type::Unit, vec![]);
@@ -274,14 +261,14 @@ mod test_postorder {
     use super::*;
     use crate::compiler::{
         ast::{
-            expression::{Expression, UnaryOperator},
+            expression::Expression,
             module::Module,
             parameter::Parameter,
             routinedef::RoutineDef,
-            statement::{Bind, Statement, YieldReturn},
+            statement::{Bind, Statement},
             structdef::StructDef,
             ty::Type,
-            BinaryOperator, RoutineCall,
+            BinaryOperator,
         },
         lexer::stringtable::{StringId, StringTable},
     };
@@ -295,11 +282,6 @@ mod test_postorder {
     fn empty_module() {
         let mut table = StringTable::new();
         let m = table.insert("m".into());
-        let m2 = table.insert("m2".into());
-        let p = table.insert("p".into());
-        let func = table.insert("func".into());
-        let cor = table.insert("cor".into());
-        let sd = table.insert("sd".into());
 
         let module1 = Module::new(m, 1i32);
 
@@ -316,10 +298,6 @@ mod test_postorder {
         let mut table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
-        let p = table.insert("p".into());
-        let func = table.insert("func".into());
-        let cor = table.insert("cor".into());
-        let sd = table.insert("sd".into());
 
         let mut module1 = Module::new(m, 1i32);
         module1.add_module(Module::new(m2, 2i32));
@@ -374,16 +352,9 @@ mod test_postorder {
     #[test]
     fn function() {
         let mut table = StringTable::new();
-        let m = table.insert("m".into());
-        let m2 = table.insert("m2".into());
-        let p = table.insert("p".into());
         let x = table.insert("x".into());
         let y = table.insert("y".into());
-        let c = table.insert("c".into());
         let func = table.insert("func".into());
-        let cor = table.insert("cor".into());
-        let sd = table.insert("sd".into());
-        let test = table.insert("test".into());
 
         let mut f = RoutineDef::new_function(func, 1, vec![], Type::Unit, vec![]);
         f.body.push(Statement::Bind(box Bind::new(

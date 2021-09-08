@@ -7,6 +7,8 @@ use inkwell::context::Context;
 
 use braid_lang::*;
 
+use crate::compiler::ast::MAIN_MODULE;
+
 const BRAID_FILE_EXT: &str = "br";
 const USER_MAIN_FN: &str = "my_main";
 
@@ -35,8 +37,10 @@ fn main() {
 
     let stop_stage = get_stage(&config).unwrap();
 
+    let mut string_table = StringTable::new();
+
     let trace_lexer = get_lexer_tracing(&config);
-    let token_sets = match tokenize_project(src_input, trace_lexer) {
+    let token_sets = match tokenize_project(&mut string_table, src_input, trace_lexer) {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&errs);
@@ -49,7 +53,8 @@ fn main() {
     }
 
     let trace_parser = get_parser_tracing(&config);
-    let root = match parse_project(project_name, token_sets, trace_parser) {
+    let project_name_id = string_table.insert(project_name.into());
+    let root = match parse_project(&mut string_table, project_name_id, token_sets, trace_parser) {
         Ok(root) => root,
         Err(errs) => {
             print_errs(&errs);
@@ -66,9 +71,12 @@ fn main() {
     let trace_canonization = get_canonization_tracing(&config);
     let trace_type_resolver = get_type_resolver_tracing(&config);
 
+    let main_mod_id = string_table.insert(MAIN_MODULE.into());
+    let main_fn_id = string_table.insert(USER_MAIN_FN.into());
     let semantic_ast = match resolve_types_with_imports(
         &root,
-        USER_MAIN_FN,
+        main_mod_id,
+        main_fn_id,
         &imports,
         trace_semantic_node,
         trace_canonization,
@@ -89,8 +97,8 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, project_name, &imports);
-    match llvm.ingest(&semantic_ast, USER_MAIN_FN) {
+    let mut llvm = llvm::IrGen::new(&context, &string_table, project_name, &imports);
+    match llvm.ingest(&semantic_ast, main_fn_id) {
         Ok(()) => (),
         Err(msg) => {
             println!("LLVM IR translation failed: {}", msg);

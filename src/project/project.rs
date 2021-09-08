@@ -89,7 +89,7 @@ pub fn read_src_files(src_path: &std::path::Path, ext: &str) -> Vec<CompilationU
 /// path given in the CompilationUnit and all are added as child
 /// modules of a single "root" module.
 pub fn parse_project(
-    string_table: &StringTable,
+    string_table: &mut StringTable,
     root_module: StringId,
     token_sets: Project<Vec<Token>>,
     trace_parser: TracingConfig,
@@ -174,7 +174,7 @@ fn tokenize_src_file(
 /// part of the data field (when a module is created with the same name that becomes the
 /// parent of all items within the source file).
 fn parse_src_tokens(
-    string_table: &StringTable,
+    string_table: &mut StringTable,
     src_tokens: CompilationUnit<Vec<Token>>,
 ) -> Result<CompilationUnit<Module<u32>>> {
     if let Some((name, parent_path)) = src_tokens.path.split_last() {
@@ -193,7 +193,7 @@ fn parse_src_tokens(
 }
 
 fn append_module(
-    string_table: &StringTable,
+    string_table: &mut StringTable,
     root: &mut Module<u32>,
     src_ast: CompilationUnit<Module<u32>>,
 ) {
