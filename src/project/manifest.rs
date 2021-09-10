@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     ast::{Item, Module, Node, Path, RoutineDef, StructDef, Type},
+    import::Import,
     semantics::semanticnode::SemanticContext,
 };
 
@@ -42,6 +43,13 @@ impl Manifest {
 
         // Create the manifest
         Manifest { routines, structs }
+    }
+
+    pub fn to_import(&self) -> Import {
+        Import {
+            funcs: self.get_functions(),
+            structs: self.structs.clone(),
+        }
     }
 
     pub fn get_functions(&self) -> Vec<(Path, Vec<Type>, Type)> {

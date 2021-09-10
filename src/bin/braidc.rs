@@ -27,7 +27,7 @@ fn main() {
     let project_name = get_project_name(&src_path).unwrap();
     let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
 
-    let imports: Vec<_> = match read_manifests(&config) {
+    let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
             print_errs(&errs);
@@ -71,6 +71,7 @@ fn main() {
     let trace_canonization = get_canonization_tracing(&config);
     let trace_type_resolver = get_type_resolver_tracing(&config);
 
+    let imports: Vec<_> = manifests.iter().map(|m| m.to_import()).collect();
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
     let semantic_ast = match resolve_types_with_imports(
@@ -97,7 +98,7 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, &string_table, project_name, &imports);
+    let mut llvm = llvm::IrGen::new(&context, &string_table, project_name, &manifests);
     match llvm.ingest(&semantic_ast, main_fn_id) {
         Ok(()) => (),
         Err(msg) => {

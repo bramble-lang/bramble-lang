@@ -56,7 +56,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
             where
                 V: SeqAccess<'de>,
             {
-                let name: String = seq
+                let _name: String = seq
                     .next_element()?
                     .ok_or_else(|| de::Error::invalid_length(0, &self))?;
                 let params = seq
@@ -113,7 +113,7 @@ impl<'de> Deserialize<'de> for RoutineDef<SemanticContext> {
                     }
                 }
 
-                let name = name.ok_or_else(|| de::Error::missing_field(NAME_FIELD))?;
+                let _name = name.ok_or_else(|| de::Error::missing_field(NAME_FIELD))?;
                 let params = params.ok_or_else(|| de::Error::missing_field(PARAMS_FIELD))?;
                 let ret_ty = ret_ty.ok_or_else(|| de::Error::missing_field(TY_FIELD))?;
                 let context = context.ok_or_else(|| de::Error::missing_field(CONTEXT_FIELD))?;

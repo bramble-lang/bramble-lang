@@ -1,8 +1,8 @@
+use crate::compiler::import::Import;
 use crate::result::Result;
 
 use crate::compiler::ast::*;
 use crate::diagnostics::{config::TracingConfig, DiagRecorder};
-use crate::project::manifest::Manifest;
 
 use super::super::{semanticnode::SemanticContext, stack::SymbolTableScopeStack};
 use super::Canonizable;
@@ -38,7 +38,7 @@ where
     pub fn new(
         name: &str,
         root: &'a mut Module<SemanticContext>,
-        imports: &[Manifest],
+        imports: &[Import],
         tracing: TracingConfig,
         format: T,
     ) -> ForEachPreOrderMut<T> {

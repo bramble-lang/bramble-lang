@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use log::*;
 
-use crate::{
-    compiler::ast::{Element, Module, Node, Path, StructDef, Type},
-    project::manifest::Manifest,
+use crate::compiler::{
+    ast::{Element, Module, Node, Path, StructDef, Type},
+    import::Import,
 };
 use crate::{compiler::lexer::stringtable::StringId, result::Result};
 
@@ -35,7 +35,7 @@ impl<'a> std::fmt::Display for SymbolTableScopeStack {
 }
 
 impl<'a> SymbolTableScopeStack {
-    pub fn new(root: &'a Module<SemanticContext>, imports: &[Manifest]) -> SymbolTableScopeStack {
+    pub fn new(root: &'a Module<SemanticContext>, imports: &[Import]) -> SymbolTableScopeStack {
         let mut ss = SymbolTableScopeStack {
             stack: vec![],
             head: SymbolTable::new(),
@@ -52,19 +52,19 @@ impl<'a> SymbolTableScopeStack {
         unsafe { self.root.as_ref().expect("Root has does not exist") }
     }
 
-    fn add_imports(&mut self, manifests: &[Manifest]) {
+    fn add_imports(&mut self, imports: &[Import]) {
         debug!("Adding Imports");
         // Load all struct imports first because imported functions may depend upon
         // imported structures (If any semantic analysis is done on functions)
-        for manifest in manifests.into_iter() {
-            for sd in manifest.get_structs().iter() {
+        for import in imports.into_iter() {
+            for sd in import.structs.iter() {
                 debug!("Import struct {}", sd);
                 self.import_structdef(sd);
             }
         }
 
-        for manifest in manifests.into_iter() {
-            for (path, params, ret_ty) in manifest.get_functions().iter() {
+        for import in imports.into_iter() {
+            for (path, params, ret_ty) in import.funcs.iter() {
                 debug!("Import function {}", path);
                 self.import_function(path.clone(), params.clone(), ret_ty.clone());
             }

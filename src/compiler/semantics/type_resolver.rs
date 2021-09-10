@@ -1,12 +1,12 @@
 use crate::compiler::{
     ast::*,
+    import::Import,
     lexer::stringtable::StringId,
     parser::parser::ParserContext,
     semantics::semanticnode::{SemanticAst, SemanticNode},
     semantics::symbol_table::*,
 };
 use crate::diagnostics::config::{Tracing, TracingConfig};
-use crate::manifest::Manifest;
 use crate::result::Result;
 use std::collections::HashMap;
 
@@ -37,7 +37,7 @@ pub fn resolve_types_with_imports(
     ast: &Module<ParserContext>,
     main_mod: StringId,
     main_fn: StringId,
-    imports: &[Manifest],
+    imports: &[Import],
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
     trace_type_resolver: TracingConfig,
@@ -69,7 +69,7 @@ impl Tracing for TypeResolver {
 impl TypeResolver {
     pub fn new(
         root: &Module<SemanticContext>,
-        imports: &[Manifest],
+        imports: &[Import],
         main_mod: StringId,
         main_fn: StringId,
     ) -> TypeResolver {
