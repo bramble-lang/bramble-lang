@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        ast::{Item, Module, Node, Path, RoutineDef, RoutineDefType, StructDef, Type},
+        ast::{Item, Module, Node, Parameter, Path, RoutineDef, RoutineDefType, StructDef, Type},
         import::Import,
         semantics::semanticnode::SemanticContext,
     },
@@ -55,16 +55,13 @@ impl Manifest {
         Self::new(st, &routines, &structs)
     }
 
-    pub fn to_import(&self) -> Import {
-        todo!()
-    }
+    /// Convert a Manifest of a Braid artifact to set of definitions which can be used
+    /// by the compiler for imported items.
+    pub fn to_import(&self, st: &mut StringTable) -> Import {
+        let structs = self.structs.iter().map(|s| s.to_sd(st)).collect();
+        let funcs = self.routines.iter().map(|r| r.to_rd(st)).collect();
 
-    pub fn get_functions(&self) -> Vec<(Path, Vec<Type>, Type)> {
-        todo!()
-    }
-
-    pub fn get_structs(&self) -> &Vec<StructDef<SemanticContext>> {
-        todo!()
+        Import { structs, funcs }
     }
 
     /// Loads a manifest from the given file.
@@ -112,6 +109,14 @@ impl ManifestRoutineDef {
             canon_path,
         })
     }
+
+    fn to_rd(&self, st: &mut StringTable) -> (Path, Vec<Type>, Type) {
+        let path = string_to_path(st, &self.canon_path);
+        let params = self.params.iter().map(|p| p.to_ty(st)).collect();
+        let ret_ty = self.ret_ty.to_ty(st);
+
+        (path, params, ret_ty)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -143,6 +148,24 @@ impl ManifestStructDef {
             canon_path,
             fields,
         })
+    }
+
+    fn to_sd(&self, st: &mut StringTable) -> StructDef<SemanticContext> {
+        let mut ctx = SemanticContext::new(0, 0, Type::Unit);
+        ctx.set_canonical_path(string_to_path(st, &self.canon_path));
+
+        let name = st.insert(self.name.clone());
+        let fields = self
+            .fields
+            .iter()
+            .map(|(fnm, fty)| Parameter {
+                context: ctx.clone(),
+                name: st.insert(fnm.into()),
+                ty: fty.to_ty(st),
+            })
+            .collect();
+
+        StructDef::new(name, ctx, fields)
     }
 }
 
@@ -189,6 +212,24 @@ impl ManifestType {
 
         Ok(man_ty)
     }
+
+    fn to_ty(&self, st: &mut StringTable) -> Type {
+        match self {
+            ManifestType::U8 => Type::U8,
+            ManifestType::U16 => Type::U16,
+            ManifestType::U32 => Type::U32,
+            ManifestType::U64 => Type::U64,
+            ManifestType::I8 => Type::I8,
+            ManifestType::I16 => Type::I16,
+            ManifestType::I32 => Type::I32,
+            ManifestType::I64 => Type::I64,
+            ManifestType::Bool => Type::Bool,
+            ManifestType::StringLiteral => Type::StringLiteral,
+            ManifestType::Array(_, _) => todo!(),
+            ManifestType::Unit => Type::Unit,
+            ManifestType::Custom(p) => Type::Custom(string_to_path(st, p)),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -202,6 +243,13 @@ impl ManifestRoutineDefType {
         match def {
             RoutineDefType::Function => Self::Function,
             RoutineDefType::Coroutine => Self::Coroutine,
+        }
+    }
+
+    fn to_def(&self) -> RoutineDefType {
+        match self {
+            ManifestRoutineDefType::Function => RoutineDefType::Function,
+            ManifestRoutineDefType::Coroutine => RoutineDefType::Coroutine,
         }
     }
 }
@@ -220,4 +268,22 @@ fn path_to_string(st: &StringTable, p: &Path) -> Result<String, String> {
         .ok_or(format!("Failed to convert Path to String"))?
         .join("::");
     Ok(ps)
+}
+
+fn string_to_path(st: &mut StringTable, p: &str) -> Path {
+    use crate::compiler::ast::Element;
+    let p = p.split("::");
+
+    let mut path = Path::new();
+    for e in p {
+        match e {
+            "self" => path.push(Element::Selph),
+            "super" => path.push(Element::Super),
+            "root" => path.push(Element::FileRoot),
+            "project" => path.push(Element::CanonicalRoot),
+            e => path.push(Element::Id(st.insert(e.into()))),
+        }
+    }
+
+    path
 }

@@ -3302,7 +3302,7 @@ mod type_resolver_tests {
             let result = resolve_types_with_imports(
                 &ast, 
                 main_mod, main_fn,
-                &vec![imports.to_import()], 
+                &vec![imports.to_import(&mut table)], 
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off, 

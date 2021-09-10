@@ -104,7 +104,7 @@ impl SemanticContext {
         &self.canonical_path
     }
 
-    pub(super) fn set_canonical_path(&mut self, path: Path) {
+    pub fn set_canonical_path(&mut self, path: Path) {
         self.canonical_path = path;
     }
 }
