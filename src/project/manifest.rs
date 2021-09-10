@@ -11,24 +11,31 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
-    routines: Vec<RoutineDef<SemanticContext>>,
-    structs: Vec<StructDef<SemanticContext>>,
+    routines: Vec<ManifestRoutineDef>,
+    structs: Vec<ManifestStructDef>,
 }
 
 impl Manifest {
     pub fn new(
+        st: &StringTable,
         routines: &[RoutineDef<SemanticContext>],
         structs: &[StructDef<SemanticContext>],
-    ) -> Manifest {
-        Manifest {
-            routines: routines.into(),
-            structs: structs.into(),
-        }
+    ) -> Result<Self, String> {
+        let routines = routines
+            .iter()
+            .map(|r| ManifestRoutineDef::from_rd(st, r))
+            .collect::<Result<Vec<_>, String>>()?;
+        let structs = structs
+            .iter()
+            .map(|s| ManifestStructDef::from_sd(st, s))
+            .collect::<Result<Vec<_>, String>>()?;
+
+        Ok(Manifest { routines, structs })
     }
 
-    pub fn extract(module: &Module<SemanticContext>) -> Manifest {
+    pub fn extract(st: &StringTable, module: &Module<SemanticContext>) -> Result<Self, String> {
         // Get list of all functions contained within a module and their paths
-        let routines = module
+        let routines: Vec<_> = module
             .deep_get_functions()
             .iter()
             .map(|f| match f {
@@ -38,38 +45,26 @@ impl Manifest {
             .collect();
 
         // Get list of all structures contained within the module
-        let structs = module
+        let structs: Vec<_> = module
             .deep_get_structs()
             .into_iter()
             .map(|s| s.clone())
             .collect();
 
         // Create the manifest
-        Manifest { routines, structs }
+        Self::new(st, &routines, &structs)
     }
 
     pub fn to_import(&self) -> Import {
-        Import {
-            funcs: self.get_functions(),
-            structs: self.structs.clone(),
-        }
+        todo!()
     }
 
     pub fn get_functions(&self) -> Vec<(Path, Vec<Type>, Type)> {
-        self.routines
-            .iter()
-            .map(|i| {
-                (
-                    i.get_context().get_canonical_path().clone(),
-                    i.params.iter().map(|p| p.ty.clone()).clone().collect(),
-                    i.ret_ty.clone(),
-                )
-            })
-            .collect()
+        todo!()
     }
 
     pub fn get_structs(&self) -> &Vec<StructDef<SemanticContext>> {
-        &self.structs
+        todo!()
     }
 
     /// Loads a manifest from the given file.
@@ -86,7 +81,7 @@ impl Manifest {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-struct ManifestRoutine {
+struct ManifestRoutineDef {
     name: String,
     canon_path: String,
     def: ManifestRoutineDefType,
@@ -94,8 +89,8 @@ struct ManifestRoutine {
     ret_ty: ManifestType,
 }
 
-impl ManifestRoutine {
-    fn from_rd(st: &StringTable, rd: RoutineDef<SemanticContext>) -> Result<Self, String> {
+impl ManifestRoutineDef {
+    fn from_rd(st: &StringTable, rd: &RoutineDef<SemanticContext>) -> Result<Self, String> {
         let name = st
             .get(rd.name)
             .ok_or(format!("Could not find routine name"))?
@@ -109,7 +104,7 @@ impl ManifestRoutine {
         let ret_ty = ManifestType::from_ty(st, &rd.ret_ty)?;
         let canon_path = path_to_string(st, rd.get_context().get_canonical_path())?;
 
-        Ok(ManifestRoutine {
+        Ok(ManifestRoutineDef {
             name,
             params,
             def,

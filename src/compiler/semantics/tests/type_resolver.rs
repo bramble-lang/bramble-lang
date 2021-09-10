@@ -3291,14 +3291,14 @@ mod type_resolver_tests {
 
             let mut import_context = SemanticContext::new(0, 0, Type::Unit);
             import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
-            let imports = Manifest::new(&vec![RoutineDef{
+            let imports = Manifest::new(&table, &vec![RoutineDef{
                 context: import_context,
                 def: RoutineDefType::Function,
                 name: test,
                 ret_ty: import_func.1.clone(),
                 params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), a, p)).collect(),
                 body: vec![],
-            }], &vec![]);
+            }], &vec![]).unwrap();
             let result = resolve_types_with_imports(
                 &ast, 
                 main_mod, main_fn,
