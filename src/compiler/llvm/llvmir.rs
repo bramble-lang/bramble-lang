@@ -27,6 +27,7 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::Element,
+        import::Import,
         lexer::stringtable::{StringId, StringTable},
     },
     result::Result,
@@ -52,7 +53,7 @@ pub struct IrGen<'ctx> {
     context: &'ctx context::Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
-    imports: &'ctx [Manifest],
+    imports: &'ctx [Import],
     string_pool: StringPool<'ctx>,
     string_table: &'ctx StringTable,
     registers: RegisterLookup<'ctx>,
@@ -65,7 +66,7 @@ impl<'ctx> IrGen<'ctx> {
         ctx: &'ctx context::Context,
         string_table: &'ctx StringTable,
         module: &str,
-        imports: &'ctx [Manifest],
+        imports: &'ctx [Import],
     ) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
@@ -231,7 +232,7 @@ impl<'ctx> IrGen<'ctx> {
         // upon these types
         for manifest in self.imports {
             // Add imported structures to the LLVM Module
-            for sd in manifest.get_structs() {
+            for sd in &manifest.structs {
                 self.add_struct_def(sd)
             }
         }
@@ -239,7 +240,7 @@ impl<'ctx> IrGen<'ctx> {
         // Add all function definitions that are imported from other projects
         for manifest in self.imports {
             // Add imported functions to the LLVM Module
-            for (path, params, ty) in &manifest.get_functions() {
+            for (path, params, ty) in &manifest.funcs {
                 self.add_fn_decl(&path.to_label(self.string_table), params, false, ty, 0);
             }
         }

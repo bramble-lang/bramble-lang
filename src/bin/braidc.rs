@@ -72,6 +72,7 @@ fn main() {
     let trace_type_resolver = get_type_resolver_tracing(&config);
 
     let imports: Vec<_> = manifests.iter().map(|m| m.to_import()).collect();
+
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
     let semantic_ast = match resolve_types_with_imports(
@@ -98,7 +99,7 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, &string_table, project_name, &manifests);
+    let mut llvm = llvm::IrGen::new(&context, &string_table, project_name, &imports);
     match llvm.ingest(&semantic_ast, main_fn_id) {
         Ok(()) => (),
         Err(msg) => {
