@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        ast::{Item, Module, Node, Path, RoutineDef, StructDef, Type},
+        ast::{Item, Module, Node, Path, RoutineDef, RoutineDefType, StructDef, Type},
         import::Import,
         semantics::semanticnode::SemanticContext,
     },
@@ -85,9 +85,11 @@ impl Manifest {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct ManifestRoutine {
     name: String,
     canon_path: String,
+    def: ManifestRoutineDefType,
     params: Vec<ManifestType>,
     ret_ty: ManifestType,
 }
@@ -103,18 +105,21 @@ impl ManifestRoutine {
             .iter()
             .map(|p| ManifestType::from_ty(st, &p.ty))
             .collect::<Result<_, String>>()?;
+        let def = ManifestRoutineDefType::from_def(rd.def);
         let ret_ty = ManifestType::from_ty(st, &rd.ret_ty)?;
         let canon_path = path_to_string(st, rd.get_context().get_canonical_path())?;
 
         Ok(ManifestRoutine {
             name,
             params,
+            def,
             ret_ty,
             canon_path,
         })
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct ManifestStructDef {
     name: String,
     canon_path: String,
@@ -146,6 +151,7 @@ impl ManifestStructDef {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum ManifestType {
     U8,
     U16,
@@ -187,6 +193,21 @@ impl ManifestType {
         };
 
         Ok(man_ty)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+enum ManifestRoutineDefType {
+    Function,
+    Coroutine,
+}
+
+impl ManifestRoutineDefType {
+    fn from_def(def: RoutineDefType) -> Self {
+        match def {
+            RoutineDefType::Function => Self::Function,
+            RoutineDefType::Coroutine => Self::Coroutine,
+        }
     }
 }
 
