@@ -9,6 +9,8 @@ use crate::{
     StringTable,
 };
 
+/// Data type used to represent items from a compiled artifact which can be imported by other
+/// projects.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
     routines: Vec<ManifestRoutineDef>,
@@ -77,6 +79,8 @@ impl Manifest {
     }
 }
 
+/// Represent a routine definition in a way which can be serialized to a manifest file
+/// and deserialized from a manifest file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct ManifestRoutineDef {
     name: String,
@@ -119,6 +123,8 @@ impl ManifestRoutineDef {
     }
 }
 
+/// Represent a structure definition in a way which can be serialized to a manifest file
+/// and deserialized from a manifest file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct ManifestStructDef {
     name: String,
@@ -169,6 +175,7 @@ impl ManifestStructDef {
     }
 }
 
+/// Represent a Type in the manifest file
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum ManifestType {
     U8,
