@@ -8,10 +8,10 @@ pub mod tests {
         lexer::stringtable::StringTable,
         lexer::{tokens::Token, LexerError},
         parser::{expression::*, statement::*, tokenstream::TokenStream},
-        Lexer,
+        CompilerError, Lexer,
     };
 
-    type LResult = std::result::Result<Vec<Token>, LexerError>;
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     #[test]
     fn parse_unary_operators() {

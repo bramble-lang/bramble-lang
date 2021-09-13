@@ -1,6 +1,6 @@
 use tokens::Primitive;
 
-use super::CompilerError;
+use super::CompilerErrorDisplay;
 
 mod tests;
 
@@ -10,11 +10,10 @@ pub(crate) mod tokens;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LexerError {
-    line: u32,
     kind: LexerErrorKind,
 }
 
-impl CompilerError for LexerError {
+impl CompilerErrorDisplay for LexerError {
     fn format(&self, _: &crate::StringTable) -> Result<String, String> {
         use LexerErrorKind::*;
         let msg = match self.kind {
@@ -26,7 +25,7 @@ impl CompilerError for LexerError {
             UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim),
         };
 
-        Ok(format!("L{}: {}", self.line, msg))
+        Ok(format!("{}", msg))
     }
 }
 

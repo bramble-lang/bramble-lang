@@ -5,6 +5,7 @@ mod type_resolver_tests {
             ast::*, lexer::tokens::Token, lexer::LexerError, parser::parser,
             semantics::semanticnode::SemanticContext, Lexer,
             lexer::stringtable::StringTable,
+        CompilerError,
         },
         diagnostics::config::TracingConfig,
         project::manifest::Manifest,
@@ -12,7 +13,7 @@ mod type_resolver_tests {
 
     use super::super::super::type_resolver::*;
     
-    type LResult = std::result::Result<Vec<Token>, LexerError>;
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     #[test]
     pub fn test_identifiers() {

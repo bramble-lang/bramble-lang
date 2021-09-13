@@ -25,6 +25,20 @@ meant for human consumption from string ids to the correct value.
 The biggest problem is probably Paths, because a path is a set of StringIds, while
 everything else is a single StringId.
 
+## Commons
+What are the data which are common across all or most errors in the compiler?
+
+- line #
+- source code token
+- col #
+- File name
+- 
+
+The things which are common across all errors that are thrown within the Compiler
+module should be pulled into a single type and then things which are specific
+to submodules (if they exist) should be provided in enums or submodule specific
+structs which are composed of the supra-common data.
+
 ## Designs
 ### Converter Value
 Provide a type which stores a string ID given by the compiler, then at the UI level

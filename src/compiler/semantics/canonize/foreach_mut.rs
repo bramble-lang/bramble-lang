@@ -431,12 +431,12 @@ where
 mod tests {
     use crate::compiler::{
         lexer::stringtable::StringTable, lexer::tokens::Token, lexer::LexerError, parser::parser,
-        semantics::semanticnode::SemanticAst, Lexer,
+        semantics::semanticnode::SemanticAst, CompilerError, Lexer,
     };
 
     use super::*;
 
-    type LResult = std::result::Result<Vec<Token>, LexerError>;
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     #[test]
     fn empty_module_ignore_stack() {

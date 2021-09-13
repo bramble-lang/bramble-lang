@@ -586,9 +586,9 @@ mod test {
         ast::{Statement, Type},
         lexer::stringtable::StringTable,
         lexer::{tokens::Token, LexerError},
-        Lexer,
+        CompilerError, Lexer,
     };
-    type LResult = std::result::Result<Vec<Token>, LexerError>;
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     #[test]
     fn parse_number() {

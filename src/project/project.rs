@@ -6,7 +6,7 @@ use crate::compiler::{
         stringtable::{StringId, StringTable},
         tokens::Token,
     },
-    parser, CompilerError,
+    parser, CompilerErrorDisplay,
 };
 use crate::{diagnostics::config::TracingConfig, io::get_files};
 
