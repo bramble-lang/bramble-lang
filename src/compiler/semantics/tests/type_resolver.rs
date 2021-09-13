@@ -3308,7 +3308,7 @@ mod type_resolver_tests {
                 TracingConfig::Off, 
             );
             match expected {
-                Ok(_) => assert!(result.is_ok(), "L{}: {:?} got {:?}", line, expected, result),
+                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result),
                 Err(msg) => assert_eq!(result.err(), Some(msg.into())),
             }
         }

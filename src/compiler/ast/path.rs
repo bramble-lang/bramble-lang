@@ -62,7 +62,12 @@ impl Path {
     }
 
     pub fn push(&mut self, step: Element) {
-        self.path.push(step)
+        // Check if this is the creation of a canonical path
+        if self.path.len() == 0 && step == Element::CanonicalRoot {
+            self.is_canonical = true;
+        } else {
+            self.path.push(step)
+        }
     }
 
     pub fn pop(&mut self) -> Option<Element> {

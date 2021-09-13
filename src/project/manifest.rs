@@ -246,6 +246,7 @@ enum ManifestRoutineDefType {
 }
 
 impl ManifestRoutineDefType {
+    /// Convert a Compiler Routine Definition Type value to a Manifest Routine Definition Type value.
     fn from_def(def: RoutineDefType) -> Self {
         match def {
             RoutineDefType::Function => Self::Function,
@@ -253,6 +254,7 @@ impl ManifestRoutineDefType {
         }
     }
 
+    /// Convert a Manifest Routine Definition Type to a Compiler Routine Definition Type
     fn to_def(&self) -> RoutineDefType {
         match self {
             ManifestRoutineDefType::Function => RoutineDefType::Function,
@@ -261,22 +263,30 @@ impl ManifestRoutineDefType {
     }
 }
 
+/// Convert a Compiler Path value into the Manifest file string format.
 fn path_to_string(st: &StringTable, p: &Path) -> Result<String, String> {
-    let ps = p
-        .iter()
-        .map(|e| match e {
-            crate::compiler::ast::Element::FileRoot => Some("root"),
-            crate::compiler::ast::Element::CanonicalRoot => Some("project"),
-            crate::compiler::ast::Element::Selph => Some("self"),
-            crate::compiler::ast::Element::Super => Some("super"),
-            crate::compiler::ast::Element::Id(id) => st.get(*id),
-        })
-        .collect::<Option<Vec<&str>>>()
-        .ok_or(format!("Failed to convert Path to String"))?
-        .join("::");
-    Ok(ps)
+    let mut ps = vec![];
+    if p.is_canonical() {
+        ps.push("project");
+    }
+
+    for e in p.iter() {
+        let es = match e {
+            crate::compiler::ast::Element::FileRoot => "root",
+            crate::compiler::ast::Element::CanonicalRoot => "project",
+            crate::compiler::ast::Element::Selph => "self",
+            crate::compiler::ast::Element::Super => "super",
+            crate::compiler::ast::Element::Id(id) => st
+                .get(*id)
+                .ok_or(format!("Failed to convert Path to String"))?,
+        };
+        ps.push(es);
+    }
+
+    Ok(ps.join("::"))
 }
 
+/// Convert a Manifest file Path string to a Compiler Path value.
 fn string_to_path(st: &mut StringTable, p: &str) -> Path {
     use crate::compiler::ast::Element;
     let p = p.split("::");
