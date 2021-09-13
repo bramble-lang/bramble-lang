@@ -265,42 +265,10 @@ impl ManifestRoutineDefType {
 
 /// Convert a Compiler Path value into the Manifest file string format.
 fn path_to_string(st: &StringTable, p: &Path) -> Result<String, String> {
-    let mut ps = vec![];
-    if p.is_canonical() {
-        ps.push("project");
-    }
-
-    for e in p.iter() {
-        let es = match e {
-            crate::compiler::ast::Element::FileRoot => "root",
-            crate::compiler::ast::Element::CanonicalRoot => "project",
-            crate::compiler::ast::Element::Selph => "self",
-            crate::compiler::ast::Element::Super => "super",
-            crate::compiler::ast::Element::Id(id) => st
-                .get(*id)
-                .ok_or(format!("Failed to convert Path to String"))?,
-        };
-        ps.push(es);
-    }
-
-    Ok(ps.join("::"))
+    p.to_human_string(st)
 }
 
 /// Convert a Manifest file Path string to a Compiler Path value.
 fn string_to_path(st: &mut StringTable, p: &str) -> Path {
-    use crate::compiler::ast::Element;
-    let p = p.split("::");
-
-    let mut path = Path::new();
-    for e in p {
-        match e {
-            "self" => path.push(Element::Selph),
-            "super" => path.push(Element::Super),
-            "root" => path.push(Element::FileRoot),
-            "project" => path.push(Element::CanonicalRoot),
-            e => path.push(Element::Id(st.insert(e.into()))),
-        }
-    }
-
-    path
+    Path::from_human_string(st, p)
 }

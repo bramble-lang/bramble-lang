@@ -161,21 +161,54 @@ impl Path {
     pub fn to_label(&self, table: &StringTable) -> String {
         self.path
             .iter()
-            .map(|element| Self::element_to_str(table, *element))
+            .map(|element| Self::element_to_str(table, *element).unwrap())
             .collect::<Vec<&str>>()
             .join("_")
     }
 
-    pub fn element_to_str(table: &StringTable, element: Element) -> &str {
-        match element {
+    /// Convert a path into a human readable string, by replacing all String IDs
+    /// with their respective String Values.
+    pub fn to_human_string(&self, table: &StringTable) -> Result<String> {
+        let mut ps = vec![];
+        if self.is_canonical() {
+            ps.push("project");
+        }
+
+        for e in self.iter() {
+            let es = Self::element_to_str(table, *e)?;
+            ps.push(es.into());
+        }
+
+        Ok(ps.join("::"))
+    }
+
+    pub fn from_human_string(table: &mut StringTable, p: &str) -> Path {
+        let p = p.split("::");
+
+        let mut path = Path::new();
+        for e in p {
+            match e {
+                "self" => path.push(Element::Selph),
+                "super" => path.push(Element::Super),
+                "root" => path.push(Element::FileRoot),
+                "project" => path.push(Element::CanonicalRoot),
+                e => path.push(Element::Id(table.insert(e.into()))),
+            }
+        }
+
+        path
+    }
+
+    pub fn element_to_str(table: &StringTable, element: Element) -> Result<&str> {
+        Ok(match element {
             Element::FileRoot => ROOT_PATH,
             Element::CanonicalRoot => CANONICAL_ROOT,
             Element::Selph => SELF,
             Element::Super => SUPER,
             Element::Id(id) => table
                 .get(id)
-                .expect(&format!("Could not find Id {} in {:?}", id, table)),
-        }
+                .ok_or(format!("Could not find Id {} in {:?}", id, table))?,
+        })
     }
 }
 
