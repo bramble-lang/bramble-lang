@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use super::{
     node::{
         Context, Node, NodeType, {PostOrderIter, PreOrderIter},
@@ -9,7 +7,7 @@ use super::{
 };
 use crate::{compiler::lexer::stringtable::StringId, result::Result};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct StructDef<M> {
     context: M,
     name: StringId,

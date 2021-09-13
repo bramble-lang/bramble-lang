@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use crate::compiler::lexer::stringtable::StringId;
 
 use super::{
@@ -9,7 +7,7 @@ use super::{
     ty::Type,
 };
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
     pub context: M,
     pub name: StringId,

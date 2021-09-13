@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use crate::compiler::{
     ast::*, lexer::stringtable::StringId, semantics::semanticnode::SemanticContext,
 };
@@ -29,7 +27,7 @@ use crate::result::Result;
  * know about are the ones in the `SymbolTable`s of the nodes that comprise the path from
  * the root of the AST to the given node.
  */
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     ty: ScopeType,
     sym: Vec<Symbol>,
@@ -217,7 +215,7 @@ impl std::fmt::Display for SymbolTable {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
     pub name: StringId,
     pub ty: Type,
@@ -234,7 +232,7 @@ impl std::fmt::Display for Symbol {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub(super) enum ScopeType {
     Local,
     Routine(StringId),

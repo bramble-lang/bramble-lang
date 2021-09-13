@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use crate::{compiler::lexer::stringtable::StringId, diagnostics::config::TracingConfig};
 use crate::{
     compiler::{ast::*, parser::parser::ParserContext},
@@ -8,7 +6,7 @@ use crate::{
 
 use super::symbol_table::SymbolTable;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
     id: u32,
     ln: u32,

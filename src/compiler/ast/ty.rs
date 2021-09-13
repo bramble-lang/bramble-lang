@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
-
 use crate::compiler::lexer::stringtable::StringId;
 
 use super::{path::Path, HasVarArgs};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     U8,
     U16,

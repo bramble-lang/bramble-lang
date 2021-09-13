@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use crate::{
     compiler::lexer::stringtable::{StringId, StringTable},
     result::Result,
@@ -10,7 +8,7 @@ pub const ROOT_PATH: &str = "root";
 pub const SELF: &str = "self";
 pub const SUPER: &str = "super";
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Element {
     FileRoot,
     CanonicalRoot,
@@ -31,7 +29,7 @@ impl std::fmt::Display for Element {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Path {
     path: Vec<Element>,
     is_canonical: bool,

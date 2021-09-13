@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
-
 /**
 Stores a table of all distinct strings read from source code files.
 The different IR structures in the compiler shall use IDs which map
@@ -58,7 +56,7 @@ impl StringTable {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct StringId(u32);
 
 impl StringId {
