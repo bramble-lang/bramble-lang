@@ -42,10 +42,6 @@ macro_rules! err {
     };
 }
 
-/*macor_rules! err(line: u32, kind: LexerErrorKind) -> LexerError {
-    LexerError { line, kind }
-}*/
-
 struct LexerBranch<'a, 'st> {
     lexer: &'a mut Lexer<'st>,
     index: usize,
