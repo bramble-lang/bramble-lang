@@ -1,4 +1,4 @@
-use super::CompilerErrorDisplay;
+use super::{CompilerError, CompilerErrorDisplay};
 
 mod statement;
 mod tests;
@@ -6,6 +6,8 @@ mod tokenstream;
 
 pub mod expression;
 pub mod parser;
+
+type ParserError = CompilerError<ParserErrorKind>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParserErrorKind {
@@ -21,6 +23,7 @@ pub enum ParserErrorKind {
     PathExpectedColons,
     ArrayExpectedIntLiteral,
     IdDeclExpectedType,
+    ExpectedButFound(super::lexer::tokens::Lex, super::lexer::tokens::Lex),
 }
 
 impl CompilerErrorDisplay for ParserErrorKind {

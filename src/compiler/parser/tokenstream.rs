@@ -1,8 +1,17 @@
+use super::{ParserError, ParserErrorKind};
 use crate::compiler::lexer::{
     stringtable::StringId,
     tokens::{Lex, Token},
 };
-use crate::result::Result;
+use crate::compiler::CompilerError;
+//use crate::result::Result;
+
+/// Helper macro to get rid of repitition of boilerplate code.
+macro_rules! err {
+    ($ln: expr, $kind: expr) => {
+        Err(CompilerError::new($ln, $kind))
+    };
+}
 
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,
@@ -52,14 +61,18 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token> {
+    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, ParserError> {
         let (line, found) = match self.peek() {
             Some(t) => (t.l, t.s.to_string()),
             None => (0, "EOF".into()),
         };
         match self.next_if(test) {
             Some(t) => Ok(t),
-            None => Err(format!("L{}: Expected {}, but found {}", line, test, found)),
+            None =>
+            //Err(format!("L{}: Expected {}, but found {}", line, test, found)),
+            {
+                err!(line, ParserErrorKind::ExpectedButFound(test, found))
+            }
         }
     }
 
