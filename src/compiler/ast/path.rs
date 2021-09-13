@@ -209,25 +209,6 @@ impl From<Vec<Element>> for Path {
     }
 }
 
-/*impl From<Vec<&str>> for Path {
-    fn from(v: Vec<&str>) -> Self {
-        let is_canonical = v.first().map_or(false, |f| *f == CANONICAL_ROOT);
-        let v = if is_canonical { &v[1..] } else { &v };
-        Path {
-            path: v.iter().map(|e| (*e).into()).collect(),
-            is_canonical,
-        }
-    }
-}*/
-
-/*impl std::hash::Hash for Path {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        for s in self.path.iter() {
-            s.hash(state);
-        }
-    }
-}*/
-
 #[cfg(test)]
 mod test_path {
     use super::*;
