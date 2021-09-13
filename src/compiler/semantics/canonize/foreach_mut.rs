@@ -430,12 +430,13 @@ where
 #[cfg(test)]
 mod tests {
     use crate::compiler::{
-        lexer::stringtable::StringTable, lexer::tokens::Token, parser::parser,
+        lexer::stringtable::StringTable, lexer::tokens::Token, lexer::LexerError, parser::parser,
         semantics::semanticnode::SemanticAst, Lexer,
     };
-    use crate::result::Result;
 
     use super::*;
+
+    type LResult = std::result::Result<Vec<Token>, LexerError>;
 
     #[test]
     fn empty_module_ignore_stack() {
@@ -446,7 +447,7 @@ mod tests {
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let ast = parser::parse(test, &tokens)
             .expect(&format!("{}", text))
@@ -478,7 +479,7 @@ mod tests {
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let ast = parser::parse(test, &tokens)
             .expect(&format!("{}", text))
@@ -535,7 +536,7 @@ mod tests {
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let ast = parser::parse(test, &tokens)
             .expect(&format!("{}", text))

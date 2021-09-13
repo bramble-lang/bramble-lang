@@ -2,7 +2,7 @@
 mod type_resolver_tests {
     use crate::{
         compiler::{
-            ast::*, lexer::tokens::Token, parser::parser,
+            ast::*, lexer::tokens::Token, lexer::LexerError, parser::parser,
             semantics::semanticnode::SemanticContext, Lexer,
             lexer::stringtable::StringTable,
         },
@@ -11,7 +11,8 @@ mod type_resolver_tests {
     };
 
     use super::super::super::type_resolver::*;
-    use crate::result::Result;
+    
+    type LResult = std::result::Result<Vec<Token>, LexerError>;
 
     #[test]
     pub fn test_identifiers() {
@@ -137,7 +138,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(test, &tokens)
                 .expect(&format!("{}", text))
@@ -233,7 +234,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -295,7 +296,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -344,7 +345,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -401,7 +402,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -469,7 +470,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -524,7 +525,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -573,7 +574,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -616,7 +617,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -814,7 +815,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -939,7 +940,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1009,7 +1010,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1090,7 +1091,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1172,7 +1173,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1254,7 +1255,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1345,7 +1346,7 @@ mod type_resolver_tests {
                 let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                         .tokenize()
                         .into_iter()
-                        .collect::<Result<_>>()
+                        .collect::<LResult>()
                         .unwrap();
                 let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let module = resolve_types(
@@ -1406,7 +1407,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1485,7 +1486,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1603,7 +1604,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1796,7 +1797,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1889,7 +1890,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -1979,7 +1980,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2090,7 +2091,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2261,7 +2262,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main,&tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2378,7 +2379,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2478,7 +2479,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2565,7 +2566,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2638,7 +2639,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2715,7 +2716,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2820,7 +2821,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -2899,7 +2900,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
@@ -3131,7 +3132,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
@@ -3177,7 +3178,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                     .tokenize()
                     .into_iter()
-                    .collect::<Result<_>>()
+                    .collect::<LResult>()
                     .unwrap();
                 let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let result = resolve_types(
@@ -3285,7 +3286,7 @@ mod type_resolver_tests {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let ast = parser::parse(std, &tokens).unwrap().unwrap();
 

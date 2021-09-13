@@ -6,7 +6,7 @@ use crate::compiler::{
         stringtable::{StringId, StringTable},
         tokens::Token,
     },
-    parser,
+    parser, CompilerError,
 };
 use crate::{diagnostics::config::TracingConfig, io::get_files};
 
@@ -139,8 +139,10 @@ fn tokenize_src_file(
     let mut lexer = crate::compiler::Lexer::new(string_table, &src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
-    let (tokens, errors): (Vec<Result<Token>>, Vec<Result<Token>>) =
-        tokens.into_iter().partition(|t| t.is_ok());
+    let (tokens, errors): (
+        Vec<std::result::Result<Token, _>>,
+        Vec<std::result::Result<Token, _>>,
+    ) = tokens.into_iter().partition(|t| t.is_ok());
 
     if errors.len() == 0 {
         let tokens: Vec<Token> = tokens
@@ -159,7 +161,7 @@ fn tokenize_src_file(
             .into_iter()
             .filter_map(|t| match t {
                 Ok(_) => None,
-                Err(msg) => Some(msg),
+                Err(msg) => Some(msg.format(string_table).unwrap()),
             })
             .collect();
         Err(errors)

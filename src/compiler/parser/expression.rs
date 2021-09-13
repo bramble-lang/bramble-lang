@@ -585,9 +585,10 @@ mod test {
     use crate::compiler::{
         ast::{Statement, Type},
         lexer::stringtable::StringTable,
+        lexer::{tokens::Token, LexerError},
         Lexer,
     };
-    use crate::result::Result;
+    type LResult = std::result::Result<Vec<Token>, LexerError>;
 
     #[test]
     fn parse_number() {
@@ -606,7 +607,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match number(&mut stream) {
@@ -673,7 +674,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match array_value(&mut stream) {
@@ -696,7 +697,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             assert_eq!(array_value(&mut stream), Err((*msg).into()), "{:?}", text);
@@ -791,7 +792,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
@@ -816,7 +817,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             assert_eq!(expression(&mut stream), Err((*msg).into()), "{:?}", text);
@@ -832,7 +833,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match member_access(&mut stream) {
@@ -860,7 +861,7 @@ mod test {
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
@@ -891,7 +892,7 @@ mod test {
             let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             assert_eq!(
@@ -912,7 +913,7 @@ mod test {
         let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
