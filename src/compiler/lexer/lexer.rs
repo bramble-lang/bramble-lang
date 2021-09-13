@@ -1,4 +1,4 @@
-use crate::result::Result;
+//use crate::result::Result;
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
 use stdext::function_name;
@@ -8,6 +8,7 @@ use crate::diagnostics::config::TracingConfig;
 use super::{
     stringtable::{StringId, StringTable},
     tokens::{Lex, Primitive, Token},
+    LexerError, LexerErrorKind,
 };
 use Lex::*;
 
@@ -33,6 +34,19 @@ macro_rules! trace {
         }
     };
 }
+
+macro_rules! err {
+    ($ln: expr, $kind: expr) => {
+        Err(LexerError {
+            line: $ln,
+            kind: $kind,
+        })
+    };
+}
+
+/*macor_rules! err(line: u32, kind: LexerErrorKind) -> LexerError {
+    LexerError { line, kind }
+}*/
 
 struct LexerBranch<'a, 'st> {
     lexer: &'a mut Lexer<'st>,
@@ -190,7 +204,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenize(&mut self) -> Vec<Result<Token>> {
+    pub fn tokenize(&mut self) -> Vec<Result<Token, LexerError>> {
         let mut tokens = vec![];
 
         while self.index < self.chars.len() {
@@ -207,10 +221,10 @@ impl<'a> Lexer<'a> {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(Err(format!(
-                    "The lexer is locked, at {:?}, and cannot proceed",
-                    self.current_token()
-                )));
+                tokens.push(err!(
+                    self.line(),
+                    LexerErrorKind::Locked(self.current_token())
+                ));
                 break;
             }
         }
@@ -218,7 +232,7 @@ impl<'a> Lexer<'a> {
         tokens
     }
 
-    fn next_token(&mut self) -> Result<Option<Token>> {
+    fn next_token(&mut self) -> Result<Option<Token>, LexerError> {
         self.consume_line_comment();
         self.consume_block_comment();
 
@@ -237,7 +251,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn consume_literal(&mut self) -> Result<Option<Token>> {
+    fn consume_literal(&mut self) -> Result<Option<Token>, LexerError> {
         trace!(self);
         match self.consume_integer()? {
             Some(i) => Ok(Some(i)),
@@ -260,7 +274,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn consume_identifier(&mut self) -> Result<Option<Token>> {
+    pub fn consume_identifier(&mut self) -> Result<Option<Token>, LexerError> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch
@@ -285,7 +299,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn consume_string_literal(&mut self) -> Result<Option<Token>> {
+    fn consume_string_literal(&mut self) -> Result<Option<Token>, LexerError> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -299,8 +313,11 @@ impl<'a> Lexer<'a> {
                 if c == '\\' {
                     match branch.next() {
                         Some(c) if Self::is_escape_code(c) => (),
-                        Some(c) => return Err(format!("Invalid escape sequence \\{}", c)),
-                        None => return Err("Expected escape character after \\".into()),
+                        Some(c) => {
+                            return err!(self.line(), LexerErrorKind::InvalidEscapeSequence(c))
+                        }
+
+                        None => return err!(self.line(), LexerErrorKind::ExpectedEscapeCharacter),
                     }
                 }
             }
@@ -318,7 +335,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn consume_integer(&mut self) -> Result<Option<Token>> {
+    pub fn consume_integer(&mut self) -> Result<Option<Token>, LexerError> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -348,10 +365,7 @@ impl<'a> Lexer<'a> {
             .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
-            return Err(format!(
-                "L{}: Invalid integer, should not contain characters",
-                self.line
-            ));
+            return err!(self.line(), LexerErrorKind::InvalidInteger);
         }
 
         branch.merge();
@@ -364,7 +378,7 @@ impl<'a> Lexer<'a> {
         offset: u32,
         int_token: &str,
         prim: Primitive,
-    ) -> Result<Option<Token>> {
+    ) -> Result<Option<Token>, LexerError> {
         match prim {
             Primitive::U8 => Ok(Some(Token::new(
                 line,
@@ -407,12 +421,13 @@ impl<'a> Lexer<'a> {
                 I64(int_token.parse::<i64>().unwrap()),
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
-                Err(format!("Unexpected primitive type after number: {}", prim))
+                //Err(format!("Unexpected primitive type after number: {}", prim))
+                err!(line, LexerErrorKind::UnexpectedSuffixType(prim))
             }
         }
     }
 
-    fn consume_int_suffix(branch: &mut LexerBranch) -> Result<Option<Primitive>> {
+    fn consume_int_suffix(branch: &mut LexerBranch) -> Result<Option<Primitive>, LexerError> {
         Ok(if branch.next_ifn("i8") {
             Some(Primitive::I8)
         } else if branch.next_ifn("i16") {
@@ -434,7 +449,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn consume_operator(&mut self) -> Result<Option<Token>> {
+    pub fn consume_operator(&mut self) -> Result<Option<Token>, LexerError> {
         trace!(self);
         let line = self.line;
         let offset = self.offset;
