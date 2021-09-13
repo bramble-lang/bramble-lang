@@ -232,7 +232,7 @@ impl ManifestType {
             ManifestType::I64 => Type::I64,
             ManifestType::Bool => Type::Bool,
             ManifestType::StringLiteral => Type::StringLiteral,
-            ManifestType::Array(_, _) => todo!(),
+            ManifestType::Array(box el_ty, sz) => Type::Array(box el_ty.to_ty(st), *sz),
             ManifestType::Unit => Type::Unit,
             ManifestType::Custom(p) => Type::Custom(string_to_path(st, p)),
         }
