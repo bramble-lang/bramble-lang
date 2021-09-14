@@ -84,42 +84,42 @@ mod type_resolver_tests {
                     let k: i64 := false;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i64 but got bool"),
+                Err("L2: Bind expected i64 but got bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i32 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i32 but got i64"),
+                Err("L2: Bind expected i32 but got i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: i16 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i16 but got i64"),
+                Err("L2: Bind expected i16 but got i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: i8 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i8 but got i64"),
+                Err("L2: Bind expected i8 but got i64"),
             ),
             (
                 "fn main() -> u64 {
                     let k: u64 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected u64 but got i64"),
+                Err("L2: Bind expected u64 but got i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k;
                 }",
-                Err("Semantic: L3: Return expected bool but got i64"),
+                Err("L3: Return expected bool but got i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -214,7 +214,7 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             println!("Test: {}", ln);
@@ -326,7 +326,7 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -437,21 +437,21 @@ mod type_resolver_tests {
                 "fn my_main() -> i32 {
                     return 0i32;
                 }",
-                Err("Semantic: L1: my_main must return an i64. It must be of type () -> i64"),
+                Err("L1: my_main must be a function of type () -> i64"),
             ),
             (
                 line!(),
                 "fn my_main(i: i32) -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: my_main must take no parameters. It must be of type () -> i64"),
+                Err("L1: my_main must take no parameters. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "co my_main() -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: my_main must be a function of type () -> i64"),
+                Err("L1: my_main must be a function of type () -> i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -747,7 +747,7 @@ mod type_resolver_tests {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
                     return k;
                 }",
-                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+                Err("L2: + expected i32 but found i32 and i64"),
             ),
             (
                 line!(),
@@ -755,7 +755,7 @@ mod type_resolver_tests {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2 + 3));
                     return k;
                 }",
-                Err("Semantic: L2: / expected i32 but found i32 and i64"),
+                Err("L2: / expected i32 but found i32 and i64"),
             ),
             (
                 line!(),
@@ -763,7 +763,7 @@ mod type_resolver_tests {
                     let k: i64 := 1 + 5i32;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i64 but found i64 and i32"),
+                Err("L2: + expected i64 but found i64 and i32"),
             ),
             (
                 line!(),
@@ -771,7 +771,7 @@ mod type_resolver_tests {
                     let k: i64 := 1i32 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+                Err("L2: + expected i32 but found i32 and i64"),
             ),
             (
                 line!(),
@@ -779,7 +779,7 @@ mod type_resolver_tests {
                     let k: i64 := 1i8 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i8 but found i8 and i64"),
+                Err("L2: + expected i8 but found i8 and i64"),
             ),
             (
                 line!(),
@@ -787,7 +787,7 @@ mod type_resolver_tests {
                     let k: u64 := 1u64 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected u64 but found u64 and i64"), // TODO: Change this error message to specify the right operand is wrong
+                Err("L2: + expected u64 but found u64 and i64"), // TODO: Change this error message to specify the right operand is wrong
             ),
             (
                 line!(),
@@ -795,7 +795,7 @@ mod type_resolver_tests {
                     let k: i64 := 1i16 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i16 but found i16 and i64"),
+                Err("L2: + expected i16 but found i16 and i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -899,14 +899,14 @@ mod type_resolver_tests {
                     let k: bool := false;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i32 or i64 but found bool"), // TODO: Change this error message to include i8 and i16
+                Err("L3: - expected i32 or i64 but found bool"), // TODO: Change this error message to include i8 and i16
             ),
             (
                 "fn main() -> u64 {
                     let k: u64 := 5u64;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i32 or i64 but found u64"),
+                Err("L3: - expected i32 or i64 but found u64"),
             ),
             (
                 "fn main() -> bool {
@@ -920,7 +920,7 @@ mod type_resolver_tests {
                     let k: i64 := 5;
                     return !k;
                 }",
-                Err("Semantic: L3: ! expected bool but found i64"),
+                Err("L3: ! expected bool but found i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -976,21 +976,21 @@ mod type_resolver_tests {
                     let k: i64 := 1 + false;
                     return k + 3;
                 }",
-                Err("Semantic: L2: + expected i64 but found i64 and bool"),
+                Err("L2: + expected i64 but found i64 and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := \"hello\" + 5;
                     return k + 3;
                 }",
-                Err("Semantic: L2: + expected i64 but found string and i64"),
+                Err("L2: + expected i64 but found string and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := true;
                     return k + 3;
                 }",
-                Err("Semantic: L3: + expected i64 but found bool and i64"),
+                Err("L3: + expected i64 but found bool and i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -1057,21 +1057,21 @@ mod type_resolver_tests {
                     let k: i64 := 1 * false;
                     return k * 3;
                 }",
-                Err("Semantic: L2: * expected i64 but found i64 and bool"),
+                Err("L2: * expected i64 but found i64 and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := \"hello\" * 5;
                     return k * 3;
                 }",
-                Err("Semantic: L2: * expected i64 but found string and i64"),
+                Err("L2: * expected i64 but found string and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := true;
                     return k * 3;
                 }",
-                Err("Semantic: L3: * expected i64 but found bool and i64"),
+                Err("L3: * expected i64 but found bool and i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -1139,21 +1139,21 @@ mod type_resolver_tests {
                     let k: bool := true && 1;
                     return k && true;
                 }",
-                Err("Semantic: L2: && expected bool but found bool and i64"),
+                Err("L2: && expected bool but found bool and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := \"hello\" && false;
                     return k && true;
                 }",
-                Err("Semantic: L2: && expected bool but found string and bool"),
+                Err("L2: && expected bool but found string and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k && true;
                 }",
-                Err("Semantic: L3: && expected bool but found i64 and bool"),
+                Err("L3: && expected bool but found i64 and bool"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -1221,21 +1221,21 @@ mod type_resolver_tests {
                     let k: bool := true || 1;
                     return k || true;
                 }",
-                Err("Semantic: L2: || expected bool but found bool and i64"),
+                Err("L2: || expected bool but found bool and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := \"hello\" || false;
                     return k || true;
                 }",
-                Err("Semantic: L2: || expected bool but found string and bool"),
+                Err("L2: || expected bool but found string and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k || true;
                 }",
-                Err("Semantic: L3: || expected bool but found i64 and bool"),
+                Err("L3: || expected bool but found i64 and bool"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -1311,7 +1311,7 @@ mod type_resolver_tests {
                         op
                     )),
                     Err(format!(
-                        "Semantic: L2: {} expected i64 but found i64 and bool",
+                        "L2: {} expected i64 but found i64 and bool",
                         op
                     )),
                 ),
@@ -1324,7 +1324,7 @@ mod type_resolver_tests {
                         op
                     )),
                     Err(format!(
-                        "Semantic: L2: {} expected bool but found bool and i64",
+                        "L2: {} expected bool but found bool and i64",
                         op
                     )),
                 ),
@@ -1466,7 +1466,7 @@ mod type_resolver_tests {
                     let k: i16 := a[0];
                     return k * 3i16;
                 }",
-                Err("Semantic: L2: Bind expected [i16; 2] but got [i64; 2]"),
+                Err("L2: Bind expected [i16; 2] but got [i64; 2]"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -1574,7 +1574,7 @@ mod type_resolver_tests {
                     let k: i64 := a[false];
                     return k * 3;
                 }",
-                Err("Semantic: L3: Expected integral type for index but found bool"),
+                Err("L3: Expected integral type for index but found bool"),
             ),
             (
                 line!(),
@@ -1583,7 +1583,7 @@ mod type_resolver_tests {
                     let k: i64 := a[0];
                     return k * 3;
                 }",
-                Err("Semantic: L3: Expected array type on LHS of [] but found i64"),
+                Err("L3: Expected array type on LHS of [] but found i64"),
             ),
         ] {
             println!("Test L{}", line);
@@ -1694,7 +1694,7 @@ mod type_resolver_tests {
                     let k: [i64;5] := [1, 2, 3, 4, 5];
                     return k;
                 }",
-                Err("Semantic: L3: Return expected [i32; 5] but got [i64; 5]"),
+                Err("L3: Return expected [i32; 5] but got [i64; 5]"),
             ),
             (
                 line!(),
@@ -1702,7 +1702,7 @@ mod type_resolver_tests {
                     let k: [i64;0] := [];
                     return k;
                 }",
-                Err("Semantic: L1: Expected length > 0 for array, but found 0"),
+                Err("L1: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1711,7 +1711,7 @@ mod type_resolver_tests {
                     let k: [i64;1] := [1];
                     return k;
                 }",
-                Err("Semantic: L2: Arrays with 0 length are not allowed"),
+                Err("L2: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1719,7 +1719,7 @@ mod type_resolver_tests {
                     let k: [i32;5] := [1, 2, 3, 4, 5];
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected [i32; 5] but got [i64; 5]"),
+                Err("L2: Bind expected [i32; 5] but got [i64; 5]"),
             ),
             (
                 line!(),
@@ -1727,7 +1727,7 @@ mod type_resolver_tests {
                     let k: [i64;5] := [1, 2i32, 3, 4, 5];
                     return k;
                 }",
-                Err("Semantic: L2: Inconsistent types in array value"),
+                Err("L2: Inconsistent types in array value"),
             ),
             (
                 line!(),
@@ -1735,7 +1735,7 @@ mod type_resolver_tests {
                     let k: i32 := 5;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i32 but got i64"),
+                Err("L2: Bind expected i32 but got i64"),
             ),
             (
                 line!(),
@@ -1743,7 +1743,7 @@ mod type_resolver_tests {
                     let k: i64 := 5i32;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i64 but got i32"),
+                Err("L2: Bind expected i64 but got i32"),
             ),
             (
                 line!(),
@@ -1751,7 +1751,7 @@ mod type_resolver_tests {
                     let k: bool := 5;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected bool but got i64"),
+                Err("L2: Bind expected bool but got i64"),
             ),
             (
                 line!(),
@@ -1759,7 +1759,7 @@ mod type_resolver_tests {
                     let k: i64 := 5;
                     return k;
                 }",
-                Err("Semantic: L3: Return expected bool but got i64"),
+                Err("L3: Return expected bool but got i64"),
             ),
             (
                 line!(),
@@ -1768,7 +1768,7 @@ mod type_resolver_tests {
                     let k: bool := k;
                     return k;
                 }",
-                Err("Semantic: L2: k is not defined"),
+                Err("L2: k is not defined"),
             ),
             (
                 line!(),
@@ -1776,7 +1776,7 @@ mod type_resolver_tests {
                     let k: bool := x;
                     return k;
                 }",
-                Err("Semantic: L2: x is not defined"),
+                Err("L2: x is not defined"),
             ),
         ] {
             println!("Test L{}", ln);
@@ -1846,7 +1846,7 @@ mod type_resolver_tests {
                     mut k := false;
                     return k;
                 }",
-                Err("Semantic: L3: k is of type i64 but is assigned bool"),
+                Err("L3: k is of type i64 but is assigned bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -1854,7 +1854,7 @@ mod type_resolver_tests {
                     mut k := 3;
                     return k;
                 }",
-                Err("Semantic: L3: Variable k is not mutable"),
+                Err("L3: Variable k is not mutable"),
             ),
             (
                 "fn main() -> i64 {
@@ -1862,7 +1862,7 @@ mod type_resolver_tests {
                     mut k := false;
                     return k;
                 }",
-                Err("Semantic: L3: Variable k is not mutable"),
+                Err("L3: Variable k is not mutable"),
             ),
             (
                 "fn main() -> i64 {
@@ -1870,7 +1870,7 @@ mod type_resolver_tests {
                     mut x := false;
                     return k;
                 }",
-                Err("Semantic: L3: x is not defined"),
+                Err("L3: x is not defined"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -1954,13 +1954,13 @@ mod type_resolver_tests {
                 "fn main() -> bool {
                     return 5;
                 }",
-                Err("Semantic: L2: Return expected bool but got i64"),
+                Err("L2: Return expected bool but got i64"),
             ),
             (
                 "fn main() {
                     return 5;
                 }",
-                Err("Semantic: L2: Return expected unit but got i64"),
+                Err("L2: Return expected unit but got i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2045,7 +2045,7 @@ mod type_resolver_tests {
                     return number(5i32, 10, 15i32, 8u8, \"hello\");
                 }
                 ",
-                Err("Semantic: L4: One or more parameters have mismatching types for function $main::number: parameter 1 expected i64 but got i32"),
+                Err("L4: One or more parameters have mismatching types for function $main::number: parameter 1 expected i64 but got i32"),
             ),
             (
                 "
@@ -2054,7 +2054,7 @@ mod type_resolver_tests {
                     return number();
                 }
                 ",
-                Err("Semantic: L4: Function $main::number expects at least 1 parameters, but got 0"),
+                Err("L4: Function $main::number expects at least 1 parameters, but got 0"),
             ),
             (
                 "
@@ -2063,7 +2063,7 @@ mod type_resolver_tests {
                     return number(5);
                 }
                 ",
-                Err("Semantic: L4: Function $main::number expects at least 2 parameters, but got 1"),
+                Err("L4: Function $main::number expects at least 2 parameters, but got 1"),
             ),
             (
                 "fn main() -> bool {
@@ -2071,7 +2071,7 @@ mod type_resolver_tests {
                 }
                 extern fn number() -> i64;
                 ",
-                Err("Semantic: L2: Return expected bool but got i64"),
+                Err("L2: Return expected bool but got i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2154,7 +2154,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i32 {return 5;}
                 ",
-                Err("Semantic: L4: Return expected i32 but got i64"),
+                Err("L4: Return expected i32 but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -2162,7 +2162,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: Return expected bool but got i64"),
+                Err("L2: Return expected bool but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -2170,7 +2170,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: bad_fun is not defined"),
+                Err("L2: bad_fun is not defined"),
             ),
             (
                 "fn main() -> i64 {
@@ -2194,7 +2194,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i32 but got i64"),
+                Err("L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i32 but got i64"),
             ),
             (
                 "fn main() -> i64 {
@@ -2202,7 +2202,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Err("Semantic: L2: Return expected i64 but got i32"),
+                Err("L2: Return expected i64 but got i32"),
             ),
             (
                 "fn main() -> i64 {
@@ -2210,7 +2210,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i64 but got bool"),
+                Err("L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2218,7 +2218,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 2 expected i64 but got bool"),
+                Err("L2: One or more parameters have mismatching types for function $main::add: parameter 2 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2226,7 +2226,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
             (
                 "fn main() -> i64 {
@@ -2234,7 +2234,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 3"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 3"),
             ),
             (
                 "fn main() -> i64 {
@@ -2242,7 +2242,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2305,7 +2305,7 @@ mod type_resolver_tests {
                 }
                 co number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 0 but got 1"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::number. Expected 0 but got 1"),
             ),
             (
                 "fn main() {
@@ -2323,7 +2323,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 0"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 0"),
             ),
             (
                 "fn main() {
@@ -2332,7 +2332,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 2"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 2"),
             ),
             (
                 "fn main() {
@@ -2341,7 +2341,7 @@ mod type_resolver_tests {
                 }
                 fn number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Expected coroutine but $main::number is a fn (i64) -> i64"),
+                Err("L2: Expected coroutine but $main::number is a fn (i64) -> i64"),
             ),
             (
                 "fn main() {
@@ -2359,7 +2359,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i32) -> i32 {return i;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
+                Err("L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2430,7 +2430,7 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected i64 but got bool"),
+                Err("L6: Yield return expected i64 but got bool"),
             ),
             (
                 line!(),
@@ -2443,7 +2443,7 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected i64 but got unit"),
+                Err("L6: Yield return expected i64 but got unit"),
             ),
             /*
                 Need to add a symbol for the unit type
@@ -2458,7 +2458,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected unit but got i64"),
+                Err("L6: Yield return expected unit but got i64"),
             ),*/
         ] {
             println!("Test L{}", line);
@@ -2533,7 +2533,7 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L3: Yield expects co<_> but got bool"),
+                Err("L3: Yield expects co<_> but got bool"),
             ),
             (
                 "fn main() {
@@ -2546,7 +2546,7 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L3: Bind expected bool but got i64"),
+                Err("L3: Bind expected bool but got i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2605,21 +2605,21 @@ mod type_resolver_tests {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got bool"),
+                Err("L2: Return expected i64 but got bool"),
             ),
             (
                 "fn main(b: bool) -> i64 {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got unit"),
+                Err("L2: Return expected i64 but got unit"),
             ),
             (
                 "fn main(b: bool) {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected unit but got bool"),
+                Err("L2: Return expected unit but got bool"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2682,21 +2682,21 @@ mod type_resolver_tests {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got bool"),
+                Err("L2: Return expected i64 but got bool"),
             ),
             (
                 "co main(b: bool) -> i64 {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got unit"),
+                Err("L2: Return expected i64 but got unit"),
             ),
             (
                 "co main(b: bool) {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected unit but got bool"),
+                Err("L2: Return expected unit but got bool"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2761,7 +2761,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Expected boolean expression in if conditional, got: i64"),
+                Err("L2: Expected boolean expression in if conditional, got: i64"),
             ),
             (
                 "fn main() {
@@ -2769,7 +2769,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected bool got i64"),
+                Err("L2: If expression has mismatching arms: expected bool got i64"),
             ),
             (
                 "fn main() {
@@ -2777,7 +2777,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected i64 got string"),
+                Err("L2: If expression has mismatching arms: expected i64 got string"),
             ),
             (
                 "fn main() {
@@ -2785,7 +2785,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Bind expected i64 but got string"),
+                Err("L2: Bind expected i64 but got string"),
             ),
             (
                 "fn main() {
@@ -2793,7 +2793,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected i64 got unit"),
+                Err("L2: If expression has mismatching arms: expected i64 got unit"),
             ),
             (
                 "fn main() {
@@ -2868,19 +2868,19 @@ mod type_resolver_tests {
             ),
             (
                 "fn main() {
-                    while (5) {1;};
-                    return;
-                }
-                ",
-                Err("Semantic: L2: The condition of a while expression must resolve to a unit type, but got: i64"),
-            ),
-            (
-                "fn main() {
                     while (true) {1};
                     return;
                 }
                 ",
-                Err("Semantic: L2: The body of a while expression must resolve to a unit type, but got: i64"),
+                Err("L2: The body of a while expression must resolve to the unit type, but got: i64"),
+            ),
+            (
+                "fn main() {
+                    while (5) {1;};
+                    return;
+                }
+                ",
+                Err("L2: The condition of a while expression must resolve to the bool type, but got: i64"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -3085,7 +3085,7 @@ mod type_resolver_tests {
                     let y: i64 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function $main::test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
+                Err("L7: One or more parameters have mismatching types for function $main::test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
@@ -3096,22 +3096,22 @@ mod type_resolver_tests {
                     let x: root::MyStruct2 := self::MyStruct{x: 1};
                     return x;
                 }",
-                Err("Semantic: L5: Bind expected $main::MyStruct2 but got $main::MyStruct"),
+                Err("L5: Bind expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:false};}",
-                Err("Semantic: L1: $main::MyStruct.x expects i64 but got bool"),
+                Err("L1: $main::MyStruct.x expects i64 but got bool"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{};}",
-                Err("Semantic: L1: expected 1 parameters but found 0"),
+                Err("L1: Struct expected 1 parameters but found 0"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> i64 {return MyStruct{x:5};}",
-                Err("Semantic: L1: Return expected i64 but got $main::MyStruct"),
+                Err("L1: Return expected i64 but got $main::MyStruct"),
             ),
         ] {
             println!("L{}", line);
@@ -3149,17 +3149,17 @@ mod type_resolver_tests {
                     return ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
-                Err("Semantic: L1: $main::MyStruct does not have member y")),
+                Err("L1: $main::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
-                Err("Semantic: L1: Return expected bool but got i64")),
+                Err("L1: Return expected bool but got i64")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.y;}",
-                Err("Semantic: L1: $main::MyStruct does not have member y")),
+                Err("L1: $main::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
-                Err("Semantic: L1: Return expected bool but got i64")),
+                Err("L1: Return expected bool but got i64")),
             ] {
             let mut table = StringTable::new();
             let main = table.insert("main".into());
@@ -3242,7 +3242,7 @@ mod type_resolver_tests {
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Could not find item with the given path: $std::test2 ($std::test2)"),
+                Err("L3: Could not find item with the given path: $std::test2 ($std::test2)"),
             ),
             (
                 line!(),
@@ -3253,7 +3253,7 @@ mod type_resolver_tests {
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
+                Err("L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
             ),
             (
                 line!(),
@@ -3264,7 +3264,7 @@ mod type_resolver_tests {
                 }
                 ",
                 (vec![Type::I64, Type::Bool], (Type::I64)),
-                Err("Semantic: L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
+                Err("L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
         ] {
             let mut table = StringTable::new();

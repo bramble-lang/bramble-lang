@@ -1,4 +1,4 @@
-use crate::compiler::lexer::stringtable::StringId;
+use crate::{compiler::lexer::stringtable::StringId, StringTable};
 
 use super::{path::Path, HasVarArgs};
 
@@ -108,6 +108,71 @@ impl Type {
             | Type::Coroutine(_)
             | Type::ExternDecl(..)
             | Type::Unknown => false,
+        }
+    }
+
+    pub fn to_human_string(&self, string_table: &StringTable) -> Result<String, String> {
+        match self {
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64
+            | Type::Bool
+            | Type::Unit
+            | Type::Unknown
+            | Type::StringLiteral => Ok(format!("{}", self)),
+            Type::Custom(path) => path.to_human_string(string_table),
+            Type::Coroutine(ty) => Ok(format!("co<{}>", ty.to_human_string(string_table)?)),
+            Type::Array(ty, sz) => Ok(format!("[{}; {}]", ty.to_human_string(string_table)?, sz)),
+            Type::ExternDecl(params, has_varargs, ret_ty) => {
+                let mut params = params
+                    .iter()
+                    .map(|p| p.to_human_string(string_table))
+                    .collect::<Result<Vec<String>, _>>()?
+                    .join(",");
+                if *has_varargs {
+                    params += ", ...";
+                }
+                Ok(format!("extern fn ({}) -> {}", params, ret_ty))
+            }
+            Type::StructDef(fields) => {
+                let fields = fields
+                    .iter()
+                    .map(|(sid, f)| {
+                        string_table
+                            .get(*sid)
+                            .ok_or(format!("StringId not found"))
+                            .and_then(|fname| {
+                                f.to_human_string(string_table)
+                                    .map(|fs| format!("{}: {}", fname, fs))
+                            })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?
+                    .join(",");
+                Ok(format!("StructDef({})", fields))
+            }
+            Type::FunctionDef(params, ret_ty) => {
+                let params = params
+                    .iter()
+                    .map(|p| p.to_human_string(string_table))
+                    .collect::<Result<Vec<String>, _>>()?
+                    .join(",");
+
+                Ok(format!("fn ({}) -> {}", params, ret_ty))
+            }
+            Type::CoroutineDef(params, ret_ty) => {
+                let params = params
+                    .iter()
+                    .map(|p| p.to_human_string(string_table))
+                    .collect::<Result<Vec<String>, _>>()?
+                    .join(",");
+
+                Ok(format!("co ({}) -> {}", params, ret_ty))
+            }
         }
     }
 }

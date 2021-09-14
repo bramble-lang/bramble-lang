@@ -685,7 +685,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         meta.line(),
-                        SemanticError::WhileInvalidType(body.get_type().clone()),
+                        SemanticError::WhileCondInvalidType(cond.get_type().clone()),
                     ))
                 }
             }
@@ -863,7 +863,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         operand.get_context().line(),
-                        SemanticError::ExpectedSignedInteger(operand.get_type().clone()),
+                        SemanticError::ExpectedSignedInteger(op, operand.get_type().clone()),
                     ))
                 }
             }
@@ -873,7 +873,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         operand.get_context().line(),
-                        SemanticError::ExpectedBool(operand.get_type().clone()),
+                        SemanticError::ExpectedBool(op, operand.get_type().clone()),
                     ))
                 }
             }
@@ -949,7 +949,7 @@ impl TypeResolver {
     }
 
     fn get_current_path(&self) -> Result<Path, SemanticError> {
-        self.symbols.to_path().ok_or(SemanticError::InvalidPath)
+        self.symbols.to_path().ok_or(SemanticError::PathNotValid)
     }
 
     fn extract_routine_type_info<'b>(
@@ -1004,15 +1004,13 @@ impl TypeResolver {
         } else if has_varargs && mismatches.len() == 0 && given.len() >= expected_types.len() {
             Ok(())
         } else {
-            let errors: Vec<String> = mismatches
+            let errors: Vec<_> = mismatches
                 .iter()
-                .map(|(idx, got, expected)| {
-                    format!("parameter {} expected {} but got {}", idx, expected, got)
-                })
+                .map(|(idx, got, expected)| (*idx, (*expected).clone(), (*got).clone()))
                 .collect();
             Err(SemanticError::RoutineParamTypeMismatch(
                 routine_path.clone(),
-                errors.join(", "),
+                errors,
             ))
         }
     }
