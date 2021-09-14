@@ -22,8 +22,7 @@ pub enum ProjectError {
 
 impl From<CompilerError<ParserError>> for CompilerError<ProjectError> {
     fn from(parser_ce: CompilerError<ParserError>) -> Self {
-        let line = parser_ce.line();
-        let ie = parser_ce.inner();
+        let (line, ie) = parser_ce.take();
         CompilerError::new(line, ProjectError::ParserError(ie))
     }
 }

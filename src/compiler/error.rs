@@ -13,7 +13,10 @@ use crate::StringTable;
 /// are stored in the `inner` field.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompilerError<IE: CompilerErrorDisplay> {
+    /// The line in the source code which caused the error
     line: u32,
+
+    /// An inner error value that contains more specific error information
     inner: IE,
 }
 
@@ -25,12 +28,12 @@ where
         CompilerError { line, inner }
     }
 
-    pub fn inner(self) -> IE {
-        self.inner
-    }
-
-    pub fn line(&self) -> u32 {
-        self.line
+    /// Moves the Line number and Inner error out of the wrapping [CompilerError].
+    /// This is to allow conversion of one type of [CompilerError] to another type, by
+    /// converting the `inner` type into a new type and then creating a new [CompilerError]
+    /// wrapper.
+    pub fn take(self) -> (u32, IE) {
+        (self.line, self.inner)
     }
 }
 

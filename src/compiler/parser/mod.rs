@@ -11,6 +11,9 @@ mod tokenstream;
 pub mod expression;
 pub mod parser;
 
+/// Compiler errors that happen within the Parser stage of compilation.
+/// These errors may also cover [AstError]s thrown by the AST during construction;
+/// such errors will be transformed into [ParserError]s.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParserError {
     Locked(Option<super::lexer::tokens::Token>),
@@ -53,6 +56,8 @@ pub enum ParserError {
 }
 
 impl CompilerErrorDisplay for ParserError {
+    /// Format a ParserError into a human readable message and replace any [StringId]s
+    /// with their respective string values.
     fn format(&self, _st: &crate::StringTable) -> Result<String, String> {
         Ok(format!("Parser error"))
     }
@@ -60,8 +65,7 @@ impl CompilerErrorDisplay for ParserError {
 
 impl From<CompilerError<AstError>> for CompilerError<ParserError> {
     fn from(ce: CompilerError<AstError>) -> Self {
-        let line = ce.line();
-        let ae = ce.inner();
+        let (line, ae) = ce.take();
         match ae {
             AstError::ModuleAlreadyContains(sid) => {
                 CompilerError::new(line, ParserError::ModAlreadyContains(sid))
