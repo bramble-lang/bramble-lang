@@ -89,7 +89,7 @@ fn main() {
     ) {
         Ok(ast) => ast,
         Err(msg) => {
-            println!("Error: {}", msg);
+            println!("Error: {:?}", msg);
             std::process::exit(ERR_TYPE_CHECK);
         }
     };

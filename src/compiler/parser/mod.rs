@@ -70,6 +70,7 @@ impl From<CompilerError<AstError>> for CompilerError<ParserError> {
             AstError::ModuleAlreadyContains(sid) => {
                 CompilerError::new(line, ParserError::ModAlreadyContains(sid))
             }
+            AstError::PathTooSuper => todo!(),
         }
     }
 }

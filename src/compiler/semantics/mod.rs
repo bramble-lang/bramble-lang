@@ -1,5 +1,5 @@
 use super::{
-    ast::{AstError, Path},
+    ast::{AstError, BinaryOperator, Path, Type},
     lexer::stringtable::StringId,
     CompilerError, CompilerErrorDisplay,
 };
@@ -23,7 +23,7 @@ pub mod symbol_table;
 pub mod type_resolver;
 
 /// Errors generated during semantic analysis of a compilation unit.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SemanticError {
     NotVariable(StringId),
     NotRoutine(StringId),
@@ -34,9 +34,38 @@ pub enum SemanticError {
     NotDefined(StringId),
     EmptyPath,
     ArrayInvalidSize(usize),
+    ArrayInconsistentElementTypes,
+    ArrayIndexingInvalidType(Type),
+    ArrayIndexingInvalidIndexType(Type),
     InvalidPath,
     AlreadyDeclared(StringId),
     PathTooSuper,
+    BindExpected(Type, Type),
+    VariableNotMutable(StringId),
+    BindMismatch(StringId, Type, Type),
+    YieldExpected(Type, Type),
+    YieldInvalidLocation,
+    ReturnExpected(Type, Type),
+    ReturnInvalidLocation,
+    MemberAccessInvalidRootType(Type),
+    MemberAccessMemberNotFound(Path, StringId),
+    IfExprMismatchArms(Type, Type),
+    CondExpectedBool(Type),
+    WhileInvalidType(Type),
+    YieldInvalidType(Type),
+    RoutineCallWrongNumParams(Path, usize, usize),
+    FunctionParamsNotEnough(Path, usize, usize),
+    StructExprWrongNumParams(usize, usize),
+    StructExprMemberNotFound(Path, StringId),
+    StructExprFieldTypeMismatch(Path, StringId, Type, Type),
+    ExpectedSignedInteger(Type),
+    ExpectedBool(Type),
+    OpExpected(BinaryOperator, Type, Type, Type),
+    RoutineParamTypeMismatch(Path, String),
+    MainFnInvalidType,
+    MainFnInvalidParams,
+    InvalidStructure,
+    RoutineCallInvalidTarget(super::ast::RoutineCall, Path, Type),
 }
 
 impl CompilerErrorDisplay for SemanticError {
