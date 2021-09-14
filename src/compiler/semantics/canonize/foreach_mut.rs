@@ -1,11 +1,10 @@
 use crate::compiler::import::Import;
-use crate::result::Result;
 
 use crate::compiler::ast::*;
 use crate::diagnostics::{config::TracingConfig, DiagRecorder};
 
 use super::super::{semanticnode::SemanticContext, stack::SymbolTableScopeStack};
-use super::Canonizable;
+use super::{Canonizable, CanonizeResult};
 
 /**
 Traverse through each node, in pre-order DFS, and apply a function to mutate the
@@ -51,19 +50,19 @@ where
         }
     }
 
-    fn transform<F>(&mut self, a: &mut dyn Canonizable, mut f: F) -> Result<()>
+    fn transform<F>(&mut self, a: &mut dyn Canonizable, mut f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         self.diag.begin(a.get_context());
-        let r = f(&self.symbols, a).map_err(|e| format!("L{}: {}", a.get_context().line(), e));
+        let r = f(&self.symbols, a);
         self.diag.end(a.get_context());
         r
     }
 
-    pub fn for_each<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> Result<()>
+    pub fn for_each<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         if self.tracing != TracingConfig::Off {
             println!("ForEach: {}", self.name);
@@ -77,12 +76,12 @@ where
             println!("ForEach: {:?}", r);
         }
 
-        r.map_err(|e| format!("Semantic: {}", e))
+        r
     }
 
-    fn for_module<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> Result<()>
+    fn for_module<F>(&mut self, m: &mut Module<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         self.symbols.enter_scope(&m.get_context().sym);
         let r = self.transform(m, f);
@@ -100,9 +99,9 @@ where
         r
     }
 
-    fn for_items<F>(&mut self, items: &mut Vec<Item<SemanticContext>>, f: F) -> Result<()>
+    fn for_items<F>(&mut self, items: &mut Vec<Item<SemanticContext>>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         for i in items.iter_mut() {
             match i {
@@ -114,18 +113,22 @@ where
         Ok(())
     }
 
-    fn for_structdef<F>(&mut self, sd: &mut StructDef<SemanticContext>, f: F) -> Result<()>
+    fn for_structdef<F>(&mut self, sd: &mut StructDef<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(sd, f);
         self.for_parameters(&mut sd.get_fields_mut(), f)?;
         r
     }
 
-    fn for_routinedef<F>(&mut self, rd: &mut RoutineDef<SemanticContext>, f: F) -> Result<()>
+    fn for_routinedef<F>(
+        &mut self,
+        rd: &mut RoutineDef<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         self.symbols.enter_scope(&rd.get_context().sym);
         let r = self.transform(rd, f);
@@ -140,9 +143,9 @@ where
         r
     }
 
-    fn for_extern<F>(&mut self, ex: &mut Extern<SemanticContext>, f: F) -> Result<()>
+    fn for_extern<F>(&mut self, ex: &mut Extern<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(ex, f);
         self.for_parameters(&mut ex.params, f)?;
@@ -153,9 +156,9 @@ where
         &mut self,
         params: &mut Vec<Parameter<SemanticContext>>,
         f: F,
-    ) -> Result<()>
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         for p in params {
             self.transform(p, f)?;
@@ -163,9 +166,13 @@ where
         Ok(())
     }
 
-    fn for_statement<F>(&mut self, statement: &mut Statement<SemanticContext>, f: F) -> Result<()>
+    fn for_statement<F>(
+        &mut self,
+        statement: &mut Statement<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         match statement {
             Statement::Bind(b) => {
@@ -187,27 +194,31 @@ where
         Ok(())
     }
 
-    fn for_bind<F>(&mut self, bind: &mut Bind<SemanticContext>, f: F) -> Result<()>
+    fn for_bind<F>(&mut self, bind: &mut Bind<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(bind, f);
         self.for_expression(bind.get_rhs_mut(), f)?;
         r
     }
 
-    fn for_mutate<F>(&mut self, mutate: &mut Mutate<SemanticContext>, f: F) -> Result<()>
+    fn for_mutate<F>(&mut self, mutate: &mut Mutate<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(mutate, f);
         self.for_expression(mutate.get_rhs_mut(), f)?;
         r
     }
 
-    fn for_yieldreturn<F>(&mut self, yr: &mut YieldReturn<SemanticContext>, f: F) -> Result<()>
+    fn for_yieldreturn<F>(
+        &mut self,
+        yr: &mut YieldReturn<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(yr, f);
         match yr.get_value_mut() {
@@ -217,9 +228,9 @@ where
         r
     }
 
-    fn for_return<F>(&mut self, ret: &mut Return<SemanticContext>, f: F) -> Result<()>
+    fn for_return<F>(&mut self, ret: &mut Return<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(ret, f);
 
@@ -231,9 +242,13 @@ where
         r
     }
 
-    fn for_expression<F>(&mut self, exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_expression<F>(
+        &mut self,
+        exp: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         use Expression::*;
 
@@ -281,9 +296,9 @@ where
         &mut self,
         block: &mut Expression<SemanticContext>,
         f: F,
-    ) -> Result<()>
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         self.symbols.enter_scope(&block.get_context().sym);
         let r = self.transform(block, f);
@@ -304,9 +319,13 @@ where
         r
     }
 
-    fn for_member_access<F>(&mut self, access: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_member_access<F>(
+        &mut self,
+        access: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(access, f);
         if let Expression::MemberAccess(_, src, _member) = access {
@@ -317,9 +336,13 @@ where
         r
     }
 
-    fn for_unary_op<F>(&mut self, un_op: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_unary_op<F>(
+        &mut self,
+        un_op: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(un_op, f);
         if let Expression::UnaryOp(_, _op, operand) = un_op {
@@ -330,9 +353,13 @@ where
         r
     }
 
-    fn for_binary_op<F>(&mut self, bin_op: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_binary_op<F>(
+        &mut self,
+        bin_op: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(bin_op, f);
         if let Expression::BinaryOp(_, _op, l, r) = bin_op {
@@ -344,9 +371,9 @@ where
         r
     }
 
-    fn for_if<F>(&mut self, if_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_if<F>(&mut self, if_exp: &mut Expression<SemanticContext>, f: F) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(if_exp, f);
         if let Expression::If {
@@ -369,9 +396,13 @@ where
         r
     }
 
-    fn for_while<F>(&mut self, while_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_while<F>(
+        &mut self,
+        while_exp: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(while_exp, f);
         if let Expression::While { cond, body, .. } = while_exp {
@@ -383,9 +414,13 @@ where
         r
     }
 
-    fn for_routine_call<F>(&mut self, rc: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_routine_call<F>(
+        &mut self,
+        rc: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(rc, f);
         if let Expression::RoutineCall(_, _call, _name, params) = rc {
@@ -398,9 +433,13 @@ where
         r
     }
 
-    fn for_yield<F>(&mut self, yield_exp: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_yield<F>(
+        &mut self,
+        yield_exp: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(yield_exp, f);
         if let Expression::Yield(_, e) = yield_exp {
@@ -411,9 +450,13 @@ where
         r
     }
 
-    fn for_struct_expression<F>(&mut self, se: &mut Expression<SemanticContext>, f: F) -> Result<()>
+    fn for_struct_expression<F>(
+        &mut self,
+        se: &mut Expression<SemanticContext>,
+        f: F,
+    ) -> CanonizeResult<()>
     where
-        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> Result<()> + Copy,
+        F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
         let r = self.transform(se, f);
         if let Expression::StructExpression(_, _struct_name, fields) = se {

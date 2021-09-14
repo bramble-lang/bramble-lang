@@ -23,6 +23,7 @@ pub mod symbol_table;
 pub mod type_resolver;
 
 /// Errors generated during semantic analysis of a compilation unit.
+#[derive(Debug)]
 pub enum SemanticError {
     NotVariable(StringId),
     NotRoutine(StringId),
