@@ -5,7 +5,7 @@ use stdext::function_name;
 use super::{
     parser::{block, path, routine_call_params, ParserContext, ParserResult},
     tokenstream::TokenStream,
-    ParserErrorKind,
+    ParserError,
 };
 use crate::{
     compiler::{
@@ -96,7 +96,7 @@ impl Expression<ParserContext> {
             _ =>
             //Err(format!("L{}: {} is not a unary operator", line, op)),
             {
-                err!(line, ParserErrorKind::NotAUnaryOp(op.clone()))
+                err!(line, ParserError::NotAUnaryOp(op.clone()))
             }
         }
     }
@@ -184,7 +184,7 @@ impl Expression<ParserContext> {
             _ =>
             //Err(format!("L{}: {} is not a binary operator", line, op)),
             {
-                err!(line, ParserErrorKind::NotABinaryOp(op.clone()))
+                err!(line, ParserError::NotABinaryOp(op.clone()))
             }
         }
     }
@@ -250,7 +250,7 @@ pub fn binary_op(
             Some(op) => {
                 let right = binary_op(stream, test, left_pattern)?.ok_or(CompilerError::new(
                     op.l,
-                    ParserErrorKind::ExpectedExprAfter(op.s.clone()),
+                    ParserError::ExpectedExprAfter(op.s.clone()),
                 ))?;
                 Expression::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
             }
@@ -266,7 +266,7 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         Some(op) => {
             let factor = negate(stream)?.ok_or(CompilerError::new(
                 op.l,
-                ParserErrorKind::ExpectedTermAfter(op.s.clone()),
+                ParserError::ExpectedTermAfter(op.s.clone()),
             ))?;
             Expression::unary_op(op.l, &op.s, Box::new(factor))
         }
@@ -286,13 +286,10 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                         .map(|(_, member)| Expression::MemberAccess(token.l, Box::new(ma), member))
                         .ok_or(CompilerError::new(
                             token.l,
-                            ParserErrorKind::MemberAccessExpectedField,
+                            ParserError::MemberAccessExpectedField,
                         ))?,
                     Lex::LBracket => expression(stream)?
-                        .ok_or(CompilerError::new(
-                            token.l,
-                            ParserErrorKind::IndexOpInvalidExpr,
-                        ))
+                        .ok_or(CompilerError::new(token.l, ParserError::IndexOpInvalidExpr))
                         .map(|index| {
                             stream
                                 .next_must_be(&Lex::RBracket)
@@ -305,7 +302,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                     _ => {
                         return err!(
                             token.l,
-                            ParserErrorKind::ExpectedButFound(Lex::LBracket, Some(token.s.clone()))
+                            ParserError::ExpectedButFound(Lex::LBracket, Some(token.s.clone()))
                         )
                     }
                 };
@@ -347,40 +344,39 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
                 token.l,
-                ParserErrorKind::IfExpectedConditional,
+                ParserError::IfExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let if_arm = expression_block(stream)?.ok_or(CompilerError::new(
                 token.l,
-                ParserErrorKind::IfTrueArmMissingExpr,
+                ParserError::IfTrueArmMissingExpr,
             ))?;
 
             // check for `else if`
-            let else_arm =
-                match stream.next_if(&Lex::Else) {
-                    Some(_) => match stream.peek() {
-                        Some(Token {
-                            l,
-                            o: _,
-                            s: Lex::If,
-                        }) => {
-                            let l = *l;
-                            Some(if_expression(stream)?.ok_or(CompilerError::new(
-                                l,
-                                ParserErrorKind::IfElseExpectedIfExpr,
-                            ))?)
-                        }
-                        _ => {
-                            let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                                token.l,
-                                ParserErrorKind::IfFalseArmMissingExpr,
-                            ))?;
-                            Some(false_arm)
-                        }
-                    },
-                    None => None,
-                };
+            let else_arm = match stream.next_if(&Lex::Else) {
+                Some(_) => match stream.peek() {
+                    Some(Token {
+                        l,
+                        o: _,
+                        s: Lex::If,
+                    }) => {
+                        let l = *l;
+                        Some(
+                            if_expression(stream)?
+                                .ok_or(CompilerError::new(l, ParserError::IfElseExpectedIfExpr))?,
+                        )
+                    }
+                    _ => {
+                        let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
+                            token.l,
+                            ParserError::IfFalseArmMissingExpr,
+                        ))?;
+                        Some(false_arm)
+                    }
+                },
+                None => None,
+            };
 
             Some(Expression::If {
                 context: token.l,
@@ -400,14 +396,12 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
                 token.l,
-                ParserErrorKind::WhileExpectedConditional,
+                ParserError::WhileExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
-            let body = expression_block(stream)?.ok_or(CompilerError::new(
-                token.l,
-                ParserErrorKind::WhileMissingBody,
-            ))?;
+            let body = expression_block(stream)?
+                .ok_or(CompilerError::new(token.l, ParserError::WhileMissingBody))?;
 
             Some(Expression::While {
                 context: token.l,
@@ -438,7 +432,7 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
                         if let Element::Id(sid) = path.last().unwrap() {
                             Some(Expression::Identifier(line, *sid))
                         } else {
-                            return err!(line, ParserErrorKind::PathExpectedIdentifier);
+                            return err!(line, ParserError::PathExpectedIdentifier);
                         }
                     }
                 }
@@ -460,7 +454,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
                     Expression::new_yield(*coroutine.get_context(), Box::new(coroutine))
                 }
                 None => {
-                    err!(line, ParserErrorKind::YieldExpectedIdentifier)
+                    err!(line, ParserError::YieldExpectedIdentifier)
                 }
             }
         }
@@ -479,7 +473,7 @@ fn struct_init_params(
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(CompilerError::new(
                     line,
-                    ParserErrorKind::StructExpectedFieldExpr(field_name),
+                    ParserError::StructExpectedFieldExpr(field_name),
                 ))?;
                 params.push((field_name, field_value));
                 match stream.next_if(&Lex::Comma) {
@@ -716,13 +710,13 @@ mod test {
         for (text, msg) in [
             (
                 "[5",
-                CompilerError::new(0, ParserErrorKind::ExpectedButFound(Lex::RBracket, None)),
+                CompilerError::new(0, ParserError::ExpectedButFound(Lex::RBracket, None)),
             ),
             (
                 "[5 6]",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
+                    ParserError::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
                 ),
             ),
         ]
@@ -843,22 +837,22 @@ mod test {
         for (text, msg) in [
             (
                 "a[5",
-                CompilerError::new(0, ParserErrorKind::ExpectedButFound(Lex::RBracket, None)),
+                CompilerError::new(0, ParserError::ExpectedButFound(Lex::RBracket, None)),
             ),
             (
                 "a[5 6]",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
+                    ParserError::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
                 ),
             ),
             (
                 "a[]",
-                CompilerError::new(1, ParserErrorKind::IndexOpInvalidExpr),
+                CompilerError::new(1, ParserError::IndexOpInvalidExpr),
             ),
             (
                 "a[2 + ]",
-                CompilerError::new(1, ParserErrorKind::ExpectedExprAfter(Lex::Add)),
+                CompilerError::new(1, ParserError::ExpectedExprAfter(Lex::Add)),
             ),
         ]
         .iter()
@@ -932,28 +926,28 @@ mod test {
                 "{5 10 51}",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Some(Lex::I64(10))),
+                    ParserError::ExpectedButFound(Lex::RBrace, Some(Lex::I64(10))),
                 ),
             ),
             (
                 "{5; 10 51}",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Some(Lex::I64(51))),
+                    ParserError::ExpectedButFound(Lex::RBrace, Some(Lex::I64(51))),
                 ),
             ),
             (
                 "{5; 10 let x:i64 := 5}",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Some(Lex::Let)),
+                    ParserError::ExpectedButFound(Lex::RBrace, Some(Lex::Let)),
                 ),
             ),
             (
                 "{let x: i64 := 10 5}",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::Semicolon, Some(Lex::I64(5))),
+                    ParserError::ExpectedButFound(Lex::Semicolon, Some(Lex::I64(5))),
                 ),
             ),
         ]

@@ -7,7 +7,7 @@ pub mod tests {
         ast::*,
         lexer::stringtable::StringTable,
         lexer::{tokens::Token, LexerError},
-        parser::{expression::*, statement::*, tokenstream::TokenStream, ParserErrorKind},
+        parser::{expression::*, statement::*, tokenstream::TokenStream, ParserError},
         CompilerError, CompilerErrorDisplay, Lexer,
     };
 
@@ -201,17 +201,11 @@ pub mod tests {
             ),
             (
                 "thing::",
-                Err(CompilerError::new(
-                    1,
-                    ParserErrorKind::PathExpectedIdentifier,
-                )),
+                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
             ),
             (
                 "thing::first::",
-                Err(CompilerError::new(
-                    1,
-                    ParserErrorKind::PathExpectedIdentifier,
-                )),
+                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
             ),
         ] {
             test += 1;

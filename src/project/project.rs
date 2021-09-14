@@ -6,7 +6,7 @@ use crate::compiler::{
         stringtable::{StringId, StringTable},
         tokens::Token,
     },
-    parser::{self, ParserErrorKind},
+    parser::{self, ParserError},
     CompilerError, CompilerErrorDisplay,
 };
 use crate::{diagnostics::config::TracingConfig, io::get_files};
@@ -17,11 +17,11 @@ use crate::result::NResult;
 pub enum ProjectError {
     NoAstGenerated,
     InvalidPath,
-    ParserError(ParserErrorKind),
+    ParserError(ParserError),
 }
 
-impl From<CompilerError<ParserErrorKind>> for CompilerError<ProjectError> {
-    fn from(parser_ce: CompilerError<ParserErrorKind>) -> Self {
+impl From<CompilerError<ParserError>> for CompilerError<ProjectError> {
+    fn from(parser_ce: CompilerError<ParserError>) -> Self {
         let line = parser_ce.line();
         let ie = parser_ce.inner();
         CompilerError::new(line, ProjectError::ParserError(ie))

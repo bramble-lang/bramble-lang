@@ -1,4 +1,4 @@
-use super::{ParserError, ParserErrorKind};
+use super::ParserError;
 use crate::compiler::lexer::{
     stringtable::StringId,
     tokens::{Lex, Token},
@@ -61,17 +61,17 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, ParserError> {
+    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, CompilerError<ParserError>> {
         let (line, found) = match self.peek() {
             Some(t) => (t.l, t.s.clone()),
-            None => return err!(0, ParserErrorKind::ExpectedButFound(test.clone(), None)),
+            None => return err!(0, ParserError::ExpectedButFound(test.clone(), None)),
         };
         match self.next_if(test) {
             Some(t) => Ok(t),
             None => {
                 err!(
                     line,
-                    ParserErrorKind::ExpectedButFound(test.clone(), Some(found))
+                    ParserError::ExpectedButFound(test.clone(), Some(found))
                 )
             }
         }

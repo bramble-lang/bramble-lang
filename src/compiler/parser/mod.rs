@@ -11,10 +11,8 @@ mod tokenstream;
 pub mod expression;
 pub mod parser;
 
-type ParserError = CompilerError<ParserErrorKind>;
-
 #[derive(Clone, Debug, PartialEq)]
-pub enum ParserErrorKind {
+pub enum ParserError {
     Locked(Option<super::lexer::tokens::Token>),
     ModExpectedName,
     ModAlreadyContains(StringId),
@@ -54,19 +52,19 @@ pub enum ParserErrorKind {
     IndexOpInvalidExpr,
 }
 
-impl CompilerErrorDisplay for ParserErrorKind {
+impl CompilerErrorDisplay for ParserError {
     fn format(&self, _st: &crate::StringTable) -> Result<String, String> {
         Ok(format!("Parser error"))
     }
 }
 
-impl From<CompilerError<AstError>> for CompilerError<ParserErrorKind> {
+impl From<CompilerError<AstError>> for CompilerError<ParserError> {
     fn from(ce: CompilerError<AstError>) -> Self {
         let line = ce.line();
         let ae = ce.inner();
         match ae {
             AstError::ModuleAlreadyContains(sid) => {
-                CompilerError::new(line, ParserErrorKind::ModAlreadyContains(sid))
+                CompilerError::new(line, ParserError::ModAlreadyContains(sid))
             }
         }
     }
