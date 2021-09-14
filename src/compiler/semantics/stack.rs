@@ -2,16 +2,24 @@ use std::collections::HashMap;
 
 use log::*;
 
+use crate::compiler::lexer::stringtable::StringId;
 use crate::compiler::{
     ast::{Element, Module, Node, Path, StructDef, Type},
     import::Import,
 };
-use crate::{compiler::lexer::stringtable::StringId, result::Result};
 
 use super::{
     semanticnode::SemanticContext,
     symbol_table::{ScopeType, Symbol, SymbolTable},
 };
+use super::{SemanticError, SemanticResult};
+
+/// Helper macro to get rid of repitition of boilerplate code.
+macro_rules! err {
+    ($ln: expr, $kind: expr) => {
+        Err(CompilerError::new($ln, $kind))
+    };
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTableScopeStack {
@@ -176,21 +184,22 @@ impl<'a> SymbolTableScopeStack {
 
     /// Add a new symbol to the current symbol table (the SymbolTable that is at the
     /// top of the stack).
-    pub fn add(&mut self, name: StringId, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
+    pub fn add(
+        &mut self,
+        name: StringId,
+        ty: Type,
+        mutable: bool,
+        is_extern: bool,
+    ) -> Result<(), SemanticError> {
         self.head.add(name, ty, mutable, is_extern)
     }
 
     /// Finds the given variable in the current symbol table or in the symbol table history
     /// Follows scoping rules, so when a boundary scope is reached (e.g. a Routine) it will
     /// stop searching
-    pub fn lookup_var(&'a self, id: StringId) -> Result<&'a Symbol> {
+    pub fn lookup_var(&'a self, id: StringId) -> Result<&'a Symbol, SemanticError> {
         let (symbol, _) = &self.lookup_symbol_by_path(&vec![Element::Id(id)].into())?;
         match symbol.ty {
-            Type::FunctionDef(..)
-            | Type::CoroutineDef(..)
-            | Type::ExternDecl(..)
-            | Type::StructDef { .. }
-            | Type::Unknown => return Err(format!("{} is not a variable", id)),
             Type::Custom(..)
             | Type::Coroutine(_)
             | Type::U8
@@ -205,13 +214,21 @@ impl<'a> SymbolTableScopeStack {
             | Type::StringLiteral
             | Type::Array(_, _)
             | Type::Unit => Ok(symbol),
+            Type::FunctionDef(..)
+            | Type::CoroutineDef(..)
+            | Type::ExternDecl(..)
+            | Type::StructDef { .. }
+            | Type::Unknown => return Err(SemanticError::NotVariable(id)),
         }
     }
 
     /// Specifically looks for a routine (function or coroutine) with the given ID.  Will search upward through the scope
     /// hierarchy until a symbol is found that matches `id`. If that symbol is a routine it is returned
     /// if the symbol is not a routine `Err` is returned.  If no symbol is found `Err` is returned.
-    pub fn lookup_func_or_cor(&'a self, id: StringId) -> Result<(&Vec<Type>, &Type)> {
+    pub fn lookup_func_or_cor(
+        &'a self,
+        id: StringId,
+    ) -> Result<(&Vec<Type>, &Type), SemanticError> {
         match self.lookup_symbol_by_path(&vec![Element::Id(id)].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
@@ -221,20 +238,20 @@ impl<'a> SymbolTableScopeStack {
                 ty: Type::FunctionDef(params, p),
                 ..
             } => Ok((params, p)),
-            _ => return Err(format!("{} is not a coroutine or function", id)),
+            _ => return Err(SemanticError::NotRoutine(id)),
         }
     }
 
     /// Specifically looks for a coroutine with the given ID.  Will search upward through the scope
     /// hierarchy until a symbol is found that matches `id`. If that symbol is a coroutine it is returned
     /// if the symbol is not a coroutine `Err` is returned.  If no symbol is found `Err` is returned.
-    pub fn lookup_coroutine(&'a self, id: StringId) -> Result<(&Vec<Type>, &Type)> {
+    pub fn lookup_coroutine(&'a self, id: StringId) -> Result<(&Vec<Type>, &Type), SemanticError> {
         match self.lookup_symbol_by_path(&vec![Element::Id(id)].into())?.0 {
             Symbol {
                 ty: Type::CoroutineDef(params, p),
                 ..
             } => Ok((params, p)),
-            _ => return Err(format!("{} is not a coroutine", id)),
+            _ => return Err(SemanticError::NotCoroutine(id)),
         }
     }
 
@@ -243,7 +260,10 @@ impl<'a> SymbolTableScopeStack {
     /// or the item identified by the path does not exist, then an error is returned.
     ///
     /// This function will work with relative and canonical paths.
-    pub fn lookup_symbol_by_path(&'a self, path: &Path) -> Result<(&'a Symbol, Path)> {
+    pub fn lookup_symbol_by_path(
+        &'a self,
+        path: &Path,
+    ) -> Result<(&'a Symbol, Path), SemanticError> {
         if path.len() > 1 {
             let canon_path = self.to_canonical(path)?;
 
@@ -257,23 +277,21 @@ impl<'a> SymbolTableScopeStack {
             match (project_symbol, imported_symbol) {
                 (Some(ps), None) => Ok((ps, canon_path)),
                 (None, Some(is)) => Ok((is, canon_path)),
-                (Some(_), Some(_)) => Err(format!("Found multiple definitions of {}", path)),
-                (None, None) => Err(format!(
-                    "Could not find item with the given path: {} ({})",
-                    path, canon_path
+                (Some(_), Some(_)) => Err(SemanticError::MultipleDefs(path.clone())),
+                (None, None) => Err(SemanticError::PathNotFound(
+                    path.clone(),
+                    canon_path.clone(),
                 )),
             }
         } else if path.len() == 1 {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
             match path.item() {
-                Some(item) => self
-                    .get_symbol(item)
-                    .ok_or(format!("{} is not defined", item)),
-                None => Err("Path does not end with a valid identifier".into()),
+                Some(item) => self.get_symbol(item).ok_or(SemanticError::NotDefined(item)),
+                None => Err(SemanticError::PathNotValid),
             }
         } else {
-            Err("empty path passed to lookup_path".into())
+            Err(SemanticError::EmptyPath)
         }
     }
 
@@ -315,7 +333,7 @@ impl<'a> SymbolTableScopeStack {
     For example, the path `super::MyStruct` would be converted to `root::my_module::MyStruct`
     if the current node were in a module contained within `my_module`.
      */
-    pub fn canonize_type(&self, ty: &Type) -> Result<Type> {
+    pub fn canonize_type(&self, ty: &Type) -> Result<Type, SemanticError> {
         match ty {
             Type::Custom(path) => self
                 .lookup_symbol_by_path(path)
@@ -325,7 +343,7 @@ impl<'a> SymbolTableScopeStack {
                 let cparams = params
                     .iter()
                     .map(|pty| self.canonize_type(pty))
-                    .collect::<Result<Vec<Type>>>()?;
+                    .collect::<Result<Vec<Type>, SemanticError>>()?;
                 let cret_ty = self.canonize_type(ret_ty)?;
                 Ok(Type::CoroutineDef(cparams, Box::new(cret_ty)))
             }
@@ -333,7 +351,7 @@ impl<'a> SymbolTableScopeStack {
                 let cparams = params
                     .iter()
                     .map(|pty| self.canonize_type(pty))
-                    .collect::<Result<Vec<Type>>>()?;
+                    .collect::<Result<Vec<Type>, SemanticError>>()?;
                 let cret_ty = self.canonize_type(ret_ty)?;
                 Ok(Type::FunctionDef(cparams, Box::new(cret_ty)))
             }
@@ -341,20 +359,20 @@ impl<'a> SymbolTableScopeStack {
                 let cparams = params
                     .iter()
                     .map(|(name, ty)| self.canonize_type(ty).map(|ty| (*name, ty)))
-                    .collect::<Result<Vec<(StringId, Type)>>>()?;
+                    .collect::<Result<Vec<(StringId, Type)>, SemanticError>>()?;
                 Ok(Type::StructDef(cparams))
             }
             Type::ExternDecl(params, has_varargs, ret_ty) => {
                 let cparams = params
                     .iter()
                     .map(|pty| self.canonize_type(pty))
-                    .collect::<Result<Vec<Type>>>()?;
+                    .collect::<Result<Vec<Type>, SemanticError>>()?;
                 let cret_ty = self.canonize_type(ret_ty)?;
                 Ok(Type::ExternDecl(cparams, *has_varargs, Box::new(cret_ty)))
             }
             Type::Array(el_ty, len) => {
                 if *len <= 0 {
-                    Err(format!("Expected length > 0 for array, but found {}", *len))
+                    Err(SemanticError::ArrayInvalidSize(*len))
                 } else {
                     Ok(Type::Array(box self.canonize_type(el_ty)?, *len))
                 }
@@ -365,9 +383,9 @@ impl<'a> SymbolTableScopeStack {
 
     /// Converts a relative path, `path`, into a canonical path by merging it with
     /// the path to the current node, as represented by the stack.
-    pub fn to_canonical(&self, path: &Path) -> Result<Path> {
-        let current_path = self.to_path().ok_or("A valid path is expected")?;
-        path.to_canonical(&current_path)
+    pub fn to_canonical(&self, path: &Path) -> Result<Path, SemanticError> {
+        let current_path = self.to_path().ok_or(SemanticError::PathNotValid)?;
+        path.to_canonical(&current_path).map_err(|e| e.into())
     }
 
     /// Starting from the bottom of the stack this builds a path

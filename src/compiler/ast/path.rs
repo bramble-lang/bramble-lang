@@ -1,7 +1,6 @@
-use crate::{
-    compiler::lexer::stringtable::{StringId, StringTable},
-    result::Result,
-};
+use crate::compiler::lexer::stringtable::{StringId, StringTable};
+
+use super::AstError;
 
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";
@@ -112,7 +111,7 @@ impl Path {
     - If this path begins with `self` then `self` will be replaced with `current_path`
     - occurances of `super` will move up the current path
     */
-    pub fn to_canonical(&self, current_path: &Path) -> Result<Path> {
+    pub fn to_canonical(&self, current_path: &Path) -> Result<Path, AstError> {
         // TODO: make this method move "self"?
         if !current_path.is_canonical() {
             panic!("Current path is not canonical: {}", current_path);
@@ -137,13 +136,9 @@ impl Path {
             let mut merged: Vec<Element> = current_path.into();
             for step in path.iter() {
                 if *step == Element::Super {
-                    merged
-                        .pop()
-                        .ok_or("Use of super in path exceeded the depth of the current path")?;
+                    merged.pop().ok_or(AstError::PathTooSuper)?;
                     if merged.len() == 0 {
-                        return Err(
-                            "Use of super in path exceeded the depth of the current path".into(),
-                        );
+                        return Err(AstError::PathTooSuper);
                     }
                 } else {
                     merged.push(*step);
@@ -166,7 +161,7 @@ impl Path {
 
     /// Convert a path into a human readable string, by replacing all String IDs
     /// with their respective String Values.
-    pub fn to_human_string(&self, table: &StringTable) -> Result<String> {
+    pub fn to_human_string(&self, table: &StringTable) -> Result<String, String> {
         let mut ps = vec![];
         if self.is_canonical() {
             ps.push("project");
@@ -197,7 +192,7 @@ impl Path {
         path
     }
 
-    pub fn element_to_str(table: &StringTable, element: Element) -> Result<&str> {
+    pub fn element_to_str(table: &StringTable, element: Element) -> Result<&str, String> {
         Ok(match element {
             Element::FileRoot => ROOT_PATH,
             Element::CanonicalRoot => CANONICAL_ROOT,
@@ -329,8 +324,7 @@ mod test_path {
         let path: Path = vec![Element::Super, Element::Super, relative_id].into();
         let current = vec![Element::CanonicalRoot, current_id].into();
         let canonized_path = path.to_canonical(&current);
-        let expected = "Use of super in path exceeded the depth of the current path".into();
-        assert_eq!(canonized_path, Err(expected));
+        assert_eq!(canonized_path, Err(AstError::PathTooSuper));
     }
 
     #[test]

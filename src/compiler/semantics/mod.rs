@@ -1,3 +1,9 @@
+use super::{
+    ast::{AstError, Path},
+    lexer::stringtable::StringId,
+    CompilerError, CompilerErrorDisplay,
+};
+
 /*
  * Handles semantic analysis of a syntax tree.  This includes:
  * 1. Type checking: determing the type of every expression and making sure that the types match
@@ -15,3 +21,36 @@ mod tests;
 pub mod semanticnode;
 pub mod symbol_table;
 pub mod type_resolver;
+
+/// Errors generated during semantic analysis of a compilation unit.
+pub enum SemanticError {
+    NotVariable(StringId),
+    NotRoutine(StringId),
+    NotCoroutine(StringId),
+    MultipleDefs(Path),
+    PathNotFound(Path, Path),
+    PathNotValid,
+    NotDefined(StringId),
+    EmptyPath,
+    ArrayInvalidSize(usize),
+    InvalidPath,
+    AlreadyDeclared(StringId),
+    PathTooSuper,
+}
+
+impl CompilerErrorDisplay for SemanticError {
+    fn format(&self, _st: &crate::StringTable) -> Result<String, String> {
+        todo!()
+    }
+}
+
+impl From<AstError> for SemanticError {
+    fn from(ae: AstError) -> Self {
+        match ae {
+            AstError::ModuleAlreadyContains(_) => todo!(),
+            AstError::PathTooSuper => Self::PathTooSuper,
+        }
+    }
+}
+
+type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;

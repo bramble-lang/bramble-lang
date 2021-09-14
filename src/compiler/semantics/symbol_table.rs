@@ -2,7 +2,7 @@ use crate::compiler::{
     ast::*, lexer::stringtable::StringId, semantics::semanticnode::SemanticContext,
 };
 
-use crate::result::Result;
+use super::SemanticError;
 
 /**
  * `SymbolTable` is an AST node context that contains information about symbols that
@@ -63,7 +63,9 @@ impl SymbolTable {
      *
      * This function is recursively applied to child modules.
      */
-    pub fn add_item_defs_to_table(module: &mut Module<SemanticContext>) -> Result<()> {
+    pub fn add_item_defs_to_table(
+        module: &mut Module<SemanticContext>,
+    ) -> Result<(), SemanticError> {
         let mut context = module.get_context().clone();
 
         let fm = module.get_functions_mut();
@@ -93,7 +95,10 @@ impl SymbolTable {
         Ok(())
     }
 
-    fn for_item(item: &mut Item<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
+    fn for_item(
+        item: &mut Item<SemanticContext>,
+        sym: &mut SemanticContext,
+    ) -> Result<(), SemanticError> {
         match item {
             Item::Routine(rd) => SymbolTable::add_routine_parameters(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
@@ -104,7 +109,7 @@ impl SymbolTable {
     fn add_structdef(
         structdef: &mut StructDef<SemanticContext>,
         sym: &mut SemanticContext,
-    ) -> Result<()> {
+    ) -> Result<(), SemanticError> {
         sym.sym.add(
             structdef.get_name(),
             Type::StructDef(
@@ -119,7 +124,10 @@ impl SymbolTable {
         )
     }
 
-    fn add_extern(ex: &mut Extern<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
+    fn add_extern(
+        ex: &mut Extern<SemanticContext>,
+        sym: &mut SemanticContext,
+    ) -> Result<(), SemanticError> {
         let Extern {
             name, params, ty, ..
         } = ex;
@@ -136,7 +144,7 @@ impl SymbolTable {
     fn add_routine_parameters(
         routine: &mut RoutineDef<SemanticContext>,
         sym: &mut SemanticContext,
-    ) -> Result<()> {
+    ) -> Result<(), SemanticError> {
         let RoutineDef {
             def,
             name,
@@ -185,9 +193,15 @@ impl SymbolTable {
         }
     }
 
-    pub fn add(&mut self, name: StringId, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
+    pub fn add(
+        &mut self,
+        name: StringId,
+        ty: Type,
+        mutable: bool,
+        is_extern: bool,
+    ) -> Result<(), SemanticError> {
         if self.get(name).is_some() {
-            Err(format!("{} already declared", name))
+            Err(SemanticError::AlreadyDeclared(name))
         } else {
             self.sym.push(Symbol {
                 name,

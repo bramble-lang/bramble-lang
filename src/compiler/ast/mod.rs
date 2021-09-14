@@ -25,9 +25,10 @@ use super::CompilerErrorDisplay;
 
 pub const MAIN_MODULE: &str = "main";
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AstError {
     ModuleAlreadyContains(StringId),
+    PathTooSuper,
 }
 
 impl CompilerErrorDisplay for AstError {
@@ -37,6 +38,9 @@ impl CompilerErrorDisplay for AstError {
                 let s = st.get(*sid).ok_or(format!("Could not find String"))?;
                 Ok(format!("{} already exists in module", s))
             }
+            AstError::PathTooSuper => Ok(format!(
+                "Use of super would exceed the current depth of the path"
+            )),
         }
     }
 }
