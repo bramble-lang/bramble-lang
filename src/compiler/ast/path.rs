@@ -162,17 +162,20 @@ impl Path {
     /// Convert a path into a human readable string, by replacing all String IDs
     /// with their respective String Values.
     pub fn to_human_string(&self, table: &StringTable) -> Result<String, String> {
-        let mut ps = vec![];
-        if self.is_canonical() {
-            ps.push("project");
-        }
+        let mut ps: Vec<&str> = vec![];
 
         for e in self.iter() {
             let es = Self::element_to_str(table, *e)?;
             ps.push(es.into());
         }
 
-        Ok(ps.join("::"))
+        let ps = ps.join("::");
+
+        if self.is_canonical() {
+            Ok(format!("${}", ps))
+        } else {
+            Ok(ps)
+        }
     }
 
     pub fn from_human_string(table: &mut StringTable, p: &str) -> Path {
