@@ -208,7 +208,10 @@ pub mod tests {
             ),
             (
                 "thing::first::",
-                Err(CompilerError::new(1, ParserErrorKind::PathExpectedColons)),
+                Err(CompilerError::new(
+                    1,
+                    ParserErrorKind::PathExpectedIdentifier,
+                )),
             ),
         ] {
             test += 1;

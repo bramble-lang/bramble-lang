@@ -589,7 +589,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
                     "L{}: expect identifier after path separator '::'",
                     token.l
                 ))*/
-                return err!(token.l, ParserErrorKind::PathExpectedColons);
+                return err!(token.l, ParserErrorKind::PathExpectedIdentifier);
             }
         }
     }

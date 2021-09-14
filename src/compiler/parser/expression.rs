@@ -305,7 +305,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                     _ => {
                         return err!(
                             token.l,
-                            ParserErrorKind::ExpectedButFound(Lex::LBracket, token.s.clone())
+                            ParserErrorKind::ExpectedButFound(Lex::LBracket, Some(token.s.clone()))
                         )
                     }
                 };
@@ -716,16 +716,13 @@ mod test {
         for (text, msg) in [
             (
                 "[5",
-                CompilerError::new(
-                    0,
-                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Lex::Assign),
-                ),
+                CompilerError::new(0, ParserErrorKind::ExpectedButFound(Lex::RBracket, None)),
             ),
             (
                 "[5 6]",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Lex::I64(6)),
+                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
                 ),
             ),
         ]
@@ -846,16 +843,13 @@ mod test {
         for (text, msg) in [
             (
                 "a[5",
-                CompilerError::new(
-                    0,
-                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Lex::Assign),
-                ),
+                CompilerError::new(0, ParserErrorKind::ExpectedButFound(Lex::RBracket, None)),
             ),
             (
                 "a[5 6]",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Lex::I64(6)),
+                    ParserErrorKind::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
                 ),
             ),
             (
@@ -938,25 +932,28 @@ mod test {
                 "{5 10 51}",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Lex::I64(10)),
+                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Some(Lex::I64(10))),
                 ),
             ),
             (
                 "{5; 10 51}",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Lex::I64(51)),
+                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Some(Lex::I64(51))),
                 ),
             ),
             (
                 "{5; 10 let x:i64 := 5}",
-                CompilerError::new(1, ParserErrorKind::ExpectedButFound(Lex::RBrace, Lex::Let)),
+                CompilerError::new(
+                    1,
+                    ParserErrorKind::ExpectedButFound(Lex::RBrace, Some(Lex::Let)),
+                ),
             ),
             (
                 "{let x: i64 := 10 5}",
                 CompilerError::new(
                     1,
-                    ParserErrorKind::ExpectedButFound(Lex::Semicolon, Lex::I64(5)),
+                    ParserErrorKind::ExpectedButFound(Lex::Semicolon, Some(Lex::I64(5))),
                 ),
             ),
         ]

@@ -66,7 +66,10 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
                     let line = *stm.get_context();
                     err!(
                         line,
-                        ParserErrorKind::ExpectedSemicolon(stream.peek().map(|x| x.s.clone()))
+                        ParserErrorKind::ExpectedButFound(
+                            Lex::Semicolon,
+                            stream.peek().map(|x| x.s.clone())
+                        )
                     )
                 } else {
                     stream.set_index(start_index);

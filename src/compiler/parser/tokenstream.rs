@@ -64,14 +64,15 @@ impl<'a> TokenStream<'a> {
     pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, ParserError> {
         let (line, found) = match self.peek() {
             Some(t) => (t.l, t.s.clone()),
-            None => return err!(0, ParserErrorKind::EOF),
+            None => return err!(0, ParserErrorKind::ExpectedButFound(test.clone(), None)),
         };
         match self.next_if(test) {
             Some(t) => Ok(t),
-            None =>
-            //Err(format!("L{}: Expected {}, but found {}", line, test, found)),
-            {
-                err!(line, ParserErrorKind::ExpectedButFound(test.clone(), found))
+            None => {
+                err!(
+                    line,
+                    ParserErrorKind::ExpectedButFound(test.clone(), Some(found))
+                )
             }
         }
     }
