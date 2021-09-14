@@ -24,6 +24,14 @@ where
     pub fn new(line: u32, inner: IE) -> Self {
         CompilerError { line, inner }
     }
+
+    pub fn inner(&self) -> IE {
+        self.inner
+    }
+
+    pub fn line(&self) -> u32 {
+        self.line
+    }
 }
 
 impl<IE> CompilerErrorDisplay for CompilerError<IE>

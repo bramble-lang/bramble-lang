@@ -355,9 +355,10 @@ fn function_decl(
         None => return Ok(None),
     };
 
-    let (fn_line, fn_name) = stream
-        .next_if_id()
-        .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
+    let (fn_line, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
+        fn_line,
+        ParserErrorKind::FnExpectedIdentifierAfterFn,
+    ))?;
     let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
         consume_type(stream)? //.ok_or(format!("L{}: Expected type after ->", fn_line))?
@@ -378,9 +379,10 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => return Ok(None),
     };
 
-    let (co_line, co_name) = stream
-        .next_if_id()
-        .ok_or(format!("L{}: Expected identifier after co", co_line))?;
+    let (co_line, co_name) = stream.next_if_id().ok_or(CompilerError::new(
+        co_line,
+        ParserErrorKind::CoExpectedIdentifierAfterCo,
+    ))?;
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
@@ -389,7 +391,10 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     }
 
     let co_type = match stream.next_if(&Lex::LArrow) {
-        Some(t) => consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", t.l))?,
+        Some(t) => consume_type(stream)?.ok_or(CompilerError::new(
+            t.l,
+            ParserErrorKind::FnExpectedTypeAfterArrow,
+        ))?,
         _ => Type::Unit,
     };
 
@@ -645,13 +650,17 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
 fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
     trace!(stream);
     match stream.next_if(&Lex::LBracket) {
-        Some(_) => {
-            let element_ty =
-                consume_type(stream)?.ok_or("Expected type in array type declaration")?;
+        Some(Token { l: line, .. }) => {
+            let element_ty = consume_type(stream)?.ok_or(CompilerError::new(
+                line,
+                ParserErrorKind::ArrayDeclExpectedType,
+            ))?;
             stream.next_must_be(&Lex::Semicolon)?;
 
-            let len = expression(stream)?
-                .ok_or("Expected size to be specified in array type declaration")?;
+            let len = expression(stream)?.ok_or(CompilerError::new(
+                line,
+                ParserErrorKind::ArrayDeclExpectedSize,
+            ))?;
             let len = match len {
                 Expression::U8(_, l) => l as usize,
                 Expression::U16(_, l) => l as usize,

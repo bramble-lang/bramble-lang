@@ -20,4 +20,23 @@ pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;
 pub use self::ty::Type;
 
+use super::lexer::stringtable::StringId;
+use super::CompilerErrorDisplay;
+
 pub const MAIN_MODULE: &str = "main";
+
+#[derive(Clone, Debug)]
+pub enum AstError {
+    ModuleAlreadyContains(StringId),
+}
+
+impl CompilerErrorDisplay for AstError {
+    fn format(&self, st: &crate::StringTable) -> Result<String, String> {
+        match self {
+            AstError::ModuleAlreadyContains(sid) => {
+                let s = st.get(*sid).ok_or(format!("Could not find String"))?;
+                Ok(format!("{} already exists in module", s))
+            }
+        }
+    }
+}

@@ -12,6 +12,7 @@ use crate::{
             stringtable::StringId,
             tokens::{Lex, Token},
         },
+        CompilerError,
     },
     trace,
 };
@@ -19,7 +20,15 @@ use crate::{
 use super::{
     parser::{ParserContext, ParserResult},
     tokenstream::TokenStream,
+    ParserErrorKind,
 };
+
+/// Helper macro to get rid of repitition of boilerplate code.
+macro_rules! err {
+    ($ln: expr, $kind: expr) => {
+        Err(CompilerError::new($ln, $kind))
+    };
+}
 
 pub(super) fn statement_or_yield_return(
     stream: &mut TokenStream,
@@ -55,14 +64,18 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
             _ => {
                 if must_have_semicolon {
                     let line = *stm.get_context();
-                    Err(format!(
+                    err!(
+                        line,
+                        ParserErrorKind::ExpectedSemicolon(stream.peek().map(|x| x.s))
+                    )
+                    /*Err(format!(
                         "L{}: Expected ;, but found {}",
                         line,
                         match stream.peek() {
                             Some(x) => format!("{}", x.s),
                             None => "EOF".into(),
                         }
-                    ))
+                    ))*/
                 } else {
                     stream.set_index(start_index);
                     Ok(None)
@@ -81,25 +94,26 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
     match stream.next_if(&Lex::Let) {
         Some(token) => {
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
-            let id_decl = id_declaration(stream)?.ok_or(format!(
-                "L{}: Expected identifier declaration (`<id> : <type>`) after let",
-                token.l
+            let id_decl = id_declaration(stream)?.ok_or(CompilerError::new(
+                token.l,
+                ParserErrorKind::ExpectedIdDeclAfterLet,
             ))?;
             stream.next_must_be(&Lex::Assign)?;
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
-                None => expression(stream)?
-                    .ok_or(format!("L{}: expected expression on RHS of bind", token.l))?,
+                None => expression(stream)?.ok_or(CompilerError::new(
+                    token.l,
+                    ParserErrorKind::ExpectedExpressionOnRhs,
+                ))?,
             };
 
             match id_decl {
                 Expression::IdentifierDeclare(_, id, ty) => {
                     Ok(Some(Bind::new(token.l, id, ty.clone(), is_mutable, exp)))
                 }
-                _ => Err(format!(
-                    "L{}: Expected type specification after {}",
+                _ => Err(CompilerError::new(
                     token.l,
-                    id_decl.root_str()
+                    ParserErrorKind::ExpectedTypeAfter,
                 )),
             }
         }
@@ -120,9 +134,9 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 .s
                 .get_str()
                 .expect("CRITICAL: identifier token cannot be converted to string");
-            let exp = expression(stream)?.ok_or(format!(
-                "L{}: expected expression on LHS of assignment",
-                tokens[2].l
+            let exp = expression(stream)?.ok_or(CompilerError::new(
+                tokens[2].l,
+                ParserErrorKind::ExpectedExpressionOnRhs,
             ))?;
             //Expression::new_mutate(tokens[0].l, &id, Box::new(exp))
             Ok(Some(Mutate::new(tokens[0].l, id, exp)))
@@ -136,7 +150,7 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
         Some(token) => match path(stream)? {
             Some((l, path)) => {
                 let params = routine_call_params(stream)?
-                    .ok_or(&format!("L{}: Expected parameters after coroutine name", l))?;
+                    .ok_or(CompilerError::new(l, ParserErrorKind::ExpectedParams))?;
                 Ok(Some(Expression::RoutineCall(
                     l,
                     RoutineCall::CoroutineInit,
@@ -144,7 +158,10 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
                     params,
                 )))
             }
-            None => Err(format!("L{}: expected identifier after init", token.l)),
+            None => Err(CompilerError::new(
+                token.l,
+                ParserErrorKind::ExpectedIdAfterInit,
+            )),
         },
         _ => Ok(None),
     }

@@ -6,8 +6,18 @@ use super::{
     path::{Element, Path},
     routinedef::{RoutineDef, RoutineDefType},
     structdef::StructDef,
+    AstError,
 };
-use crate::{compiler::lexer::stringtable::StringId, result::Result};
+use crate::compiler::{lexer::stringtable::StringId, CompilerError};
+
+type AstResult<T> = Result<T, CompilerError<AstError>>;
+
+/// Helper macro to get rid of repitition of boilerplate code.
+macro_rules! err {
+    ($ln: expr, $kind: expr) => {
+        Err(CompilerError::new($ln, $kind))
+    };
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module<M> {
@@ -64,7 +74,7 @@ impl<M: Context> Node<M> for Module<M> {
 }
 
 impl<M> std::fmt::Display for Module<M> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_fmt(format_args!("{}", self.get_name()))
     }
 }
@@ -86,47 +96,51 @@ impl<M> Module<M> {
         self.modules.push(m);
     }
 
-    pub fn add_function(&mut self, f: RoutineDef<M>) -> Result<()> {
+    pub fn add_function(&mut self, f: RoutineDef<M>) -> AstResult<()> {
         let fname = f.get_name();
         if self.get_item(fname).is_none() {
             self.functions.push(Item::Routine(f));
             Ok(())
         } else {
-            Err(format!("{} already exists in module", fname))
+            //Err(format!("{} already exists in module", fname))
+            err!(0, AstError::ModuleAlreadyContains(fname))
         }
     }
 
-    pub fn add_coroutine(&mut self, c: RoutineDef<M>) -> Result<()> {
+    pub fn add_coroutine(&mut self, c: RoutineDef<M>) -> AstResult<()> {
         let cname = c.get_name();
         if self.get_item(cname).is_none() {
             self.coroutines.push(Item::Routine(c));
             Ok(())
         } else {
-            Err(format!("{} already exists in module", cname))
+            //Err(format!("{} already exists in module", cname))
+            err!(0, AstError::ModuleAlreadyContains(cname))
         }
     }
 
-    pub fn add_struct(&mut self, s: StructDef<M>) -> Result<()> {
+    pub fn add_struct(&mut self, s: StructDef<M>) -> AstResult<()> {
         let name = s.get_name();
         if self.get_item(name).is_none() {
             self.structs.push(Item::Struct(s));
             Ok(())
         } else {
-            Err(format!("{} already exists in module", name))
+            //Err(format!("{} already exists in module", name))
+            err!(0, AstError::ModuleAlreadyContains(name))
         }
     }
 
-    pub fn add_extern(&mut self, e: Extern<M>) -> Result<()> {
+    pub fn add_extern(&mut self, e: Extern<M>) -> AstResult<()> {
         let name = e.get_name();
         if self.get_item(name).is_none() {
             self.externs.push(Item::Extern(e));
             Ok(())
         } else {
-            Err(format!("{} already exists in module", name))
+            //Err(format!("{} already exists in module", name))
+            err!(0, AstError::ModuleAlreadyContains(name))
         }
     }
 
-    pub fn add_item(&mut self, i: Item<M>) -> Result<()> {
+    pub fn add_item(&mut self, i: Item<M>) -> AstResult<()> {
         match i {
             Item::Routine(r) => {
                 if *r.get_def() == RoutineDefType::Function {
@@ -595,7 +609,7 @@ impl<M: Context> Node<M> for Item<M> {
 }
 
 impl<M> std::fmt::Display for Item<M> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_fmt(format_args!("{}", self.get_name()))
     }
 }
