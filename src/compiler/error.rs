@@ -25,7 +25,7 @@ where
         CompilerError { line, inner }
     }
 
-    pub fn inner(&self) -> IE {
+    pub fn inner(self) -> IE {
         self.inner
     }
 

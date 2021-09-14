@@ -40,6 +40,21 @@ pub enum ParserErrorKind {
     ExpectedExpressionOnRhs,
     ExpectedParams,
     ExpectedIdAfterInit,
+    NotAUnaryOp(Lex),
+    NotABinaryOp(Lex),
+    IfExpectedConditional,
+    IfTrueArmMissingExpr,
+    IfElseExpectedIfExpr,
+    IfFalseArmMissingExpr,
+    WhileExpectedConditional,
+    WhileMissingBody,
+    PathExpectedIdentifier,
+    YieldExpectedIdentifier,
+    StructExpectedFieldExpr(StringId),
+    ExpectedExprAfter(Lex),
+    ExpectedTermAfter(Lex),
+    MemberAccessExpectedField,
+    IndexOpInvalidExpr,
 }
 
 impl CompilerErrorDisplay for ParserErrorKind {
@@ -50,10 +65,11 @@ impl CompilerErrorDisplay for ParserErrorKind {
 
 impl From<CompilerError<AstError>> for CompilerError<ParserErrorKind> {
     fn from(ce: CompilerError<AstError>) -> Self {
+        let line = ce.line();
         let ae = ce.inner();
         match ae {
             AstError::ModuleAlreadyContains(sid) => {
-                CompilerError::new(ce.line(), ParserErrorKind::ModAlreadyContains(sid))
+                CompilerError::new(line, ParserErrorKind::ModAlreadyContains(sid))
             }
         }
     }

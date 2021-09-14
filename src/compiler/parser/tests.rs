@@ -7,8 +7,8 @@ pub mod tests {
         ast::*,
         lexer::stringtable::StringTable,
         lexer::{tokens::Token, LexerError},
-        parser::{expression::*, statement::*, tokenstream::TokenStream},
-        CompilerError, Lexer,
+        parser::{expression::*, statement::*, tokenstream::TokenStream, ParserErrorKind},
+        CompilerError, CompilerErrorDisplay, Lexer,
     };
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
@@ -201,11 +201,14 @@ pub mod tests {
             ),
             (
                 "thing::",
-                Err("L1: expect identifier after path separator '::'"),
+                Err(CompilerError::new(
+                    1,
+                    ParserErrorKind::PathExpectedIdentifier,
+                )),
             ),
             (
                 "thing::first::",
-                Err("L1: expect identifier after path separator '::'"),
+                Err(CompilerError::new(1, ParserErrorKind::PathExpectedColons)),
             ),
         ] {
             test += 1;
@@ -221,7 +224,7 @@ pub mod tests {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, "{}", msg),
+                        Err(msg) => assert!(false, "{:?}", msg.format(&table)),
                     }
                 }
                 Ok(Some(Expression::Identifier(l, id))) => {
@@ -231,13 +234,13 @@ pub mod tests {
                             assert_eq!(expected.len(), 1);
                             assert_eq!(Element::Id(id), expected[0]);
                         }
-                        Err(msg) => assert!(false, "{}", msg),
+                        Err(msg) => assert!(false, "{:?}", msg),
                     }
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
-                    Ok(_) => assert!(false, "{}", msg),
+                    Ok(_) => assert!(false, "{}", msg.format(&table).unwrap()),
                     Err(expected) => assert_eq!(expected, msg),
                 },
             }
@@ -281,7 +284,7 @@ pub mod tests {
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
                 Ok(None) => panic!("No node returned for {}", text),
-                Err(msg) => panic!("{} caused {}", text, msg),
+                Err(msg) => panic!("{} caused {:?}", text, msg),
             }
         }
     }

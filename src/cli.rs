@@ -2,7 +2,7 @@ use clap::{App, Arg, ArgMatches};
 use log::LevelFilter;
 use simplelog::*;
 
-use crate::diagnostics::config::TracingConfig;
+use crate::{compiler::CompilerError, diagnostics::config::TracingConfig, ProjectError};
 
 // Exit Codes for different types of errors
 pub const ERR_TYPE_CHECK: i32 = 1;
@@ -13,9 +13,9 @@ pub const ERR_LEXER_ERROR: i32 = 5;
 pub const ERR_IMPORT_ERROR: i32 = 6;
 pub const ERR_MANIFEST_WRITE_ERROR: i32 = 7;
 
-pub fn print_errs(errs: &[String]) {
+pub fn print_errs(errs: &[CompilerError<ProjectError>]) {
     for e in errs {
-        println!("{}", e);
+        println!("{:?}", e);
     }
 }
 

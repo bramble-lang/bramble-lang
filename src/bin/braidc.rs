@@ -30,7 +30,7 @@ fn main() {
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
-            print_errs(&errs);
+            todo!("{:?}", &errs);
             exit(ERR_IMPORT_ERROR)
         }
     };
@@ -43,7 +43,7 @@ fn main() {
     let token_sets = match tokenize_project(&mut string_table, src_input, trace_lexer) {
         Ok(ts) => ts,
         Err(errs) => {
-            print_errs(&errs);
+            todo!("{:?}", &errs);
             exit(ERR_LEXER_ERROR)
         }
     };

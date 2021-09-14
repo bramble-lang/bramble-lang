@@ -63,7 +63,7 @@ impl<'a> TokenStream<'a> {
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, ParserError> {
         let (line, found) = match self.peek() {
-            Some(t) => (t.l, t.s),
+            Some(t) => (t.l, t.s.clone()),
             None => return err!(0, ParserErrorKind::EOF),
         };
         match self.next_if(test) {
