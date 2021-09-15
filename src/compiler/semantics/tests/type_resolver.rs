@@ -3284,7 +3284,7 @@ mod type_resolver_tests {
 
             let mut import_context = SemanticContext::new(0, 0, Type::Unit);
             import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
-            let imports = Manifest::new(&table, &vec![RoutineDef{
+            let manifest = Manifest::new(&table, &vec![RoutineDef{
                 context: import_context,
                 def: RoutineDefType::Function,
                 name: test,
@@ -3292,16 +3292,17 @@ mod type_resolver_tests {
                 params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), a, p)).collect(),
                 body: vec![],
             }], &vec![]).unwrap();
+            let imports = manifest.to_import(&mut table);
             let result = resolve_types_with_imports(
                 &ast, 
                 main_mod, main_fn,
-                &vec![imports.to_import(&mut table)], 
+                &vec![imports], 
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off, 
             );
             match expected {
-                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result),
+                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.format(&table))),
                 Err(msg) => assert_eq!(result.unwrap_err().format(&table).unwrap(), msg),
             }
         }

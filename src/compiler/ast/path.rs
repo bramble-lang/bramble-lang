@@ -179,20 +179,27 @@ impl Path {
     }
 
     pub fn from_human_string(table: &mut StringTable, p: &str) -> Path {
+        let (p, is_canonical) = match p.strip_prefix("$") {
+            Some(stripped) => (stripped, true),
+            None => (p, false),
+        };
         let p = p.split("::");
 
-        let mut path = Path::new();
+        let mut path = vec![];
+        if is_canonical {
+            path.push(Element::CanonicalRoot)
+        }
+
         for e in p {
             match e {
                 "self" => path.push(Element::Selph),
                 "super" => path.push(Element::Super),
                 "root" => path.push(Element::FileRoot),
-                "project" => path.push(Element::CanonicalRoot),
                 e => path.push(Element::Id(table.insert(e.into()))),
             }
         }
 
-        path
+        path.into()
     }
 
     pub fn element_to_str(table: &StringTable, element: Element) -> Result<&str, String> {
