@@ -72,15 +72,15 @@ impl CompilerErrorDisplay for SemanticError {
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {
         match self {
             SemanticError::NotVariable(_) => Ok(format!("Not a variable")),
-            SemanticError::NotRoutine(_) => Ok(format!("not a routine")),
+            SemanticError::NotRoutine(_) => Ok(format!("Not a routine")),
             SemanticError::NotCoroutine(_) => Ok(format!("Not a coroutine")),
-            SemanticError::MultipleDefs(_) => Ok(format!("multiple defs")),
+            SemanticError::MultipleDefs(_) => Ok(format!("Multiple defs")),
             SemanticError::PathNotFound(path, canonical_form) => Ok(format!(
                 "Could not find item with the given path: {} ({})",
                 path.to_human_string(st)?,
                 canonical_form.to_human_string(st)?
             )),
-            SemanticError::PathNotValid => Ok(format!("path not valid")),
+            SemanticError::PathNotValid => Ok(format!("Path is not valid")),
             SemanticError::NotDefined(sid) => Ok(format!("{} is not defined", st.get(*sid)?)),
             SemanticError::EmptyPath => Ok(format!("Empty path")),
             SemanticError::ArrayInvalidSize(sz) => {
