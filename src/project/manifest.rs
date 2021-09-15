@@ -92,10 +92,7 @@ struct ManifestRoutineDef {
 
 impl ManifestRoutineDef {
     fn from_rd(st: &StringTable, rd: &RoutineDef<SemanticContext>) -> Result<Self, String> {
-        let name = st
-            .get(rd.name)
-            .ok_or(format!("Could not find routine name"))?
-            .into();
+        let name = st.get(rd.name)?.into();
         let params = rd
             .params
             .iter()
@@ -134,16 +131,13 @@ struct ManifestStructDef {
 
 impl ManifestStructDef {
     fn from_sd(st: &StringTable, sd: &StructDef<SemanticContext>) -> Result<Self, String> {
-        let name = st
-            .get(sd.get_name())
-            .ok_or(format!("Could not find the name of the struct"))?
-            .into();
+        let name = st.get(sd.get_name())?.into();
         let canon_path = path_to_string(st, sd.get_context().get_canonical_path())?;
         let fields = sd
             .get_fields()
             .iter()
             .map(|f| {
-                let name = st.get(f.name).ok_or(format!("Could not find field name"));
+                let name = st.get(f.name);
                 let fty = ManifestType::from_ty(st, &f.ty);
                 name.and_then(|name| fty.and_then(|fty| Ok((name.into(), fty))))
             })

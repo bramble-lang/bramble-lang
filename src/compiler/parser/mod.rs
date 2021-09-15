@@ -59,7 +59,7 @@ impl CompilerErrorDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [StringId]s
     /// with their respective string values.
     fn format(&self, _st: &crate::StringTable) -> Result<String, String> {
-        match self {
+        let msg = match self {
             ParserError::Locked(_) => todo!(),
             ParserError::ModExpectedName => todo!(),
             ParserError::ModAlreadyContains(_) => todo!(),
@@ -76,8 +76,19 @@ impl CompilerErrorDisplay for ParserError {
             ParserError::ArrayDeclExpectedType => todo!(),
             ParserError::ArrayDeclExpectedSize => todo!(),
             ParserError::IdDeclExpectedType => todo!(),
-            ParserError::ExpectedButFound(_, _) => todo!(),
-            ParserError::ExpectedIdDeclAfterLet => todo!(),
+            ParserError::ExpectedButFound(expected, actual) => {
+                format!(
+                    "Expected {}, but found {}",
+                    expected,
+                    actual
+                        .as_ref()
+                        .map(|l| l.to_string())
+                        .unwrap_or("EOF".into())
+                )
+            }
+            ParserError::ExpectedIdDeclAfterLet => {
+                format!("Expected identifier declaration (`<id> : <type>`) after let")
+            }
             ParserError::ExpectedTypeAfter => todo!(),
             ParserError::ExpectedExpressionOnRhs => todo!(),
             ParserError::ExpectedParams => todo!(),
@@ -97,8 +108,8 @@ impl CompilerErrorDisplay for ParserError {
             ParserError::ExpectedTermAfter(_) => todo!(),
             ParserError::MemberAccessExpectedField => todo!(),
             ParserError::IndexOpInvalidExpr => todo!(),
-        }
-        Ok(format!("Parser error"))
+        };
+        Ok(msg)
     }
 }
 
