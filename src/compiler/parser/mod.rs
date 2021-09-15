@@ -56,7 +56,7 @@ pub enum ParserError {
 }
 
 impl CompilerErrorDisplay for ParserError {
-    /// Format a ParserError into a human readable message and replace any [StringId]s
+    /// Format a ParserError into a human readable message and replace any [`StringId`]s
     /// with their respective string values.
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {
         let msg = match self {
@@ -134,7 +134,7 @@ impl From<CompilerError<AstError>> for CompilerError<ParserError> {
             AstError::ModuleAlreadyContains(sid) => {
                 CompilerError::new(line, ParserError::ModAlreadyContains(sid))
             }
-            AstError::PathTooSuper => todo!(),
+            AstError::PathTooSuper => todo!(), // TODO: Investigate why this error is in the AST?
         }
     }
 }
