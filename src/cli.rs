@@ -2,7 +2,7 @@ use clap::{App, Arg, ArgMatches};
 use log::LevelFilter;
 use simplelog::*;
 
-use crate::{compiler::CompilerError, diagnostics::config::TracingConfig, ProjectError};
+use crate::{compiler::CompilerErrorDisplay, diagnostics::config::TracingConfig, StringTable};
 
 // Exit Codes for different types of errors
 pub const ERR_TYPE_CHECK: i32 = 1;
@@ -13,9 +13,9 @@ pub const ERR_LEXER_ERROR: i32 = 5;
 pub const ERR_IMPORT_ERROR: i32 = 6;
 pub const ERR_MANIFEST_WRITE_ERROR: i32 = 7;
 
-pub fn print_errs(errs: &[CompilerError<ProjectError>]) {
+pub fn print_errs<E: CompilerErrorDisplay>(st: &StringTable, errs: &[E]) {
     for e in errs {
-        println!("{:?}", e);
+        println!("Error: {}", e.format(st).unwrap());
     }
 }
 
@@ -190,4 +190,12 @@ pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> 
         TerminalMode::Mixed,
         ColorChoice::Auto,
     )])
+}
+
+impl CompilerErrorDisplay for String {
+    /// Allow for errors from the Lexer (which do not include StringIds since the lexer generates the
+    /// [StringTable]) to be printed using the same error printing functions as all other errors
+    fn format(&self, _: &StringTable) -> Result<String, String> {
+        Ok(format!("{}", self))
+    }
 }

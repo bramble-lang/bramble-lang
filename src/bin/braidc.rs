@@ -20,6 +20,8 @@ fn main() {
         None => (),
     }
 
+    let mut string_table = StringTable::new();
+
     let input = config
         .value_of("input")
         .expect("Expected an input source file to compile");
@@ -30,20 +32,18 @@ fn main() {
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
-            todo!("{:?}", &errs);
+            print_errs(&string_table, &errs);
             exit(ERR_IMPORT_ERROR)
         }
     };
 
     let stop_stage = get_stage(&config).unwrap();
 
-    let mut string_table = StringTable::new();
-
     let trace_lexer = get_lexer_tracing(&config);
     let token_sets = match tokenize_project(&mut string_table, src_input, trace_lexer) {
         Ok(ts) => ts,
         Err(errs) => {
-            todo!("{:?}", &errs);
+            print_errs(&string_table, &errs);
             exit(ERR_LEXER_ERROR)
         }
     };
@@ -57,7 +57,7 @@ fn main() {
     let root = match parse_project(&mut string_table, project_name_id, token_sets, trace_parser) {
         Ok(root) => root,
         Err(errs) => {
-            print_errs(&errs);
+            print_errs(&string_table, &errs);
             exit(ERR_PARSER_ERROR)
         }
     };
@@ -89,7 +89,7 @@ fn main() {
     ) {
         Ok(ast) => ast,
         Err(msg) => {
-            println!("Error: {:?}", msg);
+            print_errs(&string_table, &[msg]);
             std::process::exit(ERR_TYPE_CHECK);
         }
     };

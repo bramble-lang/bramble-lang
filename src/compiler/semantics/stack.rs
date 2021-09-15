@@ -8,18 +8,11 @@ use crate::compiler::{
     import::Import,
 };
 
+use super::SemanticError;
 use super::{
     semanticnode::SemanticContext,
     symbol_table::{ScopeType, Symbol, SymbolTable},
 };
-use super::{SemanticError, SemanticResult};
-
-/// Helper macro to get rid of repitition of boilerplate code.
-macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
-    };
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTableScopeStack {
