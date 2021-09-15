@@ -208,9 +208,7 @@ impl Path {
             Element::CanonicalRoot => CANONICAL_ROOT,
             Element::Selph => SELF,
             Element::Super => SUPER,
-            Element::Id(id) => table
-                .get(id)
-                .ok_or(format!("Could not find Id {} in {:?}", id, table))?,
+            Element::Id(id) => table.get(id)?,
         })
     }
 }

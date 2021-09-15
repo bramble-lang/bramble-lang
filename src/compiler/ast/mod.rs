@@ -35,7 +35,7 @@ impl CompilerErrorDisplay for AstError {
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {
         match self {
             AstError::ModuleAlreadyContains(sid) => {
-                let s = st.get(*sid).ok_or(format!("Could not find String"))?;
+                let s = st.get(*sid)?;
                 Ok(format!("{} already exists in module", s))
             }
             AstError::PathTooSuper => Ok(format!(

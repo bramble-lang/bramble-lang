@@ -59,6 +59,45 @@ impl CompilerErrorDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [StringId]s
     /// with their respective string values.
     fn format(&self, _st: &crate::StringTable) -> Result<String, String> {
+        match self {
+            ParserError::Locked(_) => todo!(),
+            ParserError::ModExpectedName => todo!(),
+            ParserError::ModAlreadyContains(_) => todo!(),
+            ParserError::ExternInvalidVarArgs => todo!(),
+            ParserError::ExternExpectedFnDecl => todo!(),
+            ParserError::StructExpectedIdentifier => todo!(),
+            ParserError::FnExpectedIdentifierAfterFn => todo!(),
+            ParserError::FnVarArgsNotAllowed => todo!(),
+            ParserError::FnExpectedTypeAfterArrow => todo!(),
+            ParserError::FnExpectedReturn(_) => todo!(),
+            ParserError::FnCallExpectedParams => todo!(),
+            ParserError::CoExpectedIdentifierAfterCo => todo!(),
+            ParserError::ArrayExpectedIntLiteral => todo!(),
+            ParserError::ArrayDeclExpectedType => todo!(),
+            ParserError::ArrayDeclExpectedSize => todo!(),
+            ParserError::IdDeclExpectedType => todo!(),
+            ParserError::ExpectedButFound(_, _) => todo!(),
+            ParserError::ExpectedIdDeclAfterLet => todo!(),
+            ParserError::ExpectedTypeAfter => todo!(),
+            ParserError::ExpectedExpressionOnRhs => todo!(),
+            ParserError::ExpectedParams => todo!(),
+            ParserError::ExpectedIdAfterInit => todo!(),
+            ParserError::NotAUnaryOp(_) => todo!(),
+            ParserError::NotABinaryOp(_) => todo!(),
+            ParserError::IfExpectedConditional => todo!(),
+            ParserError::IfTrueArmMissingExpr => todo!(),
+            ParserError::IfElseExpectedIfExpr => todo!(),
+            ParserError::IfFalseArmMissingExpr => todo!(),
+            ParserError::WhileExpectedConditional => todo!(),
+            ParserError::WhileMissingBody => todo!(),
+            ParserError::PathExpectedIdentifier => todo!(),
+            ParserError::YieldExpectedIdentifier => todo!(),
+            ParserError::StructExpectedFieldExpr(_) => todo!(),
+            ParserError::ExpectedExprAfter(_) => todo!(),
+            ParserError::ExpectedTermAfter(_) => todo!(),
+            ParserError::MemberAccessExpectedField => todo!(),
+            ParserError::IndexOpInvalidExpr => todo!(),
+        }
         Ok(format!("Parser error"))
     }
 }

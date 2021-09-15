@@ -81,10 +81,7 @@ impl CompilerErrorDisplay for SemanticError {
                 canonical_form.to_human_string(st)?
             )),
             SemanticError::PathNotValid => Ok(format!("path not valid")),
-            SemanticError::NotDefined(sid) => Ok(format!(
-                "{} is not defined",
-                st.get(*sid).ok_or("StringId not found")?
-            )),
+            SemanticError::NotDefined(sid) => Ok(format!("{} is not defined", st.get(*sid)?)),
             SemanticError::EmptyPath => Ok(format!("Empty path")),
             SemanticError::ArrayInvalidSize(sz) => {
                 Ok(format!("Expected length > 0 for array, but found {}", sz))
@@ -100,23 +97,21 @@ impl CompilerErrorDisplay for SemanticError {
                 "Expected integral type for index but found {}",
                 ty.to_human_string(st)?
             )),
-            SemanticError::AlreadyDeclared(sid) => Ok(format!(
-                "{} already declared",
-                st.get(*sid).ok_or("StringId not found")?
-            )),
+            SemanticError::AlreadyDeclared(sid) => {
+                Ok(format!("{} already declared", st.get(*sid)?))
+            }
             SemanticError::PathTooSuper => Ok(format!("Path too super")),
             SemanticError::BindExpected(expected, actual) => Ok(format!(
                 "Bind expected {} but got {}",
                 expected.to_human_string(st)?,
                 actual.to_human_string(st)?
             )),
-            SemanticError::VariableNotMutable(sid) => Ok(format!(
-                "Variable {} is not mutable",
-                st.get(*sid).ok_or(format!("StringId not found"))?
-            )),
+            SemanticError::VariableNotMutable(sid) => {
+                Ok(format!("Variable {} is not mutable", st.get(*sid)?))
+            }
             SemanticError::BindMismatch(sid, expected, actual) => Ok(format!(
                 "{} is of type {} but is assigned {}",
-                st.get(*sid).ok_or(format!("StringId not found"))?,
+                st.get(*sid)?,
                 expected.to_human_string(st)?,
                 actual.to_human_string(st)?
             )),
@@ -138,7 +133,7 @@ impl CompilerErrorDisplay for SemanticError {
             SemanticError::MemberAccessMemberNotFound(path, member) => Ok(format!(
                 "{} does not have member {}",
                 path.to_human_string(st)?,
-                st.get(*member).ok_or(format!("StringId not found"))?
+                st.get(*member)?
             )),
             SemanticError::IfExprMismatchArms(t, f) => Ok(format!(
                 "If expression has mismatching arms: expected {} got {}",
@@ -179,14 +174,14 @@ impl CompilerErrorDisplay for SemanticError {
             )),
             SemanticError::StructExprMemberNotFound(path, sid) => Ok(format!(
                 "member {} not found on {}",
-                st.get(*sid).ok_or(format!("StringId not found"))?,
+                st.get(*sid)?,
                 path.to_human_string(st)?
             )),
             SemanticError::StructExprFieldTypeMismatch(path, fname, expected, actual) => {
                 Ok(format!(
                     "{}.{} expects {} but got {}",
                     path.to_human_string(st)?,
-                    st.get(*fname).ok_or(format!("StringId not found"))?,
+                    st.get(*fname)?,
                     expected.to_human_string(st)?,
                     actual.to_human_string(st)?
                 ))

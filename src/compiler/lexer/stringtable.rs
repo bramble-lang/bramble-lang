@@ -45,14 +45,14 @@ impl StringTable {
 
     /// Given an ID, if it is assigned to a string, then return the associated
     /// string, otherwise, return None.
-    pub fn get(&self, id: StringId) -> Option<&str> {
+    pub fn get(&self, id: StringId) -> Result<&str, String> {
         for s in &self.table {
             if *s.1 == id {
-                return Some(s.0);
+                return Ok(s.0);
             }
         }
 
-        None
+        Err("StringId not found".into())
     }
 }
 

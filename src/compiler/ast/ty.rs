@@ -143,13 +143,10 @@ impl Type {
                 let fields = fields
                     .iter()
                     .map(|(sid, f)| {
-                        string_table
-                            .get(*sid)
-                            .ok_or(format!("StringId not found"))
-                            .and_then(|fname| {
-                                f.to_human_string(string_table)
-                                    .map(|fs| format!("{}: {}", fname, fs))
-                            })
+                        string_table.get(*sid).and_then(|fname| {
+                            f.to_human_string(string_table)
+                                .map(|fs| format!("{}: {}", fname, fs))
+                        })
                     })
                     .collect::<Result<Vec<_>, _>>()?
                     .join(",");
