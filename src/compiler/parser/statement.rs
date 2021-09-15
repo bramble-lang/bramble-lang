@@ -106,7 +106,10 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                 Expression::IdentifierDeclare(_, id, ty) => {
                     Ok(Some(Bind::new(token.l, id, ty.clone(), is_mutable, exp)))
                 }
-                _ => Err(CompilerError::new(token.l, ParserError::ExpectedTypeAfter)),
+                _ => Err(CompilerError::new(
+                    token.l,
+                    ParserError::ExpectedTypeInIdDecl,
+                )),
             }
         }
         None => Ok(None),

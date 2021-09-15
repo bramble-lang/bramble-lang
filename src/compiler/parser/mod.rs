@@ -34,7 +34,7 @@ pub enum ParserError {
     IdDeclExpectedType,
     ExpectedButFound(Lex, Option<Lex>),
     ExpectedIdDeclAfterLet,
-    ExpectedTypeAfter,
+    ExpectedTypeInIdDecl,
     ExpectedExpressionOnRhs,
     ExpectedParams,
     ExpectedIdAfterInit,
@@ -58,20 +58,34 @@ pub enum ParserError {
 impl CompilerErrorDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [StringId]s
     /// with their respective string values.
-    fn format(&self, _st: &crate::StringTable) -> Result<String, String> {
+    fn format(&self, st: &crate::StringTable) -> Result<String, String> {
         let msg = match self {
             ParserError::Locked(_) => todo!(),
-            ParserError::ModExpectedName => todo!(),
-            ParserError::ModAlreadyContains(_) => todo!(),
-            ParserError::ExternInvalidVarArgs => todo!(),
-            ParserError::ExternExpectedFnDecl => todo!(),
-            ParserError::StructExpectedIdentifier => todo!(),
-            ParserError::FnExpectedIdentifierAfterFn => todo!(),
-            ParserError::FnVarArgsNotAllowed => todo!(),
-            ParserError::FnExpectedTypeAfterArrow => todo!(),
-            ParserError::FnExpectedReturn(_) => todo!(),
-            ParserError::FnCallExpectedParams => todo!(),
-            ParserError::CoExpectedIdentifierAfterCo => todo!(),
+            ParserError::ModExpectedName => format!("Identifier expected after mod keyword"),
+            ParserError::ModAlreadyContains(sid) => {
+                format!("Module already contains {}", st.get(*sid)?)
+            }
+            ParserError::ExternInvalidVarArgs => format!(""),
+            ParserError::ExternExpectedFnDecl => {
+                format!("Function declaration expected after extern keyword")
+            }
+            ParserError::StructExpectedIdentifier => {
+                format!("Identifier expected after struct keyword")
+            }
+            ParserError::FnExpectedIdentifierAfterFn => {
+                format!("Identifier expected after fn keyword")
+            }
+            ParserError::FnVarArgsNotAllowed => {
+                format!("Varargs are not allowed in Braid functions (only in externs)")
+            }
+            ParserError::FnExpectedTypeAfterArrow => format!("Type expected after ->"),
+            ParserError::FnExpectedReturn(_) => format!("Expected return, but found {}", todo!()),
+            ParserError::FnCallExpectedParams => {
+                format!("Expected parameter list after function call point")
+            }
+            ParserError::CoExpectedIdentifierAfterCo => {
+                format!("Expected identifier after co keyword")
+            }
             ParserError::ArrayExpectedIntLiteral => todo!(),
             ParserError::ArrayDeclExpectedType => todo!(),
             ParserError::ArrayDeclExpectedSize => todo!(),
@@ -89,7 +103,7 @@ impl CompilerErrorDisplay for ParserError {
             ParserError::ExpectedIdDeclAfterLet => {
                 format!("Expected identifier declaration (`<id> : <type>`) after let")
             }
-            ParserError::ExpectedTypeAfter => todo!(),
+            ParserError::ExpectedTypeInIdDecl => todo!(),
             ParserError::ExpectedExpressionOnRhs => todo!(),
             ParserError::ExpectedParams => todo!(),
             ParserError::ExpectedIdAfterInit => todo!(),
