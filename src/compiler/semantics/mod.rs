@@ -69,6 +69,8 @@ pub enum SemanticError {
 }
 
 impl CompilerErrorDisplay for SemanticError {
+    /// Turn a SemanticError into a human readable message.  This will convert all StringIds
+    /// to their associated string value.
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {
         match self {
             SemanticError::NotVariable(_) => Ok(format!("Not a variable")),
@@ -240,10 +242,18 @@ impl CompilerErrorDisplay for SemanticError {
 }
 
 impl From<AstError> for SemanticError {
+    /// If the AST generates an error during SemanticAnalysis then this will convert that
+    /// error to an appropriate [SemanticError].
+    ///
+    /// Only non-structural changes to the AST are considered valid (e.g. traversing the AST via
+    /// a path).  If the semantic analyzer attempts to change the structure of the AST (adding nodes)
+    // then that is a fault.
     fn from(ae: AstError) -> Self {
         match ae {
-            AstError::ModuleAlreadyContains(_) => todo!(),
-            AstError::PathTooSuper => Self::PathTooSuper,
+            AstError::PathTooSuper => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
+            AstError::ModuleAlreadyContains(_) => {
+                panic!("Semantic Analysis should never modify the structure  of the AST")
+            }
         }
     }
 }
