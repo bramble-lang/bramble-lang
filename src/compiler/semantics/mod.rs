@@ -100,7 +100,10 @@ impl CompilerErrorDisplay for SemanticError {
                 "Expected integral type for index but found {}",
                 ty.to_human_string(st)?
             )),
-            SemanticError::AlreadyDeclared(_) => Ok(format!("Already declared")),
+            SemanticError::AlreadyDeclared(sid) => Ok(format!(
+                "{} already declared",
+                st.get(*sid).ok_or("StringId not found")?
+            )),
             SemanticError::PathTooSuper => Ok(format!("Path too super")),
             SemanticError::BindExpected(expected, actual) => Ok(format!(
                 "Bind expected {} but got {}",
@@ -174,7 +177,11 @@ impl CompilerErrorDisplay for SemanticError {
                 "Struct expected {} parameters but found {}",
                 expected, actual
             )),
-            SemanticError::StructExprMemberNotFound(_, _) => Ok(format!("Struct field not found")),
+            SemanticError::StructExprMemberNotFound(path, sid) => Ok(format!(
+                "member {} not found on {}",
+                st.get(*sid).ok_or(format!("StringId not found"))?,
+                path.to_human_string(st)?
+            )),
             SemanticError::StructExprFieldTypeMismatch(path, fname, expected, actual) => {
                 Ok(format!(
                     "{}.{} expects {} but got {}",
