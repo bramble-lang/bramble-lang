@@ -302,7 +302,10 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                     _ => {
                         return err!(
                             token.l,
-                            ParserError::ExpectedButFound(Lex::LBracket, Some(token.s.clone()))
+                            ParserError::ExpectedButFound(
+                                vec![Lex::LBracket, Lex::MemberAccess],
+                                Some(token.s.clone())
+                            )
                         )
                     }
                 };
@@ -710,13 +713,13 @@ mod test {
         for (text, msg) in [
             (
                 "[5",
-                CompilerError::new(0, ParserError::ExpectedButFound(Lex::RBracket, None)),
+                CompilerError::new(0, ParserError::ExpectedButFound(vec![Lex::RBracket], None)),
             ),
             (
                 "[5 6]",
                 CompilerError::new(
                     1,
-                    ParserError::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
+                    ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
                 ),
             ),
         ]
@@ -837,13 +840,13 @@ mod test {
         for (text, msg) in [
             (
                 "a[5",
-                CompilerError::new(0, ParserError::ExpectedButFound(Lex::RBracket, None)),
+                CompilerError::new(0, ParserError::ExpectedButFound(vec![Lex::RBracket], None)),
             ),
             (
                 "a[5 6]",
                 CompilerError::new(
                     1,
-                    ParserError::ExpectedButFound(Lex::RBracket, Some(Lex::I64(6))),
+                    ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
                 ),
             ),
             (
@@ -926,28 +929,28 @@ mod test {
                 "{5 10 51}",
                 CompilerError::new(
                     1,
-                    ParserError::ExpectedButFound(Lex::RBrace, Some(Lex::I64(10))),
+                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(10))),
                 ),
             ),
             (
                 "{5; 10 51}",
                 CompilerError::new(
                     1,
-                    ParserError::ExpectedButFound(Lex::RBrace, Some(Lex::I64(51))),
+                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(51))),
                 ),
             ),
             (
                 "{5; 10 let x:i64 := 5}",
                 CompilerError::new(
                     1,
-                    ParserError::ExpectedButFound(Lex::RBrace, Some(Lex::Let)),
+                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::Let)),
                 ),
             ),
             (
                 "{let x: i64 := 10 5}",
                 CompilerError::new(
                     1,
-                    ParserError::ExpectedButFound(Lex::Semicolon, Some(Lex::I64(5))),
+                    ParserError::ExpectedButFound(vec![Lex::Semicolon], Some(Lex::I64(5))),
                 ),
             ),
         ]

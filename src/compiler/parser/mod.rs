@@ -32,7 +32,7 @@ pub enum ParserError {
     ArrayDeclExpectedType,
     ArrayDeclExpectedSize,
     IdDeclExpectedType,
-    ExpectedButFound(Lex, Option<Lex>),
+    ExpectedButFound(Vec<Lex>, Option<Lex>),
     ExpectedIdDeclAfterLet,
     ExpectedTypeInIdDecl,
     ExpectedExpressionOnRhs,
@@ -60,71 +60,126 @@ impl CompilerErrorDisplay for ParserError {
     /// with their respective string values.
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {
         let msg = match self {
-            ParserError::Locked(_) => todo!(),
+            ParserError::Locked(token) => {
+                let ts = token_to_string(token);
+                format!("Parser cannot advance past {}", ts)
+            }
             ParserError::ModExpectedName => format!("Identifier expected after mod keyword"),
             ParserError::ModAlreadyContains(sid) => {
                 format!("Module already contains {}", st.get(*sid)?)
             }
-            ParserError::ExternInvalidVarArgs => format!(""),
+            ParserError::ExternInvalidVarArgs => format!(
+                "An extern declaration must have at least one \
+                    parameter before a VarArgs (...) parameter"
+            ),
             ParserError::ExternExpectedFnDecl => {
-                format!("Function declaration expected after extern keyword")
+                format!("Expected function declaration after extern keyword")
             }
             ParserError::StructExpectedIdentifier => {
-                format!("Identifier expected after struct keyword")
+                format!("Expected identifier after struct keyword")
             }
             ParserError::FnExpectedIdentifierAfterFn => {
-                format!("Identifier expected after fn keyword")
+                format!("Expected identifier after fn keyword")
             }
             ParserError::FnVarArgsNotAllowed => {
                 format!("Varargs are not allowed in Braid functions (only in externs)")
             }
             ParserError::FnExpectedTypeAfterArrow => format!("Type expected after ->"),
-            ParserError::FnExpectedReturn(_) => format!("Expected return, but found {}", todo!()),
+            ParserError::FnExpectedReturn(token) => {
+                format!(
+                    "Routines must end with a return statement, but found {}",
+                    token_to_string(token)
+                )
+            }
             ParserError::FnCallExpectedParams => {
-                format!("Expected parameter list after function call point")
+                format!("Expected parameters after function call point")
             }
             ParserError::CoExpectedIdentifierAfterCo => {
                 format!("Expected identifier after co keyword")
             }
-            ParserError::ArrayExpectedIntLiteral => todo!(),
-            ParserError::ArrayDeclExpectedType => todo!(),
-            ParserError::ArrayDeclExpectedSize => todo!(),
-            ParserError::IdDeclExpectedType => todo!(),
+            ParserError::ArrayExpectedIntLiteral => {
+                format!("Expected integer literal for array size")
+            }
+            ParserError::ArrayDeclExpectedType => {
+                format!("Expected type in array type declaration")
+            }
+            ParserError::ArrayDeclExpectedSize => {
+                format!("Expected size to be specified in array type declaration")
+            }
+            ParserError::IdDeclExpectedType => {
+                format!("Expected type after : in variable declaration")
+            }
             ParserError::ExpectedButFound(expected, actual) => {
                 format!(
                     "Expected {}, but found {}",
-                    expected,
-                    actual
-                        .as_ref()
-                        .map(|l| l.to_string())
-                        .unwrap_or("EOF".into())
+                    lex_set_to_string(expected),
+                    lex_to_string(actual)
                 )
             }
             ParserError::ExpectedIdDeclAfterLet => {
                 format!("Expected identifier declaration (`<id> : <type>`) after let")
             }
-            ParserError::ExpectedTypeInIdDecl => todo!(),
-            ParserError::ExpectedExpressionOnRhs => todo!(),
-            ParserError::ExpectedParams => todo!(),
-            ParserError::ExpectedIdAfterInit => todo!(),
-            ParserError::NotAUnaryOp(_) => todo!(),
-            ParserError::NotABinaryOp(_) => todo!(),
-            ParserError::IfExpectedConditional => todo!(),
-            ParserError::IfTrueArmMissingExpr => todo!(),
-            ParserError::IfElseExpectedIfExpr => todo!(),
-            ParserError::IfFalseArmMissingExpr => todo!(),
-            ParserError::WhileExpectedConditional => todo!(),
-            ParserError::WhileMissingBody => todo!(),
-            ParserError::PathExpectedIdentifier => todo!(),
-            ParserError::YieldExpectedIdentifier => todo!(),
-            ParserError::StructExpectedFieldExpr(_) => todo!(),
-            ParserError::ExpectedExprAfter(_) => todo!(),
-            ParserError::ExpectedTermAfter(_) => todo!(),
-            ParserError::MemberAccessExpectedField => todo!(),
-            ParserError::IndexOpInvalidExpr => todo!(),
+            ParserError::ExpectedTypeInIdDecl => {
+                format!("Expected type specification in let binding")
+            }
+            ParserError::ExpectedExpressionOnRhs => format!("Expected expression after :="),
+            ParserError::ExpectedParams => format!("Expected parameter list after identifier"),
+            ParserError::ExpectedIdAfterInit => format!("Expected identifer after init"),
+            ParserError::NotAUnaryOp(op) => format!("{} is not a unary operator", op),
+            ParserError::NotABinaryOp(op) => format!("{} is not a binary operator", op),
+            ParserError::IfExpectedConditional => {
+                format!("Expected conditional expression after if")
+            }
+            ParserError::IfTrueArmMissingExpr => {
+                format!("Expected expression block in true arm of if expression")
+            }
+            ParserError::IfElseExpectedIfExpr => format!("Expected expression block after else if"),
+            ParserError::IfFalseArmMissingExpr => format!("Expected expression block after else"),
+            ParserError::WhileExpectedConditional => {
+                format!("Expected conditional after while keyword")
+            }
+            ParserError::WhileMissingBody => {
+                format!("Expected expression block for while loop body")
+            }
+            ParserError::PathExpectedIdentifier => format!("Expected identifier after ::"),
+            ParserError::YieldExpectedIdentifier => format!("Expected identifier after yield"),
+            ParserError::StructExpectedFieldExpr(sid) => format!(
+                "Expected an expression to be assigned to field {}",
+                st.get(*sid)?
+            ),
+            ParserError::ExpectedExprAfter(lex) => {
+                format!("Expected expression after {}", lex_to_string(&Some(*lex)))
+            }
+            ParserError::ExpectedTermAfter(lex) => {
+                format!("Expected term after {}", lex_to_string(&Some(*lex)))
+            }
+            ParserError::MemberAccessExpectedField => {
+                format!("Expected member name after . operator.")
+            }
+            ParserError::IndexOpInvalidExpr => {
+                format!("Index operator must contain valid expression")
+            }
         };
         Ok(msg)
     }
+}
+
+fn token_to_string(token: &Option<super::lexer::tokens::Token>) -> String {
+    token
+        .as_ref()
+        .map(|t| t.to_string())
+        .unwrap_or("EOF".into())
+}
+
+fn lex_to_string(lex: &Option<Lex>) -> String {
+    lex.as_ref().map(|t| t.to_string()).unwrap_or("EOF".into())
+}
+
+fn lex_set_to_string(set: &[Lex]) -> String {
+    set.iter()
+        .map(|l| l.to_string())
+        .collect::<Vec<_>>()
+        .join(" or ")
 }
 
 impl From<CompilerError<AstError>> for CompilerError<ParserError> {

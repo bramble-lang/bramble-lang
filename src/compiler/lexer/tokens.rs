@@ -1,6 +1,6 @@
 use super::stringtable::StringId;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Primitive {
     U8,
     U16,
@@ -31,7 +31,7 @@ impl std::fmt::Display for Primitive {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Lex {
     U8(u8),
     U16(u16),

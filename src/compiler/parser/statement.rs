@@ -67,7 +67,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
                     err!(
                         line,
                         ParserError::ExpectedButFound(
-                            Lex::Semicolon,
+                            vec![Lex::Semicolon],
                             stream.peek().map(|x| x.s.clone())
                         )
                     )
