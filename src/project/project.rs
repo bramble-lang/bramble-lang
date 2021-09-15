@@ -5,13 +5,12 @@ use crate::compiler::{
     lexer::{
         stringtable::{StringId, StringTable},
         tokens::Token,
+        LexerError,
     },
     parser::{self, ParserError},
     CompilerError, CompilerErrorDisplay,
 };
 use crate::{diagnostics::config::TracingConfig, io::get_files};
-
-use crate::result::NResult;
 
 #[derive(Debug)]
 pub enum ProjectError {
@@ -139,7 +138,7 @@ pub fn tokenize_project(
     string_table: &mut StringTable,
     src_input: Project<String>,
     trace_lexer: TracingConfig,
-) -> NResult<Vec<CompilationUnit<Vec<Token>>>> {
+) -> Result<Vec<CompilationUnit<Vec<Token>>>, Vec<CompilerError<LexerError>>> {
     let mut token_sets = vec![];
     let mut errors = vec![];
     for src in src_input {
@@ -160,7 +159,7 @@ fn tokenize_src_file(
     string_table: &mut StringTable,
     src: CompilationUnit<String>,
     trace_lexer: TracingConfig,
-) -> NResult<CompilationUnit<Vec<Token>>> {
+) -> Result<CompilationUnit<Vec<Token>>, Vec<CompilerError<LexerError>>> {
     let mut lexer = crate::compiler::Lexer::new(string_table, &src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
@@ -182,11 +181,11 @@ fn tokenize_src_file(
             data: tokens,
         })
     } else {
-        let errors: Vec<String> = errors
+        let errors: Vec<_> = errors
             .into_iter()
             .filter_map(|t| match t {
                 Ok(_) => None,
-                Err(msg) => Some(msg.format(string_table).unwrap()),
+                Err(msg) => Some(msg),
             })
             .collect();
         Err(errors)

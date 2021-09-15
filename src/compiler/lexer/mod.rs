@@ -29,6 +29,7 @@ impl CompilerErrorDisplay for LexerError {
     }
 }
 
+/// Errors which can be encountered while tokenizing a compilation unit
 #[derive(Clone, Debug, PartialEq)]
 pub enum LexerErrorKind {
     Locked(Option<char>),
