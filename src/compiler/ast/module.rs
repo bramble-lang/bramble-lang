@@ -102,7 +102,6 @@ impl<M> Module<M> {
             self.functions.push(Item::Routine(f));
             Ok(())
         } else {
-            //Err(format!("{} already exists in module", fname))
             err!(0, AstError::ModuleAlreadyContains(fname))
         }
     }
@@ -113,7 +112,6 @@ impl<M> Module<M> {
             self.coroutines.push(Item::Routine(c));
             Ok(())
         } else {
-            //Err(format!("{} already exists in module", cname))
             err!(0, AstError::ModuleAlreadyContains(cname))
         }
     }
@@ -124,7 +122,6 @@ impl<M> Module<M> {
             self.structs.push(Item::Struct(s));
             Ok(())
         } else {
-            //Err(format!("{} already exists in module", name))
             err!(0, AstError::ModuleAlreadyContains(name))
         }
     }
@@ -135,7 +132,6 @@ impl<M> Module<M> {
             self.externs.push(Item::Extern(e));
             Ok(())
         } else {
-            //Err(format!("{} already exists in module", name))
             err!(0, AstError::ModuleAlreadyContains(name))
         }
     }

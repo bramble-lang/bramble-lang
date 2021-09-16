@@ -77,7 +77,7 @@ impl Expression<ParserContext> {
         line: u32,
         coroutine_value: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
-        let i = line; //ParserInfo{l: line};
+        let i = line;
         Ok(Some(Expression::Yield(i, coroutine_value)))
     }
 
@@ -93,9 +93,7 @@ impl Expression<ParserContext> {
                 operand,
             ))),
             Lex::Not => Ok(Some(Expression::UnaryOp(line, UnaryOperator::Not, operand))),
-            _ =>
-            //Err(format!("L{}: {} is not a unary operator", line, op)),
-            {
+            _ => {
                 err!(line, ParserError::NotAUnaryOp(op.clone()))
             }
         }
@@ -181,9 +179,7 @@ impl Expression<ParserContext> {
                 left,
                 right,
             ))),
-            _ =>
-            //Err(format!("L{}: {} is not a binary operator", line, op)),
-            {
+            _ => {
                 err!(line, ParserError::NotABinaryOp(op.clone()))
             }
         }

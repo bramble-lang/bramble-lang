@@ -174,7 +174,6 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
         parse_items_into(&mut stream, &mut module)?;
 
         if stream.index() == start_index {
-            //return Err(format!("Parser cannot advance past {:?}", stream.peek()));
             return err!(0, ParserError::Locked(stream.peek().map(|t| t.clone())));
         }
     }
@@ -195,7 +194,6 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
                 Some(module)
             }
             _ => {
-                //return Err(format!("L{}: expected name after mod keyword", token.l));
                 return err!(token.l, ParserError::ModExpectedName);
             }
         },
@@ -260,9 +258,6 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
         Some(token) => match function_decl(stream, true)? {
             Some((fn_line, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    /*return Err("An extern declaration must have at least one \
-                    parameter before a VarArgs (...) parameter"
-                       .into());*/
                     return err!(fn_line, ParserError::ExternInvalidVarArgs);
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
@@ -274,12 +269,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
                     fn_type,
                 )))
             }
-            None =>
-            /*Err(format!(
-                "L{}: expected function declaration after extern",
-                token.l
-            ))*/
-            {
+            None => {
                 err!(token.l, ParserError::ExternExpectedFnDecl)
             }
         },
@@ -296,9 +286,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
                 stream.next_must_be(&Lex::RBrace)?;
                 Ok(Some(StructDef::new(id, line, fields)))
             }
-            None =>
-            //Err(format!("L{}: expected identifer after struct", token.l)),
-            {
+            None => {
                 err!(token.l, ParserError::StructExpectedIdentifier)
             }
         },
@@ -309,7 +297,6 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
         Some((l, n, p, v, t)) => {
             if v {
-                //return Err("VarArgs are not allowed in Braid function definitions".into());
                 return err!(l, ParserError::FnVarArgsNotAllowed);
             }
             (l, n, p, t)
@@ -323,11 +310,6 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
-            /*return Err(format!(
-                "L{}: Function must end with a return statement, got {:?}",
-                stmts.last().map_or(fn_line, |s| *s.get_context()),
-                stream.peek(),
-            ))*/
             return err!(
                 fn_line,
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
@@ -361,11 +343,10 @@ fn function_decl(
     ))?;
     let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream)? //.ok_or(format!("L{}: Expected type after ->", fn_line))?
-            .ok_or(CompilerError::new(
-                fn_line,
-                ParserError::FnExpectedTypeAfterArrow,
-            ))?
+        consume_type(stream)?.ok_or(CompilerError::new(
+            fn_line,
+            ParserError::FnExpectedTypeAfterArrow,
+        ))?
     } else {
         Type::Unit
     };
@@ -386,7 +367,6 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
-        //return Err("VarArgs are not allowed in Braid function definitions".into());
         return err!(co_line, ParserError::FnVarArgsNotAllowed);
     }
 
@@ -404,10 +384,6 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
-            /*return Err(format!(
-                "L{}: Coroutine must end with a return statement",
-                stmts.last().map_or(co_line, |s| *s.get_context()),
-            ))*/
             return err!(
                 stmts.last().map_or(co_line, |s| *s.get_context()),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
@@ -511,7 +487,6 @@ fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
             .next_if_id()
             .expect("CRITICAL: failed to get identifier");
         let params = routine_call_params(stream)?
-            //.ok_or(format!("L{}: expected parameters in function call", line))?;
             .ok_or(CompilerError::new(line, ParserError::FnCallExpectedParams))?;
         Ok(Some(Expression::RoutineCall(
             line,
@@ -582,10 +557,6 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
                 ..
             }) => path.push(Element::Id(id)),
             _ => {
-                /*return Err(format!(
-                    "L{}: expect identifier after path separator '::'",
-                    token.l
-                ))*/
                 return err!(token.l, ParserError::PathExpectedIdentifier);
             }
         }
@@ -663,7 +634,6 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
                 Expression::I16(_, l) => l as usize,
                 Expression::I32(_, l) => l as usize,
                 Expression::I64(_, l) => l as usize,
-                //_ => return Err("Expected integer literal for array size".into()),
                 _ => return err!(0, ParserError::ArrayExpectedIntLiteral),
             };
 
@@ -683,14 +653,10 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
             let id = t[0].s.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let ty = consume_type(stream)? /*.ok_or(format!(
-                    "L{}: expected type after : in type declaration",
-                    line_value
-                ))?*/
-                .ok_or(CompilerError::new(
-                    line_value,
-                    ParserError::IdDeclExpectedType,
-                ))?;
+            let ty = consume_type(stream)?.ok_or(CompilerError::new(
+                line_value,
+                ParserError::IdDeclExpectedType,
+            ))?;
             Ok(Some(Expression::IdentifierDeclare(line_id, id, ty)))
         }
         None => Ok(None),

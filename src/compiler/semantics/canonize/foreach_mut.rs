@@ -267,9 +267,7 @@ where
             Expression::ArrayExpression(_, el, _) => {
                 for e in el {
                     self.for_expression(e, f)?;
-                    //println!("{} Checking Elements => {}", self.name, e.annotation().ty);
                 }
-                //println!("{} Checking ArrayValue", self.name);
                 self.transform(exp, f)
             }
             Expression::ArrayAt { array, index, .. } => {
@@ -389,7 +387,6 @@ where
                 Some(else_arm) => self.for_expression(else_arm, f)?,
                 None => (),
             }
-            //else_arm.as_mut().map(|ea| self.for_expression(ea, f));
         } else {
             panic!("Expected IfExpression, but got {:?}", if_exp)
         }

@@ -410,7 +410,6 @@ impl<'a> Lexer<'a> {
                 I64(int_token.parse::<i64>().unwrap()),
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
-                //Err(format!("Unexpected primitive type after number: {}", prim))
                 err!(line, LexerError::UnexpectedSuffixType(prim))
             }
         }

@@ -133,7 +133,6 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 tokens[2].l,
                 ParserError::ExpectedExpressionOnRhs,
             ))?;
-            //Expression::new_mutate(tokens[0].l, &id, Box::new(exp))
             Ok(Some(Mutate::new(tokens[0].l, id, exp)))
         }
     }

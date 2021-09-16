@@ -71,45 +71,7 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
     Ok(())
 }
 
-/*fn default_canonize_annotation_type<T: SemanticNode + ?Sized>(
-    node: &mut T,
-    stack: &SymbolTableScopeStack,
-) -> Result<()> {
-    // Update the Type information in the annotation data
-    let ctype = stack.canonize_local_type_ref(node.annotation().ty())?;
-    node.annotation_mut().ty = ctype;
-    Ok(())
-}*/
-
 impl Canonizable for Expression<SemanticContext> {
-    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let canon_ty = match self {
-            Expression::ArrayValue(_, elements, len) => {
-                if elements.len() == 0 {
-                    return Err("Arrays with 0 length are not allowed".into());
-                } else {
-                    let el_ty = elements[0].annotation().ty.clone();
-                    stack.canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?
-                }
-            }
-            Expression::StructExpression(_, struct_def, _) => Type::Custom(struct_def.clone()),
-            Expression::I8(..) => Type::I8,
-            Expression::I16(..) => Type::I16,
-            Expression::I32(..) => Type::I32,
-            Expression::I64(..) => Type::I64,
-            Expression::U8(..) => Type::U8,
-            Expression::U16(..) => Type::U16,
-            Expression::U32(..) => Type::U32,
-            Expression::U64(..) => Type::U64,
-            Expression::Boolean(..) => Type::Bool,
-            Expression::StringLiteral(..) => Type::StringLiteral,
-            _ => Type::Unknown,
-            //_ => default_canonize_annotation_type(self, stack)?,
-        };
-        self.annotation_mut().ty = canon_ty;
-        Ok(())
-    }*/
-
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         match self {
             Expression::Path(_, ref mut path) => {
@@ -160,11 +122,6 @@ impl Canonizable for Expression<SemanticContext> {
 }
 impl Canonizable for Statement<SemanticContext> {}
 impl Canonizable for Bind<SemanticContext> {
-    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
-        Ok(())
-    }*/
-
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let canon_type = stack
             .canonize_type(self.get_type())
@@ -215,11 +172,6 @@ impl Canonizable for Extern<SemanticContext> {
         Ok(())
     }
 
-    /*fn canonize_annotation_type(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
-        self.annotation_mut().ty = self.get_return_type().clone();
-        Ok(())
-    }*/
-
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
             .canonize_type(&self.ty)
@@ -237,14 +189,5 @@ impl Canonizable for Parameter<SemanticContext> {
         Ok(())
     }
 }
-impl Canonizable for YieldReturn<SemanticContext> {
-    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let current_fn = stack
-            .get_current_fn()
-            .ok_or("YieldReturn must appear within a function")?;
-        let (_, ret_ty) = stack.lookup_coroutine(current_fn)?;
-        self.annotation_mut().ty = stack.canonize_local_type_ref(ret_ty)?;
-        Ok(())
-    }*/
-}
+impl Canonizable for YieldReturn<SemanticContext> {}
 impl Canonizable for Return<SemanticContext> {}
