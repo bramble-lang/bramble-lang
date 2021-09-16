@@ -165,7 +165,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 0,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -195,7 +195,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 0,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -205,7 +205,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -230,7 +230,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 0,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -240,7 +240,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -250,7 +250,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 3,
+                c: 3,
                 s: Lex::Add
             }
         );
@@ -260,7 +260,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 5,
+                c: 5,
                 s: Lex::I64(4)
             }
         );
@@ -270,7 +270,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 6,
+                c: 6,
                 s: Lex::RParen
             }
         );
@@ -280,7 +280,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 8,
+                c: 8,
                 s: Lex::Mul
             }
         );
@@ -290,7 +290,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 10,
+                c: 10,
                 s: Lex::I64(3)
             }
         );
@@ -315,7 +315,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 0,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -325,7 +325,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -338,7 +338,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -361,12 +361,12 @@ mod test_tokenstream {
             vec![
                 Token {
                     l: 1,
-                    o: 0,
+                    c: 0,
                     s: Lex::LParen
                 },
                 Token {
                     l: 1,
-                    o: 1,
+                    c: 1,
                     s: Lex::I64(2)
                 }
             ]
@@ -377,7 +377,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 3,
+                c: 3,
                 s: Lex::Add
             }
         );
@@ -417,7 +417,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 0,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -426,7 +426,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -436,7 +436,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                o: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -445,7 +445,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 3,
+                c: 3,
                 s: Lex::Add
             }
         );
@@ -457,7 +457,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                o: 3,
+                c: 3,
                 s: Lex::Add
             }
         );

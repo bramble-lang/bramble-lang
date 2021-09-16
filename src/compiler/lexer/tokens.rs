@@ -186,8 +186,13 @@ impl CompilerDisplay for Lex {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
+    /// Line that the token occurs on
     pub l: u32,
-    pub o: u32,
+
+    /// Column in the line
+    pub c: u32,
+
+    /// The value of the token
     pub s: Lex,
 }
 
@@ -205,7 +210,7 @@ impl CompilerDisplay for Token {
 
 impl Token {
     pub fn new(l: u32, o: u32, s: Lex) -> Token {
-        Token { l, o, s }
+        Token { l, c: o, s }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {
