@@ -105,3 +105,19 @@ that does not include error values in my tests)
 I think the second option is simpler.  Not only is it simpler, but the step of
 making different types/variants for each error message is also somehting that would
 be done for the first choice. So, the second choice makes the most sense.
+
+## Update
+What I wound up doing was creating a `CompilerDisplay` trait which will encompass
+the display of any internal Compiler data (which will use encodings to represent
+a lot of data, e.g. StringIds).  This trait will cover converting any Compiler value
+to a human readable form and has a function `fmt` which takes a `StringTable` and
+will convert any `StringId` into the associated string value.
+
+Then there is a `CompilerError` which captures universal data that will be associated
+with any error (e.g. line number) and contains an inner error that is associated with
+submodule specific data (e.g. Parser errors).  The `CompilerError` implements `CompilerDisplay`
+and will a consistent format for errors that begins with the line number and then formats
+the inner error.
+
+`CompilerError` requires all inner error values to implement `CompilerDisplay` so they
+can be recursively printed into a human readable format.
