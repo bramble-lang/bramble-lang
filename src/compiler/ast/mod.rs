@@ -59,3 +59,7 @@ impl CompilerDisplay for PathError {
         }
     }
 }
+
+/// Error that is generated if a given string cannot be parsed into a valid [`Path`]
+#[derive(Debug)]
+pub struct ParsePathError;

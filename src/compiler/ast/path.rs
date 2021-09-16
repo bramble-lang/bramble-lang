@@ -3,7 +3,7 @@ use crate::compiler::{
     CompilerDisplay, CompilerDisplayError,
 };
 
-use super::PathError;
+use super::{ParsePathError, PathError};
 
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";
@@ -174,7 +174,9 @@ impl Path {
             .join("_")
     }
 
-    pub fn from_human_string(table: &mut StringTable, p: &str) -> Path {
+    /// Attempts to parse a string into a [`Path`].  This expects the same text format
+    /// as the [`CompilerDisplay`] implementation outputs.
+    pub fn parse(table: &mut StringTable, p: &str) -> Result<Path, ParsePathError> {
         let (p, is_canonical) = match p.strip_prefix("$") {
             Some(stripped) => (stripped, true),
             None => (p, false),
@@ -195,7 +197,7 @@ impl Path {
             }
         }
 
-        path.into()
+        Ok(path.into())
     }
 }
 

@@ -292,5 +292,5 @@ fn path_to_string(st: &StringTable, p: &Path) -> Result<String, CompilerDisplayE
 
 /// Convert a Manifest file Path string to a Compiler Path value.
 fn string_to_path(st: &mut StringTable, p: &str) -> Path {
-    Path::from_human_string(st, p)
+    Path::parse(st, p).unwrap()
 }
