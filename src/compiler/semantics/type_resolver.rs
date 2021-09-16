@@ -12,10 +12,10 @@ use std::collections::HashMap;
 
 use super::{
     canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
-    SemanticError,
+    SemanticError, SemanticResult,
 };
 
-type ResolverResult<T> = Result<T, CompilerError<SemanticError>>;
+//type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;
 
 pub fn resolve_types(
     ast: &Module<ParserContext>,
@@ -24,7 +24,7 @@ pub fn resolve_types(
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
-) -> ResolverResult<Module<SemanticContext>> {
+) -> SemanticResult<Module<SemanticContext>> {
     resolve_types_with_imports(
         ast,
         main_mod,
@@ -44,7 +44,7 @@ pub fn resolve_types_with_imports(
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
     trace_type_resolver: TracingConfig,
-) -> ResolverResult<Module<SemanticContext>> {
+) -> SemanticResult<Module<SemanticContext>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     SymbolTable::add_item_defs_to_table(&mut sm_ast).map_err(|e| CompilerError::new(0, e))?;
@@ -89,7 +89,7 @@ impl TypeResolver {
         }
     }
 
-    pub fn resolve_types(&mut self) -> ResolverResult<Module<SemanticContext>> {
+    pub fn resolve_types(&mut self) -> SemanticResult<Module<SemanticContext>> {
         // TODO: I think that this is the problem, perhaps I should get rid of the concept
         // of the stack root?  I need root to be able to find items using the stack.
         self.analyze_module(self.symbols.get_root())
@@ -98,7 +98,7 @@ impl TypeResolver {
     fn analyze_module(
         &mut self,
         m: &Module<SemanticContext>,
-    ) -> ResolverResult<Module<SemanticContext>> {
+    ) -> SemanticResult<Module<SemanticContext>> {
         let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
 
         self.symbols.enter_scope(&nmodule.get_context().sym);
@@ -107,27 +107,27 @@ impl TypeResolver {
             .get_modules()
             .iter()
             .map(|m| self.analyze_module(m))
-            .collect::<ResolverResult<Vec<Module<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Module<SemanticContext>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
             .map(|f| self.analyze_item(f))
-            .collect::<ResolverResult<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c))
-            .collect::<ResolverResult<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
             .map(|s| self.analyze_item(s))
-            .collect::<ResolverResult<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_externs_mut() = m
             .get_externs()
             .iter()
             .map(|e| self.analyze_item(e))
-            .collect::<ResolverResult<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
 
         let mut meta = nmodule.get_context_mut();
         meta.ty = Type::Unit;
@@ -136,7 +136,7 @@ impl TypeResolver {
         Ok(nmodule)
     }
 
-    fn analyze_item(&mut self, i: &Item<SemanticContext>) -> ResolverResult<Item<SemanticContext>> {
+    fn analyze_item(&mut self, i: &Item<SemanticContext>) -> SemanticResult<Item<SemanticContext>> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r).map(|r2| Item::Routine(r2)),
@@ -147,7 +147,7 @@ impl TypeResolver {
     fn analyze_routine(
         &mut self,
         routine: &RoutineDef<SemanticContext>,
-    ) -> ResolverResult<RoutineDef<SemanticContext>> {
+    ) -> SemanticResult<RoutineDef<SemanticContext>> {
         let RoutineDef {
             context,
             name,
@@ -199,7 +199,7 @@ impl TypeResolver {
     fn analyze_structdef(
         &mut self,
         struct_def: &StructDef<SemanticContext>,
-    ) -> ResolverResult<StructDef<SemanticContext>> {
+    ) -> SemanticResult<StructDef<SemanticContext>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
         for Parameter {
@@ -232,7 +232,7 @@ impl TypeResolver {
     fn analyze_extern(
         &mut self,
         ex: &Extern<SemanticContext>,
-    ) -> ResolverResult<Extern<SemanticContext>> {
+    ) -> SemanticResult<Extern<SemanticContext>> {
         // Check the type of each member
         let params = ex.get_params();
         for Parameter { ty: field_type, .. } in params.iter() {
@@ -258,7 +258,7 @@ impl TypeResolver {
     fn analyze_statement(
         &mut self,
         stmt: &Statement<SemanticContext>,
-    ) -> ResolverResult<Statement<SemanticContext>> {
+    ) -> SemanticResult<Statement<SemanticContext>> {
         use Statement::*;
         let inner = match stmt {
             Bind(box b) => Bind(Box::new(self.analyze_bind(b)?)),
@@ -274,7 +274,7 @@ impl TypeResolver {
     fn analyze_bind(
         &mut self,
         bind: &Bind<SemanticContext>,
-    ) -> ResolverResult<Bind<SemanticContext>> {
+    ) -> SemanticResult<Bind<SemanticContext>> {
         let meta = bind.get_context();
         let rhs = bind.get_rhs();
         let result = {
@@ -305,7 +305,7 @@ impl TypeResolver {
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticContext>,
-    ) -> ResolverResult<Mutate<SemanticContext>> {
+    ) -> SemanticResult<Mutate<SemanticContext>> {
         let mut meta = mutate.get_context().clone();
         let rhs = self.traverse(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
@@ -333,7 +333,7 @@ impl TypeResolver {
     fn analyze_yieldreturn(
         &mut self,
         yr: &YieldReturn<SemanticContext>,
-    ) -> ResolverResult<YieldReturn<SemanticContext>> {
+    ) -> SemanticResult<YieldReturn<SemanticContext>> {
         // Get the actual expression and its type as it comes from the
         // source code written by the user.
         let (actual_ret_exp, actual_ret_ty) = match yr.get_value() {
@@ -372,7 +372,7 @@ impl TypeResolver {
     fn analyze_return(
         &mut self,
         r: &Return<SemanticContext>,
-    ) -> ResolverResult<Return<SemanticContext>> {
+    ) -> SemanticResult<Return<SemanticContext>> {
         // Get the actual expression and its type as it comes from the
         // source code written by the user.
         let (actual_ret_exp, actual_ret_ty) = match r.get_value() {
@@ -411,13 +411,13 @@ impl TypeResolver {
         .map_err(|e| CompilerError::new(r.get_context().line(), e))
     }
 
-    fn traverse(&mut self, ast: &SemanticNode) -> ResolverResult<SemanticNode> {
+    fn traverse(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
         // TODO: With the new error handling design this function is no longer needed
         // It only existed as a way of injecting line numbers into error messages
         self.analyze_expression(ast)
     }
 
-    fn analyze_expression(&mut self, ast: &SemanticNode) -> ResolverResult<SemanticNode> {
+    fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
         match &ast {
             &Expression::U8(meta, v) => {
                 let mut meta = meta.clone();
@@ -471,7 +471,7 @@ impl TypeResolver {
             }
             Expression::ArrayExpression(meta, elements, len) => {
                 // Resolve the types for each element in the array value
-                let nelements: ResolverResult<Vec<Expression<SemanticContext>>> =
+                let nelements: SemanticResult<Vec<Expression<SemanticContext>>> =
                     elements.iter().map(|e| self.traverse(e)).collect();
                 let nelements = nelements?;
 
@@ -851,7 +851,7 @@ impl TypeResolver {
         &mut self,
         op: UnaryOperator,
         operand: &SemanticNode,
-    ) -> ResolverResult<(Type, SemanticNode)> {
+    ) -> SemanticResult<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
         let operand = self.traverse(operand)?;
@@ -885,7 +885,7 @@ impl TypeResolver {
         op: BinaryOperator,
         l: &SemanticNode,
         r: &SemanticNode,
-    ) -> ResolverResult<(Type, SemanticNode, SemanticNode)> {
+    ) -> SemanticResult<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
         let l = self.traverse(l)?;
@@ -1015,7 +1015,7 @@ impl TypeResolver {
         }
     }
 
-    fn validate_main_fn(routine: &RoutineDef<SemanticContext>) -> ResolverResult<()> {
+    fn validate_main_fn(routine: &RoutineDef<SemanticContext>) -> SemanticResult<()> {
         let RoutineDef {
             def,
             params,
