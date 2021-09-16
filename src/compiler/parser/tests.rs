@@ -221,7 +221,7 @@ pub mod tests {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, "{:?}", msg.format(&table)),
+                        Err(msg) => assert!(false, "{:?}", msg.fmt(&table)),
                     }
                 }
                 Ok(Some(Expression::Identifier(l, id))) => {
@@ -237,7 +237,7 @@ pub mod tests {
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
-                    Ok(_) => assert!(false, "{}", msg.format(&table).unwrap()),
+                    Ok(_) => assert!(false, "{}", msg.fmt(&table).unwrap()),
                     Err(expected) => assert_eq!(expected, msg),
                 },
             }

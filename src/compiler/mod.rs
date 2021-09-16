@@ -20,5 +20,5 @@ string value.
 pub trait CompilerDisplay {
     /// Uses the given [`StringTable`] to render the associated Compiler type into a
     /// human readable format.
-    fn format(&self, st: &StringTable) -> Result<String, String>;
+    fn fmt(&self, st: &StringTable) -> Result<String, String>;
 }

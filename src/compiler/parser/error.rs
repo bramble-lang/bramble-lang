@@ -54,7 +54,7 @@ pub enum ParserError {
 impl CompilerDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [`StringId`]s
     /// with their respective string values.
-    fn format(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
         let msg = match self {
             ParserError::Locked(token) => {
                 let ts = token_to_string(token);

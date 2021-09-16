@@ -155,7 +155,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -238,7 +238,7 @@ mod type_resolver_tests {
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
-                Err(msg) => assert_eq!(result.err().unwrap().format(&table).unwrap(), msg),
+                Err(msg) => assert_eq!(result.err().unwrap().fmt(&table).unwrap(), msg),
             }
         }
     }
@@ -349,7 +349,7 @@ mod type_resolver_tests {
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "Expected Ok got {:?}", result),
-                Err(msg) => assert_eq!(result.unwrap_err().format(&table).unwrap(), msg),
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
     }
@@ -484,13 +484,13 @@ mod type_resolver_tests {
                     );
                 }
                 (Ok(_), Err(actual)) => {
-                    assert!(false, "L{}: Expected OK, got Err({})", line, actual.format(&table).unwrap());
+                    assert!(false, "L{}: Expected OK, got Err({})", line, actual.fmt(&table).unwrap());
                 }
                 (Err(expected), Ok(_)) => {
                     assert!(false, "L{}: Expected Err({}), but got Ok", line, expected);
                 }
                 (Err(msg), Err(actual)) => {
-                    assert_eq!(actual.format(&table).unwrap(), msg, "Test Case at L:{}", line);
+                    assert_eq!(actual.fmt(&table).unwrap(), msg, "Test Case at L:{}", line);
                 }
             }
         }
@@ -857,7 +857,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg, "Test Case at L:{}", line);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg, "Test Case at L:{}", line);
                 }
             }
         }
@@ -955,7 +955,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1036,7 +1036,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1118,7 +1118,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1200,7 +1200,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1282,7 +1282,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1373,7 +1373,7 @@ mod type_resolver_tests {
                         }
                     }
                     Err(msg) => {
-                        assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                        assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                     }
                 }
             }
@@ -1513,7 +1513,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1631,7 +1631,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1823,7 +1823,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1917,7 +1917,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2002,7 +2002,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2114,7 +2114,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2280,7 +2280,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2397,7 +2397,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2500,7 +2500,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2584,7 +2584,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2661,7 +2661,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2738,7 +2738,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2842,7 +2842,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2921,7 +2921,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().format(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -3136,7 +3136,7 @@ mod type_resolver_tests {
             );
             match expected {
                 Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\nST: {:?}", line, text, result, table)},
-                Err(msg) => assert_eq!(result.unwrap_err().format(&table).unwrap(), msg),
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
     }
@@ -3182,7 +3182,7 @@ mod type_resolver_tests {
                 );
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
-                    Err(msg) => assert_eq!(result.unwrap_err().format(&table).unwrap(), msg),
+                    Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
                 }
             }
     }
@@ -3302,8 +3302,8 @@ mod type_resolver_tests {
                 TracingConfig::Off, 
             );
             match expected {
-                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.format(&table))),
-                Err(msg) => assert_eq!(result.unwrap_err().format(&table).unwrap(), msg),
+                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.fmt(&table))),
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
     }

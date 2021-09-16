@@ -43,8 +43,8 @@ impl<IE> CompilerDisplay for CompilerError<IE>
 where
     IE: CompilerDisplay,
 {
-    fn format(&self, st: &StringTable) -> Result<String, String> {
-        let inner = self.inner.format(st)?;
+    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+        let inner = self.inner.fmt(st)?;
         Ok(format!("L{}: {}", self.line, inner))
     }
 }

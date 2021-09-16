@@ -53,7 +53,7 @@ pub enum SemanticError {
 impl CompilerDisplay for SemanticError {
     /// Turn a SemanticError into a human readable message.  This will convert all StringIds
     /// to their associated string value.
-    fn format(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
         match self {
             SemanticError::NotVariable(_) => Ok(format!("Not a variable")),
             SemanticError::NotRoutine(_) => Ok(format!("Not a routine")),

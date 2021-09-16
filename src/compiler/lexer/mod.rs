@@ -19,7 +19,7 @@ pub enum LexerError {
 }
 
 impl CompilerDisplay for LexerError {
-    fn format(&self, _: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, _: &crate::StringTable) -> Result<String, String> {
         use LexerError::*;
         let msg = match self {
             Locked(None) => format!("Lexer Locked on EOF"),

@@ -32,7 +32,7 @@ pub enum AstError {
 }
 
 impl CompilerDisplay for AstError {
-    fn format(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
         match self {
             AstError::ModuleAlreadyContains(sid) => {
                 let s = st.get(*sid)?;

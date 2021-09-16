@@ -15,7 +15,7 @@ pub const ERR_MANIFEST_WRITE_ERROR: i32 = 7;
 
 pub fn print_errs<E: CompilerDisplay>(st: &StringTable, errs: &[E]) {
     for e in errs {
-        println!("Error: {}", e.format(st).unwrap());
+        println!("Error: {}", e.fmt(st).unwrap());
     }
 }
 
@@ -195,7 +195,7 @@ pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> 
 impl CompilerDisplay for String {
     /// Allow for errors from the Lexer (which do not include StringIds since the lexer generates the
     /// [StringTable]) to be printed using the same error printing functions as all other errors
-    fn format(&self, _: &StringTable) -> Result<String, String> {
+    fn fmt(&self, _: &StringTable) -> Result<String, String> {
         Ok(format!("{}", self))
     }
 }
