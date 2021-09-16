@@ -111,8 +111,8 @@ where
 #[cfg(test)]
 mod test_preorder {
     use super::*;
-    use crate::compiler::{
-        ast::{
+    use crate::{
+        compiler::ast::{
             expression::{self, Expression, UnaryOperator},
             module::Module,
             parameter::Parameter,
@@ -122,7 +122,7 @@ mod test_preorder {
             ty::Type,
             Element,
         },
-        lexer::stringtable::{StringId, StringTable},
+        StringId, StringTable,
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
@@ -259,8 +259,8 @@ mod test_preorder {
 #[cfg(test)]
 mod test_postorder {
     use super::*;
-    use crate::compiler::{
-        ast::{
+    use crate::{
+        compiler::ast::{
             expression::Expression,
             module::Module,
             parameter::Parameter,
@@ -270,7 +270,7 @@ mod test_postorder {
             ty::Type,
             BinaryOperator, Element, RoutineCall, UnaryOperator, YieldReturn,
         },
-        lexer::stringtable::{StringId, StringTable},
+        StringId, StringTable,
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {

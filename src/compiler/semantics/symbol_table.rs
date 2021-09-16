@@ -1,5 +1,6 @@
-use crate::compiler::{
-    ast::*, lexer::stringtable::StringId, semantics::semanticnode::SemanticContext,
+use crate::{
+    compiler::{ast::*, semantics::semanticnode::SemanticContext},
+    StringId,
 };
 
 use super::SemanticError;

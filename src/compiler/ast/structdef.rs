@@ -5,7 +5,7 @@ use super::{
     parameter::Parameter,
     ty::Type,
 };
-use crate::{compiler::lexer::stringtable::StringId, result::Result};
+use crate::{result::Result, StringId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructDef<M> {

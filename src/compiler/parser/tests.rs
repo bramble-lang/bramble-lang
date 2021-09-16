@@ -3,12 +3,14 @@ pub mod tests {
     use core::panic;
 
     use super::super::parser::*;
-    use crate::compiler::{
-        ast::*,
-        lexer::stringtable::StringTable,
-        lexer::{tokens::Token, LexerError},
-        parser::{expression::*, statement::*, tokenstream::TokenStream, ParserError},
-        CompilerDisplay, CompilerError, Lexer,
+    use crate::{
+        compiler::{
+            ast::*,
+            lexer::{tokens::Token, LexerError},
+            parser::{expression::*, statement::*, tokenstream::TokenStream, ParserError},
+            CompilerDisplay, CompilerError, Lexer,
+        },
+        StringTable,
     };
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;

@@ -20,8 +20,8 @@ pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;
 pub use self::ty::Type;
 
-use super::lexer::stringtable::StringId;
 use super::{CompilerDisplay, CompilerDisplayError};
+use crate::StringId;
 
 pub const MAIN_MODULE: &str = "main";
 

@@ -1,8 +1,8 @@
-use crate::{compiler::lexer::stringtable::StringId, diagnostics::config::TracingConfig};
 use crate::{
     compiler::{ast::*, parser::parser::ParserContext},
     diagnostics::{Diag, DiagData},
 };
+use crate::{diagnostics::config::TracingConfig, StringId};
 
 use super::symbol_table::SymbolTable;
 

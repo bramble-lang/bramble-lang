@@ -1,13 +1,10 @@
 use crate::{
     compiler::{
         ast::AstError,
-        lexer::{
-            stringtable::StringId,
-            tokens::{Lex, Token},
-        },
+        lexer::tokens::{Lex, Token},
         CompilerDisplay, CompilerDisplayError, CompilerError,
     },
-    StringTable,
+    StringId, StringTable,
 };
 
 /// Compiler errors that happen within the Parser stage of compilation.

@@ -1,6 +1,7 @@
-use crate::compiler::{CompilerDisplay, CompilerDisplayError};
-
-use super::stringtable::StringId;
+use crate::{
+    compiler::{CompilerDisplay, CompilerDisplayError},
+    StringId,
+};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Primitive {

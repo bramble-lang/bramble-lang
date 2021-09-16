@@ -3,7 +3,7 @@ use std::fmt::Display;
 mod iter;
 mod map;
 
-use crate::compiler::lexer::stringtable::StringId;
+use crate::StringId;
 
 pub use self::iter::{PostOrderIter, PreOrderIter};
 pub use self::map::MapPreOrder;

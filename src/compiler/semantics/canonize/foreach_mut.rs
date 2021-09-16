@@ -469,9 +469,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::compiler::{
-        lexer::stringtable::StringTable, lexer::tokens::Token, lexer::LexerError, parser::parser,
-        semantics::semanticnode::SemanticAst, CompilerError, Lexer,
+    use crate::{
+        compiler::{
+            lexer::tokens::Token, lexer::LexerError, parser::parser,
+            semantics::semanticnode::SemanticAst, CompilerError, Lexer,
+        },
+        StringTable,
     };
 
     use super::*;

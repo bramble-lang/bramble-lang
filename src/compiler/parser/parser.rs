@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::compiler::lexer::stringtable::StringId;
+use crate::StringId;
 use crate::{
     compiler::{
         ast::*,

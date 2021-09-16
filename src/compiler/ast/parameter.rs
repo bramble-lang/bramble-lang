@@ -1,4 +1,4 @@
-use crate::compiler::lexer::stringtable::StringId;
+use crate::StringId;
 
 use super::{
     node::{

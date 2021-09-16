@@ -5,14 +5,13 @@ pub mod lexer;
 pub mod llvm;
 pub mod parser;
 pub mod semantics;
+pub mod stringtable;
 
 pub use error::CompilerError;
 
 pub use lexer::lexer::Lexer;
 
-use crate::StringTable;
-
-use self::lexer::stringtable::StringTableError;
+use crate::{StringTable, StringTableError};
 
 /**
 Format trait for rendering any Compiler value into a human readable form.

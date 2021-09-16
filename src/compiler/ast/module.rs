@@ -8,7 +8,8 @@ use super::{
     structdef::StructDef,
     AstError,
 };
-use crate::compiler::{lexer::stringtable::StringId, CompilerError};
+use crate::compiler::CompilerError;
+use crate::StringId;
 
 type AstResult<T> = Result<T, CompilerError<AstError>>;
 

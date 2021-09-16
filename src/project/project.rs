@@ -1,14 +1,13 @@
 use std::path::{Path, PathBuf};
 
-use crate::compiler::{
-    ast::Module,
-    lexer::{
-        stringtable::{StringId, StringTable},
-        tokens::Token,
-        LexerError,
+use crate::{
+    compiler::{
+        ast::Module,
+        lexer::{tokens::Token, LexerError},
+        parser::{self, ParserError},
+        CompilerDisplay, CompilerDisplayError, CompilerError,
     },
-    parser::{self, ParserError},
-    CompilerDisplay, CompilerDisplayError, CompilerError,
+    StringId, StringTable,
 };
 use crate::{diagnostics::config::TracingConfig, io::get_files};
 

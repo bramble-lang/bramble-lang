@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use log::*;
 
-use crate::compiler::lexer::stringtable::StringId;
 use crate::compiler::{
     ast::{Element, Module, Node, Path, StructDef, Type},
     import::Import,
 };
+use crate::StringId;
 
 use super::SemanticError;
 use super::{

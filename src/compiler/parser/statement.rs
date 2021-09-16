@@ -9,13 +9,10 @@ use stdext::function_name;
 use crate::{
     compiler::{
         ast::*,
-        lexer::{
-            stringtable::StringId,
-            tokens::{Lex, Token},
-        },
+        lexer::tokens::{Lex, Token},
         CompilerError,
     },
-    trace,
+    trace, StringId,
 };
 
 use super::{parser::ParserContext, tokenstream::TokenStream, ParserError};

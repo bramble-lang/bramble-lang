@@ -4,11 +4,10 @@ use crate::{
     compiler::{
         ast::{Item, Module, Node, Parameter, Path, RoutineDef, RoutineDefType, StructDef, Type},
         import::Import,
-        lexer::stringtable::StringTableError,
         semantics::semanticnode::SemanticContext,
         CompilerDisplay, CompilerDisplayError,
     },
-    StringTable,
+    StringTable, StringTableError,
 };
 
 /// Errors that can occur when writing or reading a Manifest file.

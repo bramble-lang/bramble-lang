@@ -1,9 +1,7 @@
 use super::ParserError;
-use crate::compiler::lexer::{
-    stringtable::StringId,
-    tokens::{Lex, Token},
-};
+use crate::compiler::lexer::tokens::{Lex, Token};
 use crate::compiler::CompilerError;
+use crate::StringId;
 //use crate::result::Result;
 
 /// Helper macro to get rid of repitition of boilerplate code.
@@ -145,9 +143,9 @@ impl<'a> TokenStream<'a> {
 #[cfg(test)]
 mod test_tokenstream {
     use super::TokenStream;
-    use crate::compiler::lexer::stringtable::StringTable;
     use crate::compiler::lexer::tokens::{Lex, Token};
     use crate::compiler::Lexer;
+    use crate::StringTable;
 
     #[test]
     fn test_peek() {

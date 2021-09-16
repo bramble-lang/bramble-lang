@@ -5,7 +5,6 @@ use super::{CompilerDisplay, CompilerDisplayError, CompilerError};
 mod tests;
 
 pub(crate) mod lexer;
-pub(crate) mod stringtable;
 pub(crate) mod tokens;
 
 type LexerResult<T> = Result<T, CompilerError<LexerError>>;

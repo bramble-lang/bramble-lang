@@ -13,13 +13,10 @@ use super::{
 use crate::{
     compiler::{
         ast::*,
-        lexer::{
-            stringtable::StringId,
-            tokens::{Lex, Token},
-        },
+        lexer::tokens::{Lex, Token},
         CompilerError,
     },
-    trace,
+    trace, StringId,
 };
 
 /// Helper macro to get rid of repitition of boilerplate code.
@@ -604,11 +601,13 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserCon
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::compiler::{
-        ast::{Statement, Type},
-        lexer::stringtable::StringTable,
-        lexer::{tokens::Token, LexerError},
-        CompilerError, Lexer,
+    use crate::{
+        compiler::{
+            ast::{Statement, Type},
+            lexer::{tokens::Token, LexerError},
+            CompilerError, Lexer,
+        },
+        StringTable,
     };
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 

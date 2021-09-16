@@ -1,6 +1,6 @@
 use crate::{
-    compiler::{lexer::stringtable::StringId, CompilerDisplay, CompilerDisplayError},
-    StringTable,
+    compiler::{CompilerDisplay, CompilerDisplayError},
+    StringId, StringTable,
 };
 
 use super::{path::Path, HasVarArgs};

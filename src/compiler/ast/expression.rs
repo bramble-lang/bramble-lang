@@ -1,3 +1,5 @@
+use crate::StringId;
+
 use super::{
     node::{
         Context, Node, NodeType, {PostOrderIter, PreOrderIter},
@@ -6,8 +8,6 @@ use super::{
     statement::Statement,
     ty::Type,
 };
-
-use crate::compiler::lexer::stringtable::StringId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {

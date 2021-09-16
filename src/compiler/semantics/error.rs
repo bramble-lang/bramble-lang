@@ -1,7 +1,9 @@
-use crate::compiler::{
-    ast::{BinaryOperator, Path, PathError, RoutineCall, Type, UnaryOperator},
-    lexer::stringtable::StringId,
-    CompilerDisplay, CompilerDisplayError,
+use crate::{
+    compiler::{
+        ast::{BinaryOperator, Path, PathError, RoutineCall, Type, UnaryOperator},
+        CompilerDisplay, CompilerDisplayError,
+    },
+    StringId,
 };
 
 /// Errors generated during semantic analysis of a compilation unit.

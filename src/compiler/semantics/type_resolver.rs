@@ -1,13 +1,15 @@
-use crate::compiler::{
-    ast::*,
-    import::Import,
-    lexer::stringtable::StringId,
-    parser::parser::ParserContext,
-    semantics::semanticnode::{SemanticAst, SemanticNode},
-    semantics::symbol_table::*,
-    CompilerError,
-};
 use crate::diagnostics::config::{Tracing, TracingConfig};
+use crate::{
+    compiler::{
+        ast::*,
+        import::Import,
+        parser::parser::ParserContext,
+        semantics::semanticnode::{SemanticAst, SemanticNode},
+        semantics::symbol_table::*,
+        CompilerError,
+    },
+    StringId,
+};
 use std::collections::HashMap;
 
 use super::{

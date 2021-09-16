@@ -1,7 +1,5 @@
-use crate::compiler::{
-    lexer::stringtable::{StringId, StringTable},
-    CompilerDisplay, CompilerDisplayError,
-};
+use crate::compiler::{CompilerDisplay, CompilerDisplayError};
+use crate::{StringId, StringTable};
 
 use super::{ParsePathError, PathError};
 

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::compiler::lexer::stringtable::StringTable;
+
+use crate::StringTable;
 
 use super::ast::*;
 
@@ -187,7 +188,7 @@ mod test {
     use super::super::super::lexer::tokens::Token;
     use super::super::super::parser::parser;
     use super::super::super::semantics::type_resolver::resolve_types;
-    use crate::compiler::{Lexer, lexer::stringtable::StringTable};
+    use crate::compiler::Lexer;
     use crate::diagnostics::config::TracingConfig;
 
     use super::*;

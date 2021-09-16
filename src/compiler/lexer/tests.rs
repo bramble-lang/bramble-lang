@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::compiler::lexer::{
-        stringtable::StringTable,
-        tokens::{Lex, Primitive, Token},
+    use crate::{
+        compiler::lexer::tokens::{Lex, Primitive, Token},
+        StringTable,
     };
     use Lex::*;
 

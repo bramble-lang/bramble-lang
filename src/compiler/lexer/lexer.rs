@@ -4,11 +4,11 @@
 use stdext::function_name;
 
 use crate::diagnostics::config::TracingConfig;
+use crate::{StringId, StringTable};
 
 use super::super::CompilerError;
 use super::LexerResult;
 use super::{
-    stringtable::{StringId, StringTable},
     tokens::{Lex, Primitive, Token},
     LexerError,
 };

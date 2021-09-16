@@ -25,12 +25,9 @@ use inkwell::{
 };
 
 use crate::{
-    compiler::{
-        ast::Element,
-        import::Import,
-        lexer::stringtable::{StringId, StringTable},
-    },
+    compiler::{ast::Element, import::Import},
     result::Result,
+    StringId, StringTable,
 };
 
 use crate::{

@@ -1,10 +1,12 @@
 #[cfg(test)]
 mod stack_tests {
     use super::super::super::*;
-    use crate::compiler::{
-        ast::{Element, Module, Type},
-        lexer::stringtable::StringTable,
-        semantics::{semanticnode::SemanticContext, symbol_table::SymbolTable},
+    use crate::{
+        compiler::{
+            ast::{Element, Module, Type},
+            semantics::{semanticnode::SemanticContext, symbol_table::SymbolTable},
+        },
+        StringTable,
     };
     use stack::*;
 

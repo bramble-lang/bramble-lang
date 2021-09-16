@@ -374,11 +374,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::compiler::{
-        ast::{module::Module, ty::Type},
-        lexer::stringtable::StringTable,
-    };
+    use crate::compiler::ast::{module::Module, ty::Type};
     use crate::diagnostics::DiagData;
+    use crate::StringTable;
 
     impl Context for i32 {
         fn id(&self) -> u32 {

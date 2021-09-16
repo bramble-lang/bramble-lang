@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod type_resolver_tests {
-    use crate::{compiler::{CompilerError, CompilerDisplay, Lexer, ast::*, lexer::LexerError, lexer::stringtable::StringTable, lexer::tokens::Token, parser::parser, semantics::semanticnode::SemanticContext}, diagnostics::config::TracingConfig, project::manifest::Manifest};
+    use crate::{StringTable, compiler::{CompilerError, CompilerDisplay, Lexer, ast::*, lexer::LexerError, lexer::tokens::Token, parser::parser, semantics::semanticnode::SemanticContext}, diagnostics::config::TracingConfig, project::manifest::Manifest};
 
     use super::super::super::type_resolver::*;
     
