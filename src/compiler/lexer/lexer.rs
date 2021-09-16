@@ -3,10 +3,10 @@
 // by tokenize
 use stdext::function_name;
 
-use crate::compiler::LexerResult;
 use crate::diagnostics::config::TracingConfig;
 
 use super::super::CompilerError;
+use super::LexerResult;
 use super::{
     stringtable::{StringId, StringTable},
     tokens::{Lex, Primitive, Token},

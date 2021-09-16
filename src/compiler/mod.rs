@@ -14,9 +14,6 @@ use crate::StringTable;
 
 use self::lexer::stringtable::StringTableError;
 
-type LexerResult<T> = Result<T, CompilerError<lexer::LexerError>>;
-type ParserResult<T> = Result<Option<T>, CompilerError<parser::ParserError>>;
-
 /**
 Format trait for rendering any Compiler value into a human readable form.
 Specifically, this will handle converting any [`StringId`]s into their associated

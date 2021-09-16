@@ -1,4 +1,7 @@
-use super::parser::{ENABLE_TRACING, TRACE_END, TRACE_START};
+use super::{
+    parser::{ENABLE_TRACING, TRACE_END, TRACE_START},
+    ParserResult,
+};
 use std::sync::atomic::Ordering;
 use stdext::function_name;
 
@@ -14,7 +17,7 @@ use crate::{
             stringtable::StringId,
             tokens::{Lex, Token},
         },
-        CompilerError, ParserResult,
+        CompilerError,
     },
     trace,
 };

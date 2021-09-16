@@ -7,3 +7,7 @@ pub mod expression;
 pub mod parser;
 
 pub use error::ParserError;
+
+use super::CompilerError;
+
+type ParserResult<T> = Result<Option<T>, CompilerError<ParserError>>;

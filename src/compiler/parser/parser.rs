@@ -4,7 +4,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use stdext::function_name;
 
 use crate::compiler::lexer::stringtable::StringId;
-use crate::compiler::ParserResult;
 use crate::{
     compiler::{
         ast::*,
@@ -21,6 +20,7 @@ use crate::{
 use super::{
     expression::expression,
     statement::{return_stmt, statement, statement_or_yield_return},
+    ParserResult,
 };
 use super::{tokenstream::TokenStream, ParserError};
 

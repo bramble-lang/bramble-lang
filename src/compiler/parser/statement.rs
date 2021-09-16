@@ -1,6 +1,7 @@
 use super::{
     expression::expression,
     parser::{id_declaration, path, routine_call_params, ENABLE_TRACING, TRACE_END, TRACE_START},
+    ParserResult,
 };
 use std::sync::atomic::Ordering;
 use stdext::function_name;
@@ -12,7 +13,7 @@ use crate::{
             stringtable::StringId,
             tokens::{Lex, Token},
         },
-        CompilerError, ParserResult,
+        CompilerError,
     },
     trace,
 };
