@@ -25,10 +25,10 @@ use super::{CompilerDisplay, CompilerDisplayError};
 
 pub const MAIN_MODULE: &str = "main";
 
+/// Covers errors that can happen when creating or modifying an AST value.
 #[derive(Clone, Debug, PartialEq)]
 pub enum AstError {
     ModuleAlreadyContains(StringId),
-    PathTooSuper,
 }
 
 impl CompilerDisplay for AstError {
@@ -38,7 +38,20 @@ impl CompilerDisplay for AstError {
                 let s = st.get(*sid)?;
                 Ok(format!("{} already exists in module", s))
             }
-            AstError::PathTooSuper => Ok(format!(
+        }
+    }
+}
+
+/// Errors that can be generated when using or creating Path values.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PathError {
+    SubsedingRoot,
+}
+
+impl CompilerDisplay for PathError {
+    fn fmt(&self, _st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+        match self {
+            PathError::SubsedingRoot => Ok(format!(
                 "Use of super would exceed the current depth of the path"
             )),
         }

@@ -3,7 +3,7 @@ use crate::compiler::{
     CompilerDisplay, CompilerDisplayError,
 };
 
-use super::AstError;
+use super::PathError;
 
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";
@@ -126,7 +126,7 @@ impl Path {
     - If this path begins with `self` then `self` will be replaced with `current_path`
     - occurances of `super` will move up the current path
     */
-    pub fn to_canonical(&self, current_path: &Path) -> Result<Path, AstError> {
+    pub fn to_canonical(&self, current_path: &Path) -> Result<Path, PathError> {
         // TODO: make this method move "self"?
         if !current_path.is_canonical() {
             panic!("Current path is not canonical: {}", current_path);
@@ -151,9 +151,9 @@ impl Path {
             let mut merged: Vec<Element> = current_path.into();
             for step in path.iter() {
                 if *step == Element::Super {
-                    merged.pop().ok_or(AstError::PathTooSuper)?;
+                    merged.pop().ok_or(PathError::SubsedingRoot)?;
                     if merged.len() == 0 {
-                        return Err(AstError::PathTooSuper);
+                        return Err(PathError::SubsedingRoot);
                     }
                 } else {
                     merged.push(*step);
@@ -337,7 +337,7 @@ mod test_path {
         let path: Path = vec![Element::Super, Element::Super, relative_id].into();
         let current = vec![Element::CanonicalRoot, current_id].into();
         let canonized_path = path.to_canonical(&current);
-        assert_eq!(canonized_path, Err(AstError::PathTooSuper));
+        assert_eq!(canonized_path, Err(PathError::SubsedingRoot));
     }
 
     #[test]

@@ -1,5 +1,5 @@
 use crate::compiler::{
-    ast::{AstError, BinaryOperator, Path, RoutineCall, Type, UnaryOperator},
+    ast::{BinaryOperator, Path, PathError, RoutineCall, Type, UnaryOperator},
     lexer::stringtable::StringId,
     CompilerDisplay, CompilerDisplayError,
 };
@@ -224,19 +224,10 @@ impl CompilerDisplay for SemanticError {
     }
 }
 
-impl From<AstError> for SemanticError {
-    /// If the AST generates an error during SemanticAnalysis then this will convert that
-    /// error to an appropriate [SemanticError].
-    ///
-    /// Only non-structural changes to the AST are considered valid (e.g. traversing the AST via
-    /// a path).  If the semantic analyzer attempts to change the structure of the AST (adding nodes)
-    // then that is a fault.
-    fn from(ae: AstError) -> Self {
-        match ae {
-            AstError::PathTooSuper => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
-            AstError::ModuleAlreadyContains(_) => {
-                panic!("Semantic Analysis should never modify the structure  of the AST")
-            }
+impl From<PathError> for SemanticError {
+    fn from(pe: PathError) -> Self {
+        match pe {
+            PathError::SubsedingRoot => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
         }
     }
 }
