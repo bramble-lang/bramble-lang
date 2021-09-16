@@ -1,6 +1,6 @@
 use crate::compiler::{
     lexer::stringtable::{StringId, StringTable},
-    CompilerDisplay,
+    CompilerDisplay, CompilerDisplayError,
 };
 
 use super::AstError;
@@ -20,7 +20,7 @@ pub enum Element {
 }
 
 impl CompilerDisplay for Element {
-    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
         Ok(match self {
             Element::FileRoot => ROOT_PATH.into(),
             Element::CanonicalRoot => CANONICAL_ROOT.into(),
@@ -169,8 +169,8 @@ impl Path {
     pub fn to_label(&self, table: &StringTable) -> String {
         self.path
             .iter()
-            .map(|element| Self::element_to_str(table, *element).unwrap())
-            .collect::<Vec<&str>>()
+            .map(|element| element.fmt(table).unwrap())
+            .collect::<Vec<_>>()
             .join("_")
     }
 
@@ -197,16 +197,6 @@ impl Path {
 
         path.into()
     }
-
-    pub fn element_to_str(table: &StringTable, element: Element) -> Result<&str, String> {
-        Ok(match element {
-            Element::FileRoot => ROOT_PATH,
-            Element::CanonicalRoot => CANONICAL_ROOT,
-            Element::Selph => SELF,
-            Element::Super => SUPER,
-            Element::Id(id) => table.get(id)?,
-        })
-    }
 }
 
 impl<I: std::slice::SliceIndex<[Element]>> std::ops::Index<I> for Path {
@@ -219,7 +209,7 @@ impl<I: std::slice::SliceIndex<[Element]>> std::ops::Index<I> for Path {
 }
 
 impl CompilerDisplay for Path {
-    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
         let mut ps: Vec<String> = vec![];
 
         for e in self.iter() {

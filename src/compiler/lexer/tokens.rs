@@ -1,4 +1,4 @@
-use crate::compiler::CompilerDisplay;
+use crate::compiler::{CompilerDisplay, CompilerDisplayError};
 
 use super::stringtable::StringId;
 
@@ -34,7 +34,7 @@ impl std::fmt::Display for Primitive {
 }
 
 impl CompilerDisplay for Primitive {
-    fn fmt(&self, _: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, _: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         Ok(format!("{}", self))
     }
 }
@@ -175,7 +175,7 @@ impl std::fmt::Display for Lex {
 }
 
 impl CompilerDisplay for Lex {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         match self {
             Lex::Identifier(sid) => Ok(format!("identifier {}", st.get(*sid)?)),
             Lex::StringLiteral(sid) => Ok(format!("string literal {}", st.get(*sid)?)),
@@ -198,7 +198,7 @@ impl std::fmt::Display for Token {
 }
 
 impl CompilerDisplay for Token {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         Ok(format!("{}", self.s.fmt(st)?))
     }
 }

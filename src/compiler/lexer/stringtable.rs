@@ -1,4 +1,19 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
+
+use crate::compiler::CompilerDisplayError;
+
+#[derive(Debug)]
+pub enum StringTableError {
+    NotFound,
+}
+
+impl Display for StringTableError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StringTableError::NotFound => f.write_str("StringId Not Found"),
+        }
+    }
+}
 
 /**
 Stores a table of all distinct strings read from source code files.
@@ -45,14 +60,14 @@ impl StringTable {
 
     /// Given an ID, if it is assigned to a string, then return the associated
     /// string, otherwise, return None.
-    pub fn get(&self, id: StringId) -> Result<&str, String> {
+    pub fn get(&self, id: StringId) -> Result<&str, StringTableError> {
         for s in &self.table {
             if *s.1 == id {
                 return Ok(s.0);
             }
         }
 
-        Err("StringId not found".into())
+        Err(StringTableError::NotFound)
     }
 }
 
@@ -74,8 +89,8 @@ impl StringId {
 }
 
 impl crate::compiler::CompilerDisplay for StringId {
-    fn fmt(&self, st: &StringTable) -> Result<String, String> {
-        st.get(*self).map(|s| s.into())
+    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
+        st.get(*self).map(|s| s.into()).map_err(|e| e.into())
     }
 }
 

@@ -1,6 +1,6 @@
 use tokens::Primitive;
 
-use super::CompilerDisplay;
+use super::{CompilerDisplay, CompilerDisplayError};
 
 mod tests;
 
@@ -19,7 +19,7 @@ pub enum LexerError {
 }
 
 impl CompilerDisplay for LexerError {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         use LexerError::*;
         let msg = match self {
             Locked(None) => format!("Lexer Locked on EOF"),

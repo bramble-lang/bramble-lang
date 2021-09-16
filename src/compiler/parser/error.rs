@@ -5,7 +5,7 @@ use crate::{
             stringtable::StringId,
             tokens::{Lex, Token},
         },
-        CompilerDisplay, CompilerError,
+        CompilerDisplay, CompilerDisplayError, CompilerError,
     },
     StringTable,
 };
@@ -57,7 +57,7 @@ pub enum ParserError {
 impl CompilerDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [`StringId`]s
     /// with their respective string values.
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         let msg = match self {
             ParserError::Locked(token) => {
                 let ts = token_to_string(st, token)?;
@@ -166,22 +166,25 @@ impl CompilerDisplay for ParserError {
     }
 }
 
-fn token_to_string(st: &StringTable, token: &Option<Token>) -> Result<String, String> {
+fn token_to_string(
+    st: &StringTable,
+    token: &Option<Token>,
+) -> Result<String, CompilerDisplayError> {
     token
         .as_ref()
         .map(|t| t.fmt(st))
         .unwrap_or(Ok("EOF".into()))
 }
 
-fn lex_to_string(st: &StringTable, lex: &Option<Lex>) -> Result<String, String> {
+fn lex_to_string(st: &StringTable, lex: &Option<Lex>) -> Result<String, CompilerDisplayError> {
     lex.as_ref().map(|t| t.fmt(st)).unwrap_or(Ok("EOF".into()))
 }
 
-fn lex_set_to_string(st: &StringTable, set: &[Lex]) -> Result<String, String> {
+fn lex_set_to_string(st: &StringTable, set: &[Lex]) -> Result<String, CompilerDisplayError> {
     Ok(set
         .iter()
         .map(|l| l.fmt(st))
-        .collect::<Result<Vec<_>, String>>()?
+        .collect::<Result<Vec<_>, _>>()?
         .join(" or "))
 }
 

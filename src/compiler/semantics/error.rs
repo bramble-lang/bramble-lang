@@ -1,7 +1,7 @@
 use crate::compiler::{
     ast::{AstError, BinaryOperator, Path, RoutineCall, Type, UnaryOperator},
     lexer::stringtable::StringId,
-    CompilerDisplay,
+    CompilerDisplay, CompilerDisplayError,
 };
 
 /// Errors generated during semantic analysis of a compilation unit.
@@ -53,7 +53,7 @@ pub enum SemanticError {
 impl CompilerDisplay for SemanticError {
     /// Turn a SemanticError into a human readable message.  This will convert all StringIds
     /// to their associated string value.
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         match self {
             SemanticError::NotVariable(sid) => Ok(format!("{} is not a variable", sid.fmt(st)?)),
             SemanticError::NotRoutine(sid) => Ok(format!("{} is not a routine", sid.fmt(st)?)),
@@ -197,7 +197,7 @@ impl CompilerDisplay for SemanticError {
                             actual.fmt(st)?
                         ))
                     })
-                    .collect::<Result<Vec<_>, String>>()?
+                    .collect::<Result<Vec<_>, CompilerDisplayError>>()?
                     .join(", ")
             )),
             SemanticError::MainFnInvalidType => {

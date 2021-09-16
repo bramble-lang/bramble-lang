@@ -1,6 +1,6 @@
 use crate::StringTable;
 
-use super::CompilerDisplay;
+use super::{CompilerDisplay, CompilerDisplayError};
 
 /// Represents all errors that are generated from within the Compiler
 /// module and its submodules.
@@ -43,7 +43,7 @@ impl<IE> CompilerDisplay for CompilerError<IE>
 where
     IE: CompilerDisplay,
 {
-    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
         let inner = self.inner.fmt(st)?;
         Ok(format!("L{}: {}", self.line, inner))
     }

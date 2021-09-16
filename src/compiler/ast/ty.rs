@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{lexer::stringtable::StringId, CompilerDisplay},
+    compiler::{lexer::stringtable::StringId, CompilerDisplay, CompilerDisplayError},
     StringTable,
 };
 
@@ -128,7 +128,7 @@ impl PartialEq<&Type> for Type {
 }
 
 impl CompilerDisplay for Type {
-    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
         match self {
             Type::Custom(path) => path.fmt(st),
             Type::Coroutine(ty) => Ok(format!("co<{}>", ty.fmt(st)?)),
@@ -149,6 +149,7 @@ impl CompilerDisplay for Type {
                     .iter()
                     .map(|(sid, f)| {
                         st.get(*sid)
+                            .map_err(|e| e.into())
                             .and_then(|fname| f.fmt(st).map(|fs| format!("{}: {}", fname, fs)))
                     })
                     .collect::<Result<Vec<_>, _>>()?

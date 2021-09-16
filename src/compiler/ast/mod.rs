@@ -21,7 +21,7 @@ pub use self::structdef::StructDef;
 pub use self::ty::Type;
 
 use super::lexer::stringtable::StringId;
-use super::CompilerDisplay;
+use super::{CompilerDisplay, CompilerDisplayError};
 
 pub const MAIN_MODULE: &str = "main";
 
@@ -32,7 +32,7 @@ pub enum AstError {
 }
 
 impl CompilerDisplay for AstError {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         match self {
             AstError::ModuleAlreadyContains(sid) => {
                 let s = st.get(*sid)?;
