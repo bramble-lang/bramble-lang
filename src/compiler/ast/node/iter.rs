@@ -268,7 +268,7 @@ mod test_postorder {
             statement::{Bind, Statement},
             structdef::StructDef,
             ty::Type,
-            BinaryOperator,
+            BinaryOperator, Element, RoutineCall, UnaryOperator, YieldReturn,
         },
         lexer::stringtable::{StringId, StringTable},
     };
@@ -374,8 +374,7 @@ mod test_postorder {
                 else_arm: Some(box Expression::StringLiteral(8, StringId::new())),
             },
         )));
-        /*
-        TODO: Getting a weird error here about missing quote
+
         f.body.push(Statement::YieldReturn(box YieldReturn::new(
             9,
             Some(Expression::UnaryOp(
@@ -385,13 +384,13 @@ mod test_postorder {
                     11,
                     vec![Statement::Expression(box Expression::Yield(
                         12,
-                        box Expression::Identifier(13, c),
+                        box Expression::Identifier(13, x),
                     ))],
                     Some(box Expression::RoutineCall(
                         14,
                         RoutineCall::Function,
-                        vec![Element::Id(test)].into(),
-                        vec![Expression::Identifier(15, p)],
+                        vec![Element::Id(func)].into(),
+                        vec![Expression::Identifier(15, y)],
                     )),
                 ),
             )),
@@ -400,6 +399,5 @@ mod test_postorder {
         let expected = vec![5, 6, 4, 7, 8, 3, 2, 13, 12, 15, 14, 11, 10, 9, 1];
         let test: Vec<i64> = f.iter_postorder().map(|n| *n.get_context()).collect();
         assert_eq!(test, expected);
-        */
     }
 }
