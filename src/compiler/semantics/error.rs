@@ -1,7 +1,7 @@
 use crate::compiler::{
     ast::{AstError, BinaryOperator, Path, RoutineCall, Type, UnaryOperator},
     lexer::stringtable::StringId,
-    CompilerError, CompilerErrorDisplay,
+    CompilerErrorDisplay,
 };
 
 /// Errors generated during semantic analysis of a compilation unit.
@@ -239,5 +239,3 @@ impl From<AstError> for SemanticError {
         }
     }
 }
-
-type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;
