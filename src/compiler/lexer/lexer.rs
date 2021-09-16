@@ -9,7 +9,7 @@ use super::super::CompilerError;
 use super::{
     stringtable::{StringId, StringTable},
     tokens::{Lex, Primitive, Token},
-    LexerError, LexerErrorKind,
+    LexerError,
 };
 use Lex::*;
 
@@ -38,7 +38,7 @@ macro_rules! trace {
 
 macro_rules! err {
     ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, LexerError { kind: $kind }))
+        Err(CompilerError::new($ln, $kind))
     };
 }
 
@@ -215,10 +215,7 @@ impl<'a> Lexer<'a> {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(err!(
-                    self.line(),
-                    LexerErrorKind::Locked(self.current_token())
-                ));
+                tokens.push(err!(self.line(), LexerError::Locked(self.current_token())));
                 break;
             }
         }
@@ -307,11 +304,9 @@ impl<'a> Lexer<'a> {
                 if c == '\\' {
                     match branch.next() {
                         Some(c) if Self::is_escape_code(c) => (),
-                        Some(c) => {
-                            return err!(self.line(), LexerErrorKind::InvalidEscapeSequence(c))
-                        }
+                        Some(c) => return err!(self.line(), LexerError::InvalidEscapeSequence(c)),
 
-                        None => return err!(self.line(), LexerErrorKind::ExpectedEscapeCharacter),
+                        None => return err!(self.line(), LexerError::ExpectedEscapeCharacter),
                     }
                 }
             }
@@ -359,7 +354,7 @@ impl<'a> Lexer<'a> {
             .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
-            return err!(self.line(), LexerErrorKind::InvalidInteger);
+            return err!(self.line(), LexerError::InvalidInteger);
         }
 
         branch.merge();
@@ -416,7 +411,7 @@ impl<'a> Lexer<'a> {
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
                 //Err(format!("Unexpected primitive type after number: {}", prim))
-                err!(line, LexerErrorKind::UnexpectedSuffixType(prim))
+                err!(line, LexerError::UnexpectedSuffixType(prim))
             }
         }
     }

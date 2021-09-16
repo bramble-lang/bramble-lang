@@ -8,15 +8,20 @@ pub(crate) mod lexer;
 pub(crate) mod stringtable;
 pub(crate) mod tokens;
 
+/// Errors which can be encountered while tokenizing a compilation unit
 #[derive(Clone, Debug, PartialEq)]
-pub struct LexerError {
-    kind: LexerErrorKind,
+pub enum LexerError {
+    Locked(Option<char>),
+    InvalidEscapeSequence(char),
+    ExpectedEscapeCharacter,
+    InvalidInteger,
+    UnexpectedSuffixType(Primitive),
 }
 
 impl CompilerErrorDisplay for LexerError {
     fn format(&self, _: &crate::StringTable) -> Result<String, String> {
-        use LexerErrorKind::*;
-        let msg = match self.kind {
+        use LexerError::*;
+        let msg = match self {
             Locked(None) => format!("Lexer Locked on EOF"),
             Locked(Some(c)) => format!("Lexer locked on {}", c),
             InvalidEscapeSequence(c) => format!("Invalid escape sequence \\{}", c),
@@ -27,14 +32,4 @@ impl CompilerErrorDisplay for LexerError {
 
         Ok(format!("{}", msg))
     }
-}
-
-/// Errors which can be encountered while tokenizing a compilation unit
-#[derive(Clone, Debug, PartialEq)]
-pub enum LexerErrorKind {
-    Locked(Option<char>),
-    InvalidEscapeSequence(char),
-    ExpectedEscapeCharacter,
-    InvalidInteger,
-    UnexpectedSuffixType(Primitive),
 }
