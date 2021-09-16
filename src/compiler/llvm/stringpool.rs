@@ -4,10 +4,13 @@ use crate::compiler::lexer::stringtable::StringTable;
 
 use super::ast::*;
 
+/// Stores the statically defined strings that occur within a Braid compilation unit
+/// These will then be encoded into the data section of the generated binary for 
+/// quick access at run time.
 #[derive(Debug)]
-pub struct StringPool<'a> {
+pub struct StringPool<'st> {
     pub pool: HashMap<String, usize>,
-    string_table: &'a StringTable,
+    string_table: &'st StringTable,
 }
 
 impl<'a> StringPool<'a> {
