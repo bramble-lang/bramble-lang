@@ -1,6 +1,6 @@
 use crate::{
     compiler::{
-        ast::{BinaryOperator, Path, PathError, RoutineCall, Type, UnaryOperator},
+        ast::{BinaryOperator, Path, PathCanonizationError, RoutineCall, Type, UnaryOperator},
         CompilerDisplay, CompilerDisplayError,
     },
     StringId,
@@ -226,10 +226,10 @@ impl CompilerDisplay for SemanticError {
     }
 }
 
-impl From<PathError> for SemanticError {
-    fn from(pe: PathError) -> Self {
+impl From<PathCanonizationError> for SemanticError {
+    fn from(pe: PathCanonizationError) -> Self {
         match pe {
-            PathError::SubsedingRoot => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
+            PathCanonizationError::SubceedingRoot => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
         }
     }
 }

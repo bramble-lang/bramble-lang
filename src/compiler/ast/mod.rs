@@ -44,16 +44,16 @@ impl CompilerDisplay for AstError {
 
 /// Errors that can be generated when using or creating Path values.
 #[derive(Clone, Debug, PartialEq)]
-pub enum PathError {
+pub enum PathCanonizationError {
     /// A relative path contains enough [Element::Super] elements that it would go post the
     /// root of the absolute path.
-    SubsedingRoot,
+    SubceedingRoot,
 }
 
-impl CompilerDisplay for PathError {
+impl CompilerDisplay for PathCanonizationError {
     fn fmt(&self, _st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         match self {
-            PathError::SubsedingRoot => Ok(format!(
+            PathCanonizationError::SubceedingRoot => Ok(format!(
                 "Use of super would exceed the current depth of the path"
             )),
         }
