@@ -1,5 +1,7 @@
 use crate::StringTable;
 
+use super::CompilerDisplay;
+
 /// Represents all errors that are generated from within the Compiler
 /// module and its submodules.
 ///
@@ -12,7 +14,7 @@ use crate::StringTable;
 /// the compiler. E.g., the errors themselves are submodule specific and
 /// are stored in the `inner` field.
 #[derive(Clone, Debug, PartialEq)]
-pub struct CompilerError<IE: CompilerErrorDisplay> {
+pub struct CompilerError<IE: CompilerDisplay> {
     /// The line in the source code which caused the error
     line: u32,
 
@@ -22,7 +24,7 @@ pub struct CompilerError<IE: CompilerErrorDisplay> {
 
 impl<IE> CompilerError<IE>
 where
-    IE: CompilerErrorDisplay,
+    IE: CompilerDisplay,
 {
     pub fn new(line: u32, inner: IE) -> Self {
         CompilerError { line, inner }
@@ -37,16 +39,12 @@ where
     }
 }
 
-impl<IE> CompilerErrorDisplay for CompilerError<IE>
+impl<IE> CompilerDisplay for CompilerError<IE>
 where
-    IE: CompilerErrorDisplay,
+    IE: CompilerDisplay,
 {
     fn format(&self, st: &StringTable) -> Result<String, String> {
         let inner = self.inner.format(st)?;
         Ok(format!("L{}: {}", self.line, inner))
     }
-}
-
-pub trait CompilerErrorDisplay {
-    fn format(&self, st: &StringTable) -> Result<String, String>;
 }

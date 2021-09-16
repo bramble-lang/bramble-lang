@@ -21,7 +21,7 @@ pub use self::structdef::StructDef;
 pub use self::ty::Type;
 
 use super::lexer::stringtable::StringId;
-use super::CompilerErrorDisplay;
+use super::CompilerDisplay;
 
 pub const MAIN_MODULE: &str = "main";
 
@@ -31,7 +31,7 @@ pub enum AstError {
     PathTooSuper,
 }
 
-impl CompilerErrorDisplay for AstError {
+impl CompilerDisplay for AstError {
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {
         match self {
             AstError::ModuleAlreadyContains(sid) => {

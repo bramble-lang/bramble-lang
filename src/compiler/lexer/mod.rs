@@ -1,6 +1,6 @@
 use tokens::Primitive;
 
-use super::CompilerErrorDisplay;
+use super::CompilerDisplay;
 
 mod tests;
 
@@ -18,7 +18,7 @@ pub enum LexerError {
     UnexpectedSuffixType(Primitive),
 }
 
-impl CompilerErrorDisplay for LexerError {
+impl CompilerDisplay for LexerError {
     fn format(&self, _: &crate::StringTable) -> Result<String, String> {
         use LexerError::*;
         let msg = match self {

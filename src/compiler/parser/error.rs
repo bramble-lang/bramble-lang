@@ -4,7 +4,7 @@ use crate::compiler::{
         stringtable::StringId,
         tokens::{Lex, Token},
     },
-    CompilerError, CompilerErrorDisplay,
+    CompilerDisplay, CompilerError,
 };
 
 /// Compiler errors that happen within the Parser stage of compilation.
@@ -51,7 +51,7 @@ pub enum ParserError {
     IndexOpInvalidExpr,
 }
 
-impl CompilerErrorDisplay for ParserError {
+impl CompilerDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [`StringId`]s
     /// with their respective string values.
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {

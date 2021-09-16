@@ -1,7 +1,7 @@
 use crate::compiler::{
     ast::{AstError, BinaryOperator, Path, RoutineCall, Type, UnaryOperator},
     lexer::stringtable::StringId,
-    CompilerErrorDisplay,
+    CompilerDisplay,
 };
 
 /// Errors generated during semantic analysis of a compilation unit.
@@ -50,7 +50,7 @@ pub enum SemanticError {
     RoutineCallInvalidTarget(RoutineCall, Path, Type),
 }
 
-impl CompilerErrorDisplay for SemanticError {
+impl CompilerDisplay for SemanticError {
     /// Turn a SemanticError into a human readable message.  This will convert all StringIds
     /// to their associated string value.
     fn format(&self, st: &crate::StringTable) -> Result<String, String> {

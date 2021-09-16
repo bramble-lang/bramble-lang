@@ -8,7 +8,7 @@ pub mod tests {
         lexer::stringtable::StringTable,
         lexer::{tokens::Token, LexerError},
         parser::{expression::*, statement::*, tokenstream::TokenStream, ParserError},
-        CompilerError, CompilerErrorDisplay, Lexer,
+        CompilerDisplay, CompilerError, Lexer,
     };
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
