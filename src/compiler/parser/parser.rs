@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use stdext::function_name;
 
 use crate::compiler::lexer::stringtable::StringId;
+use crate::compiler::ParserResult;
 use crate::{
     compiler::{
         ast::*,
@@ -41,8 +42,6 @@ impl Diag for ParserContext {
         DiagData::new(*self, 0)
     }
 }
-
-pub(super) type ParserResult<T> = Result<Option<T>, CompilerError<ParserError>>;
 
 pub(super) static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 pub(super) static TRACE_START: AtomicUsize = AtomicUsize::new(0);

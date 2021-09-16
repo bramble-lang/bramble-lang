@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use super::{
-    parser::{block, path, routine_call_params, ParserContext, ParserResult},
+    parser::{block, path, routine_call_params, ParserContext},
     tokenstream::TokenStream,
     ParserError,
 };
@@ -14,7 +14,7 @@ use crate::{
             stringtable::StringId,
             tokens::{Lex, Token},
         },
-        CompilerError,
+        CompilerError, ParserResult,
     },
     trace,
 };

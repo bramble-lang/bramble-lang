@@ -12,16 +12,12 @@ use crate::{
             stringtable::StringId,
             tokens::{Lex, Token},
         },
-        CompilerError,
+        CompilerError, ParserResult,
     },
     trace,
 };
 
-use super::{
-    parser::{ParserContext, ParserResult},
-    tokenstream::TokenStream,
-    ParserError,
-};
+use super::{parser::ParserContext, tokenstream::TokenStream, ParserError};
 
 /// Helper macro to get rid of repitition of boilerplate code.
 macro_rules! err {
