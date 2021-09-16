@@ -19,7 +19,7 @@ pub enum LexerError {
 }
 
 impl CompilerDisplay for LexerError {
-    fn fmt(&self, _: &crate::StringTable) -> Result<String, String> {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
         use LexerError::*;
         let msg = match self {
             Locked(None) => format!("Lexer Locked on EOF"),
@@ -27,7 +27,7 @@ impl CompilerDisplay for LexerError {
             InvalidEscapeSequence(c) => format!("Invalid escape sequence \\{}", c),
             ExpectedEscapeCharacter => format!("Expected an escape character after \\"),
             InvalidInteger => format!("Invalid integer"),
-            UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim),
+            UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(st)?),
         };
 
         Ok(format!("{}", msg))

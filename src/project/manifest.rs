@@ -5,6 +5,7 @@ use crate::{
         ast::{Item, Module, Node, Parameter, Path, RoutineDef, RoutineDefType, StructDef, Type},
         import::Import,
         semantics::semanticnode::SemanticContext,
+        CompilerDisplay,
     },
     StringTable,
 };
@@ -259,7 +260,7 @@ impl ManifestRoutineDefType {
 
 /// Convert a Compiler Path value into the Manifest file string format.
 fn path_to_string(st: &StringTable, p: &Path) -> Result<String, String> {
-    p.to_human_string(st)
+    p.fmt(st)
 }
 
 /// Convert a Manifest file Path string to a Compiler Path value.

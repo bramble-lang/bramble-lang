@@ -1,3 +1,5 @@
+use crate::compiler::CompilerDisplay;
+
 use super::stringtable::StringId;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -28,6 +30,12 @@ impl std::fmt::Display for Primitive {
             Primitive::Bool => f.write_str("bool"),
             Primitive::StringLiteral => f.write_str("string"),
         }
+    }
+}
+
+impl CompilerDisplay for Primitive {
+    fn fmt(&self, _: &crate::StringTable) -> Result<String, String> {
+        Ok(format!("{}", self))
     }
 }
 
@@ -113,7 +121,7 @@ impl std::fmt::Display for Lex {
             I16(i) => f.write_str(&format!("i16 literal {}", i)),
             I32(i) => f.write_str(&format!("i32 literal {}", i)),
             I64(i) => f.write_str(&format!("i64 literal {}", i)),
-            Bool(b) => f.write_str(&format!("literal {}", b)),
+            Bool(b) => f.write_str(&format!("bool literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
             VarArgs => f.write_str("..."),
@@ -166,6 +174,16 @@ impl std::fmt::Display for Lex {
     }
 }
 
+impl CompilerDisplay for Lex {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+        match self {
+            Lex::Identifier(sid) => Ok(format!("identifier {}", st.get(*sid)?)),
+            Lex::StringLiteral(sid) => Ok(format!("string literal {}", st.get(*sid)?)),
+            _ => Ok(format!("{}", self)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub l: u32,
@@ -176,6 +194,12 @@ pub struct Token {
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("L{}: {}", self.l, self.s))
+    }
+}
+
+impl CompilerDisplay for Token {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
+        Ok(format!("{}", self.s.fmt(st)?))
     }
 }
 

@@ -55,17 +55,19 @@ impl CompilerDisplay for SemanticError {
     /// to their associated string value.
     fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
         match self {
-            SemanticError::NotVariable(_) => Ok(format!("Not a variable")),
-            SemanticError::NotRoutine(_) => Ok(format!("Not a routine")),
-            SemanticError::NotCoroutine(_) => Ok(format!("Not a coroutine")),
-            SemanticError::MultipleDefs(_) => Ok(format!("Multiple defs")),
+            SemanticError::NotVariable(sid) => Ok(format!("{} is not a variable", sid.fmt(st)?)),
+            SemanticError::NotRoutine(sid) => Ok(format!("{} is not a routine", sid.fmt(st)?)),
+            SemanticError::NotCoroutine(sid) => Ok(format!("{} is not a coroutine", sid.fmt(st)?)),
+            SemanticError::MultipleDefs(path) => {
+                Ok(format!("{} is defined multiple times", path.fmt(st)?))
+            }
             SemanticError::PathNotFound(path, canonical_form) => Ok(format!(
                 "Could not find item with the given path: {} ({})",
-                path.to_human_string(st)?,
-                canonical_form.to_human_string(st)?
+                path.fmt(st)?,
+                canonical_form.fmt(st)?
             )),
             SemanticError::PathNotValid => Ok(format!("Path is not valid")),
-            SemanticError::NotDefined(sid) => Ok(format!("{} is not defined", st.get(*sid)?)),
+            SemanticError::NotDefined(sid) => Ok(format!("{} is not defined", sid.fmt(st)?)),
             SemanticError::EmptyPath => Ok(format!("Empty path")),
             SemanticError::ArrayInvalidSize(sz) => {
                 Ok(format!("Expected length > 0 for array, but found {}", sz))
@@ -75,40 +77,38 @@ impl CompilerDisplay for SemanticError {
             }
             SemanticError::ArrayIndexingInvalidType(ty) => Ok(format!(
                 "Expected array type on LHS of [] but found {}",
-                ty.to_human_string(st)?
+                ty.fmt(st)?
             )),
             SemanticError::ArrayIndexingInvalidIndexType(ty) => Ok(format!(
                 "Expected integral type for index but found {}",
-                ty.to_human_string(st)?
+                ty.fmt(st)?
             )),
-            SemanticError::AlreadyDeclared(sid) => {
-                Ok(format!("{} already declared", st.get(*sid)?))
-            }
+            SemanticError::AlreadyDeclared(sid) => Ok(format!("{} already declared", sid.fmt(st)?)),
             SemanticError::PathTooSuper => Ok(format!("Path too super")),
             SemanticError::BindExpected(expected, actual) => Ok(format!(
                 "Bind expected {} but got {}",
-                expected.to_human_string(st)?,
-                actual.to_human_string(st)?
+                expected.fmt(st)?,
+                actual.fmt(st)?
             )),
             SemanticError::VariableNotMutable(sid) => {
-                Ok(format!("Variable {} is not mutable", st.get(*sid)?))
+                Ok(format!("Variable {} is not mutable", sid.fmt(st)?))
             }
             SemanticError::BindMismatch(sid, expected, actual) => Ok(format!(
                 "{} is of type {} but is assigned {}",
-                st.get(*sid)?,
-                expected.to_human_string(st)?,
-                actual.to_human_string(st)?
+                sid.fmt(st)?,
+                expected.fmt(st)?,
+                actual.fmt(st)?
             )),
             SemanticError::YieldExpected(expected, actual) => Ok(format!(
                 "Yield return expected {} but got {}",
-                expected.to_human_string(st)?,
-                actual.to_human_string(st)?
+                expected.fmt(st)?,
+                actual.fmt(st)?
             )),
             SemanticError::YieldInvalidLocation => Ok(format!("yield must be at end of function")),
             SemanticError::ReturnExpected(expected, actual) => Ok(format!(
                 "Return expected {} but got {}",
-                expected.to_human_string(st)?,
-                actual.to_human_string(st)?
+                expected.fmt(st)?,
+                actual.fmt(st)?
             )),
             SemanticError::ReturnInvalidLocation => Ok(format!("return invalid loc")),
             SemanticError::MemberAccessInvalidRootType(_) => {
@@ -116,39 +116,38 @@ impl CompilerDisplay for SemanticError {
             }
             SemanticError::MemberAccessMemberNotFound(path, member) => Ok(format!(
                 "{} does not have member {}",
-                path.to_human_string(st)?,
-                st.get(*member)?
+                path.fmt(st)?,
+                member.fmt(st)?
             )),
             SemanticError::IfExprMismatchArms(t, f) => Ok(format!(
                 "If expression has mismatching arms: expected {} got {}",
-                t.to_human_string(st)?,
-                f.to_human_string(st)?
+                t.fmt(st)?,
+                f.fmt(st)?
             )),
             SemanticError::CondExpectedBool(actual) => Ok(format!(
                 "Expected boolean expression in if conditional, got: {}",
-                actual.to_human_string(st)?
+                actual.fmt(st)?
             )),
             SemanticError::WhileInvalidType(actual) => Ok(format!(
                 "The body of a while expression must resolve to the unit type, but got: {}",
-                actual.to_human_string(st)?
+                actual.fmt(st)?
             )),
             SemanticError::WhileCondInvalidType(actual) => Ok(format!(
                 "The condition of a while expression must resolve to the bool type, but got: {}",
-                actual.to_human_string(st)?
+                actual.fmt(st)?
             )),
-            SemanticError::YieldInvalidType(ty) => Ok(format!(
-                "Yield expects co<_> but got {}",
-                ty.to_human_string(st)?
-            )),
+            SemanticError::YieldInvalidType(ty) => {
+                Ok(format!("Yield expects co<_> but got {}", ty.fmt(st)?))
+            }
             SemanticError::RoutineCallWrongNumParams(path, expected, actual) => Ok(format!(
                 "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
-                path.to_human_string(st)?,
+                path.fmt(st)?,
                 expected,
                 actual,
             )),
             SemanticError::FunctionParamsNotEnough(path, expected, actual) => Ok(format!(
                 "Function {} expects at least {} parameters, but got {}",
-                path.to_human_string(st)?,
+                path.fmt(st)?,
                 expected,
                 actual,
             )),
@@ -158,42 +157,44 @@ impl CompilerDisplay for SemanticError {
             )),
             SemanticError::StructExprMemberNotFound(path, sid) => Ok(format!(
                 "member {} not found on {}",
-                st.get(*sid)?,
-                path.to_human_string(st)?
+                sid.fmt(st)?,
+                path.fmt(st)?
             )),
             SemanticError::StructExprFieldTypeMismatch(path, fname, expected, actual) => {
                 Ok(format!(
                     "{}.{} expects {} but got {}",
-                    path.to_human_string(st)?,
-                    st.get(*fname)?,
-                    expected.to_human_string(st)?,
-                    actual.to_human_string(st)?
+                    path.fmt(st)?,
+                    fname.fmt(st)?,
+                    expected.fmt(st)?,
+                    actual.fmt(st)?
                 ))
             }
-            SemanticError::ExpectedSignedInteger(op, ty) => {
-                Ok(format!("{} expected i32 or i64 but found {}", op, ty))
-            }
+            SemanticError::ExpectedSignedInteger(op, ty) => Ok(format!(
+                "{} expected i32 or i64 but found {}",
+                op,
+                ty.fmt(st)?
+            )),
             SemanticError::ExpectedBool(op, ty) => {
-                Ok(format!("{} expected bool but found {}", op, ty))
+                Ok(format!("{} expected bool but found {}", op, ty.fmt(st)?))
             }
             SemanticError::OpExpected(op, expected, l, r) => Ok(format!(
                 "{} expected {} but found {} and {}",
                 op,
-                expected.to_human_string(st)?,
-                l.to_human_string(st)?,
-                r.to_human_string(st)?
+                expected.fmt(st)?,
+                l.fmt(st)?,
+                r.fmt(st)?
             )),
             SemanticError::RoutineParamTypeMismatch(path, mismatches) => Ok(format!(
                 "One or more parameters have mismatching types for function {}: {}",
-                path.to_human_string(st)?,
+                path.fmt(st)?,
                 mismatches
                     .iter()
                     .map(|(param_id, expected, actual)| {
                         Ok(format!(
                             "parameter {} expected {} but got {}",
                             param_id,
-                            expected.to_human_string(st)?,
-                            actual.to_human_string(st)?
+                            expected.fmt(st)?,
+                            actual.fmt(st)?
                         ))
                     })
                     .collect::<Result<Vec<_>, String>>()?
@@ -215,8 +216,8 @@ impl CompilerDisplay for SemanticError {
                 Ok(format!(
                     "Expected {} but {} is a {}",
                     call,
-                    path.to_human_string(st)?,
-                    ty.to_human_string(st)?
+                    path.fmt(st)?,
+                    ty.fmt(st)?
                 ))
             }
         }

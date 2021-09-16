@@ -1,10 +1,13 @@
-use crate::compiler::{
-    ast::AstError,
-    lexer::{
-        stringtable::StringId,
-        tokens::{Lex, Token},
+use crate::{
+    compiler::{
+        ast::AstError,
+        lexer::{
+            stringtable::StringId,
+            tokens::{Lex, Token},
+        },
+        CompilerDisplay, CompilerError,
     },
-    CompilerDisplay, CompilerError,
+    StringTable,
 };
 
 /// Compiler errors that happen within the Parser stage of compilation.
@@ -57,12 +60,12 @@ impl CompilerDisplay for ParserError {
     fn fmt(&self, st: &crate::StringTable) -> Result<String, String> {
         let msg = match self {
             ParserError::Locked(token) => {
-                let ts = token_to_string(token);
+                let ts = token_to_string(st, token)?;
                 format!("Parser cannot advance past {}", ts)
             }
             ParserError::ModExpectedName => format!("Identifier expected after mod keyword"),
             ParserError::ModAlreadyContains(sid) => {
-                format!("Module already contains {}", st.get(*sid)?)
+                format!("Module already contains {}", sid.fmt(st)?)
             }
             ParserError::ExternInvalidVarArgs => format!(
                 "An extern declaration must have at least one \
@@ -84,7 +87,7 @@ impl CompilerDisplay for ParserError {
             ParserError::FnExpectedReturn(token) => {
                 format!(
                     "Routines must end with a return statement, but found {}",
-                    token_to_string(token)
+                    token_to_string(st, token)?
                 )
             }
             ParserError::FnCallExpectedParams => {
@@ -108,8 +111,8 @@ impl CompilerDisplay for ParserError {
             ParserError::ExpectedButFound(expected, actual) => {
                 format!(
                     "Expected {}, but found {}",
-                    lex_set_to_string(expected),
-                    lex_to_string(actual)
+                    lex_set_to_string(st, expected)?,
+                    lex_to_string(st, actual)?
                 )
             }
             ParserError::ExpectedIdDeclAfterLet => {
@@ -141,13 +144,16 @@ impl CompilerDisplay for ParserError {
             ParserError::YieldExpectedIdentifier => format!("Expected identifier after yield"),
             ParserError::StructExpectedFieldExpr(sid) => format!(
                 "Expected an expression to be assigned to field {}",
-                st.get(*sid)?
+                sid.fmt(st)?
             ),
             ParserError::ExpectedExprAfter(lex) => {
-                format!("Expected expression after {}", lex_to_string(&Some(*lex)))
+                format!(
+                    "Expected expression after {}",
+                    lex_to_string(st, &Some(*lex))?
+                )
             }
             ParserError::ExpectedTermAfter(lex) => {
-                format!("Expected term after {}", lex_to_string(&Some(*lex)))
+                format!("Expected term after {}", lex_to_string(st, &Some(*lex))?)
             }
             ParserError::MemberAccessExpectedField => {
                 format!("Expected member name after . operator.")
@@ -160,22 +166,23 @@ impl CompilerDisplay for ParserError {
     }
 }
 
-fn token_to_string(token: &Option<Token>) -> String {
+fn token_to_string(st: &StringTable, token: &Option<Token>) -> Result<String, String> {
     token
         .as_ref()
-        .map(|t| t.to_string())
-        .unwrap_or("EOF".into())
+        .map(|t| t.fmt(st))
+        .unwrap_or(Ok("EOF".into()))
 }
 
-fn lex_to_string(lex: &Option<Lex>) -> String {
-    lex.as_ref().map(|t| t.to_string()).unwrap_or("EOF".into())
+fn lex_to_string(st: &StringTable, lex: &Option<Lex>) -> Result<String, String> {
+    lex.as_ref().map(|t| t.fmt(st)).unwrap_or(Ok("EOF".into()))
 }
 
-fn lex_set_to_string(set: &[Lex]) -> String {
-    set.iter()
-        .map(|l| l.to_string())
-        .collect::<Vec<_>>()
-        .join(" or ")
+fn lex_set_to_string(st: &StringTable, set: &[Lex]) -> Result<String, String> {
+    Ok(set
+        .iter()
+        .map(|l| l.fmt(st))
+        .collect::<Result<Vec<_>, String>>()?
+        .join(" or "))
 }
 
 impl From<CompilerError<AstError>> for CompilerError<ParserError> {

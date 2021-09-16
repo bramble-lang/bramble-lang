@@ -73,6 +73,12 @@ impl StringId {
     }
 }
 
+impl crate::compiler::CompilerDisplay for StringId {
+    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+        st.get(*self).map(|s| s.into())
+    }
+}
+
 impl std::fmt::Display for StringId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{}", self.0))

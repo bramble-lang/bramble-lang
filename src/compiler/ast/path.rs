@@ -1,4 +1,7 @@
-use crate::compiler::lexer::stringtable::{StringId, StringTable};
+use crate::compiler::{
+    lexer::stringtable::{StringId, StringTable},
+    CompilerDisplay,
+};
 
 use super::AstError;
 
@@ -14,6 +17,18 @@ pub enum Element {
     Selph,
     Super,
     Id(StringId),
+}
+
+impl CompilerDisplay for Element {
+    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+        Ok(match self {
+            Element::FileRoot => ROOT_PATH.into(),
+            Element::CanonicalRoot => CANONICAL_ROOT.into(),
+            Element::Selph => SELF.into(),
+            Element::Super => SUPER.into(),
+            Element::Id(id) => st.get(*id)?.into(),
+        })
+    }
 }
 
 impl std::fmt::Display for Element {
@@ -159,25 +174,6 @@ impl Path {
             .join("_")
     }
 
-    /// Convert a path into a human readable string, by replacing all String IDs
-    /// with their respective String Values.
-    pub fn to_human_string(&self, table: &StringTable) -> Result<String, String> {
-        let mut ps: Vec<&str> = vec![];
-
-        for e in self.iter() {
-            let es = Self::element_to_str(table, *e)?;
-            ps.push(es.into());
-        }
-
-        let ps = ps.join("::");
-
-        if self.is_canonical() {
-            Ok(format!("${}", ps))
-        } else {
-            Ok(ps)
-        }
-    }
-
     pub fn from_human_string(table: &mut StringTable, p: &str) -> Path {
         let (p, is_canonical) = match p.strip_prefix("$") {
             Some(stripped) => (stripped, true),
@@ -219,6 +215,25 @@ impl<I: std::slice::SliceIndex<[Element]>> std::ops::Index<I> for Path {
     #[inline]
     fn index(&self, index: I) -> &Self::Output {
         std::ops::Index::index(&*self.path, index)
+    }
+}
+
+impl CompilerDisplay for Path {
+    fn fmt(&self, st: &StringTable) -> Result<String, String> {
+        let mut ps: Vec<String> = vec![];
+
+        for e in self.iter() {
+            let es = e.fmt(st)?;
+            ps.push(es);
+        }
+
+        let ps = ps.join("::");
+
+        if self.is_canonical() {
+            Ok(format!("${}", ps))
+        } else {
+            Ok(ps)
+        }
     }
 }
 
