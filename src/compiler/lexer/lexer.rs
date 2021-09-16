@@ -3,6 +3,7 @@
 // by tokenize
 use stdext::function_name;
 
+use crate::compiler::LexerResult;
 use crate::diagnostics::config::TracingConfig;
 
 use super::super::CompilerError;
@@ -198,7 +199,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenize(&mut self) -> Vec<Result<Token, CompilerError<LexerError>>> {
+    pub fn tokenize(&mut self) -> Vec<LexerResult<Token>> {
         let mut tokens = vec![];
 
         while self.index < self.chars.len() {
@@ -223,7 +224,7 @@ impl<'a> Lexer<'a> {
         tokens
     }
 
-    fn next_token(&mut self) -> Result<Option<Token>, CompilerError<LexerError>> {
+    fn next_token(&mut self) -> LexerResult<Option<Token>> {
         self.consume_line_comment();
         self.consume_block_comment();
 
@@ -242,7 +243,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn consume_literal(&mut self) -> Result<Option<Token>, CompilerError<LexerError>> {
+    fn consume_literal(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         match self.consume_integer()? {
             Some(i) => Ok(Some(i)),
@@ -265,7 +266,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn consume_identifier(&mut self) -> Result<Option<Token>, CompilerError<LexerError>> {
+    pub fn consume_identifier(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch
@@ -290,7 +291,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn consume_string_literal(&mut self) -> Result<Option<Token>, CompilerError<LexerError>> {
+    fn consume_string_literal(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -324,7 +325,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn consume_integer(&mut self) -> Result<Option<Token>, CompilerError<LexerError>> {
+    pub fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -367,7 +368,7 @@ impl<'a> Lexer<'a> {
         offset: u32,
         int_token: &str,
         prim: Primitive,
-    ) -> Result<Option<Token>, CompilerError<LexerError>> {
+    ) -> LexerResult<Option<Token>> {
         match prim {
             Primitive::U8 => Ok(Some(Token::new(
                 line,
@@ -415,9 +416,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn consume_int_suffix(
-        branch: &mut LexerBranch,
-    ) -> Result<Option<Primitive>, CompilerError<LexerError>> {
+    fn consume_int_suffix(branch: &mut LexerBranch) -> LexerResult<Option<Primitive>> {
         Ok(if branch.next_ifn("i8") {
             Some(Primitive::I8)
         } else if branch.next_ifn("i16") {
@@ -439,7 +438,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn consume_operator(&mut self) -> Result<Option<Token>, CompilerError<LexerError>> {
+    pub fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let line = self.line;
         let offset = self.col;

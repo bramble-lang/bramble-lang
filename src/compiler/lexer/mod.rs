@@ -22,7 +22,7 @@ impl CompilerDisplay for LexerError {
     fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         use LexerError::*;
         let msg = match self {
-            Locked(None) => format!("Lexer Locked on EOF"),
+            Locked(None) => format!("Lexer locked on EOF"),
             Locked(Some(c)) => format!("Lexer locked on {}", c),
             InvalidEscapeSequence(c) => format!("Invalid escape sequence \\{}", c),
             ExpectedEscapeCharacter => format!("Expected an escape character after \\"),
