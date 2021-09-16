@@ -12,17 +12,10 @@ use crate::{
         lexer::tokens::{Lex, Token},
         CompilerError,
     },
-    trace, StringId,
+    err, trace, StringId,
 };
 
 use super::{parser::ParserContext, tokenstream::TokenStream, ParserError};
-
-/// Helper macro to get rid of repitition of boilerplate code.
-macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
-    };
-}
 
 pub(super) fn statement_or_yield_return(
     stream: &mut TokenStream,

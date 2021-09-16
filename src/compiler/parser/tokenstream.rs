@@ -1,15 +1,8 @@
 use super::ParserError;
 use crate::compiler::lexer::tokens::{Lex, Token};
 use crate::compiler::CompilerError;
-use crate::StringId;
+use crate::{err, StringId};
 //use crate::result::Result;
-
-/// Helper macro to get rid of repitition of boilerplate code.
-macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
-    };
-}
 
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,

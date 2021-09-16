@@ -16,15 +16,8 @@ use crate::{
         lexer::tokens::{Lex, Token},
         CompilerError,
     },
-    trace, StringId,
+    err, trace, StringId,
 };
-
-/// Helper macro to get rid of repitition of boilerplate code.
-macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
-    };
-}
 
 impl ParserCombinator<ParserResult<Expression<ParserContext>>>
     for ParserResult<Expression<ParserContext>>

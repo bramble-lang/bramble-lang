@@ -4,7 +4,7 @@
 use stdext::function_name;
 
 use crate::diagnostics::config::TracingConfig;
-use crate::{StringId, StringTable};
+use crate::{err, StringId, StringTable};
 
 use super::super::CompilerError;
 use super::LexerResult;
@@ -34,12 +34,6 @@ macro_rules! trace {
                 $ts.current_token()
             )
         }
-    };
-}
-
-macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
     };
 }
 

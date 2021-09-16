@@ -8,17 +8,10 @@ use super::{
     structdef::StructDef,
     AstError,
 };
-use crate::compiler::CompilerError;
 use crate::StringId;
+use crate::{compiler::CompilerError, err};
 
 type AstResult<T> = Result<T, CompilerError<AstError>>;
-
-/// Helper macro to get rid of repitition of boilerplate code.
-macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
-    };
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module<M> {

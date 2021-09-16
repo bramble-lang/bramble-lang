@@ -3,7 +3,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::StringId;
 use crate::{
     compiler::{
         ast::*,
@@ -12,6 +11,7 @@ use crate::{
     },
     diagnostics::{config::TracingConfig, Diag, DiagData},
 };
+use crate::{err, StringId};
 
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
@@ -105,13 +105,6 @@ macro_rules! trace {
                 }
             }
         }
-    };
-}
-
-/// Helper macro to get rid of repitition of boilerplate code.
-macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
     };
 }
 

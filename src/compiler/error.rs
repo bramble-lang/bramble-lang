@@ -48,3 +48,11 @@ where
         Ok(format!("L{}: {}", self.line, inner))
     }
 }
+
+/// Helper macro to get rid of repitition of boilerplate code.
+#[macro_export]
+macro_rules! err {
+    ($ln: expr, $kind: expr) => {
+        Err(CompilerError::new($ln, $kind))
+    };
+}
