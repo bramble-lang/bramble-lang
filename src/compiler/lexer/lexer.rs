@@ -123,7 +123,13 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     }
 
     pub fn next_ifn(&mut self, t: &str) -> bool {
-        // TODO: What if `t` contains a line break?
+        // Check that `t` does not contain a line break, which would violate acceptable tokens
+        if t.chars().any(|c| c.is_whitespace()) {
+            // Panic because this indicates that there is a bug in the compiler code itself and the
+            // user cannot fix it.
+            panic!("A lexical token cannot contain a whitespace character")
+        }
+
         if self.peek_ifn(t) {
             self.index += t.len();
             self.offset += t.len() as u32;
