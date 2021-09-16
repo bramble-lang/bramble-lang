@@ -54,7 +54,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         LexerBranch {
             index: l.index,
             line: l.line,
-            offset: l.offset,
+            offset: l.col,
             lexer: l,
         }
     }
@@ -64,7 +64,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
         self.lexer.index = self.index;
         self.lexer.line = self.line;
-        self.lexer.offset = self.offset;
+        self.lexer.col = self.offset;
 
         s
     }
@@ -76,7 +76,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// done with `merge`.
     pub fn cut(&mut self) -> (Option<StringId>, u32) {
         let start = self.lexer.index;
-        let offset = self.lexer.offset;
+        let offset = self.lexer.col;
         let stop = self.index;
         let mut s = String::new();
 
@@ -165,7 +165,7 @@ pub struct Lexer<'a> {
     chars: Vec<char>,
     index: usize,
     line: u32,
-    offset: u32,
+    col: u32,
     tracing: TracingConfig,
     string_table: &'a mut StringTable,
 }
@@ -176,7 +176,7 @@ impl<'a> Lexer<'a> {
             chars: text.chars().collect(),
             index: 0,
             line: 1,
-            offset: 0,
+            col: 0,
             tracing: TracingConfig::Off,
             string_table,
         }
@@ -258,10 +258,10 @@ impl<'a> Lexer<'a> {
         while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
             if self.chars[self.index] == '\n' {
                 self.line += 1;
-                self.offset = 0;
+                self.col = 0;
             }
             self.index += 1;
-            self.offset += 1;
+            self.col += 1;
         }
     }
 
@@ -442,7 +442,7 @@ impl<'a> Lexer<'a> {
     pub fn consume_operator(&mut self) -> Result<Option<Token>, CompilerError<LexerError>> {
         trace!(self);
         let line = self.line;
-        let offset = self.offset;
+        let offset = self.col;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
             ("...", VarArgs),
