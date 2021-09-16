@@ -45,6 +45,8 @@ impl CompilerDisplay for AstError {
 /// Errors that can be generated when using or creating Path values.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PathError {
+    /// A relative path contains enough [Element::Super] elements that it would go post the
+    /// root of the absolute path.
     SubsedingRoot,
 }
 
