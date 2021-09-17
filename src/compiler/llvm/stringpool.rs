@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-
 use crate::StringTable;
 
 use super::ast::*;
 
 /// Stores the statically defined strings that occur within a Braid compilation unit
-/// These will then be encoded into the data section of the generated binary for 
+/// These will then be encoded into the data section of the generated binary for
 /// quick access at run time.
 #[derive(Debug)]
 pub struct StringPool<'st> {
@@ -15,7 +14,7 @@ pub struct StringPool<'st> {
 }
 
 impl<'a> StringPool<'a> {
-    pub fn new(string_table:&'a StringTable) -> StringPool<'a> {
+    pub fn new(string_table: &'a StringTable) -> StringPool<'a> {
         StringPool {
             pool: HashMap::new(),
             string_table,
@@ -252,12 +251,12 @@ mod test {
                 .unwrap();
             let ast = parser::parse(test_mod, &tokens).unwrap().unwrap();
             let module = resolve_types(
-                &ast, 
+                &ast,
                 main_mod,
                 main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off, 
+                TracingConfig::Off,
             ).unwrap();
             let mut sp = StringPool::new(&table);
             sp.extract_from_module(&module);
