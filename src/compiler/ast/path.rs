@@ -192,6 +192,7 @@ impl Path {
             }
         }
 
+        // Check if this is a canonical path, and remove the $ if it is
         let (p, is_canonical) = match p.strip_prefix("$") {
             Some(stripped) => (stripped, true),
             None => (p, false),
