@@ -274,273 +274,6 @@ impl<M> Module<M> {
     }
 }
 
-/*
-#[cfg(test)]
-mod test {
-    use crate::compiler::ast::routinedef::{RoutineDef, RoutineDefType};
-    use crate::compiler::ast::ty::Type;
-
-    use super::*;
-
-    #[test]
-    pub fn test_new_module() {
-        let module = Module::new("test", 1);
-        assert_eq!(module.get_name(), "test");
-        assert_eq!(*module.get_context(), 1);
-    }
-
-    #[test]
-    pub fn test_get_nonexistant_item() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let f = module.get_item("not_found");
-        assert_eq!(f, None);
-    }
-
-    #[test]
-    pub fn test_add_function() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let f = module.get_item("func");
-        assert_eq!(f, Some(&Item::Routine(fdef)));
-    }
-
-    #[test]
-    pub fn test_add_function_that_already_exists() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let result = module.add_function(fdef.clone());
-        assert_eq!(result, Err("func already exists in module".into()));
-    }
-
-    #[test]
-    pub fn test_add_coroutine() {
-        let mut module = Module::new("test", 1);
-        let cdef = RoutineDef {
-            context: 1,
-            name: "cor".into(),
-            def: RoutineDefType::Coroutine,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_coroutine(cdef.clone()).unwrap();
-        let c = module.get_item("cor").unwrap();
-        assert_eq!(c, &Item::Routine(cdef));
-    }
-
-    #[test]
-    pub fn test_add_coroutine_that_already_exists() {
-        let mut module = Module::new("test", 1);
-        let cdef = RoutineDef {
-            context: 1,
-            name: "cor".into(),
-            def: RoutineDefType::Coroutine,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_coroutine(cdef.clone()).unwrap();
-        let result = module.add_coroutine(cdef.clone());
-        assert_eq!(result, Err("cor already exists in module".into()));
-    }
-
-    #[test]
-    pub fn test_add_coroutine_with_same_name_as_function() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "dupe".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-
-        let cdef = RoutineDef {
-            context: 1,
-            name: "dupe".into(),
-            def: RoutineDefType::Coroutine,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        let result = module.add_coroutine(cdef.clone());
-        assert_eq!(result, Err("dupe already exists in module".into()));
-    }
-
-    #[test]
-    pub fn test_add_function_with_same_name_as_coroutine() {
-        let mut module = Module::new("test", 1);
-        let cdef = RoutineDef {
-            context: 1,
-            name: "dupe".into(),
-            def: RoutineDefType::Coroutine,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_coroutine(cdef.clone()).unwrap();
-
-        let fdef = RoutineDef {
-            context: 1,
-            name: "dupe".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        let result = module.add_function(fdef.clone());
-        assert_eq!(result, Err("dupe already exists in module".into()));
-    }
-
-    #[test]
-    pub fn test_get_item_that_does_not_exist() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let f = module.get_item("nothing");
-        assert_eq!(f, None);
-    }
-
-    #[test]
-    pub fn test_get_function() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "func".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-        let f = module.get_item("func");
-        assert_eq!(f, Some(&Item::Routine(fdef)));
-    }
-
-    #[test]
-    pub fn test_get_coroutine() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "co".into(),
-            def: RoutineDefType::Coroutine,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_coroutine(fdef.clone()).unwrap();
-        let f = module.get_item("co");
-        assert_eq!(f, Some(&Item::Routine(fdef)));
-    }
-
-    #[test]
-    pub fn test_go_to_nested() {
-        let mut inner = Module::new("inner", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "co".into(),
-            def: RoutineDefType::Coroutine,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        inner.add_coroutine(fdef.clone()).unwrap();
-        let mut outer = Module::new("outer", 2);
-        outer.add_module(inner.clone());
-        let m = outer.go_to_module(&vec!["outer", "inner"].into()).unwrap();
-        let f = m.get_item("co");
-        assert_eq!(f, Some(&Item::Routine(fdef)));
-    }
-
-    #[test]
-    pub fn test_add_extern() {
-        let mut module = Module::new("test", 1);
-        let edef = Extern::new("puts", 1, vec![], false, Type::Unit);
-        module.add_extern(edef.clone()).unwrap();
-        let c = module.get_item("puts").unwrap();
-        assert_eq!(c, &Item::Extern(edef));
-    }
-
-    #[test]
-    pub fn test_add_extern_that_already_exists() {
-        let mut module = Module::new("test", 1);
-        let edef = Extern::new("puts", 1, vec![], false, Type::Unit);
-        module.add_extern(edef.clone()).unwrap();
-        let result = module.add_extern(edef.clone());
-        assert_eq!(result, Err("puts already exists in module".into()));
-    }
-
-    #[test]
-    pub fn test_add_extern_with_same_name_as_function() {
-        let mut module = Module::new("test", 1);
-        let fdef = RoutineDef {
-            context: 1,
-            name: "dupe".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        module.add_function(fdef.clone()).unwrap();
-
-        let edef = Extern::new("dupe", 1, vec![], false, Type::Unit);
-        let result = module.add_extern(edef.clone());
-        assert_eq!(result, Err("dupe already exists in module".into()));
-    }
-
-    #[test]
-    pub fn test_add_function_with_same_name_as_extern() {
-        let mut module = Module::new("test", 1);
-        let edef = Extern::new("dupe", 1, vec![], false, Type::Unit);
-        module.add_extern(edef.clone()).unwrap();
-
-        let fdef = RoutineDef {
-            context: 1,
-            name: "dupe".into(),
-            def: RoutineDefType::Function,
-            params: vec![],
-            ret_ty: Type::I64,
-            body: vec![],
-        };
-        let result = module.add_function(fdef.clone());
-        assert_eq!(result, Err("dupe already exists in module".into()));
-    }
-}*/
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item<M> {
     Routine(RoutineDef<M>),
@@ -627,5 +360,356 @@ impl<M> Item<M> {
             Item::Struct(s) => s.root_str(),
             Item::Extern(e) => e.root_str(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::compiler::ast::routinedef::{RoutineDef, RoutineDefType};
+    use crate::compiler::ast::ty::Type;
+    use crate::StringTable;
+
+    use super::*;
+
+    #[test]
+    pub fn test_new_module() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+
+        let module = Module::new(test, 1);
+        assert_eq!(module.get_name(), test);
+        assert_eq!(*module.get_context(), 1);
+    }
+
+    #[test]
+    pub fn test_get_nonexistant_item() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let func = table.insert("func".into());
+        let not_found = table.insert("not_found".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: func,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+        let f = module.get_item(not_found);
+        assert_eq!(f, None);
+    }
+
+    #[test]
+    pub fn test_add_function() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let func = table.insert("func".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: func,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+        let f = module.get_item(func);
+        assert_eq!(f, Some(&Item::Routine(fdef)));
+    }
+
+    #[test]
+    pub fn test_add_function_that_already_exists() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let func = table.insert("func".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: func,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+        let result = module.add_function(fdef.clone());
+        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(func)));
+    }
+
+    #[test]
+    pub fn test_add_coroutine() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let cor = table.insert("cor".into());
+
+        let mut module = Module::new(test, 1);
+        let cdef = RoutineDef {
+            context: 1,
+            name: cor,
+            def: RoutineDefType::Coroutine,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_coroutine(cdef.clone()).unwrap();
+        let c = module.get_item(cor).unwrap();
+        assert_eq!(c, &Item::Routine(cdef));
+    }
+
+    #[test]
+    pub fn test_add_coroutine_that_already_exists() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let cor = table.insert("cor".into());
+
+        let mut module = Module::new(test, 1);
+        let cdef = RoutineDef {
+            context: 1,
+            name: cor,
+            def: RoutineDefType::Coroutine,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_coroutine(cdef.clone()).unwrap();
+        let result = module.add_coroutine(cdef.clone());
+        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(cor)));
+    }
+
+    #[test]
+    pub fn test_add_coroutine_with_same_name_as_function() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let dupe = table.insert("dupe".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: dupe,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+
+        let cdef = RoutineDef {
+            context: 1,
+            name: dupe,
+            def: RoutineDefType::Coroutine,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        let result = module.add_coroutine(cdef.clone());
+        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
+    }
+
+    #[test]
+    pub fn test_add_function_with_same_name_as_coroutine() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let dupe = table.insert("dupe".into());
+
+        let mut module = Module::new(test, 1);
+        let cdef = RoutineDef {
+            context: 1,
+            name: dupe,
+            def: RoutineDefType::Coroutine,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_coroutine(cdef.clone()).unwrap();
+
+        let fdef = RoutineDef {
+            context: 1,
+            name: dupe,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        let result = module.add_function(fdef.clone());
+        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
+    }
+
+    #[test]
+    pub fn test_get_item_that_does_not_exist() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let func = table.insert("func".into());
+        let nothing = table.insert("nothing".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: func,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+        let f = module.get_item(nothing);
+        assert_eq!(f, None);
+    }
+
+    #[test]
+    pub fn test_get_function() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let func = table.insert("func".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: func,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+        let f = module.get_item(func);
+        assert_eq!(f, Some(&Item::Routine(fdef)));
+    }
+
+    #[test]
+    pub fn test_get_coroutine() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let co = table.insert("co".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: co,
+            def: RoutineDefType::Coroutine,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_coroutine(fdef.clone()).unwrap();
+        let f = module.get_item(co);
+        assert_eq!(f, Some(&Item::Routine(fdef)));
+    }
+
+    #[test]
+    pub fn test_go_to_nested() {
+        let mut table = StringTable::new();
+
+        let inner = table.insert("inner".into());
+        let outer = table.insert("outer".into());
+        let co = table.insert("co".into());
+
+        let mut mod_inner = Module::new(inner, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: co,
+            def: RoutineDefType::Coroutine,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        mod_inner.add_coroutine(fdef.clone()).unwrap();
+        let mut mod_outer = Module::new(outer, 2);
+        mod_outer.add_module(mod_inner.clone());
+        let m = mod_outer
+            .go_to_module(&vec![Element::Id(outer), Element::Id(inner)].into())
+            .unwrap();
+        let f = m.get_item(co);
+        assert_eq!(f, Some(&Item::Routine(fdef)));
+    }
+
+    #[test]
+    pub fn test_add_extern() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let puts = table.insert("puts".into());
+
+        let mut module = Module::new(test, 1);
+        let edef = Extern::new(puts, 1, vec![], false, Type::Unit);
+        module.add_extern(edef.clone()).unwrap();
+        let c = module.get_item(puts).unwrap();
+        assert_eq!(c, &Item::Extern(edef));
+    }
+
+    #[test]
+    pub fn test_add_extern_that_already_exists() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let puts = table.insert("puts".into());
+
+        let mut module = Module::new(test, 1);
+        let edef = Extern::new(puts, 1, vec![], false, Type::Unit);
+        module.add_extern(edef.clone()).unwrap();
+        let result = module.add_extern(edef.clone());
+        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(puts)));
+    }
+
+    #[test]
+    pub fn test_add_extern_with_same_name_as_function() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let dupe = table.insert("dupe".into());
+
+        let mut module = Module::new(test, 1);
+        let fdef = RoutineDef {
+            context: 1,
+            name: dupe,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        module.add_function(fdef.clone()).unwrap();
+
+        let edef = Extern::new(dupe, 1, vec![], false, Type::Unit);
+        let result = module.add_extern(edef.clone());
+        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
+    }
+
+    #[test]
+    pub fn test_add_function_with_same_name_as_extern() {
+        let mut table = StringTable::new();
+
+        let test = table.insert("test".into());
+        let dupe = table.insert("dupe".into());
+
+        let mut module = Module::new(test, 1);
+        let edef = Extern::new(dupe, 1, vec![], false, Type::Unit);
+        module.add_extern(edef.clone()).unwrap();
+
+        let fdef = RoutineDef {
+            context: 1,
+            name: dupe,
+            def: RoutineDefType::Function,
+            params: vec![],
+            ret_ty: Type::I64,
+            body: vec![],
+        };
+        let result = module.add_function(fdef.clone());
+        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
     }
 }
