@@ -175,19 +175,39 @@ impl Path {
     /// Attempts to parse a string into a [`Path`].  This expects the same text format
     /// as the [`CompilerDisplay`] implementation outputs.
     pub fn parse(table: &mut StringTable, p: &str) -> Result<Path, ParsePathError> {
+        /// Tests that an element is a valid identifier
+        fn is_element_valid(el: &str) -> bool {
+            let cs = el.chars().collect::<Vec<_>>();
+            if cs.len() == 0 {
+                // Element must have at least one character
+                false
+            } else {
+                if !(cs[0].is_alphabetic() || cs[0] == '_') {
+                    // Element can only start with a letter or underscore
+                    false
+                } else {
+                    // Element can only contain alphanumerics and _
+                    !cs.iter().any(|c| !(c.is_alphanumeric() || *c == '_'))
+                }
+            }
+        }
+
         let (p, is_canonical) = match p.strip_prefix("$") {
             Some(stripped) => (stripped, true),
             None => (p, false),
         };
-        let p = p.split("::");
+        let elements = p.split("::");
 
         let mut path = vec![];
         if is_canonical {
             path.push(Element::CanonicalRoot)
         }
 
-        for e in p {
-            match e {
+        for el in elements {
+            if !is_element_valid(el) {
+                return Err(ParsePathError);
+            }
+            match el {
                 "self" => path.push(Element::Selph),
                 "super" => path.push(Element::Super),
                 "root" => path.push(Element::FileRoot),
