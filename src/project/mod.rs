@@ -21,7 +21,9 @@ pub enum ManifestError {
     CannotConvertType(Type),
 
     /// Error that is generated if a given string cannot be parsed into a valid [`Path`]
-    ParsePathError,
+    PathElementIsEmpty,
+    PathElementStartsWithInvalidChar(char),
+    PathElementContainsInvalidChar(char),
 }
 
 impl CompilerDisplay for ManifestError {
@@ -31,8 +33,12 @@ impl CompilerDisplay for ManifestError {
                 format!("Could not write Manifest file: StringId was not found in StringTable")
             }
             ManifestError::CannotConvertType(ty) => format!("Cannot convert type: {}", ty.fmt(st)?),
-            ManifestError::ParsePathError => {
-                format!("A Path contained in the Manifest file was invalid")
+            ManifestError::PathElementIsEmpty => format!("Path element is empty"),
+            ManifestError::PathElementStartsWithInvalidChar(c) => {
+                format!("Path starts with invalid character: {}", c)
+            }
+            ManifestError::PathElementContainsInvalidChar(c) => {
+                format!("Path contains invalid character: {}", c)
             }
         })
     }

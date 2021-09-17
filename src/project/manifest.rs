@@ -285,18 +285,21 @@ fn path_to_string(st: &StringTable, p: &Path) -> Result<String, CompilerDisplayE
 /// Convert a Manifest file Path string to a Compiler Path value.
 fn string_to_path(st: &mut StringTable, p: &str) -> Result<Path, ManifestError> {
     /// Tests that an element is a valid identifier
-    fn is_element_valid(el: &str) -> bool {
+    fn is_element_valid(el: &str) -> Result<(), ManifestError> {
         let cs = el.chars().collect::<Vec<_>>();
         if cs.len() == 0 {
             // Element must have at least one character
-            false
+            Err(ManifestError::PathElementIsEmpty)
         } else {
             if !(cs[0].is_alphabetic() || cs[0] == '_') {
                 // Element can only start with a letter or underscore
-                false
+                Err(ManifestError::PathElementStartsWithInvalidChar(cs[0]))
             } else {
                 // Element can only contain alphanumerics and _
-                !cs.iter().any(|c| !(c.is_alphanumeric() || *c == '_'))
+                match cs.iter().find(|&&c| !(c.is_alphanumeric() || c == '_')) {
+                    Some(c) => Err(ManifestError::PathElementContainsInvalidChar(*c)),
+                    None => Ok(()),
+                }
             }
         }
     }
@@ -314,9 +317,8 @@ fn string_to_path(st: &mut StringTable, p: &str) -> Result<Path, ManifestError> 
     }
 
     for el in elements {
-        if !is_element_valid(el) {
-            return Err(ManifestError::ParsePathError);
-        }
+        is_element_valid(el)?;
+
         match el {
             "self" => path.push(Element::Selph),
             "super" => path.push(Element::Super),
