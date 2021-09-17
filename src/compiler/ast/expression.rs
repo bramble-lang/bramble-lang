@@ -1,3 +1,5 @@
+use crate::StringId;
+
 use super::{
     node::{
         Context, Node, NodeType, {PostOrderIter, PreOrderIter},
@@ -18,7 +20,7 @@ pub enum Expression<I> {
     I32(I, i32),
     I64(I, i64),
     Boolean(I, bool),
-    StringLiteral(I, String),
+    StringLiteral(I, StringId),
     ArrayExpression(I, Vec<Expression<I>>, usize),
     ArrayAt {
         context: I,
@@ -26,12 +28,12 @@ pub enum Expression<I> {
         index: Box<Expression<I>>,
     },
     CustomType(I, Path),
-    Identifier(I, String),
+    Identifier(I, StringId),
     Path(I, Path),
-    MemberAccess(I, Box<Expression<I>>, String),
-    IdentifierDeclare(I, String, Type),
+    MemberAccess(I, Box<Expression<I>>, StringId),
+    IdentifierDeclare(I, StringId, Type),
     RoutineCall(I, RoutineCall, Path, Vec<Expression<I>>),
-    StructExpression(I, Path, Vec<(String, Expression<I>)>),
+    StructExpression(I, Path, Vec<(StringId, Expression<I>)>),
     If {
         context: I,
         cond: Box<Expression<I>>,
@@ -188,7 +190,7 @@ impl<M: Context> Node<M> for Expression<M> {
         }
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<StringId> {
         None
     }
 
@@ -230,7 +232,7 @@ impl<I> Expression<I> {
             ),
             ArrayAt { array, index, .. } => format!("{}[{}]", array, index),
             CustomType(_, v) => format!("{}", v),
-            Identifier(_, v) => v.clone(),
+            Identifier(_, v) => format!("{}", v),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
             MemberAccess(_, s, m) => format!("{}.{}", s.root_str(), m),
             Path(_, path) => format!("{}", path),

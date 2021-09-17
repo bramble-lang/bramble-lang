@@ -1,8 +1,9 @@
-use serde::{Deserialize, Serialize};
+use crate::{
+    compiler::{ast::*, semantics::semanticnode::SemanticContext},
+    StringId,
+};
 
-use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
-
-use crate::result::Result;
+use super::SemanticError;
 
 /**
  * `SymbolTable` is an AST node context that contains information about symbols that
@@ -27,7 +28,7 @@ use crate::result::Result;
  * know about are the ones in the `SymbolTable`s of the nodes that comprise the path from
  * the root of the AST to the given node.
  */
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     ty: ScopeType,
     sym: Vec<Symbol>,
@@ -41,16 +42,16 @@ impl SymbolTable {
         }
     }
 
-    pub fn new_routine(name: &str) -> Self {
+    pub fn new_routine(name: StringId) -> Self {
         SymbolTable {
-            ty: ScopeType::Routine(name.into()),
+            ty: ScopeType::Routine(name),
             sym: vec![],
         }
     }
 
-    pub fn new_module(name: &str) -> Self {
+    pub fn new_module(name: StringId) -> Self {
         SymbolTable {
-            ty: ScopeType::Module(name.into()),
+            ty: ScopeType::Module(name),
             sym: vec![],
         }
     }
@@ -63,7 +64,9 @@ impl SymbolTable {
      *
      * This function is recursively applied to child modules.
      */
-    pub fn add_item_defs_to_table(module: &mut Module<SemanticContext>) -> Result<()> {
+    pub fn add_item_defs_to_table(
+        module: &mut Module<SemanticContext>,
+    ) -> Result<(), SemanticError> {
         let mut context = module.get_context().clone();
 
         let fm = module.get_functions_mut();
@@ -93,7 +96,10 @@ impl SymbolTable {
         Ok(())
     }
 
-    fn for_item(item: &mut Item<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
+    fn for_item(
+        item: &mut Item<SemanticContext>,
+        sym: &mut SemanticContext,
+    ) -> Result<(), SemanticError> {
         match item {
             Item::Routine(rd) => SymbolTable::add_routine_parameters(rd, sym),
             Item::Struct(sd) => SymbolTable::add_structdef(sd, sym),
@@ -104,14 +110,14 @@ impl SymbolTable {
     fn add_structdef(
         structdef: &mut StructDef<SemanticContext>,
         sym: &mut SemanticContext,
-    ) -> Result<()> {
+    ) -> Result<(), SemanticError> {
         sym.sym.add(
             structdef.get_name(),
             Type::StructDef(
                 structdef
                     .get_fields()
                     .iter()
-                    .map(|f| (f.name.clone(), f.ty.clone()))
+                    .map(|f| (f.name, f.ty.clone()))
                     .collect(),
             ),
             false,
@@ -119,7 +125,10 @@ impl SymbolTable {
         )
     }
 
-    fn add_extern(ex: &mut Extern<SemanticContext>, sym: &mut SemanticContext) -> Result<()> {
+    fn add_extern(
+        ex: &mut Extern<SemanticContext>,
+        sym: &mut SemanticContext,
+    ) -> Result<(), SemanticError> {
         let Extern {
             name, params, ty, ..
         } = ex;
@@ -130,13 +139,13 @@ impl SymbolTable {
             Box::new(ty.clone()),
         );
 
-        sym.sym.add(name, def, false, true)
+        sym.sym.add(*name, def, false, true)
     }
 
     fn add_routine_parameters(
         routine: &mut RoutineDef<SemanticContext>,
         sym: &mut SemanticContext,
-    ) -> Result<()> {
+    ) -> Result<(), SemanticError> {
         let RoutineDef {
             def,
             name,
@@ -154,7 +163,7 @@ impl SymbolTable {
             }
         };
 
-        sym.sym.add(name, def, false, false)
+        sym.sym.add(*name, def, false, false)
     }
 
     fn get_types_for_params(params: &Vec<Parameter<SemanticContext>>) -> Vec<Type> {
@@ -173,24 +182,30 @@ impl SymbolTable {
         &mut self.sym
     }
 
-    pub fn get(&self, name: &str) -> Option<&Symbol> {
+    pub fn get(&self, name: StringId) -> Option<&Symbol> {
         self.sym.iter().find(|s| s.name == name)
     }
 
     pub fn get_path(&self, name: &Path) -> Option<&Symbol> {
         if name.len() == 1 {
-            self.sym.iter().find(|s| s.name == name[0])
+            self.sym.iter().find(|s| Element::Id(s.name) == name[0])
         } else {
             None
         }
     }
 
-    pub fn add(&mut self, name: &str, ty: Type, mutable: bool, is_extern: bool) -> Result<()> {
+    pub fn add(
+        &mut self,
+        name: StringId,
+        ty: Type,
+        mutable: bool,
+        is_extern: bool,
+    ) -> Result<(), SemanticError> {
         if self.get(name).is_some() {
-            Err(format!("{} already declared", name))
+            Err(SemanticError::AlreadyDeclared(name))
         } else {
             self.sym.push(Symbol {
-                name: name.into(),
+                name,
                 ty,
                 mutable,
                 is_extern,
@@ -215,9 +230,9 @@ impl std::fmt::Display for SymbolTable {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
-    pub name: String,
+    pub name: StringId,
     pub ty: Type,
     pub mutable: bool,
     pub is_extern: bool,
@@ -232,11 +247,11 @@ impl std::fmt::Display for Symbol {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub(super) enum ScopeType {
     Local,
-    Routine(String),
-    Module(String),
+    Routine(StringId),
+    Module(StringId),
 }
 
 impl ScopeType {
@@ -247,10 +262,10 @@ impl ScopeType {
         }
     }
 
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn get_name(&self) -> Option<StringId> {
         match self {
             Self::Local => None,
-            Self::Routine(name) | Self::Module(name) => Some(name),
+            Self::Routine(name) | Self::Module(name) => Some(*name),
         }
     }
 }

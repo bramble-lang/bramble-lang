@@ -1,27 +1,35 @@
-use crate::compiler::{
-    ast::*,
-    parser::parser::ParserContext,
-    semantics::semanticnode::{SemanticAst, SemanticNode},
-    semantics::symbol_table::*,
-};
 use crate::diagnostics::config::{Tracing, TracingConfig};
-use crate::manifest::Manifest;
-use crate::result::Result;
+use crate::{
+    compiler::{
+        ast::*,
+        import::Import,
+        parser::parser::ParserContext,
+        semantics::semanticnode::{SemanticAst, SemanticNode},
+        semantics::symbol_table::*,
+        CompilerError,
+    },
+    StringId,
+};
 use std::collections::HashMap;
 
 use super::{
     canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
+    SemanticError, SemanticResult,
 };
+
+//type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;
 
 pub fn resolve_types(
     ast: &Module<ParserContext>,
-    main_fn: &str,
+    main_mod: StringId,
+    main_fn: StringId,
     trace: TracingConfig,
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
-) -> Result<Module<SemanticContext>> {
+) -> SemanticResult<Module<SemanticContext>> {
     resolve_types_with_imports(
         ast,
+        main_mod,
         main_fn,
         &vec![],
         trace_semantic_node,
@@ -32,18 +40,19 @@ pub fn resolve_types(
 
 pub fn resolve_types_with_imports(
     ast: &Module<ParserContext>,
-    main_fn: &str,
-    imports: &[Manifest],
+    main_mod: StringId,
+    main_fn: StringId,
+    imports: &[Import],
     trace_semantic_node: TracingConfig,
     trace_canonization: TracingConfig,
     trace_type_resolver: TracingConfig,
-) -> Result<Module<SemanticContext>> {
+) -> SemanticResult<Module<SemanticContext>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
-    SymbolTable::add_item_defs_to_table(&mut sm_ast)?;
+    SymbolTable::add_item_defs_to_table(&mut sm_ast).map_err(|e| CompilerError::new(0, e))?;
     canonize_paths(&mut sm_ast, imports, trace_canonization)?; //TODO: Add a trace for this step
 
-    let mut semantic = TypeResolver::new(&sm_ast, imports, main_fn);
+    let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn);
 
     semantic.set_tracing(trace_type_resolver);
     semantic.resolve_types()
@@ -65,25 +74,33 @@ impl Tracing for TypeResolver {
 impl TypeResolver {
     pub fn new(
         root: &Module<SemanticContext>,
-        imports: &[Manifest],
-        main_fn: &str,
+        imports: &[Import],
+        main_mod: StringId,
+        main_fn: StringId,
     ) -> TypeResolver {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root, imports),
             tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
-            main_fn: vec![CANONICAL_ROOT, MAIN_MODULE, main_fn.into()].into(), // TODO: should get rid of this
+            main_fn: vec![
+                Element::CanonicalRoot,
+                Element::Id(main_mod),
+                Element::Id(main_fn),
+            ]
+            .into(), // TODO: should get rid of this
         }
     }
 
-    pub fn resolve_types(&mut self) -> Result<Module<SemanticContext>> {
+    pub fn resolve_types(&mut self) -> SemanticResult<Module<SemanticContext>> {
         // TODO: I think that this is the problem, perhaps I should get rid of the concept
         // of the stack root?  I need root to be able to find items using the stack.
         self.analyze_module(self.symbols.get_root())
-            .map_err(|e| format!("Semantic: {}", e))
     }
 
-    fn analyze_module(&mut self, m: &Module<SemanticContext>) -> Result<Module<SemanticContext>> {
+    fn analyze_module(
+        &mut self,
+        m: &Module<SemanticContext>,
+    ) -> SemanticResult<Module<SemanticContext>> {
         let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
 
         self.symbols.enter_scope(&nmodule.get_context().sym);
@@ -92,27 +109,27 @@ impl TypeResolver {
             .get_modules()
             .iter()
             .map(|m| self.analyze_module(m))
-            .collect::<Result<Vec<Module<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Module<SemanticContext>>>>()?;
         *nmodule.get_functions_mut() = m
             .get_functions()
             .iter()
             .map(|f| self.analyze_item(f))
-            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_coroutines_mut() = m
             .get_coroutines()
             .iter()
             .map(|c| self.analyze_item(c))
-            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_structs_mut() = m
             .get_structs()
             .iter()
             .map(|s| self.analyze_item(s))
-            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
         *nmodule.get_externs_mut() = m
             .get_externs()
             .iter()
             .map(|e| self.analyze_item(e))
-            .collect::<Result<Vec<Item<SemanticContext>>>>()?;
+            .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
 
         let mut meta = nmodule.get_context_mut();
         meta.ty = Type::Unit;
@@ -121,7 +138,7 @@ impl TypeResolver {
         Ok(nmodule)
     }
 
-    fn analyze_item(&mut self, i: &Item<SemanticContext>) -> Result<Item<SemanticContext>> {
+    fn analyze_item(&mut self, i: &Item<SemanticContext>) -> SemanticResult<Item<SemanticContext>> {
         match i {
             Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
             Item::Routine(r) => self.analyze_routine(r).map(|r2| Item::Routine(r2)),
@@ -132,7 +149,7 @@ impl TypeResolver {
     fn analyze_routine(
         &mut self,
         routine: &RoutineDef<SemanticContext>,
-    ) -> Result<RoutineDef<SemanticContext>> {
+    ) -> SemanticResult<RoutineDef<SemanticContext>> {
         let RoutineDef {
             context,
             name,
@@ -145,7 +162,7 @@ impl TypeResolver {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if context.get_canonical_path() == &self.main_fn {
-            Self::validate_main_fn(routine).map_err(|e| format!("L{}: {}", context.line(), e))?;
+            Self::validate_main_fn(routine)?;
         }
 
         let mut meta = context.clone();
@@ -155,7 +172,9 @@ impl TypeResolver {
 
         // Add parameters to symbol table
         for p in params.iter() {
-            meta.sym.add(&p.name, p.ty.clone(), false, false)?;
+            meta.sym
+                .add(p.name, p.ty.clone(), false, false)
+                .map_err(|e| CompilerError::new(p.context.line(), e))?;
         }
 
         self.symbols.enter_scope(&meta.sym);
@@ -182,25 +201,20 @@ impl TypeResolver {
     fn analyze_structdef(
         &mut self,
         struct_def: &StructDef<SemanticContext>,
-    ) -> Result<StructDef<SemanticContext>> {
+    ) -> SemanticResult<StructDef<SemanticContext>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
         for Parameter {
-            name: field_name,
+            context: field_ctx,
             ty: field_type,
             ..
         } in fields.iter()
         {
             match field_type {
                 Type::Custom(ty_name) => {
-                    self.symbols.lookup_symbol_by_path(ty_name).map_err(|e| {
-                        format!(
-                            "member {}.{} invalid: {}",
-                            struct_def.get_name(),
-                            field_name,
-                            e
-                        )
-                    })?;
+                    self.symbols
+                        .lookup_symbol_by_path(ty_name)
+                        .map_err(|e| CompilerError::new(field_ctx.line(), e))?;
                 }
                 _ => (),
             }
@@ -217,7 +231,10 @@ impl TypeResolver {
         ))
     }
 
-    fn analyze_extern(&mut self, ex: &Extern<SemanticContext>) -> Result<Extern<SemanticContext>> {
+    fn analyze_extern(
+        &mut self,
+        ex: &Extern<SemanticContext>,
+    ) -> SemanticResult<Extern<SemanticContext>> {
         // Check the type of each member
         let params = ex.get_params();
         for Parameter { ty: field_type, .. } in params.iter() {
@@ -243,7 +260,7 @@ impl TypeResolver {
     fn analyze_statement(
         &mut self,
         stmt: &Statement<SemanticContext>,
-    ) -> Result<Statement<SemanticContext>> {
+    ) -> SemanticResult<Statement<SemanticContext>> {
         use Statement::*;
         let inner = match stmt {
             Bind(box b) => Bind(Box::new(self.analyze_bind(b)?)),
@@ -256,7 +273,10 @@ impl TypeResolver {
         Ok(inner)
     }
 
-    fn analyze_bind(&mut self, bind: &Bind<SemanticContext>) -> Result<Bind<SemanticContext>> {
+    fn analyze_bind(
+        &mut self,
+        bind: &Bind<SemanticContext>,
+    ) -> SemanticResult<Bind<SemanticContext>> {
         let meta = bind.get_context();
         let rhs = bind.get_rhs();
         let result = {
@@ -275,20 +295,19 @@ impl TypeResolver {
                     Err(e) => Err(e),
                 }
             } else {
-                Err(format!(
-                    "Bind expected {} but got {}",
-                    meta.ty,
-                    rhs.get_type()
+                Err(SemanticError::BindExpected(
+                    meta.ty.clone(),
+                    rhs.get_type().clone(),
                 ))
             }
         };
-        result.map_err(|e| format!("L{}: {}", bind.get_context().line(), e))
+        result.map_err(|e| CompilerError::new(meta.line(), e))
     }
 
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticContext>,
-    ) -> Result<Mutate<SemanticContext>> {
+    ) -> SemanticResult<Mutate<SemanticContext>> {
         let mut meta = mutate.get_context().clone();
         let rhs = self.traverse(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
@@ -298,26 +317,25 @@ impl TypeResolver {
                         meta.ty = rhs.get_type().clone();
                         Ok(Mutate::new(meta, mutate.get_id(), rhs))
                     } else {
-                        Err(format!(
-                            "{} is of type {} but is assigned {}",
+                        Err(SemanticError::BindMismatch(
                             mutate.get_id(),
-                            symbol.ty,
-                            rhs.get_type()
+                            symbol.ty.clone(),
+                            rhs.get_type().clone(),
                         ))
                     }
                 } else {
-                    Err(format!("Variable {} is not mutable", mutate.get_id()))
+                    Err(SemanticError::VariableNotMutable(mutate.get_id()))
                 }
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| format!("L{}: {}", mutate.get_context().line(), e))
+        result.map_err(|e| CompilerError::new(mutate.get_context().line(), e))
     }
 
     fn analyze_yieldreturn(
         &mut self,
         yr: &YieldReturn<SemanticContext>,
-    ) -> Result<YieldReturn<SemanticContext>> {
+    ) -> SemanticResult<YieldReturn<SemanticContext>> {
         // Get the actual expression and its type as it comes from the
         // source code written by the user.
         let (actual_ret_exp, actual_ret_ty) = match yr.get_value() {
@@ -331,26 +349,32 @@ impl TypeResolver {
 
         // Get the expected yield return type of the coroutine that the yield return
         // occurs within.
-        let current_func = self
+        let current_func = self.symbols.get_current_fn().ok_or(CompilerError::new(
+            yr.get_context().line(),
+            SemanticError::YieldInvalidLocation,
+        ))?;
+        let (_, expected_ret_ty) = self
             .symbols
-            .get_current_fn()
-            .ok_or(format!("Yield return must occur inside of a function"))?;
-        let (_, expected_ret_ty) = self.symbols.lookup_coroutine(current_func)?;
+            .lookup_coroutine(current_func)
+            .map_err(|e| CompilerError::new(yr.get_context().line(), e))?;
 
         if actual_ret_ty == expected_ret_ty {
             let mut meta = yr.get_context().clone();
             meta.ty = actual_ret_ty;
             Ok(YieldReturn::new(meta, actual_ret_exp))
         } else {
-            Err(format!(
-                "Yield return expected {} but got {}",
-                expected_ret_ty, actual_ret_ty,
+            Err(SemanticError::YieldExpected(
+                expected_ret_ty.clone(),
+                actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", yr.get_context().line(), e))
+        .map_err(|e| CompilerError::new(yr.get_context().line(), e))
     }
 
-    fn analyze_return(&mut self, r: &Return<SemanticContext>) -> Result<Return<SemanticContext>> {
+    fn analyze_return(
+        &mut self,
+        r: &Return<SemanticContext>,
+    ) -> SemanticResult<Return<SemanticContext>> {
         // Get the actual expression and its type as it comes from the
         // source code written by the user.
         let (actual_ret_exp, actual_ret_ty) = match r.get_value() {
@@ -367,8 +391,12 @@ impl TypeResolver {
         let current_func = self
             .symbols
             .get_current_fn()
-            .ok_or(format!("Return must occur inside of a function"))?;
-        let (_, expected_ret_ty) = self.symbols.lookup_func_or_cor(current_func)?;
+            .ok_or(SemanticError::ReturnInvalidLocation)
+            .map_err(|e| CompilerError::new(r.get_context().line(), e))?;
+        let (_, expected_ret_ty) = self
+            .symbols
+            .lookup_func_or_cor(current_func)
+            .map_err(|e| CompilerError::new(r.get_context().line(), e))?;
 
         // Check that the actual expression matches the expected return type
         // of the function
@@ -377,25 +405,21 @@ impl TypeResolver {
             meta.ty = actual_ret_ty;
             Ok(Return::new(meta, actual_ret_exp))
         } else {
-            Err(format!(
-                "Return expected {} but got {}",
-                expected_ret_ty, actual_ret_ty,
+            Err(SemanticError::ReturnExpected(
+                expected_ret_ty.clone(),
+                actual_ret_ty,
             ))
         }
-        .map_err(|e| format!("L{}: {}", r.get_context().line(), e))
+        .map_err(|e| CompilerError::new(r.get_context().line(), e))
     }
 
-    fn traverse(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
-        self.analyze_expression(ast).map_err(|e| {
-            if !e.starts_with("L") {
-                format!("L{}: {}", ast.get_context().line(), e)
-            } else {
-                e
-            }
-        })
+    fn traverse(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
+        // TODO: With the new error handling design this function is no longer needed
+        // It only existed as a way of injecting line numbers into error messages
+        self.analyze_expression(ast)
     }
 
-    fn analyze_expression(&mut self, ast: &SemanticNode) -> Result<SemanticNode> {
+    fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
         match &ast {
             &Expression::U8(meta, v) => {
                 let mut meta = meta.clone();
@@ -449,19 +473,25 @@ impl TypeResolver {
             }
             Expression::ArrayExpression(meta, elements, len) => {
                 // Resolve the types for each element in the array value
-                let nelements: Result<Vec<Expression<SemanticContext>>> =
+                let nelements: SemanticResult<Vec<Expression<SemanticContext>>> =
                     elements.iter().map(|e| self.traverse(e)).collect();
                 let nelements = nelements?;
 
                 // Check that they are homogenous
                 let el_ty;
                 if nelements.len() == 0 {
-                    return Err("Arrays with 0 length are not allowed".into());
+                    return Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::ArrayInvalidSize(nelements.len()),
+                    ));
                 } else {
                     el_ty = nelements[0].get_context().ty.clone();
                     for e in &nelements {
                         if e.get_context().ty != el_ty {
-                            return Err("Inconsistent types in array value".into());
+                            return Err(CompilerError::new(
+                                meta.line(),
+                                SemanticError::ArrayInconsistentElementTypes,
+                            ));
                         }
                     }
                 }
@@ -480,15 +510,20 @@ impl TypeResolver {
                 let n_array = self.traverse(array)?;
                 let el_ty = match n_array.get_context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
-                    ty => Err(format!("Expected array type on LHS of [] but found {}", ty)),
+                    ty => Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::ArrayIndexingInvalidType(ty.clone()),
+                    )),
                 }?;
 
                 // Check that the index is an i64 type
                 let n_index = self.traverse(index)?;
                 if !n_index.get_context().ty().is_integral() {
-                    return Err(format!(
-                        "Expected integral type for index but found {}",
-                        n_index.get_context().ty()
+                    return Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::ArrayIndexingInvalidIndexType(
+                            n_index.get_context().ty().clone(),
+                        ),
                     ));
                 }
 
@@ -517,7 +552,11 @@ impl TypeResolver {
             }
             Expression::Identifier(meta, id) => {
                 let mut meta = meta.clone();
-                match self.symbols.lookup_var(&id)? {
+                match self
+                    .symbols
+                    .lookup_var(*id)
+                    .map_err(|e| CompilerError::new(meta.line(), e))?
+                {
                     Symbol { ty: p, .. } => meta.ty = p.clone(),
                 };
                 Ok(Expression::Identifier(meta.clone(), id.clone()))
@@ -533,11 +572,18 @@ impl TypeResolver {
                 let src = self.traverse(&src)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
-                        let (struct_def, _) = self.symbols.lookup_symbol_by_path(&struct_name)?;
+                        let (struct_def, _) = self
+                            .symbols
+                            .lookup_symbol_by_path(&struct_name)
+                            .map_err(|e| CompilerError::new(meta.line(), e))?;
                         let member_ty = struct_def
                             .ty
-                            .get_member(&member)
-                            .ok_or(format!("{} does not have member {}", struct_name, member))?;
+                            .get_member(*member)
+                            .ok_or(SemanticError::MemberAccessMemberNotFound(
+                                struct_name.clone(),
+                                *member,
+                            ))
+                            .map_err(|e| CompilerError::new(meta.line(), e))?;
                         meta.ty = member_ty.clone();
 
                         Ok(Expression::MemberAccess(
@@ -546,7 +592,10 @@ impl TypeResolver {
                             member.clone(),
                         ))
                     }
-                    _ => Err(format!("Type {} does not have members", src.get_type())),
+                    _ => Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::MemberAccessInvalidRootType(src.get_type().clone()),
+                    )),
                 }
             }
             Expression::BinaryOp(meta, op, l, r) => {
@@ -596,16 +645,18 @@ impl TypeResolver {
                             else_arm: else_arm,
                         })
                     } else {
-                        Err(format!(
-                            "If expression has mismatching arms: expected {} got {}",
-                            if_arm.get_type(),
-                            else_arm_ty
+                        Err(CompilerError::new(
+                            meta.line(),
+                            SemanticError::IfExprMismatchArms(
+                                if_arm.get_type().clone(),
+                                else_arm_ty,
+                            ),
                         ))
                     }
                 } else {
-                    Err(format!(
-                        "Expected boolean expression in if conditional, got: {}",
-                        cond.get_type()
+                    Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::CondExpectedBool(cond.get_type().clone()),
                     ))
                 }
             }
@@ -628,15 +679,15 @@ impl TypeResolver {
                             body: box body,
                         })
                     } else {
-                        Err(format!(
-                            "The body of a while expression must resolve to a unit type, but got: {}",
-                            body.get_type()
+                        Err(CompilerError::new(
+                            meta.line(),
+                            SemanticError::WhileInvalidType(body.get_type().clone()),
                         ))
                     }
                 } else {
-                    Err(format!(
-                        "The condition of a while expression must resolve to a unit type, but got: {}",
-                        cond.get_type()
+                    Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::WhileCondInvalidType(cond.get_type().clone()),
                     ))
                 }
             }
@@ -645,7 +696,12 @@ impl TypeResolver {
                 let exp = self.traverse(&exp)?;
                 meta.ty = match exp.get_type() {
                     Type::Coroutine(box ret_ty) => ret_ty.clone(),
-                    _ => return Err(format!("Yield expects co<_> but got {}", exp.get_type())),
+                    _ => {
+                        return Err(CompilerError::new(
+                            meta.line(),
+                            SemanticError::YieldInvalidType(exp.get_type().clone()),
+                        ))
+                    }
                 };
                 Ok(Expression::Yield(meta, Box::new(exp)))
             }
@@ -661,27 +717,34 @@ impl TypeResolver {
                 }
 
                 // Check that the function being called exists
-                let (symbol, routine_canon_path) =
-                    self.symbols.lookup_symbol_by_path(routine_path)?;
+                let (symbol, routine_canon_path) = self
+                    .symbols
+                    .lookup_symbol_by_path(routine_path)
+                    .map_err(|e| CompilerError::new(meta.line(), e))?;
 
-                let (expected_param_tys, has_varargs, ret_ty) =
-                    self.extract_routine_type_info(symbol, call, &routine_canon_path)?;
+                let (expected_param_tys, has_varargs, ret_ty) = self
+                    .extract_routine_type_info(symbol, call, &routine_canon_path)
+                    .map_err(|e| CompilerError::new(meta.line(), e))?;
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
                 if !has_varargs && (resolved_params.len() != expected_param_tys.len()) {
-                    Err(format!(
-                        "Incorrect number of parameters passed to routine: {}. Expected {} but got {}",
-                        routine_path,
-                        expected_param_tys.len(),
-                        resolved_params.len(),
+                    Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::RoutineCallWrongNumParams(
+                            routine_path.clone(),
+                            expected_param_tys.len(),
+                            resolved_params.len(),
+                        ),
                     ))
                 } else if has_varargs && (resolved_params.len() < expected_param_tys.len()) {
-                    Err(format!(
-                        "Function {} expects at least {} parameters, but got {}",
-                        routine_canon_path,
-                        expected_param_tys.len(),
-                        resolved_params.len(),
+                    Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::FunctionParamsNotEnough(
+                            routine_path.clone(),
+                            expected_param_tys.len(),
+                            resolved_params.len(),
+                        ),
                     ))
                 } else {
                     match Self::check_for_invalid_routine_parameters(
@@ -690,7 +753,7 @@ impl TypeResolver {
                         &expected_param_tys,
                         has_varargs,
                     ) {
-                        Err(msg) => Err(msg),
+                        Err(msg) => Err(CompilerError::new(meta.line(), msg)),
                         Ok(()) => {
                             meta.ty = ret_ty.clone();
                             Ok(Expression::RoutineCall(
@@ -735,34 +798,41 @@ impl TypeResolver {
             Expression::StructExpression(meta, struct_name, params) => {
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
-                let (struct_def, canonical_path) =
-                    self.symbols.lookup_symbol_by_path(&struct_name)?;
+                let (struct_def, canonical_path) = self
+                    .symbols
+                    .lookup_symbol_by_path(&struct_name)
+                    .map_err(|e| CompilerError::new(meta.line(), e))?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
-                    .ok_or("Invalid structure")?
+                    .ok_or(CompilerError::new(
+                        meta.line(),
+                        SemanticError::InvalidStructure,
+                    ))?
                     .len();
                 if params.len() != expected_num_params {
-                    return Err(format!(
-                        "expected {} parameters but found {}",
-                        expected_num_params,
-                        params.len()
+                    return Err(CompilerError::new(
+                        meta.line(),
+                        SemanticError::StructExprWrongNumParams(expected_num_params, params.len()),
                     ));
                 }
 
                 let mut resolved_params = vec![];
                 for (pn, pv) in params.iter() {
-                    let member_ty = struct_def_ty
-                        .get_member(pn)
-                        .ok_or(format!("member {} not found on {}", pn, canonical_path))?;
+                    let member_ty = struct_def_ty.get_member(*pn).ok_or(CompilerError::new(
+                        meta.line(),
+                        SemanticError::StructExprMemberNotFound(canonical_path.clone(), *pn),
+                    ))?;
                     let param = self.traverse(pv)?;
                     if param.get_type() != member_ty {
-                        return Err(format!(
-                            "{}.{} expects {} but got {}",
-                            canonical_path,
-                            pn,
-                            member_ty,
-                            param.get_type()
+                        return Err(CompilerError::new(
+                            meta.line(),
+                            SemanticError::StructExprFieldTypeMismatch(
+                                canonical_path,
+                                *pn,
+                                member_ty.clone(),
+                                param.get_type().clone(),
+                            ),
                         ));
                     }
                     resolved_params.push((pn.clone(), param));
@@ -783,7 +853,7 @@ impl TypeResolver {
         &mut self,
         op: UnaryOperator,
         operand: &SemanticNode,
-    ) -> Result<(Type, SemanticNode)> {
+    ) -> SemanticResult<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
         let operand = self.traverse(operand)?;
@@ -793,10 +863,9 @@ impl TypeResolver {
                 if operand.get_type().is_signed_int() {
                     Ok((operand.get_type().clone(), operand))
                 } else {
-                    Err(format!(
-                        "{} expected i32 or i64 but found {}",
-                        op,
-                        operand.get_type()
+                    Err(CompilerError::new(
+                        operand.get_context().line(),
+                        SemanticError::ExpectedSignedInteger(op, operand.get_type().clone()),
                     ))
                 }
             }
@@ -804,10 +873,9 @@ impl TypeResolver {
                 if operand.get_type() == Type::Bool {
                     Ok((Type::Bool, operand))
                 } else {
-                    Err(format!(
-                        "{} expected bool but found {}",
-                        op,
-                        operand.get_type()
+                    Err(CompilerError::new(
+                        operand.get_context().line(),
+                        SemanticError::ExpectedBool(op, operand.get_type().clone()),
                     ))
                 }
             }
@@ -819,7 +887,7 @@ impl TypeResolver {
         op: BinaryOperator,
         l: &SemanticNode,
         r: &SemanticNode,
-    ) -> Result<(Type, SemanticNode, SemanticNode)> {
+    ) -> SemanticResult<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
         let l = self.traverse(l)?;
@@ -834,16 +902,18 @@ impl TypeResolver {
                     Ok((l.get_type().clone(), l, r))
                 } else {
                     let expected = if l.get_type().is_integral() {
-                        format!("{}", l.get_type())
+                        l.get_type().clone()
                     } else {
-                        "i64".into()
+                        Type::I64
                     };
-                    Err(format!(
-                        "{} expected {} but found {} and {}",
-                        op,
-                        expected,
-                        l.get_type(),
-                        r.get_type()
+                    Err(CompilerError::new(
+                        l.get_context().line(),
+                        SemanticError::OpExpected(
+                            op,
+                            expected,
+                            l.get_type().clone(),
+                            r.get_type().clone(),
+                        ),
                     ))
                 }
             }
@@ -851,11 +921,14 @@ impl TypeResolver {
                 if l.get_type() == Type::Bool && r.get_type() == Type::Bool {
                     Ok((Type::Bool, l, r))
                 } else {
-                    Err(format!(
-                        "{} expected bool but found {} and {}",
-                        op,
-                        l.get_type(),
-                        r.get_type()
+                    Err(CompilerError::new(
+                        l.get_context().line(),
+                        SemanticError::OpExpected(
+                            op,
+                            Type::Bool,
+                            l.get_type().clone(),
+                            r.get_type().clone(),
+                        ),
                     ))
                 }
             }
@@ -863,22 +936,22 @@ impl TypeResolver {
                 if l.get_type() == r.get_type() {
                     Ok((Type::Bool, l, r))
                 } else {
-                    Err(format!(
-                        "{} expected {} but found {} and {}",
-                        op,
-                        l.get_type(),
-                        l.get_type(),
-                        r.get_type()
+                    Err(CompilerError::new(
+                        l.get_context().line(),
+                        SemanticError::OpExpected(
+                            op,
+                            l.get_type().clone(),
+                            l.get_type().clone(),
+                            r.get_type().clone(),
+                        ),
                     ))
                 }
             }
         }
     }
 
-    fn get_current_path(&self) -> Result<Path> {
-        self.symbols
-            .to_path()
-            .ok_or("A valid path is expected".into())
+    fn get_current_path(&self) -> Result<Path, SemanticError> {
+        self.symbols.to_path().ok_or(SemanticError::PathNotValid)
     }
 
     fn extract_routine_type_info<'b>(
@@ -886,7 +959,7 @@ impl TypeResolver {
         symbol: &'b Symbol,
         call: &RoutineCall,
         routine_path: &Path,
-    ) -> Result<(&'b Vec<Type>, HasVarArgs, Type)> {
+    ) -> Result<(&'b Vec<Type>, HasVarArgs, Type), SemanticError> {
         let (expected_param_tys, has_varargs, ret_ty) = match symbol {
             Symbol {
                 ty: Type::FunctionDef(pty, box rty),
@@ -901,14 +974,10 @@ impl TypeResolver {
                 ..
             } if *call == RoutineCall::CoroutineInit => (pty, false, Type::Coroutine(rty.clone())),
             _ => {
-                let expected = match call {
-                    RoutineCall::Function => "function",
-                    RoutineCall::CoroutineInit => "coroutine",
-                    RoutineCall::Extern => "extern",
-                };
-                return Err(format!(
-                    "Expected {0} but {1} is a {2}",
-                    expected, routine_path, symbol.ty
+                return Err(SemanticError::RoutineCallInvalidTarget(
+                    *call,
+                    routine_path.clone(),
+                    symbol.ty.clone(),
                 ));
             }
         };
@@ -921,7 +990,7 @@ impl TypeResolver {
         given: &'b Vec<SemanticNode>,
         expected_types: &'b Vec<Type>,
         has_varargs: HasVarArgs,
-    ) -> Result<()> {
+    ) -> Result<(), SemanticError> {
         let mut mismatches = vec![];
         let mut idx = 0;
         for (user, expected) in given.iter().zip(expected_types.iter()) {
@@ -937,21 +1006,18 @@ impl TypeResolver {
         } else if has_varargs && mismatches.len() == 0 && given.len() >= expected_types.len() {
             Ok(())
         } else {
-            let errors: Vec<String> = mismatches
+            let errors: Vec<_> = mismatches
                 .iter()
-                .map(|(idx, got, expected)| {
-                    format!("parameter {} expected {} but got {}", idx, expected, got)
-                })
+                .map(|(idx, got, expected)| (*idx, (*expected).clone(), (*got).clone()))
                 .collect();
-            Err(format!(
-                "One or more parameters have mismatching types for function {}: {}",
-                routine_path,
-                errors.join(", ")
+            Err(SemanticError::RoutineParamTypeMismatch(
+                routine_path.clone(),
+                errors,
             ))
         }
     }
 
-    fn validate_main_fn(routine: &RoutineDef<SemanticContext>) -> Result<()> {
+    fn validate_main_fn(routine: &RoutineDef<SemanticContext>) -> SemanticResult<()> {
         let RoutineDef {
             def,
             params,
@@ -961,18 +1027,23 @@ impl TypeResolver {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if def != &RoutineDefType::Function {
-            return Err(format!("my_main must be a function of type () -> i64",));
+            return Err(CompilerError::new(
+                routine.get_context().line(),
+                SemanticError::MainFnInvalidType,
+            ));
         }
 
         if params.len() > 0 {
-            return Err(format!(
-                "my_main must take no parameters. It must be of type () -> i64",
+            return Err(CompilerError::new(
+                routine.get_context().line(),
+                SemanticError::MainFnInvalidParams,
             ));
         }
 
         if p != Type::I64 {
-            return Err(format!(
-                "my_main must return an i64. It must be of type () -> i64",
+            return Err(CompilerError::new(
+                routine.get_context().line(),
+                SemanticError::MainFnInvalidType,
             ));
         }
 

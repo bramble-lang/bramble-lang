@@ -1,5 +1,8 @@
+use super::ParserError;
 use crate::compiler::lexer::tokens::{Lex, Token};
-use crate::result::Result;
+use crate::compiler::CompilerError;
+use crate::StringId;
+//use crate::result::Result;
 
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,
@@ -37,8 +40,8 @@ impl<'a> TokenStream<'a> {
     }
 
     // TODO: return the line # and the ID name
-    pub fn next_if_id(&mut self) -> Option<(u32, String)> {
-        match self.next_if(&Lex::Identifier("".into())) {
+    pub fn next_if_id(&mut self) -> Option<(u32, StringId)> {
+        match self.next_if(&Lex::Identifier(StringId::new())) {
             Some(Token {
                 l,
                 s: Lex::Identifier(id),
@@ -49,14 +52,19 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token> {
+    pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, CompilerError<ParserError>> {
         let (line, found) = match self.peek() {
-            Some(t) => (t.l, t.s.to_string()),
-            None => (0, "EOF".into()),
+            Some(t) => (t.l, t.s.clone()),
+            None => return err!(0, ParserError::ExpectedButFound(vec![test.clone()], None)),
         };
         match self.next_if(test) {
             Some(t) => Ok(t),
-            None => Err(format!("L{}: Expected {}, but found {}", line, test, found)),
+            None => {
+                err!(
+                    line,
+                    ParserError::ExpectedButFound(vec![test.clone()], Some(found))
+                )
+            }
         }
     }
 
@@ -130,11 +138,13 @@ mod test_tokenstream {
     use super::TokenStream;
     use crate::compiler::lexer::tokens::{Lex, Token};
     use crate::compiler::Lexer;
+    use crate::StringTable;
 
     #[test]
     fn test_peek() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -146,6 +156,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -162,7 +173,8 @@ mod test_tokenstream {
     #[test]
     fn test_peek_at() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -174,6 +186,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -183,6 +196,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -194,7 +208,8 @@ mod test_tokenstream {
     #[test]
     fn test_next() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -206,6 +221,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -215,18 +231,27 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
-
-        let p = ts.next().unwrap();
-        assert_eq!(p, Token { l: 1, s: Lex::Add });
 
         let p = ts.next().unwrap();
         assert_eq!(
             p,
             Token {
                 l: 1,
+                c: 3,
+                s: Lex::Add
+            }
+        );
+
+        let p = ts.next().unwrap();
+        assert_eq!(
+            p,
+            Token {
+                l: 1,
+                c: 5,
                 s: Lex::I64(4)
             }
         );
@@ -236,18 +261,27 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                c: 6,
                 s: Lex::RParen
             }
         );
-
-        let p = ts.next().unwrap();
-        assert_eq!(p, Token { l: 1, s: Lex::Mul });
 
         let p = ts.next().unwrap();
         assert_eq!(
             p,
             Token {
                 l: 1,
+                c: 8,
+                s: Lex::Mul
+            }
+        );
+
+        let p = ts.next().unwrap();
+        assert_eq!(
+            p,
+            Token {
+                l: 1,
+                c: 10,
                 s: Lex::I64(3)
             }
         );
@@ -259,7 +293,8 @@ mod test_tokenstream {
     #[test]
     fn test_next_if() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -271,6 +306,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -280,6 +316,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -292,6 +329,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -300,7 +338,8 @@ mod test_tokenstream {
     #[test]
     fn test_next_ifn() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -313,23 +352,33 @@ mod test_tokenstream {
             vec![
                 Token {
                     l: 1,
+                    c: 0,
                     s: Lex::LParen
                 },
                 Token {
                     l: 1,
+                    c: 1,
                     s: Lex::I64(2)
                 }
             ]
         );
 
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                c: 3,
+                s: Lex::Add
+            }
+        );
     }
 
     #[test]
     fn test_if_one_of() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -346,7 +395,8 @@ mod test_tokenstream {
     #[test]
     fn test_next_if_on_of() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -358,6 +408,7 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                c: 0,
                 s: Lex::LParen
             }
         );
@@ -366,6 +417,7 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
@@ -375,15 +427,30 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
+                c: 1,
                 s: Lex::I64(2)
             }
         );
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                c: 3,
+                s: Lex::Add
+            }
+        );
 
         let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).is_none();
         assert_eq!(p, true);
         let p = ts.peek().unwrap();
-        assert_eq!(*p, Token { l: 1, s: Lex::Add });
+        assert_eq!(
+            *p,
+            Token {
+                l: 1,
+                c: 3,
+                s: Lex::Add
+            }
+        );
     }
 }

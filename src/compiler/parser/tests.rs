@@ -3,30 +3,36 @@ pub mod tests {
     use core::panic;
 
     use super::super::parser::*;
-    use crate::compiler::{
-        ast::*,
-        lexer::tokens::Token,
-        parser::{expression::*, statement::*, tokenstream::TokenStream},
-        Lexer,
+    use crate::{
+        compiler::{
+            ast::*,
+            lexer::{tokens::Token, LexerError},
+            parser::{expression::*, statement::*, tokenstream::TokenStream, ParserError},
+            CompilerDisplay, CompilerError, Lexer,
+        },
+        StringTable,
     };
-    use crate::result::Result;
+
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     #[test]
     fn parse_unary_operators() {
         for (text, expected) in
             vec![("-a", UnaryOperator::Negate), ("!a", UnaryOperator::Not)].iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let a = table.insert("a".into());
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let exp = expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(l, op, operand)) = exp {
                 assert_eq!(op, *expected);
                 assert_eq!(l, 1);
-                assert_eq!(*operand, Expression::Identifier(1, "a".into()));
+                assert_eq!(*operand, Expression::Identifier(1, a));
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
             }
@@ -38,10 +44,13 @@ pub mod tests {
         for (text, expected) in
             vec![("--a", UnaryOperator::Negate), ("!!a", UnaryOperator::Not)].iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let a = table.insert("a".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let exp = expression(&mut stream).unwrap();
@@ -51,7 +60,7 @@ pub mod tests {
                 if let Expression::UnaryOp(l, op, operand) = *operand {
                     assert_eq!(op, *expected);
                     assert_eq!(l, 1);
-                    assert_eq!(*operand, Expression::Identifier(1, "a".into()));
+                    assert_eq!(*operand, Expression::Identifier(1, a));
                 }
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
@@ -75,10 +84,11 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap()
@@ -101,10 +111,11 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             if let Some(Expression::BinaryOp(l, op, left, right)) = expression(&mut stream).unwrap()
@@ -122,10 +133,11 @@ pub mod tests {
     #[test]
     fn parse_nested_arithmetic_expression() {
         let text = "(2 + 4) * 3";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Expression::BinaryOp(l, BinaryOperator::Mul, left, right)) =
@@ -148,10 +160,11 @@ pub mod tests {
     #[test]
     fn parse_boolean_expression() {
         let text = "true || false";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Expression::BinaryOp(l, BinaryOperator::BOr, left, right)) =
@@ -167,24 +180,42 @@ pub mod tests {
 
     #[test]
     fn parse_path() {
+        let mut table = StringTable::new();
+        let thing = table.insert("thing".into());
+        let first = table.insert("first".into());
+        let second = table.insert("second".into());
+
+        let mut test = 0;
         for (text, expected) in vec![
-            ("thing", Ok(vec!["thing"])),
-            ("::thing", Ok(vec![ROOT_PATH, "thing"])),
-            ("thing::first", Ok(vec!["thing", "first"])),
-            ("thing::first::second", Ok(vec!["thing", "first", "second"])),
+            ("thing", Ok(vec![Element::Id(thing)])),
+            ("::thing", Ok(vec![Element::FileRoot, Element::Id(thing)])),
+            (
+                "thing::first",
+                Ok(vec![Element::Id(thing), Element::Id(first)]),
+            ),
+            (
+                "thing::first::second",
+                Ok(vec![
+                    Element::Id(thing),
+                    Element::Id(first),
+                    Element::Id(second),
+                ]),
+            ),
             (
                 "thing::",
-                Err("L1: expect identifier after path separator '::'"),
+                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
             ),
             (
                 "thing::first::",
-                Err("L1: expect identifier after path separator '::'"),
+                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            test += 1;
+            println!("Test #{}", test);
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
@@ -192,7 +223,7 @@ pub mod tests {
                     assert_eq!(l, 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, "{}", msg),
+                        Err(msg) => assert!(false, "{:?}", msg.fmt(&table)),
                     }
                 }
                 Ok(Some(Expression::Identifier(l, id))) => {
@@ -200,15 +231,15 @@ pub mod tests {
                     match expected {
                         Ok(expected) => {
                             assert_eq!(expected.len(), 1);
-                            assert_eq!(id, expected[0]);
+                            assert_eq!(Element::Id(id), expected[0]);
                         }
-                        Err(msg) => assert!(false, "{}", msg),
+                        Err(msg) => assert!(false, "{:?}", msg),
                     }
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
-                    Ok(_) => assert!(false, "{}", msg),
+                    Ok(_) => assert!(false, "{}", msg.fmt(&table).unwrap()),
                     Err(expected) => assert_eq!(expected, msg),
                 },
             }
@@ -217,6 +248,11 @@ pub mod tests {
 
     #[test]
     fn parse_multiple_member_access() {
+        let mut table = StringTable::new();
+        let thing = table.insert("thing".into());
+        let first = table.insert("first".into());
+        let second = table.insert("second".into());
+
         for text in vec![
             "thing.first.second",
             "(thing).first.second",
@@ -224,10 +260,10 @@ pub mod tests {
             "((thing.first).second)",
             "(thing.first.second)",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
@@ -237,17 +273,17 @@ pub mod tests {
                         *left,
                         Expression::MemberAccess(
                             1,
-                            Box::new(Expression::Identifier(1, "thing".into())),
-                            "first".into()
+                            Box::new(Expression::Identifier(1, thing)),
+                            first,
                         ),
                         "Input: {}",
                         text,
                     );
-                    assert_eq!(right, "second");
+                    assert_eq!(right, second);
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
                 Ok(None) => panic!("No node returned for {}", text),
-                Err(msg) => panic!("{} caused {}", text, msg),
+                Err(msg) => panic!("{} caused {:?}", text, msg),
             }
         }
     }
@@ -255,16 +291,18 @@ pub mod tests {
     #[test]
     fn parse_bind() {
         let text = "let x:i64 := 5;";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box b) => {
-                assert_eq!(b.get_id(), "x");
+                assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), false);
                 assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
@@ -276,16 +314,18 @@ pub mod tests {
     #[test]
     fn parse_mut_bind() {
         let text = "let mut x:i64 := 5;";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box b) => {
-                assert_eq!(b.get_id(), "x");
+                assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), true);
                 assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
@@ -317,10 +357,13 @@ pub mod tests {
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let x = table.insert("x".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
 
@@ -329,7 +372,7 @@ pub mod tests {
 
             match stm.unwrap().unwrap() {
                 Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x", "{}", text);
+                    assert_eq!(b.get_id(), x, "{}", text);
                     assert_eq!(b.get_type(), expected_ty, "{}", text);
                     assert_eq!(b.is_mutable(), false, "{}", text);
                 }
@@ -341,16 +384,19 @@ pub mod tests {
     #[test]
     fn parse_mutation() {
         let text = "mut x := 5;";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Mutate(box m) => {
-                assert_eq!(m.get_id(), "x");
+                assert_eq!(m.get_id(), x);
                 assert_eq!(*m.get_rhs(), Expression::I64(1, 5));
             }
             _ => panic!("Not a binding statement"),
@@ -360,18 +406,18 @@ pub mod tests {
     #[test]
     fn parse_module_empty() {
         let text = "mod test_mod {}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let test = table.insert("test".into());
+        let test_mod = table.insert("test_mod".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse("test", &tokens)
-            .unwrap()
-            .unwrap()
-            .get_module("test_mod")
-        {
+        if let Some(m) = parse(test, &tokens).unwrap().unwrap().get_module(test_mod) {
             assert_eq!(*m.get_context(), 1);
-            assert_eq!(m.get_name(), "test_mod");
+            assert_eq!(m.get_name(), test_mod);
         } else {
             panic!("No nodes returned by parser")
         }
@@ -380,15 +426,20 @@ pub mod tests {
     #[test]
     fn parse_module_with_function() {
         let text = "mod test_fn_mod { fn test(x:i64) {return;} }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let test = table.insert("test".into());
+        let test_fn_mod = table.insert("test_fn_mod".into());
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
 
-        if let Some(m) = parse("test", &tokens).unwrap() {
+        if let Some(m) = parse(test, &tokens).unwrap() {
             assert_eq!(*m.get_context(), 1);
-            assert_eq!(m.get_name(), "test");
+            assert_eq!(m.get_name(), test);
 
             assert_eq!(m.get_modules().len(), 1);
             assert_eq!(m.get_functions().len(), 0);
@@ -397,7 +448,7 @@ pub mod tests {
 
             let m = &m.get_modules()[0];
             assert_eq!(*m.get_context(), 1);
-            assert_eq!(m.get_name(), "test_fn_mod");
+            assert_eq!(m.get_name(), test_fn_mod);
 
             assert_eq!(m.get_modules().len(), 0);
             assert_eq!(m.get_functions().len(), 1);
@@ -414,8 +465,8 @@ pub mod tests {
             }) = &m.get_functions()[0]
             {
                 assert_eq!(*context, 1);
-                assert_eq!(name, "test");
-                assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(*name, test);
+                assert_eq!(params, &vec![Parameter::new(1, x, &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -433,18 +484,23 @@ pub mod tests {
     #[test]
     fn parse_module_with_coroutine() {
         let text = "mod test_co_mod { co test(x:i64) {return;} }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let test_co_mod = table.insert("test_co_mod".into());
+        let test = table.insert("test".into());
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse("test", &tokens)
+        if let Some(m) = parse(test, &tokens)
             .unwrap()
             .unwrap()
-            .get_module("test_co_mod")
+            .get_module(test_co_mod)
         {
             assert_eq!(*m.get_context(), 1);
-            assert_eq!(m.get_name(), "test_co_mod");
+            assert_eq!(m.get_name(), test_co_mod);
 
             assert_eq!(m.get_modules().len(), 0);
             assert_eq!(m.get_functions().len(), 0);
@@ -459,11 +515,11 @@ pub mod tests {
                 ret_ty: ty,
                 body,
                 ..
-            })) = m.get_item("test")
+            })) = m.get_item(test)
             {
                 assert_eq!(*context, 1);
-                assert_eq!(name, "test");
-                assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(*name, test);
+                assert_eq!(params, &vec![Parameter::new(1, x, &Type::I64)]);
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -481,28 +537,34 @@ pub mod tests {
     #[test]
     fn parse_module_with_struct() {
         let text = "mod test_struct_mod { struct my_struct{x: i64} }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let test_struct_mod = table.insert("test_struct_mod".into());
+        let test = table.insert("test".into());
+        let my_struct = table.insert("my_struct".into());
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse("test", &tokens)
+        if let Some(m) = parse(test, &tokens)
             .unwrap()
             .unwrap()
-            .get_module("test_struct_mod")
+            .get_module(test_struct_mod)
         {
             assert_eq!(*m.get_context(), 1);
-            assert_eq!(m.get_name(), "test_struct_mod");
+            assert_eq!(m.get_name(), test_struct_mod);
 
             assert_eq!(m.get_modules().len(), 0);
             assert_eq!(m.get_functions().len(), 0);
             assert_eq!(m.get_coroutines().len(), 0);
             assert_eq!(m.get_structs().len(), 1);
 
-            if let Some(Item::Struct(sd)) = m.get_item("my_struct") {
+            if let Some(Item::Struct(sd)) = m.get_item(my_struct) {
                 assert_eq!(*sd.get_context(), 1);
-                assert_eq!(sd.get_name(), "my_struct");
-                assert_eq!(sd.get_fields(), &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(sd.get_name(), my_struct);
+                assert_eq!(sd.get_fields(), &vec![Parameter::new(1, x, &Type::I64)]);
             }
         } else {
             panic!("No nodes returned by parser")
@@ -512,18 +574,24 @@ pub mod tests {
     #[test]
     fn parse_module_with_extern() {
         let text = "mod test_extern_mod { extern fn my_fn(x: i64) -> i32; }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let test_extern_mod = table.insert("test_extern_mod".into());
+        let test = table.insert("test".into());
+        let my_fn = table.insert("my_fn".into());
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse("test", &tokens)
+        if let Some(m) = parse(test, &tokens)
             .unwrap()
             .unwrap()
-            .get_module("test_extern_mod")
+            .get_module(test_extern_mod)
         {
             assert_eq!(*m.get_context(), 1);
-            assert_eq!(m.get_name(), "test_extern_mod");
+            assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
             assert_eq!(m.get_functions().len(), 0);
@@ -531,10 +599,10 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
             assert_eq!(m.get_externs().len(), 1);
 
-            if let Some(Item::Extern(e)) = m.get_item("my_fn") {
+            if let Some(Item::Extern(e)) = m.get_item(my_fn) {
                 assert_eq!(*e.get_context(), 1);
-                assert_eq!(e.get_name(), "my_fn");
-                assert_eq!(e.get_params(), &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(e.get_name(), my_fn);
+                assert_eq!(e.get_params(), &vec![Parameter::new(1, x, &Type::I64)]);
                 assert_eq!(e.get_return_type(), Type::I32);
             }
         } else {
@@ -545,18 +613,24 @@ pub mod tests {
     #[test]
     fn parse_module_with_extern_with_varargs() {
         let text = "mod test_extern_mod { extern fn my_fn(x: i64, ...) -> i32; }";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let test_extern_mod = table.insert("test_extern_mod".into());
+        let test = table.insert("test".into());
+        let my_fn = table.insert("my_fn".into());
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse("test", &tokens)
+        if let Some(m) = parse(test, &tokens)
             .unwrap()
             .unwrap()
-            .get_module("test_extern_mod")
+            .get_module(test_extern_mod)
         {
             assert_eq!(*m.get_context(), 1);
-            assert_eq!(m.get_name(), "test_extern_mod");
+            assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
             assert_eq!(m.get_functions().len(), 0);
@@ -564,10 +638,10 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
             assert_eq!(m.get_externs().len(), 1);
 
-            if let Some(Item::Extern(e)) = m.get_item("my_fn") {
+            if let Some(Item::Extern(e)) = m.get_item(my_fn) {
                 assert_eq!(*e.get_context(), 1);
-                assert_eq!(e.get_name(), "my_fn");
-                assert_eq!(e.get_params(), &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(e.get_name(), my_fn);
+                assert_eq!(e.get_params(), &vec![Parameter::new(1, x, &Type::I64)]);
                 assert_eq!(e.get_return_type(), Type::I32);
                 assert_eq!(e.has_varargs, true);
             }
@@ -579,10 +653,14 @@ pub mod tests {
     #[test]
     fn parse_unit_function_def() {
         let text = "fn test(x:i64) {return;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let test = table.insert("test".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         if let Some(Item::Routine(RoutineDef {
             context: l,
@@ -592,11 +670,11 @@ pub mod tests {
             ret_ty: ty,
             body,
             ..
-        })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
+        })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
             assert_eq!(*l, 1);
-            assert_eq!(name, "test");
-            assert_eq!(*params, vec![Parameter::new(1, "x", &Type::I64)]);
+            assert_eq!(*name, test);
+            assert_eq!(*params, vec![Parameter::new(1, x, &Type::I64)]);
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -611,10 +689,14 @@ pub mod tests {
     #[test]
     fn parse_function_def() {
         let text = "fn test(x:i64) -> bool {return true;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let test = table.insert("test".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         if let Some(Item::Routine(RoutineDef {
             context: l,
@@ -624,11 +706,11 @@ pub mod tests {
             ret_ty: ty,
             body,
             ..
-        })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
+        })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
             assert_eq!(*l, 1);
-            assert_eq!(name, "test");
-            assert_eq!(*params, vec![Parameter::new(1, "x", &Type::I64)]);
+            assert_eq!(*name, test);
+            assert_eq!(*params, vec![Parameter::new(1, x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -654,34 +736,39 @@ pub mod tests {
             return;
         }
         ";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let test = table.insert("test".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
-        parse("test", &tokens).expect_err("This should fail");
+        parse(test, &tokens).expect_err("This should fail");
     }
 
     #[test]
     fn parse_routine_call() {
         let text = "test(x, y)";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let y = table.insert("y".into());
+        let test = table.insert("test".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens);
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(name, vec!["test"].into());
+            assert_eq!(name, vec![Element::Id(test)].into());
             assert_eq!(
                 params,
-                vec![
-                    Expression::Identifier(1, "x".into()),
-                    Expression::Identifier(1, "y".into())
-                ]
+                vec![Expression::Identifier(1, x), Expression::Identifier(1, y)]
             );
         } else {
             panic!("No nodes returned by parser")
@@ -691,23 +778,26 @@ pub mod tests {
     #[test]
     fn parse_routine_by_path_call() {
         let text = "self::test(x, y)";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let y = table.insert("y".into());
+        let test = table.insert("test".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
+        println!("{:?}", table);
         let mut iter = TokenStream::new(&tokens);
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
             assert_eq!(l, 1);
-            assert_eq!(name, vec![SELF, "test"].into());
+            assert_eq!(name, vec![Element::Selph, Element::Id(test)].into());
             assert_eq!(
                 params,
-                vec![
-                    Expression::Identifier(1, "x".into()),
-                    Expression::Identifier(1, "y".into())
-                ]
+                vec![Expression::Identifier(1, x), Expression::Identifier(1, y)]
             );
         } else {
             panic!("No nodes returned by parser")
@@ -717,12 +807,17 @@ pub mod tests {
     #[test]
     fn parse_coroutine_def() {
         let text = "co test(x:i64) -> bool {return true;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let test = table.insert("test".into());
+        let test_mod = table.insert("test_mod".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse("test_mod", &tokens).unwrap() {
+        if let Some(m) = parse(test_mod, &tokens).unwrap() {
             assert_eq!(*m.get_context(), 1);
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
@@ -731,10 +826,10 @@ pub mod tests {
                 ret_ty: ty,
                 body,
                 ..
-            })) = m.get_item("test")
+            })) = m.get_item(test)
             {
-                assert_eq!(name, "test");
-                assert_eq!(params, &vec![Parameter::new(1, "x", &Type::I64)]);
+                assert_eq!(*name, test);
+                assert_eq!(params, &vec![Parameter::new(1, x, &Type::I64)]);
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -752,23 +847,27 @@ pub mod tests {
     #[test]
     fn parse_coroutine_init() {
         let text = "let x:co i64 := init c(1, 2);";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let c = table.insert("c".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box b) => {
-                assert_eq!(b.get_id(), "x");
+                assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
                     *b.get_rhs(),
                     Expression::RoutineCall(
                         1,
                         RoutineCall::CoroutineInit,
-                        vec!["c"].into(),
+                        vec![Element::Id(c)].into(),
                         vec![Expression::I64(1, 1), Expression::I64(1, 2)]
                     )
                 );
@@ -780,23 +879,30 @@ pub mod tests {
     #[test]
     fn parse_coroutine_path_init() {
         let text = "let x:co i64 := init a::b::c(1, 2);";
-        let tokens: Vec<Token> = Lexer::new(&text)
+
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let a = table.insert("a".into());
+        let b = table.insert("b".into());
+        let c = table.insert("c".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
-            Statement::Bind(box b) => {
-                assert_eq!(b.get_id(), "x");
-                assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I64)));
+            Statement::Bind(box bind) => {
+                assert_eq!(bind.get_id(), x);
+                assert_eq!(bind.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
-                    *b.get_rhs(),
+                    *bind.get_rhs(),
                     Expression::RoutineCall(
                         1,
                         RoutineCall::CoroutineInit,
-                        vec!["a", "b", "c"].into(),
+                        vec![Element::Id(a), Element::Id(b), Element::Id(c)].into(),
                         vec![Expression::I64(1, 1), Expression::I64(1, 2)]
                     )
                 );
@@ -808,10 +914,16 @@ pub mod tests {
     #[test]
     fn parse_yield() {
         let text = "fn test(x:i64) -> bool {return yield cor;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+
+        let mut table = StringTable::new();
+        let test = table.insert("test".into());
+        let x = table.insert("x".into());
+        let cor = table.insert("cor".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         if let Some(Item::Routine(RoutineDef {
             context: l,
@@ -821,11 +933,11 @@ pub mod tests {
             ret_ty: ty,
             body,
             ..
-        })) = parse("test", &tokens).unwrap().unwrap().get_item("test")
+        })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
             assert_eq!(*l, 1);
-            assert_eq!(name, "test");
-            assert_eq!(*params, vec![Parameter::new(1, "x", &Type::I64)]);
+            assert_eq!(*name, test);
+            assert_eq!(*params, vec![Parameter::new(1, x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -834,7 +946,7 @@ pub mod tests {
                         *r.get_value(),
                         Some(Expression::Yield(
                             1,
-                            Box::new(Expression::Identifier(1, "cor".into()))
+                            Box::new(Expression::Identifier(1, cor))
                         ))
                     );
                 }
@@ -848,10 +960,13 @@ pub mod tests {
     #[test]
     fn parse_if_expression() {
         let text = "if (x) {5} else {7}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
@@ -863,7 +978,7 @@ pub mod tests {
         }) = exp
         {
             assert_eq!(l, 1);
-            assert_eq!(*cond, Expression::Identifier(1, "x".into()));
+            assert_eq!(*cond, Expression::Identifier(1, x));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
                 assert_eq!(*final_exp, Expression::I64(1, 5));
             } else {
@@ -883,10 +998,15 @@ pub mod tests {
     #[test]
     fn parse_if_else_if_expression() {
         let text = "if (x) {5} else if (y && z) {7} else {8}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let y = table.insert("y".into());
+        let z = table.insert("z".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
@@ -898,7 +1018,7 @@ pub mod tests {
         }) = exp
         {
             assert_eq!(l, 1);
-            assert_eq!(*cond, Expression::Identifier(1, "x".into()));
+            assert_eq!(*cond, Expression::Identifier(1, x));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
                 assert_eq!(*final_exp, Expression::I64(1, 5));
             } else {
@@ -917,8 +1037,8 @@ pub mod tests {
                     Expression::BinaryOp(
                         1,
                         BinaryOperator::BAnd,
-                        Box::new(Expression::Identifier(1, "y".into())),
-                        Box::new(Expression::Identifier(1, "z".into()))
+                        Box::new(Expression::Identifier(1, y)),
+                        Box::new(Expression::Identifier(1, z))
                     )
                 );
                 if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
@@ -944,10 +1064,14 @@ pub mod tests {
     #[test]
     fn parse_while_expression() {
         let text = "while (x) {5;}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
@@ -958,7 +1082,7 @@ pub mod tests {
         }) = exp
         {
             assert_eq!(l, 1);
-            assert_eq!(*cond, Expression::Identifier(1, "x".into()));
+            assert_eq!(*cond, Expression::Identifier(1, x));
             if let Expression::ExpressionBlock(_l, body, None) = *body {
                 assert_eq!(body[0], Statement::Expression(box Expression::I64(1, 5)));
             } else {
@@ -971,30 +1095,36 @@ pub mod tests {
 
     #[test]
     fn parse_struct_def() {
+        let mut table = StringTable::new();
+        let test = table.insert("test".into());
+        let my_struct = table.insert("MyStruct".into());
+        let x = table.insert("x".into());
+        let y = table.insert("y".into());
+
         for (text, expected) in vec![
-            ("struct MyStruct {}", StructDef::new("MyStruct", 1, vec![])),
+            ("struct MyStruct {}", StructDef::new(my_struct, 1, vec![])),
             (
                 "struct MyStruct {x: i64}",
-                StructDef::new("MyStruct", 1, vec![Parameter::new(1, "x", &Type::I64)]),
+                StructDef::new(my_struct, 1, vec![Parameter::new(1, x, &Type::I64)]),
             ),
             (
                 "struct MyStruct {x: i64, y: bool}",
                 StructDef::new(
-                    "MyStruct",
+                    my_struct,
                     1,
                     vec![
-                        Parameter::new(1, "x", &Type::I64),
-                        Parameter::new(1, "y", &Type::Bool),
+                        Parameter::new(1, x, &Type::I64),
+                        Parameter::new(1, y, &Type::Bool),
                     ],
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            if let Some(m) = parse("test", &tokens).unwrap() {
+            if let Some(m) = parse(test, &tokens).unwrap() {
                 assert_eq!(m.get_structs()[0], Item::Struct(expected), "{:?}", text);
             }
         }
@@ -1002,27 +1132,34 @@ pub mod tests {
 
     #[test]
     fn parse_struct_init() {
+        let mut table = StringTable::new();
+        let my_struct = table.insert("MyStruct".into());
+        let my_struct2 = table.insert("MyStruct2".into());
+        let x = table.insert("x".into());
+        let y = table.insert("y".into());
+        let z = table.insert("z".into());
+
         for (text, expected) in vec![
             (
                 "MyStruct{}",
-                Expression::StructExpression(1, vec!["MyStruct"].into(), vec![]),
+                Expression::StructExpression(1, vec![Element::Id(my_struct)].into(), vec![]),
             ),
             (
                 "MyStruct{x: 5}",
                 Expression::StructExpression(
                     1,
-                    vec!["MyStruct"].into(),
-                    vec![("x".into(), Expression::I64(1, 5))],
+                    vec![Element::Id(my_struct)].into(),
+                    vec![(x, Expression::I64(1, 5))],
                 ),
             ),
             (
                 "MyStruct{x: 5, y: false}",
                 Expression::StructExpression(
                     1,
-                    vec!["MyStruct"].into(),
+                    vec![Element::Id(my_struct)].into(),
                     vec![
-                        ("x".into(), Expression::I64(1, 5)),
-                        ("y".into(), Expression::Boolean(1, false)),
+                        (x, Expression::I64(1, 5)),
+                        (y, Expression::Boolean(1, false)),
                     ],
                 ),
             ),
@@ -1030,25 +1167,25 @@ pub mod tests {
                 "MyStruct{x: 5, y: MyStruct2{z:3}}",
                 Expression::StructExpression(
                     1,
-                    vec!["MyStruct"].into(),
+                    vec![Element::Id(my_struct)].into(),
                     vec![
-                        ("x".into(), Expression::I64(1, 5)),
+                        (x, Expression::I64(1, 5)),
                         (
-                            "y".into(),
+                            y,
                             Expression::StructExpression(
                                 1,
-                                vec!["MyStruct2"].into(),
-                                vec![("z".into(), Expression::I64(1, 3))],
+                                vec![Element::Id(my_struct2)].into(),
+                                vec![(z, Expression::I64(1, 3))],
                             ),
                         ),
                     ],
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             let result = expression(&mut stream);
@@ -1058,23 +1195,27 @@ pub mod tests {
 
     #[test]
     fn parse_string_literals() {
+        let mut table = StringTable::new();
+        let test_mod = table.insert("test_mod".into());
+        let test = table.insert("test".into());
+        let test2 = table.insert("test 2".into());
+
         for (text, expected) in vec![
-            ("fn test() -> String {return \"test\";}", "test"),
-            ("fn test() -> String {return \"test 2\";}", "test 2"),
+            ("fn test() -> String {return \"test\";}", test),
+            ("fn test() -> String {return \"test 2\";}", test2),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let module = parse("test_mod", &tokens).unwrap();
+            let module = parse(test_mod, &tokens).unwrap();
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
-                        Statement::Return(box r) => assert_eq!(
-                            *r.get_value(),
-                            Some(Expression::StringLiteral(1, expected.into()))
-                        ),
+                        Statement::Return(box r) => {
+                            assert_eq!(*r.get_value(), Some(Expression::StringLiteral(1, expected)))
+                        }
                         _ => assert!(false, "Not a return statement"),
                     },
                     _ => assert!(false, "Not a return statement"),

@@ -1,4 +1,9 @@
-#[derive(Debug, Clone, PartialEq)]
+use crate::{
+    compiler::{CompilerDisplay, CompilerDisplayError},
+    StringId,
+};
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Primitive {
     U8,
     U16,
@@ -29,7 +34,13 @@ impl std::fmt::Display for Primitive {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl CompilerDisplay for Primitive {
+    fn fmt(&self, _: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+        Ok(format!("{}", self))
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Lex {
     U8(u8),
     U16(u16),
@@ -40,8 +51,8 @@ pub enum Lex {
     I32(i32),
     I64(i64),
     Bool(bool),
-    Identifier(String),
-    StringLiteral(String),
+    Identifier(StringId),
+    StringLiteral(StringId),
     VarArgs,
     Mul,
     Div,
@@ -84,12 +95,16 @@ pub enum Lex {
     PathSeparator,
     LArrow,
     Primitive(Primitive),
+    PathSelf,
+    PathSuper,
+    PathProjectRoot,
+    PathFileRoot,
 }
 
 impl Lex {
-    pub fn get_str(&self) -> Option<String> {
+    pub fn get_str(&self) -> Option<StringId> {
         match self {
-            Lex::StringLiteral(s) | Lex::Identifier(s) => Some(s.clone()),
+            Lex::StringLiteral(s) | Lex::Identifier(s) => Some(*s),
             _ => None,
         }
     }
@@ -107,7 +122,7 @@ impl std::fmt::Display for Lex {
             I16(i) => f.write_str(&format!("i16 literal {}", i)),
             I32(i) => f.write_str(&format!("i32 literal {}", i)),
             I64(i) => f.write_str(&format!("i64 literal {}", i)),
-            Bool(b) => f.write_str(&format!("literal {}", b)),
+            Bool(b) => f.write_str(&format!("bool literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
             VarArgs => f.write_str("..."),
@@ -152,13 +167,33 @@ impl std::fmt::Display for Lex {
             PathSeparator => f.write_str("::"),
             LArrow => f.write_str("->"),
             Primitive(p) => f.write_str(&format!("{}", p)),
+            PathSelf => f.write_str("self"),
+            PathSuper => f.write_str("super"),
+            PathFileRoot => f.write_str("root"),
+            PathProjectRoot => f.write_str("project"),
+        }
+    }
+}
+
+impl CompilerDisplay for Lex {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+        match self {
+            Lex::Identifier(sid) => Ok(format!("identifier {}", st.get(*sid)?)),
+            Lex::StringLiteral(sid) => Ok(format!("string literal {}", st.get(*sid)?)),
+            _ => Ok(format!("{}", self)),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
+    /// Line that the token occurs on
     pub l: u32,
+
+    /// Column in the line
+    pub c: u32,
+
+    /// The value of the token
     pub s: Lex,
 }
 
@@ -168,9 +203,15 @@ impl std::fmt::Display for Token {
     }
 }
 
+impl CompilerDisplay for Token {
+    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+        Ok(format!("{}", self.s.fmt(st)?))
+    }
+}
+
 impl Token {
-    pub fn new(l: u32, s: Lex) -> Token {
-        Token { l, s }
+    pub fn new(l: u32, o: u32, s: Lex) -> Token {
+        Token { l, c: o, s }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {
@@ -264,6 +305,10 @@ impl Token {
             | Lex::Colon
             | Lex::MemberAccess
             | Lex::PathSeparator
+            | Lex::PathSelf
+            | Lex::PathSuper
+            | Lex::PathFileRoot
+            | Lex::PathProjectRoot
             | Lex::LArrow => *a == self.s,
         }
     }

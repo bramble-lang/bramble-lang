@@ -1,14 +1,12 @@
-use serde::{Deserialize, Serialize};
-
-use crate::diagnostics::config::TracingConfig;
 use crate::{
     compiler::{ast::*, parser::parser::ParserContext},
     diagnostics::{Diag, DiagData},
 };
+use crate::{diagnostics::config::TracingConfig, StringId};
 
 use super::symbol_table::SymbolTable;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
     id: u32,
     ln: u32,
@@ -80,7 +78,7 @@ impl SemanticContext {
         }
     }
 
-    pub fn new_routine(id: u32, ln: u32, name: &str, ty: Type) -> SemanticContext {
+    pub fn new_routine(id: u32, ln: u32, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
             ln,
@@ -90,7 +88,7 @@ impl SemanticContext {
         }
     }
 
-    pub fn new_module(id: u32, ln: u32, name: &str, ty: Type) -> SemanticContext {
+    pub fn new_module(id: u32, ln: u32, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
             ln,
@@ -104,7 +102,7 @@ impl SemanticContext {
         &self.canonical_path
     }
 
-    pub(super) fn set_canonical_path(&mut self, path: Path) {
+    pub fn set_canonical_path(&mut self, path: Path) {
         self.canonical_path = path;
     }
 }
@@ -149,13 +147,13 @@ impl SemanticAst {
         sm_data
     }
 
-    fn routine_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+    fn routine_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
         let sm_data = SemanticContext::new_routine(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn module_semantic_context_from(&mut self, ln: u32, name: &str) -> SemanticContext {
+    fn module_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
         let sm_data = SemanticContext::new_module(self.next_id, ln, name, Type::Unknown);
         self.next_id += 1;
         sm_data

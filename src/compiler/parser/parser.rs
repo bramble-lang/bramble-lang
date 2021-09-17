@@ -3,11 +3,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::result::Result;
+use crate::StringId;
 use crate::{
     compiler::{
         ast::*,
         lexer::tokens::{Lex, Primitive, Token},
+        CompilerError,
     },
     diagnostics::{config::TracingConfig, Diag, DiagData},
 };
@@ -16,11 +17,12 @@ use crate::{
 // program
 // Each type of node represents an expression and the only requirement is that at the
 // end of computing an expression its result is in EAX
-use super::tokenstream::TokenStream;
 use super::{
     expression::expression,
     statement::{return_stmt, statement, statement_or_yield_return},
+    ParserResult,
 };
+use super::{tokenstream::TokenStream, ParserError};
 
 pub type ParserContext = u32;
 type HasVarArgs = bool;
@@ -40,8 +42,6 @@ impl Diag for ParserContext {
         DiagData::new(*self, 0)
     }
 }
-
-pub(super) type ParserResult<T> = Result<Option<T>>;
 
 pub(super) static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 pub(super) static TRACE_START: AtomicUsize = AtomicUsize::new(0);
@@ -155,18 +155,18 @@ impl Parser {
     }
 }
 
-pub fn parse(name: &str, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
+pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     let mut stream = TokenStream::new(&tokens);
 
     let module_line = stream.peek().map_or(1, |t| t.l);
-    let mut module = Module::new(&name, module_line);
+    let mut module = Module::new(name, module_line);
 
     while stream.peek().is_some() {
         let start_index = stream.index();
-        parse_items_into(&mut stream, &mut module).map_err(|e| format!("Parser: {}", e))?;
+        parse_items_into(&mut stream, &mut module)?;
 
         if stream.index() == start_index {
-            return Err(format!("Parser cannot advance past {:?}", stream.peek()));
+            return err!(0, ParserError::Locked(stream.peek().map(|t| t.clone())));
         }
     }
 
@@ -177,7 +177,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
             Some((ln, module_name)) => {
-                let mut module = Module::new(&module_name, ln);
+                let mut module = Module::new(module_name, ln);
                 stream.next_must_be(&Lex::LBrace)?;
 
                 parse_items_into(stream, &mut module)?;
@@ -186,7 +186,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
                 Some(module)
             }
             _ => {
-                return Err(format!("L{}: expected name after mod keyword", token.l));
+                return err!(token.l, ParserError::ModExpectedName);
             }
         },
         None => None,
@@ -250,23 +250,20 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
         Some(token) => match function_decl(stream, true)? {
             Some((fn_line, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    return Err("An extern declaration must have at least one \
-                     parameter before a VarArgs (...) parameter"
-                        .into());
+                    return err!(fn_line, ParserError::ExternInvalidVarArgs);
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
-                    &fn_name,
+                    fn_name,
                     fn_line,
                     params,
                     has_varargs,
                     fn_type,
                 )))
             }
-            None => Err(format!(
-                "L{}: expected function declaration after extern",
-                token.l
-            )),
+            None => {
+                err!(token.l, ParserError::ExternExpectedFnDecl)
+            }
         },
         None => Ok(None),
     }
@@ -279,9 +276,11 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = parameter_list(stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
-                Ok(Some(StructDef::new(&id, line, fields)))
+                Ok(Some(StructDef::new(id, line, fields)))
             }
-            None => Err(format!("L{}: expected identifer after struct", token.l)),
+            None => {
+                err!(token.l, ParserError::StructExpectedIdentifier)
+            }
         },
         None => Ok(None),
     }
@@ -290,7 +289,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
         Some((l, n, p, v, t)) => {
             if v {
-                return Err("VarArgs are not allowed in Braid function definitions".into());
+                return err!(l, ParserError::FnVarArgsNotAllowed);
             }
             (l, n, p, t)
         }
@@ -303,11 +302,10 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
-            return Err(format!(
-                "L{}: Function must end with a return statement, got {:?}",
-                stmts.last().map_or(fn_line, |s| *s.get_context()),
-                stream.peek(),
-            ))
+            return err!(
+                fn_line,
+                ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
+            );
         }
     }
     stream.next_must_be(&Lex::RBrace)?;
@@ -325,18 +323,22 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
 fn function_decl(
     stream: &mut TokenStream,
     allow_var_args: bool,
-) -> ParserResult<(u32, String, Vec<Parameter<u32>>, HasVarArgs, Type)> {
+) -> ParserResult<(u32, StringId, Vec<Parameter<u32>>, HasVarArgs, Type)> {
     let fn_line = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.l,
         None => return Ok(None),
     };
 
-    let (fn_line, fn_name) = stream
-        .next_if_id()
-        .ok_or(format!("L{}: Expected identifier after fn", fn_line))?;
+    let (fn_line, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
+        fn_line,
+        ParserError::FnExpectedIdentifierAfterFn,
+    ))?;
     let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", fn_line))?
+        consume_type(stream)?.ok_or(CompilerError::new(
+            fn_line,
+            ParserError::FnExpectedTypeAfterArrow,
+        ))?
     } else {
         Type::Unit
     };
@@ -350,17 +352,21 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         None => return Ok(None),
     };
 
-    let (co_line, co_name) = stream
-        .next_if_id()
-        .ok_or(format!("L{}: Expected identifier after co", co_line))?;
+    let (co_line, co_name) = stream.next_if_id().ok_or(CompilerError::new(
+        co_line,
+        ParserError::CoExpectedIdentifierAfterCo,
+    ))?;
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
-        return Err("VarArgs are not allowed in Braid function definitions".into());
+        return err!(co_line, ParserError::FnVarArgsNotAllowed);
     }
 
     let co_type = match stream.next_if(&Lex::LArrow) {
-        Some(t) => consume_type(stream)?.ok_or(format!("L{}: Expected type after ->", t.l))?,
+        Some(t) => consume_type(stream)?.ok_or(CompilerError::new(
+            t.l,
+            ParserError::FnExpectedTypeAfterArrow,
+        ))?,
         _ => Type::Unit,
     };
 
@@ -370,10 +376,10 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
-            return Err(format!(
-                "L{}: Coroutine must end with a return statement",
+            return err!(
                 stmts.last().map_or(co_line, |s| *s.get_context()),
-            ))
+                ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
+            );
         }
     }
     stream.next_must_be(&Lex::RBrace)?;
@@ -388,7 +394,9 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
     }))
 }
 
-pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserContext>>> {
+pub(super) fn block(
+    stream: &mut TokenStream,
+) -> Result<Vec<Statement<ParserContext>>, CompilerError<ParserError>> {
     trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement(stream)? {
@@ -397,7 +405,9 @@ pub(super) fn block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserCont
     Ok(stmts)
 }
 
-fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserContext>>> {
+fn co_block(
+    stream: &mut TokenStream,
+) -> Result<Vec<Statement<ParserContext>>, CompilerError<ParserError>> {
     trace!(stream);
     let mut stmts = vec![];
     while let Some(s) = statement_or_yield_return(stream)? {
@@ -409,7 +419,7 @@ fn co_block(stream: &mut TokenStream) -> Result<Vec<Statement<ParserContext>>> {
 fn fn_def_params(
     stream: &mut TokenStream,
     allow_var_args: bool,
-) -> Result<(Vec<Parameter<ParserContext>>, HasVarArgs)> {
+) -> Result<(Vec<Parameter<ParserContext>>, HasVarArgs), CompilerError<ParserError>> {
     trace!(stream);
     stream.next_must_be(&Lex::LParen)?;
     let params = parameter_list(stream)?;
@@ -425,7 +435,9 @@ fn fn_def_params(
     Ok((params, has_varargs))
 }
 
-fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserContext>>> {
+fn parameter_list(
+    stream: &mut TokenStream,
+) -> Result<Vec<Parameter<ParserContext>>, CompilerError<ParserError>> {
     let params = id_declaration_list(stream)?;
 
     // Convert tuples into parameters
@@ -433,7 +445,7 @@ fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserContex
         .iter()
         .map(|(line, name, ty)| Parameter {
             context: *line,
-            name: name.clone(),
+            name: *name,
             ty: ty.clone(),
         })
         .collect();
@@ -441,7 +453,9 @@ fn parameter_list(stream: &mut TokenStream) -> Result<Vec<Parameter<ParserContex
     Ok(params)
 }
 
-pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(u32, String, Type)>> {
+pub(super) fn id_declaration_list(
+    stream: &mut TokenStream,
+) -> Result<Vec<(u32, StringId, Type)>, CompilerError<ParserError>> {
     trace!(stream);
     let mut decls = vec![];
 
@@ -460,16 +474,16 @@ pub(super) fn id_declaration_list(stream: &mut TokenStream) -> Result<Vec<(u32, 
 
 fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
-    if stream.test_ifn(vec![Lex::Identifier("".into()), Lex::LParen]) {
+    if stream.test_ifn(vec![Lex::Identifier(StringId::new()), Lex::LParen]) {
         let (line, fn_name) = stream
             .next_if_id()
             .expect("CRITICAL: failed to get identifier");
         let params = routine_call_params(stream)?
-            .ok_or(format!("L{}: expected parameters in function call", line))?;
+            .ok_or(CompilerError::new(line, ParserError::FnCallExpectedParams))?;
         Ok(Some(Expression::RoutineCall(
             line,
             RoutineCall::Function,
-            vec![fn_name].into(),
+            vec![Element::Id(fn_name)].into(),
             params,
         )))
     } else {
@@ -507,26 +521,40 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
     trace!(stream);
     let mut path = vec![];
 
+    let line = stream.peek().map(|t| t.l).unwrap_or_default();
     // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
-    if stream.next_if(&Lex::PathSeparator).is_some() {
-        path.push(ROOT_PATH.into());
+    if stream.test_if(&Lex::PathSeparator) {
+        path.push(Element::FileRoot);
+    } else if stream.next_if(&Lex::PathProjectRoot).is_some() {
+        path.push(Element::CanonicalRoot);
+    } else if stream.next_if(&Lex::PathFileRoot).is_some() {
+        path.push(Element::FileRoot);
+    } else if stream.next_if(&Lex::PathSelf).is_some() {
+        path.push(Element::Selph);
+    } else if stream.next_if(&Lex::PathSuper).is_some() {
+        path.push(Element::Super);
+    } else if let Some(id) = stream.next_if_id() {
+        path.push(Element::Id(id.1));
+    } else {
+        return Ok(None);
     }
 
-    match stream.next_if_id() {
-        Some((line, id)) => {
-            path.push(id);
-            while let Some(token) = stream.next_if(&Lex::PathSeparator) {
-                let line = token.l;
-                let (_, id) = stream.next_if_id().ok_or(format!(
-                    "L{}: expect identifier after path separator '::'",
-                    line
-                ))?;
-                path.push(id);
+    while let Some(token) = stream.next_if(&Lex::PathSeparator) {
+        match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
+            Some(Token {
+                s: Lex::PathSuper, ..
+            }) => path.push(Element::Super),
+            Some(Token {
+                s: Lex::Identifier(id),
+                ..
+            }) => path.push(Element::Id(id)),
+            _ => {
+                return err!(token.l, ParserError::PathExpectedIdentifier);
             }
-            Ok(Some((line, path.into())))
         }
-        None => Ok(None),
     }
+
+    Ok(Some((line, path.into())))
 }
 
 fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -543,6 +571,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     let ty = match stream.peek() {
         Some(Token {
             l: _,
+            c: _,
             s: Lex::Primitive(primitive),
         }) => {
             let ty = match *primitive {
@@ -581,13 +610,13 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
 fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
     trace!(stream);
     match stream.next_if(&Lex::LBracket) {
-        Some(_) => {
-            let element_ty =
-                consume_type(stream)?.ok_or("Expected type in array type declaration")?;
+        Some(Token { l: line, .. }) => {
+            let element_ty = consume_type(stream)?
+                .ok_or(CompilerError::new(line, ParserError::ArrayDeclExpectedType))?;
             stream.next_must_be(&Lex::Semicolon)?;
 
             let len = expression(stream)?
-                .ok_or("Expected size to be specified in array type declaration")?;
+                .ok_or(CompilerError::new(line, ParserError::ArrayDeclExpectedSize))?;
             let len = match len {
                 Expression::U8(_, l) => l as usize,
                 Expression::U16(_, l) => l as usize,
@@ -597,7 +626,7 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
                 Expression::I16(_, l) => l as usize,
                 Expression::I32(_, l) => l as usize,
                 Expression::I64(_, l) => l as usize,
-                _ => return Err("Expected integer literal for array size".into()),
+                _ => return err!(0, ParserError::ArrayExpectedIntLiteral),
             };
 
             stream.next_must_be(&Lex::RBracket)?;
@@ -609,16 +638,16 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
 
 pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
-    match stream.next_ifn(vec![Lex::Identifier("".into()), Lex::Colon]) {
+    match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
         Some(t) => {
             let line_id = t[0].l;
             let line_value = t[1].l;
             let id = t[0].s.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let ty = consume_type(stream)?.ok_or(format!(
-                "L{}: expected type after : in type declaration",
-                line_value
+            let ty = consume_type(stream)?.ok_or(CompilerError::new(
+                line_value,
+                ParserError::IdDeclExpectedType,
             ))?;
             Ok(Some(Expression::IdentifierDeclare(line_id, id, ty)))
         }

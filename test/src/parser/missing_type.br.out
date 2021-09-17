@@ -1,1 +1,1 @@
-Error: Parser: L4: Expected identifier declaration (`<id> : <type>`) after let
+Error: L4: Expected identifier declaration (`<id> : <type>`) after let

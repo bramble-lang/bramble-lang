@@ -2,15 +2,17 @@
 mod type_resolver_tests {
     use crate::{
         compiler::{
-            ast::*, lexer::tokens::Token, parser::parser,
-            semantics::semanticnode::SemanticContext, Lexer,
+            ast::*, lexer::tokens::Token, lexer::LexerError, parser::parser,
+            semantics::semanticnode::SemanticContext, CompilerDisplay, CompilerError, Lexer,
         },
         diagnostics::config::TracingConfig,
         project::manifest::Manifest,
+        StringTable,
     };
 
     use super::super::super::type_resolver::*;
-    use crate::result::Result;
+
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     #[test]
     pub fn test_identifiers() {
@@ -90,55 +92,61 @@ mod type_resolver_tests {
                     let k: i64 := false;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i64 but got bool"),
+                Err("L2: Bind expected i64 but got bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i32 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i32 but got i64"),
+                Err("L2: Bind expected i32 but got i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: i16 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i16 but got i64"),
+                Err("L2: Bind expected i16 but got i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: i8 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i8 but got i64"),
+                Err("L2: Bind expected i8 but got i64"),
             ),
             (
                 "fn main() -> u64 {
                     let k: u64 := 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected u64 but got i64"),
+                Err("L2: Bind expected u64 but got i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k;
                 }",
-                Err("Semantic: L3: Return expected bool but got i64"),
+                Err("L3: Return expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens)
+            let ast = parser::parse(test, &tokens)
                 .expect(&format!("{}", text))
                 .unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -156,7 +164,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -215,26 +223,31 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             println!("Test: {}", ln);
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
-                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+                Err(msg) => assert_eq!(result.err().unwrap().fmt(&table).unwrap(), msg),
             }
         }
     }
@@ -276,15 +289,21 @@ mod type_resolver_tests {
                     }
                 }",),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -317,25 +336,30 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("Semantic: L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "Expected Ok got {:?}", result),
-                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
     }
@@ -372,15 +396,21 @@ mod type_resolver_tests {
             test_id += 1;
             println!("Test: {}", test_id);
 
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse("test", &tokens).unwrap().unwrap();
+            let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -389,7 +419,9 @@ mod type_resolver_tests {
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
-                        let expected: Path = vec![CANONICAL_ROOT, "test", "test"].into();
+                        let expected: Path =
+                            vec![Element::CanonicalRoot, Element::Id(test), Element::Id(test)]
+                                .into();
                         assert_eq!(struct_name, &expected)
                     } else {
                         panic!("Not a struct expression")
@@ -418,32 +450,38 @@ mod type_resolver_tests {
                 "fn my_main() -> i32 {
                     return 0i32;
                 }",
-                Err("Semantic: L1: my_main must return an i64. It must be of type () -> i64"),
+                Err("L1: my_main must be a function of type () -> i64"),
             ),
             (
                 line!(),
                 "fn my_main(i: i32) -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: my_main must take no parameters. It must be of type () -> i64"),
+                Err("L1: my_main must take no parameters. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "co my_main() -> i64 {
                     return 0;
                 }",
-                Err("Semantic: L1: my_main must be a function of type () -> i64"),
+                Err("L1: my_main must be a function of type () -> i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -460,13 +498,18 @@ mod type_resolver_tests {
                     );
                 }
                 (Ok(_), Err(actual)) => {
-                    assert!(false, "L{}: Expected OK, got Err({})", line, actual);
+                    assert!(
+                        false,
+                        "L{}: Expected OK, got Err({})",
+                        line,
+                        actual.fmt(&table).unwrap()
+                    );
                 }
                 (Err(expected), Ok(_)) => {
                     assert!(false, "L{}: Expected Err({}), but got Ok", line, expected);
                 }
                 (Err(msg), Err(actual)) => {
-                    assert_eq!(actual, msg, "Test Case at L:{}", line);
+                    assert_eq!(actual.fmt(&table).unwrap(), msg, "Test Case at L:{}", line);
                 }
             }
         }
@@ -483,15 +526,22 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -503,7 +553,8 @@ mod type_resolver_tests {
                     ..
                 } = &params[0]
                 {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path =
+                        vec![Element::CanonicalRoot, Element::Id(main), Element::Id(test)].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -525,15 +576,22 @@ mod type_resolver_tests {
                 }
                 ",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -541,7 +599,8 @@ mod type_resolver_tests {
             .unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path =
+                        vec![Element::CanonicalRoot, Element::Id(main), Element::Id(test)].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -561,15 +620,22 @@ mod type_resolver_tests {
                 struct test2{t: test}
                 ",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let test = table.insert("test".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -578,7 +644,8 @@ mod type_resolver_tests {
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
-                    let expected: Path = vec![CANONICAL_ROOT, MAIN_MODULE, "test"].into();
+                    let expected: Path =
+                        vec![Element::CanonicalRoot, Element::Id(main), Element::Id(test)].into();
                     assert_eq!(ty_path, &expected)
                 } else {
                     panic!("Not a custom type")
@@ -702,7 +769,7 @@ mod type_resolver_tests {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2i32 + 3));
                     return k;
                 }",
-                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+                Err("L2: + expected i32 but found i32 and i64"),
             ),
             (
                 line!(),
@@ -710,7 +777,7 @@ mod type_resolver_tests {
                     let k: i32 := (1i32 + 5i32) * (3i32 - 4i32/(2 + 3));
                     return k;
                 }",
-                Err("Semantic: L2: / expected i32 but found i32 and i64"),
+                Err("L2: / expected i32 but found i32 and i64"),
             ),
             (
                 line!(),
@@ -718,7 +785,7 @@ mod type_resolver_tests {
                     let k: i64 := 1 + 5i32;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i64 but found i64 and i32"),
+                Err("L2: + expected i64 but found i64 and i32"),
             ),
             (
                 line!(),
@@ -726,7 +793,7 @@ mod type_resolver_tests {
                     let k: i64 := 1i32 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i32 but found i32 and i64"),
+                Err("L2: + expected i32 but found i32 and i64"),
             ),
             (
                 line!(),
@@ -734,7 +801,7 @@ mod type_resolver_tests {
                     let k: i64 := 1i8 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i8 but found i8 and i64"),
+                Err("L2: + expected i8 but found i8 and i64"),
             ),
             (
                 line!(),
@@ -742,7 +809,7 @@ mod type_resolver_tests {
                     let k: u64 := 1u64 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected u64 but found u64 and i64"), // TODO: Change this error message to specify the right operand is wrong
+                Err("L2: + expected u64 but found u64 and i64"), // TODO: Change this error message to specify the right operand is wrong
             ),
             (
                 line!(),
@@ -750,18 +817,24 @@ mod type_resolver_tests {
                     let k: i64 := 1i16 + 5i64;
                     return k;
                 }",
-                Err("Semantic: L2: + expected i16 but found i16 and i64"),
+                Err("L2: + expected i16 but found i16 and i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -806,7 +879,12 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg, "Test Case at L:{}", line);
+                    assert_eq!(
+                        module.unwrap_err().fmt(&table).unwrap(),
+                        msg,
+                        "Test Case at L:{}",
+                        line
+                    );
                 }
             }
         }
@@ -848,14 +926,14 @@ mod type_resolver_tests {
                     let k: bool := false;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i32 or i64 but found bool"), // TODO: Change this error message to include i8 and i16
+                Err("L3: - expected i32 or i64 but found bool"), // TODO: Change this error message to include i8 and i16
             ),
             (
                 "fn main() -> u64 {
                     let k: u64 := 5u64;
                     return -k;
                 }",
-                Err("Semantic: L3: - expected i32 or i64 but found u64"),
+                Err("L3: - expected i32 or i64 but found u64"),
             ),
             (
                 "fn main() -> bool {
@@ -869,18 +947,24 @@ mod type_resolver_tests {
                     let k: i64 := 5;
                     return !k;
                 }",
-                Err("Semantic: L3: ! expected bool but found i64"),
+                Err("L3: ! expected bool but found i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -898,7 +982,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -919,32 +1003,38 @@ mod type_resolver_tests {
                     let k: i64 := 1 + false;
                     return k + 3;
                 }",
-                Err("Semantic: L2: + expected i64 but found i64 and bool"),
+                Err("L2: + expected i64 but found i64 and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := \"hello\" + 5;
                     return k + 3;
                 }",
-                Err("Semantic: L2: + expected i64 but found string and i64"),
+                Err("L2: + expected i64 but found string and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := true;
                     return k + 3;
                 }",
-                Err("Semantic: L3: + expected i64 but found bool and i64"),
+                Err("L3: + expected i64 but found bool and i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -973,7 +1063,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -994,32 +1084,38 @@ mod type_resolver_tests {
                     let k: i64 := 1 * false;
                     return k * 3;
                 }",
-                Err("Semantic: L2: * expected i64 but found i64 and bool"),
+                Err("L2: * expected i64 but found i64 and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := \"hello\" * 5;
                     return k * 3;
                 }",
-                Err("Semantic: L2: * expected i64 but found string and i64"),
+                Err("L2: * expected i64 but found string and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := true;
                     return k * 3;
                 }",
-                Err("Semantic: L3: * expected i64 but found bool and i64"),
+                Err("L3: * expected i64 but found bool and i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1049,7 +1145,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1070,32 +1166,38 @@ mod type_resolver_tests {
                     let k: bool := true && 1;
                     return k && true;
                 }",
-                Err("Semantic: L2: && expected bool but found bool and i64"),
+                Err("L2: && expected bool but found bool and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := \"hello\" && false;
                     return k && true;
                 }",
-                Err("Semantic: L2: && expected bool but found string and bool"),
+                Err("L2: && expected bool but found string and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k && true;
                 }",
-                Err("Semantic: L3: && expected bool but found i64 and bool"),
+                Err("L3: && expected bool but found i64 and bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1125,7 +1227,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1146,32 +1248,38 @@ mod type_resolver_tests {
                     let k: bool := true || 1;
                     return k || true;
                 }",
-                Err("Semantic: L2: || expected bool but found bool and i64"),
+                Err("L2: || expected bool but found bool and i64"),
             ),
             (
                 "fn main() -> bool {
                     let k: bool := \"hello\" || false;
                     return k || true;
                 }",
-                Err("Semantic: L2: || expected bool but found string and bool"),
+                Err("L2: || expected bool but found string and bool"),
             ),
             (
                 "fn main() -> bool {
                     let k: i64 := 5;
                     return k || true;
                 }",
-                Err("Semantic: L3: || expected bool but found i64 and bool"),
+                Err("L3: || expected bool but found i64 and bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1201,7 +1309,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1229,10 +1337,7 @@ mod type_resolver_tests {
                         }}",
                         op
                     )),
-                    Err(format!(
-                        "Semantic: L2: {} expected i64 but found i64 and bool",
-                        op
-                    )),
+                    Err(format!("L2: {} expected i64 but found i64 and bool", op)),
                 ),
                 (
                     String::from(&format!(
@@ -1242,21 +1347,24 @@ mod type_resolver_tests {
                         }}",
                         op
                     )),
-                    Err(format!(
-                        "Semantic: L2: {} expected bool but found bool and i64",
-                        op
-                    )),
+                    Err(format!("L2: {} expected bool but found bool and i64", op)),
                 ),
             ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
+                let mut table = StringTable::new();
+                let main = table.insert("main".into());
+                let main_mod = table.insert(MAIN_MODULE.into());
+                let main_fn = table.insert("my_main".into());
+
+                let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                     .tokenize()
                     .into_iter()
-                    .collect::<Result<_>>()
+                    .collect::<LResult>()
                     .unwrap();
-                let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+                let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let module = resolve_types(
                     &ast,
-                    "my_main",
+                    main_mod,
+                    main_fn,
                     TracingConfig::Off,
                     TracingConfig::Off,
                     TracingConfig::Off,
@@ -1286,7 +1394,7 @@ mod type_resolver_tests {
                         }
                     }
                     Err(msg) => {
-                        assert_eq!(module.unwrap_err(), msg);
+                        assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                     }
                 }
             }
@@ -1303,15 +1411,21 @@ mod type_resolver_tests {
                 }}",
                 ty
             );
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1373,18 +1487,24 @@ mod type_resolver_tests {
                     let k: i16 := a[0];
                     return k * 3i16;
                 }",
-                Err("Semantic: L2: Bind expected [i16; 2] but got [i64; 2]"),
+                Err("L2: Bind expected [i16; 2] but got [i64; 2]"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1414,7 +1534,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1475,7 +1595,7 @@ mod type_resolver_tests {
                     let k: i64 := a[false];
                     return k * 3;
                 }",
-                Err("Semantic: L3: Expected integral type for index but found bool"),
+                Err("L3: Expected integral type for index but found bool"),
             ),
             (
                 line!(),
@@ -1484,19 +1604,25 @@ mod type_resolver_tests {
                     let k: i64 := a[0];
                     return k * 3;
                 }",
-                Err("Semantic: L3: Expected array type on LHS of [] but found i64"),
+                Err("L3: Expected array type on LHS of [] but found i64"),
             ),
         ] {
             println!("Test L{}", line);
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1526,7 +1652,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1589,7 +1715,7 @@ mod type_resolver_tests {
                     let k: [i64;5] := [1, 2, 3, 4, 5];
                     return k;
                 }",
-                Err("Semantic: L3: Return expected [i32; 5] but got [i64; 5]"),
+                Err("L3: Return expected [i32; 5] but got [i64; 5]"),
             ),
             (
                 line!(),
@@ -1597,7 +1723,7 @@ mod type_resolver_tests {
                     let k: [i64;0] := [];
                     return k;
                 }",
-                Err("Semantic: L1: Expected length > 0 for array, but found 0"),
+                Err("L1: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1606,7 +1732,7 @@ mod type_resolver_tests {
                     let k: [i64;1] := [1];
                     return k;
                 }",
-                Err("Semantic: L2: Arrays with 0 length are not allowed"),
+                Err("L2: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1614,7 +1740,7 @@ mod type_resolver_tests {
                     let k: [i32;5] := [1, 2, 3, 4, 5];
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected [i32; 5] but got [i64; 5]"),
+                Err("L2: Bind expected [i32; 5] but got [i64; 5]"),
             ),
             (
                 line!(),
@@ -1622,7 +1748,7 @@ mod type_resolver_tests {
                     let k: [i64;5] := [1, 2i32, 3, 4, 5];
                     return k;
                 }",
-                Err("Semantic: L2: Inconsistent types in array value"),
+                Err("L2: Inconsistent types in array value"),
             ),
             (
                 line!(),
@@ -1630,7 +1756,7 @@ mod type_resolver_tests {
                     let k: i32 := 5;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i32 but got i64"),
+                Err("L2: Bind expected i32 but got i64"),
             ),
             (
                 line!(),
@@ -1638,7 +1764,7 @@ mod type_resolver_tests {
                     let k: i64 := 5i32;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected i64 but got i32"),
+                Err("L2: Bind expected i64 but got i32"),
             ),
             (
                 line!(),
@@ -1646,7 +1772,7 @@ mod type_resolver_tests {
                     let k: bool := 5;
                     return k;
                 }",
-                Err("Semantic: L2: Bind expected bool but got i64"),
+                Err("L2: Bind expected bool but got i64"),
             ),
             (
                 line!(),
@@ -1654,7 +1780,7 @@ mod type_resolver_tests {
                     let k: i64 := 5;
                     return k;
                 }",
-                Err("Semantic: L3: Return expected bool but got i64"),
+                Err("L3: Return expected bool but got i64"),
             ),
             (
                 line!(),
@@ -1663,7 +1789,7 @@ mod type_resolver_tests {
                     let k: bool := k;
                     return k;
                 }",
-                Err("Semantic: L2: k is not defined"),
+                Err("L2: k is not defined"),
             ),
             (
                 line!(),
@@ -1671,19 +1797,25 @@ mod type_resolver_tests {
                     let k: bool := x;
                     return k;
                 }",
-                Err("Semantic: L2: x is not defined"),
+                Err("L2: x is not defined"),
             ),
         ] {
             println!("Test L{}", ln);
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1712,7 +1844,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1735,7 +1867,7 @@ mod type_resolver_tests {
                     mut k := false;
                     return k;
                 }",
-                Err("Semantic: L3: k is of type i64 but is assigned bool"),
+                Err("L3: k is of type i64 but is assigned bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -1743,7 +1875,7 @@ mod type_resolver_tests {
                     mut k := 3;
                     return k;
                 }",
-                Err("Semantic: L3: Variable k is not mutable"),
+                Err("L3: Variable k is not mutable"),
             ),
             (
                 "fn main() -> i64 {
@@ -1751,7 +1883,7 @@ mod type_resolver_tests {
                     mut k := false;
                     return k;
                 }",
-                Err("Semantic: L3: Variable k is not mutable"),
+                Err("L3: Variable k is not mutable"),
             ),
             (
                 "fn main() -> i64 {
@@ -1759,18 +1891,24 @@ mod type_resolver_tests {
                     mut x := false;
                     return k;
                 }",
-                Err("Semantic: L3: x is not defined"),
+                Err("L3: x is not defined"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1800,7 +1938,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1837,24 +1975,30 @@ mod type_resolver_tests {
                 "fn main() -> bool {
                     return 5;
                 }",
-                Err("Semantic: L2: Return expected bool but got i64"),
+                Err("L2: Return expected bool but got i64"),
             ),
             (
                 "fn main() {
                     return 5;
                 }",
-                Err("Semantic: L2: Return expected unit but got i64"),
+                Err("L2: Return expected unit but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1879,7 +2023,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -1922,7 +2066,7 @@ mod type_resolver_tests {
                     return number(5i32, 10, 15i32, 8u8, \"hello\");
                 }
                 ",
-                Err("Semantic: L4: One or more parameters have mismatching types for function $main::number: parameter 1 expected i64 but got i32"),
+                Err("L4: One or more parameters have mismatching types for function $main::number: parameter 1 expected i64 but got i32"),
             ),
             (
                 "
@@ -1931,7 +2075,7 @@ mod type_resolver_tests {
                     return number();
                 }
                 ",
-                Err("Semantic: L4: Function $main::number expects at least 1 parameters, but got 0"),
+                Err("L4: Function $main::number expects at least 1 parameters, but got 0"),
             ),
             (
                 "
@@ -1940,7 +2084,7 @@ mod type_resolver_tests {
                     return number(5);
                 }
                 ",
-                Err("Semantic: L4: Function $main::number expects at least 2 parameters, but got 1"),
+                Err("L4: Function $main::number expects at least 2 parameters, but got 1"),
             ),
             (
                 "fn main() -> bool {
@@ -1948,18 +2092,23 @@ mod type_resolver_tests {
                 }
                 extern fn number() -> i64;
                 ",
-                Err("Semantic: L2: Return expected bool but got i64"),
+                Err("L2: Return expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1985,7 +2134,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2025,7 +2174,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i32 {return 5;}
                 ",
-                Err("Semantic: L4: Return expected i32 but got i64"),
+                Err("L4: Return expected i32 but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -2033,7 +2182,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: Return expected bool but got i64"),
+                Err("L2: Return expected bool but got i64"),
             ),
             (
                 "fn main() -> bool {
@@ -2041,7 +2190,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: bad_fun is not defined"),
+                Err("L2: bad_fun is not defined"),
             ),
             (
                 "fn main() -> i64 {
@@ -2065,7 +2214,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i32 but got i64"),
+                Err("L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i32 but got i64"),
             ),
             (
                 "fn main() -> i64 {
@@ -2073,7 +2222,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i32, b: i32) -> i32 {return a + b;}
                 ",
-                Err("Semantic: L2: Return expected i64 but got i32"),
+                Err("L2: Return expected i64 but got i32"),
             ),
             (
                 "fn main() -> i64 {
@@ -2081,7 +2230,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i64 but got bool"),
+                Err("L2: One or more parameters have mismatching types for function $main::add: parameter 1 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2089,7 +2238,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::add: parameter 2 expected i64 but got bool"),
+                Err("L2: One or more parameters have mismatching types for function $main::add: parameter 2 expected i64 but got bool"),
             ),
             (
                 "fn main() -> i64 {
@@ -2097,7 +2246,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
             (
                 "fn main() -> i64 {
@@ -2105,7 +2254,7 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 3"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 3"),
             ),
             (
                 "fn main() -> i64 {
@@ -2113,20 +2262,25 @@ mod type_resolver_tests {
                 }
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main,&tokens).unwrap().unwrap();
             let module = resolve_types(
-                &ast, 
-                "my_main", 
+                &ast,
+                main_mod, main_fn,
                 TracingConfig::Off,
-                TracingConfig::Off, 
+                TracingConfig::Off,
                 TracingConfig::Off,
             );
             match expected {
@@ -2145,7 +2299,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2170,7 +2324,7 @@ mod type_resolver_tests {
                 }
                 co number() -> i64 {return 5;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 0 but got 1"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::number. Expected 0 but got 1"),
             ),
             (
                 "fn main() {
@@ -2188,7 +2342,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 0"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 0"),
             ),
             (
                 "fn main() {
@@ -2197,7 +2351,7 @@ mod type_resolver_tests {
                 }
                 co number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 2"),
+                Err("L2: Incorrect number of parameters passed to routine: $main::number. Expected 1 but got 2"),
             ),
             (
                 "fn main() {
@@ -2206,7 +2360,7 @@ mod type_resolver_tests {
                 }
                 fn number(i: i64) -> i64 {return i;}
                 ",
-                Err("Semantic: L2: Expected coroutine but $main::number is a fn (i64) -> i64"),
+                Err("L2: Expected coroutine but $main::number is a fn (i64) -> i64"),
             ),
             (
                 "fn main() {
@@ -2224,18 +2378,23 @@ mod type_resolver_tests {
                 }
                 co number(i: i32) -> i32 {return i;}
                 ",
-                Err("Semantic: L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
+                Err("L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
-                &ast, 
-                "my_main", 
+                &ast,
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off
@@ -2256,7 +2415,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2289,7 +2448,7 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected i64 but got bool"),
+                Err("L6: Yield return expected i64 but got bool"),
             ),
             (
                 line!(),
@@ -2302,7 +2461,7 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected i64 but got unit"),
+                Err("L6: Yield return expected i64 but got unit"),
             ),
             /*
                 Need to add a symbol for the unit type
@@ -2317,19 +2476,25 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L6: Yield return expected unit but got i64"),
+                Err("L6: Yield return expected unit but got i64"),
             ),*/
         ] {
             println!("Test L{}", line);
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2353,7 +2518,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2386,7 +2551,7 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L3: Yield expects co<_> but got bool"),
+                Err("L3: Yield expects co<_> but got bool"),
             ),
             (
                 "fn main() {
@@ -2399,18 +2564,24 @@ mod type_resolver_tests {
                     return 5;
                 }
                 ",
-                Err("Semantic: L3: Bind expected bool but got i64"),
+                Err("L3: Bind expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2431,7 +2602,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2452,32 +2623,38 @@ mod type_resolver_tests {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got bool"),
+                Err("L2: Return expected i64 but got bool"),
             ),
             (
                 "fn main(b: bool) -> i64 {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got unit"),
+                Err("L2: Return expected i64 but got unit"),
             ),
             (
                 "fn main(b: bool) {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected unit but got bool"),
+                Err("L2: Return expected unit but got bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2502,7 +2679,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2523,32 +2700,38 @@ mod type_resolver_tests {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got bool"),
+                Err("L2: Return expected i64 but got bool"),
             ),
             (
                 "co main(b: bool) -> i64 {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Return expected i64 but got unit"),
+                Err("L2: Return expected i64 but got unit"),
             ),
             (
                 "co main(b: bool) {
                     return b;
                 }
                 ",
-                Err("Semantic: L2: Return expected unit but got bool"),
+                Err("L2: Return expected unit but got bool"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2573,7 +2756,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2596,7 +2779,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Expected boolean expression in if conditional, got: i64"),
+                Err("L2: Expected boolean expression in if conditional, got: i64"),
             ),
             (
                 "fn main() {
@@ -2604,7 +2787,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected bool got i64"),
+                Err("L2: If expression has mismatching arms: expected bool got i64"),
             ),
             (
                 "fn main() {
@@ -2612,7 +2795,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected i64 got string"),
+                Err("L2: If expression has mismatching arms: expected i64 got string"),
             ),
             (
                 "fn main() {
@@ -2620,7 +2803,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: Bind expected i64 but got string"),
+                Err("L2: Bind expected i64 but got string"),
             ),
             (
                 "fn main() {
@@ -2628,7 +2811,7 @@ mod type_resolver_tests {
                     return;
                 }
                 ",
-                Err("Semantic: L2: If expression has mismatching arms: expected i64 got unit"),
+                Err("L2: If expression has mismatching arms: expected i64 got unit"),
             ),
             (
                 "fn main() {
@@ -2639,15 +2822,21 @@ mod type_resolver_tests {
                 Ok(Type::Unit),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2671,7 +2860,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2697,30 +2886,35 @@ mod type_resolver_tests {
             ),
             (
                 "fn main() {
-                    while (5) {1;};
-                    return;
-                }
-                ",
-                Err("Semantic: L2: The condition of a while expression must resolve to a unit type, but got: i64"),
-            ),
-            (
-                "fn main() {
                     while (true) {1};
                     return;
                 }
                 ",
-                Err("Semantic: L2: The body of a while expression must resolve to a unit type, but got: i64"),
+                Err("L2: The body of a while expression must resolve to the unit type, but got: i64"),
+            ),
+            (
+                "fn main() {
+                    while (5) {1;};
+                    return;
+                }
+                ",
+                Err("L2: The condition of a while expression must resolve to the bool type, but got: i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
-                "my_main",
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -2744,7 +2938,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
                 }
             }
         }
@@ -2894,6 +3088,11 @@ mod type_resolver_tests {
             ),
             (
                 line!(),
+                "struct MyStruct{x:co i64} fn test(c: co i64) -> MyStruct {return MyStruct{x: c};}",
+                Ok(()),
+            ),
+            (
+                line!(),
                 "struct MyStruct{x:i64}
                 struct MyStruct2{ms: MyStruct}
                 fn test2(ms2: MyStruct2) -> i64 {return ms2.ms.x;}
@@ -2903,7 +3102,7 @@ mod type_resolver_tests {
                     let y: i64 := test2(x);
                     return y;
                 }",
-                Err("Semantic: L7: One or more parameters have mismatching types for function $main::test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
+                Err("L7: One or more parameters have mismatching types for function $main::test2: parameter 1 expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
@@ -2914,46 +3113,46 @@ mod type_resolver_tests {
                     let x: root::MyStruct2 := self::MyStruct{x: 1};
                     return x;
                 }",
-                Err("Semantic: L5: Bind expected $main::MyStruct2 but got $main::MyStruct"),
+                Err("L5: Bind expected $main::MyStruct2 but got $main::MyStruct"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:false};}",
-                Err("Semantic: L1: $main::MyStruct.x expects i64 but got bool"),
+                Err("L1: $main::MyStruct.x expects i64 but got bool"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{};}",
-                Err("Semantic: L1: expected 1 parameters but found 0"),
+                Err("L1: Struct expected 1 parameters but found 0"),
             ),
             (
                 line!(),
                 "struct MyStruct{x:i64} fn test() -> i64 {return MyStruct{x:5};}",
-                Err("Semantic: L1: Return expected i64 but got $main::MyStruct"),
-            ),
-            (
-                line!(),
-                "struct MyStruct{x:co i64} fn test(c: co i64) -> MyStruct {return MyStruct{x: c};}",
-                Ok(()),
+                Err("L1: Return expected i64 but got $main::MyStruct"),
             ),
         ] {
             println!("L{}", line);
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
-                &ast, 
-                "my_main", 
+                &ast,
+                main_mod, main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off, 
+                TracingConfig::Off,
             );
             match expected {
-                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}", line, text, result)},
-                Err(msg) => assert_eq!(result.err().unwrap(), msg),
+                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\nST: {:?}", line, text, result, table)},
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
     }
@@ -2966,34 +3165,39 @@ mod type_resolver_tests {
                     return ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
-                Err("Semantic: L1: $main::MyStruct does not have member y")),
+                Err("L1: $main::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
-                Err("Semantic: L1: Return expected bool but got i64")),
+                Err("L1: Return expected bool but got i64")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.y;}",
-                Err("Semantic: L1: $main::MyStruct does not have member y")),
+                Err("L1: $main::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
-                Err("Semantic: L1: Return expected bool but got i64")),
+                Err("L1: Return expected bool but got i64")),
             ] {
-                let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                     .tokenize()
                     .into_iter()
-                    .collect::<Result<_>>()
+                    .collect::<LResult>()
                     .unwrap();
-                let ast = parser::parse(MAIN_MODULE,&tokens).unwrap().unwrap();
+                let ast = parser::parse(main, &tokens).unwrap().unwrap();
                 let result = resolve_types(
-                    &ast, 
-                    "my_main", 
+                    &ast,
+                    main_mod, main_fn,
                     TracingConfig::Off,
                     TracingConfig::Off,
-                    TracingConfig::Off, 
+                    TracingConfig::Off,
                 );
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
-                    Err(msg) => assert_eq!(result.err().unwrap(), msg),
+                    Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
                 }
             }
     }
@@ -3053,7 +3257,7 @@ mod type_resolver_tests {
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Could not find item with the given path: $std::test2 ($std::test2)"),
+                Err("L3: Could not find item with the given path: $std::test2 ($std::test2)"),
             ),
             (
                 line!(),
@@ -3064,7 +3268,7 @@ mod type_resolver_tests {
                 }
                 ",
                 (vec![], (Type::I64)),
-                Err("Semantic: L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
+                Err("L3: Incorrect number of parameters passed to routine: $std::test. Expected 0 but got 1"),
             ),
             (
                 line!(),
@@ -3075,37 +3279,45 @@ mod type_resolver_tests {
                 }
                 ",
                 (vec![Type::I64, Type::Bool], (Type::I64)),
-                Err("Semantic: L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
+                Err("L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let std = table.insert("std".into());
+            let test = table.insert("test".into());
+            let a = table.insert("a".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse("std",&tokens).unwrap().unwrap();
+            let ast = parser::parse(std, &tokens).unwrap().unwrap();
 
             let mut import_context = SemanticContext::new(0, 0, Type::Unit);
-            import_context.set_canonical_path(vec![CANONICAL_ROOT, "std", "test"].into());
-            let imports = Manifest::new(&vec![RoutineDef{
+            import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
+            let manifest = Manifest::new(&table, &vec![RoutineDef{
                 context: import_context,
                 def: RoutineDefType::Function,
-                name: "test".into(),
+                name: test,
                 ret_ty: import_func.1.clone(),
-                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), "a", p)).collect(),
+                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), a, p)).collect(),
                 body: vec![],
-            }], &vec![]);
+            }], &vec![]).unwrap();
+            let imports = manifest.to_import(&mut table).unwrap();
             let result = resolve_types_with_imports(
-                &ast, 
-                "my_main", 
-                &vec![imports], 
+                &ast,
+                main_mod, main_fn,
+                &vec![imports],
                 TracingConfig::Off,
                 TracingConfig::Off,
-                TracingConfig::Off, 
+                TracingConfig::Off,
             );
             match expected {
-                Ok(_) => assert!(result.is_ok(), "L{}: {:?} got {:?}", line, expected, result),
-                Err(msg) => assert_eq!(result.err(), Some(msg.into())),
+                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.fmt(&table))),
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
     }

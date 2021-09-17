@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use crate::StringId;
 
 use super::{
     node::{
@@ -7,10 +7,10 @@ use super::{
     ty::Type,
 };
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Parameter<M> {
     pub context: M,
-    pub name: String,
+    pub name: StringId,
     pub ty: Type,
 }
 
@@ -31,8 +31,8 @@ impl<M: Context> Node<M> for Parameter<M> {
         vec![]
     }
 
-    fn name(&self) -> Option<&str> {
-        Some(&self.name)
+    fn name(&self) -> Option<StringId> {
+        Some(self.name)
     }
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
@@ -45,10 +45,10 @@ impl<M: Context> Node<M> for Parameter<M> {
 }
 
 impl<M> Parameter<M> {
-    pub fn new(a: M, name: &str, ty: &Type) -> Parameter<M> {
+    pub fn new(a: M, name: StringId, ty: &Type) -> Parameter<M> {
         Parameter {
             context: a,
-            name: name.into(),
+            name,
             ty: ty.clone(),
         }
     }

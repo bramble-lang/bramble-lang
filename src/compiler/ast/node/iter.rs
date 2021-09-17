@@ -111,14 +111,18 @@ where
 #[cfg(test)]
 mod test_preorder {
     use super::*;
-    use crate::compiler::ast::{
-        expression::{self, Expression, UnaryOperator},
-        module::Module,
-        parameter::Parameter,
-        routinedef::RoutineDef,
-        statement::{Bind, Statement, YieldReturn},
-        structdef::StructDef,
-        ty::Type,
+    use crate::{
+        compiler::ast::{
+            expression::{self, Expression, UnaryOperator},
+            module::Module,
+            parameter::Parameter,
+            routinedef::RoutineDef,
+            statement::{Bind, Statement, YieldReturn},
+            structdef::StructDef,
+            ty::Type,
+            Element,
+        },
+        StringId, StringTable,
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
@@ -128,7 +132,10 @@ mod test_preorder {
 
     #[test]
     fn empty_module() {
-        let module1 = Module::new("m", 1i32);
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+
+        let module1 = Module::new(m, 1i32);
 
         let expected = vec![1];
         let mut iter = module1.iter_preorder();
@@ -140,8 +147,12 @@ mod test_preorder {
 
     #[test]
     fn nested_module() {
-        let mut module1 = Module::new("m", 1i32);
-        module1.add_module(Module::new("m2", 2i32));
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+        let m2 = table.insert("m2".into());
+
+        let mut module1 = Module::new(m, 1i32);
+        module1.add_module(Module::new(m2, 2i32));
 
         let expected = vec![1, 2];
         let mut iter = module1.iter_preorder();
@@ -153,9 +164,17 @@ mod test_preorder {
 
     #[test]
     fn module_with_items() {
-        let mut m = Module::new("m", 1);
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+        let m2 = table.insert("m2".into());
+        let p = table.insert("p".into());
+        let func = table.insert("func".into());
+        let cor = table.insert("cor".into());
+        let sd = table.insert("sd".into());
+
+        let mut m = Module::new(m, 1);
         m.add_coroutine(RoutineDef::new_coroutine(
-            "cor",
+            cor,
             2,
             vec![],
             Type::Unit,
@@ -163,19 +182,19 @@ mod test_preorder {
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
-            "func",
+            func,
             4,
             vec![Parameter {
                 context: 5,
-                name: "p".into(),
+                name: p,
                 ty: Type::Bool,
             }],
             Type::Unit,
             vec![Statement::Expression(box Expression::I64(6, 2))],
         ))
         .unwrap();
-        m.add_module(Module::new("m2", 7));
-        m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
+        m.add_module(Module::new(m2, 7));
+        m.add_struct(StructDef::new(sd, 8, vec![])).unwrap();
 
         let expected = vec![1, 7, 4, 5, 6, 2, 3, 8];
         let test: Vec<i64> = m.iter_preorder().map(|n| *n.get_context()).collect();
@@ -184,10 +203,18 @@ mod test_preorder {
 
     #[test]
     fn function() {
-        let mut f = RoutineDef::new_function("func", 1, vec![], Type::Unit, vec![]);
+        let mut table = StringTable::new();
+        let p = table.insert("p".into());
+        let x = table.insert("x".into());
+        let y = table.insert("y".into());
+        let c = table.insert("c".into());
+        let func = table.insert("func".into());
+        let test = table.insert("test".into());
+
+        let mut f = RoutineDef::new_function(func, 1, vec![], Type::Unit, vec![]);
         f.body.push(Statement::Bind(box Bind::new(
             2,
-            "x",
+            x,
             Type::I32,
             false,
             Expression::If {
@@ -198,8 +225,8 @@ mod test_preorder {
                     box Expression::I64(5, 1),
                     box Expression::I64(6, 1),
                 ),
-                if_arm: box Expression::Identifier(7, "y".into()),
-                else_arm: Some(box Expression::StringLiteral(8, "h".into())),
+                if_arm: box Expression::Identifier(7, y),
+                else_arm: Some(box Expression::StringLiteral(8, StringId::new())),
             },
         )));
         f.body.push(Statement::YieldReturn(box YieldReturn::new(
@@ -211,13 +238,13 @@ mod test_preorder {
                     11,
                     vec![Statement::Expression(box Expression::Yield(
                         12,
-                        box Expression::Identifier(13, "c".into()),
+                        box Expression::Identifier(13, c),
                     ))],
                     Some(box Expression::RoutineCall(
                         14,
                         expression::RoutineCall::Function,
-                        vec!["test"].into(),
-                        vec![Expression::Identifier(15, "p".into())],
+                        vec![Element::Id(test)].into(),
+                        vec![Expression::Identifier(15, p)],
                     )),
                 ),
             )),
@@ -232,15 +259,18 @@ mod test_preorder {
 #[cfg(test)]
 mod test_postorder {
     use super::*;
-    use crate::compiler::ast::{
-        expression::{Expression, UnaryOperator},
-        module::Module,
-        parameter::Parameter,
-        routinedef::RoutineDef,
-        statement::{Bind, Statement, YieldReturn},
-        structdef::StructDef,
-        ty::Type,
-        BinaryOperator, RoutineCall,
+    use crate::{
+        compiler::ast::{
+            expression::Expression,
+            module::Module,
+            parameter::Parameter,
+            routinedef::RoutineDef,
+            statement::{Bind, Statement},
+            structdef::StructDef,
+            ty::Type,
+            BinaryOperator, Element, RoutineCall, UnaryOperator, YieldReturn,
+        },
+        StringId, StringTable,
     };
 
     fn convert(n: &dyn Node<i32>) -> i64 {
@@ -250,7 +280,10 @@ mod test_postorder {
 
     #[test]
     fn empty_module() {
-        let module1 = Module::new("m", 1i32);
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+
+        let module1 = Module::new(m, 1i32);
 
         let expected = vec![1];
         let mut iter = module1.iter_postorder();
@@ -262,8 +295,12 @@ mod test_postorder {
 
     #[test]
     fn nested_module() {
-        let mut module1 = Module::new("m", 1i32);
-        module1.add_module(Module::new("m2", 2i32));
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+        let m2 = table.insert("m2".into());
+
+        let mut module1 = Module::new(m, 1i32);
+        module1.add_module(Module::new(m2, 2i32));
 
         let expected = vec![2, 1];
         let mut iter = module1.iter_postorder();
@@ -275,9 +312,17 @@ mod test_postorder {
 
     #[test]
     fn module_with_items() {
-        let mut m = Module::new("m", 1);
+        let mut table = StringTable::new();
+        let m = table.insert("m".into());
+        let m2 = table.insert("m2".into());
+        let p = table.insert("p".into());
+        let func = table.insert("func".into());
+        let cor = table.insert("cor".into());
+        let sd = table.insert("sd".into());
+
+        let mut m = Module::new(m, 1);
         m.add_coroutine(RoutineDef::new_coroutine(
-            "cor",
+            cor,
             2,
             vec![],
             Type::Unit,
@@ -285,19 +330,19 @@ mod test_postorder {
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
-            "func",
+            func,
             4,
             vec![Parameter {
                 context: 5,
-                name: "p".into(),
+                name: p,
                 ty: Type::Bool,
             }],
             Type::Unit,
             vec![Statement::Expression(box Expression::I64(6, 2))],
         ))
         .unwrap();
-        m.add_module(Module::new("m2", 7));
-        m.add_struct(StructDef::new("sd", 8, vec![])).unwrap();
+        m.add_module(Module::new(m2, 7));
+        m.add_struct(StructDef::new(sd, 8, vec![])).unwrap();
 
         let expected = vec![7, 5, 6, 4, 3, 2, 8, 1];
         let test: Vec<i64> = m.iter_postorder().map(|n| *n.get_context()).collect();
@@ -306,10 +351,15 @@ mod test_postorder {
 
     #[test]
     fn function() {
-        let mut f = RoutineDef::new_function("func", 1, vec![], Type::Unit, vec![]);
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let y = table.insert("y".into());
+        let func = table.insert("func".into());
+
+        let mut f = RoutineDef::new_function(func, 1, vec![], Type::Unit, vec![]);
         f.body.push(Statement::Bind(box Bind::new(
             2,
-            "x",
+            x,
             Type::I32,
             false,
             Expression::If {
@@ -320,10 +370,11 @@ mod test_postorder {
                     box Expression::I64(5, 1),
                     box Expression::I64(6, 1),
                 ),
-                if_arm: box Expression::Identifier(7, "y".into()),
-                else_arm: Some(box Expression::StringLiteral(8, "h".into())),
+                if_arm: box Expression::Identifier(7, y),
+                else_arm: Some(box Expression::StringLiteral(8, StringId::new())),
             },
         )));
+
         f.body.push(Statement::YieldReturn(box YieldReturn::new(
             9,
             Some(Expression::UnaryOp(
@@ -333,13 +384,13 @@ mod test_postorder {
                     11,
                     vec![Statement::Expression(box Expression::Yield(
                         12,
-                        box Expression::Identifier(13, "c".into()),
+                        box Expression::Identifier(13, x),
                     ))],
                     Some(box Expression::RoutineCall(
                         14,
                         RoutineCall::Function,
-                        vec!["test"].into(),
-                        vec![Expression::Identifier(15, "p".into())],
+                        vec![Element::Id(func)].into(),
+                        vec![Expression::Identifier(15, y)],
                     )),
                 ),
             )),

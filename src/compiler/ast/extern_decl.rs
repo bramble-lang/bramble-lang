@@ -1,3 +1,5 @@
+use crate::StringId;
+
 use super::{
     node::{
         Context, Node, NodeType, {PostOrderIter, PreOrderIter},
@@ -11,7 +13,7 @@ pub type HasVarArgs = bool;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Extern<M> {
     pub context: M,
-    pub name: String,
+    pub name: StringId,
     pub params: Vec<Parameter<M>>,
     pub has_varargs: HasVarArgs,
     pub ty: Type,
@@ -34,8 +36,8 @@ impl<M: Context> Node<M> for Extern<M> {
         vec![]
     }
 
-    fn name(&self) -> Option<&str> {
-        Some(&self.name)
+    fn name(&self) -> Option<StringId> {
+        Some(self.name)
     }
 
     fn iter_postorder(&self) -> PostOrderIter<M> {
@@ -49,13 +51,13 @@ impl<M: Context> Node<M> for Extern<M> {
 
 impl<M> std::fmt::Display for Extern<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        f.write_str(&self.name)
+        f.write_fmt(format_args!("{}", self.name))
     }
 }
 
 impl<M> Extern<M> {
     pub fn new(
-        name: &str,
+        name: StringId,
         context: M,
         params: Vec<Parameter<M>>,
         has_varargs: bool,
@@ -63,15 +65,15 @@ impl<M> Extern<M> {
     ) -> Extern<M> {
         Extern {
             context,
-            name: name.into(),
+            name,
             params,
             has_varargs,
             ty,
         }
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> StringId {
+        self.name
     }
 
     pub fn get_params(&self) -> &Vec<Parameter<M>> {

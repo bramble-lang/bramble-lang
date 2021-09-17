@@ -1,8 +1,11 @@
-use serde::{Deserialize, Serialize};
+use crate::{
+    compiler::{CompilerDisplay, CompilerDisplayError},
+    StringId, StringTable,
+};
 
 use super::{path::Path, HasVarArgs};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     U8,
     U16,
@@ -17,7 +20,7 @@ pub enum Type {
     Array(Box<Type>, usize),
     Unit,
     Custom(Path),
-    StructDef(Vec<(String, Type)>),
+    StructDef(Vec<(StringId, Type)>),
     FunctionDef(Vec<Type>, Box<Type>),
     CoroutineDef(Vec<Type>, Box<Type>),
     Coroutine(Box<Type>),
@@ -32,16 +35,16 @@ impl Type {
             _ => None,
         }
     }
-    pub fn get_members(&self) -> Option<&Vec<(String, Type)>> {
+    pub fn get_members(&self) -> Option<&Vec<(StringId, Type)>> {
         match self {
             Type::StructDef(members) => Some(members),
             _ => None,
         }
     }
 
-    pub fn get_member(&self, member: &str) -> Option<&Type> {
+    pub fn get_member(&self, member: StringId) -> Option<&Type> {
         self.get_members()
-            .map(|ms| ms.iter().find(|(n, _)| n == member).map(|m| &m.1))
+            .map(|ms| ms.iter().find(|(n, _)| *n == member).map(|m| &m.1))
             .flatten()
     }
 
@@ -121,6 +124,58 @@ impl PartialEq<Type> for &Type {
 impl PartialEq<&Type> for Type {
     fn eq(&self, other: &&Type) -> bool {
         self == *other
+    }
+}
+
+impl CompilerDisplay for Type {
+    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
+        match self {
+            Type::Custom(path) => path.fmt(st),
+            Type::Coroutine(ty) => Ok(format!("co<{}>", ty.fmt(st)?)),
+            Type::Array(ty, sz) => Ok(format!("[{}; {}]", ty.fmt(st)?, sz)),
+            Type::ExternDecl(params, has_varargs, ret_ty) => {
+                let mut params = params
+                    .iter()
+                    .map(|p| p.fmt(st))
+                    .collect::<Result<Vec<String>, _>>()?
+                    .join(",");
+                if *has_varargs {
+                    params += ", ...";
+                }
+                Ok(format!("extern fn ({}) -> {}", params, ret_ty))
+            }
+            Type::StructDef(fields) => {
+                let fields = fields
+                    .iter()
+                    .map(|(sid, f)| {
+                        st.get(*sid)
+                            .map_err(|e| e.into())
+                            .and_then(|fname| f.fmt(st).map(|fs| format!("{}: {}", fname, fs)))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?
+                    .join(",");
+                Ok(format!("StructDef({})", fields))
+            }
+            Type::FunctionDef(params, ret_ty) => {
+                let params = params
+                    .iter()
+                    .map(|p| p.fmt(st))
+                    .collect::<Result<Vec<String>, _>>()?
+                    .join(",");
+
+                Ok(format!("fn ({}) -> {}", params, ret_ty))
+            }
+            Type::CoroutineDef(params, ret_ty) => {
+                let params = params
+                    .iter()
+                    .map(|p| p.fmt(st))
+                    .collect::<Result<Vec<String>, _>>()?
+                    .join(",");
+
+                Ok(format!("co ({}) -> {}", params, ret_ty))
+            }
+            _ => Ok(format!("{}", self)),
+        }
     }
 }
 

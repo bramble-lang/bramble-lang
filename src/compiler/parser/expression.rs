@@ -1,17 +1,22 @@
-use super::parser::{ENABLE_TRACING, TRACE_END, TRACE_START};
+use super::{
+    parser::{ENABLE_TRACING, TRACE_END, TRACE_START},
+    ParserResult,
+};
 use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use super::{
-    parser::{block, path, routine_call_params, ParserContext, ParserResult},
+    parser::{block, path, routine_call_params, ParserContext},
     tokenstream::TokenStream,
+    ParserError,
 };
 use crate::{
     compiler::{
         ast::*,
         lexer::tokens::{Lex, Token},
+        CompilerError,
     },
-    trace,
+    trace, StringId,
 };
 
 impl ParserCombinator<ParserResult<Expression<ParserContext>>>
@@ -65,7 +70,7 @@ impl Expression<ParserContext> {
         line: u32,
         coroutine_value: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
-        let i = line; //ParserInfo{l: line};
+        let i = line;
         Ok(Some(Expression::Yield(i, coroutine_value)))
     }
 
@@ -81,7 +86,9 @@ impl Expression<ParserContext> {
                 operand,
             ))),
             Lex::Not => Ok(Some(Expression::UnaryOp(line, UnaryOperator::Not, operand))),
-            _ => Err(format!("L{}: {} is not a unary operator", line, op)),
+            _ => {
+                err!(line, ParserError::NotAUnaryOp(op.clone()))
+            }
         }
     }
 
@@ -165,7 +172,9 @@ impl Expression<ParserContext> {
                 left,
                 right,
             ))),
-            _ => Err(format!("L{}: {} is not a binary operator", line, op)),
+            _ => {
+                err!(line, ParserError::NotABinaryOp(op.clone()))
+            }
         }
     }
 }
@@ -228,8 +237,10 @@ pub fn binary_op(
     match left_pattern(stream)? {
         Some(left) => match stream.next_if_one_of(test.clone()) {
             Some(op) => {
-                let right = binary_op(stream, test, left_pattern)?
-                    .ok_or(format!("L{}: expected expression after {}", op.l, op.s))?;
+                let right = binary_op(stream, test, left_pattern)?.ok_or(CompilerError::new(
+                    op.l,
+                    ParserError::ExpectedExprAfter(op.s.clone()),
+                ))?;
                 Expression::binary_op(op.l, &op.s, Box::new(left), Box::new(right))
             }
             None => Ok(Some(left)),
@@ -242,8 +253,10 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
-            let factor =
-                negate(stream)?.ok_or(&format!("L{}: expected term after {}", op.l, op.s))?;
+            let factor = negate(stream)?.ok_or(CompilerError::new(
+                op.l,
+                ParserError::ExpectedTermAfter(op.s.clone()),
+            ))?;
             Expression::unary_op(op.l, &op.s, Box::new(factor))
         }
         None => member_access(stream),
@@ -260,15 +273,12 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                     Lex::MemberAccess => stream
                         .next_if_id()
                         .map(|(_, member)| Expression::MemberAccess(token.l, Box::new(ma), member))
-                        .ok_or(format!(
-                            "L{}: expect field name after member access '.'",
-                            token.l
+                        .ok_or(CompilerError::new(
+                            token.l,
+                            ParserError::MemberAccessExpectedField,
                         ))?,
                     Lex::LBracket => expression(stream)?
-                        .ok_or(format!(
-                            "L{}: Index operator must contain valid expression",
-                            token.l
-                        ))
+                        .ok_or(CompilerError::new(token.l, ParserError::IndexOpInvalidExpr))
                         .map(|index| {
                             stream
                                 .next_must_be(&Lex::RBracket)
@@ -279,10 +289,13 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                                 })
                         })??,
                     _ => {
-                        return Err(format!(
-                            "L{}: Expected [ or . but found {}",
-                            token.l, token.s
-                        ))
+                        return err!(
+                            token.l,
+                            ParserError::ExpectedButFound(
+                                vec![Lex::LBracket, Lex::MemberAccess],
+                                Some(token.s.clone())
+                            )
+                        )
                     }
                 };
             }
@@ -298,6 +311,7 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     match stream.peek() {
         Some(Token {
             l: _,
+            c: _,
             s: Lex::LParen,
         }) => {
             stream.next();
@@ -320,31 +334,35 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
     Ok(match stream.next_if(&Lex::If) {
         Some(token) => {
             stream.next_must_be(&Lex::LParen)?;
-            let cond = expression(stream)?.ok_or(format!(
-                "L{}: Expected conditional expression after if",
-                token.l
+            let cond = expression(stream)?.ok_or(CompilerError::new(
+                token.l,
+                ParserError::IfExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
-            let if_arm = expression_block(stream)?.ok_or(format!(
-                "L{}: Expression in true arm of if expression",
-                token.l
+            let if_arm = expression_block(stream)?.ok_or(CompilerError::new(
+                token.l,
+                ParserError::IfTrueArmMissingExpr,
             ))?;
 
             // check for `else if`
             let else_arm = match stream.next_if(&Lex::Else) {
                 Some(_) => match stream.peek() {
-                    Some(Token { l, s: Lex::If }) => {
+                    Some(Token {
+                        l,
+                        c: _,
+                        s: Lex::If,
+                    }) => {
                         let l = *l;
                         Some(
                             if_expression(stream)?
-                                .ok_or(format!("L{}: Expected if expression after else if", l))?,
+                                .ok_or(CompilerError::new(l, ParserError::IfElseExpectedIfExpr))?,
                         )
                     }
                     _ => {
-                        let false_arm = expression_block(stream)?.ok_or(&format!(
-                            "L{}: Expression in false arm of if expression",
-                            token.l
+                        let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
+                            token.l,
+                            ParserError::IfFalseArmMissingExpr,
                         ))?;
                         Some(false_arm)
                     }
@@ -368,14 +386,14 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
     Ok(match stream.next_if(&Lex::While) {
         Some(token) => {
             stream.next_must_be(&Lex::LParen)?;
-            let cond = expression(stream)?.ok_or(format!(
-                "L{}: Expected conditional expression after while",
-                token.l
+            let cond = expression(stream)?.ok_or(CompilerError::new(
+                token.l,
+                ParserError::WhileExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
-            let body =
-                expression_block(stream)?.ok_or(format!("L{}: Expression in body", token.l))?;
+            let body = expression_block(stream)?
+                .ok_or(CompilerError::new(token.l, ParserError::WhileMissingBody))?;
 
             Some(Expression::While {
                 context: token.l,
@@ -403,7 +421,11 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
                     if path.len() > 1 {
                         Some(Expression::Path(line, path))
                     } else {
-                        Some(Expression::Identifier(line, path.last().unwrap().clone()))
+                        if let Element::Id(sid) = path.last().unwrap() {
+                            Some(Expression::Identifier(line, *sid))
+                        } else {
+                            return err!(line, ParserError::PathExpectedIdentifier);
+                        }
                     }
                 }
             },
@@ -423,7 +445,9 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
                 Some(coroutine) => {
                     Expression::new_yield(*coroutine.get_context(), Box::new(coroutine))
                 }
-                None => Err(format!("L{}: expected an identifier after yield", line)),
+                None => {
+                    err!(line, ParserError::YieldExpectedIdentifier)
+                }
             }
         }
         None => Ok(None),
@@ -432,16 +456,16 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
 
 fn struct_init_params(
     stream: &mut TokenStream,
-) -> ParserResult<Vec<(String, Expression<ParserContext>)>> {
+) -> ParserResult<Vec<(StringId, Expression<ParserContext>)>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
             let mut params = vec![];
             while let Some((line, field_name)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
-                let field_value = expression(stream)?.ok_or(format!(
-                    "L{}: expected an expression to be assigned to field {}",
-                    line, field_name
+                let field_value = expression(stream)?.ok_or(CompilerError::new(
+                    line,
+                    ParserError::StructExpectedFieldExpr(field_name),
                 ))?;
                 params.push((field_name, field_value));
                 match stream.next_if(&Lex::Comma) {
@@ -498,14 +522,46 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         Lex::I32(0),
         Lex::I64(0),
     ]) {
-        Some(Token { l, s: Lex::U8(i) }) => Ok(Some(Expression::U8(l, i))),
-        Some(Token { l, s: Lex::U16(i) }) => Ok(Some(Expression::U16(l, i))),
-        Some(Token { l, s: Lex::U32(i) }) => Ok(Some(Expression::U32(l, i))),
-        Some(Token { l, s: Lex::U64(i) }) => Ok(Some(Expression::U64(l, i))),
-        Some(Token { l, s: Lex::I8(i) }) => Ok(Some(Expression::I8(l, i))),
-        Some(Token { l, s: Lex::I16(i) }) => Ok(Some(Expression::I16(l, i))),
-        Some(Token { l, s: Lex::I32(i) }) => Ok(Some(Expression::I32(l, i))),
-        Some(Token { l, s: Lex::I64(i) }) => Ok(Some(Expression::I64(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::U8(i),
+        }) => Ok(Some(Expression::U8(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::U16(i),
+        }) => Ok(Some(Expression::U16(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::U32(i),
+        }) => Ok(Some(Expression::U32(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::U64(i),
+        }) => Ok(Some(Expression::U64(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::I8(i),
+        }) => Ok(Some(Expression::I8(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::I16(i),
+        }) => Ok(Some(Expression::I16(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::I32(i),
+        }) => Ok(Some(Expression::I32(l, i))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::I64(i),
+        }) => Ok(Some(Expression::I64(l, i))),
         Some(t) => panic!("Unexpected token: {:?}", t),
         None => Ok(None),
     }
@@ -514,16 +570,21 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
 fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
-        Some(Token { l, s: Lex::Bool(b) }) => Ok(Some(Expression::Boolean(l, b))),
+        Some(Token {
+            l,
+            c: _,
+            s: Lex::Bool(b),
+        }) => Ok(Some(Expression::Boolean(l, b))),
         _ => Ok(None),
     }
 }
 
 fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
-    match stream.next_if(&Lex::StringLiteral("".into())) {
+    match stream.next_if(&Lex::StringLiteral(StringId::new())) {
         Some(Token {
             l,
+            c: _,
             s: Lex::StringLiteral(s),
         }) => Ok(Some(Expression::StringLiteral(l, s))),
         _ => Ok(None),
@@ -533,11 +594,15 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserCon
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::compiler::{
-        ast::{Statement, Type},
-        Lexer,
+    use crate::{
+        compiler::{
+            ast::{Statement, Type},
+            lexer::{tokens::Token, LexerError},
+            CompilerError, Lexer,
+        },
+        StringTable,
     };
-    use crate::result::Result;
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     #[test]
     fn parse_number() {
@@ -552,16 +617,17 @@ mod test {
             ("64i64", Expression::I64(1, 64)),
             ("64", Expression::I64(1, 64)),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match number(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
-                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
             }
         }
     }
@@ -618,16 +684,17 @@ mod test {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match array_value(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
-                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
             }
         }
     }
@@ -635,30 +702,44 @@ mod test {
     #[test]
     fn parse_array_fails() {
         for (text, msg) in [
-            ("[5", "L0: Expected ], but found EOF"),
-            ("[5 6]", "L1: Expected ], but found i64 literal 6"),
+            (
+                "[5",
+                CompilerError::new(0, ParserError::ExpectedButFound(vec![Lex::RBracket], None)),
+            ),
+            (
+                "[5 6]",
+                CompilerError::new(
+                    1,
+                    ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
+                ),
+            ),
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            assert_eq!(array_value(&mut stream), Err((*msg).into()), "{:?}", text);
+            assert_eq!(array_value(&mut stream).unwrap_err(), *msg, "{:?}", text);
         }
     }
 
     #[test]
     fn parse_array_at_index() {
+        let mut table = StringTable::new();
+        let a = table.insert("a".into());
+        let b = table.insert("b".into());
+
         for (text, expected) in vec![
             //
             (
                 "a[1]",
                 Expression::ArrayAt {
                     context: 1,
-                    array: box Expression::Identifier(1, "a".into()),
+                    array: box Expression::Identifier(1, a),
                     index: box Expression::I64(1, 1),
                 },
             ),
@@ -666,7 +747,7 @@ mod test {
                 "(a)[1]",
                 Expression::ArrayAt {
                     context: 1,
-                    array: box Expression::Identifier(1, "a".into()),
+                    array: box Expression::Identifier(1, a),
                     index: box Expression::I64(1, 1),
                 },
             ),
@@ -674,11 +755,7 @@ mod test {
                 "a.b[1]",
                 Expression::ArrayAt {
                     context: 1,
-                    array: box Expression::MemberAccess(
-                        1,
-                        box Expression::Identifier(1, "a".into()),
-                        "b".into(),
-                    ),
+                    array: box Expression::MemberAccess(1, box Expression::Identifier(1, a), b),
                     index: box Expression::I64(1, 1),
                 },
             ),
@@ -688,10 +765,10 @@ mod test {
                     1,
                     box Expression::ArrayAt {
                         context: 1,
-                        array: box Expression::Identifier(1, "a".into()),
+                        array: box Expression::Identifier(1, a),
                         index: box Expression::I64(1, 1),
                     },
-                    "b".into(),
+                    b,
                 ),
             ),
             (
@@ -702,10 +779,10 @@ mod test {
                         1,
                         box Expression::ArrayAt {
                             context: 1,
-                            array: box Expression::Identifier(1, "a".into()),
+                            array: box Expression::Identifier(1, a),
                             index: box Expression::I64(1, 0),
                         },
-                        "b".into(),
+                        b,
                     ),
                     index: box Expression::I64(1, 1),
                 },
@@ -716,7 +793,7 @@ mod test {
                     context: 1,
                     array: box Expression::ArrayAt {
                         context: 1,
-                        array: box Expression::Identifier(1, "a".into()),
+                        array: box Expression::Identifier(1, a),
                         index: box Expression::I64(1, 1),
                     },
                     index: box Expression::I64(1, 2),
@@ -728,23 +805,23 @@ mod test {
                     context: 1,
                     array: box Expression::ArrayAt {
                         context: 1,
-                        array: box Expression::Identifier(1, "a".into()),
+                        array: box Expression::Identifier(1, a),
                         index: box Expression::I64(1, 1),
                     },
                     index: box Expression::I64(1, 2),
                 },
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
-                Err(err) => panic!("Expected {:?}, but got {}", expected, err),
+                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
             }
         }
     }
@@ -752,30 +829,49 @@ mod test {
     #[test]
     fn parse_array_at_index_fails() {
         for (text, msg) in [
-            ("a[5", "L0: Expected ], but found EOF"),
-            ("a[5 6]", "L1: Expected ], but found i64 literal 6"),
-            ("a[]", "L1: Index operator must contain valid expression"),
-            ("a[2 + ]", "L1: expected expression after +"),
+            (
+                "a[5",
+                CompilerError::new(0, ParserError::ExpectedButFound(vec![Lex::RBracket], None)),
+            ),
+            (
+                "a[5 6]",
+                CompilerError::new(
+                    1,
+                    ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
+                ),
+            ),
+            (
+                "a[]",
+                CompilerError::new(1, ParserError::IndexOpInvalidExpr),
+            ),
+            (
+                "a[2 + ]",
+                CompilerError::new(1, ParserError::ExpectedExprAfter(Lex::Add)),
+            ),
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            assert_eq!(expression(&mut stream), Err((*msg).into()), "{:?}", text);
+            assert_eq!(expression(&mut stream).unwrap_err(), *msg, "{:?}", text);
         }
     }
 
     #[test]
     fn parse_member_access() {
         for text in vec!["thing.first", "(thing).first", "(thing.first)"] {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let thing_id = table.insert("thing".into());
+            let first_id = table.insert("first".into());
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match member_access(&mut stream) {
@@ -783,15 +879,15 @@ mod test {
                     assert_eq!(l, 1);
                     assert_eq!(
                         *left,
-                        Expression::Identifier(1, "thing".into()),
+                        Expression::Identifier(1, thing_id),
                         "Input: {}",
                         text,
                     );
-                    assert_eq!(right, "first");
+                    assert_eq!(right, first_id);
                 }
                 Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
                 Ok(None) => panic!("No node returned for {}", text),
-                Err(msg) => panic!("{} caused {}", text, msg),
+                Err(msg) => panic!("{} caused {:?}", text, msg),
             }
         }
     }
@@ -799,10 +895,11 @@ mod test {
     #[test]
     fn parse_expression_block_oneline() {
         let text = "{5}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
@@ -819,25 +916,47 @@ mod test {
     #[test]
     fn parse_expression_block_bad() {
         for (text, msg) in [
-            ("{5 10 51}", "L1: Expected }, but found i64 literal 10"),
-            ("{5; 10 51}", "L1: Expected }, but found i64 literal 51"),
-            ("{5; 10 let x:i64 := 5}", "L1: Expected }, but found let"),
+            (
+                "{5 10 51}",
+                CompilerError::new(
+                    1,
+                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(10))),
+                ),
+            ),
+            (
+                "{5; 10 51}",
+                CompilerError::new(
+                    1,
+                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(51))),
+                ),
+            ),
+            (
+                "{5; 10 let x:i64 := 5}",
+                CompilerError::new(
+                    1,
+                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::Let)),
+                ),
+            ),
             (
                 "{let x: i64 := 10 5}",
-                "L1: Expected ;, but found i64 literal 5",
+                CompilerError::new(
+                    1,
+                    ParserError::ExpectedButFound(vec![Lex::Semicolon], Some(Lex::I64(5))),
+                ),
             ),
         ]
         .iter()
         {
-            let tokens: Vec<Token> = Lexer::new(&text)
+            let mut table = StringTable::new();
+            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
                 .tokenize()
                 .into_iter()
-                .collect::<Result<_>>()
+                .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             assert_eq!(
-                expression_block(&mut stream),
-                Err((*msg).into()),
+                expression_block(&mut stream).unwrap_err(),
+                *msg,
                 "{:?}",
                 text
             );
@@ -847,10 +966,13 @@ mod test {
     #[test]
     fn parse_expression_block_multiline() {
         let text = "{let x:i64 := 5; f(x); x * x}";
-        let tokens: Vec<Token> = Lexer::new(&text)
+        let mut table = StringTable::new();
+        let x = table.insert("x".into());
+        let f = table.insert("f".into());
+        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
             .tokenize()
             .into_iter()
-            .collect::<Result<_>>()
+            .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
@@ -860,7 +982,7 @@ mod test {
             assert_eq!(body.len(), 2);
             match &body[0] {
                 Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), "x");
+                    assert_eq!(b.get_id(), x);
                     assert_eq!(b.get_type(), Type::I64);
                     assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
                 }
@@ -873,15 +995,15 @@ mod test {
                     fn_name,
                     params,
                 )) => {
-                    assert_eq!(*fn_name, vec!["f"].into());
-                    assert_eq!(params[0], Expression::Identifier(1, "x".into()));
+                    assert_eq!(*fn_name, vec![Element::Id(f)].into());
+                    assert_eq!(params[0], Expression::Identifier(1, x));
                 }
                 _ => panic!("No body: {:?}", &body[1]),
             }
             match final_exp {
                 box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(*l.as_ref(), Expression::Identifier(1, "x".into()));
-                    assert_eq!(*r.as_ref(), Expression::Identifier(1, "x".into()));
+                    assert_eq!(*l.as_ref(), Expression::Identifier(1, x));
+                    assert_eq!(*r.as_ref(), Expression::Identifier(1, x));
                 }
                 _ => panic!("No body: {:?}", &body[2]),
             }

@@ -1,11 +1,17 @@
-use crate::result::Result;
+//use crate::result::Result;
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
 use stdext::function_name;
 
 use crate::diagnostics::config::TracingConfig;
+use crate::{StringId, StringTable};
 
-use super::tokens::{Lex, Primitive, Token};
+use super::super::CompilerError;
+use super::LexerResult;
+use super::{
+    tokens::{Lex, Primitive, Token},
+    LexerError,
+};
 use Lex::*;
 
 macro_rules! trace {
@@ -31,26 +37,29 @@ macro_rules! trace {
     };
 }
 
-struct LexerBranch<'a> {
-    lexer: &'a mut Lexer,
+struct LexerBranch<'a, 'st> {
+    lexer: &'a mut Lexer<'st>,
     index: usize,
     line: u32,
+    offset: u32,
 }
 
-impl<'a> LexerBranch<'a> {
-    pub fn from(l: &mut Lexer) -> LexerBranch {
+impl<'a, 'st> LexerBranch<'a, 'st> {
+    pub fn from(l: &'a mut Lexer<'st>) -> LexerBranch<'a, 'st> {
         LexerBranch {
             index: l.index,
             line: l.line,
+            offset: l.col,
             lexer: l,
         }
     }
 
-    pub fn merge(&mut self) -> String {
+    pub fn merge(&mut self) -> (Option<StringId>, u32) {
         let s = self.cut();
 
         self.lexer.index = self.index;
         self.lexer.line = self.line;
+        self.lexer.col = self.offset;
 
         s
     }
@@ -60,8 +69,9 @@ impl<'a> LexerBranch<'a> {
     /// Then advance the start point of the next token in this
     /// branch.  This will NOT update the source.  That must be
     /// done with `merge`.
-    pub fn cut(&mut self) -> String {
+    pub fn cut(&mut self) -> (Option<StringId>, u32) {
         let start = self.lexer.index;
+        let offset = self.lexer.col;
         let stop = self.index;
         let mut s = String::new();
 
@@ -69,15 +79,23 @@ impl<'a> LexerBranch<'a> {
             s.push(self.lexer.chars[i]);
         }
 
-        s
+        let id = if s.len() == 0 {
+            None
+        } else {
+            Some(self.lexer.string_table.insert(s))
+        };
+
+        (id, offset)
     }
 
     pub fn next(&mut self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
             let c = self.lexer.chars[self.index];
             self.index += 1;
+            self.offset += 1;
             if c == '\n' {
                 self.line += 1;
+                self.offset = 0;
             }
             Some(c)
         } else {
@@ -99,8 +117,16 @@ impl<'a> LexerBranch<'a> {
     }
 
     pub fn next_ifn(&mut self, t: &str) -> bool {
+        // Check that `t` does not contain a line break, which would violate acceptable tokens
+        if t.chars().any(|c| c.is_whitespace()) {
+            // Panic because this indicates that there is a bug in the compiler code itself and the
+            // user cannot fix it.
+            panic!("A lexical token cannot contain a whitespace character")
+        }
+
         if self.peek_ifn(t) {
             self.index += t.len();
+            self.offset += t.len() as u32;
             true
         } else {
             false
@@ -136,20 +162,24 @@ impl<'a> LexerBranch<'a> {
     }
 }
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     chars: Vec<char>,
     index: usize,
     line: u32,
+    col: u32,
     tracing: TracingConfig,
+    string_table: &'a mut StringTable,
 }
 
-impl Lexer {
-    pub fn new(text: &str) -> Lexer {
+impl<'a> Lexer<'a> {
+    pub fn new(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
         Lexer {
             chars: text.chars().collect(),
             index: 0,
             line: 1,
+            col: 0,
             tracing: TracingConfig::Off,
+            string_table,
         }
     }
 
@@ -169,7 +199,7 @@ impl Lexer {
         }
     }
 
-    pub fn tokenize(&mut self) -> Vec<Result<Token>> {
+    pub fn tokenize(&mut self) -> Vec<LexerResult<Token>> {
         let mut tokens = vec![];
 
         while self.index < self.chars.len() {
@@ -186,10 +216,7 @@ impl Lexer {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(Err(format!(
-                    "The lexer is locked, at {:?}, and cannot proceed",
-                    self.current_token()
-                )));
+                tokens.push(err!(self.line(), LexerError::Locked(self.current_token())));
                 break;
             }
         }
@@ -197,7 +224,7 @@ impl Lexer {
         tokens
     }
 
-    fn next_token(&mut self) -> Result<Option<Token>> {
+    fn next_token(&mut self) -> LexerResult<Option<Token>> {
         self.consume_line_comment();
         self.consume_block_comment();
 
@@ -216,7 +243,7 @@ impl Lexer {
         }
     }
 
-    fn consume_literal(&mut self) -> Result<Option<Token>> {
+    fn consume_literal(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         match self.consume_integer()? {
             Some(i) => Ok(Some(i)),
@@ -232,12 +259,14 @@ impl Lexer {
         while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
             if self.chars[self.index] == '\n' {
                 self.line += 1;
+                self.col = 0;
             }
             self.index += 1;
+            self.col += 1;
         }
     }
 
-    pub fn consume_identifier(&mut self) -> Result<Option<Token>> {
+    pub fn consume_identifier(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch
@@ -255,15 +284,14 @@ impl Lexer {
             }
         }
 
-        let id = branch.merge();
-        if id.len() == 0 {
-            Ok(None)
-        } else {
-            Ok(Some(Token::new(self.line, Lex::Identifier(id))))
+        let (id, offset) = branch.merge();
+        match id {
+            None => Ok(None),
+            Some(id) => Ok(Some(Token::new(self.line, offset, Lex::Identifier(id)))),
         }
     }
 
-    fn consume_string_literal(&mut self) -> Result<Option<Token>> {
+    fn consume_string_literal(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -277,24 +305,27 @@ impl Lexer {
                 if c == '\\' {
                     match branch.next() {
                         Some(c) if Self::is_escape_code(c) => (),
-                        Some(c) => return Err(format!("Invalid escape sequence \\{}", c)),
-                        None => return Err("Expected escape character after \\".into()),
+                        Some(c) => return err!(self.line(), LexerError::InvalidEscapeSequence(c)),
+
+                        None => return err!(self.line(), LexerError::ExpectedEscapeCharacter),
                     }
                 }
             }
-            let mut s = branch.merge();
+            let (s, offset) = branch.merge();
 
             // Remove the quotes from the string
+            let mut s: String = self.string_table.get(s.unwrap()).unwrap().into();
             s.remove(0);
             s.pop();
+            let id = self.string_table.insert(s);
 
-            Ok(Some(Token::new(self.line, Lex::StringLiteral(s))))
+            Ok(Some(Token::new(self.line, offset, Lex::StringLiteral(id))))
         } else {
             Ok(None)
         }
     }
 
-    pub fn consume_integer(&mut self) -> Result<Option<Token>> {
+    pub fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -310,7 +341,7 @@ impl Lexer {
             branch.next();
         }
 
-        let int_token = branch.cut();
+        let (int_token, offset) = branch.cut();
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
         // no suffix then default to i64
@@ -324,51 +355,68 @@ impl Lexer {
             .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
-            return Err(format!(
-                "L{}: Invalid integer, should not contain characters",
-                self.line
-            ));
+            return err!(self.line(), LexerError::InvalidInteger);
         }
 
         branch.merge();
-        Self::create_int_literal(self.line, &int_token, type_suffix)
+        let int_text = self.string_table.get(int_token.unwrap()).unwrap();
+        Self::create_int_literal(self.line, offset, int_text, type_suffix)
     }
 
-    fn create_int_literal(line: u32, int_token: &str, prim: Primitive) -> Result<Option<Token>> {
+    fn create_int_literal(
+        line: u32,
+        offset: u32,
+        int_token: &str,
+        prim: Primitive,
+    ) -> LexerResult<Option<Token>> {
         match prim {
-            Primitive::U8 => Ok(Some(Token::new(line, U8(int_token.parse::<u8>().unwrap())))),
+            Primitive::U8 => Ok(Some(Token::new(
+                line,
+                offset,
+                U8(int_token.parse::<u8>().unwrap()),
+            ))),
             Primitive::U16 => Ok(Some(Token::new(
                 line,
+                offset,
                 U16(int_token.parse::<u16>().unwrap()),
             ))),
             Primitive::U32 => Ok(Some(Token::new(
                 line,
+                offset,
                 U32(int_token.parse::<u32>().unwrap()),
             ))),
             Primitive::U64 => Ok(Some(Token::new(
                 line,
+                offset,
                 U64(int_token.parse::<u64>().unwrap()),
             ))),
-            Primitive::I8 => Ok(Some(Token::new(line, I8(int_token.parse::<i8>().unwrap())))),
+            Primitive::I8 => Ok(Some(Token::new(
+                line,
+                offset,
+                I8(int_token.parse::<i8>().unwrap()),
+            ))),
             Primitive::I16 => Ok(Some(Token::new(
                 line,
+                offset,
                 I16(int_token.parse::<i16>().unwrap()),
             ))),
             Primitive::I32 => Ok(Some(Token::new(
                 line,
+                offset,
                 I32(int_token.parse::<i32>().unwrap()),
             ))),
             Primitive::I64 => Ok(Some(Token::new(
                 line,
+                offset,
                 I64(int_token.parse::<i64>().unwrap()),
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
-                Err(format!("Unexpected primitive type after number: {}", prim))
+                err!(line, LexerError::UnexpectedSuffixType(prim))
             }
         }
     }
 
-    fn consume_int_suffix(branch: &mut LexerBranch) -> Result<Option<Primitive>> {
+    fn consume_int_suffix(branch: &mut LexerBranch) -> LexerResult<Option<Primitive>> {
         Ok(if branch.next_ifn("i8") {
             Some(Primitive::I8)
         } else if branch.next_ifn("i16") {
@@ -390,9 +438,10 @@ impl Lexer {
         })
     }
 
-    pub fn consume_operator(&mut self) -> Result<Option<Token>> {
+    pub fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let line = self.line;
+        let offset = self.col;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
             ("...", VarArgs),
@@ -428,7 +477,7 @@ impl Lexer {
         let mut token = None;
         for (op, t) in operators.iter() {
             if branch.next_ifn(op) {
-                token = Some(Token::new(line, t.clone()));
+                token = Some(Token::new(line, offset, t.clone()));
                 break;
             }
         }
@@ -464,11 +513,12 @@ impl Lexer {
         trace!(self);
         match &token {
             Token {
-                l: _,
+                l,
+                c: o,
                 s: Identifier(id),
-            } => match id.as_str() {
-                "true" => Token::new(self.line, Bool(true)),
-                "false" => Token::new(self.line, Bool(false)),
+            } => match self.string_table.get(*id).unwrap() {
+                "true" => Token::new(*l, *o, Bool(true)),
+                "false" => Token::new(*l, *o, Bool(false)),
                 _ => token,
             },
             _ => token,
@@ -479,20 +529,21 @@ impl Lexer {
         trace!(self);
         match token {
             Token {
-                l: _,
+                l,
+                c: o,
                 s: Identifier(ref id),
-            } => match id.as_str() {
-                "u8" => Token::new(self.line, Primitive(Primitive::U8)),
-                "u16" => Token::new(self.line, Primitive(Primitive::U16)),
-                "u32" => Token::new(self.line, Primitive(Primitive::U32)),
-                "u64" => Token::new(self.line, Primitive(Primitive::U64)),
-                "i8" => Token::new(self.line, Primitive(Primitive::I8)),
-                "i16" => Token::new(self.line, Primitive(Primitive::I16)),
-                "i32" => Token::new(self.line, Primitive(Primitive::I32)),
-                "i64" => Token::new(self.line, Primitive(Primitive::I64)),
-                "bool" => Token::new(self.line, Primitive(Primitive::Bool)),
-                "string" => Token::new(self.line, Primitive(Primitive::StringLiteral)),
-                _ => Token::new(self.line, Identifier(id.clone())),
+            } => match self.string_table.get(*id).unwrap() {
+                "u8" => Token::new(l, o, Primitive(Primitive::U8)),
+                "u16" => Token::new(l, o, Primitive(Primitive::U16)),
+                "u32" => Token::new(l, o, Primitive(Primitive::U32)),
+                "u64" => Token::new(l, o, Primitive(Primitive::U64)),
+                "i8" => Token::new(l, o, Primitive(Primitive::I8)),
+                "i16" => Token::new(l, o, Primitive(Primitive::I16)),
+                "i32" => Token::new(l, o, Primitive(Primitive::I32)),
+                "i64" => Token::new(l, o, Primitive(Primitive::I64)),
+                "bool" => Token::new(l, o, Primitive(Primitive::Bool)),
+                "string" => Token::new(l, o, Primitive(Primitive::StringLiteral)),
+                _ => Token::new(l, o, Identifier(id.clone())),
             },
             _ => token,
         }
@@ -502,24 +553,29 @@ impl Lexer {
         trace!(self);
         match token {
             Token {
-                l: _,
+                l,
+                c: o,
                 s: Identifier(ref id),
-            } => match id.as_str() {
-                "let" => Token::new(self.line, Let),
-                "mut" => Token::new(self.line, Mut),
-                "return" => Token::new(self.line, Return),
-                "yield" => Token::new(self.line, Yield),
-                "yret" => Token::new(self.line, YieldReturn),
-                "fn" => Token::new(self.line, FunctionDef),
-                "co" => Token::new(self.line, CoroutineDef),
-                "mod" => Token::new(self.line, ModuleDef),
-                "struct" => Token::new(self.line, Struct),
-                "extern" => Token::new(self.line, Extern),
-                "init" => Token::new(self.line, Init),
-                "if" => Token::new(self.line, If),
-                "else" => Token::new(self.line, Else),
-                "while" => Token::new(self.line, While),
-                _ => Token::new(self.line, Identifier(id.clone())),
+            } => match self.string_table.get(*id).unwrap() {
+                "let" => Token::new(l, o, Let),
+                "mut" => Token::new(l, o, Mut),
+                "return" => Token::new(l, o, Return),
+                "yield" => Token::new(l, o, Yield),
+                "yret" => Token::new(l, o, YieldReturn),
+                "fn" => Token::new(l, o, FunctionDef),
+                "co" => Token::new(l, o, CoroutineDef),
+                "mod" => Token::new(l, o, ModuleDef),
+                "struct" => Token::new(l, o, Struct),
+                "extern" => Token::new(l, o, Extern),
+                "init" => Token::new(l, o, Init),
+                "if" => Token::new(l, o, If),
+                "else" => Token::new(l, o, Else),
+                "while" => Token::new(l, o, While),
+                "self" => Token::new(l, o, PathSelf),
+                "super" => Token::new(l, o, PathSuper),
+                "root" => Token::new(l, o, PathFileRoot),
+                "project" => Token::new(l, o, PathProjectRoot),
+                _ => Token::new(l, o, Identifier(id.clone())),
             },
             _ => token,
         }

@@ -1,22 +1,23 @@
-use crate::result::Result;
+use crate::compiler::{import::Import, CompilerError};
 use log::debug;
 
 use crate::{
     compiler::{ast::*, semantics::stack::SymbolTableScopeStack},
     diagnostics::config::TracingConfig,
-    project::manifest::Manifest,
 };
 
-use super::{super::semanticnode::SemanticContext, foreach_mut::ForEachPreOrderMut};
+use super::{
+    super::semanticnode::SemanticContext, foreach_mut::ForEachPreOrderMut, CanonizeResult,
+};
 
 /**
 Canonize all the paths in the AST
  */
 pub fn canonize_paths(
     module: &mut Module<SemanticContext>,
-    imports: &[Manifest],
+    imports: &[Import],
     tracing: TracingConfig,
-) -> Result<()> {
+) -> CanonizeResult<()> {
     debug!("Start canonization of paths");
 
     let mut t = ForEachPreOrderMut::new("Canonize Paths", module, imports, tracing, |a| {
@@ -40,11 +41,11 @@ pub fn canonize_paths(
 pub trait Canonizable: Node<SemanticContext> {
     // TODO: make one canonize function that handles everything and then the special cases
     // do their own thing.  I think that will be easier than 3 separate functions
-    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         default_canonize_context_path(self, stack)
     }
 
-    fn canonize_type_refs(&mut self, _stack: &SymbolTableScopeStack) -> Result<()> {
+    fn canonize_type_refs(&mut self, _stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         Ok(())
     }
 }
@@ -52,7 +53,7 @@ pub trait Canonizable: Node<SemanticContext> {
 fn default_canonize_context_path<T: Canonizable + ?Sized>(
     node: &mut T,
     stack: &SymbolTableScopeStack,
-) -> Result<()> {
+) -> CanonizeResult<()> {
     // If this node has a name, then use the current stack to construct
     // a canonical path from the root of the AST to the current node
     // (this is for routine definitions, modules, and structure definitions)
@@ -60,7 +61,9 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
         // Set SemanticAnnotation::canonical_path to CanonicalPath
         // Addresses RoutineDefs and StructDefs (for LLVM IR)
         Some(name) => {
-            let cpath = stack.to_canonical(&vec![name].into())?;
+            let cpath = stack
+                .to_canonical(&vec![Element::Id(name)].into())
+                .map_err(|e| CompilerError::new(node.get_context().line(), e))?;
             node.get_context_mut().set_canonical_path(cpath);
         }
         None => (),
@@ -68,46 +71,8 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
     Ok(())
 }
 
-/*fn default_canonize_annotation_type<T: SemanticNode + ?Sized>(
-    node: &mut T,
-    stack: &SymbolTableScopeStack,
-) -> Result<()> {
-    // Update the Type information in the annotation data
-    let ctype = stack.canonize_local_type_ref(node.annotation().ty())?;
-    node.annotation_mut().ty = ctype;
-    Ok(())
-}*/
-
 impl Canonizable for Expression<SemanticContext> {
-    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let canon_ty = match self {
-            Expression::ArrayValue(_, elements, len) => {
-                if elements.len() == 0 {
-                    return Err("Arrays with 0 length are not allowed".into());
-                } else {
-                    let el_ty = elements[0].annotation().ty.clone();
-                    stack.canonize_local_type_ref(&Type::Array(Box::new(el_ty), *len))?
-                }
-            }
-            Expression::StructExpression(_, struct_def, _) => Type::Custom(struct_def.clone()),
-            Expression::I8(..) => Type::I8,
-            Expression::I16(..) => Type::I16,
-            Expression::I32(..) => Type::I32,
-            Expression::I64(..) => Type::I64,
-            Expression::U8(..) => Type::U8,
-            Expression::U16(..) => Type::U16,
-            Expression::U32(..) => Type::U32,
-            Expression::U64(..) => Type::U64,
-            Expression::Boolean(..) => Type::Bool,
-            Expression::StringLiteral(..) => Type::StringLiteral,
-            _ => Type::Unknown,
-            //_ => default_canonize_annotation_type(self, stack)?,
-        };
-        self.annotation_mut().ty = canon_ty;
-        Ok(())
-    }*/
-
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         match self {
             Expression::Path(_, ref mut path) => {
                 if !path.is_canonical() {
@@ -117,6 +82,7 @@ impl Canonizable for Expression<SemanticContext> {
                             *path = canonical_path;
                             Ok(())
                         })
+                        .map_err(|e| CompilerError::new(self.get_context().line(), e))
                 } else {
                     Ok(())
                 }
@@ -132,6 +98,7 @@ impl Canonizable for Expression<SemanticContext> {
                             }
                             Ok(())
                         })
+                        .map_err(|e| CompilerError::new(self.get_context().line(), e))
                 } else {
                     Ok(())
                 }
@@ -144,6 +111,7 @@ impl Canonizable for Expression<SemanticContext> {
                             *path = canonical_path;
                             Ok(())
                         })
+                        .map_err(|e| CompilerError::new(self.get_context().line(), e))
                 } else {
                     Ok(())
                 }
@@ -154,29 +122,29 @@ impl Canonizable for Expression<SemanticContext> {
 }
 impl Canonizable for Statement<SemanticContext> {}
 impl Canonizable for Bind<SemanticContext> {
-    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        self.annotation_mut().ty = stack.canonize_local_type_ref(self.get_type())?;
-        Ok(())
-    }*/
-
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let canon_type = stack.canonize_type(self.get_type())?;
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+        let canon_type = stack
+            .canonize_type(self.get_type())
+            .map_err(|e| CompilerError::new(self.get_context().line(), e))?;
         self.set_type(canon_type);
         Ok(())
     }
 }
 impl Canonizable for Mutate<SemanticContext> {}
 impl Canonizable for Module<SemanticContext> {
-    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
+    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
         default_canonize_context_path(self, stack)?;
 
         // Canonize Symbol Table
+        let line = self.get_context().line();
         let sym = &mut self.get_context_mut().sym;
         for s in sym.table_mut().iter_mut() {
-            let cty = stack.canonize_type(&s.ty)?;
+            let cty = stack
+                .canonize_type(&s.ty)
+                .map_err(|e| CompilerError::new(line, e))?;
             s.ty = cty;
         }
 
@@ -185,49 +153,41 @@ impl Canonizable for Module<SemanticContext> {
 }
 impl Canonizable for StructDef<SemanticContext> {}
 impl Canonizable for RoutineDef<SemanticContext> {
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let ctype = stack.canonize_type(&self.ret_ty)?;
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+        let ctype = stack
+            .canonize_type(&self.ret_ty)
+            .map_err(|e| CompilerError::new(self.get_context().line(), e))?;
         self.ret_ty = ctype;
         Ok(())
     }
 }
 impl Canonizable for Extern<SemanticContext> {
-    fn canonize_context_path(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
+    fn canonize_context_path(&mut self, _: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let name = match self.name() {
             Some(name) => name,
             None => panic!("Externs must have a name"),
         };
-        let cpath = vec![name].into();
+        let cpath = vec![Element::Id(name)].into();
         self.get_context_mut().set_canonical_path(cpath);
         Ok(())
     }
 
-    /*fn canonize_annotation_type(&mut self, _: &SymbolTableScopeStack) -> Result<()> {
-        self.annotation_mut().ty = self.get_return_type().clone();
-        Ok(())
-    }*/
-
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let ctype = stack.canonize_type(&self.ty)?;
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+        let ctype = stack
+            .canonize_type(&self.ty)
+            .map_err(|e| CompilerError::new(self.get_context().line(), e))?;
         self.ty = ctype;
         Ok(())
     }
 }
 impl Canonizable for Parameter<SemanticContext> {
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let ctype = stack.canonize_type(&self.ty)?;
+    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+        let ctype = stack
+            .canonize_type(&self.ty)
+            .map_err(|e| CompilerError::new(self.get_context().line(), e))?;
         self.ty = ctype;
         Ok(())
     }
 }
-impl Canonizable for YieldReturn<SemanticContext> {
-    /*fn canonize_annotation_type(&mut self, stack: &SymbolTableScopeStack) -> Result<()> {
-        let current_fn = stack
-            .get_current_fn()
-            .ok_or("YieldReturn must appear within a function")?;
-        let (_, ret_ty) = stack.lookup_coroutine(current_fn)?;
-        self.annotation_mut().ty = stack.canonize_local_type_ref(ret_ty)?;
-        Ok(())
-    }*/
-}
+impl Canonizable for YieldReturn<SemanticContext> {}
 impl Canonizable for Return<SemanticContext> {}

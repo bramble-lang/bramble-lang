@@ -7,6 +7,8 @@ use inkwell::context::Context;
 
 use braid_lang::*;
 
+use crate::compiler::ast::MAIN_MODULE;
+
 const BRAID_FILE_EXT: &str = "br";
 const USER_MAIN_FN: &str = "my_main";
 
@@ -18,6 +20,8 @@ fn main() {
         None => (),
     }
 
+    let mut string_table = StringTable::new();
+
     let input = config
         .value_of("input")
         .expect("Expected an input source file to compile");
@@ -25,10 +29,10 @@ fn main() {
     let project_name = get_project_name(&src_path).unwrap();
     let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
 
-    let imports: Vec<_> = match read_manifests(&config) {
+    let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
-            print_errs(&errs);
+            print_errs(&string_table, &errs);
             exit(ERR_IMPORT_ERROR)
         }
     };
@@ -36,10 +40,10 @@ fn main() {
     let stop_stage = get_stage(&config).unwrap();
 
     let trace_lexer = get_lexer_tracing(&config);
-    let token_sets = match tokenize_project(src_input, trace_lexer) {
+    let token_sets = match tokenize_project(&mut string_table, src_input, trace_lexer) {
         Ok(ts) => ts,
         Err(errs) => {
-            print_errs(&errs);
+            print_errs(&string_table, &errs);
             exit(ERR_LEXER_ERROR)
         }
     };
@@ -49,10 +53,11 @@ fn main() {
     }
 
     let trace_parser = get_parser_tracing(&config);
-    let root = match parse_project(project_name, token_sets, trace_parser) {
+    let project_name_id = string_table.insert(project_name.into());
+    let root = match parse_project(&mut string_table, project_name_id, token_sets, trace_parser) {
         Ok(root) => root,
         Err(errs) => {
-            print_errs(&errs);
+            print_errs(&string_table, &errs);
             exit(ERR_PARSER_ERROR)
         }
     };
@@ -66,9 +71,25 @@ fn main() {
     let trace_canonization = get_canonization_tracing(&config);
     let trace_type_resolver = get_type_resolver_tracing(&config);
 
+    let imports: Result<Vec<_>, _> = manifests
+        .iter()
+        .map(|m| m.to_import(&mut string_table))
+        .collect();
+
+    let imports = match imports {
+        Ok(im) => im,
+        Err(msg) => {
+            print_errs(&string_table, &[msg]);
+            exit(ERR_IMPORT_ERROR)
+        }
+    };
+
+    let main_mod_id = string_table.insert(MAIN_MODULE.into());
+    let main_fn_id = string_table.insert(USER_MAIN_FN.into());
     let semantic_ast = match resolve_types_with_imports(
         &root,
-        USER_MAIN_FN,
+        main_mod_id,
+        main_fn_id,
         &imports,
         trace_semantic_node,
         trace_canonization,
@@ -76,7 +97,7 @@ fn main() {
     ) {
         Ok(ast) => ast,
         Err(msg) => {
-            println!("Error: {}", msg);
+            print_errs(&string_table, &[msg]);
             std::process::exit(ERR_TYPE_CHECK);
         }
     };
@@ -89,8 +110,8 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, project_name, &imports);
-    match llvm.ingest(&semantic_ast, USER_MAIN_FN) {
+    let mut llvm = llvm::IrGen::new(&context, &string_table, project_name, &imports);
+    match llvm.ingest(&semantic_ast, main_fn_id) {
         Ok(()) => (),
         Err(msg) => {
             println!("LLVM IR translation failed: {}", msg);
@@ -105,7 +126,7 @@ fn main() {
     llvm.emit_object_code(Path::new(output_target)).unwrap();
 
     if config.is_present("manifest") {
-        let manifest = Manifest::extract(&semantic_ast);
+        let manifest = Manifest::extract(&string_table, &semantic_ast).unwrap();
         match std::fs::File::create(format!("./target/{}.manifest", project_name))
             .map_err(|e| format!("{}", e))
             .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))

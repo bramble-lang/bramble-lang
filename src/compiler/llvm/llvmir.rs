@@ -24,7 +24,11 @@ use inkwell::{
     AddressSpace, IntPredicate, OptimizationLevel,
 };
 
-use crate::result::Result;
+use crate::{
+    compiler::{ast::Element, import::Import},
+    result::Result,
+    StringId, StringTable,
+};
 
 use crate::{
     compiler::{
@@ -46,8 +50,9 @@ pub struct IrGen<'ctx> {
     context: &'ctx context::Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
-    imports: &'ctx [Manifest],
-    string_pool: StringPool,
+    imports: &'ctx [Import],
+    string_pool: StringPool<'ctx>,
+    string_table: &'ctx StringTable,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, &'ctx ast::StructDef<SemanticContext>>,
     fn_use_out_param: HashSet<String>,
@@ -56,15 +61,17 @@ pub struct IrGen<'ctx> {
 impl<'ctx> IrGen<'ctx> {
     pub fn new(
         ctx: &'ctx context::Context,
+        string_table: &'ctx StringTable,
         module: &str,
-        imports: &'ctx [Manifest],
+        imports: &'ctx [Import],
     ) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
+            string_table,
             imports,
-            string_pool: StringPool::new(),
+            string_pool: StringPool::new(string_table),
             registers: RegisterLookup::new(),
             struct_table: HashMap::new(),
             fn_use_out_param: HashSet::new(),
@@ -121,7 +128,11 @@ impl<'ctx> IrGen<'ctx> {
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
-    pub fn ingest(&mut self, m: &'ctx ast::Module<SemanticContext>, user_main: &str) -> Result<()> {
+    pub fn ingest(
+        &mut self,
+        m: &'ctx ast::Module<SemanticContext>,
+        user_main: StringId,
+    ) -> Result<()> {
         self.compile_string_pool(m);
         self.add_imports();
 
@@ -141,7 +152,7 @@ impl<'ctx> IrGen<'ctx> {
 
     fn find_distinct_user_main(
         m: &'ctx ast::Module<SemanticContext>,
-        user_main: &str,
+        user_main: StringId,
     ) -> Result<Option<Path>> {
         let mut matches = vec![];
         let base_path = Path::new();
@@ -160,18 +171,21 @@ impl<'ctx> IrGen<'ctx> {
 
     fn find_user_main(
         module: &'ctx ast::Module<SemanticContext>,
-        user_main: &str,
+        user_main: StringId,
         mut path: Path,
         matches: &mut Vec<Path>,
     ) {
-        path.push(module.name().expect("Modules must have a name."));
+        path.push(Element::Id(
+            module.name().expect("Modules must have a name."),
+        ));
+
         // Search through functions for "my_main"
         let functions = module.get_functions();
         for f in functions {
             match f.name() {
                 Some(name) if name == user_main => {
                     let mut path = path.clone();
-                    path.push(name.into());
+                    path.push(Element::Id(name));
                     matches.push(path);
                 }
                 _ => (),
@@ -194,7 +208,7 @@ impl<'ctx> IrGen<'ctx> {
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
 
-        let user_main_name = path.to_label();
+        let user_main_name = path.to_label(self.string_table);
         let user_main = self
             .module
             .get_function(&user_main_name)
@@ -215,7 +229,7 @@ impl<'ctx> IrGen<'ctx> {
         // upon these types
         for manifest in self.imports {
             // Add imported structures to the LLVM Module
-            for sd in manifest.get_structs() {
+            for sd in &manifest.structs {
                 self.add_struct_def(sd)
             }
         }
@@ -223,8 +237,8 @@ impl<'ctx> IrGen<'ctx> {
         // Add all function definitions that are imported from other projects
         for manifest in self.imports {
             // Add imported functions to the LLVM Module
-            for (path, params, ty) in &manifest.get_functions() {
-                self.add_fn_decl(&path.to_label(), params, false, ty, 0);
+            for (path, params, ty) in &manifest.funcs {
+                self.add_fn_decl(&path.to_label(self.string_table), params, false, ty, 0);
             }
         }
     }
@@ -266,7 +280,7 @@ impl<'ctx> IrGen<'ctx> {
     fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticContext>) {
         let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
-            &rd.context.get_canonical_path().to_label(),
+            &rd.context.get_canonical_path().to_label(self.string_table),
             &params,
             false,
             &rd.ret_ty,
@@ -278,7 +292,9 @@ impl<'ctx> IrGen<'ctx> {
         // Declare external function
         let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
-            &ex.get_context().get_canonical_path().to_label(),
+            &ex.get_context()
+                .get_canonical_path()
+                .to_label(self.string_table),
             &params,
             ex.has_varargs,
             ex.get_return_type(),
@@ -350,9 +366,16 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Add a struct definition to the LLVM context and module.
     fn add_struct_def(&mut self, sd: &'ctx ast::StructDef<SemanticContext>) {
-        self.struct_table
-            .insert(sd.get_context().get_canonical_path().to_label(), sd);
-        let name = sd.get_context().get_canonical_path().to_label();
+        self.struct_table.insert(
+            sd.get_context()
+                .get_canonical_path()
+                .to_label(self.string_table),
+            sd,
+        );
+        let name = sd
+            .get_context()
+            .get_canonical_path()
+            .to_label(self.string_table);
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
             .iter()
@@ -469,7 +492,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
-        let fn_name = self.context.get_canonical_path().to_label();
+        let fn_name = self
+            .context
+            .get_canonical_path()
+            .to_label(llvm.string_table);
         let fn_value = llvm
             .module
             .get_function(&fn_name)
@@ -492,7 +518,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
         };
 
         for pi in start..num_params {
-            let pname = &(*self.get_params())[pi - start].name;
+            let pid = &(*self.get_params())[pi - start].name;
+            let pname = llvm.string_table.get(*pid).unwrap();
 
             // move parameter into the stack
             let pptr = llvm.builder.build_alloca(llvm_params[pi].get_type(), pname);
@@ -530,6 +557,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
+        let sid = self.get_id();
+        let name = llvm.string_table.get(sid).unwrap();
 
         match self
             .get_type()
@@ -539,17 +568,17 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             .into_basic_type()
         {
             Ok(ty) if ty.is_aggregate_type() => {
-                let ptr = llvm.builder.build_alloca(ty, self.get_id());
+                let ptr = llvm.builder.build_alloca(ty, name);
                 let rhs_ptr = rhs.into_pointer_value();
                 llvm.build_memcpy(ptr, rhs_ptr);
 
-                llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
+                llvm.registers.insert(name, ptr.into()).unwrap();
                 Some(ptr)
             }
             Ok(ty) => {
-                let ptr = llvm.builder.build_alloca(ty, self.get_id());
+                let ptr = llvm.builder.build_alloca(ty, name);
                 llvm.builder.build_store(ptr, rhs);
-                llvm.registers.insert(self.get_id(), ptr.into()).unwrap();
+                llvm.registers.insert(name, ptr.into()).unwrap();
                 Some(ptr)
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
@@ -562,11 +591,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
-        let v_ptr = llvm
-            .registers
-            .get(self.get_id())
-            .unwrap()
-            .into_pointer_value();
+        let sid = self.get_id();
+        let name = llvm.string_table.get(sid).unwrap();
+
+        let v_ptr = llvm.registers.get(name).unwrap().into_pointer_value();
         llvm.builder.build_store(v_ptr, rhs);
         Some(v_ptr)
     }
@@ -644,7 +672,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(bt.const_int(*b as u64, true).into())
             }
             ast::Expression::StringLiteral(_, s) => {
-                let str_id = llvm.get_str_var(s).unwrap();
+                let val = llvm.string_table.get(*s).unwrap();
+                let str_id = llvm.get_str_var(val).unwrap();
                 let val = llvm.module.get_global(&str_id).unwrap();
                 let val_ptr = val.as_pointer_value();
                 let bitcast = llvm.builder.build_bitcast(
@@ -658,11 +687,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(bitcast.into())
             }
             ast::Expression::Identifier(_, id) => {
-                let ptr = llvm.registers.get(id).unwrap().into_pointer_value();
+                let name = llvm.string_table.get(*id).unwrap();
+
+                let ptr = llvm.registers.get(name).unwrap().into_pointer_value();
                 if ptr.get_type().get_element_type().is_aggregate_type() {
                     Some(ptr.into())
                 } else {
-                    let val = llvm.builder.build_load(ptr, id);
+                    let val = llvm.builder.build_load(ptr, name);
                     Some(val)
                 }
             }
@@ -753,9 +784,15 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             ast::Expression::MemberAccess(_, val, field) => {
                 let sdef = llvm
                     .struct_table
-                    .get(&val.get_type().get_path().unwrap().to_label())
+                    .get(
+                        &val.get_type()
+                            .get_path()
+                            .unwrap()
+                            .to_label(llvm.string_table),
+                    )
                     .unwrap();
-                let field_idx = sdef.get_field_idx(field).unwrap();
+
+                let field_idx = sdef.get_field_idx(*field).unwrap();
 
                 let field_idx_llvm = llvm.context.i64_type().const_int(field_idx as u64, true);
 
@@ -775,7 +812,12 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 }
             }
             ast::Expression::StructExpression(_, name, fields) => {
-                let sname = self.get_context().ty().get_path().unwrap().to_label();
+                let sname = self
+                    .get_context()
+                    .ty()
+                    .get_path()
+                    .unwrap()
+                    .to_label(llvm.string_table);
                 let sdef = llvm
                     .struct_table
                     .get(&sname)
@@ -787,7 +829,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 // be the same as in the defintion)
                 let idx_fields: Vec<(usize, &ast::Expression<SemanticContext>)> = fields
                     .iter()
-                    .map(|(n, v)| (sdef.get_field_idx(n).unwrap(), v))
+                    .map(|(n, v)| (sdef.get_field_idx(*n).unwrap(), v))
                     .collect();
 
                 for (f_idx, e) in idx_fields {
@@ -962,12 +1004,15 @@ impl ast::BinaryOperator {
 }
 
 impl ast::RoutineCall {
-    fn to_label(&self, target: &ast::Path) -> String {
+    fn to_label<'ctx>(&self, llvm: &IrGen<'ctx>, target: &ast::Path) -> String {
         match self {
-            ast::RoutineCall::Function | ast::RoutineCall::CoroutineInit => target.to_label(),
-            ast::RoutineCall::Extern => target
-                .item()
-                .expect("Extern call must have a target path")
+            ast::RoutineCall::Function | ast::RoutineCall::CoroutineInit => {
+                target.to_label(llvm.string_table)
+            }
+            ast::RoutineCall::Extern => llvm
+                .string_table
+                .get(target.item().expect("Extern call must have a target path"))
+                .unwrap()
                 .into(),
         }
     }
@@ -1007,7 +1052,7 @@ impl ast::RoutineCall {
             ast::RoutineCall::Function | ast::RoutineCall::Extern => {
                 // Check if the function returns a struct, if it does then create a local struct
                 // and pass that as the first parameter
-                let fn_name = self.to_label(target);
+                let fn_name = self.to_label(llvm, target);
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
                 let out_param = Self::to_out_param(llvm, &fn_name, ret_ty)?;
@@ -1053,7 +1098,7 @@ impl ast::Type {
                 .into(),
             ast::Type::Custom(name) => llvm
                 .module
-                .get_struct_type(&name.to_label())
+                .get_struct_type(&name.to_label(llvm.string_table))
                 .expect(&format!("Could not find struct {}", name))
                 .into(),
             ast::Type::Array(a, len) => {
