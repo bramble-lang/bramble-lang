@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use crate::result::NResult;
+use crate::{result::NResult, Manifest};
 use clap::ArgMatches;
 
-use super::{cli::get_imports, manifest::Manifest};
+use super::cli::get_imports;
 
 pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error> {
     let mut files = vec![];

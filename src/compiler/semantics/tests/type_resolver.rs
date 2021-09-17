@@ -3292,7 +3292,7 @@ mod type_resolver_tests {
                 params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new(0, 0, p.clone()), a, p)).collect(),
                 body: vec![],
             }], &vec![]).unwrap();
-            let imports = manifest.to_import(&mut table);
+            let imports = manifest.to_import(&mut table).unwrap();
             let result = resolve_types_with_imports(
                 &ast, 
                 main_mod, main_fn,

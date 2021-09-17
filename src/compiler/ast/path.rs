@@ -1,7 +1,7 @@
 use crate::compiler::{CompilerDisplay, CompilerDisplayError};
 use crate::{StringId, StringTable};
 
-use super::{ParsePathError, PathCanonizationError};
+use super::PathCanonizationError;
 
 pub const CANONICAL_ROOT: &str = "project";
 pub const ROOT_PATH: &str = "root";
@@ -170,53 +170,6 @@ impl Path {
             .map(|element| element.fmt(table).unwrap())
             .collect::<Vec<_>>()
             .join("_")
-    }
-
-    /// Attempts to parse a string into a [`Path`].  This expects the same text format
-    /// as the [`CompilerDisplay`] implementation outputs.
-    pub fn parse(table: &mut StringTable, p: &str) -> Result<Path, ParsePathError> {
-        /// Tests that an element is a valid identifier
-        fn is_element_valid(el: &str) -> bool {
-            let cs = el.chars().collect::<Vec<_>>();
-            if cs.len() == 0 {
-                // Element must have at least one character
-                false
-            } else {
-                if !(cs[0].is_alphabetic() || cs[0] == '_') {
-                    // Element can only start with a letter or underscore
-                    false
-                } else {
-                    // Element can only contain alphanumerics and _
-                    !cs.iter().any(|c| !(c.is_alphanumeric() || *c == '_'))
-                }
-            }
-        }
-
-        // Check if this is a canonical path, and remove the $ if it is
-        let (p, is_canonical) = match p.strip_prefix("$") {
-            Some(stripped) => (stripped, true),
-            None => (p, false),
-        };
-        let elements = p.split("::");
-
-        let mut path = vec![];
-        if is_canonical {
-            path.push(Element::CanonicalRoot)
-        }
-
-        for el in elements {
-            if !is_element_valid(el) {
-                return Err(ParsePathError);
-            }
-            match el {
-                "self" => path.push(Element::Selph),
-                "super" => path.push(Element::Super),
-                "root" => path.push(Element::FileRoot),
-                e => path.push(Element::Id(table.insert(e.into()))),
-            }
-        }
-
-        Ok(path.into())
     }
 }
 

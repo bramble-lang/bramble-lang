@@ -2,41 +2,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        ast::{Item, Module, Node, Parameter, Path, RoutineDef, RoutineDefType, StructDef, Type},
+        ast::{
+            Element, Item, Module, Node, Parameter, Path, RoutineDef, RoutineDefType, StructDef,
+            Type,
+        },
         import::Import,
         semantics::semanticnode::SemanticContext,
         CompilerDisplay, CompilerDisplayError,
     },
-    StringTable, StringTableError,
+    StringTable,
 };
 
-/// Errors that can occur when writing or reading a Manifest file.
-#[derive(Debug)]
-pub enum ManifestError {
-    /// When attempting to write a Compiler type to a manifest file and a [`StringId`] member
-    /// cannot be found in the [`StringTable`].
-    StringIdNotFound,
-
-    /// Some types ought not be written to a Manifest: this error is thrown when one of those
-    /// types is written.
-    CannotConvertType(Type),
-}
-
-impl From<CompilerDisplayError> for ManifestError {
-    fn from(cde: CompilerDisplayError) -> Self {
-        match cde {
-            CompilerDisplayError::StringIdNotFound => Self::StringIdNotFound,
-        }
-    }
-}
-
-impl From<StringTableError> for ManifestError {
-    fn from(ste: StringTableError) -> Self {
-        match ste {
-            StringTableError::NotFound => Self::StringIdNotFound,
-        }
-    }
-}
+use super::ManifestError;
 
 /// Data type used to represent items from a compiled artifact which can be imported by other
 /// projects.
@@ -91,11 +68,19 @@ impl Manifest {
 
     /// Convert a Manifest of a Braid artifact to set of definitions which can be used
     /// by the compiler for imported items.
-    pub fn to_import(&self, st: &mut StringTable) -> Import {
-        let structs = self.structs.iter().map(|s| s.to_sd(st)).collect();
-        let funcs = self.routines.iter().map(|r| r.to_rd(st)).collect();
+    pub fn to_import(&self, st: &mut StringTable) -> Result<Import, ManifestError> {
+        let structs = self
+            .structs
+            .iter()
+            .map(|s| s.to_sd(st))
+            .collect::<Result<_, _>>()?;
+        let funcs = self
+            .routines
+            .iter()
+            .map(|r| r.to_rd(st))
+            .collect::<Result<_, _>>()?;
 
-        Import { structs, funcs }
+        Ok(Import { structs, funcs })
     }
 
     /// Loads a manifest from the given file.
@@ -143,12 +128,16 @@ impl ManifestRoutineDef {
         })
     }
 
-    fn to_rd(&self, st: &mut StringTable) -> (Path, Vec<Type>, Type) {
-        let path = string_to_path(st, &self.canon_path);
-        let params = self.params.iter().map(|p| p.to_ty(st)).collect();
-        let ret_ty = self.ret_ty.to_ty(st);
+    fn to_rd(&self, st: &mut StringTable) -> Result<(Path, Vec<Type>, Type), ManifestError> {
+        let path = string_to_path(st, &self.canon_path)?;
+        let params = self
+            .params
+            .iter()
+            .map(|p| Ok(p.to_ty(st)?))
+            .collect::<Result<_, ManifestError>>()?;
+        let ret_ty = self.ret_ty.to_ty(st)?;
 
-        (path, params, ret_ty)
+        Ok((path, params, ret_ty))
     }
 }
 
@@ -182,22 +171,24 @@ impl ManifestStructDef {
         })
     }
 
-    fn to_sd(&self, st: &mut StringTable) -> StructDef<SemanticContext> {
+    fn to_sd(&self, st: &mut StringTable) -> Result<StructDef<SemanticContext>, ManifestError> {
         let mut ctx = SemanticContext::new(0, 0, Type::Unit);
-        ctx.set_canonical_path(string_to_path(st, &self.canon_path));
+        ctx.set_canonical_path(string_to_path(st, &self.canon_path)?);
 
         let name = st.insert(self.name.clone());
         let fields = self
             .fields
             .iter()
-            .map(|(fnm, fty)| Parameter {
-                context: ctx.clone(),
-                name: st.insert(fnm.into()),
-                ty: fty.to_ty(st),
+            .map(|(fnm, fty)| {
+                Ok(Parameter {
+                    context: ctx.clone(),
+                    name: st.insert(fnm.into()),
+                    ty: fty.to_ty(st)?,
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>, ManifestError>>()?;
 
-        StructDef::new(name, ctx, fields)
+        Ok(StructDef::new(name, ctx, fields))
     }
 }
 
@@ -241,8 +232,8 @@ impl ManifestType {
         Ok(man_ty)
     }
 
-    fn to_ty(&self, st: &mut StringTable) -> Type {
-        match self {
+    fn to_ty(&self, st: &mut StringTable) -> Result<Type, ManifestError> {
+        let cty = match self {
             ManifestType::U8 => Type::U8,
             ManifestType::U16 => Type::U16,
             ManifestType::U32 => Type::U32,
@@ -253,10 +244,12 @@ impl ManifestType {
             ManifestType::I64 => Type::I64,
             ManifestType::Bool => Type::Bool,
             ManifestType::StringLiteral => Type::StringLiteral,
-            ManifestType::Array(box el_ty, sz) => Type::Array(box el_ty.to_ty(st), *sz),
+            ManifestType::Array(box el_ty, sz) => Type::Array(box el_ty.to_ty(st)?, *sz),
             ManifestType::Unit => Type::Unit,
-            ManifestType::Custom(p) => Type::Custom(string_to_path(st, p)),
-        }
+            ManifestType::Custom(p) => Type::Custom(string_to_path(st, p)?),
+        };
+
+        Ok(cty)
     }
 }
 
@@ -290,6 +283,47 @@ fn path_to_string(st: &StringTable, p: &Path) -> Result<String, CompilerDisplayE
 }
 
 /// Convert a Manifest file Path string to a Compiler Path value.
-fn string_to_path(st: &mut StringTable, p: &str) -> Path {
-    Path::parse(st, p).unwrap()
+fn string_to_path(st: &mut StringTable, p: &str) -> Result<Path, ManifestError> {
+    /// Tests that an element is a valid identifier
+    fn is_element_valid(el: &str) -> bool {
+        let cs = el.chars().collect::<Vec<_>>();
+        if cs.len() == 0 {
+            // Element must have at least one character
+            false
+        } else {
+            if !(cs[0].is_alphabetic() || cs[0] == '_') {
+                // Element can only start with a letter or underscore
+                false
+            } else {
+                // Element can only contain alphanumerics and _
+                !cs.iter().any(|c| !(c.is_alphanumeric() || *c == '_'))
+            }
+        }
+    }
+
+    // Check if this is a canonical path, and remove the $ if it is
+    let (p, is_canonical) = match p.strip_prefix("$") {
+        Some(stripped) => (stripped, true),
+        None => (p, false),
+    };
+    let elements = p.split("::");
+
+    let mut path = vec![];
+    if is_canonical {
+        path.push(Element::CanonicalRoot)
+    }
+
+    for el in elements {
+        if !is_element_valid(el) {
+            return Err(ManifestError::ParsePathError);
+        }
+        match el {
+            "self" => path.push(Element::Selph),
+            "super" => path.push(Element::Super),
+            "root" => path.push(Element::FileRoot),
+            e => path.push(Element::Id(st.insert(e.into()))),
+        }
+    }
+
+    Ok(path.into())
 }

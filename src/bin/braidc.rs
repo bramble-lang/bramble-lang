@@ -71,10 +71,18 @@ fn main() {
     let trace_canonization = get_canonization_tracing(&config);
     let trace_type_resolver = get_type_resolver_tracing(&config);
 
-    let imports: Vec<_> = manifests
+    let imports: Result<Vec<_>, _> = manifests
         .iter()
         .map(|m| m.to_import(&mut string_table))
         .collect();
+
+    let imports = match imports {
+        Ok(im) => im,
+        Err(msg) => {
+            print_errs(&string_table, &[msg]);
+            exit(ERR_IMPORT_ERROR)
+        }
+    };
 
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
