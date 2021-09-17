@@ -8,8 +8,8 @@ use super::{
     structdef::StructDef,
     AstError,
 };
+use crate::compiler::CompilerError;
 use crate::StringId;
-use crate::{compiler::CompilerError, err};
 
 type AstResult<T> = Result<T, CompilerError<AstError>>;
 

@@ -4,7 +4,7 @@
 use stdext::function_name;
 
 use crate::diagnostics::config::TracingConfig;
-use crate::{err, StringId, StringTable};
+use crate::{StringId, StringTable};
 
 use super::super::CompilerError;
 use super::LexerResult;

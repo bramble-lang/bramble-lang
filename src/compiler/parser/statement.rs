@@ -12,7 +12,7 @@ use crate::{
         lexer::tokens::{Lex, Token},
         CompilerError,
     },
-    err, trace, StringId,
+    trace, StringId,
 };
 
 use super::{parser::ParserContext, tokenstream::TokenStream, ParserError};

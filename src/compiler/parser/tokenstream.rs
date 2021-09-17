@@ -1,7 +1,7 @@
 use super::ParserError;
 use crate::compiler::lexer::tokens::{Lex, Token};
 use crate::compiler::CompilerError;
-use crate::{err, StringId};
+use crate::StringId;
 //use crate::result::Result;
 
 pub struct TokenStream<'a> {

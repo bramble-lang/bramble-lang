@@ -16,7 +16,7 @@ use crate::{
         lexer::tokens::{Lex, Token},
         CompilerError,
     },
-    err, trace, StringId,
+    trace, StringId,
 };
 
 impl ParserCombinator<ParserResult<Expression<ParserContext>>>

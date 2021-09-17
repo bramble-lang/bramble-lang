@@ -1,5 +1,7 @@
-pub mod ast;
+// Contains a macro and therefore this must be imported before all other modules
 mod error;
+
+pub mod ast;
 pub mod import;
 pub mod lexer;
 pub mod llvm;

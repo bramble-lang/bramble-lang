@@ -1,3 +1,4 @@
+#![macro_use]
 use crate::StringTable;
 
 use super::{CompilerDisplay, CompilerDisplayError};
@@ -50,7 +51,7 @@ where
 }
 
 /// Helper macro to get rid of repitition of boilerplate code.
-#[macro_export]
+//#[macro_export]
 macro_rules! err {
     ($ln: expr, $kind: expr) => {
         Err(CompilerError::new($ln, $kind))
