@@ -41,6 +41,23 @@ impl std::fmt::Display for Element {
     }
 }
 
+/**
+Provides the directions along the hierarchy of modules in a project to get to
+a specific item (e.g. structure definition or function definition). [`Path`]s
+allow the user to specify an item that exists in a different module than the
+current one (i.e. non-local).
+
+A [`Path`] may be relative or absolute.  A relative path starts at the current
+module and uses modifies to either move up the hierarchy or into specific, named,
+modules.  A canonical path always starts at the root of hte project and moves
+down through the specifically named modules.
+
+Keywords:
+- `project`: if a path starts with this keyword, it is canonical
+- `root`: if a path starts with this keyword, it begins at top level of the
+current file.
+- `self`: if a path begins with this keyword, it starts at the current module.
+*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path {
     path: Vec<Element>,
