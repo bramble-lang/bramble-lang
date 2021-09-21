@@ -1,3 +1,4 @@
+#! /bin/sh
 # Randomly generate syntactically correct code and test that braidc validates it.
 if [ -z "$1" ]
   then
