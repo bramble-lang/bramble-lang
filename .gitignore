@@ -4,3 +4,4 @@
 .tisk/
 /test/target
 /test/*.log
+.vscode/
