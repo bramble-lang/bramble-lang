@@ -46,10 +46,6 @@ impl SemanticContext {
         &self.sym
     }
 
-    pub fn sym(&self) -> &SymbolTable {
-        &self.sym
-    }
-
     pub fn ty(&self) -> &Type {
         &self.ty
     }
