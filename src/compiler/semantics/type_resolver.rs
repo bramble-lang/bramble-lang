@@ -103,7 +103,7 @@ impl TypeResolver {
     ) -> SemanticResult<Module<SemanticContext>> {
         let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
 
-        self.symbols.enter_scope(&nmodule.get_context().sym);
+        self.symbols.enter_scope(&nmodule.get_context().sym());
 
         *nmodule.get_modules_mut() = m
             .get_modules()

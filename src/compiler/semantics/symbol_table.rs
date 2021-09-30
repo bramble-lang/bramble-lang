@@ -111,7 +111,7 @@ impl SymbolTable {
         structdef: &mut StructDef<SemanticContext>,
         sym: &mut SemanticContext,
     ) -> Result<(), SemanticError> {
-        sym.sym.add(
+        sym.sym().add(
             structdef.get_name(),
             Type::StructDef(
                 structdef
@@ -139,7 +139,7 @@ impl SymbolTable {
             Box::new(ty.clone()),
         );
 
-        sym.sym.add(*name, def, false, true)
+        sym.sym().add(*name, def, false, true)
     }
 
     fn add_routine_parameters(
@@ -163,7 +163,7 @@ impl SymbolTable {
             }
         };
 
-        sym.sym.add(*name, def, false, false)
+        sym.sym().add(*name, def, false, false)
     }
 
     fn get_types_for_params(params: &Vec<Parameter<SemanticContext>>) -> Vec<Type> {

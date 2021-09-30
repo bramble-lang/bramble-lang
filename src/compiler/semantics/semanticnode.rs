@@ -10,9 +10,9 @@ use super::symbol_table::SymbolTable;
 pub struct SemanticContext {
     id: u32,
     ln: u32,
-    pub(super) ty: Type,
-    pub(super) sym: SymbolTable,
-    pub(super) canonical_path: Path,
+    ty: Type,
+    sym: SymbolTable,
+    canonical_path: Path,
 }
 
 impl Context for SemanticContext {
@@ -44,6 +44,10 @@ impl Diag for SemanticContext {
 impl SemanticContext {
     pub fn anonymous_name(&self) -> String {
         format!("!{}_{}", self.canonical_path, self.id)
+    }
+
+    pub fn sym(&self) -> &SymbolTable {
+        &self.sym
     }
 
     pub fn ty(&self) -> &Type {
