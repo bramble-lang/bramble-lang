@@ -42,10 +42,12 @@ impl Diag for SemanticContext {
 }
 
 impl SemanticContext {
+    /// Get the [`SymbolTable`] for a node in the AST.
     pub fn sym(&self) -> &SymbolTable {
         &self.sym
     }
 
+    /// Get the [`Type`] for a node in the AST
     pub fn ty(&self) -> &Type {
         &self.ty
     }
