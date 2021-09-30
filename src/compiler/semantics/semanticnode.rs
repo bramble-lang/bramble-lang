@@ -42,10 +42,6 @@ impl Diag for SemanticContext {
 }
 
 impl SemanticContext {
-    pub fn anonymous_name(&self) -> String {
-        format!("!{}_{}", self.canonical_path, self.id)
-    }
-
     pub fn ty(&self) -> &Type {
         &self.ty
     }
