@@ -172,12 +172,12 @@ impl TypeResolver {
 
         // Add parameters to symbol table
         for p in params.iter() {
-            meta.sym
+            meta.sym()
                 .add(p.name, p.ty.clone(), false, false)
                 .map_err(|e| CompilerError::new(p.context.line(), e))?;
         }
 
-        self.symbols.enter_scope(&meta.sym);
+        self.symbols.enter_scope(&meta.sym());
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
@@ -187,7 +187,7 @@ impl TypeResolver {
 
         meta.sym = self.symbols.leave_scope();
 
-        let canonical_ret_ty = meta.ty.clone();
+        let canonical_ret_ty = meta.ty().clone();
         Ok(RoutineDef {
             context: meta,
             def: def.clone(),
@@ -253,7 +253,7 @@ impl TypeResolver {
             meta.clone(),
             params.clone(),
             ex.has_varargs,
-            meta.ty.clone(),
+            meta.ty().clone(),
         ))
     }
 
@@ -283,10 +283,10 @@ impl TypeResolver {
             let mut meta = meta.clone();
             meta.ty = bind.get_type().clone();
             let rhs = self.traverse(rhs)?;
-            if meta.ty == rhs.get_type() {
+            if meta.ty() == rhs.get_type() {
                 match self
                     .symbols
-                    .add(bind.get_id(), meta.ty.clone(), bind.is_mutable(), false)
+                    .add(bind.get_id(), meta.ty().clone(), bind.is_mutable(), false)
                 {
                     Ok(()) => {
                         let ty = meta.ty().clone();
@@ -296,7 +296,7 @@ impl TypeResolver {
                 }
             } else {
                 Err(SemanticError::BindExpected(
-                    meta.ty.clone(),
+                    meta.ty().clone(),
                     rhs.get_type().clone(),
                 ))
             }
@@ -769,7 +769,7 @@ impl TypeResolver {
             Expression::ExpressionBlock(meta, body, final_exp) => {
                 let mut resolved_body = vec![];
 
-                self.symbols.enter_scope(&meta.sym);
+                self.symbols.enter_scope(&meta.sym());
 
                 for stmt in body.iter() {
                     let exp = self.analyze_statement(stmt)?;

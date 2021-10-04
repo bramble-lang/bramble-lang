@@ -156,7 +156,7 @@ mod type_resolver_tests {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -491,7 +491,7 @@ mod type_resolver_tests {
                     let fn_main = actual.get_functions()[0].to_routine().unwrap();
 
                     assert_eq!(
-                        fn_main.get_context().ty,
+                        fn_main.get_context().ty(),
                         expected_ty,
                         "Test Case at L:{}",
                         line
@@ -849,7 +849,7 @@ mod type_resolver_tests {
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
                         assert_eq!(
-                            bind_stm.get_context().ty,
+                            bind_stm.get_context().ty(),
                             expected_ty,
                             "Test Case at L:{}",
                             line
@@ -866,7 +866,7 @@ mod type_resolver_tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(
                             r.get_value().clone().unwrap().get_type(),
@@ -974,7 +974,7 @@ mod type_resolver_tests {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1047,7 +1047,7 @@ mod type_resolver_tests {
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     if let Statement::Bind(box b) = bind_stm {
-                        assert_eq!(bind_stm.get_context().ty, Type::I64);
+                        assert_eq!(bind_stm.get_context().ty(), Type::I64);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1055,7 +1055,7 @@ mod type_resolver_tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1126,7 +1126,7 @@ mod type_resolver_tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_context().ty, Type::I64);
+                    assert_eq!(bind_stm.get_context().ty(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1137,7 +1137,7 @@ mod type_resolver_tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1208,7 +1208,7 @@ mod type_resolver_tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_context().ty, Type::Bool);
+                    assert_eq!(bind_stm.get_context().ty(), Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1219,7 +1219,7 @@ mod type_resolver_tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1290,7 +1290,7 @@ mod type_resolver_tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_context().ty, Type::Bool);
+                    assert_eq!(bind_stm.get_context().ty(), Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1301,7 +1301,7 @@ mod type_resolver_tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1434,7 +1434,7 @@ mod type_resolver_tests {
             let fn_main = module.get_functions()[0].to_routine().unwrap();
 
             let bind_stm = &fn_main.get_body()[0];
-            assert_eq!(bind_stm.get_context().ty, Type::Array(box Type::I64, 2));
+            assert_eq!(bind_stm.get_context().ty(), Type::Array(box Type::I64, 2));
         }
     }
 
@@ -1515,7 +1515,7 @@ mod type_resolver_tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[1];
-                    assert_eq!(bind_stm.get_context().ty, expected_ty);
+                    assert_eq!(bind_stm.get_context().ty(), expected_ty);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1526,7 +1526,7 @@ mod type_resolver_tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[2];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
@@ -1633,7 +1633,7 @@ mod type_resolver_tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     let bind_stm = &fn_main.get_body()[1];
-                    assert_eq!(bind_stm.get_context().ty, expected_ty);
+                    assert_eq!(bind_stm.get_context().ty(), expected_ty);
 
                     // validate that the RHS of the bind is the correct type
                     if let Statement::Bind(box b) = bind_stm {
@@ -1644,7 +1644,7 @@ mod type_resolver_tests {
 
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[2];
-                    assert_eq!(ret_stm.get_context().ty, expected_ty);
+                    assert_eq!(ret_stm.get_context().ty(), expected_ty);
                     if let Statement::Return(box r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
