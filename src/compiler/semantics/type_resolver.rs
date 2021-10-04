@@ -136,7 +136,7 @@ impl TypeResolver {
             .get_context_mut()
             .with_type(Type::Unit)
             .with_sym(sym);
-        *nmodule.get_context_mut() = meta;
+        *nmodule.get_context_mut() = meta; // TODO: This is not needed, if I comment it out code still works.
 
         Ok(nmodule)
     }
