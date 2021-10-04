@@ -244,13 +244,14 @@ impl TypeResolver {
         // Update the context with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
         let meta = ex.get_context().with_type(ex.get_return_type().clone());
+        let ret_ty = meta.ty().clone();
 
         Ok(Extern::new(
             name,
             meta,
             params.clone(),
             ex.has_varargs,
-            meta.ty().clone(),
+            ret_ty,
         ))
     }
 
@@ -309,7 +310,7 @@ impl TypeResolver {
             Ok(symbol) => {
                 if symbol.mutable {
                     if symbol.ty == rhs.get_type() {
-                        let mut meta = mutate.get_context().with_type(rhs.get_type().clone());
+                        let meta = mutate.get_context().with_type(rhs.get_type().clone());
                         Ok(Mutate::new(meta, mutate.get_id(), rhs))
                     } else {
                         Err(SemanticError::BindMismatch(
@@ -354,7 +355,7 @@ impl TypeResolver {
             .map_err(|e| CompilerError::new(yr.get_context().line(), e))?;
 
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = yr.get_context().with_type(actual_ret_ty);
+            let meta = yr.get_context().with_type(actual_ret_ty);
             Ok(YieldReturn::new(meta, actual_ret_exp))
         } else {
             Err(SemanticError::YieldExpected(
@@ -395,7 +396,7 @@ impl TypeResolver {
         // Check that the actual expression matches the expected return type
         // of the function
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = r.get_context().with_type(actual_ret_ty);
+            let meta = r.get_context().with_type(actual_ret_ty);
             Ok(Return::new(meta, actual_ret_exp))
         } else {
             Err(SemanticError::ReturnExpected(
@@ -415,43 +416,43 @@ impl TypeResolver {
     fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
         match &ast {
             &Expression::U8(meta, v) => {
-                let mut meta = meta.with_type(Type::U8);
+                let meta = meta.with_type(Type::U8);
                 Ok(Expression::U8(meta, *v))
             }
             &Expression::U16(meta, v) => {
-                let mut meta = meta.with_type(Type::U16);
+                let meta = meta.with_type(Type::U16);
                 Ok(Expression::U16(meta, *v))
             }
             &Expression::U32(meta, v) => {
-                let mut meta = meta.with_type(Type::U32);
+                let meta = meta.with_type(Type::U32);
                 Ok(Expression::U32(meta, *v))
             }
             &Expression::U64(meta, v) => {
-                let mut meta = meta.with_type(Type::U64);
+                let meta = meta.with_type(Type::U64);
                 Ok(Expression::U64(meta, *v))
             }
             &Expression::I8(meta, v) => {
-                let mut meta = meta.with_type(Type::I8);
+                let meta = meta.with_type(Type::I8);
                 Ok(Expression::I8(meta, *v))
             }
             &Expression::I16(meta, v) => {
-                let mut meta = meta.with_type(Type::I16);
+                let meta = meta.with_type(Type::I16);
                 Ok(Expression::I16(meta, *v))
             }
             &Expression::I32(meta, v) => {
-                let mut meta = meta.with_type(Type::I32);
+                let meta = meta.with_type(Type::I32);
                 Ok(Expression::I32(meta, *v))
             }
             &Expression::I64(meta, v) => {
-                let mut meta = meta.with_type(Type::I64);
+                let meta = meta.with_type(Type::I64);
                 Ok(Expression::I64(meta, *v))
             }
             Expression::Boolean(meta, v) => {
-                let mut meta = meta.with_type(Type::Bool);
+                let meta = meta.with_type(Type::Bool);
                 Ok(Expression::Boolean(meta.clone(), *v))
             }
             Expression::StringLiteral(meta, v) => {
-                let mut meta = meta.with_type(Type::StringLiteral);
+                let meta = meta.with_type(Type::StringLiteral);
                 Ok(Expression::StringLiteral(meta.clone(), v.clone()))
             }
             Expression::ArrayExpression(meta, elements, len) => {
@@ -480,7 +481,7 @@ impl TypeResolver {
                 }
 
                 // Use the size of the array and the type to define the array type
-                let mut meta = meta.with_type(Type::Array(Box::new(el_ty), *len));
+                let meta = meta.with_type(Type::Array(Box::new(el_ty), *len));
                 Ok(Expression::ArrayExpression(meta, nelements, *len))
             }
             Expression::ArrayAt {
@@ -509,7 +510,7 @@ impl TypeResolver {
                     ));
                 }
 
-                let mut meta = meta.with_type(el_ty.clone());
+                let meta = meta.with_type(el_ty.clone());
 
                 Ok(Expression::ArrayAt {
                     context: meta,
@@ -518,11 +519,11 @@ impl TypeResolver {
                 })
             }
             Expression::CustomType(meta, name) => {
-                let mut meta = meta.with_type(Type::Custom(name.clone()));
+                let meta = meta.with_type(Type::Custom(name.clone()));
                 Ok(Expression::CustomType(meta.clone(), name.clone()))
             }
             Expression::IdentifierDeclare(meta, name, p) => {
-                let mut meta = meta.with_type(p.clone());
+                let meta = meta.with_type(p.clone());
                 Ok(Expression::IdentifierDeclare(
                     meta.clone(),
                     name.clone(),
@@ -562,7 +563,7 @@ impl TypeResolver {
                             ))
                             .map_err(|e| CompilerError::new(meta.line(), e))?;
 
-                        let mut meta = meta.with_type(member_ty.clone());
+                        let meta = meta.with_type(member_ty.clone());
                         Ok(Expression::MemberAccess(
                             meta,
                             Box::new(src),
@@ -577,7 +578,7 @@ impl TypeResolver {
             }
             Expression::BinaryOp(meta, op, l, r) => {
                 let (ty, l, r) = self.binary_op(*op, &l, &r)?;
-                let mut meta = meta.with_type(ty);
+                let meta = meta.with_type(ty);
                 Ok(Expression::BinaryOp(
                     meta.clone(),
                     *op,
@@ -587,7 +588,7 @@ impl TypeResolver {
             }
             Expression::UnaryOp(meta, op, operand) => {
                 let (ty, operand) = self.unary_op(*op, &operand)?;
-                let mut meta = meta.with_type(ty);
+                let meta = meta.with_type(ty);
                 Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
             }
             Expression::If {
@@ -611,7 +612,7 @@ impl TypeResolver {
                         .unwrap_or(Type::Unit);
 
                     if if_arm.get_type() == else_arm_ty {
-                        let mut meta = meta.with_type(if_arm.get_type().clone());
+                        let meta = meta.with_type(if_arm.get_type().clone());
                         Ok(Expression::If {
                             context: meta.clone(),
                             cond: box cond,
@@ -645,7 +646,7 @@ impl TypeResolver {
                     let body = self.traverse(&body)?;
 
                     if body.get_type() == Type::Unit {
-                        let mut meta = meta.with_type(Type::Unit);
+                        let meta = meta.with_type(Type::Unit);
                         Ok(Expression::While {
                             context: meta.clone(),
                             cond: box cond,
@@ -726,7 +727,7 @@ impl TypeResolver {
                     ) {
                         Err(msg) => Err(CompilerError::new(meta.line(), msg)),
                         Ok(()) => {
-                            let mut meta = meta.with_type(ret_ty.clone());
+                            let meta = meta.with_type(ret_ty.clone());
                             Ok(Expression::RoutineCall(
                                 meta.clone(),
                                 *call,
@@ -757,7 +758,7 @@ impl TypeResolver {
                 };
 
                 let sym = self.symbols.leave_scope();
-                let mut meta = meta.with_type(block_ty).with_sym(sym);
+                let meta = meta.with_type(block_ty).with_sym(sym);
 
                 Ok(Expression::ExpressionBlock(
                     meta.clone(),
@@ -808,7 +809,7 @@ impl TypeResolver {
                     resolved_params.push((pn.clone(), param));
                 }
 
-                let mut meta = meta.with_type(Type::Custom(struct_name.clone()));
+                let meta = meta.with_type(Type::Custom(struct_name.clone()));
                 Ok(Expression::StructExpression(
                     meta.clone(),
                     canonical_path,
