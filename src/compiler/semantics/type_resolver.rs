@@ -17,8 +17,6 @@ use super::{
     SemanticError, SemanticResult,
 };
 
-//type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;
-
 pub fn resolve_types(
     ast: &Module<ParserContext>,
     main_mod: StringId,
