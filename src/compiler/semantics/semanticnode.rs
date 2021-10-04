@@ -51,6 +51,11 @@ impl SemanticContext {
     pub fn ty(&self) -> &Type {
         &self.ty
     }
+
+    /// Set the [`Type`] for a node
+    pub fn set_ty(&mut self, ty: Type) {
+        self.ty = ty
+    }
 }
 
 pub type SemanticNode = Expression<SemanticContext>;
