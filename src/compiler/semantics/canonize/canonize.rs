@@ -140,13 +140,15 @@ impl Canonizable for Module<SemanticContext> {
 
         // Canonize Symbol Table
         let line = self.get_context().line();
-        let sym = &mut self.get_context_mut().sym();
+        let mut sym = self.get_context().sym().clone();
         for s in sym.table_mut().iter_mut() {
             let canonized_ty = stack
                 .canonize_type(&s.ty)
                 .map_err(|e| CompilerError::new(line, e))?;
             s.ty = canonized_ty;
         }
+
+        *self.get_context_mut() = self.get_context().with_sym(sym);
 
         Ok(())
     }
