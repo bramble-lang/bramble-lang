@@ -485,9 +485,9 @@ impl TypeResolver {
                         SemanticError::ArrayInvalidSize(nelements.len()),
                     ));
                 } else {
-                    el_ty = nelements[0].get_context().ty.clone();
+                    el_ty = nelements[0].get_context().ty().clone();
                     for e in &nelements {
-                        if e.get_context().ty != el_ty {
+                        if e.get_context().ty() != el_ty {
                             return Err(CompilerError::new(
                                 meta.line(),
                                 SemanticError::ArrayInconsistentElementTypes,

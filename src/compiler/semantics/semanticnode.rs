@@ -41,23 +41,6 @@ impl Diag for SemanticContext {
     }
 }
 
-impl SemanticContext {
-    /// Get the [`SymbolTable`] for a node in the AST.
-    pub fn sym(&self) -> &SymbolTable {
-        &self.sym
-    }
-
-    /// Get the [`Type`] for a node in the AST
-    pub fn ty(&self) -> &Type {
-        &self.ty
-    }
-
-    /// Set the [`Type`] for a node
-    pub fn set_ty(&mut self, ty: Type) {
-        self.ty = ty
-    }
-}
-
 pub type SemanticNode = Expression<SemanticContext>;
 
 impl SemanticNode {
@@ -103,6 +86,21 @@ impl SemanticContext {
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),
         }
+    }
+
+    /// Get the [`SymbolTable`] for a node in the AST.
+    pub fn sym(&self) -> &SymbolTable {
+        &self.sym
+    }
+
+    /// Get the [`Type`] for a node in the AST
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
+
+    /// Set the [`Type`] for a node
+    pub fn set_ty(&mut self, ty: Type) {
+        self.ty = ty
     }
 
     pub fn get_canonical_path(&self) -> &Path {
