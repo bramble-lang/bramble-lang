@@ -88,6 +88,22 @@ impl SemanticContext {
         }
     }
 
+    /// Creates a copy of this instances of [`SemanticContext`] but the [`Type`]
+    /// field is assigned the value in `ty`
+    pub fn with_type(&self, ty: Type) -> SemanticContext {
+        let mut sm = self.clone();
+        sm.ty = ty;
+        sm
+    }
+
+    /// Creates a copy of this instances of [`SemanticContext`] but the [`SymbolTable`]
+    /// field is assigned the value in `ty`
+    pub fn with_sym(&self, sym: SymbolTable) -> SemanticContext {
+        let mut sm = self.clone();
+        sm.sym = sym;
+        sm
+    }
+
     /// Get the [`SymbolTable`] for a node in the AST.
     pub fn sym(&self) -> &SymbolTable {
         &self.sym
