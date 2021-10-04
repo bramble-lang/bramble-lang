@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::{diagnostics::config::TracingConfig, StringId};
 
-use super::symbol_table::SymbolTable;
+use super::{error::SemanticError, symbol_table::SymbolTable};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
@@ -125,6 +125,16 @@ impl SemanticContext {
 
     pub fn set_canonical_path(&mut self, path: Path) {
         self.canonical_path = path;
+    }
+
+    pub fn add_symbol(
+        &mut self,
+        name: StringId,
+        ty: Type,
+        mutable: bool,
+        is_extern: bool,
+    ) -> Result<(), SemanticError> {
+        self.sym.add(name, ty, mutable, is_extern)
     }
 }
 

@@ -169,15 +169,16 @@ impl TypeResolver {
         }
 
         let meta = context.with_type(ret_ty.clone());
+        let mut routine_sym = meta.sym().clone();
 
         // Add parameters to symbol table
         for p in params.iter() {
-            meta.sym()
+            routine_sym
                 .add(p.name, p.ty.clone(), false, false)
                 .map_err(|e| CompilerError::new(p.context.line(), e))?;
         }
 
-        self.symbols.enter_scope(&meta.sym());
+        self.symbols.enter_scope(&routine_sym);
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
