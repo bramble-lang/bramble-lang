@@ -142,10 +142,10 @@ impl Canonizable for Module<SemanticContext> {
         let line = self.get_context().line();
         let sym = &mut self.get_context_mut().sym();
         for s in sym.table_mut().iter_mut() {
-            let cty = stack
+            let canonized_ty = stack
                 .canonize_type(&s.ty)
                 .map_err(|e| CompilerError::new(line, e))?;
-            s.ty = cty;
+            s.ty = canonized_ty;
         }
 
         Ok(())
