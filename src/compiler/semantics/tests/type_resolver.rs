@@ -223,7 +223,7 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: $test::my_mod::my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             println!("Test: {}", ln);
@@ -336,7 +336,7 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: $test::my_mod::my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -352,7 +352,8 @@ mod type_resolver_tests {
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                main_mod, main_fn,
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1891,7 +1892,7 @@ mod type_resolver_tests {
                     mut x := false;
                     return k;
                 }",
-                Err("L3: x is not defined"),
+                Err("L3: Could not find definition for x in this scope"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2262,7 +2263,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Err("L2: bad_fun is not defined"),
+                Err("L2: Could not find item with the given path: $main::bad_fun ($main::bad_fun)"),
             ),
         ] {
             let mut table = StringTable::new();

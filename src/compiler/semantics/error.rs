@@ -69,7 +69,10 @@ impl CompilerDisplay for SemanticError {
                 canonical_form.fmt(st)?
             )),
             SemanticError::PathNotValid => Ok(format!("Path is not valid")),
-            SemanticError::NotDefined(sid) => Ok(format!("{} is not defined", sid.fmt(st)?)),
+            SemanticError::NotDefined(sid) => Ok(format!(
+                "Could not find definition for {} in this scope",
+                sid.fmt(st)?
+            )),
             SemanticError::EmptyPath => Ok(format!("Empty path")),
             SemanticError::ArrayInvalidSize(sz) => {
                 Ok(format!("Expected length > 0 for array, but found {}", sz))
