@@ -262,7 +262,7 @@ impl TypeResolver {
             Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b)?)),
             Return(box x) => Return(Box::new(self.analyze_return(x)?)),
             YieldReturn(box x) => YieldReturn(Box::new(self.analyze_yieldreturn(x)?)),
-            Expression(box e) => Expression(Box::new(self.traverse(e)?)),
+            Expression(box e) => Expression(Box::new(self.analyze_expression(e)?)),
         };
 
         Ok(inner)
@@ -276,7 +276,7 @@ impl TypeResolver {
         let rhs = bind.get_rhs();
         let result = {
             let ctx = ctx.with_type(bind.get_type().clone());
-            let rhs = self.traverse(rhs)?;
+            let rhs = self.analyze_expression(rhs)?;
             if ctx.ty() == rhs.get_type() {
                 match self
                     .symbols
@@ -302,7 +302,7 @@ impl TypeResolver {
         &mut self,
         mutate: &Mutate<SemanticContext>,
     ) -> SemanticResult<Mutate<SemanticContext>> {
-        let rhs = self.traverse(mutate.get_rhs())?;
+        let rhs = self.analyze_expression(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
             Ok(symbol) => {
                 if symbol.mutable {
@@ -334,7 +334,7 @@ impl TypeResolver {
         let (actual_ret_exp, actual_ret_ty) = match yr.get_value() {
             None => (None, Type::Unit),
             Some(exp) => {
-                let exp = self.traverse(exp)?;
+                let exp = self.analyze_expression(exp)?;
                 let exp_ty = exp.get_type().clone();
                 (Some(exp), exp_ty)
             }
@@ -372,7 +372,7 @@ impl TypeResolver {
         let (actual_ret_exp, actual_ret_ty) = match r.get_value() {
             None => (None, Type::Unit),
             Some(exp) => {
-                let exp = self.traverse(exp)?;
+                let exp = self.analyze_expression(exp)?;
                 let exp_ty = exp.get_type().clone();
                 (Some(exp), exp_ty)
             }
@@ -402,12 +402,6 @@ impl TypeResolver {
             ))
         }
         .map_err(|e| CompilerError::new(r.get_context().line(), e))
-    }
-
-    fn traverse(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
-        // TODO: With the new error handling design this function is no longer needed
-        // It only existed as a way of injecting line numbers into error messages
-        self.analyze_expression(ast)
     }
 
     /// Recursively resolve every child of the given expression and check that every
@@ -459,8 +453,10 @@ impl TypeResolver {
             }
             Expression::ArrayExpression(ctx, elements, len) => {
                 // Resolve the types for each element in the array value
-                let nelements: SemanticResult<Vec<Expression<SemanticContext>>> =
-                    elements.iter().map(|e| self.traverse(e)).collect();
+                let nelements: SemanticResult<Vec<Expression<SemanticContext>>> = elements
+                    .iter()
+                    .map(|e| self.analyze_expression(e))
+                    .collect();
                 let nelements = nelements?;
 
                 // Check that they are homogenous
@@ -492,7 +488,7 @@ impl TypeResolver {
                 index,
             } => {
                 //  Check that the array value is an array type
-                let n_array = self.traverse(array)?;
+                let n_array = self.analyze_expression(array)?;
                 let el_ty = match n_array.get_context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(CompilerError::new(
@@ -502,7 +498,7 @@ impl TypeResolver {
                 }?;
 
                 // Check that the index is an i64 type
-                let n_index = self.traverse(index)?;
+                let n_index = self.analyze_expression(index)?;
                 if !n_index.get_context().ty().is_integral() {
                     return Err(CompilerError::new(
                         ctx.line(),
@@ -545,7 +541,7 @@ impl TypeResolver {
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
                 // if it exists, if it does not exist then return an error
-                let src = self.traverse(&src)?;
+                let src = self.analyze_expression(&src)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
                         let (struct_def, _) = self
@@ -586,13 +582,13 @@ impl TypeResolver {
                 if_arm,
                 else_arm,
             } => {
-                let cond = self.traverse(&cond)?;
+                let cond = self.analyze_expression(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let if_arm = self.traverse(&if_arm)?;
+                    let if_arm = self.analyze_expression(&if_arm)?;
 
                     let else_arm = else_arm
                         .as_ref()
-                        .map(|e| self.traverse(&e))
+                        .map(|e| self.analyze_expression(&e))
                         .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
 
                     let else_arm_ty = else_arm
@@ -630,9 +626,9 @@ impl TypeResolver {
                 body,
                 ..
             } => {
-                let cond = self.traverse(&cond)?;
+                let cond = self.analyze_expression(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let body = self.traverse(&body)?;
+                    let body = self.analyze_expression(&body)?;
 
                     if body.get_type() == Type::Unit {
                         let ctx = ctx.with_type(Type::Unit);
@@ -655,7 +651,7 @@ impl TypeResolver {
                 }
             }
             Expression::Yield(ctx, exp) => {
-                let exp = self.traverse(&exp)?;
+                let exp = self.analyze_expression(&exp)?;
                 let ctx = match exp.get_type() {
                     Type::Coroutine(box ret_ty) => ctx.with_type(ret_ty.clone()),
                     _ => {
@@ -672,7 +668,7 @@ impl TypeResolver {
                 // parameter types
                 let mut resolved_params = vec![];
                 for param in params.iter() {
-                    let ty = self.traverse(param)?;
+                    let ty = self.analyze_expression(param)?;
 
                     resolved_params.push(ty);
                 }
@@ -740,7 +736,7 @@ impl TypeResolver {
                 let (final_exp, block_ty) = match final_exp {
                     None => (None, Type::Unit),
                     Some(fe) => {
-                        let fe = self.traverse(fe)?;
+                        let fe = self.analyze_expression(fe)?;
                         let ty = fe.get_type().clone();
                         (Some(Box::new(fe)), ty)
                     }
@@ -779,7 +775,7 @@ impl TypeResolver {
                         ctx.line(),
                         SemanticError::StructExprMemberNotFound(canonical_path.clone(), *pn),
                     ))?;
-                    let param = self.traverse(pv)?;
+                    let param = self.analyze_expression(pv)?;
                     if param.get_type() != member_ty {
                         return Err(CompilerError::new(
                             ctx.line(),
@@ -814,7 +810,7 @@ impl TypeResolver {
     ) -> SemanticResult<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
-        let operand = self.traverse(operand)?;
+        let operand = self.analyze_expression(operand)?;
 
         match op {
             Negate => {
@@ -851,8 +847,8 @@ impl TypeResolver {
     ) -> SemanticResult<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
-        let l = self.traverse(l)?;
-        let r = self.traverse(r)?;
+        let l = self.analyze_expression(l)?;
+        let r = self.analyze_expression(r)?;
 
         match op {
             Add | Sub | Mul | Div => {
