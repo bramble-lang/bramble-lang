@@ -1721,10 +1721,18 @@ mod type_resolver_tests {
             (
                 line!(),
                 "fn main() -> [i32;0] {
-                    let k: [i64;0] := [];
+                    let k: [i64;1] := [];
                     return k;
                 }",
                 Err("L1: Expected length > 0 for array, but found 0"),
+            ),
+            (
+                line!(),
+                "fn main() -> [i32;1] {
+                    let k: [i64;0] := [];
+                    return k;
+                }",
+                Err("L2: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1790,7 +1798,7 @@ mod type_resolver_tests {
                     let k: bool := k;
                     return k;
                 }",
-                Err("L2: k is not defined"),
+                Err("L2: Could not find definition for k in this scope"),
             ),
             (
                 line!(),
@@ -1798,7 +1806,7 @@ mod type_resolver_tests {
                     let k: bool := x;
                     return k;
                 }",
-                Err("L2: x is not defined"),
+                Err("L2: Could not find definition for x in this scope"),
             ),
         ] {
             println!("Test L{}", ln);
