@@ -503,7 +503,8 @@ mod tests {
                 "test".into()
             });
         t.for_module(&mut sm_ast, |_stack, n| {
-            n.get_context_mut().set_ty(Type::I64);
+            let ctx = n.get_context().with_type(Type::I64);
+            *n.get_context_mut() = ctx;
             Ok(())
         })
         .unwrap();
