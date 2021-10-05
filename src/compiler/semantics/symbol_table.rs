@@ -6,28 +6,28 @@ use crate::{
 use super::SemanticError;
 
 /**
- * `SymbolTable` is an AST node context that contains information about symbols that
- * are defined by immediate children of this node. For example:
- *
- *``` ignore
- * mod my_mod {
- *      fn hello(i: i64) {
- *          let x: i64 := i * i;
- *          // do something
- *      }
- * }
- *```
- *
- * The node representing `my_mod` would have a child node representing the definition of
- * `hello`; the `SymbolTable` context on `my_mod`'s node would contain information for
- * the symbol `hello`, but it would _not_ contain the symbol for `x` which is whithin the
- * body of `hello`.
- *
- * The `SymbolTable` combined with the hierarchical structure of the AST provides the
- * solution for symbol scopes.  At any given node, the only symbols that node can possibly
- * know about are the ones in the `SymbolTable`s of the nodes that comprise the path from
- * the root of the AST to the given node.
- */
+ `SymbolTable` is an AST node context that contains information about symbols that
+ are defined by immediate children of this node. For example:
+
+``` ignore
+ mod my_mod {
+      fn hello(i: i64) {
+          let x: i64 := i * i;
+          // do something
+      }
+ }
+```
+
+ The node representing `my_mod` would have a child node representing the definition of
+ `hello`; the `SymbolTable` context on `my_mod`'s node would contain information for
+ the symbol `hello`, but it would _not_ contain the symbol for `x` which is whithin the
+ body of `hello`.
+
+ The `SymbolTable` combined with the hierarchical structure of the AST provides the
+ solution for symbol scopes.  At any given node, the only symbols that node can possibly
+ know about are the ones in the `SymbolTable`s of the nodes that comprise the path from
+ the root of the AST to the given node.
+*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     ty: ScopeType,
