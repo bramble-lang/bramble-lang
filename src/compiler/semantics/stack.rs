@@ -356,9 +356,7 @@ impl<'a> SymbolTableScopeStack {
      */
     pub fn canonize_type(&self, ty: &Type) -> Result<Type, SemanticError> {
         match ty {
-            Type::Custom(path) => self
-                .lookup_symbol_by_path(path)
-                .map(|(_, p)| Type::Custom(p)),
+            Type::Custom(path) => self.to_canonical(path).map(|p| Type::Custom(p)),
             Type::Coroutine(ty) => Ok(Type::Coroutine(Box::new(self.canonize_type(&ty)?))),
             Type::CoroutineDef(params, ret_ty) => {
                 let cparams = params

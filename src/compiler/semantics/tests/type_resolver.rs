@@ -2949,12 +2949,12 @@ mod type_resolver_tests {
         for (line, text, expected) in vec![
             (
                 line!(),
-                "struct MyStruct{x:i64} fn test() -> root::MyStruct {return MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> root::MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
@@ -3151,7 +3151,7 @@ mod type_resolver_tests {
                 TracingConfig::Off,
             );
             match expected {
-                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\nST: {:?}", line, text, result, table)},
+                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\n\nST: {:?}", line, text, result.map_err(|e| e.fmt(&table)), table)},
                 Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
