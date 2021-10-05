@@ -21,7 +21,6 @@ new Annotation type.
 */
 pub struct ForEachPreOrderMut {
     pub name: String,
-    pub tracing: TracingConfig,
     diag: DiagRecorder<SemanticContext, SemanticContext>,
     symbols: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
 }
@@ -35,7 +34,6 @@ impl<'a> ForEachPreOrderMut {
     ) -> ForEachPreOrderMut {
         ForEachPreOrderMut {
             name: name.into(),
-            tracing,
             diag: DiagRecorder::new(name, tracing),
             symbols: SymbolTableScopeStack::new(root, imports),
         }
@@ -55,17 +53,9 @@ impl<'a> ForEachPreOrderMut {
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
-        if self.tracing != TracingConfig::Off {
-            println!("ForEach: {}", self.name);
-        }
-
         self.diag.start_trace();
         let r = self.for_module(m, f);
         self.diag.end_trace();
-
-        if self.tracing != TracingConfig::Off {
-            println!("ForEach: {:?}", r);
-        }
 
         r
     }
