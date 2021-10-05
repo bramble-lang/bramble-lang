@@ -19,32 +19,23 @@ AST transformation; when specific fields within an Annotation need to be updated
 with new values. This avoids the need to generate an entirely new AST with a
 new Annotation type.
 */
-pub struct ForEachPreOrderMut<T>
-where
-    T: Fn(&SemanticContext) -> String,
-{
+pub struct ForEachPreOrderMut {
     pub name: String,
     pub tracing: TracingConfig,
-    pub format: T,
     diag: DiagRecorder<SemanticContext, SemanticContext>,
     symbols: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
 }
 
-impl<'a, T> ForEachPreOrderMut<T>
-where
-    T: Fn(&SemanticContext) -> String,
-{
+impl<'a> ForEachPreOrderMut {
     pub fn new(
         name: &str,
         root: &'a mut Module<SemanticContext>,
         imports: &[Import],
         tracing: TracingConfig,
-        format: T,
-    ) -> ForEachPreOrderMut<T> {
+    ) -> ForEachPreOrderMut {
         ForEachPreOrderMut {
             name: name.into(),
             tracing,
-            format,
             diag: DiagRecorder::new(name, tracing),
             symbols: SymbolTableScopeStack::new(root, imports),
         }
@@ -498,10 +489,7 @@ mod tests {
         let mut sa = SemanticAst::new();
         let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
-        let mut t =
-            ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off, |_| {
-                "test".into()
-            });
+        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off);
         t.for_module(&mut sm_ast, |_stack, n| {
             let ctx = n.get_context().with_type(Type::I64);
             *n.get_context_mut() = ctx;
@@ -531,10 +519,7 @@ mod tests {
         let mut sa = SemanticAst::new();
         let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
-        let mut t =
-            ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off, |_| {
-                "test".into()
-            });
+        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off);
         t.for_module(&mut sm_ast, |stack, n| {
             let cpath = stack
                 .to_canonical(&vec![Element::Id(annotation)].into())
@@ -584,10 +569,7 @@ mod tests {
         let mut sa = SemanticAst::new();
         let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
 
-        let mut t =
-            ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off, |_| {
-                "test".into()
-            });
+        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off);
         t.for_module(&mut sm_ast, |stack, n| match n.name() {
             Some(name) => {
                 let cpath = stack.to_canonical(&vec![Element::Id(name)].into()).unwrap();
