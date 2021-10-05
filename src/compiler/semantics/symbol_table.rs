@@ -1,3 +1,5 @@
+use log::debug;
+
 use crate::{
     compiler::{ast::*, semantics::semanticnode::SemanticContext},
     StringId,
@@ -67,6 +69,7 @@ impl SymbolTable {
     pub fn add_item_defs_to_table(
         module: &mut Module<SemanticContext>,
     ) -> Result<(), SemanticError> {
+        debug!("Initialize symbol tables for AST");
         let mut context = module.get_context().clone();
 
         let fm = module.get_functions_mut();
