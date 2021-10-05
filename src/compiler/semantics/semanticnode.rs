@@ -114,11 +114,6 @@ impl SemanticContext {
         &self.ty
     }
 
-    /// Set the [`Type`] for a node
-    pub fn set_ty(&mut self, ty: Type) {
-        self.ty = ty
-    }
-
     pub fn canonical_path(&self) -> &Path {
         &self.canonical_path
     }
