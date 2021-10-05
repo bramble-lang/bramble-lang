@@ -134,7 +134,7 @@ impl TypeResolver {
             .get_context_mut()
             .with_type(Type::Unit)
             .with_sym(sym);
-        *nmodule.get_context_mut() = ctx; // TODO: This is not needed, if I comment it out code still works.
+        *nmodule.get_context_mut() = ctx; // TODO: This is not needed, if I comment it out code still works.  This is not needed because the unit of a module is never used for anything.
 
         Ok(nmodule)
     }

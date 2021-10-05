@@ -78,11 +78,11 @@ impl SemanticContext {
         }
     }
 
-    pub fn new_module(id: u32, ln: u32, name: StringId, ty: Type) -> SemanticContext {
+    pub fn new_module(id: u32, ln: u32, name: StringId) -> SemanticContext {
         SemanticContext {
             id,
             ln,
-            ty,
+            ty: Type::Unit,
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),
         }
@@ -180,7 +180,7 @@ impl SemanticAst {
     }
 
     fn module_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
-        let sm_data = SemanticContext::new_module(self.next_id, ln, name, Type::Unknown);
+        let sm_data = SemanticContext::new_module(self.next_id, ln, name);
         self.next_id += 1;
         sm_data
     }
