@@ -18,9 +18,9 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
         let path = stack.to_path().unwrap();
         assert_eq!(path, vec![Element::CanonicalRoot, Element::Id(test)].into());
         assert!(path.is_canonical());
@@ -35,11 +35,11 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let sym = SymbolTable::new_module(inner);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
         let path = stack.to_path().unwrap();
         assert!(path.is_canonical());
     }
@@ -53,11 +53,11 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let sym = SymbolTable::new_module(inner);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
         let path = stack.to_path().unwrap();
         let expected = vec![
             Element::CanonicalRoot,
@@ -79,11 +79,11 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let sym = SymbolTable::new_module(test_mod);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let current = SymbolTable::new_module(inner);
-        stack.enter_scope(&current);
+        stack.enter_scope(current);
         let path = stack.to_path().unwrap();
         let expected = vec![
             Element::CanonicalRoot,
@@ -105,11 +105,11 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let sym = SymbolTable::new_module(test_mod);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let current = SymbolTable::new_routine(inner);
-        stack.enter_scope(&current);
+        stack.enter_scope(current);
         let current_fn = stack.get_current_fn();
         let expected = Some(inner);
         assert_eq!(current_fn, expected);
@@ -124,9 +124,9 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let sym = SymbolTable::new_module(test_mod);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let current_fn = stack.get_current_fn();
         let expected = None;
         assert_eq!(current_fn, expected);
@@ -141,13 +141,13 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
         let module = SymbolTable::new_module(inner);
-        stack.enter_scope(&module);
+        stack.enter_scope(module);
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
         let local2 = SymbolTable::new();
-        stack.enter_scope(&local2);
+        stack.enter_scope(local2);
         let path = stack.to_path().unwrap();
         let expected = vec![
             Element::CanonicalRoot,
@@ -168,19 +168,19 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
 
         // Module 1
         let module = SymbolTable::new_module(first);
-        stack.enter_scope(&module);
+        stack.enter_scope(module);
 
         // Module 2
         let module2 = SymbolTable::new_module(second);
-        stack.enter_scope(&module2);
+        stack.enter_scope(module2);
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
         let local2 = SymbolTable::new();
-        stack.enter_scope(&local2);
+        stack.enter_scope(local2);
 
         let path = stack.to_path().unwrap();
         let expected = vec![
@@ -203,14 +203,14 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
 
         // Module 1
         let module = SymbolTable::new_module(first);
-        stack.enter_scope(&module);
+        stack.enter_scope(module);
 
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
         stack.add(x, Type::I8, false, false).unwrap();
 
         let (s, _) = stack
@@ -229,18 +229,18 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
 
         // Module 1
         let module = SymbolTable::new_module(first);
-        stack.enter_scope(&module);
+        stack.enter_scope(module);
 
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
         stack.add(x, Type::I8, false, false).unwrap();
 
         let local2 = SymbolTable::new();
-        stack.enter_scope(&local2);
+        stack.enter_scope(local2);
 
         let (s, _) = stack
             .lookup_symbol_by_path(&vec![Element::Id(x)].into())
@@ -259,18 +259,18 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
 
         // Module 1
         let module = SymbolTable::new_module(first);
-        stack.enter_scope(&module);
+        stack.enter_scope(module);
         stack.add(x, Type::I8, false, false).unwrap();
 
         let func = SymbolTable::new_routine(my_func);
-        stack.enter_scope(&func);
+        stack.enter_scope(func);
 
         let local2 = SymbolTable::new();
-        stack.enter_scope(&local2);
+        stack.enter_scope(local2);
 
         let (_s, p) = stack
             .lookup_symbol_by_path(&vec![Element::Id(x)].into())
@@ -299,19 +299,19 @@ mod stack_tests {
         let m = Module::new(test, SemanticContext::new_module(1, 1, test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
-        stack.enter_scope(&sym);
+        stack.enter_scope(sym);
 
         // Module 1
         let module = SymbolTable::new_module(first);
-        stack.enter_scope(&module);
+        stack.enter_scope(module);
         stack.add(x, Type::I8, false, false).unwrap();
 
         // Module 2
         let module2 = SymbolTable::new_module(second);
-        stack.enter_scope(&module2);
+        stack.enter_scope(module2);
 
         let local = SymbolTable::new();
-        stack.enter_scope(&local);
+        stack.enter_scope(local);
 
         // across 1 boundary
         let (s, p) = stack
@@ -332,7 +332,7 @@ mod stack_tests {
         // across 2 boundaries
         // Module 2
         let module2 = SymbolTable::new_module(third);
-        stack.enter_scope(&module2);
+        stack.enter_scope(module2);
 
         let (s, p) = stack
             .lookup_symbol_by_path(&vec![Element::Id(x)].into())

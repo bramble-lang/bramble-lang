@@ -101,7 +101,8 @@ impl TypeResolver {
     ) -> SemanticResult<Module<SemanticContext>> {
         let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
 
-        self.symbols.enter_scope(&nmodule.get_context().sym());
+        self.symbols
+            .enter_scope(nmodule.get_context().sym().clone());
 
         *nmodule.get_modules_mut() = m
             .get_modules()
@@ -172,7 +173,7 @@ impl TypeResolver {
                 .map_err(|e| CompilerError::new(p.context.line(), e))?;
         }
 
-        self.symbols.enter_scope(ctx.sym());
+        self.symbols.enter_scope(ctx.sym().clone());
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
@@ -724,7 +725,7 @@ impl TypeResolver {
             Expression::ExpressionBlock(ctx, body, final_exp) => {
                 let mut resolved_body = vec![];
 
-                self.symbols.enter_scope(&ctx.sym());
+                self.symbols.enter_scope(ctx.sym().clone());
 
                 for stmt in body.iter() {
                     let exp = self.analyze_statement(stmt)?;

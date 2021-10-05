@@ -124,8 +124,8 @@ impl<'a> SymbolTableScopeStack {
         self.imported_symbols.get(&canonical_name.to_string())
     }
 
-    pub fn enter_scope(&mut self, sym: &SymbolTable) {
-        match self.head.replace(sym.clone()) {
+    pub fn enter_scope(&mut self, sym: SymbolTable) {
+        match self.head.replace(sym) {
             Some(h) => self.stack.push(h),
             None => (),
         }
