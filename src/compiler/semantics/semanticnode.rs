@@ -58,7 +58,7 @@ impl Statement<SemanticContext> {
 }
 
 impl SemanticContext {
-    pub fn new(id: u32, ln: u32, ty: Type) -> SemanticContext {
+    pub fn new_local(id: u32, ln: u32, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
             ln,
@@ -173,7 +173,7 @@ impl SemanticAst {
     }
 
     fn semantic_context_from(&mut self, ln: u32) -> SemanticContext {
-        let sm_data = SemanticContext::new(self.next_id, ln, Type::Unknown);
+        let sm_data = SemanticContext::new_local(self.next_id, ln, Type::Unknown);
         self.next_id += 1;
         sm_data
     }

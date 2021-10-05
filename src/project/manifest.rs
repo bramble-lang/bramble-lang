@@ -172,7 +172,7 @@ impl ManifestStructDef {
     }
 
     fn to_sd(&self, st: &mut StringTable) -> Result<StructDef<SemanticContext>, ManifestError> {
-        let mut ctx = SemanticContext::new(0, 0, Type::Unit);
+        let mut ctx = SemanticContext::new_local(0, 0, Type::Unit);
         ctx.set_canonical_path(string_to_path(st, &self.canon_path)?);
 
         let name = st.insert(self.name.clone());
