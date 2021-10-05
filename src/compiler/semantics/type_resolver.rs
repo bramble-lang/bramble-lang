@@ -184,13 +184,12 @@ impl TypeResolver {
 
         let sym = self.symbols.leave_scope();
 
-        let canonical_ret_ty = meta.ty().clone();
         Ok(RoutineDef {
             context: meta.with_sym(sym),
             def: def.clone(),
             name: name.clone(),
             params: params.clone(),
-            ret_ty: canonical_ret_ty,
+            ret_ty: ret_ty.clone(),
             body: resolved_body,
         })
     }
