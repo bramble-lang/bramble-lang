@@ -223,7 +223,7 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: $test::my_mod::my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             println!("Test: {}", ln);
@@ -336,7 +336,7 @@ mod type_resolver_tests {
                         return;
                     }
                 }",
-                Err("L4: Could not find item with the given path: my_mod::test ($test::my_mod::my_mod::test)"),
+                Err("L4: Could not find item with the given path: $test::my_mod::my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -352,7 +352,8 @@ mod type_resolver_tests {
             let ast = parser::parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
-                main_mod, main_fn,
+                main_mod,
+                main_fn,
                 TracingConfig::Off,
                 TracingConfig::Off,
                 TracingConfig::Off,
@@ -1720,10 +1721,18 @@ mod type_resolver_tests {
             (
                 line!(),
                 "fn main() -> [i32;0] {
-                    let k: [i64;0] := [];
+                    let k: [i64;1] := [];
                     return k;
                 }",
                 Err("L1: Expected length > 0 for array, but found 0"),
+            ),
+            (
+                line!(),
+                "fn main() -> [i32;1] {
+                    let k: [i64;0] := [];
+                    return k;
+                }",
+                Err("L2: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1789,7 +1798,7 @@ mod type_resolver_tests {
                     let k: bool := k;
                     return k;
                 }",
-                Err("L2: k is not defined"),
+                Err("L2: Could not find definition for k in this scope"),
             ),
             (
                 line!(),
@@ -1797,7 +1806,7 @@ mod type_resolver_tests {
                     let k: bool := x;
                     return k;
                 }",
-                Err("L2: x is not defined"),
+                Err("L2: Could not find definition for x in this scope"),
             ),
         ] {
             println!("Test L{}", ln);
@@ -1891,7 +1900,7 @@ mod type_resolver_tests {
                     mut x := false;
                     return k;
                 }",
-                Err("L3: x is not defined"),
+                Err("L3: Could not find definition for x in this scope"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2262,7 +2271,7 @@ mod type_resolver_tests {
                 }
                 fn number() -> i64 {return 5;}
                 ",
-                Err("L2: bad_fun is not defined"),
+                Err("L2: Could not find item with the given path: $main::bad_fun ($main::bad_fun)"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2949,12 +2958,12 @@ mod type_resolver_tests {
         for (line, text, expected) in vec![
             (
                 line!(),
-                "struct MyStruct{x:i64} fn test() -> root::MyStruct {return MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
                 line!(),
-                "struct MyStruct{x:i64} fn test() -> MyStruct {return MyStruct{x:1};}",
+                "struct MyStruct{x:i64} fn test() -> root::MyStruct {return MyStruct{x:1};}",
                 Ok(()),
             ),
             (
@@ -3151,7 +3160,7 @@ mod type_resolver_tests {
                 TracingConfig::Off,
             );
             match expected {
-                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\nST: {:?}", line, text, result, table)},
+                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\n\nST: {:?}", line, text, result.map_err(|e| e.fmt(&table)), table)},
                 Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
             }
         }
