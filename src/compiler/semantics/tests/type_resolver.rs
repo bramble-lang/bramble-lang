@@ -924,6 +924,13 @@ mod type_resolver_tests {
             (
                 "fn main() -> bool {
                     let k: bool := false;
+                    return !k;
+                }",
+                Ok(Type::Bool),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: bool := false;
                     return -k;
                 }",
                 Err("L3: - expected i32 or i64 but found bool"), // TODO: Change this error message to include i8 and i16
@@ -934,13 +941,6 @@ mod type_resolver_tests {
                     return -k;
                 }",
                 Err("L3: - expected i32 or i64 but found u64"),
-            ),
-            (
-                "fn main() -> bool {
-                    let k: bool := false;
-                    return !k;
-                }",
-                Ok(Type::Bool),
             ),
             (
                 "fn main() -> i64 {
@@ -2169,30 +2169,6 @@ mod type_resolver_tests {
                 Ok(Type::I64),
             ),
             (
-                "fn main() -> i32 {
-                    return number();
-                }
-                fn number() -> i32 {return 5;}
-                ",
-                Err("L4: Return expected i32 but got i64"),
-            ),
-            (
-                "fn main() -> bool {
-                    return number();
-                }
-                fn number() -> i64 {return 5;}
-                ",
-                Err("L2: Return expected bool but got i64"),
-            ),
-            (
-                "fn main() -> bool {
-                    return bad_fun();
-                }
-                fn number() -> i64 {return 5;}
-                ",
-                Err("L2: bad_fun is not defined"),
-            ),
-            (
                 "fn main() -> i64 {
                     return add(1, 2);
                 }
@@ -2263,6 +2239,30 @@ mod type_resolver_tests {
                 fn add(a: i64, b: i64) -> i64 {return a + b;}
                 ",
                 Err("L2: Incorrect number of parameters passed to routine: $main::add. Expected 2 but got 1"),
+            ),
+            (
+                "fn main() -> i32 {
+                    return number();
+                }
+                fn number() -> i32 {return 5;}
+                ",
+                Err("L4: Return expected i32 but got i64"),
+            ),
+            (
+                "fn main() -> bool {
+                    return number();
+                }
+                fn number() -> i64 {return 5;}
+                ",
+                Err("L2: Return expected bool but got i64"),
+            ),
+            (
+                "fn main() -> bool {
+                    return bad_fun();
+                }
+                fn number() -> i64 {return 5;}
+                ",
+                Err("L2: bad_fun is not defined"),
             ),
         ] {
             let mut table = StringTable::new();
@@ -2775,6 +2775,14 @@ mod type_resolver_tests {
             ),
             (
                 "fn main() {
+                    if (false) {};
+                    return;
+                }
+                ",
+                Ok(Type::Unit),
+            ),
+            (
+                "fn main() {
                     let x: i64 := if (4) {1} else {2};
                     return;
                 }
@@ -2812,14 +2820,6 @@ mod type_resolver_tests {
                 }
                 ",
                 Err("L2: If expression has mismatching arms: expected i64 got unit"),
-            ),
-            (
-                "fn main() {
-                    if (false) {};
-                    return;
-                }
-                ",
-                Ok(Type::Unit),
             ),
         ] {
             let mut table = StringTable::new();
@@ -3164,14 +3164,14 @@ mod type_resolver_tests {
                 fn test(ms:MyStruct) -> i64 {
                     return ms.x;}",
                 Ok(())),
-                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
-                Err("L1: $main::MyStruct does not have member y")),
-                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
-                Err("L1: Return expected bool but got i64")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.x;}",
                 Ok(())),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> MyStruct {return ms.ms;}",
                 Ok(())),
+                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> i64 {return ms.y;}",
+                Err("L1: $main::MyStruct does not have member y")),
+                ("struct MyStruct{x:i64} fn test(ms:MyStruct) -> bool{return ms.x;}",
+                Err("L1: Return expected bool but got i64")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> i64 {return ms.ms.y;}",
                 Err("L1: $main::MyStruct does not have member y")),
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
