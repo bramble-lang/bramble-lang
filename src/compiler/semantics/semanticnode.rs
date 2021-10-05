@@ -119,7 +119,7 @@ impl SemanticContext {
         self.ty = ty
     }
 
-    pub fn get_canonical_path(&self) -> &Path {
+    pub fn canonical_path(&self) -> &Path {
         &self.canonical_path
     }
 

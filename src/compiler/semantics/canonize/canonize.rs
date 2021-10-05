@@ -21,7 +21,7 @@ pub fn canonize_paths(
     debug!("Start canonization of paths");
 
     let mut t = ForEachPreOrderMut::new("Canonize Paths", module, imports, tracing, |a| {
-        format!("Path: {}", a.get_canonical_path())
+        format!("Path: {}", a.canonical_path())
     });
     t.for_each(module, |stack, node| node.canonize_context_path(stack))?;
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;

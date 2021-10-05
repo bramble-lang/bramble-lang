@@ -544,7 +544,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            *sm_ast.get_context().get_canonical_path(),
+            *sm_ast.get_context().canonical_path(),
             vec![
                 Element::CanonicalRoot,
                 Element::Id(test),
@@ -553,11 +553,7 @@ mod tests {
             .into()
         );
         assert_eq!(
-            *sm_ast
-                .get_module(m)
-                .unwrap()
-                .get_context()
-                .get_canonical_path(),
+            *sm_ast.get_module(m).unwrap().get_context().canonical_path(),
             vec![
                 Element::CanonicalRoot,
                 Element::Id(test),
@@ -608,7 +604,7 @@ mod tests {
                 .get_item(my_struct)
                 .unwrap()
                 .get_context()
-                .get_canonical_path(),
+                .canonical_path(),
             vec![
                 Element::CanonicalRoot,
                 Element::Id(test),

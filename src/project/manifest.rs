@@ -117,7 +117,7 @@ impl ManifestRoutineDef {
             .collect::<Result<_, ManifestError>>()?;
         let def = ManifestRoutineDefType::from_def(rd.def);
         let ret_ty = ManifestType::from_ty(st, &rd.ret_ty)?;
-        let canon_path = path_to_string(st, rd.get_context().get_canonical_path())?;
+        let canon_path = path_to_string(st, rd.get_context().canonical_path())?;
 
         Ok(ManifestRoutineDef {
             name,
@@ -153,7 +153,7 @@ struct ManifestStructDef {
 impl ManifestStructDef {
     fn from_sd(st: &StringTable, sd: &StructDef<SemanticContext>) -> Result<Self, ManifestError> {
         let name = st.get(sd.get_name())?.into();
-        let canon_path = path_to_string(st, sd.get_context().get_canonical_path())?;
+        let canon_path = path_to_string(st, sd.get_context().canonical_path())?;
         let fields = sd
             .get_fields()
             .iter()

@@ -162,7 +162,7 @@ impl TypeResolver {
         } = routine;
 
         // If routine is root::my_main it must be a function type and have type () -> i64
-        if context.get_canonical_path() == &self.main_fn {
+        if context.canonical_path() == &self.main_fn {
             Self::validate_main_fn(routine)?;
         }
 
