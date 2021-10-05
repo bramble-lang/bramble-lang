@@ -47,8 +47,8 @@ pub fn resolve_types_with_imports(
 ) -> SemanticResult<Module<SemanticContext>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
-    SymbolTable::add_item_defs_to_table(&mut sm_ast).map_err(|e| CompilerError::new(0, e))?;
     canonize_paths(&mut sm_ast, imports, trace_canonization)?; //TODO: Add a trace for this step
+    SymbolTable::add_item_defs_to_table(&mut sm_ast).map_err(|e| CompilerError::new(0, e))?;
 
     let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn);
 
@@ -678,8 +678,15 @@ impl TypeResolver {
                     .lookup_symbol_by_path(routine_path)
                     .map_err(|e| CompilerError::new(ctx.line(), e))?;
 
+                // if the routine is external, then change the call type to extern
+                let call = if symbol.is_extern {
+                    RoutineCall::Extern
+                } else {
+                    *call
+                };
+
                 let (expected_param_tys, has_varargs, ret_ty) = self
-                    .extract_routine_type_info(symbol, call, &routine_canon_path)
+                    .extract_routine_type_info(symbol, &call, &routine_canon_path)
                     .map_err(|e| CompilerError::new(ctx.line(), e))?;
 
                 // Check that parameters are correct and if so, return the node annotated with
@@ -714,7 +721,7 @@ impl TypeResolver {
                             let ctx = ctx.with_type(ret_ty.clone());
                             Ok(Expression::RoutineCall(
                                 ctx,
-                                *call,
+                                call,
                                 routine_canon_path,
                                 resolved_params,
                             ))

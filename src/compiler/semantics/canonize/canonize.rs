@@ -77,8 +77,9 @@ impl Canonizable for Expression<SemanticContext> {
             Expression::Path(_, ref mut path) => {
                 if !path.is_canonical() {
                     stack
-                        .lookup_symbol_by_path(path)
-                        .and_then(|(_, canonical_path)| {
+                        .to_canonical(path)
+                        /*.lookup_symbol_by_path(path)*/
+                        .and_then(|canonical_path| {
                             *path = canonical_path;
                             Ok(())
                         })
@@ -90,12 +91,13 @@ impl Canonizable for Expression<SemanticContext> {
             Expression::RoutineCall(_, ref mut call_target, ref mut path, _) => {
                 if !path.is_canonical() {
                     stack
-                        .lookup_symbol_by_path(path)
-                        .and_then(|(sym, canonical_path)| {
+                        //.lookup_symbol_by_path(path)
+                        .to_canonical(path)
+                        .and_then(|canonical_path| {
                             *path = canonical_path;
-                            if sym.is_extern {
+                            /*if sym.is_extern {
                                 *call_target = RoutineCall::Extern;
-                            }
+                            }*/
                             Ok(())
                         })
                         .map_err(|e| CompilerError::new(self.get_context().line(), e))
@@ -106,8 +108,9 @@ impl Canonizable for Expression<SemanticContext> {
             Expression::StructExpression(_, ref mut path, _) => {
                 if !path.is_canonical() {
                     stack
-                        .lookup_symbol_by_path(path)
-                        .and_then(|(_, canonical_path)| {
+                        //.lookup_symbol_by_path(path)
+                        .to_canonical(path)
+                        .and_then(|canonical_path| {
                             *path = canonical_path;
                             Ok(())
                         })
