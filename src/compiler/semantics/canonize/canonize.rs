@@ -139,9 +139,6 @@ impl Canonizable for Module<SemanticContext> {
         default_canonize_context_path(self, stack)?;
 
         // Canonize Symbol Table
-        // The symbol table needs to be canonized because when the type checker
-        // looks up routines and structure definitions in a module it will use
-        // the full canonical name.
         let line = self.get_context().line();
         let mut sym = self.get_context().sym().clone();
         for s in sym.table_mut().iter_mut() {
