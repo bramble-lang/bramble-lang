@@ -4,15 +4,15 @@ use crate::{
 };
 use crate::{diagnostics::config::TracingConfig, StringId};
 
-use super::symbol_table::SymbolTable;
+use super::{error::SemanticError, symbol_table::SymbolTable};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
     id: u32,
     ln: u32,
-    pub(super) ty: Type,
-    pub(super) sym: SymbolTable,
-    pub(super) canonical_path: Path,
+    ty: Type,
+    sym: SymbolTable,
+    canonical_path: Path,
 }
 
 impl Context for SemanticContext {
@@ -41,12 +41,6 @@ impl Diag for SemanticContext {
     }
 }
 
-impl SemanticContext {
-    pub fn ty(&self) -> &Type {
-        &self.ty
-    }
-}
-
 pub type SemanticNode = Expression<SemanticContext>;
 
 impl SemanticNode {
@@ -64,7 +58,7 @@ impl Statement<SemanticContext> {
 }
 
 impl SemanticContext {
-    pub fn new(id: u32, ln: u32, ty: Type) -> SemanticContext {
+    pub fn new_local(id: u32, ln: u32, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
             ln,
@@ -84,22 +78,58 @@ impl SemanticContext {
         }
     }
 
-    pub fn new_module(id: u32, ln: u32, name: StringId, ty: Type) -> SemanticContext {
+    pub fn new_module(id: u32, ln: u32, name: StringId) -> SemanticContext {
         SemanticContext {
             id,
             ln,
-            ty,
+            ty: Type::Unit,
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),
         }
     }
 
-    pub fn get_canonical_path(&self) -> &Path {
+    /// Creates a copy of this instances of [`SemanticContext`] but the [`Type`]
+    /// field is assigned the value in `ty`
+    pub fn with_type(&self, ty: Type) -> SemanticContext {
+        let mut sm = self.clone();
+        sm.ty = ty;
+        sm
+    }
+
+    /// Creates a copy of this instances of [`SemanticContext`] but the [`SymbolTable`]
+    /// field is assigned the value in `ty`
+    pub fn with_sym(&self, sym: SymbolTable) -> SemanticContext {
+        let mut sm = self.clone();
+        sm.sym = sym;
+        sm
+    }
+
+    /// Get the [`SymbolTable`] for a node in the AST.
+    pub fn sym(&self) -> &SymbolTable {
+        &self.sym
+    }
+
+    /// Get the [`Type`] for a node in the AST
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
+
+    pub fn canonical_path(&self) -> &Path {
         &self.canonical_path
     }
 
     pub fn set_canonical_path(&mut self, path: Path) {
         self.canonical_path = path;
+    }
+
+    pub fn add_symbol(
+        &mut self,
+        name: StringId,
+        ty: Type,
+        mutable: bool,
+        is_extern: bool,
+    ) -> Result<(), SemanticError> {
+        self.sym.add(name, ty, mutable, is_extern)
     }
 }
 
@@ -138,7 +168,7 @@ impl SemanticAst {
     }
 
     fn semantic_context_from(&mut self, ln: u32) -> SemanticContext {
-        let sm_data = SemanticContext::new(self.next_id, ln, Type::Unknown);
+        let sm_data = SemanticContext::new_local(self.next_id, ln, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
@@ -150,7 +180,7 @@ impl SemanticAst {
     }
 
     fn module_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
-        let sm_data = SemanticContext::new_module(self.next_id, ln, name, Type::Unknown);
+        let sm_data = SemanticContext::new_module(self.next_id, ln, name);
         self.next_id += 1;
         sm_data
     }

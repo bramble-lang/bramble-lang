@@ -280,7 +280,7 @@ impl<'ctx> IrGen<'ctx> {
     fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticContext>) {
         let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
-            &rd.context.get_canonical_path().to_label(self.string_table),
+            &rd.context.canonical_path().to_label(self.string_table),
             &params,
             false,
             &rd.ret_ty,
@@ -293,7 +293,7 @@ impl<'ctx> IrGen<'ctx> {
         let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
             &ex.get_context()
-                .get_canonical_path()
+                .canonical_path()
                 .to_label(self.string_table),
             &params,
             ex.has_varargs,
@@ -368,13 +368,13 @@ impl<'ctx> IrGen<'ctx> {
     fn add_struct_def(&mut self, sd: &'ctx ast::StructDef<SemanticContext>) {
         self.struct_table.insert(
             sd.get_context()
-                .get_canonical_path()
+                .canonical_path()
                 .to_label(self.string_table),
             sd,
         );
         let name = sd
             .get_context()
-            .get_canonical_path()
+            .canonical_path()
             .to_label(self.string_table);
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
@@ -492,10 +492,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
-        let fn_name = self
-            .context
-            .get_canonical_path()
-            .to_label(llvm.string_table);
+        let fn_name = self.context.canonical_path().to_label(llvm.string_table);
         let fn_value = llvm
             .module
             .get_function(&fn_name)

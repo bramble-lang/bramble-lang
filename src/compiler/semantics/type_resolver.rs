@@ -17,8 +17,6 @@ use super::{
     SemanticError, SemanticResult,
 };
 
-//type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;
-
 pub fn resolve_types(
     ast: &Module<ParserContext>,
     main_mod: StringId,
@@ -103,7 +101,8 @@ impl TypeResolver {
     ) -> SemanticResult<Module<SemanticContext>> {
         let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
 
-        self.symbols.enter_scope(&nmodule.get_context().sym);
+        self.symbols
+            .enter_scope(nmodule.get_context().sym().clone());
 
         *nmodule.get_modules_mut() = m
             .get_modules()
@@ -131,9 +130,10 @@ impl TypeResolver {
             .map(|e| self.analyze_item(e))
             .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
 
-        let mut meta = nmodule.get_context_mut();
-        meta.ty = Type::Unit;
-        meta.sym = self.symbols.leave_scope();
+        // We can ignore the returned symbol table because currently, the type
+        // resolver will not modify the symbol table of a module. As only routine
+        // and expression block symbol tables can be modified (through binds).
+        self.symbols.leave_scope();
 
         Ok(nmodule)
     }
@@ -161,23 +161,19 @@ impl TypeResolver {
         } = routine;
 
         // If routine is root::my_main it must be a function type and have type () -> i64
-        if context.get_canonical_path() == &self.main_fn {
+        if context.canonical_path() == &self.main_fn {
             Self::validate_main_fn(routine)?;
         }
 
-        let mut meta = context.clone();
-
-        // canonize routine parameter types
-        meta.ty = ret_ty.clone();
+        let mut ctx = context.with_type(ret_ty.clone());
 
         // Add parameters to symbol table
         for p in params.iter() {
-            meta.sym
-                .add(p.name, p.ty.clone(), false, false)
+            ctx.add_symbol(p.name, p.ty.clone(), false, false)
                 .map_err(|e| CompilerError::new(p.context.line(), e))?;
         }
 
-        self.symbols.enter_scope(&meta.sym);
+        self.symbols.enter_scope(ctx.sym().clone());
 
         let mut resolved_body = vec![];
         for stmt in body.iter() {
@@ -185,15 +181,14 @@ impl TypeResolver {
             resolved_body.push(exp);
         }
 
-        meta.sym = self.symbols.leave_scope();
+        let sym = self.symbols.leave_scope();
 
-        let canonical_ret_ty = meta.ty.clone();
         Ok(RoutineDef {
-            context: meta,
+            context: ctx.with_sym(sym),
             def: def.clone(),
             name: name.clone(),
             params: params.clone(),
-            ret_ty: canonical_ret_ty,
+            ret_ty: ret_ty.clone(),
             body: resolved_body,
         })
     }
@@ -221,12 +216,11 @@ impl TypeResolver {
         }
 
         // Update the context with canonical path information and set the type to Type::Unit
-        let mut meta = struct_def.get_context().clone();
-        meta.ty = Type::Unit;
+        let ctx = struct_def.get_context().with_type(Type::Unit);
 
         Ok(StructDef::new(
             struct_def.get_name().clone(),
-            meta.clone(),
+            ctx,
             fields.clone(),
         ))
     }
@@ -245,15 +239,15 @@ impl TypeResolver {
 
         // Update the context with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
-        let mut meta = ex.get_context().clone();
-        meta.ty = ex.get_return_type().clone();
+        let ctx = ex.get_context().with_type(ex.get_return_type().clone());
+        let ret_ty = ctx.ty().clone();
 
         Ok(Extern::new(
             name,
-            meta.clone(),
+            ctx,
             params.clone(),
             ex.has_varargs,
-            meta.ty.clone(),
+            ret_ty,
         ))
     }
 
@@ -267,7 +261,7 @@ impl TypeResolver {
             Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b)?)),
             Return(box x) => Return(Box::new(self.analyze_return(x)?)),
             YieldReturn(box x) => YieldReturn(Box::new(self.analyze_yieldreturn(x)?)),
-            Expression(box e) => Expression(Box::new(self.traverse(e)?)),
+            Expression(box e) => Expression(Box::new(self.analyze_expression(e)?)),
         };
 
         Ok(inner)
@@ -277,45 +271,43 @@ impl TypeResolver {
         &mut self,
         bind: &Bind<SemanticContext>,
     ) -> SemanticResult<Bind<SemanticContext>> {
-        let meta = bind.get_context();
+        let ctx = bind.get_context();
         let rhs = bind.get_rhs();
         let result = {
-            let mut meta = meta.clone();
-            meta.ty = bind.get_type().clone();
-            let rhs = self.traverse(rhs)?;
-            if meta.ty == rhs.get_type() {
+            let ctx = ctx.with_type(bind.get_type().clone());
+            let rhs = self.analyze_expression(rhs)?;
+            if ctx.ty() == rhs.get_type() {
                 match self
                     .symbols
-                    .add(bind.get_id(), meta.ty.clone(), bind.is_mutable(), false)
+                    .add(bind.get_id(), ctx.ty().clone(), bind.is_mutable(), false)
                 {
                     Ok(()) => {
-                        let ty = meta.ty().clone();
-                        Ok(Bind::new(meta, bind.get_id(), ty, bind.is_mutable(), rhs))
+                        let ty = ctx.ty().clone();
+                        Ok(Bind::new(ctx, bind.get_id(), ty, bind.is_mutable(), rhs))
                     }
                     Err(e) => Err(e),
                 }
             } else {
                 Err(SemanticError::BindExpected(
-                    meta.ty.clone(),
+                    ctx.ty().clone(),
                     rhs.get_type().clone(),
                 ))
             }
         };
-        result.map_err(|e| CompilerError::new(meta.line(), e))
+        result.map_err(|e| CompilerError::new(ctx.line(), e))
     }
 
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticContext>,
     ) -> SemanticResult<Mutate<SemanticContext>> {
-        let mut meta = mutate.get_context().clone();
-        let rhs = self.traverse(mutate.get_rhs())?;
+        let rhs = self.analyze_expression(mutate.get_rhs())?;
         let result = match self.symbols.lookup_var(mutate.get_id()) {
             Ok(symbol) => {
                 if symbol.mutable {
                     if symbol.ty == rhs.get_type() {
-                        meta.ty = rhs.get_type().clone();
-                        Ok(Mutate::new(meta, mutate.get_id(), rhs))
+                        let ctx = mutate.get_context().with_type(rhs.get_type().clone());
+                        Ok(Mutate::new(ctx, mutate.get_id(), rhs))
                     } else {
                         Err(SemanticError::BindMismatch(
                             mutate.get_id(),
@@ -341,7 +333,7 @@ impl TypeResolver {
         let (actual_ret_exp, actual_ret_ty) = match yr.get_value() {
             None => (None, Type::Unit),
             Some(exp) => {
-                let exp = self.traverse(exp)?;
+                let exp = self.analyze_expression(exp)?;
                 let exp_ty = exp.get_type().clone();
                 (Some(exp), exp_ty)
             }
@@ -359,9 +351,8 @@ impl TypeResolver {
             .map_err(|e| CompilerError::new(yr.get_context().line(), e))?;
 
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = yr.get_context().clone();
-            meta.ty = actual_ret_ty;
-            Ok(YieldReturn::new(meta, actual_ret_exp))
+            let ctx = yr.get_context().with_type(actual_ret_ty);
+            Ok(YieldReturn::new(ctx, actual_ret_exp))
         } else {
             Err(SemanticError::YieldExpected(
                 expected_ret_ty.clone(),
@@ -380,7 +371,7 @@ impl TypeResolver {
         let (actual_ret_exp, actual_ret_ty) = match r.get_value() {
             None => (None, Type::Unit),
             Some(exp) => {
-                let exp = self.traverse(exp)?;
+                let exp = self.analyze_expression(exp)?;
                 let exp_ty = exp.get_type().clone();
                 (Some(exp), exp_ty)
             }
@@ -401,9 +392,8 @@ impl TypeResolver {
         // Check that the actual expression matches the expected return type
         // of the function
         if actual_ret_ty == expected_ret_ty {
-            let mut meta = r.get_context().clone();
-            meta.ty = actual_ret_ty;
-            Ok(Return::new(meta, actual_ret_exp))
+            let ctx = r.get_context().with_type(actual_ret_ty);
+            Ok(Return::new(ctx, actual_ret_exp))
         } else {
             Err(SemanticError::ReturnExpected(
                 expected_ret_ty.clone(),
@@ -413,83 +403,74 @@ impl TypeResolver {
         .map_err(|e| CompilerError::new(r.get_context().line(), e))
     }
 
-    fn traverse(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
-        // TODO: With the new error handling design this function is no longer needed
-        // It only existed as a way of injecting line numbers into error messages
-        self.analyze_expression(ast)
-    }
-
+    /// Recursively resolve every child of the given expression and check that every
+    /// operator and function is given operands with the correct types.  Finally,
+    /// return the type that the expression ultimately resolves to or return an
+    /// error if there is a mismatch between the required type of an operand and
+    /// the given type of an operand.
     fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
         match &ast {
-            &Expression::U8(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::U8;
-                Ok(Expression::U8(meta, *v))
+            &Expression::U8(ctx, v) => {
+                let ctx = ctx.with_type(Type::U8);
+                Ok(Expression::U8(ctx, *v))
             }
-            &Expression::U16(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::U16;
-                Ok(Expression::U16(meta, *v))
+            &Expression::U16(ctx, v) => {
+                let ctx = ctx.with_type(Type::U16);
+                Ok(Expression::U16(ctx, *v))
             }
-            &Expression::U32(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::U32;
-                Ok(Expression::U32(meta, *v))
+            &Expression::U32(ctx, v) => {
+                let ctx = ctx.with_type(Type::U32);
+                Ok(Expression::U32(ctx, *v))
             }
-            &Expression::U64(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::U64;
-                Ok(Expression::U64(meta, *v))
+            &Expression::U64(ctx, v) => {
+                let ctx = ctx.with_type(Type::U64);
+                Ok(Expression::U64(ctx, *v))
             }
-            &Expression::I8(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::I8;
-                Ok(Expression::I8(meta, *v))
+            &Expression::I8(ctx, v) => {
+                let ctx = ctx.with_type(Type::I8);
+                Ok(Expression::I8(ctx, *v))
             }
-            &Expression::I16(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::I16;
-                Ok(Expression::I16(meta, *v))
+            &Expression::I16(ctx, v) => {
+                let ctx = ctx.with_type(Type::I16);
+                Ok(Expression::I16(ctx, *v))
             }
-            &Expression::I32(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::I32;
-                Ok(Expression::I32(meta, *v))
+            &Expression::I32(ctx, v) => {
+                let ctx = ctx.with_type(Type::I32);
+                Ok(Expression::I32(ctx, *v))
             }
-            &Expression::I64(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::I64;
-                Ok(Expression::I64(meta, *v))
+            &Expression::I64(ctx, v) => {
+                let ctx = ctx.with_type(Type::I64);
+                Ok(Expression::I64(ctx, *v))
             }
-            Expression::Boolean(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::Bool;
-                Ok(Expression::Boolean(meta.clone(), *v))
+            Expression::Boolean(ctx, v) => {
+                let ctx = ctx.with_type(Type::Bool);
+                Ok(Expression::Boolean(ctx, *v))
             }
-            Expression::StringLiteral(meta, v) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::StringLiteral;
-                Ok(Expression::StringLiteral(meta.clone(), v.clone()))
+            Expression::StringLiteral(ctx, v) => {
+                let ctx = ctx.with_type(Type::StringLiteral);
+                Ok(Expression::StringLiteral(ctx, v.clone()))
             }
-            Expression::ArrayExpression(meta, elements, len) => {
+            Expression::ArrayExpression(ctx, elements, len) => {
                 // Resolve the types for each element in the array value
-                let nelements: SemanticResult<Vec<Expression<SemanticContext>>> =
-                    elements.iter().map(|e| self.traverse(e)).collect();
+                let nelements: SemanticResult<Vec<Expression<SemanticContext>>> = elements
+                    .iter()
+                    .map(|e| self.analyze_expression(e))
+                    .collect();
                 let nelements = nelements?;
 
                 // Check that they are homogenous
                 let el_ty;
                 if nelements.len() == 0 {
                     return Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::ArrayInvalidSize(nelements.len()),
                     ));
                 } else {
-                    el_ty = nelements[0].get_context().ty.clone();
+                    el_ty = nelements[0].get_context().ty().clone();
                     for e in &nelements {
-                        if e.get_context().ty != el_ty {
+                        if e.get_context().ty() != el_ty {
                             return Err(CompilerError::new(
-                                meta.line(),
+                                ctx.line(),
                                 SemanticError::ArrayInconsistentElementTypes,
                             ));
                         }
@@ -497,85 +478,75 @@ impl TypeResolver {
                 }
 
                 // Use the size of the array and the type to define the array type
-                let mut meta = meta.clone();
-                meta.ty = Type::Array(Box::new(el_ty), *len);
-                Ok(Expression::ArrayExpression(meta, nelements, *len))
+                let ctx = ctx.with_type(Type::Array(Box::new(el_ty), *len));
+                Ok(Expression::ArrayExpression(ctx, nelements, *len))
             }
             Expression::ArrayAt {
-                context: meta,
+                context: ctx,
                 array,
                 index,
             } => {
                 //  Check that the array value is an array type
-                let n_array = self.traverse(array)?;
+                let n_array = self.analyze_expression(array)?;
                 let el_ty = match n_array.get_context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::ArrayIndexingInvalidType(ty.clone()),
                     )),
                 }?;
 
                 // Check that the index is an i64 type
-                let n_index = self.traverse(index)?;
+                let n_index = self.analyze_expression(index)?;
                 if !n_index.get_context().ty().is_integral() {
                     return Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::ArrayIndexingInvalidIndexType(
                             n_index.get_context().ty().clone(),
                         ),
                     ));
                 }
 
-                let mut meta = meta.clone();
-                meta.ty = el_ty.clone();
+                let ctx = ctx.with_type(el_ty.clone());
 
                 Ok(Expression::ArrayAt {
-                    context: meta,
+                    context: ctx,
                     array: box n_array,
                     index: box n_index,
                 })
             }
-            Expression::CustomType(meta, name) => {
-                let mut meta = meta.clone();
-                meta.ty = Type::Custom(name.clone());
-                Ok(Expression::CustomType(meta.clone(), name.clone()))
+            Expression::CustomType(ctx, name) => {
+                let ctx = ctx.with_type(Type::Custom(name.clone()));
+                Ok(Expression::CustomType(ctx, name.clone()))
             }
-            Expression::IdentifierDeclare(meta, name, p) => {
-                let mut meta = meta.clone();
-                meta.ty = p.clone();
-                Ok(Expression::IdentifierDeclare(
-                    meta.clone(),
-                    name.clone(),
-                    p.clone(),
-                ))
+            Expression::IdentifierDeclare(ctx, name, p) => {
+                let ctx = ctx.with_type(p.clone());
+                Ok(Expression::IdentifierDeclare(ctx, name.clone(), p.clone()))
             }
-            Expression::Identifier(meta, id) => {
-                let mut meta = meta.clone();
-                match self
+            Expression::Identifier(ctx, id) => {
+                let ctx = match self
                     .symbols
                     .lookup_var(*id)
-                    .map_err(|e| CompilerError::new(meta.line(), e))?
+                    .map_err(|e| CompilerError::new(ctx.line(), e))?
                 {
-                    Symbol { ty: p, .. } => meta.ty = p.clone(),
+                    Symbol { ty: p, .. } => ctx.with_type(p.clone()),
                 };
-                Ok(Expression::Identifier(meta.clone(), id.clone()))
+                Ok(Expression::Identifier(ctx, id.clone()))
             }
             Expression::Path(..) => {
                 todo!("Check to make sure that each identifier in the path is a valid module or a item in that module");
             }
-            Expression::MemberAccess(meta, src, member) => {
-                let mut meta = meta.clone();
+            Expression::MemberAccess(ctx, src, member) => {
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
                 // if it exists, if it does not exist then return an error
-                let src = self.traverse(&src)?;
+                let src = self.analyze_expression(&src)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
                         let (struct_def, _) = self
                             .symbols
                             .lookup_symbol_by_path(&struct_name)
-                            .map_err(|e| CompilerError::new(meta.line(), e))?;
+                            .map_err(|e| CompilerError::new(ctx.line(), e))?;
                         let member_ty = struct_def
                             .ty
                             .get_member(*member)
@@ -583,52 +554,40 @@ impl TypeResolver {
                                 struct_name.clone(),
                                 *member,
                             ))
-                            .map_err(|e| CompilerError::new(meta.line(), e))?;
-                        meta.ty = member_ty.clone();
+                            .map_err(|e| CompilerError::new(ctx.line(), e))?;
 
-                        Ok(Expression::MemberAccess(
-                            meta,
-                            Box::new(src),
-                            member.clone(),
-                        ))
+                        let ctx = ctx.with_type(member_ty.clone());
+                        Ok(Expression::MemberAccess(ctx, Box::new(src), member.clone()))
                     }
                     _ => Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::MemberAccessInvalidRootType(src.get_type().clone()),
                     )),
                 }
             }
-            Expression::BinaryOp(meta, op, l, r) => {
-                let mut meta = meta.clone();
+            Expression::BinaryOp(ctx, op, l, r) => {
                 let (ty, l, r) = self.binary_op(*op, &l, &r)?;
-                meta.ty = ty;
-                Ok(Expression::BinaryOp(
-                    meta.clone(),
-                    *op,
-                    Box::new(l),
-                    Box::new(r),
-                ))
+                let ctx = ctx.with_type(ty);
+                Ok(Expression::BinaryOp(ctx, *op, Box::new(l), Box::new(r)))
             }
-            Expression::UnaryOp(meta, op, operand) => {
-                let mut meta = meta.clone();
+            Expression::UnaryOp(ctx, op, operand) => {
                 let (ty, operand) = self.unary_op(*op, &operand)?;
-                meta.ty = ty;
-                Ok(Expression::UnaryOp(meta.clone(), *op, Box::new(operand)))
+                let ctx = ctx.with_type(ty);
+                Ok(Expression::UnaryOp(ctx, *op, Box::new(operand)))
             }
             Expression::If {
-                context: meta,
+                context: ctx,
                 cond,
                 if_arm,
                 else_arm,
             } => {
-                let mut meta = meta.clone();
-                let cond = self.traverse(&cond)?;
+                let cond = self.analyze_expression(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let if_arm = self.traverse(&if_arm)?;
+                    let if_arm = self.analyze_expression(&if_arm)?;
 
                     let else_arm = else_arm
                         .as_ref()
-                        .map(|e| self.traverse(&e))
+                        .map(|e| self.analyze_expression(&e))
                         .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
 
                     let else_arm_ty = else_arm
@@ -637,16 +596,16 @@ impl TypeResolver {
                         .unwrap_or(Type::Unit);
 
                     if if_arm.get_type() == else_arm_ty {
-                        meta.ty = if_arm.get_type().clone();
+                        let ctx = ctx.with_type(if_arm.get_type().clone());
                         Ok(Expression::If {
-                            context: meta.clone(),
+                            context: ctx,
                             cond: box cond,
                             if_arm: box if_arm,
                             else_arm: else_arm,
                         })
                     } else {
                         Err(CompilerError::new(
-                            meta.line(),
+                            ctx.line(),
                             SemanticError::IfExprMismatchArms(
                                 if_arm.get_type().clone(),
                                 else_arm_ty,
@@ -655,63 +614,60 @@ impl TypeResolver {
                     }
                 } else {
                     Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::CondExpectedBool(cond.get_type().clone()),
                     ))
                 }
             }
             Expression::While {
-                context: meta,
+                context: ctx,
                 cond,
                 body,
                 ..
             } => {
-                let mut meta = meta.clone();
-                let cond = self.traverse(&cond)?;
+                let cond = self.analyze_expression(&cond)?;
                 if cond.get_type() == Type::Bool {
-                    let body = self.traverse(&body)?;
+                    let body = self.analyze_expression(&body)?;
 
                     if body.get_type() == Type::Unit {
-                        meta.ty = Type::Unit;
+                        let ctx = ctx.with_type(Type::Unit);
                         Ok(Expression::While {
-                            context: meta.clone(),
+                            context: ctx,
                             cond: box cond,
                             body: box body,
                         })
                     } else {
                         Err(CompilerError::new(
-                            meta.line(),
+                            ctx.line(),
                             SemanticError::WhileInvalidType(body.get_type().clone()),
                         ))
                     }
                 } else {
                     Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::WhileCondInvalidType(cond.get_type().clone()),
                     ))
                 }
             }
-            Expression::Yield(meta, exp) => {
-                let mut meta = meta.clone();
-                let exp = self.traverse(&exp)?;
-                meta.ty = match exp.get_type() {
-                    Type::Coroutine(box ret_ty) => ret_ty.clone(),
+            Expression::Yield(ctx, exp) => {
+                let exp = self.analyze_expression(&exp)?;
+                let ctx = match exp.get_type() {
+                    Type::Coroutine(box ret_ty) => ctx.with_type(ret_ty.clone()),
                     _ => {
                         return Err(CompilerError::new(
-                            meta.line(),
+                            ctx.line(),
                             SemanticError::YieldInvalidType(exp.get_type().clone()),
                         ))
                     }
                 };
-                Ok(Expression::Yield(meta, Box::new(exp)))
+                Ok(Expression::Yield(ctx, Box::new(exp)))
             }
-            Expression::RoutineCall(meta, call, routine_path, params) => {
-                let mut meta = meta.clone();
+            Expression::RoutineCall(ctx, call, routine_path, params) => {
                 // test that the expressions passed to the function match the functions
                 // parameter types
                 let mut resolved_params = vec![];
                 for param in params.iter() {
-                    let ty = self.traverse(param)?;
+                    let ty = self.analyze_expression(param)?;
 
                     resolved_params.push(ty);
                 }
@@ -720,17 +676,17 @@ impl TypeResolver {
                 let (symbol, routine_canon_path) = self
                     .symbols
                     .lookup_symbol_by_path(routine_path)
-                    .map_err(|e| CompilerError::new(meta.line(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.line(), e))?;
 
                 let (expected_param_tys, has_varargs, ret_ty) = self
                     .extract_routine_type_info(symbol, call, &routine_canon_path)
-                    .map_err(|e| CompilerError::new(meta.line(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.line(), e))?;
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
                 if !has_varargs && (resolved_params.len() != expected_param_tys.len()) {
                     Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::RoutineCallWrongNumParams(
                             routine_path.clone(),
                             expected_param_tys.len(),
@@ -739,7 +695,7 @@ impl TypeResolver {
                     ))
                 } else if has_varargs && (resolved_params.len() < expected_param_tys.len()) {
                     Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::FunctionParamsNotEnough(
                             routine_path.clone(),
                             expected_param_tys.len(),
@@ -753,11 +709,11 @@ impl TypeResolver {
                         &expected_param_tys,
                         has_varargs,
                     ) {
-                        Err(msg) => Err(CompilerError::new(meta.line(), msg)),
+                        Err(msg) => Err(CompilerError::new(ctx.line(), msg)),
                         Ok(()) => {
-                            meta.ty = ret_ty.clone();
+                            let ctx = ctx.with_type(ret_ty.clone());
                             Ok(Expression::RoutineCall(
-                                meta.clone(),
+                                ctx,
                                 *call,
                                 routine_canon_path,
                                 resolved_params,
@@ -766,10 +722,10 @@ impl TypeResolver {
                     }
                 }
             }
-            Expression::ExpressionBlock(meta, body, final_exp) => {
+            Expression::ExpressionBlock(ctx, body, final_exp) => {
                 let mut resolved_body = vec![];
 
-                self.symbols.enter_scope(&meta.sym);
+                self.symbols.enter_scope(ctx.sym().clone());
 
                 for stmt in body.iter() {
                     let exp = self.analyze_statement(stmt)?;
@@ -779,40 +735,35 @@ impl TypeResolver {
                 let (final_exp, block_ty) = match final_exp {
                     None => (None, Type::Unit),
                     Some(fe) => {
-                        let fe = self.traverse(fe)?;
+                        let fe = self.analyze_expression(fe)?;
                         let ty = fe.get_type().clone();
                         (Some(Box::new(fe)), ty)
                     }
                 };
 
-                let mut meta = meta.clone();
-                meta.sym = self.symbols.leave_scope();
+                let sym = self.symbols.leave_scope();
+                let ctx = ctx.with_type(block_ty).with_sym(sym);
 
-                meta.ty = block_ty;
-                Ok(Expression::ExpressionBlock(
-                    meta.clone(),
-                    resolved_body,
-                    final_exp,
-                ))
+                Ok(Expression::ExpressionBlock(ctx, resolved_body, final_exp))
             }
-            Expression::StructExpression(meta, struct_name, params) => {
+            Expression::StructExpression(ctx, struct_name, params) => {
                 // Validate the types in the initialization parameters
                 // match their respective members in the struct
                 let (struct_def, canonical_path) = self
                     .symbols
                     .lookup_symbol_by_path(&struct_name)
-                    .map_err(|e| CompilerError::new(meta.line(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.line(), e))?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
                     .ok_or(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::InvalidStructure,
                     ))?
                     .len();
                 if params.len() != expected_num_params {
                     return Err(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::StructExprWrongNumParams(expected_num_params, params.len()),
                     ));
                 }
@@ -820,13 +771,13 @@ impl TypeResolver {
                 let mut resolved_params = vec![];
                 for (pn, pv) in params.iter() {
                     let member_ty = struct_def_ty.get_member(*pn).ok_or(CompilerError::new(
-                        meta.line(),
+                        ctx.line(),
                         SemanticError::StructExprMemberNotFound(canonical_path.clone(), *pn),
                     ))?;
-                    let param = self.traverse(pv)?;
+                    let param = self.analyze_expression(pv)?;
                     if param.get_type() != member_ty {
                         return Err(CompilerError::new(
-                            meta.line(),
+                            ctx.line(),
                             SemanticError::StructExprFieldTypeMismatch(
                                 canonical_path,
                                 *pn,
@@ -838,10 +789,9 @@ impl TypeResolver {
                     resolved_params.push((pn.clone(), param));
                 }
 
-                let mut meta = meta.clone();
-                meta.ty = Type::Custom(struct_name.clone());
+                let ctx = ctx.with_type(Type::Custom(struct_name.clone()));
                 Ok(Expression::StructExpression(
-                    meta.clone(),
+                    ctx,
                     canonical_path,
                     resolved_params,
                 ))
@@ -849,6 +799,9 @@ impl TypeResolver {
         }
     }
 
+    /// Check that the operand has the correct type for the given unary
+    /// operator and return the type that the unary operation will resolve
+    /// to.
     fn unary_op(
         &mut self,
         op: UnaryOperator,
@@ -856,7 +809,7 @@ impl TypeResolver {
     ) -> SemanticResult<(Type, SemanticNode)> {
         use UnaryOperator::*;
 
-        let operand = self.traverse(operand)?;
+        let operand = self.analyze_expression(operand)?;
 
         match op {
             Negate => {
@@ -882,6 +835,9 @@ impl TypeResolver {
         }
     }
 
+    /// Check that the two operands have the same type as the the given binary
+    /// operator requires, then, if they do, return the type that the given
+    /// binary operator resolves to.
     fn binary_op(
         &mut self,
         op: BinaryOperator,
@@ -890,8 +846,8 @@ impl TypeResolver {
     ) -> SemanticResult<(Type, SemanticNode, SemanticNode)> {
         use BinaryOperator::*;
 
-        let l = self.traverse(l)?;
-        let r = self.traverse(r)?;
+        let l = self.analyze_expression(l)?;
+        let r = self.analyze_expression(r)?;
 
         match op {
             Add | Sub | Mul | Div => {

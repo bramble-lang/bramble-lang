@@ -21,7 +21,7 @@ pub fn canonize_paths(
     debug!("Start canonization of paths");
 
     let mut t = ForEachPreOrderMut::new("Canonize Paths", module, imports, tracing, |a| {
-        format!("Path: {}", a.get_canonical_path())
+        format!("Path: {}", a.canonical_path())
     });
     t.for_each(module, |stack, node| node.canonize_context_path(stack))?;
     t.for_each(module, |s, n| n.canonize_type_refs(s))?;
@@ -120,7 +120,9 @@ impl Canonizable for Expression<SemanticContext> {
         }
     }
 }
+
 impl Canonizable for Statement<SemanticContext> {}
+
 impl Canonizable for Bind<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let canon_type = stack
@@ -130,7 +132,9 @@ impl Canonizable for Bind<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for Mutate<SemanticContext> {}
+
 impl Canonizable for Module<SemanticContext> {
     fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         // If this node has a name, then use the current stack to construct
@@ -139,19 +143,26 @@ impl Canonizable for Module<SemanticContext> {
         default_canonize_context_path(self, stack)?;
 
         // Canonize Symbol Table
+        // The types used in the routine and structure definitions need to be
+        // canonized, otherwise the type checker will not be able to find them,
+        // as the type checker expects all type references to be canonized.
         let line = self.get_context().line();
-        let sym = &mut self.get_context_mut().sym;
+        let mut sym = self.get_context().sym().clone();
         for s in sym.table_mut().iter_mut() {
-            let cty = stack
+            let canonized_ty = stack
                 .canonize_type(&s.ty)
                 .map_err(|e| CompilerError::new(line, e))?;
-            s.ty = cty;
+            s.ty = canonized_ty;
         }
+
+        *self.get_context_mut() = self.get_context().with_sym(sym);
 
         Ok(())
     }
 }
+
 impl Canonizable for StructDef<SemanticContext> {}
+
 impl Canonizable for RoutineDef<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
@@ -161,6 +172,7 @@ impl Canonizable for RoutineDef<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for Extern<SemanticContext> {
     fn canonize_context_path(&mut self, _: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let name = match self.name() {
@@ -180,6 +192,7 @@ impl Canonizable for Extern<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for Parameter<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
@@ -189,5 +202,7 @@ impl Canonizable for Parameter<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for YieldReturn<SemanticContext> {}
+
 impl Canonizable for Return<SemanticContext> {}

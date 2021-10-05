@@ -19,14 +19,17 @@ pub struct SymbolTableScopeStack {
     root: *const Module<SemanticContext>,
 
     stack: Vec<SymbolTable>,
-    head: SymbolTable,
+    head: Option<SymbolTable>,
     imported_symbols: HashMap<String, Symbol>, // TODO: change this to a SymbolTable?
 }
 
 impl<'a> std::fmt::Display for SymbolTableScopeStack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut i = 0;
-        f.write_fmt(format_args!("{}: {}\n", i, self.head))?;
+        match &self.head {
+            Some(h) => f.write_fmt(format_args!("{}: Some({})\n", i, h))?,
+            None => f.write_fmt(format_args!("{}: None\n", i))?,
+        }
         for scope in self.stack.iter().rev() {
             i += 1;
             f.write_fmt(format_args!("{}: {}\n", i, scope))?;
@@ -39,7 +42,7 @@ impl<'a> SymbolTableScopeStack {
     pub fn new(root: &'a Module<SemanticContext>, imports: &[Import]) -> SymbolTableScopeStack {
         let mut ss = SymbolTableScopeStack {
             stack: vec![],
-            head: SymbolTable::new(),
+            head: None,
             root,
             imported_symbols: HashMap::new(),
         };
@@ -97,7 +100,7 @@ impl<'a> SymbolTableScopeStack {
     /// Add a function from another module to this symbol table
     /// So that calls to external functions can be type checked.
     pub fn import_structdef(&mut self, sd: &StructDef<SemanticContext>) -> Option<Symbol> {
-        let canon_path = sd.get_context().get_canonical_path();
+        let canon_path = sd.get_context().canonical_path();
         match canon_path.item() {
             Some(item) => self.imported_symbols.insert(
                 canon_path.to_string(),
@@ -121,31 +124,48 @@ impl<'a> SymbolTableScopeStack {
         self.imported_symbols.get(&canonical_name.to_string())
     }
 
-    pub fn enter_scope(&mut self, sym: &SymbolTable) {
-        self.stack.push(self.head.clone());
-        self.head = sym.clone();
+    pub fn enter_scope(&mut self, sym: SymbolTable) {
+        match self.head.replace(sym) {
+            Some(h) => self.stack.push(h),
+            None => (),
+        }
     }
 
     pub fn leave_scope(&mut self) -> SymbolTable {
-        let tmp = self.head.clone();
-        self.head = self
-            .stack
-            .pop()
-            .expect("SymbolTable stack should never be empty on a pop");
-        tmp
+        // If the head is None and the Stack is empty, then panic
+        if self.head.is_none() && self.stack.len() == 0 {
+            panic!("There are no scopes to leave")
+        }
+
+        // take the value from head
+        // pop from stack and assign that value to head
+        let new_head = self.stack.pop();
+
+        let old_head = self
+            .head
+            .take()
+            .expect("There must be a valid head when leaving a scope");
+
+        self.head = new_head;
+        old_head
     }
 
     pub fn get_current_fn(&self) -> Option<StringId> {
         // Check if the top of the stack is a routine
-        if let ScopeType::Routine(name) = self.head.scope_type() {
-            return Some(*name);
-        } else {
-            // Search through the rest of the stack for the Routine closest to the top
-            for scope in self.stack.iter().rev() {
-                if let ScopeType::Routine(name) = scope.scope_type() {
+        match &self.head {
+            Some(h) => {
+                if let ScopeType::Routine(name) = h.scope_type() {
                     return Some(*name);
+                } else {
+                    // Search through the rest of the stack for the Routine closest to the top
+                    for scope in self.stack.iter().rev() {
+                        if let ScopeType::Routine(name) = scope.scope_type() {
+                            return Some(*name);
+                        }
+                    }
                 }
             }
+            None => panic!("There is no head scope"),
         }
         None
     }
@@ -157,22 +177,27 @@ impl<'a> SymbolTableScopeStack {
     /// Returns `None` if no matching symbol was found.
     fn get_symbol(&self, name: StringId) -> Option<(&Symbol, Path)> {
         let mut cpath = self.to_path()?;
-        let s = self.head.get(name).or_else(|| {
-            self.stack.iter().rev().find_map(|scope| {
-                let sym = scope.get(name);
-                if sym.is_none() && scope.scope_type().is_boundary() {
-                    // If we reach the end of the canonical path, there can be no more locations
-                    // for the symbol to exist and so we should return None
-                    cpath.pop()?;
-                }
-                sym
-            })
-        });
+        match &self.head {
+            Some(h) => {
+                let symbol = h.get(name).or_else(|| {
+                    self.stack.iter().rev().find_map(|scope| {
+                        let sym = scope.get(name);
+                        if sym.is_none() && scope.scope_type().is_boundary() {
+                            // If we reach the end of the canonical path, there can be no more locations
+                            // for the symbol to exist and so we should return None
+                            cpath.pop()?;
+                        }
+                        sym
+                    })
+                });
 
-        s.map(|s| {
-            cpath.push(Element::Id(name));
-            (s, cpath)
-        })
+                symbol.map(|s| {
+                    cpath.push(Element::Id(name));
+                    (s, cpath)
+                })
+            }
+            None => panic!("Expected head"),
+        }
     }
 
     /// Add a new symbol to the current symbol table (the SymbolTable that is at the
@@ -184,7 +209,10 @@ impl<'a> SymbolTableScopeStack {
         mutable: bool,
         is_extern: bool,
     ) -> Result<(), SemanticError> {
-        self.head.add(name, ty, mutable, is_extern)
+        match &mut self.head {
+            Some(h) => h.add(name, ty, mutable, is_extern),
+            None => panic!("Expected a head"),
+        }
     }
 
     /// Finds the given variable in the current symbol table or in the symbol table history
@@ -314,7 +342,7 @@ impl<'a> SymbolTableScopeStack {
                 }
             }
 
-            (*current).get_context().sym.get(item)
+            (*current).get_context().sym().get(item)
         }
     }
 
@@ -394,9 +422,12 @@ impl<'a> SymbolTableScopeStack {
             }
         }
 
-        match self.head.scope_type() {
-            ScopeType::Module(name) => steps.push(Element::Id(*name)),
-            ScopeType::Local | ScopeType::Routine(_) => (),
+        match &self.head {
+            Some(h) => match h.scope_type() {
+                ScopeType::Module(name) => steps.push(Element::Id(*name)),
+                ScopeType::Local | ScopeType::Routine(_) => (),
+            },
+            None => panic!("Expected a head"),
         }
 
         if steps.len() > 0 {

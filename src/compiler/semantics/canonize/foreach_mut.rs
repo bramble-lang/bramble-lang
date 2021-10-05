@@ -83,7 +83,7 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
-        self.symbols.enter_scope(&m.get_context().sym);
+        self.symbols.enter_scope(m.get_context().sym().clone());
         let r = self.transform(m, f);
 
         for child_module in m.get_modules_mut().iter_mut() {
@@ -130,7 +130,7 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
-        self.symbols.enter_scope(&rd.get_context().sym);
+        self.symbols.enter_scope(rd.get_context().sym().clone());
         let r = self.transform(rd, f);
         // loop through all the params
         self.for_parameters(&mut rd.params, f)?;
@@ -298,7 +298,7 @@ where
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
-        self.symbols.enter_scope(&block.get_context().sym);
+        self.symbols.enter_scope(block.get_context().sym().clone());
         let r = self.transform(block, f);
         if let Expression::ExpressionBlock(_, ref mut body, ref mut final_exp) = block {
             for e in body.iter_mut() {
@@ -503,12 +503,13 @@ mod tests {
                 "test".into()
             });
         t.for_module(&mut sm_ast, |_stack, n| {
-            n.get_context_mut().ty = Type::I64;
+            let ctx = n.get_context().with_type(Type::I64);
+            *n.get_context_mut() = ctx;
             Ok(())
         })
         .unwrap();
 
-        assert_eq!(sm_ast.get_context().ty, Type::I64);
+        assert_eq!(sm_ast.get_context().ty(), Type::I64);
     }
 
     #[test]
@@ -544,7 +545,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            *sm_ast.get_context().get_canonical_path(),
+            *sm_ast.get_context().canonical_path(),
             vec![
                 Element::CanonicalRoot,
                 Element::Id(test),
@@ -553,11 +554,7 @@ mod tests {
             .into()
         );
         assert_eq!(
-            *sm_ast
-                .get_module(m)
-                .unwrap()
-                .get_context()
-                .get_canonical_path(),
+            *sm_ast.get_module(m).unwrap().get_context().canonical_path(),
             vec![
                 Element::CanonicalRoot,
                 Element::Id(test),
@@ -608,7 +605,7 @@ mod tests {
                 .get_item(my_struct)
                 .unwrap()
                 .get_context()
-                .get_canonical_path(),
+                .canonical_path(),
             vec![
                 Element::CanonicalRoot,
                 Element::Id(test),
