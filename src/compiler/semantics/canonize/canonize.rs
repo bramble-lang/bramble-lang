@@ -88,7 +88,7 @@ impl Canonizable for Expression<SemanticContext> {
                     Ok(())
                 }
             }
-            Expression::RoutineCall(_, ref mut call_target, ref mut path, _) => {
+            Expression::RoutineCall(_, _, ref mut path, _) => {
                 if !path.is_canonical() {
                     stack
                         //.lookup_symbol_by_path(path)
