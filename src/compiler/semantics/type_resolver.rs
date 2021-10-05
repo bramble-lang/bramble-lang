@@ -410,6 +410,11 @@ impl TypeResolver {
         self.analyze_expression(ast)
     }
 
+    /// Recursively resolve every child of the given expression and check that every
+    /// operator and function is given operands with the correct types.  Finally,
+    /// return the type that the expression ultimately resolves to or return an
+    /// error if there is a mismatch between the required type of an operand and
+    /// the given type of an operand.
     fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
         match &ast {
             &Expression::U8(ctx, v) => {
@@ -799,6 +804,9 @@ impl TypeResolver {
         }
     }
 
+    /// Check that the operand has the correct type for the given unary
+    /// operator and return the type that the unary operation will resolve
+    /// to.
     fn unary_op(
         &mut self,
         op: UnaryOperator,
@@ -832,6 +840,9 @@ impl TypeResolver {
         }
     }
 
+    /// Check that the two operands have the same type as the the given binary
+    /// operator requires, then, if they do, return the type that the given
+    /// binary operator resolves to.
     fn binary_op(
         &mut self,
         op: BinaryOperator,
