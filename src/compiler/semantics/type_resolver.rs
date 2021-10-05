@@ -129,12 +129,10 @@ impl TypeResolver {
             .map(|e| self.analyze_item(e))
             .collect::<SemanticResult<Vec<Item<SemanticContext>>>>()?;
 
-        let sym = self.symbols.leave_scope();
-        let ctx = nmodule
-            .get_context_mut()
-            .with_type(Type::Unit)
-            .with_sym(sym);
-        *nmodule.get_context_mut() = ctx; // TODO: This is not needed, if I comment it out code still works.  This is not needed because the unit of a module is never used for anything.
+        // We can ignore the returned symbol table because currently, the type
+        // resolver will not modify the symbol table of a module. As only routine
+        // and expression block symbol tables can be modified (through binds).
+        self.symbols.leave_scope();
 
         Ok(nmodule)
     }
