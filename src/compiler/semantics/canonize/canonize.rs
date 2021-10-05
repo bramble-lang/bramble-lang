@@ -120,7 +120,9 @@ impl Canonizable for Expression<SemanticContext> {
         }
     }
 }
+
 impl Canonizable for Statement<SemanticContext> {}
+
 impl Canonizable for Bind<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let canon_type = stack
@@ -130,7 +132,9 @@ impl Canonizable for Bind<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for Mutate<SemanticContext> {}
+
 impl Canonizable for Module<SemanticContext> {
     fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         // If this node has a name, then use the current stack to construct
@@ -156,7 +160,9 @@ impl Canonizable for Module<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for StructDef<SemanticContext> {}
+
 impl Canonizable for RoutineDef<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
@@ -166,6 +172,7 @@ impl Canonizable for RoutineDef<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for Extern<SemanticContext> {
     fn canonize_context_path(&mut self, _: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let name = match self.name() {
@@ -185,6 +192,7 @@ impl Canonizable for Extern<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for Parameter<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
@@ -194,5 +202,7 @@ impl Canonizable for Parameter<SemanticContext> {
         Ok(())
     }
 }
+
 impl Canonizable for YieldReturn<SemanticContext> {}
+
 impl Canonizable for Return<SemanticContext> {}
