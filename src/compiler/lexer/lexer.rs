@@ -45,7 +45,7 @@ struct LexerBranch<'a, 'st> {
 }
 
 impl<'a, 'st> LexerBranch<'a, 'st> {
-    pub fn from(l: &'a mut Lexer<'st>) -> LexerBranch<'a, 'st> {
+    fn from(l: &'a mut Lexer<'st>) -> LexerBranch<'a, 'st> {
         LexerBranch {
             index: l.index,
             line: l.line,
@@ -54,7 +54,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
-    pub fn merge(&mut self) -> (Option<StringId>, u32) {
+    fn merge(&mut self) -> (Option<StringId>, u32) {
         let s = self.cut();
 
         self.lexer.index = self.index;
@@ -69,7 +69,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// Then advance the start point of the next token in this
     /// branch.  This will NOT update the source.  That must be
     /// done with `merge`.
-    pub fn cut(&mut self) -> (Option<StringId>, u32) {
+    fn cut(&mut self) -> (Option<StringId>, u32) {
         let start = self.lexer.index;
         let offset = self.lexer.col;
         let stop = self.index;
@@ -88,7 +88,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         (id, offset)
     }
 
-    pub fn next(&mut self) -> Option<char> {
+    fn next(&mut self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
             let c = self.lexer.chars[self.index];
             self.index += 1;
@@ -103,7 +103,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
-    pub fn next_if(&mut self, t: char) -> bool {
+    fn next_if(&mut self, t: char) -> bool {
         match self.peek() {
             None => false,
             Some(c) => {
@@ -116,7 +116,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
-    pub fn next_ifn(&mut self, t: &str) -> bool {
+    fn next_ifn(&mut self, t: &str) -> bool {
         // Check that `t` does not contain a line break, which would violate acceptable tokens
         if t.chars().any(|c| c.is_whitespace()) {
             // Panic because this indicates that there is a bug in the compiler code itself and the
@@ -133,7 +133,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
-    pub fn peek(&self) -> Option<char> {
+    fn peek(&self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
             Some(self.lexer.chars[self.index])
         } else {
@@ -141,7 +141,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
-    pub fn peek_at(&self, i: usize) -> Option<char> {
+    fn peek_at(&self, i: usize) -> Option<char> {
         if self.index + i < self.lexer.chars.len() {
             Some(self.lexer.chars[self.index + i])
         } else {
@@ -149,14 +149,14 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
-    pub fn peek_if(&self, t: char) -> bool {
+    fn peek_if(&self, t: char) -> bool {
         match self.peek() {
             None => false,
             Some(c) => t == c,
         }
     }
 
-    pub fn peek_ifn(&self, t: &str) -> bool {
+    fn peek_ifn(&self, t: &str) -> bool {
         let tc: Vec<char> = t.chars().collect();
         self.lexer.chars[self.index..].starts_with(&tc)
     }
