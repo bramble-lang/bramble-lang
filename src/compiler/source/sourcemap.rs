@@ -82,7 +82,7 @@ impl SourceMap {
 pub struct SourceMapEntry {
     low: Offset,
     high: Offset,
-    file: File,
+    file: File, // TODO: I could just create a new file when ever chars is called
     path: PathBuf,
 }
 
