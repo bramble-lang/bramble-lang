@@ -55,6 +55,9 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Merges this branch back into it's source Lexer.  Merging as the affect
+    /// of accepting the current branch as correct and updating the source lexer
+    /// to the match the cursor state of the branch.
     fn merge(&mut self) -> (Option<StringId>, u32) {
         let s = self.cut();
 
@@ -89,6 +92,9 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         (id, offset)
     }
 
+    /// Advances the cursor one character and returns the character that was
+    /// pointed to by the cursor before the advance.  Returns None if the cursor
+    /// was already at the end of the stream.
     fn next(&mut self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
             let c = self.lexer.chars[self.index].char();
@@ -104,6 +110,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Advances the cursor one character, if the next character matches the given
+    /// test character.
     fn next_if(&mut self, t: char) -> bool {
         match self.peek() {
             None => false,
@@ -117,6 +125,9 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Will advance the cursor if the stream after the cursor starts with the
+    /// given test string.  If the remaining stream does not start with the
+    /// test string then the cursor is not advanced.
     fn next_ifn(&mut self, t: &str) -> bool {
         // Check that `t` does not contain a line break, which would violate acceptable tokens
         if t.chars().any(|c| c.is_whitespace()) {
@@ -134,6 +145,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Returns the character pointed at by the cursor which is the next
+    /// character in the stream.
     fn peek(&self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
             Some(self.lexer.chars[self.index].char())
@@ -142,6 +155,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Returns the character which is `i` characters away from the cursor.
     fn peek_at(&self, i: usize) -> Option<char> {
         if self.index + i < self.lexer.chars.len() {
             Some(self.lexer.chars[self.index + i].char())
@@ -150,6 +164,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Checks if the next character in the stream matches the given test character
+    /// without advancing the cursor.
     fn peek_if(&self, t: char) -> bool {
         match self.peek() {
             None => false,
@@ -157,6 +173,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Checks if the character stream from the current cursor starts with
+    /// the given test string, without advancing the cursor.
     fn peek_ifn(&self, t: &str) -> bool {
         let tc: Vec<char> = t.chars().collect();
         let l = tc.len();
