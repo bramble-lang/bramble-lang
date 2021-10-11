@@ -193,15 +193,6 @@ impl<'a> Lexer<'a> {
         self.line as u32
     }
 
-    /// Returns the character that the lexer cursor is currently pointing to.
-    pub fn current_token(&self) -> Option<char> {
-        if self.index < self.chars.len() {
-            Some(self.chars[self.index])
-        } else {
-            None
-        }
-    }
-
     /// Converts the given vector of characters to a vector of tokens.
     pub fn tokenize(&mut self) -> Vec<LexerResult<Token>> {
         let mut tokens = vec![];
@@ -226,6 +217,15 @@ impl<'a> Lexer<'a> {
         }
 
         tokens
+    }
+
+    /// Returns the character that the lexer cursor is currently pointing to.
+    fn current_token(&self) -> Option<char> {
+        if self.index < self.chars.len() {
+            Some(self.chars[self.index])
+        } else {
+            None
+        }
     }
 
     /// Attempt to parse the token which immediately follows from where the lexer
