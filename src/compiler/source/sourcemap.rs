@@ -28,7 +28,7 @@ pub struct SourceMap {
     /// improve later.
     ///
     /// I probably want to create a simple struct to store the entries.
-    map: Vec<(Offset, Offset, PathBuf)>,
+    map: Vec<SourceMapEntry>,
 
     /// The upper bound of all the source files currently in the SourceMap
     /// The next added file will have this offset as its low offset and the
@@ -70,8 +70,22 @@ impl SourceMap {
         let high = self.offset_high;
 
         // Add source file to the offset map
-        self.map.push((low, high, path));
+        self.map.push(SourceMapEntry::new(low, high, path));
 
         Ok(SourceCharIter::new(file, low, high))
+    }
+}
+
+/// Tracks the assignment of a range within the global offset space
+#[derive(Debug)]
+struct SourceMapEntry {
+    low: Offset,
+    high: Offset,
+    path: PathBuf,
+}
+
+impl SourceMapEntry {
+    fn new(low: Offset, high: Offset, path: PathBuf) -> SourceMapEntry {
+        SourceMapEntry { low, high, path }
     }
 }
