@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Bytes, Read, Seek};
 
-use super::Offset;
+use super::{Offset, SourceChar};
 
 /// Iterates over each character in a Source File.
 pub struct SourceCharIter {
@@ -30,7 +30,7 @@ impl SourceCharIter {
     /// against as characters are read from the Read, if the [`Offset`] of the
     /// source exceeds the maximum offset (meaning that the source cannot fit
     /// within the range assigned to it by [`SourceMap`] then a panic will happen.)
-    pub fn new(reader: File, low: Offset, high: Offset) -> SourceCharIter {
+    pub(super) fn new(reader: File, low: Offset, high: Offset) -> SourceCharIter {
         SourceCharIter {
             chars: CharIterator::new(reader),
             low,
@@ -80,14 +80,17 @@ impl SourceCharIter {
 }
 
 impl Iterator for SourceCharIter {
-    type Item = Result<(Offset, char), SourceError>;
+    type Item = Result<SourceChar, SourceError>;
 
     /// Gets the next character from the source file.
     fn next(&mut self) -> Option<Self::Item> {
         // Get the next byte in the file
         self.chars
             .next()
-            .map(|ch| self.join_with_offset(ch?))
+            .map(|ch| {
+                self.join_with_offset(ch?)
+                    .map(|(o, c)| SourceChar::new(o, c))
+            })
             .or_else(|| {
                 if self.next_global_offset != self.high {
                     Some(Err(SourceError::UnexpectedEof))
