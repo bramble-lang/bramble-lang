@@ -6,7 +6,7 @@ use super::{Offset, SourceChar};
 /// Iterates over each character in a Source File.
 pub struct SourceCharIter {
     /// The source code file that is being read.
-    chars: CharIterator,
+    chars: UnicodeCharIterator,
 
     /// Marks the beginning of the global offset range that is assigned to this
     /// Source Unit
@@ -32,7 +32,7 @@ impl SourceCharIter {
     /// within the range assigned to it by [`SourceMap`] then a panic will happen.)
     pub(super) fn new(reader: File, low: Offset, high: Offset) -> SourceCharIter {
         SourceCharIter {
-            chars: CharIterator::new(reader),
+            chars: UnicodeCharIterator::new(reader),
             low,
             high,
             next_global_offset: low,
@@ -101,11 +101,11 @@ impl Iterator for SourceCharIter {
     }
 }
 
-struct CharIterator {
+struct UnicodeCharIterator {
     bytes: OffsetBytes,
 }
 
-impl Iterator for CharIterator {
+impl Iterator for UnicodeCharIterator {
     type Item = Result<char, UnicodeParsingError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -117,9 +117,9 @@ impl Iterator for CharIterator {
 }
 
 /// Based on code from https://rosettacode.org/wiki/Read_a_file_character_by_character/UTF8#Rust
-impl CharIterator {
-    pub fn new(file: File) -> CharIterator {
-        CharIterator {
+impl UnicodeCharIterator {
+    pub fn new(file: File) -> UnicodeCharIterator {
+        UnicodeCharIterator {
             bytes: OffsetBytes::new(file),
         }
     }
