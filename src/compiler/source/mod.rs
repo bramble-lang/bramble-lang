@@ -11,12 +11,16 @@ mod sourcemap;
 /// and the global offset of the character (which points to the specific source
 /// code file and location within that file of this character)
 pub struct SourceChar {
+    offset: Offset,
     c: char,
 }
 
 impl SourceChar {
     pub fn new(c: char) -> SourceChar {
-        SourceChar { c }
+        SourceChar {
+            c,
+            offset: Offset(0),
+        }
     }
 
     pub fn char(&self) -> char {

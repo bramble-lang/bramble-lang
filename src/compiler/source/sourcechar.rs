@@ -99,16 +99,16 @@ impl Iterator for SourceCharIter {
 }
 
 struct CharIterator {
-    bytes: CountingBytes,
+    bytes: OffsetBytes,
 }
 
 impl Iterator for CharIterator {
-    type Item = Result<char, CharError>;
+    type Item = Result<char, UnicodeParsingError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.bytes.next().map(|next| match next {
             Ok(lead) => self.complete_char(lead),
-            Err(e) => Err(CharError::SourceError(e)),
+            Err(e) => Err(UnicodeParsingError::SourceError(e)),
         })
     }
 }
@@ -117,7 +117,7 @@ impl Iterator for CharIterator {
 impl CharIterator {
     pub fn new(file: File) -> CharIterator {
         CharIterator {
-            bytes: CountingBytes::new(file),
+            bytes: OffsetBytes::new(file),
         }
     }
 
@@ -126,7 +126,7 @@ impl CharIterator {
     }
 
     /// Parses a unicode character from a byte stream
-    fn continuation(&mut self) -> Result<u32, CharError> {
+    fn continuation(&mut self) -> Result<u32, UnicodeParsingError> {
         if let Some(Ok(byte)) = self.bytes.peek() {
             let byte = *byte;
 
@@ -134,19 +134,19 @@ impl CharIterator {
                 self.bytes.next();
                 Ok((byte & 0b0011_1111) as u32)
             } else {
-                Err(CharError::InvalidByte(byte))
+                Err(UnicodeParsingError::InvalidByte(byte))
             };
         }
 
         match self.bytes.next() {
-            None => Err(CharError::UnexpectedEof),
-            Some(Err(e)) => Err(CharError::SourceError(e)),
+            None => Err(UnicodeParsingError::UnexpectedEof),
+            Some(Err(e)) => Err(UnicodeParsingError::SourceError(e)),
             Some(Ok(_)) => unreachable!(),
         }
     }
 
     /// Parses a unicode character from a byte stream
-    fn complete_char(&mut self, lead: u8) -> Result<char, CharError> {
+    fn complete_char(&mut self, lead: u8) -> Result<char, UnicodeParsingError> {
         let a = lead as u32; // Let's name the bytes in the sequence
 
         let result: Result<_, std::io::Error> = if a & 0b1000_0000 == 0 {
@@ -169,40 +169,45 @@ impl CharIterator {
 
         result
             .map_err(|e| e.into())
-            .and_then(|by| char::from_u32(by).ok_or(CharError::InvalidWord(by)))
+            .and_then(|by| char::from_u32(by).ok_or(UnicodeParsingError::InvalidWord(by)))
     }
 }
 
 /// Iterates over each byte in a file while keeping track of the current offset in the file
-struct CountingBytes {
+struct OffsetBytes {
     nread: u64,
     bytes: std::iter::Peekable<Bytes<File>>,
 }
 
-impl CountingBytes {
+impl OffsetBytes {
     /// Takes a file and creates a CountingBytes iterator which iterates over
     /// the each byte in the file (starting at the given position) and keeps
     /// tracke of the current offset in the file as the bytes are read.
-    pub fn new(mut file: File) -> CountingBytes {
+    pub fn new(mut file: File) -> OffsetBytes {
         let nread = file.stream_position().unwrap();
         let bytes = file.bytes();
 
-        CountingBytes {
+        OffsetBytes {
             nread,
             bytes: bytes.peekable(),
         }
     }
 
+    /// Returns the offset of the iterators current position in the source
     pub fn offset(&self) -> u64 {
         self.nread
     }
 
+    /// Attempts to peek at the character the iterator is currently point
+    /// to.  This will return None if there are no more characters (EOF)
+    /// It may return an error if an error happens while trying to read from
+    /// he source.
     pub fn peek(&mut self) -> Option<&Result<u8, std::io::Error>> {
         self.bytes.peek()
     }
 }
 
-impl Iterator for CountingBytes {
+impl Iterator for OffsetBytes {
     type Item = Result<u8, std::io::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -215,30 +220,33 @@ impl Iterator for CountingBytes {
     }
 }
 
+/// Errors that can happen when trying to parse a unicode character from a
+/// byte stream.
 #[derive(Debug)]
-pub enum CharError {
+pub enum UnicodeParsingError {
     InvalidByte(u8),
     InvalidWord(u32),
     UnexpectedEof,
     SourceError(std::io::Error),
 }
 
-impl From<std::io::Error> for CharError {
+impl From<std::io::Error> for UnicodeParsingError {
     fn from(ioe: std::io::Error) -> Self {
         Self::SourceError(ioe)
     }
 }
 
+/// Errors that can happen when trying to read from a source code stream.
 #[derive(Debug)]
 pub enum SourceError {
     ExceededAssignedRange,
     OffsetExceededMaxSize,
     UnexpectedEof,
-    CharError(CharError),
+    UnicodeError(UnicodeParsingError),
 }
 
-impl From<CharError> for SourceError {
-    fn from(ce: CharError) -> Self {
-        SourceError::CharError(ce)
+impl From<UnicodeParsingError> for SourceError {
+    fn from(ce: UnicodeParsingError) -> Self {
+        SourceError::UnicodeError(ce)
     }
 }
