@@ -3,6 +3,7 @@
 // by tokenize
 use stdext::function_name;
 
+use crate::compiler::SourceChar;
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
 
@@ -76,7 +77,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         let mut s = String::new();
 
         for i in start..stop {
-            s.push(self.lexer.chars[i]);
+            s.push(self.lexer.chars[i].char());
         }
 
         let id = if s.len() == 0 {
@@ -90,7 +91,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     fn next(&mut self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
-            let c = self.lexer.chars[self.index];
+            let c = self.lexer.chars[self.index].char();
             self.index += 1;
             self.offset += 1;
             if c == '\n' {
@@ -135,7 +136,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     fn peek(&self) -> Option<char> {
         if self.index < self.lexer.chars.len() {
-            Some(self.lexer.chars[self.index])
+            Some(self.lexer.chars[self.index].char())
         } else {
             None
         }
@@ -143,7 +144,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     fn peek_at(&self, i: usize) -> Option<char> {
         if self.index + i < self.lexer.chars.len() {
-            Some(self.lexer.chars[self.index + i])
+            Some(self.lexer.chars[self.index + i].char())
         } else {
             None
         }
@@ -158,12 +159,25 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     fn peek_ifn(&self, t: &str) -> bool {
         let tc: Vec<char> = t.chars().collect();
-        self.lexer.chars[self.index..].starts_with(&tc)
+        let l = tc.len();
+
+        // If the test string is longer than the remaining characters in the lexer
+        // then the match fails
+        if (self.index + (l - 1)) >= self.lexer.chars.len() {
+            return false;
+        }
+
+        for i in 0..l {
+            if self.lexer.chars[self.index + i].char() != tc[i] {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
 pub struct Lexer<'a> {
-    chars: Vec<char>,
+    chars: Vec<SourceChar>,
     index: usize,
     line: u32,
     col: u32,
@@ -174,7 +188,7 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn new(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
         Lexer {
-            chars: text.chars().collect(),
+            chars: text.chars().map(SourceChar::new).collect(),
             index: 0,
             line: 1,
             col: 0,
@@ -222,7 +236,7 @@ impl<'a> Lexer<'a> {
     /// Returns the character that the lexer cursor is currently pointing to.
     fn current_token(&self) -> Option<char> {
         if self.index < self.chars.len() {
-            Some(self.chars[self.index])
+            Some(self.chars[self.index].char())
         } else {
             None
         }
@@ -262,8 +276,8 @@ impl<'a> Lexer<'a> {
 
     pub fn consume_whitespace(&mut self) {
         trace!(self);
-        while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
-            if self.chars[self.index] == '\n' {
+        while self.index < self.chars.len() && self.chars[self.index].char().is_whitespace() {
+            if self.chars[self.index].char() == '\n' {
                 self.line += 1;
                 self.col = 0;
             }
