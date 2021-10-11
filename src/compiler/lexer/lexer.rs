@@ -58,7 +58,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// Merges this branch back into it's source Lexer.  Merging as the affect
     /// of accepting the current branch as correct and updating the source lexer
     /// to the match the cursor state of the branch.
-    fn merge(&mut self) -> (Option<StringId>, u32) {
+    fn merge(mut self) -> (Option<StringId>, u32) {
         let s = self.cut();
 
         self.lexer.index = self.index;
