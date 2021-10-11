@@ -125,6 +125,7 @@ impl CharIterator {
         self.bytes.offset()
     }
 
+    /// Parses a unicode character from a byte stream
     fn continuation(&mut self) -> Result<u32, CharError> {
         if let Some(Ok(byte)) = self.bytes.peek() {
             let byte = *byte;
@@ -144,6 +145,7 @@ impl CharIterator {
         }
     }
 
+    /// Parses a unicode character from a byte stream
     fn complete_char(&mut self, lead: u8) -> Result<char, CharError> {
         let a = lead as u32; // Let's name the bytes in the sequence
 
