@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install LLVM 11
+      - name: Install LLVM 13
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 11
+          sudo ./llvm.sh 13
       - uses: actions/checkout@v2
       - name: rust-toolchain
         uses: actions-rs/toolchain@v1
