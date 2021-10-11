@@ -29,6 +29,11 @@ impl SourceChar {
     }
 }
 
+/// A unique offset into the global space of all source code.  This offset will
+/// uniquely point to a single character or position in the space of all source
+/// code that has been input or generated for this Braid project.  The [`SourceMap`]
+/// construct manages the the Offset indexing and will convert a given offset to
+/// the actual code source (e.g. the file name)
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Offset(u32);
 
