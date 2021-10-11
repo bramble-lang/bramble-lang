@@ -1,6 +1,8 @@
-// Contains a macro and therefore this must be imported before all other modules
-mod error;
+// Modules that are needed only within the compiler
+mod error; // Contains a macro and therefore this must be imported before all other modules
+mod source;
 
+// Modules which should be accessible outside of  the [`compiler`] module
 pub mod ast;
 pub mod import;
 pub mod lexer;
@@ -9,9 +11,13 @@ pub mod parser;
 pub mod semantics;
 pub mod stringtable;
 
+// Expose certain compiler items outside of the module because they are key parts
+// of the interface between the compiler and modules which use the compiler.
 pub use error::CompilerError;
-
 pub use lexer::lexer::Lexer;
+
+// Import items for use within the compiler submodule which are not needed outside
+use source::SourceChar;
 
 use crate::{StringTable, StringTableError};
 
@@ -38,22 +44,5 @@ impl From<StringTableError> for CompilerDisplayError {
         match ste {
             StringTableError::NotFound => Self::StringIdNotFound,
         }
-    }
-}
-
-/// Represents a single char from a source code file.  This includes the character
-/// and the global offset of the character (which points to the specific source
-/// code file and location within that file of this character)
-struct SourceChar {
-    c: char,
-}
-
-impl SourceChar {
-    pub fn new(c: char) -> SourceChar {
-        SourceChar { c }
-    }
-
-    pub fn char(&self) -> char {
-        self.c
     }
 }
