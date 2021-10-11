@@ -16,15 +16,16 @@ pub struct SourceChar {
 }
 
 impl SourceChar {
-    pub fn new(c: char) -> SourceChar {
-        SourceChar {
-            c,
-            offset: Offset(0),
-        }
+    pub fn new(o: Offset, c: char) -> SourceChar {
+        SourceChar { c, offset: o }
     }
 
     pub fn char(&self) -> char {
         self.c
+    }
+
+    pub fn from_char(c: char) -> SourceChar {
+        Self::new(Offset(0), c)
     }
 }
 

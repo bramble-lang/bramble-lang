@@ -206,7 +206,7 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn new(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
         Lexer {
-            chars: text.chars().map(SourceChar::new).collect(),
+            chars: text.chars().map(SourceChar::from_char).collect(),
             index: 0,
             line: 1,
             col: 0,
