@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 
 use super::{sourcechar::SourceCharIter, Offset};
 
@@ -46,14 +46,14 @@ impl SourceMap {
         }
     }
 
-    /// Add a source unit which is a file to the [`SourceMap`].
+    /// Add a source unit which is a file to the [`SourceMap`]. If the source unit
+    /// is successfully added to the [`SourceMap`] then this will return a reference
+    /// to the [`SourceMapEntry`] for the given source code unit.  
     ///
-    /// What should this return?
-    /// A Result with:
-    /// 1. The offset range assigned to this file?
-    /// 2. The SourceCharIter that iterates over the source unit?
-    /// 3. A Source Unit ID that can be used to get things from the SourceMap related to this Source Unit?
-    pub fn add_file(&mut self, path: PathBuf) -> Result<SourceCharIter, String> {
+    /// The entry provides
+    /// an interface for interacting with (e.g. reading) the file that also provides
+    /// global offset data about each character read from the file.
+    pub fn add_file(&mut self, path: PathBuf) -> Result<&SourceMapEntry, String> {
         let file = std::fs::File::open(&path).unwrap();
 
         let file_len = file.metadata().unwrap().len();
@@ -70,22 +70,42 @@ impl SourceMap {
         let high = self.offset_high;
 
         // Add source file to the offset map
-        self.map.push(SourceMapEntry::new(low, high, path));
+        let entry = SourceMapEntry::new(low, high, file, path);
+        self.map.push(entry);
 
-        Ok(SourceCharIter::new(file, low, high))
+        Ok(self.map.last().unwrap())
     }
 }
 
 /// Tracks the assignment of a range within the global offset space
 #[derive(Debug)]
-struct SourceMapEntry {
+pub struct SourceMapEntry {
     low: Offset,
     high: Offset,
+    file: File,
     path: PathBuf,
 }
 
 impl SourceMapEntry {
-    fn new(low: Offset, high: Offset, path: PathBuf) -> SourceMapEntry {
-        SourceMapEntry { low, high, path }
+    fn new(low: Offset, high: Offset, file: File, path: PathBuf) -> SourceMapEntry {
+        SourceMapEntry {
+            low,
+            high,
+            file,
+            path,
+        }
+    }
+
+    /// Get the file path for the source code that this entry in the [`SourceMap`]
+    /// represents
+    pub fn path(&self) -> &PathBuf {
+        &self.path
+    }
+
+    /// Creates a iterator over the unicode characters in the source code that
+    /// this entry represents. Each entry in the iterator will include the
+    /// unicode character and it's offset within the global offset space.
+    pub fn chars(&self) -> SourceCharIter {
+        SourceCharIter::new(self.file.try_clone().unwrap(), self.low, self.high)
     }
 }
