@@ -212,7 +212,7 @@ impl CompilerDisplay for Token {
 }
 
 impl Token {
-    pub fn new(l: u32, o: u32, s: Lex) -> Token {
+    pub fn new(l: u32, _o: u32, s: Lex) -> Token {
         Token {
             l,
             c: 0,
