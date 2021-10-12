@@ -569,6 +569,7 @@ impl<'a> Lexer<'a> {
                 l,
                 c: o,
                 s: Identifier(id),
+                ..
             } => match self.string_table.get(*id).unwrap() {
                 "true" => Token::new(*l, *o, Bool(true)),
                 "false" => Token::new(*l, *o, Bool(false)),
@@ -585,6 +586,7 @@ impl<'a> Lexer<'a> {
                 l,
                 c: o,
                 s: Identifier(ref id),
+                ..
             } => match self.string_table.get(*id).unwrap() {
                 "u8" => Token::new(l, o, Primitive(Primitive::U8)),
                 "u16" => Token::new(l, o, Primitive(Primitive::U16)),
@@ -609,6 +611,7 @@ impl<'a> Lexer<'a> {
                 l,
                 c: o,
                 s: Identifier(ref id),
+                ..
             } => match self.string_table.get(*id).unwrap() {
                 "let" => Token::new(l, o, Let),
                 "mut" => Token::new(l, o, Mut),

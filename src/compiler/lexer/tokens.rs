@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{CompilerDisplay, CompilerDisplayError},
+    compiler::{CompilerDisplay, CompilerDisplayError, Span},
     StringId,
 };
 
@@ -195,6 +195,8 @@ pub struct Token {
 
     /// The value of the token
     pub s: Lex,
+
+    pub span: Span,
 }
 
 impl std::fmt::Display for Token {
@@ -211,7 +213,12 @@ impl CompilerDisplay for Token {
 
 impl Token {
     pub fn new(l: u32, o: u32, s: Lex) -> Token {
-        Token { l, c: o, s }
+        Token {
+            l,
+            c: o,
+            s,
+            span: Span::zero(),
+        }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {

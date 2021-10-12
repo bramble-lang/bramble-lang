@@ -137,7 +137,7 @@ impl<'a> TokenStream<'a> {
 mod test_tokenstream {
     use super::TokenStream;
     use crate::compiler::lexer::tokens::{Lex, Token};
-    use crate::compiler::Lexer;
+    use crate::compiler::{Lexer, Span};
     use crate::StringTable;
 
     #[test]
@@ -157,7 +157,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: Span::zero(),
             }
         );
     }
@@ -187,7 +188,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: Span::zero(),
             }
         );
 
@@ -197,7 +199,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: Span::zero(),
             }
         );
 
@@ -222,7 +225,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: Span::zero(),
             }
         );
 
@@ -232,7 +236,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: Span::zero(),
             }
         );
 
@@ -242,7 +247,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: Span::zero(),
             }
         );
 
@@ -252,7 +258,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 5,
-                s: Lex::I64(4)
+                s: Lex::I64(4),
+                span: Span::zero(),
             }
         );
 
@@ -262,7 +269,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 6,
-                s: Lex::RParen
+                s: Lex::RParen,
+                span: Span::zero(),
             }
         );
 
@@ -272,7 +280,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 8,
-                s: Lex::Mul
+                s: Lex::Mul,
+                span: Span::zero(),
             }
         );
 
@@ -282,7 +291,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 10,
-                s: Lex::I64(3)
+                s: Lex::I64(3),
+                span: Span::zero(),
             }
         );
 
@@ -307,7 +317,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: Span::zero(),
             }
         );
 
@@ -317,7 +328,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: Span::zero(),
             }
         );
 
@@ -330,7 +342,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: Span::zero(),
             }
         );
     }
@@ -353,12 +366,14 @@ mod test_tokenstream {
                 Token {
                     l: 1,
                     c: 0,
-                    s: Lex::LParen
+                    s: Lex::LParen,
+                    span: Span::zero(),
                 },
                 Token {
                     l: 1,
                     c: 1,
-                    s: Lex::I64(2)
+                    s: Lex::I64(2),
+                    span: Span::zero(),
                 }
             ]
         );
@@ -369,7 +384,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: Span::zero(),
             }
         );
     }
@@ -409,7 +425,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: Span::zero(),
             }
         );
         let p = ts.peek().unwrap();
@@ -418,7 +435,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: Span::zero(),
             }
         );
 
@@ -428,7 +446,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: Span::zero(),
             }
         );
         let p = ts.peek().unwrap();
@@ -437,7 +456,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: Span::zero(),
             }
         );
 
@@ -449,7 +469,8 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: Span::zero(),
             }
         );
     }

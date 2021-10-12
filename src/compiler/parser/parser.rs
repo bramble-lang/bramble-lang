@@ -570,9 +570,8 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
     let ty = match stream.peek() {
         Some(Token {
-            l: _,
-            c: _,
             s: Lex::Primitive(primitive),
+            ..
         }) => {
             let ty = match *primitive {
                 Primitive::U8 => Some(Type::U8),
