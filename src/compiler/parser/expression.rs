@@ -344,12 +344,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
             // check for `else if`
             let else_arm = match stream.next_if(&Lex::Else) {
                 Some(_) => match stream.peek() {
-                    Some(Token {
-                        l,
-                        c: _,
-                        s: Lex::If,
-                        ..
-                    }) => {
+                    Some(Token { l, s: Lex::If, .. }) => {
                         let l = *l;
                         Some(
                             if_expression(stream)?

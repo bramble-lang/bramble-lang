@@ -190,9 +190,6 @@ pub struct Token {
     /// Line that the token occurs on
     pub l: u32,
 
-    /// Column in the line
-    pub c: u32,
-
     /// The value of the token
     pub s: Lex,
 
@@ -213,7 +210,7 @@ impl CompilerDisplay for Token {
 
 impl Token {
     pub fn new(s: Lex, l: u32, span: Span) -> Token {
-        Token { l, c: 0, s, span }
+        Token { l, s, span }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {
