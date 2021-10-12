@@ -14,8 +14,11 @@ pub struct Span {
 
 impl Span {
     pub fn new(low: Offset, high: Offset) -> Span {
-        if low >= high {
-            panic!("Cannot have a low that is greater than the high")
+        if low > high {
+            panic!(
+                "Cannot have a low that is greater than the high: {:?} and {:?}",
+                low, high
+            )
         }
 
         Span { low, high }

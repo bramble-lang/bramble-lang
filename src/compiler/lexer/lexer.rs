@@ -3,7 +3,7 @@
 // by tokenize
 use stdext::function_name;
 
-use crate::compiler::{SourceChar, SourceCharIter};
+use crate::compiler::{SourceChar, SourceCharIter, Span};
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
 
@@ -58,9 +58,10 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// Merges this branch back into it's source Lexer.  Merging as the affect
     /// of accepting the current branch as correct and updating the source lexer
     /// to the match the cursor state of the branch.
-    fn merge(mut self) -> (Option<StringId>, u32) {
+    fn merge(mut self) -> Option<(StringId, Span)> {
         let s = self.cut();
 
+        // TODO: Only execute this if the cut returned something
         self.lexer.index = self.index;
         self.lexer.line = self.line;
         self.lexer.col = self.offset;
@@ -73,9 +74,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// Then advance the start point of the next token in this
     /// branch.  This will NOT update the source.  That must be
     /// done with `merge`.
-    fn cut(&mut self) -> (Option<StringId>, u32) {
+    fn cut(&mut self) -> Option<(StringId, Span)> {
         let start = self.lexer.index;
-        let offset = self.lexer.col;
         let stop = self.index;
         let mut s = String::new();
 
@@ -83,13 +83,22 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
             s.push(self.lexer.chars[i].char());
         }
 
-        let id = if s.len() == 0 {
+        if s.len() == 0 {
             None
         } else {
-            Some(self.lexer.string_table.insert(s))
-        };
+            // Compute the Span
+            let low = self.lexer.chars[start].offset();
+            let high = if stop < self.lexer.chars.len() {
+                self.lexer.chars[stop].offset()
+            } else {
+                let mut o = self.lexer.chars[stop - 1].offset();
+                o += 1; // TODO: This is temporary as unicode chars can be > 1.
+                o
+            }; // TODO: how do I get the byte immediately after the last char in the stream?
+            let span = Span::new(low, high);
 
-        (id, offset)
+            Some((self.lexer.string_table.insert(s), span))
+        }
     }
 
     /// Advances the cursor one character and returns the character that was
@@ -206,7 +215,11 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn from_str(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
         Lexer {
-            chars: text.chars().map(SourceChar::from_char).collect(),
+            chars: text
+                .chars()
+                .enumerate()
+                .map(|(i, c)| SourceChar::from_char(i as u32, c))
+                .collect(),
             index: 0,
             line: 1,
             col: 0,
@@ -337,10 +350,13 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let (id, offset) = branch.merge();
-        match id {
+        match branch.merge() {
             None => Ok(None),
-            Some(id) => Ok(Some(Token::new(self.line, offset, Lex::Identifier(id)))),
+            Some((id, span)) => Ok(Some(Token::new_with_span(
+                Lex::Identifier(id),
+                self.line,
+                span,
+            ))),
         }
     }
 
@@ -364,15 +380,19 @@ impl<'a> Lexer<'a> {
                     }
                 }
             }
-            let (s, offset) = branch.merge();
+            let (s, span) = branch.merge().unwrap();
 
             // Remove the quotes from the string
-            let mut s: String = self.string_table.get(s.unwrap()).unwrap().into();
+            let mut s: String = self.string_table.get(s).unwrap().into();
             s.remove(0);
             s.pop();
             let id = self.string_table.insert(s);
 
-            Ok(Some(Token::new(self.line, offset, Lex::StringLiteral(id))))
+            Ok(Some(Token::new_with_span(
+                Lex::StringLiteral(id),
+                self.line,
+                span,
+            )))
         } else {
             Ok(None)
         }
@@ -394,7 +414,7 @@ impl<'a> Lexer<'a> {
             branch.next();
         }
 
-        let (int_token, offset) = branch.cut();
+        let (int_token, _) = branch.cut().unwrap();
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
         // no suffix then default to i64
@@ -411,57 +431,57 @@ impl<'a> Lexer<'a> {
             return err!(self.line(), LexerError::InvalidInteger);
         }
 
-        branch.merge();
-        let int_text = self.string_table.get(int_token.unwrap()).unwrap();
-        Self::create_int_literal(self.line, offset, int_text, type_suffix)
+        let (_, span) = branch.merge().unwrap();
+        let int_text = self.string_table.get(int_token).unwrap();
+        Self::create_int_literal(self.line, span, int_text, type_suffix)
     }
 
     fn create_int_literal(
         line: u32,
-        offset: u32,
+        span: Span,
         int_token: &str,
         prim: Primitive,
     ) -> LexerResult<Option<Token>> {
         match prim {
-            Primitive::U8 => Ok(Some(Token::new(
-                line,
-                offset,
+            Primitive::U8 => Ok(Some(Token::new_with_span(
                 U8(int_token.parse::<u8>().unwrap()),
-            ))),
-            Primitive::U16 => Ok(Some(Token::new(
                 line,
-                offset,
+                span,
+            ))),
+            Primitive::U16 => Ok(Some(Token::new_with_span(
                 U16(int_token.parse::<u16>().unwrap()),
-            ))),
-            Primitive::U32 => Ok(Some(Token::new(
                 line,
-                offset,
+                span,
+            ))),
+            Primitive::U32 => Ok(Some(Token::new_with_span(
                 U32(int_token.parse::<u32>().unwrap()),
-            ))),
-            Primitive::U64 => Ok(Some(Token::new(
                 line,
-                offset,
+                span,
+            ))),
+            Primitive::U64 => Ok(Some(Token::new_with_span(
                 U64(int_token.parse::<u64>().unwrap()),
-            ))),
-            Primitive::I8 => Ok(Some(Token::new(
                 line,
-                offset,
+                span,
+            ))),
+            Primitive::I8 => Ok(Some(Token::new_with_span(
                 I8(int_token.parse::<i8>().unwrap()),
-            ))),
-            Primitive::I16 => Ok(Some(Token::new(
                 line,
-                offset,
+                span,
+            ))),
+            Primitive::I16 => Ok(Some(Token::new_with_span(
                 I16(int_token.parse::<i16>().unwrap()),
-            ))),
-            Primitive::I32 => Ok(Some(Token::new(
                 line,
-                offset,
+                span,
+            ))),
+            Primitive::I32 => Ok(Some(Token::new_with_span(
                 I32(int_token.parse::<i32>().unwrap()),
-            ))),
-            Primitive::I64 => Ok(Some(Token::new(
                 line,
-                offset,
+                span,
+            ))),
+            Primitive::I64 => Ok(Some(Token::new_with_span(
                 I64(int_token.parse::<i64>().unwrap()),
+                line,
+                span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
                 err!(line, LexerError::UnexpectedSuffixType(prim))

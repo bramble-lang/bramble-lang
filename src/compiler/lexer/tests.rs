@@ -396,15 +396,15 @@ mod tests {
             let mut lexer = Lexer::from_str(&mut table, text);
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 6, "{} => {:?}", text, tokens);
-            assert_eq!(tokens[0].clone().unwrap(), Token::new(t1.0, t1.1, Return));
-            assert_eq!(tokens[1].clone().unwrap(), Token::new(t2.0, t2.1, LParen));
+            assert_eq!(tokens[0].clone().unwrap(), Token::new(t1.0, 0, Return));
+            assert_eq!(tokens[1].clone().unwrap(), Token::new(t2.0, 0, LParen));
             assert_eq!(
                 tokens[2].clone().unwrap(),
-                Token::new(t3.0, t3.1, Identifier(table.insert("x".into())))
+                Token::new(t3.0, 0, Identifier(table.insert("x".into())))
             );
-            assert_eq!(tokens[3].clone().unwrap(), Token::new(t4.0, t4.1, Add));
-            assert_eq!(tokens[4].clone().unwrap(), Token::new(t5.0, t5.1, I64(5)));
-            assert_eq!(tokens[5].clone().unwrap(), Token::new(t6.0, t6.1, BOr));
+            assert_eq!(tokens[3].clone().unwrap(), Token::new(t4.0, 0, Add));
+            assert_eq!(tokens[4].clone().unwrap(), Token::new(t5.0, 0, I64(5)));
+            assert_eq!(tokens[5].clone().unwrap(), Token::new(t6.0, 0, BOr));
         }
     }
 }

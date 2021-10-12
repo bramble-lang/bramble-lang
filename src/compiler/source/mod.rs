@@ -29,8 +29,12 @@ impl SourceChar {
         self.c
     }
 
-    pub fn from_char(c: char) -> SourceChar {
-        Self::new(Offset(0), c)
+    pub fn offset(&self) -> Offset {
+        self.offset
+    }
+
+    pub fn from_char(o: u32, c: char) -> SourceChar {
+        Self::new(Offset(o), c)
     }
 }
 
