@@ -7,7 +7,7 @@ use std::ops::AddAssign;
 mod sourcechar;
 mod sourcemap;
 
-pub use sourcechar::SourceCharIter;
+pub use sourcechar::{SourceCharIter, SourceError};
 pub use sourcemap::{SourceMap, SourceMapEntry, SourceMapError};
 
 /// Represents a single char from a source code file.  This includes the character

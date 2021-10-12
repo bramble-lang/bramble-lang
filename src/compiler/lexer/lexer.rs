@@ -3,7 +3,7 @@
 // by tokenize
 use stdext::function_name;
 
-use crate::compiler::{SourceChar, SourceCharIter};
+use crate::compiler::{SourceChar, SourceCharIter, SourceError};
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
 
@@ -215,15 +215,19 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn new(string_table: &'a mut StringTable, text: SourceCharIter) -> Lexer<'a> {
-        Lexer {
-            chars: text.collect::<Result<Vec<_>, _>>().unwrap(), // TODO: Have this return an Error not fault
+    pub fn new(
+        string_table: &'a mut StringTable,
+        text: SourceCharIter,
+    ) -> Result<Lexer<'a>, LexerError> {
+        let chars: Result<Vec<_>, _> = text.collect();
+        Ok(Lexer {
+            chars: chars?, // TODO: Have this return an Error not fault
             index: 0,
             line: 1,
             col: 0,
             tracing: TracingConfig::Off,
             string_table,
-        }
+        })
     }
 
     pub fn set_tracing(&mut self, config: TracingConfig) {

@@ -1,15 +1,16 @@
-use crate::compiler::{CompilerDisplay, CompilerDisplayError};
+use crate::compiler::{CompilerDisplay, CompilerDisplayError, SourceError};
 
 use super::tokens::Primitive;
 
 /// Errors which can be encountered while tokenizing a compilation unit
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum LexerError {
     Locked(Option<char>),
     InvalidEscapeSequence(char),
     ExpectedEscapeCharacter,
     InvalidInteger,
     UnexpectedSuffixType(Primitive),
+    SourceError,
 }
 
 impl CompilerDisplay for LexerError {
@@ -22,8 +23,15 @@ impl CompilerDisplay for LexerError {
             ExpectedEscapeCharacter => format!("Expected an escape character after \\"),
             InvalidInteger => format!("Invalid integer"),
             UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(st)?),
+            SourceError => format!("Error reading characters from source code"),
         };
 
         Ok(format!("{}", msg))
+    }
+}
+
+impl From<SourceError> for LexerError {
+    fn from(_: SourceError) -> Self {
+        Self::SourceError
     }
 }
