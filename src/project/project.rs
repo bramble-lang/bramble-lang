@@ -187,7 +187,7 @@ fn tokenize_source(
     src: CompilationUnit<SourceCharIter>,
     trace_lexer: TracingConfig,
 ) -> Result<CompilationUnit<Vec<Token>>, Vec<CompilerError<LexerError>>> {
-    let mut lexer = crate::compiler::Lexer::from_src_char_iter(string_table, src.data);
+    let mut lexer = crate::compiler::Lexer::new(string_table, src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let (tokens, errors): (

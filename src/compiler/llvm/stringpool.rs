@@ -244,7 +244,7 @@ mod test {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
             let test_mod = table.insert("test_mod".into());
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()

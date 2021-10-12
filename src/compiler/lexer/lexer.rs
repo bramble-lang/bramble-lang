@@ -204,7 +204,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
+    pub fn from_str(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
         Lexer {
             chars: text.chars().map(SourceChar::from_char).collect(),
             index: 0,
@@ -215,10 +215,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn from_src_char_iter(
-        string_table: &'a mut StringTable,
-        text: SourceCharIter,
-    ) -> Lexer<'a> {
+    pub fn new(string_table: &'a mut StringTable, text: SourceCharIter) -> Lexer<'a> {
         Lexer {
             chars: text.collect::<Result<Vec<_>, _>>().unwrap(), // TODO: Have this return an Error not fault
             index: 0,

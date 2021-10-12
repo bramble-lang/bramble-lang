@@ -618,7 +618,7 @@ mod test {
             ("64", Expression::I64(1, 64)),
         ] {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -685,7 +685,7 @@ mod test {
             ),
         ] {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -717,7 +717,7 @@ mod test {
         .iter()
         {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -812,7 +812,7 @@ mod test {
                 },
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -852,7 +852,7 @@ mod test {
         .iter()
         {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -868,7 +868,7 @@ mod test {
             let mut table = StringTable::new();
             let thing_id = table.insert("thing".into());
             let first_id = table.insert("first".into());
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -896,7 +896,7 @@ mod test {
     fn parse_expression_block_oneline() {
         let text = "{5}";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -948,7 +948,7 @@ mod test {
         .iter()
         {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -969,7 +969,7 @@ mod test {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
         let f = table.insert("f".into());
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
