@@ -137,8 +137,13 @@ impl<'a> TokenStream<'a> {
 mod test_tokenstream {
     use super::TokenStream;
     use crate::compiler::lexer::tokens::{Lex, Token};
+    use crate::compiler::source::Offset;
     use crate::compiler::{Lexer, Span};
     use crate::StringTable;
+
+    fn new_span(l: u32, h: u32) -> Span {
+        Span::new(Offset::new(l), Offset::new(h))
+    }
 
     #[test]
     fn test_peek() {
@@ -189,7 +194,7 @@ mod test_tokenstream {
                 l: 1,
                 c: 0,
                 s: Lex::LParen,
-                span: Span::zero(),
+                span: new_span(0, 1),
             }
         );
 
@@ -198,9 +203,9 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
+                c: 0,
                 s: Lex::I64(2),
-                span: Span::zero(),
+                span: new_span(1, 2),
             }
         );
 
@@ -226,7 +231,7 @@ mod test_tokenstream {
                 l: 1,
                 c: 0,
                 s: Lex::LParen,
-                span: Span::zero(),
+                span: new_span(0, 1),
             }
         );
 
@@ -235,9 +240,9 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 1,
+                c: 0,
                 s: Lex::I64(2),
-                span: Span::zero(),
+                span: new_span(1, 2),
             }
         );
 
@@ -246,9 +251,9 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 3,
+                c: 0,
                 s: Lex::Add,
-                span: Span::zero(),
+                span: new_span(3, 4),
             }
         );
 
@@ -257,9 +262,9 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 5,
+                c: 0,
                 s: Lex::I64(4),
-                span: Span::zero(),
+                span: new_span(5, 6),
             }
         );
 
@@ -268,9 +273,9 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 6,
+                c: 0,
                 s: Lex::RParen,
-                span: Span::zero(),
+                span: new_span(6, 7),
             }
         );
 
@@ -279,9 +284,9 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 8,
+                c: 0,
                 s: Lex::Mul,
-                span: Span::zero(),
+                span: new_span(8, 9),
             }
         );
 
@@ -290,9 +295,9 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 10,
+                c: 0,
                 s: Lex::I64(3),
-                span: Span::zero(),
+                span: new_span(10, 11),
             }
         );
 
@@ -318,7 +323,7 @@ mod test_tokenstream {
                 l: 1,
                 c: 0,
                 s: Lex::LParen,
-                span: Span::zero(),
+                span: new_span(0, 1),
             }
         );
 
@@ -327,9 +332,9 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
+                c: 0,
                 s: Lex::I64(2),
-                span: Span::zero(),
+                span: new_span(1, 2),
             }
         );
 
@@ -341,9 +346,9 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
+                c: 0,
                 s: Lex::I64(2),
-                span: Span::zero(),
+                span: new_span(1, 2),
             }
         );
     }
@@ -367,13 +372,13 @@ mod test_tokenstream {
                     l: 1,
                     c: 0,
                     s: Lex::LParen,
-                    span: Span::zero(),
+                    span: new_span(0, 1),
                 },
                 Token {
                     l: 1,
-                    c: 1,
+                    c: 0,
                     s: Lex::I64(2),
-                    span: Span::zero(),
+                    span: new_span(1, 2),
                 }
             ]
         );
@@ -383,9 +388,9 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 3,
+                c: 0,
                 s: Lex::Add,
-                span: Span::zero(),
+                span: new_span(3, 4),
             }
         );
     }
@@ -409,7 +414,7 @@ mod test_tokenstream {
     }
 
     #[test]
-    fn test_next_if_on_of() {
+    fn test_next_if_one_of() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
         let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
@@ -426,7 +431,7 @@ mod test_tokenstream {
                 l: 1,
                 c: 0,
                 s: Lex::LParen,
-                span: Span::zero(),
+                span: new_span(0, 1),
             }
         );
         let p = ts.peek().unwrap();
@@ -434,9 +439,9 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
+                c: 0,
                 s: Lex::I64(2),
-                span: Span::zero(),
+                span: new_span(1, 2),
             }
         );
 
@@ -445,9 +450,9 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 1,
+                c: 0,
                 s: Lex::I64(2),
-                span: Span::zero(),
+                span: new_span(1, 2),
             }
         );
         let p = ts.peek().unwrap();
@@ -455,9 +460,9 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 3,
+                c: 0,
                 s: Lex::Add,
-                span: Span::zero(),
+                span: new_span(3, 4),
             }
         );
 
@@ -468,9 +473,9 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 3,
+                c: 0,
                 s: Lex::Add,
-                span: Span::zero(),
+                span: new_span(3, 4),
             }
         );
     }

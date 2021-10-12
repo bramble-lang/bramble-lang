@@ -553,8 +553,10 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
-        let (_, span) = branch.merge().unwrap();
-        Ok(token.map(|t| Token::new_with_span(t.clone(), line, span)))
+        Ok(token.map(|t| {
+            let (_, span) = branch.merge().unwrap();
+            Token::new_with_span(t.clone(), line, span)
+        }))
     }
 
     fn consume_line_comment(&mut self) {

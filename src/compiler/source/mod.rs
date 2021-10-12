@@ -47,6 +47,10 @@ impl SourceChar {
 pub struct Offset(u32);
 
 impl Offset {
+    pub fn new(o: u32) -> Offset {
+        Offset(o)
+    }
+
     pub fn inc(&mut self) {
         *self += 1;
     }
