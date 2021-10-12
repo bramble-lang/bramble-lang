@@ -514,7 +514,6 @@ impl<'a> Lexer<'a> {
     pub fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let line = self.line;
-        let offset = self.col;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
             ("...", VarArgs),
@@ -550,12 +549,12 @@ impl<'a> Lexer<'a> {
         let mut token = None;
         for (op, t) in operators.iter() {
             if branch.next_ifn(op) {
-                token = Some(Token::new(line, offset, t.clone()));
+                token = Some(t);
                 break;
             }
         }
-        branch.merge();
-        Ok(token)
+        let (_, span) = branch.merge().unwrap();
+        Ok(token.map(|t| Token::new_with_span(t.clone(), line, span)))
     }
 
     fn consume_line_comment(&mut self) {
