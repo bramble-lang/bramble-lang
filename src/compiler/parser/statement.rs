@@ -50,7 +50,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
             Some(Token { s: _, .. }) => Ok(Some(stm)),
             _ => {
                 if must_have_semicolon {
-                    let line = *stm.get_context();
+                    let line = stm.get_context().line();
                     err!(
                         line,
                         ParserError::ExpectedButFound(
@@ -90,9 +90,13 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
             };
 
             match id_decl {
-                Expression::IdentifierDeclare(_, id, ty) => {
-                    Ok(Some(Bind::new(token.l, id, ty.clone(), is_mutable, exp)))
-                }
+                Expression::IdentifierDeclare(_, id, ty) => Ok(Some(Bind::new(
+                    token.to_ctx(),
+                    id,
+                    ty.clone(),
+                    is_mutable,
+                    exp,
+                ))),
                 _ => Err(CompilerError::new(
                     token.l,
                     ParserError::ExpectedTypeInIdDecl,
@@ -120,7 +124,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 tokens[2].l,
                 ParserError::ExpectedExpressionOnRhs,
             ))?;
-            Ok(Some(Mutate::new(tokens[0].l, id, exp)))
+            Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
         }
     }
 }
@@ -133,7 +137,7 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
                 let params = routine_call_params(stream)?
                     .ok_or(CompilerError::new(l, ParserError::ExpectedParams))?;
                 Ok(Some(Expression::RoutineCall(
-                    l,
+                    token.to_ctx(),
                     RoutineCall::CoroutineInit,
                     path,
                     params,
@@ -155,8 +159,8 @@ pub(super) fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<Parse
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             match exp {
-                Some(exp) => Some(Return::new(token.l, Some(exp))),
-                None => Some(Return::new(token.l, None)),
+                Some(exp) => Some(Return::new(token.to_ctx(), Some(exp))),
+                None => Some(Return::new(token.to_ctx(), None)),
             }
         }
         _ => None,
@@ -170,8 +174,8 @@ fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserC
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             let yret = match exp {
-                Some(exp) => YieldReturn::new(token.l, Some(exp)),
-                None => YieldReturn::new(token.l, None),
+                Some(exp) => YieldReturn::new(token.to_ctx(), Some(exp)),
+                None => YieldReturn::new(token.to_ctx(), None),
             };
             Some(Statement::YieldReturn(Box::new(yret)))
         }
