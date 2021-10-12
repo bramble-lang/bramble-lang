@@ -10,7 +10,7 @@ pub enum LexerError {
     ExpectedEscapeCharacter,
     InvalidInteger,
     UnexpectedSuffixType(Primitive),
-    SourceError,
+    SourceError, // TODO: make this more descriptive
 }
 
 impl CompilerDisplay for LexerError {
