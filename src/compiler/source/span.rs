@@ -3,7 +3,7 @@
 
 use super::Offset;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Span {
     /// The span starts at this position in the global source map
     low: Offset,
