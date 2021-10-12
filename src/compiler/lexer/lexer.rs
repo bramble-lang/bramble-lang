@@ -352,11 +352,7 @@ impl<'a> Lexer<'a> {
 
         match branch.merge() {
             None => Ok(None),
-            Some((id, span)) => Ok(Some(Token::new_with_span(
-                Lex::Identifier(id),
-                self.line,
-                span,
-            ))),
+            Some((id, span)) => Ok(Some(Token::new(Lex::Identifier(id), self.line, span))),
         }
     }
 
@@ -388,11 +384,7 @@ impl<'a> Lexer<'a> {
             s.pop();
             let id = self.string_table.insert(s);
 
-            Ok(Some(Token::new_with_span(
-                Lex::StringLiteral(id),
-                self.line,
-                span,
-            )))
+            Ok(Some(Token::new(Lex::StringLiteral(id), self.line, span)))
         } else {
             Ok(None)
         }
@@ -443,42 +435,42 @@ impl<'a> Lexer<'a> {
         prim: Primitive,
     ) -> LexerResult<Option<Token>> {
         match prim {
-            Primitive::U8 => Ok(Some(Token::new_with_span(
+            Primitive::U8 => Ok(Some(Token::new(
                 U8(int_token.parse::<u8>().unwrap()),
                 line,
                 span,
             ))),
-            Primitive::U16 => Ok(Some(Token::new_with_span(
+            Primitive::U16 => Ok(Some(Token::new(
                 U16(int_token.parse::<u16>().unwrap()),
                 line,
                 span,
             ))),
-            Primitive::U32 => Ok(Some(Token::new_with_span(
+            Primitive::U32 => Ok(Some(Token::new(
                 U32(int_token.parse::<u32>().unwrap()),
                 line,
                 span,
             ))),
-            Primitive::U64 => Ok(Some(Token::new_with_span(
+            Primitive::U64 => Ok(Some(Token::new(
                 U64(int_token.parse::<u64>().unwrap()),
                 line,
                 span,
             ))),
-            Primitive::I8 => Ok(Some(Token::new_with_span(
+            Primitive::I8 => Ok(Some(Token::new(
                 I8(int_token.parse::<i8>().unwrap()),
                 line,
                 span,
             ))),
-            Primitive::I16 => Ok(Some(Token::new_with_span(
+            Primitive::I16 => Ok(Some(Token::new(
                 I16(int_token.parse::<i16>().unwrap()),
                 line,
                 span,
             ))),
-            Primitive::I32 => Ok(Some(Token::new_with_span(
+            Primitive::I32 => Ok(Some(Token::new(
                 I32(int_token.parse::<i32>().unwrap()),
                 line,
                 span,
             ))),
-            Primitive::I64 => Ok(Some(Token::new_with_span(
+            Primitive::I64 => Ok(Some(Token::new(
                 I64(int_token.parse::<i64>().unwrap()),
                 line,
                 span,
@@ -555,7 +547,7 @@ impl<'a> Lexer<'a> {
         }
         Ok(token.map(|t| {
             let (_, span) = branch.merge().unwrap();
-            Token::new_with_span(t.clone(), line, span)
+            Token::new(t.clone(), line, span)
         }))
     }
 
@@ -592,8 +584,8 @@ impl<'a> Lexer<'a> {
                 span,
                 ..
             } => match self.string_table.get(*id).unwrap() {
-                "true" => Token::new_with_span(Bool(true), *l, *span),
-                "false" => Token::new_with_span(Bool(false), *l, *span),
+                "true" => Token::new(Bool(true), *l, *span),
+                "false" => Token::new(Bool(false), *l, *span),
                 _ => token,
             },
             _ => token,
@@ -609,17 +601,17 @@ impl<'a> Lexer<'a> {
                 s: Identifier(ref id),
                 ..
             } => match self.string_table.get(*id).unwrap() {
-                "u8" => Token::new_with_span(Primitive(Primitive::U8), l, span),
-                "u16" => Token::new_with_span(Primitive(Primitive::U16), l, span),
-                "u32" => Token::new_with_span(Primitive(Primitive::U32), l, span),
-                "u64" => Token::new_with_span(Primitive(Primitive::U64), l, span),
-                "i8" => Token::new_with_span(Primitive(Primitive::I8), l, span),
-                "i16" => Token::new_with_span(Primitive(Primitive::I16), l, span),
-                "i32" => Token::new_with_span(Primitive(Primitive::I32), l, span),
-                "i64" => Token::new_with_span(Primitive(Primitive::I64), l, span),
-                "bool" => Token::new_with_span(Primitive(Primitive::Bool), l, span),
-                "string" => Token::new_with_span(Primitive(Primitive::StringLiteral), l, span),
-                _ => Token::new_with_span(Identifier(id.clone()), l, span),
+                "u8" => Token::new(Primitive(Primitive::U8), l, span),
+                "u16" => Token::new(Primitive(Primitive::U16), l, span),
+                "u32" => Token::new(Primitive(Primitive::U32), l, span),
+                "u64" => Token::new(Primitive(Primitive::U64), l, span),
+                "i8" => Token::new(Primitive(Primitive::I8), l, span),
+                "i16" => Token::new(Primitive(Primitive::I16), l, span),
+                "i32" => Token::new(Primitive(Primitive::I32), l, span),
+                "i64" => Token::new(Primitive(Primitive::I64), l, span),
+                "bool" => Token::new(Primitive(Primitive::Bool), l, span),
+                "string" => Token::new(Primitive(Primitive::StringLiteral), l, span),
+                _ => Token::new(Identifier(id.clone()), l, span),
             },
             _ => token,
         }
@@ -634,25 +626,25 @@ impl<'a> Lexer<'a> {
                 s: Identifier(ref id),
                 ..
             } => match self.string_table.get(*id).unwrap() {
-                "let" => Token::new_with_span(Let, l, span),
-                "mut" => Token::new_with_span(Mut, l, span),
-                "return" => Token::new_with_span(Return, l, span),
-                "yield" => Token::new_with_span(Yield, l, span),
-                "yret" => Token::new_with_span(YieldReturn, l, span),
-                "fn" => Token::new_with_span(FunctionDef, l, span),
-                "co" => Token::new_with_span(CoroutineDef, l, span),
-                "mod" => Token::new_with_span(ModuleDef, l, span),
-                "struct" => Token::new_with_span(Struct, l, span),
-                "extern" => Token::new_with_span(Extern, l, span),
-                "init" => Token::new_with_span(Init, l, span),
-                "if" => Token::new_with_span(If, l, span),
-                "else" => Token::new_with_span(Else, l, span),
-                "while" => Token::new_with_span(While, l, span),
-                "self" => Token::new_with_span(PathSelf, l, span),
-                "super" => Token::new_with_span(PathSuper, l, span),
-                "root" => Token::new_with_span(PathFileRoot, l, span),
-                "project" => Token::new_with_span(PathProjectRoot, l, span),
-                _ => Token::new_with_span(Identifier(id.clone()), l, span),
+                "let" => Token::new(Let, l, span),
+                "mut" => Token::new(Mut, l, span),
+                "return" => Token::new(Return, l, span),
+                "yield" => Token::new(Yield, l, span),
+                "yret" => Token::new(YieldReturn, l, span),
+                "fn" => Token::new(FunctionDef, l, span),
+                "co" => Token::new(CoroutineDef, l, span),
+                "mod" => Token::new(ModuleDef, l, span),
+                "struct" => Token::new(Struct, l, span),
+                "extern" => Token::new(Extern, l, span),
+                "init" => Token::new(Init, l, span),
+                "if" => Token::new(If, l, span),
+                "else" => Token::new(Else, l, span),
+                "while" => Token::new(While, l, span),
+                "self" => Token::new(PathSelf, l, span),
+                "super" => Token::new(PathSuper, l, span),
+                "root" => Token::new(PathFileRoot, l, span),
+                "project" => Token::new(PathProjectRoot, l, span),
+                _ => Token::new(Identifier(id.clone()), l, span),
             },
             _ => token,
         }
