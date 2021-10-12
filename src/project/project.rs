@@ -146,27 +146,8 @@ pub fn parse_project(
     }
 }
 
-pub fn tokenize_project(
-    string_table: &mut StringTable,
-    src_input: Project<String>,
-    trace_lexer: TracingConfig,
-) -> Result<Vec<CompilationUnit<Vec<Token>>>, Vec<CompilerError<LexerError>>> {
-    let mut token_sets = vec![];
-    let mut errors = vec![];
-    /*for src in src_input {
-        match tokenize_src_file(string_table, src, trace_lexer) {
-            Ok(t) => token_sets.push(t),
-            Err(mut e) => errors.append(&mut e),
-        }
-    }*/
-
-    if errors.len() == 0 {
-        Ok(token_sets)
-    } else {
-        Err(errors)
-    }
-}
-
+/// For each compilation unit in the [`SourceMap`], tokenize, and add to a vector
+/// of tokenized compilation units.
 pub fn tokenize_source_map(
     string_table: &mut StringTable,
     sourcemap: SourceMap,
@@ -179,24 +160,25 @@ pub fn tokenize_source_map(
     for idx in 0..sourcemap.len() {
         let entry = sourcemap.get(idx).unwrap();
 
-        // Get the logical path within the project
+        // Derive the logical path within the project
         let module_path = file_path_to_module_path(entry.path(), src_path);
 
         // Create a compilation Unit from the SourceCharIter
-        let cu = CompilationUnit {
+        let src = CompilationUnit {
             path: module_path,
             data: entry.chars(),
         };
 
         // Get the Token Set and add to the Vector of token sets
-        let tokens = tokenize_src_file(string_table, cu, trace_lexer)?;
+        let tokens = tokenize_source(string_table, src, trace_lexer)?;
         project_token_sets.push(tokens);
     }
 
     Ok(project_token_sets)
 }
 
-fn tokenize_src_file(
+/// Tokenizes a stream of unicode characters.
+fn tokenize_source(
     string_table: &mut StringTable,
     src: CompilationUnit<SourceCharIter>,
     trace_lexer: TracingConfig,
