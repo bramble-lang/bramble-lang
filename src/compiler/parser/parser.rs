@@ -160,7 +160,7 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserC
 fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
-            Some((ln, module_name)) => {
+            Some((ln, span, module_name)) => {
                 let mut module = Module::new(module_name, token.to_ctx());
                 stream.next_must_be(&Lex::LBrace)?;
 
@@ -239,7 +239,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
         Some(token) => match function_decl(stream, true)? {
             Some((fn_line, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    return err!(fn_line, ParserError::ExternInvalidVarArgs);
+                    return err!(fn_line.line(), ParserError::ExternInvalidVarArgs);
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
@@ -261,7 +261,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
 fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
     match stream.next_if(&Lex::Struct) {
         Some(token) => match stream.next_if_id() {
-            Some((line, id)) => {
+            Some((line, span, id)) => {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = parameter_list(stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
@@ -278,7 +278,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
     let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
         Some((l, n, p, v, t)) => {
             if v {
-                return err!(l, ParserError::FnVarArgsNotAllowed);
+                return err!(l.line(), ParserError::FnVarArgsNotAllowed);
             }
             (l, n, p, t)
         }
@@ -292,7 +292,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                fn_line,
+                fn_line.line(),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
@@ -324,7 +324,7 @@ fn function_decl(
         None => return Ok(None),
     };
 
-    let (fn_line, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
+    let (fn_line, fn_span, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
         fn_line.line(),
         ParserError::FnExpectedIdentifierAfterFn,
     ))?;
@@ -338,7 +338,13 @@ fn function_decl(
         Type::Unit
     };
 
-    Ok(Some((fn_line, fn_name, params, has_varargs, fn_type)))
+    Ok(Some((
+        ParserContext::new(fn_line, fn_span),
+        fn_name,
+        params,
+        has_varargs,
+        fn_type,
+    )))
 }
 
 fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
@@ -347,7 +353,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         None => return Ok(None),
     };
 
-    let (co_line, co_name) = stream.next_if_id().ok_or(CompilerError::new(
+    let (co_line, co_span, co_name) = stream.next_if_id().ok_or(CompilerError::new(
         co_line,
         ParserError::CoExpectedIdentifierAfterCo,
     ))?;
@@ -372,7 +378,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                stmts.last().map_or(co_line, |s| *s.get_context()),
+                stmts.last().map_or(co_line, |s| s.get_context().line()),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
@@ -380,7 +386,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     stream.next_must_be(&Lex::RBrace)?;
 
     Ok(Some(RoutineDef {
-        context: co_line,
+        context: ParserContext::new(co_line, co_span),
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
@@ -450,7 +456,7 @@ fn parameter_list(
 
 pub(super) fn id_declaration_list(
     stream: &mut TokenStream,
-) -> Result<Vec<(u32, StringId, Type)>, CompilerError<ParserError>> {
+) -> Result<Vec<(ParserContext, StringId, Type)>, CompilerError<ParserError>> {
     trace!(stream);
     let mut decls = vec![];
 
@@ -470,13 +476,13 @@ pub(super) fn id_declaration_list(
 fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     if stream.test_ifn(vec![Lex::Identifier(StringId::new()), Lex::LParen]) {
-        let (line, fn_name) = stream
+        let (line, span, fn_name) = stream
             .next_if_id()
             .expect("CRITICAL: failed to get identifier");
         let params = routine_call_params(stream)?
             .ok_or(CompilerError::new(line, ParserError::FnCallExpectedParams))?;
         Ok(Some(Expression::RoutineCall(
-            line,
+            ParserContext::new(line, span),
             RoutineCall::Function,
             vec![Element::Id(fn_name)].into(),
             params,
@@ -555,7 +561,10 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(ParserContext, Pat
 fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if_id() {
-        Some((line, id)) => Ok(Some(Expression::Identifier(line, id))),
+        Some((line, span, id)) => Ok(Some(Expression::Identifier(
+            ParserContext::new(line, span),
+            id,
+        ))),
         _ => Ok(None),
     }
 }
@@ -634,7 +643,7 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
         Some(t) => {
-            let line_id = t[0].l;
+            let line_id = t[0].to_ctx();
             let line_value = t[1].l;
             let id = t[0].s.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",

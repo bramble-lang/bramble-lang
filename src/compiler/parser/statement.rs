@@ -135,7 +135,7 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
         Some(token) => match path(stream)? {
             Some((l, path)) => {
                 let params = routine_call_params(stream)?
-                    .ok_or(CompilerError::new(l, ParserError::ExpectedParams))?;
+                    .ok_or(CompilerError::new(l.line(), ParserError::ExpectedParams))?;
                 Ok(Some(Expression::RoutineCall(
                     token.to_ctx(),
                     RoutineCall::CoroutineInit,

@@ -4,7 +4,7 @@ use crate::{
     compiler::{
         ast::Module,
         lexer::{tokens::Token, LexerError},
-        parser::{self, ParserError},
+        parser::{self, ParserContext, ParserError},
         CompilerDisplay, CompilerDisplayError, CompilerError, SourceCharIter, SourceMap,
         SourceMapError,
     },
@@ -133,9 +133,9 @@ pub fn parse_project(
     root_module: StringId,
     token_sets: Project<Vec<Token>>,
     trace_parser: TracingConfig,
-) -> Result<Module<u32>, Vec<CompilerError<ProjectError>>> {
+) -> Result<Module<ParserContext>, Vec<CompilerError<ProjectError>>> {
     parser::parser::set_tracing(trace_parser);
-    let mut root = Module::new(root_module, 0);
+    let mut root = Module::new(root_module, 0); // TODO: pass in the source map and get the span that covers everything in the source map and make it the root span
     let mut errors = vec![];
     for src_tokens in token_sets {
         match parse_src_tokens(string_table, src_tokens) {
@@ -229,7 +229,7 @@ fn tokenize_source(
 fn parse_src_tokens(
     string_table: &mut StringTable,
     src_tokens: CompilationUnit<Vec<Token>>,
-) -> Result<CompilationUnit<Module<u32>>, CompilerError<ProjectError>> {
+) -> Result<CompilationUnit<Module<ParserContext>>, CompilerError<ProjectError>> {
     if let Some((name, parent_path)) = src_tokens.path.split_last() {
         let name = string_table.insert(name.into());
         match parser::parser::parse(name, &src_tokens.data) {
