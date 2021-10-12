@@ -219,7 +219,7 @@ mod tests {
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(
             token,
-            Token::new(1, 0, Identifier(table.insert("x".into())))
+            Token::new_with_span(Identifier(table.insert("x".into())), 1, new_span(0, 1))
         );
         let token = tokens[1].clone().expect("Expected valid token");
         assert_eq!(token, Token::new_with_span(Colon, 1, new_span(1, 2)));

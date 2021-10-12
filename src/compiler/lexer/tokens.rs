@@ -212,15 +212,6 @@ impl CompilerDisplay for Token {
 }
 
 impl Token {
-    pub fn new(l: u32, _o: u32, s: Lex) -> Token {
-        Token {
-            l,
-            c: 0,
-            s,
-            span: Span::zero(),
-        }
-    }
-
     pub fn new_with_span(s: Lex, l: u32, span: Span) -> Token {
         Token { l, c: 0, s, span }
     }
