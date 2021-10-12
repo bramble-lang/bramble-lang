@@ -8,7 +8,7 @@ mod sourcechar;
 mod sourcemap;
 
 pub use sourcechar::SourceCharIter;
-pub use sourcemap::{SourceMap, SourceMapEntry};
+pub use sourcemap::{SourceMap, SourceMapEntry, SourceMapError};
 
 /// Represents a single char from a source code file.  This includes the character
 /// and the global offset of the character (which points to the specific source

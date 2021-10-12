@@ -6,6 +6,7 @@ use crate::{
         lexer::{tokens::Token, LexerError},
         parser::{self, ParserError},
         CompilerDisplay, CompilerDisplayError, CompilerError, SourceCharIter, SourceMap,
+        SourceMapError,
     },
     StringId, StringTable,
 };
@@ -109,10 +110,13 @@ pub fn read_src_files(src_path: &std::path::Path, ext: &str) -> Vec<CompilationU
 
 /// Given the location for source code files, this will build a [`SourceMap`]
 /// which can then be used to access all the source code for the target project.
-pub fn build_source_map(src_path: &std::path::Path, ext: &str) -> Result<SourceMap, String> {
+pub fn build_source_map(
+    src_path: &std::path::Path,
+    ext: &str,
+) -> Result<SourceMap, SourceMapError> {
     let mut sm = SourceMap::new();
 
-    let files = get_files(&src_path, ext).expect(&format!("Could not open: {:?}", src_path));
+    let files = get_files(&src_path, ext)?;
     for file in files {
         sm.add_file(file)?;
     }

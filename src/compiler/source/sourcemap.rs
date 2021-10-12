@@ -48,12 +48,12 @@ impl SourceMap {
     /// The entry provides
     /// an interface for interacting with (e.g. reading) the file that also provides
     /// global offset data about each character read from the file.
-    pub fn add_file(&mut self, path: PathBuf) -> Result<&SourceMapEntry, String> {
-        let file = std::fs::File::open(&path).unwrap();
+    pub fn add_file(&mut self, path: PathBuf) -> Result<&SourceMapEntry, SourceMapError> {
+        let file = std::fs::File::open(&path)?;
 
-        let file_len = file.metadata().unwrap().len();
+        let file_len = file.metadata()?.len();
         if file_len >= u32::MAX as u64 {
-            panic!("File is way too big");
+            return Err(SourceMapError::FileTooBig);
         }
 
         /*** Create a Source Char Iterator ***/
@@ -118,5 +118,17 @@ impl SourceMapEntry {
     /// unicode character and it's offset within the global offset space.
     pub fn chars(&self) -> SourceCharIter {
         SourceCharIter::new(self.file.try_clone().unwrap(), self.low, self.high)
+    }
+}
+
+#[derive(Debug)]
+pub enum SourceMapError {
+    FileTooBig,
+    Io(std::io::Error),
+}
+
+impl From<std::io::Error> for SourceMapError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
     }
 }
