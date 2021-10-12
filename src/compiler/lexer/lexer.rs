@@ -3,7 +3,7 @@
 // by tokenize
 use stdext::function_name;
 
-use crate::compiler::{SourceChar, SourceCharIter, SourceError};
+use crate::compiler::{SourceChar, SourceCharIter};
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
 
