@@ -5,6 +5,7 @@ use std::{path::Path, process::exit};
 
 use inkwell::context::Context;
 
+use braid_lang::project::*;
 use braid_lang::*;
 
 use crate::compiler::ast::MAIN_MODULE;
@@ -27,7 +28,8 @@ fn main() {
         .expect("Expected an input source file to compile");
     let src_path = Path::new(input);
     let project_name = get_project_name(&src_path).unwrap();
-    let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
+    //let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
+    let sourcemap = build_source_map(&src_path, BRAID_FILE_EXT).unwrap();
 
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
@@ -40,7 +42,8 @@ fn main() {
     let stop_stage = get_stage(&config).unwrap();
 
     let trace_lexer = get_lexer_tracing(&config);
-    let token_sets = match tokenize_project(&mut string_table, src_input, trace_lexer) {
+    let token_sets = match tokenize_source_map(&mut string_table, sourcemap, trace_lexer, src_path)
+    {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&string_table, &errs);

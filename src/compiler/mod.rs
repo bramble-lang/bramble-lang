@@ -15,6 +15,7 @@ pub mod stringtable;
 // of the interface between the compiler and modules which use the compiler.
 pub use error::CompilerError;
 pub use lexer::lexer::Lexer;
+pub use source::{SourceCharIter, SourceMap};
 
 // Import items for use within the compiler submodule which are not needed outside
 use source::SourceChar;

@@ -5,7 +5,7 @@ use crate::{
         ast::Module,
         lexer::{tokens::Token, LexerError},
         parser::{self, ParserError},
-        CompilerDisplay, CompilerDisplayError, CompilerError,
+        CompilerDisplay, CompilerDisplayError, CompilerError, SourceCharIter, SourceMap,
     },
     StringId, StringTable,
 };
@@ -107,6 +107,19 @@ pub fn read_src_files(src_path: &std::path::Path, ext: &str) -> Vec<CompilationU
     texts
 }
 
+/// Given the location for source code files, this will build a [`SourceMap`]
+/// which can then be used to access all the source code for the target project.
+pub fn build_source_map(src_path: &std::path::Path, ext: &str) -> Result<SourceMap, String> {
+    let mut sm = SourceMap::new();
+
+    let files = get_files(&src_path, ext).expect(&format!("Could not open: {:?}", src_path));
+    for file in files {
+        sm.add_file(file)?;
+    }
+
+    Ok(sm)
+}
+
 /// Parses every tokenized compilation unit in the given vector.
 /// Each compilation unit is parsed into a module named after the
 /// path given in the CompilationUnit and all are added as child
@@ -140,12 +153,12 @@ pub fn tokenize_project(
 ) -> Result<Vec<CompilationUnit<Vec<Token>>>, Vec<CompilerError<LexerError>>> {
     let mut token_sets = vec![];
     let mut errors = vec![];
-    for src in src_input {
+    /*for src in src_input {
         match tokenize_src_file(string_table, src, trace_lexer) {
             Ok(t) => token_sets.push(t),
             Err(mut e) => errors.append(&mut e),
         }
-    }
+    }*/
 
     if errors.len() == 0 {
         Ok(token_sets)
@@ -154,12 +167,41 @@ pub fn tokenize_project(
     }
 }
 
+pub fn tokenize_source_map(
+    string_table: &mut StringTable,
+    sourcemap: SourceMap,
+    trace_lexer: TracingConfig,
+    src_path: &std::path::Path,
+) -> Result<Vec<CompilationUnit<Vec<Token>>>, Vec<CompilerError<LexerError>>> {
+    let mut project_token_sets = vec![];
+
+    // Iterate through each entry in the source map
+    for idx in 0..sourcemap.len() {
+        let entry = sourcemap.get(idx).unwrap();
+
+        // Get the logical path within the project
+        let module_path = file_path_to_module_path(entry.path(), src_path);
+
+        // Create a compilation Unit from the SourceCharIter
+        let cu = CompilationUnit {
+            path: module_path,
+            data: entry.chars(),
+        };
+
+        // Get the Token Set and add to the Vector of token sets
+        let tokens = tokenize_src_file(string_table, cu, trace_lexer)?;
+        project_token_sets.push(tokens);
+    }
+
+    Ok(project_token_sets)
+}
+
 fn tokenize_src_file(
     string_table: &mut StringTable,
-    src: CompilationUnit<String>,
+    src: CompilationUnit<SourceCharIter>,
     trace_lexer: TracingConfig,
 ) -> Result<CompilationUnit<Vec<Token>>, Vec<CompilerError<LexerError>>> {
-    let mut lexer = crate::compiler::Lexer::new(string_table, &src.data);
+    let mut lexer = crate::compiler::Lexer::from_src_char_iter(string_table, src.data);
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let (tokens, errors): (

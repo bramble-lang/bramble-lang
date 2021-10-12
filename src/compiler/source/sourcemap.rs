@@ -23,11 +23,6 @@ pub struct SourceMap {
     /// Stores the Source Files and the maximum global offset in the assigned
     /// range. With the file owning the range from the previous high upto but
     /// not including its high.
-    ///
-    /// Not a fan of that design, changing to store the low and high.  Can
-    /// improve later.
-    ///
-    /// I probably want to create a simple struct to store the entries.
     map: Vec<SourceMapEntry>,
 
     /// The upper bound of all the source files currently in the SourceMap
@@ -74,6 +69,22 @@ impl SourceMap {
         self.map.push(entry);
 
         Ok(self.map.last().unwrap())
+    }
+
+    /// Returns the number of entries in the [`SourceMap`]
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// If `idx` is less than the number of entries, then this will return
+    /// a reference to the entry at position `idx`.  Otherwise, this will
+    /// return [`None`].
+    pub fn get(&self, idx: usize) -> Option<&SourceMapEntry> {
+        if idx < self.len() {
+            Some(&self.map[idx])
+        } else {
+            None
+        }
     }
 }
 
