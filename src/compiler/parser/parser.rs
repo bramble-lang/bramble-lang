@@ -13,6 +13,7 @@ use crate::{
     diagnostics::{config::TracingConfig, Diag, DiagData},
 };
 
+use super::ParserContext;
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
@@ -24,7 +25,6 @@ use super::{
 };
 use super::{tokenstream::TokenStream, ParserError};
 
-pub type ParserContext = u32;
 type HasVarArgs = bool;
 
 impl Context for ParserContext {

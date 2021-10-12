@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{ast::*, parser::parser::ParserContext},
+    compiler::{ast::*, parser::ParserContext},
     diagnostics::{Diag, DiagData},
 };
 use crate::{diagnostics::config::TracingConfig, StringId};

@@ -6,9 +6,9 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use super::{
-    parser::{block, path, routine_call_params, ParserContext},
+    parser::{block, path, routine_call_params},
     tokenstream::TokenStream,
-    ParserError,
+    ParserContext, ParserError,
 };
 use crate::{
     compiler::{

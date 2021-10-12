@@ -15,7 +15,7 @@ use crate::{
     trace, StringId,
 };
 
-use super::{parser::ParserContext, tokenstream::TokenStream, ParserError};
+use super::{tokenstream::TokenStream, ParserContext, ParserError};
 
 pub(super) fn statement_or_yield_return(
     stream: &mut TokenStream,
