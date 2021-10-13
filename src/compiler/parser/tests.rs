@@ -10,6 +10,7 @@ pub mod tests {
             parser::{
                 expression::*, statement::*, tokenstream::TokenStream, ParserContext, ParserError,
             },
+            source::Offset,
             CompilerDisplay, CompilerError, Lexer, Span,
         },
         StringTable,
@@ -17,8 +18,12 @@ pub mod tests {
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    fn new_ctx(line: u32) -> ParserContext {
-        ParserContext::new(line, Span::zero())
+    fn new_span(low: u32, high: u32) -> Span {
+        Span::new(Offset::new(low), Offset::new(high))
+    }
+
+    fn new_ctx(low: u32, high: u32) -> ParserContext {
+        ParserContext::new(1, new_span(low, high))
     }
 
     #[test]
@@ -38,7 +43,7 @@ pub mod tests {
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
                 assert_eq!(ctx.line(), 1);
-                assert_eq!(*operand, Expression::Identifier(new_ctx(1), a));
+                assert_eq!(*operand, Expression::Identifier(new_ctx(1, 2), a));
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
             }
@@ -66,7 +71,7 @@ pub mod tests {
                 if let Expression::UnaryOp(ctx, op, operand) = *operand {
                     assert_eq!(op, *expected);
                     assert_eq!(ctx.line(), 1);
-                    assert_eq!(*operand, Expression::Identifier(new_ctx(1), a));
+                    assert_eq!(*operand, Expression::Identifier(new_ctx(2, 3), a));
                 }
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
@@ -102,8 +107,11 @@ pub mod tests {
             {
                 assert_eq!(op, *expected);
                 assert_eq!(ctx.line(), 1);
-                assert_eq!(*left, Expression::I64(new_ctx(1), 2));
-                assert_eq!(*right, Expression::I64(new_ctx(1), 2));
+                assert_eq!(*left, Expression::I64(new_ctx(0, 1), 2));
+                assert_eq!(
+                    *right,
+                    Expression::I64(new_ctx(text.len() as u32 - 1, text.len() as u32), 2)
+                );
             } else {
                 panic!("No nodes returned by parser for {}", text)
             }
@@ -130,8 +138,8 @@ pub mod tests {
             {
                 assert_eq!(op, *expected);
                 assert_eq!(ctx.line(), 1);
-                assert_eq!(*left, Expression::Boolean(new_ctx(1), true));
-                assert_eq!(*right, Expression::Boolean(new_ctx(1), false));
+                assert_eq!(*left, Expression::Boolean(new_ctx(0, 4), true));
+                assert_eq!(*right, Expression::Boolean(new_ctx(8, 13), false));
             } else {
                 panic!("No nodes returned by parser")
             }
@@ -154,12 +162,12 @@ pub mod tests {
             assert_eq!(ctx.line(), 1);
             match left.as_ref() {
                 Expression::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
-                    assert_eq!(**ll, Expression::I64(new_ctx(1), 2));
-                    assert_eq!(**lr, Expression::I64(new_ctx(1), 4));
+                    assert_eq!(**ll, Expression::I64(new_ctx(1, 2), 2));
+                    assert_eq!(**lr, Expression::I64(new_ctx(5, 6), 4));
                 }
                 _ => panic!("Expected Add syntax"),
             }
-            assert_eq!(*right, Expression::I64(new_ctx(1), 3));
+            assert_eq!(*right, Expression::I64(new_ctx(10, 11), 3));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -179,8 +187,8 @@ pub mod tests {
             expression(&mut stream).unwrap()
         {
             assert_eq!(ctx.line(), 1);
-            assert_eq!(*left, Expression::Boolean(new_ctx(1), true));
-            assert_eq!(*right, Expression::Boolean(new_ctx(1), false));
+            assert_eq!(*left, Expression::Boolean(new_ctx(0, 4), true));
+            assert_eq!(*right, Expression::Boolean(new_ctx(8, 13), false));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -262,11 +270,11 @@ pub mod tests {
         let second = table.insert("second".into());
 
         for text in vec![
-            "thing.first.second",
-            "(thing).first.second",
-            "(thing.first).second",
-            "((thing.first).second)",
-            "(thing.first.second)",
+            "  thing .first.second",
+            "( thing).first.second",
+            " (thing .first).second",
+            "((thing .first).second)",
+            "( thing .first.second)",
         ] {
             let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
@@ -280,8 +288,8 @@ pub mod tests {
                     assert_eq!(
                         *left,
                         Expression::MemberAccess(
-                            new_ctx(1),
-                            Box::new(Expression::Identifier(new_ctx(1), thing)),
+                            new_ctx(8, 9),
+                            Box::new(Expression::Identifier(new_ctx(2, 7), thing)),
                             first,
                         ),
                         "Input: {}",
@@ -313,7 +321,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), false);
-                assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(1), 5));
+                assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(13, 14), 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -336,7 +344,7 @@ pub mod tests {
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), true);
-                assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(1), 5));
+                assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(17, 18), 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -405,7 +413,7 @@ pub mod tests {
         match stm {
             Statement::Mutate(box m) => {
                 assert_eq!(m.get_id(), x);
-                assert_eq!(*m.get_rhs(), Expression::I64(new_ctx(1), 5));
+                assert_eq!(*m.get_rhs(), Expression::I64(new_ctx(9, 10), 5));
             }
             _ => panic!("Not a binding statement"),
         }
@@ -424,7 +432,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         if let Some(m) = parse(test, &tokens).unwrap().unwrap().get_module(test_mod) {
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 3));
             assert_eq!(m.get_name(), test_mod);
         } else {
             panic!("No nodes returned by parser")
@@ -446,7 +454,7 @@ pub mod tests {
             .unwrap();
 
         if let Some(m) = parse(test, &tokens).unwrap() {
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 3));
             assert_eq!(m.get_name(), test);
 
             assert_eq!(m.get_modules().len(), 1);
@@ -455,7 +463,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             let m = &m.get_modules()[0];
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 3));
             assert_eq!(m.get_name(), test_fn_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -472,9 +480,12 @@ pub mod tests {
                 ..
             }) = &m.get_functions()[0]
             {
-                assert_eq!(*context, new_ctx(1));
+                assert_eq!(*context, new_ctx(21, 25));
                 assert_eq!(*name, test);
-                assert_eq!(params, &vec![Parameter::new(new_ctx(1), x, &Type::I64)]);
+                assert_eq!(
+                    params,
+                    &vec![Parameter::new(new_ctx(26, 27), x, &Type::I64)]
+                );
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -507,7 +518,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_co_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 3));
             assert_eq!(m.get_name(), test_co_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -525,9 +536,12 @@ pub mod tests {
                 ..
             })) = m.get_item(test)
             {
-                assert_eq!(*context, new_ctx(1));
+                assert_eq!(*context, new_ctx(21, 25));
                 assert_eq!(*name, test);
-                assert_eq!(params, &vec![Parameter::new(new_ctx(1), x, &Type::I64)]);
+                assert_eq!(
+                    params,
+                    &vec![Parameter::new(new_ctx(26, 27), x, &Type::I64)]
+                );
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -561,7 +575,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_struct_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 3));
             assert_eq!(m.get_name(), test_struct_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -570,11 +584,11 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 1);
 
             if let Some(Item::Struct(sd)) = m.get_item(my_struct) {
-                assert_eq!(*sd.get_context(), new_ctx(1));
+                assert_eq!(*sd.get_context(), new_ctx(22, 28));
                 assert_eq!(sd.get_name(), my_struct);
                 assert_eq!(
                     sd.get_fields(),
-                    &vec![Parameter::new(new_ctx(1), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(39, 40), x, &Type::I64)]
                 );
             }
         } else {
@@ -601,7 +615,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_extern_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 3));
             assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -611,11 +625,11 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item(my_fn) {
-                assert_eq!(*e.get_context(), new_ctx(1));
+                assert_eq!(*e.get_context(), new_ctx(22, 28));
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
-                    &vec![Parameter::new(new_ctx(1), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(38, 39), x, &Type::I64)]
                 );
                 assert_eq!(e.get_return_type(), Type::I32);
             }
@@ -643,7 +657,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_extern_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 3));
             assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -653,11 +667,11 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item(my_fn) {
-                assert_eq!(*e.get_context(), new_ctx(1));
+                assert_eq!(*e.get_context(), new_ctx(22, 28));
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
-                    &vec![Parameter::new(new_ctx(1), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(38, 39), x, &Type::I64)]
                 );
                 assert_eq!(e.get_return_type(), Type::I32);
                 assert_eq!(e.has_varargs, true);
@@ -689,9 +703,9 @@ pub mod tests {
             ..
         })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
-            assert_eq!(*l, new_ctx(1));
+            assert_eq!(*l, new_ctx(3, 7));
             assert_eq!(*name, test);
-            assert_eq!(*params, vec![Parameter::new(new_ctx(1), x, &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -725,14 +739,17 @@ pub mod tests {
             ..
         })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
-            assert_eq!(*l, new_ctx(1));
+            assert_eq!(*l, new_ctx(3, 7));
             assert_eq!(*name, test);
-            assert_eq!(*params, vec![Parameter::new(new_ctx(1), x, &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
                 Statement::Return(box r) => {
-                    assert_eq!(*r.get_value(), Some(Expression::Boolean(new_ctx(1), true)));
+                    assert_eq!(
+                        *r.get_value(),
+                        Some(Expression::Boolean(new_ctx(31, 35), true))
+                    );
                 }
                 _ => panic!("No body"),
             }
@@ -781,13 +798,13 @@ pub mod tests {
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
-            assert_eq!(l, new_ctx(1));
+            assert_eq!(l, new_ctx(0, 4));
             assert_eq!(name, vec![Element::Id(test)].into());
             assert_eq!(
                 params,
                 vec![
-                    Expression::Identifier(new_ctx(1), x),
-                    Expression::Identifier(new_ctx(1), y)
+                    Expression::Identifier(new_ctx(5, 6), x),
+                    Expression::Identifier(new_ctx(8, 9), y)
                 ]
             );
         } else {
@@ -813,13 +830,13 @@ pub mod tests {
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
-            assert_eq!(l, new_ctx(1));
+            assert_eq!(l, new_ctx(0, 4));
             assert_eq!(name, vec![Element::Selph, Element::Id(test)].into());
             assert_eq!(
                 params,
                 vec![
-                    Expression::Identifier(new_ctx(1), x),
-                    Expression::Identifier(new_ctx(1), y)
+                    Expression::Identifier(new_ctx(11, 12), x),
+                    Expression::Identifier(new_ctx(14, 15), y)
                 ]
             );
         } else {
@@ -841,7 +858,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         if let Some(m) = parse(test_mod, &tokens).unwrap() {
-            assert_eq!(*m.get_context(), new_ctx(1));
+            assert_eq!(*m.get_context(), new_ctx(0, 2));
             if let Some(Item::Routine(RoutineDef {
                 def: RoutineDefType::Coroutine,
                 name,
@@ -852,12 +869,15 @@ pub mod tests {
             })) = m.get_item(test)
             {
                 assert_eq!(*name, test);
-                assert_eq!(params, &vec![Parameter::new(new_ctx(1), x, &Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
                     Statement::Return(box r) => {
-                        assert_eq!(*r.get_value(), Some(Expression::Boolean(new_ctx(1), true)));
+                        assert_eq!(
+                            *r.get_value(),
+                            Some(Expression::Boolean(new_ctx(31, 35), true))
+                        );
                     }
                     _ => panic!("No body"),
                 }
@@ -888,12 +908,12 @@ pub mod tests {
                 assert_eq!(
                     *b.get_rhs(),
                     Expression::RoutineCall(
-                        new_ctx(1),
+                        new_ctx(16, 20),
                         RoutineCall::CoroutineInit,
                         vec![Element::Id(c)].into(),
                         vec![
-                            Expression::I64(new_ctx(1), 1),
-                            Expression::I64(new_ctx(1), 2)
+                            Expression::I64(new_ctx(23, 24), 1),
+                            Expression::I64(new_ctx(26, 27), 2)
                         ]
                     )
                 );
@@ -926,12 +946,12 @@ pub mod tests {
                 assert_eq!(
                     *bind.get_rhs(),
                     Expression::RoutineCall(
-                        new_ctx(1),
+                        new_ctx(16, 20),
                         RoutineCall::CoroutineInit,
                         vec![Element::Id(a), Element::Id(b), Element::Id(c)].into(),
                         vec![
-                            Expression::I64(new_ctx(1), 1),
-                            Expression::I64(new_ctx(1), 2)
+                            Expression::I64(new_ctx(29, 30), 1),
+                            Expression::I64(new_ctx(32, 33), 2)
                         ]
                     )
                 );
@@ -955,7 +975,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         if let Some(Item::Routine(RoutineDef {
-            context: l,
+            context: ctx,
             def: RoutineDefType::Function,
             name,
             params,
@@ -964,9 +984,9 @@ pub mod tests {
             ..
         })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
-            assert_eq!(*l, new_ctx(1));
+            assert_eq!(*ctx, new_ctx(3, 7));
             assert_eq!(*name, test);
-            assert_eq!(*params, vec![Parameter::new(new_ctx(1), x, &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -974,8 +994,8 @@ pub mod tests {
                     assert_eq!(
                         *r.get_value(),
                         Some(Expression::Yield(
-                            new_ctx(1),
-                            Box::new(Expression::Identifier(new_ctx(1), cor))
+                            new_ctx(37, 40),
+                            Box::new(Expression::Identifier(new_ctx(37, 40), cor))
                         ))
                     );
                 }
@@ -1006,16 +1026,16 @@ pub mod tests {
             else_arm,
         }) = exp
         {
-            assert_eq!(l, new_ctx(1));
-            assert_eq!(*cond, Expression::Identifier(new_ctx(1), x));
+            assert_eq!(l, new_ctx(0, 2));
+            assert_eq!(*cond, Expression::Identifier(new_ctx(4, 5), x));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Expression::I64(new_ctx(1), 5));
+                assert_eq!(*final_exp, Expression::I64(new_ctx(8, 9), 5));
             } else {
                 panic!("Expected Expression block");
             }
 
             if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
-                assert_eq!(*final_exp, Expression::I64(new_ctx(1), 7));
+                assert_eq!(*final_exp, Expression::I64(new_ctx(17, 18), 7));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1046,10 +1066,10 @@ pub mod tests {
             else_arm,
         }) = exp
         {
-            assert_eq!(l, new_ctx(1));
-            assert_eq!(*cond, Expression::Identifier(new_ctx(1), x));
+            assert_eq!(l, new_ctx(0, 2));
+            assert_eq!(*cond, Expression::Identifier(new_ctx(4, 5), x));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                assert_eq!(*final_exp, Expression::I64(new_ctx(1), 5));
+                assert_eq!(*final_exp, Expression::I64(new_ctx(8, 9), 5));
             } else {
                 panic!("Expected Expression block");
             }
@@ -1064,21 +1084,21 @@ pub mod tests {
                 assert_eq!(
                     *cond,
                     Expression::BinaryOp(
-                        new_ctx(1),
+                        new_ctx(22, 24),
                         BinaryOperator::BAnd,
-                        Box::new(Expression::Identifier(new_ctx(1), y)),
-                        Box::new(Expression::Identifier(new_ctx(1), z))
+                        Box::new(Expression::Identifier(new_ctx(20, 21), y)),
+                        Box::new(Expression::Identifier(new_ctx(25, 26), z))
                     )
                 );
                 if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                    assert_eq!(*final_exp, Expression::I64(new_ctx(1), 7));
+                    assert_eq!(*final_exp, Expression::I64(new_ctx(29, 30), 7));
                 } else {
                     panic!("Expected Expression block");
                 }
 
                 if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm
                 {
-                    assert_eq!(*final_exp, Expression::I64(new_ctx(1), 8));
+                    assert_eq!(*final_exp, Expression::I64(new_ctx(38, 39), 8));
                 } else {
                     panic!("Expected Expression block");
                 }
@@ -1110,12 +1130,12 @@ pub mod tests {
             body,
         }) = exp
         {
-            assert_eq!(l, new_ctx(1));
-            assert_eq!(*cond, Expression::Identifier(new_ctx(1), x));
+            assert_eq!(l, new_ctx(0, 5));
+            assert_eq!(*cond, Expression::Identifier(new_ctx(7, 8), x));
             if let Expression::ExpressionBlock(_l, body, None) = *body {
                 assert_eq!(
                     body[0],
-                    Statement::Expression(box Expression::I64(new_ctx(1), 5))
+                    Statement::Expression(box Expression::I64(new_ctx(11, 12), 5))
                 );
             } else {
                 panic!("Expected Expression block, got {:?}", *body);
@@ -1136,24 +1156,24 @@ pub mod tests {
         for (text, expected) in vec![
             (
                 "struct MyStruct {}",
-                StructDef::new(my_struct, new_ctx(1), vec![]),
+                StructDef::new(my_struct, new_ctx(0, 6), vec![]),
             ),
             (
                 "struct MyStruct {x: i64}",
                 StructDef::new(
                     my_struct,
-                    new_ctx(1),
-                    vec![Parameter::new(new_ctx(1), x, &Type::I64)],
+                    new_ctx(0, 6),
+                    vec![Parameter::new(new_ctx(17, 18), x, &Type::I64)],
                 ),
             ),
             (
                 "struct MyStruct {x: i64, y: bool}",
                 StructDef::new(
                     my_struct,
-                    new_ctx(1),
+                    new_ctx(0, 6),
                     vec![
-                        Parameter::new(new_ctx(1), x, &Type::I64),
-                        Parameter::new(new_ctx(1), y, &Type::Bool),
+                        Parameter::new(new_ctx(17, 18), x, &Type::I64),
+                        Parameter::new(new_ctx(25, 26), y, &Type::Bool),
                     ],
                 ),
             ),
@@ -1182,7 +1202,7 @@ pub mod tests {
             (
                 "MyStruct{}",
                 Expression::StructExpression(
-                    new_ctx(1),
+                    new_ctx(0, 8),
                     vec![Element::Id(my_struct)].into(),
                     vec![],
                 ),
@@ -1190,35 +1210,35 @@ pub mod tests {
             (
                 "MyStruct{x: 5}",
                 Expression::StructExpression(
-                    new_ctx(1),
+                    new_ctx(0, 8),
                     vec![Element::Id(my_struct)].into(),
-                    vec![(x, Expression::I64(new_ctx(1), 5))],
+                    vec![(x, Expression::I64(new_ctx(12, 13), 5))],
                 ),
             ),
             (
                 "MyStruct{x: 5, y: false}",
                 Expression::StructExpression(
-                    new_ctx(1),
+                    new_ctx(0, 8),
                     vec![Element::Id(my_struct)].into(),
                     vec![
-                        (x, Expression::I64(new_ctx(1), 5)),
-                        (y, Expression::Boolean(new_ctx(1), false)),
+                        (x, Expression::I64(new_ctx(12, 13), 5)),
+                        (y, Expression::Boolean(new_ctx(18, 23), false)),
                     ],
                 ),
             ),
             (
                 "MyStruct{x: 5, y: MyStruct2{z:3}}",
                 Expression::StructExpression(
-                    new_ctx(1),
+                    new_ctx(0, 8),
                     vec![Element::Id(my_struct)].into(),
                     vec![
-                        (x, Expression::I64(new_ctx(1), 5)),
+                        (x, Expression::I64(new_ctx(12, 13), 5)),
                         (
                             y,
                             Expression::StructExpression(
-                                new_ctx(1),
+                                new_ctx(18, 27),
                                 vec![Element::Id(my_struct2)].into(),
-                                vec![(z, Expression::I64(new_ctx(1), 3))],
+                                vec![(z, Expression::I64(new_ctx(30, 31), 3))],
                             ),
                         ),
                     ],
@@ -1243,9 +1263,9 @@ pub mod tests {
         let test = table.insert("test".into());
         let test2 = table.insert("test 2".into());
 
-        for (text, expected) in vec![
-            ("fn test() -> String {return \"test\";}", test),
-            ("fn test() -> String {return \"test 2\";}", test2),
+        for (text, expected, len) in vec![
+            ("fn test() -> String {return \"test\";}", test, 6),
+            ("fn test() -> String {return \"test 2\";}", test2, 8),
         ] {
             let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
@@ -1259,7 +1279,7 @@ pub mod tests {
                         Statement::Return(box r) => {
                             assert_eq!(
                                 *r.get_value(),
-                                Some(Expression::StringLiteral(new_ctx(1), expected))
+                                Some(Expression::StringLiteral(new_ctx(28, 28 + len), expected))
                             )
                         }
                         _ => assert!(false, "Not a return statement"),
