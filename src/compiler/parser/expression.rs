@@ -616,24 +616,28 @@ mod test {
         compiler::{
             ast::{Statement, Type},
             lexer::{tokens::Token, LexerError},
-            CompilerError, Lexer,
+            CompilerError, Lexer, Span,
         },
         StringTable,
     };
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
+    fn new_ctx(line: u32) -> ParserContext {
+        ParserContext::new(line, Span::zero())
+    }
+
     #[test]
     fn parse_number() {
         for (text, expected) in vec![
-            ("64u8", Expression::U8(1, 64)),
-            ("64u16", Expression::U16(1, 64)),
-            ("64u32", Expression::U32(1, 64)),
-            ("64u64", Expression::U64(1, 64)),
-            ("5i8", Expression::I8(1, 5)),
-            ("5i16", Expression::I16(1, 5)),
-            ("5i32", Expression::I32(1, 5)),
-            ("64i64", Expression::I64(1, 64)),
-            ("64", Expression::I64(1, 64)),
+            ("64u8", Expression::U8(new_ctx(1), 64)),
+            ("64u16", Expression::U16(new_ctx(1), 64)),
+            ("64u32", Expression::U32(new_ctx(1), 64)),
+            ("64u64", Expression::U64(new_ctx(1), 64)),
+            ("5i8", Expression::I8(new_ctx(1), 5)),
+            ("5i16", Expression::I16(new_ctx(1), 5)),
+            ("5i32", Expression::I32(new_ctx(1), 5)),
+            ("64i64", Expression::I64(new_ctx(1), 64)),
+            ("64", Expression::I64(new_ctx(1), 64)),
         ] {
             let mut table = StringTable::new();
             let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
@@ -655,24 +659,24 @@ mod test {
         for (text, expected) in vec![
             (
                 "[1]",
-                Expression::ArrayExpression(1, vec![Expression::I64(1, 1)], 1),
+                Expression::ArrayExpression(new_ctx(1), vec![Expression::I64(new_ctx(1), 1)], 1),
             ),
             (
                 "[1u8]",
-                Expression::ArrayExpression(1, vec![Expression::U8(1, 1)], 1),
+                Expression::ArrayExpression(new_ctx(1), vec![Expression::U8(new_ctx(1), 1)], 1),
             ),
             (
                 "[1,]",
-                Expression::ArrayExpression(1, vec![Expression::I64(1, 1)], 1),
+                Expression::ArrayExpression(new_ctx(1), vec![Expression::I64(new_ctx(1), 1)], 1),
             ),
             (
                 "[1, 2, 3]",
                 Expression::ArrayExpression(
-                    1,
+                    new_ctx(1),
                     vec![
-                        Expression::I64(1, 1),
-                        Expression::I64(1, 2),
-                        Expression::I64(1, 3),
+                        Expression::I64(new_ctx(1), 1),
+                        Expression::I64(new_ctx(1), 2),
+                        Expression::I64(new_ctx(1), 3),
                     ],
                     3,
                 ),
@@ -680,11 +684,11 @@ mod test {
             (
                 "[1, 2i8, 3]", // This is legal at the parser level (it is illegal semantically)
                 Expression::ArrayExpression(
-                    1,
+                    new_ctx(1),
                     vec![
-                        Expression::I64(1, 1),
-                        Expression::I8(1, 2),
-                        Expression::I64(1, 3),
+                        Expression::I64(new_ctx(1), 1),
+                        Expression::I8(new_ctx(1), 2),
+                        Expression::I64(new_ctx(1), 3),
                     ],
                     3,
                 ),
@@ -692,10 +696,10 @@ mod test {
             (
                 "[[1,],]",
                 Expression::ArrayExpression(
-                    1,
+                    new_ctx(1),
                     vec![Expression::ArrayExpression(
-                        1,
-                        vec![Expression::I64(1, 1)],
+                        new_ctx(1),
+                        vec![Expression::I64(new_ctx(1), 1)],
                         1,
                     )],
                     1,
@@ -756,35 +760,39 @@ mod test {
             (
                 "a[1]",
                 Expression::ArrayAt {
-                    context: 1,
-                    array: box Expression::Identifier(1, a),
-                    index: box Expression::I64(1, 1),
+                    context: new_ctx(1),
+                    array: box Expression::Identifier(new_ctx(1), a),
+                    index: box Expression::I64(new_ctx(1), 1),
                 },
             ),
             (
                 "(a)[1]",
                 Expression::ArrayAt {
-                    context: 1,
-                    array: box Expression::Identifier(1, a),
-                    index: box Expression::I64(1, 1),
+                    context: new_ctx(1),
+                    array: box Expression::Identifier(new_ctx(1), a),
+                    index: box Expression::I64(new_ctx(1), 1),
                 },
             ),
             (
                 "a.b[1]",
                 Expression::ArrayAt {
-                    context: 1,
-                    array: box Expression::MemberAccess(1, box Expression::Identifier(1, a), b),
-                    index: box Expression::I64(1, 1),
+                    context: new_ctx(1),
+                    array: box Expression::MemberAccess(
+                        new_ctx(1),
+                        box Expression::Identifier(new_ctx(1), a),
+                        b,
+                    ),
+                    index: box Expression::I64(new_ctx(1), 1),
                 },
             ),
             (
                 "a[1].b",
                 Expression::MemberAccess(
-                    1,
+                    new_ctx(1),
                     box Expression::ArrayAt {
-                        context: 1,
-                        array: box Expression::Identifier(1, a),
-                        index: box Expression::I64(1, 1),
+                        context: new_ctx(1),
+                        array: box Expression::Identifier(new_ctx(1), a),
+                        index: box Expression::I64(new_ctx(1), 1),
                     },
                     b,
                 ),
@@ -792,41 +800,41 @@ mod test {
             (
                 "a[0].b[1]",
                 Expression::ArrayAt {
-                    context: 1,
+                    context: new_ctx(1),
                     array: box Expression::MemberAccess(
-                        1,
+                        new_ctx(1),
                         box Expression::ArrayAt {
-                            context: 1,
-                            array: box Expression::Identifier(1, a),
-                            index: box Expression::I64(1, 0),
+                            context: new_ctx(1),
+                            array: box Expression::Identifier(new_ctx(1), a),
+                            index: box Expression::I64(new_ctx(1), 0),
                         },
                         b,
                     ),
-                    index: box Expression::I64(1, 1),
+                    index: box Expression::I64(new_ctx(1), 1),
                 },
             ),
             (
                 "a[1][2]",
                 Expression::ArrayAt {
-                    context: 1,
+                    context: new_ctx(1),
                     array: box Expression::ArrayAt {
-                        context: 1,
-                        array: box Expression::Identifier(1, a),
-                        index: box Expression::I64(1, 1),
+                        context: new_ctx(1),
+                        array: box Expression::Identifier(new_ctx(1), a),
+                        index: box Expression::I64(new_ctx(1), 1),
                     },
-                    index: box Expression::I64(1, 2),
+                    index: box Expression::I64(new_ctx(1), 2),
                 },
             ),
             (
                 "((a)[1])[2]",
                 Expression::ArrayAt {
-                    context: 1,
+                    context: new_ctx(1),
                     array: box Expression::ArrayAt {
-                        context: 1,
-                        array: box Expression::Identifier(1, a),
-                        index: box Expression::I64(1, 1),
+                        context: new_ctx(1),
+                        array: box Expression::Identifier(new_ctx(1), a),
+                        index: box Expression::I64(new_ctx(1), 1),
                     },
-                    index: box Expression::I64(1, 2),
+                    index: box Expression::I64(new_ctx(1), 2),
                 },
             ),
         ] {
@@ -893,11 +901,11 @@ mod test {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
             match member_access(&mut stream) {
-                Ok(Some(Expression::MemberAccess(l, left, right))) => {
-                    assert_eq!(l, 1);
+                Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
+                    assert_eq!(ctx.line(), 1);
                     assert_eq!(
                         *left,
-                        Expression::Identifier(1, thing_id),
+                        Expression::Identifier(new_ctx(1), thing_id),
                         "Input: {}",
                         text,
                     );
@@ -920,12 +928,12 @@ mod test {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
+        if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {
-            assert_eq!(l, 1);
+            assert_eq!(ctx.line(), 1);
             assert_eq!(body.len(), 0);
-            assert_eq!(*final_exp, Expression::I64(1, 5));
+            assert_eq!(*final_exp, Expression::I64(new_ctx(1), 5));
         } else {
             panic!("No nodes returned by parser")
         }
@@ -993,16 +1001,16 @@ mod test {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
-        if let Some(Expression::ExpressionBlock(l, body, Some(final_exp))) =
+        if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {
-            assert_eq!(l, 1);
+            assert_eq!(ctx.line(), 1);
             assert_eq!(body.len(), 2);
             match &body[0] {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), x);
                     assert_eq!(b.get_type(), Type::I64);
-                    assert_eq!(*b.get_rhs(), Expression::I64(1, 5));
+                    assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(1), 5));
                 }
                 _ => panic!("Not a binding statement"),
             }
@@ -1014,14 +1022,14 @@ mod test {
                     params,
                 )) => {
                     assert_eq!(*fn_name, vec![Element::Id(f)].into());
-                    assert_eq!(params[0], Expression::Identifier(1, x));
+                    assert_eq!(params[0], Expression::Identifier(new_ctx(1), x));
                 }
                 _ => panic!("No body: {:?}", &body[1]),
             }
             match final_exp {
                 box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(*l.as_ref(), Expression::Identifier(1, x));
-                    assert_eq!(*r.as_ref(), Expression::Identifier(1, x));
+                    assert_eq!(*l.as_ref(), Expression::Identifier(new_ctx(1), x));
+                    assert_eq!(*r.as_ref(), Expression::Identifier(new_ctx(1), x));
                 }
                 _ => panic!("No body: {:?}", &body[2]),
             }

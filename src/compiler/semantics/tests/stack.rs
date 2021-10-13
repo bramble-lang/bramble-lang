@@ -4,18 +4,24 @@ mod stack_tests {
     use crate::{
         compiler::{
             ast::{Element, Module, Type},
+            parser::ParserContext,
             semantics::{semanticnode::SemanticContext, symbol_table::SymbolTable},
+            Span,
         },
         StringTable,
     };
     use stack::*;
+
+    fn new_ctx(line: u32) -> ParserContext {
+        ParserContext::new(line, Span::zero())
+    }
 
     #[test]
     fn test_empty_stack_to_path() {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -32,7 +38,7 @@ mod stack_tests {
         let test = table.insert("test".into());
         let inner = table.insert("inner".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -50,7 +56,7 @@ mod stack_tests {
         let test = table.insert("test".into());
         let inner = table.insert("inner".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -76,7 +82,7 @@ mod stack_tests {
         let test_mod = table.insert("test_mod".into());
         let inner = table.insert("inner".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -102,7 +108,7 @@ mod stack_tests {
         let test_mod = table.insert("test_mod".into());
         let inner = table.insert("inner".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -121,7 +127,7 @@ mod stack_tests {
         let test = table.insert("test".into());
         let test_mod = table.insert("test_mod".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -138,7 +144,7 @@ mod stack_tests {
         let test = table.insert("test".into());
         let inner = table.insert("inner".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -165,7 +171,7 @@ mod stack_tests {
         let first = table.insert("first".into());
         let second = table.insert("second".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -200,7 +206,7 @@ mod stack_tests {
         let first = table.insert("first".into());
         let x = table.insert("x".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -226,7 +232,7 @@ mod stack_tests {
         let first = table.insert("first".into());
         let x = table.insert("x".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -256,7 +262,7 @@ mod stack_tests {
         let x = table.insert("x".into());
         let my_func = table.insert("my_func".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);
@@ -296,7 +302,7 @@ mod stack_tests {
         let third = table.insert("third".into());
         let x = table.insert("x".into());
 
-        let m = Module::new(test, SemanticContext::new_module(1, 1, test));
+        let m = Module::new(test, SemanticContext::new_module(1, new_ctx(1), test));
         let mut stack = SymbolTableScopeStack::new(&m, &vec![]);
         let sym = SymbolTable::new_module(test);
         stack.enter_scope(sym);

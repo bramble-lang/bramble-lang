@@ -2,8 +2,12 @@
 mod type_resolver_tests {
     use crate::{
         compiler::{
-            ast::*, lexer::tokens::Token, lexer::LexerError, parser::parser,
-            semantics::semanticnode::SemanticContext, CompilerDisplay, CompilerError, Lexer,
+            ast::*,
+            lexer::tokens::Token,
+            lexer::LexerError,
+            parser::{parser, ParserContext},
+            semantics::semanticnode::SemanticContext,
+            CompilerDisplay, CompilerError, Lexer, Span,
         },
         diagnostics::config::TracingConfig,
         project::manifest::Manifest,
@@ -13,6 +17,10 @@ mod type_resolver_tests {
     use super::super::super::type_resolver::*;
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
+
+    fn new_ctx(line: u32) -> ParserContext {
+        ParserContext::new(line, Span::zero())
+    }
 
     #[test]
     pub fn test_identifiers() {
@@ -3305,14 +3313,14 @@ mod type_resolver_tests {
                 .unwrap();
             let ast = parser::parse(std, &tokens).unwrap().unwrap();
 
-            let mut import_context = SemanticContext::new_local(0, 0, Type::Unit);
+            let mut import_context = SemanticContext::new_local(0, new_ctx(0), Type::Unit);
             import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
             let manifest = Manifest::new(&table, &vec![RoutineDef{
                 context: import_context,
                 def: RoutineDefType::Function,
                 name: test,
                 ret_ty: import_func.1.clone(),
-                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new_local(0, 0, p.clone()), a, p)).collect(),
+                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new_local(0, new_ctx(0), p.clone()), a, p)).collect(),
                 body: vec![],
             }], &vec![]).unwrap();
             let imports = manifest.to_import(&mut table).unwrap();
