@@ -61,7 +61,7 @@ impl SemanticContext {
     pub fn new_local(id: u32, ctx: ParserContext, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ctx,
+            ln: ctx.line(),
             ty,
             sym: SymbolTable::new(),
             canonical_path: Path::new(),
@@ -71,7 +71,7 @@ impl SemanticContext {
     pub fn new_routine(id: u32, ctx: ParserContext, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ctx,
+            ln: ctx.line(),
             ty,
             sym: SymbolTable::new_routine(name),
             canonical_path: Path::new(),
@@ -81,7 +81,7 @@ impl SemanticContext {
     pub fn new_module(id: u32, ctx: ParserContext, name: StringId) -> SemanticContext {
         SemanticContext {
             id,
-            ln,
+            ln: ctx.line(),
             ty: Type::Unit,
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),
