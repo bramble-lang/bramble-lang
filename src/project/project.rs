@@ -6,7 +6,7 @@ use crate::{
         lexer::{tokens::Token, LexerError},
         parser::{self, ParserContext, ParserError},
         CompilerDisplay, CompilerDisplayError, CompilerError, SourceCharIter, SourceMap,
-        SourceMapError,
+        SourceMapError, Span,
     },
     StringId, StringTable,
 };
@@ -52,13 +52,13 @@ pub fn get_project_name(src: &Path) -> Result<&str, String> {
 }
 
 fn create_module_path<'a>(
-    module: &'a mut Module<u32>,
+    module: &'a mut Module<ParserContext>,
     path: &[StringId],
-) -> Option<&'a mut Module<u32>> {
+) -> Option<&'a mut Module<ParserContext>> {
     match path.split_first() {
         Some((head, rest)) => {
             if module.get_module(*head).is_none() {
-                let sub = Module::new(*head, 0);
+                let sub = Module::new(*head, ParserContext::new(0, Span::zero()));
                 module.add_module(sub);
             }
 
@@ -135,7 +135,7 @@ pub fn parse_project(
     trace_parser: TracingConfig,
 ) -> Result<Module<ParserContext>, Vec<CompilerError<ProjectError>>> {
     parser::parser::set_tracing(trace_parser);
-    let mut root = Module::new(root_module, 0); // TODO: pass in the source map and get the span that covers everything in the source map and make it the root span
+    let mut root = Module::new(root_module, ParserContext::new(0, Span::zero())); // TODO: pass in the source map and get the span that covers everything in the source map and make it the root span
     let mut errors = vec![];
     for src_tokens in token_sets {
         match parse_src_tokens(string_table, src_tokens) {
@@ -247,8 +247,8 @@ fn parse_src_tokens(
 
 fn append_module(
     string_table: &mut StringTable,
-    root: &mut Module<u32>,
-    src_ast: CompilationUnit<Module<u32>>,
+    root: &mut Module<ParserContext>,
+    src_ast: CompilationUnit<Module<ParserContext>>,
 ) {
     let parent = if src_ast.path.len() == 0 {
         root
