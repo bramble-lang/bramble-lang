@@ -462,7 +462,7 @@ fn struct_init_params(
     match stream.next_if(&Lex::LBrace) {
         Some(_token) => {
             let mut params = vec![];
-            while let Some((line, span, field_name)) = stream.next_if_id() {
+            while let Some((line, _span, field_name)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(CompilerError::new(
                     line,

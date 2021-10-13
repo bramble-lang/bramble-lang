@@ -160,7 +160,7 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserC
 fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(token) => match stream.next_if_id() {
-            Some((ln, span, module_name)) => {
+            Some((_line, _span, module_name)) => {
                 let mut module = Module::new(module_name, token.to_ctx());
                 stream.next_must_be(&Lex::LBrace)?;
 
@@ -261,7 +261,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
 fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
     match stream.next_if(&Lex::Struct) {
         Some(token) => match stream.next_if_id() {
-            Some((line, span, id)) => {
+            Some((_line, _span, id)) => {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = parameter_list(stream)?;
                 stream.next_must_be(&Lex::RBrace)?;
