@@ -43,7 +43,7 @@ impl SourceChar {
 /// code that has been input or generated for this Braid project.  The [`SourceMap`]
 /// construct manages the the Offset indexing and will convert a given offset to
 /// the actual code source (e.g. the file name)
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Offset(u32);
 
 impl Offset {

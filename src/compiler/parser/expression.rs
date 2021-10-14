@@ -330,7 +330,7 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
             .por(function_call_or_variable, stream)
             .por(co_yield, stream)
             .por(constant, stream)
-            .por(array_value, stream),
+            .por(array_expression, stream),
     }
 }
 
@@ -482,7 +482,7 @@ fn struct_init_params(
     }
 }
 
-fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+fn array_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::LBracket) {
         Some(token) => {
@@ -495,14 +495,13 @@ fn array_value(stream: &mut TokenStream) -> ParserResult<Expression<ParserContex
                     None => break,
                 };
             }
-            stream.next_must_be(&Lex::RBracket)?;
+            let rbracket = stream.next_must_be(&Lex::RBracket)?;
+
+            // Compute the new span
+            let ctx = token.to_ctx().join(rbracket.to_ctx());
 
             let len = elements.len();
-            Ok(Some(Expression::ArrayExpression(
-                token.to_ctx(),
-                elements,
-                len,
-            )))
+            Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
         }
         None => Ok(None),
     }
@@ -665,7 +664,7 @@ mod test {
             (
                 "[1]",
                 Expression::ArrayExpression(
-                    new_ctx(0, 1),
+                    new_ctx(0, 3),
                     vec![Expression::I64(new_ctx(1, 2), 1)],
                     1,
                 ),
@@ -673,7 +672,7 @@ mod test {
             (
                 "[1u8]",
                 Expression::ArrayExpression(
-                    new_ctx(0, 1),
+                    new_ctx(0, 5),
                     vec![Expression::U8(new_ctx(1, 4), 1)],
                     1,
                 ),
@@ -681,7 +680,7 @@ mod test {
             (
                 "[1,]",
                 Expression::ArrayExpression(
-                    new_ctx(0, 1),
+                    new_ctx(0, 4),
                     vec![Expression::I64(new_ctx(1, 2), 1)],
                     1,
                 ),
@@ -689,7 +688,7 @@ mod test {
             (
                 "[1, 2, 3]",
                 Expression::ArrayExpression(
-                    new_ctx(0, 1),
+                    new_ctx(0, 9),
                     vec![
                         Expression::I64(new_ctx(1, 2), 1),
                         Expression::I64(new_ctx(4, 5), 2),
@@ -701,7 +700,7 @@ mod test {
             (
                 "[1, 2i8, 3]", // This is legal at the parser level (it is illegal semantically)
                 Expression::ArrayExpression(
-                    new_ctx(0, 1),
+                    new_ctx(0, 11),
                     vec![
                         Expression::I64(new_ctx(1, 2), 1),
                         Expression::I8(new_ctx(4, 7), 2),
@@ -713,9 +712,9 @@ mod test {
             (
                 "[[1,],]",
                 Expression::ArrayExpression(
-                    new_ctx(0, 1),
+                    new_ctx(0, 7),
                     vec![Expression::ArrayExpression(
-                        new_ctx(1, 2),
+                        new_ctx(1, 5),
                         vec![Expression::I64(new_ctx(2, 3), 1)],
                         1,
                     )],
@@ -730,7 +729,7 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            match array_value(&mut stream) {
+            match array_expression(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
                 Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
@@ -762,7 +761,12 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
-            assert_eq!(array_value(&mut stream).unwrap_err(), *msg, "{:?}", text);
+            assert_eq!(
+                array_expression(&mut stream).unwrap_err(),
+                *msg,
+                "{:?}",
+                text
+            );
         }
     }
 

@@ -24,6 +24,14 @@ impl ParserContext {
     pub fn new(line: u32, span: Span) -> ParserContext {
         ParserContext { line, span }
     }
+
+    /// Creates a new ParserContext with a Span that covers this span and the
+    /// span in `a`.
+    pub fn join(&self, b: ParserContext) -> ParserContext {
+        let line = self.line.min(b.line);
+        let span = Span::cover(self.span, b.span);
+        ParserContext::new(line, span)
+    }
 }
 
 impl Context for ParserContext {
