@@ -25,6 +25,7 @@ pub struct SourceChar {
 }
 
 impl SourceChar {
+    /// Create a new SourceChar
     pub fn new(ch: char, offset: Offset) -> SourceChar {
         SourceChar { c: ch, offset }
     }
