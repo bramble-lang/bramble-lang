@@ -86,10 +86,6 @@ impl Offset {
     pub fn new(o: u32) -> Offset {
         Offset(o)
     }
-
-    pub fn inc(&mut self) {
-        *self += 1;
-    }
 }
 
 impl AddAssign<u32> for Offset {
