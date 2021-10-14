@@ -14,7 +14,7 @@ use crate::{
     compiler::{
         ast::*,
         lexer::tokens::{Lex, Token},
-        CompilerError,
+        CompilerError, Span,
     },
     trace, StringId,
 };
@@ -276,8 +276,12 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                 ma = match token.s {
                     Lex::MemberAccess => stream
                         .next_if_id()
-                        .map(|(_, _, member)| {
-                            Expression::MemberAccess(token.to_ctx(), Box::new(ma), member)
+                        .map(|(_, member_span, member)| {
+                            Expression::MemberAccess(
+                                ma.get_context().extend(member_span),
+                                Box::new(ma),
+                                member,
+                            )
                         })
                         .ok_or(CompilerError::new(
                             token.l,
@@ -289,13 +293,13 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                             ParserError::IndexOpInvalidExpr,
                         ))
                         .map(|index| {
-                            stream
-                                .next_must_be(&Lex::RBracket)
-                                .map(|_| Expression::ArrayAt {
-                                    context: token.to_ctx(),
+                            stream.next_must_be(&Lex::RBracket).map(|rbracket| {
+                                Expression::ArrayAt {
+                                    context: ma.get_context().join(rbracket.to_ctx()),
                                     array: box ma,
                                     index: box index,
-                                })
+                                }
+                            })
                         })??,
                     _ => {
                         return err!(
@@ -318,10 +322,23 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
 fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.peek() {
-        Some(Token { s: Lex::LParen, .. }) => {
+        Some(Token {
+            s: Lex::LParen,
+            span,
+            ..
+        }) => {
+            let span = *span;
             stream.next();
-            let exp = expression(stream)?;
-            stream.next_must_be(&Lex::RParen)?;
+            let mut exp = expression(stream)?;
+            let rparen = stream.next_must_be(&Lex::RParen)?;
+
+            // Extend the Span of exp to cover the left paren and the right
+            exp.as_mut().map(|exp| {
+                let span = Span::cover(span, rparen.span);
+                let ctx = exp.get_context().extend(span);
+                *exp.get_context_mut() = ctx;
+            });
+
             Ok(exp)
         }
         _ => if_expression(stream)
@@ -781,7 +798,7 @@ mod test {
             (
                 "a[1]",
                 Expression::ArrayAt {
-                    context: new_ctx(1, 2),
+                    context: new_ctx(0, 4),
                     array: box Expression::Identifier(new_ctx(0, 1), a),
                     index: box Expression::I64(new_ctx(2, 3), 1),
                 },
@@ -789,17 +806,17 @@ mod test {
             (
                 "(a)[1]",
                 Expression::ArrayAt {
-                    context: new_ctx(3, 4),
-                    array: box Expression::Identifier(new_ctx(1, 2), a),
+                    context: new_ctx(0, 6),
+                    array: box Expression::Identifier(new_ctx(0, 3), a),
                     index: box Expression::I64(new_ctx(4, 5), 1),
                 },
             ),
             (
                 "a.b[1]",
                 Expression::ArrayAt {
-                    context: new_ctx(3, 4),
+                    context: new_ctx(0, 6),
                     array: box Expression::MemberAccess(
-                        new_ctx(1, 2),
+                        new_ctx(0, 3),
                         box Expression::Identifier(new_ctx(0, 1), a),
                         b,
                     ),
@@ -809,9 +826,9 @@ mod test {
             (
                 "a[1].b",
                 Expression::MemberAccess(
-                    new_ctx(4, 5),
+                    new_ctx(0, 6),
                     box Expression::ArrayAt {
-                        context: new_ctx(1, 2),
+                        context: new_ctx(0, 4),
                         array: box Expression::Identifier(new_ctx(0, 1), a),
                         index: box Expression::I64(new_ctx(2, 3), 1),
                     },
@@ -821,11 +838,11 @@ mod test {
             (
                 "a[0].b[1]",
                 Expression::ArrayAt {
-                    context: new_ctx(6, 7),
+                    context: new_ctx(0, 9),
                     array: box Expression::MemberAccess(
-                        new_ctx(4, 5),
+                        new_ctx(0, 6),
                         box Expression::ArrayAt {
-                            context: new_ctx(1, 2),
+                            context: new_ctx(0, 4),
                             array: box Expression::Identifier(new_ctx(0, 1), a),
                             index: box Expression::I64(new_ctx(2, 3), 0),
                         },
@@ -837,9 +854,9 @@ mod test {
             (
                 "a[1][2]",
                 Expression::ArrayAt {
-                    context: new_ctx(4, 5),
+                    context: new_ctx(0, 7),
                     array: box Expression::ArrayAt {
-                        context: new_ctx(1, 2),
+                        context: new_ctx(0, 4),
                         array: box Expression::Identifier(new_ctx(0, 1), a),
                         index: box Expression::I64(new_ctx(2, 3), 1),
                     },
@@ -849,16 +866,17 @@ mod test {
             (
                 "((a)[1])[2]",
                 Expression::ArrayAt {
-                    context: new_ctx(8, 9),
+                    context: new_ctx(0, 11),
                     array: box Expression::ArrayAt {
-                        context: new_ctx(4, 5),
-                        array: box Expression::Identifier(new_ctx(2, 3), a),
+                        context: new_ctx(0, 8),
+                        array: box Expression::Identifier(new_ctx(1, 4), a),
                         index: box Expression::I64(new_ctx(5, 6), 1),
                     },
                     index: box Expression::I64(new_ctx(9, 10), 2),
                 },
             ),
         ] {
+            println!("Test: {}", text);
             let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()

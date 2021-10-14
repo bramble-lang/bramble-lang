@@ -32,6 +32,12 @@ impl ParserContext {
         let span = Span::cover(self.span, b.span);
         ParserContext::new(line, span)
     }
+
+    /// Creates anew ParserContext which has a span that's extended to cover
+    /// the given Span.
+    pub fn extend(&self, b: Span) -> ParserContext {
+        ParserContext::new(self.line, Span::cover(self.span, b))
+    }
 }
 
 impl Context for ParserContext {
