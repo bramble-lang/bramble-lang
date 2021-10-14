@@ -478,10 +478,10 @@ pub(super) fn id_declaration_list(
 
 pub(super) fn routine_call_params(
     stream: &mut TokenStream,
-) -> ParserResult<Vec<Expression<ParserContext>>> {
+) -> ParserResult<(ParserContext, Vec<Expression<ParserContext>>)> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
-        Some(_) => {
+        Some(lparen) => {
             let mut params = vec![];
             while let Some(param) = expression(stream)? {
                 match param {
@@ -495,8 +495,11 @@ pub(super) fn routine_call_params(
                 }
             }
 
-            stream.next_must_be(&Lex::RParen)?;
-            Ok(Some(params))
+            let ctx = stream
+                .next_must_be(&Lex::RParen)?
+                .to_ctx()
+                .join(lparen.to_ctx());
+            Ok(Some((ctx, params)))
         }
         _ => Ok(None),
     }

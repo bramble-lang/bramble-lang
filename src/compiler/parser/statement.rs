@@ -130,19 +130,19 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
 fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Init) {
-        Some(token) => match path(stream)? {
+        Some(init_tok) => match path(stream)? {
             Some((l, path)) => {
-                let params = routine_call_params(stream)?
+                let (params_ctx, params) = routine_call_params(stream)?
                     .ok_or(CompilerError::new(l.line(), ParserError::ExpectedParams))?;
                 Ok(Some(Expression::RoutineCall(
-                    token.to_ctx(),
+                    init_tok.to_ctx().join(params_ctx),
                     RoutineCall::CoroutineInit,
                     path,
                     params,
                 )))
             }
             None => Err(CompilerError::new(
-                token.l,
+                init_tok.l,
                 ParserError::ExpectedIdAfterInit,
             )),
         },

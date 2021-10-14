@@ -433,23 +433,23 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
 fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     let s: Option<Expression<ParserContext>> = match path(stream)? {
-        Some((ctx, path)) => match routine_call_params(stream)? {
-            Some(params) => Some(Expression::RoutineCall(
-                ctx,
+        Some((call_ctx, path)) => match routine_call_params(stream)? {
+            Some((params_ctx, params)) => Some(Expression::RoutineCall(
+                call_ctx.join(params_ctx),
                 RoutineCall::Function,
                 path,
                 params.clone(),
             )),
             None => match struct_expression_params(stream)? {
-                Some(params) => Some(Expression::StructExpression(ctx, path, params.clone())),
+                Some(params) => Some(Expression::StructExpression(call_ctx, path, params.clone())),
                 None => {
                     if path.len() > 1 {
-                        Some(Expression::Path(ctx, path))
+                        Some(Expression::Path(call_ctx, path))
                     } else {
                         if let Element::Id(sid) = path.last().unwrap() {
-                            Some(Expression::Identifier(ctx, *sid))
+                            Some(Expression::Identifier(call_ctx, *sid))
                         } else {
-                            return err!(ctx.line(), ParserError::PathExpectedIdentifier);
+                            return err!(call_ctx.line(), ParserError::PathExpectedIdentifier);
                         }
                     }
                 }
