@@ -85,7 +85,7 @@ impl Iterator for SourceCharIter {
 
     /// Gets the next character from the source file.
     fn next(&mut self) -> Option<Self::Item> {
-        // Get the next byte in the file
+        // Get the next char in the file
         self.chars
             .next()
             .map(|ch| {
@@ -102,6 +102,7 @@ impl Iterator for SourceCharIter {
     }
 }
 
+/// Convert a stream of bytes into a stream of unicode characters.
 struct UnicodeCharIterator {
     bytes: OffsetBytes,
 }

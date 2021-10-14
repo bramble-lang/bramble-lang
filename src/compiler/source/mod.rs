@@ -37,8 +37,8 @@ impl SourceChar {
         self.offset
     }
 
-    pub fn from_char(o: u32, c: char) -> SourceChar {
-        Self::new(Offset(o), c)
+    pub fn from_char(ch: char, offset: u32) -> SourceChar {
+        Self::new(Offset(offset), ch)
     }
 
     pub fn is_alphabetic(&self) -> bool {

@@ -48,7 +48,7 @@ impl SourceMap {
     /// The entry provides
     /// an interface for interacting with (e.g. reading) the file that also provides
     /// global offset data about each character read from the file.
-    pub fn add_file(&mut self, path: PathBuf) -> Result<&SourceMapEntry, SourceMapError> {
+    pub fn add_file(&mut self, path: PathBuf) -> Result<(), SourceMapError> {
         let file = std::fs::File::open(&path)?;
 
         let file_len = file.metadata()?.len();
@@ -68,7 +68,7 @@ impl SourceMap {
         let entry = SourceMapEntry::new(low, high, file, path);
         self.map.push(entry);
 
-        Ok(self.map.last().unwrap())
+        Ok(())
     }
 
     /// Returns the number of entries in the [`SourceMap`]
