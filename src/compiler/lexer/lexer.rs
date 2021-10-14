@@ -58,13 +58,11 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// of accepting the current branch as correct and updating the source lexer
     /// to the match the cursor state of the branch.
     fn merge(mut self) -> Option<(StringId, Span)> {
-        let s = self.cut();
-
-        // TODO: Only execute this if the cut returned something
-        self.lexer.index = self.index;
-        self.lexer.line = self.line;
-
-        s
+        self.cut().and_then(|cut| {
+            self.lexer.index = self.index;
+            self.lexer.line = self.line;
+            Some(cut)
+        })
     }
 
     /// Cuts a string from the current branch from the last
