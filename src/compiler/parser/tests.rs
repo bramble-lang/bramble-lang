@@ -802,7 +802,7 @@ pub mod tests {
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
-            assert_eq!(l, new_ctx(0, 4));
+            assert_eq!(l, new_ctx(0, 10));
             assert_eq!(name, vec![Element::Id(test)].into());
             assert_eq!(
                 params,
@@ -834,7 +834,7 @@ pub mod tests {
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
-            assert_eq!(l, new_ctx(0, 10));
+            assert_eq!(l, new_ctx(0, 16));
             assert_eq!(name, vec![Element::Selph, Element::Id(test)].into());
             assert_eq!(
                 params,
@@ -864,14 +864,15 @@ pub mod tests {
         if let Some(m) = parse(test_mod, &tokens).unwrap() {
             assert_eq!(*m.get_context(), new_ctx(0, 2));
             if let Some(Item::Routine(RoutineDef {
+                context,
                 def: RoutineDefType::Coroutine,
                 name,
                 params,
                 ret_ty: ty,
                 body,
-                ..
             })) = m.get_item(test)
             {
+                assert_eq!(*context, new_ctx(0, 37));
                 assert_eq!(*name, test);
                 assert_eq!(params, &vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
                 assert_eq!(ty, &Type::Bool);
@@ -912,7 +913,7 @@ pub mod tests {
                 assert_eq!(
                     *b.get_rhs(),
                     Expression::RoutineCall(
-                        new_ctx(16, 20),
+                        new_ctx(16, 28),
                         RoutineCall::CoroutineInit,
                         vec![Element::Id(c)].into(),
                         vec![
@@ -950,7 +951,7 @@ pub mod tests {
                 assert_eq!(
                     *bind.get_rhs(),
                     Expression::RoutineCall(
-                        new_ctx(16, 20),
+                        new_ctx(16, 34),
                         RoutineCall::CoroutineInit,
                         vec![Element::Id(a), Element::Id(b), Element::Id(c)].into(),
                         vec![
@@ -1030,7 +1031,7 @@ pub mod tests {
             else_arm,
         }) = exp
         {
-            assert_eq!(l, new_ctx(0, 2));
+            assert_eq!(l, new_ctx(0, 19));
             assert_eq!(*cond, Expression::Identifier(new_ctx(4, 5), x));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
                 assert_eq!(*final_exp, Expression::I64(new_ctx(8, 9), 5));
@@ -1064,13 +1065,13 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens);
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::If {
-            context: l,
+            context,
             cond,
             if_arm,
             else_arm,
         }) = exp
         {
-            assert_eq!(l, new_ctx(0, 2));
+            assert_eq!(context, new_ctx(0, 40));
             assert_eq!(*cond, Expression::Identifier(new_ctx(4, 5), x));
             if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
                 assert_eq!(*final_exp, Expression::I64(new_ctx(8, 9), 5));
@@ -1082,9 +1083,10 @@ pub mod tests {
                 cond,
                 if_arm,
                 else_arm,
-                ..
+                context,
             }) = else_arm
             {
+                assert_eq!(context, new_ctx(16, 40));
                 assert_eq!(
                     *cond,
                     Expression::BinaryOp(

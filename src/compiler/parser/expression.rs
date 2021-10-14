@@ -356,16 +356,16 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
 fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::If) {
-        Some(token) => {
+        Some(if_tok) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                token.l,
+                if_tok.l,
                 ParserError::IfExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let if_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                token.l,
+                if_tok.l,
                 ParserError::IfTrueArmMissingExpr,
             ))?;
 
@@ -381,7 +381,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                     }
                     _ => {
                         let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                            token.l,
+                            if_tok.l,
                             ParserError::IfFalseArmMissingExpr,
                         ))?;
                         Some(false_arm)
@@ -390,8 +390,13 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                 None => None,
             };
 
+            let ctx = else_arm.as_ref().map_or_else(
+                || if_tok.to_ctx().join(*if_arm.get_context()),
+                |ea| if_tok.to_ctx().join(*ea.get_context()),
+            );
+
             Some(Expression::If {
-                context: token.to_ctx(),
+                context: ctx,
                 cond: Box::new(cond),
                 if_arm: Box::new(if_arm),
                 else_arm: else_arm.map(|f| box f),
