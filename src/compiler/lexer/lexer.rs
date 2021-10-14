@@ -42,7 +42,6 @@ struct LexerBranch<'a, 'st> {
     lexer: &'a mut Lexer<'st>,
     index: usize,
     line: u32,
-    offset: u32,
 }
 
 impl<'a, 'st> LexerBranch<'a, 'st> {
@@ -50,7 +49,6 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         LexerBranch {
             index: l.index,
             line: l.line,
-            offset: l.col,
             lexer: l,
         }
     }
@@ -64,7 +62,6 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         // TODO: Only execute this if the cut returned something
         self.lexer.index = self.index;
         self.lexer.line = self.line;
-        self.lexer.col = self.offset;
 
         s
     }
@@ -108,10 +105,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         if self.index < self.lexer.chars.len() {
             let c = self.lexer.chars[self.index].char();
             self.index += 1;
-            self.offset += 1;
             if c == '\n' {
                 self.line += 1;
-                self.offset = 0;
             }
             Some(c)
         } else {
@@ -147,7 +142,6 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
         if self.peek_ifn(t) {
             self.index += t.len();
-            self.offset += t.len() as u32;
             true
         } else {
             false
@@ -207,7 +201,6 @@ pub struct Lexer<'a> {
     chars: Vec<SourceChar>,
     index: usize,
     line: u32,
-    col: u32,
     tracing: TracingConfig,
     string_table: &'a mut StringTable,
 }
@@ -222,7 +215,6 @@ impl<'a> Lexer<'a> {
                 .collect(),
             index: 0,
             line: 1,
-            col: 0,
             tracing: TracingConfig::Off,
             string_table,
         }
@@ -234,10 +226,9 @@ impl<'a> Lexer<'a> {
     ) -> Result<Lexer<'a>, LexerError> {
         let chars: Result<Vec<_>, _> = text.collect();
         Ok(Lexer {
-            chars: chars?, // TODO: Have this return an Error not fault
+            chars: chars?,
             index: 0,
             line: 1,
-            col: 0,
             tracing: TracingConfig::Off,
             string_table,
         })
@@ -325,10 +316,8 @@ impl<'a> Lexer<'a> {
         while self.index < self.chars.len() && self.chars[self.index].char().is_whitespace() {
             if self.chars[self.index].char() == '\n' {
                 self.line += 1;
-                self.col = 0;
             }
             self.index += 1;
-            self.col += 1;
         }
     }
 
