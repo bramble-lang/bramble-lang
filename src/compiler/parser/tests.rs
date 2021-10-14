@@ -540,7 +540,7 @@ pub mod tests {
                 ..
             })) = m.get_item(test)
             {
-                assert_eq!(*context, new_ctx(21, 25));
+                assert_eq!(*context, new_ctx(18, 42));
                 assert_eq!(*name, test);
                 assert_eq!(
                     params,
@@ -834,7 +834,7 @@ pub mod tests {
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
-            assert_eq!(l, new_ctx(0, 4));
+            assert_eq!(l, new_ctx(0, 10));
             assert_eq!(name, vec![Element::Selph, Element::Id(test)].into());
             assert_eq!(
                 params,

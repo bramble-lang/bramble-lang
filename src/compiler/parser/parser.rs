@@ -351,19 +351,19 @@ fn function_decl(
 }
 
 fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
-    let co_line = match stream.next_if(&Lex::CoroutineDef) {
-        Some(co) => co.l,
+    let ctx = match stream.next_if(&Lex::CoroutineDef) {
+        Some(co) => co.to_ctx(),
         None => return Ok(None),
     };
 
-    let (co_line, co_span, co_name) = stream.next_if_id().ok_or(CompilerError::new(
-        co_line,
+    let (_, _, co_name) = stream.next_if_id().ok_or(CompilerError::new(
+        ctx.line(),
         ParserError::CoExpectedIdentifierAfterCo,
     ))?;
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
-        return err!(co_line, ParserError::FnVarArgsNotAllowed);
+        return err!(ctx.line(), ParserError::FnVarArgsNotAllowed);
     }
 
     let co_type = match stream.next_if(&Lex::LArrow) {
@@ -381,15 +381,15 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                stmts.last().map_or(co_line, |s| s.get_context().line()),
+                stmts.last().map_or(ctx.line(), |s| s.get_context().line()),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
     }
-    stream.next_must_be(&Lex::RBrace)?;
+    let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(ctx);
 
     Ok(Some(RoutineDef {
-        context: ParserContext::new(co_line, co_span),
+        context: ctx,
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
@@ -525,7 +525,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(ParserContext, Pat
     trace!(stream);
     let mut path = vec![];
 
-    let line = stream.peek().map(|t| t.to_ctx()).unwrap();
+    let mut ctx = stream.peek().map(|t| t.to_ctx()).unwrap();
     // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
     if stream.test_if(&Lex::PathSeparator) {
         path.push(Element::FileRoot);
@@ -544,21 +544,32 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(ParserContext, Pat
     }
 
     while let Some(token) = stream.next_if(&Lex::PathSeparator) {
-        match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
-            Some(Token {
-                s: Lex::PathSuper, ..
-            }) => path.push(Element::Super),
-            Some(Token {
-                s: Lex::Identifier(id),
-                ..
-            }) => path.push(Element::Id(id)),
-            _ => {
-                return err!(token.l, ParserError::PathExpectedIdentifier);
-            }
-        }
+        let span =
+            match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
+                Some(Token {
+                    s: Lex::PathSuper,
+                    span,
+                    ..
+                }) => {
+                    path.push(Element::Super);
+                    span
+                }
+                Some(Token {
+                    s: Lex::Identifier(id),
+                    span,
+                    ..
+                }) => {
+                    path.push(Element::Id(id));
+                    span
+                }
+                _ => {
+                    return err!(token.l, ParserError::PathExpectedIdentifier);
+                }
+            };
+        ctx = ctx.extend(span);
     }
 
-    Ok(Some((line, path.into())))
+    Ok(Some((ctx, path.into())))
 }
 
 fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
