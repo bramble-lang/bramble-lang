@@ -81,20 +81,18 @@ pub mod tests {
 
     #[test]
     fn parse_arithmetic_expressions() {
-        for (text, expected) in vec![
-            ("2+2", BinaryOperator::Add),
-            ("2-2", BinaryOperator::Sub),
-            ("2*2", BinaryOperator::Mul),
-            ("2/2", BinaryOperator::Div),
-            ("2==2", BinaryOperator::Eq),
-            ("2!=2", BinaryOperator::NEq),
-            ("2<2", BinaryOperator::Ls),
-            ("2<=2", BinaryOperator::LsEq),
-            ("2>2", BinaryOperator::Gr),
-            ("2>=2", BinaryOperator::GrEq),
-        ]
-        .iter()
-        {
+        for (text, expected, l, h) in vec![
+            ("2+2", BinaryOperator::Add, 0, 3),
+            ("2-2", BinaryOperator::Sub, 0, 3),
+            ("2*2", BinaryOperator::Mul, 0, 3),
+            ("2/2", BinaryOperator::Div, 0, 3),
+            ("2==2", BinaryOperator::Eq, 0, 4),
+            ("2!=2", BinaryOperator::NEq, 0, 4),
+            ("2<2", BinaryOperator::Ls, 0, 3),
+            ("2<=2", BinaryOperator::LsEq, 0, 4),
+            ("2>2", BinaryOperator::Gr, 0, 3),
+            ("2>=2", BinaryOperator::GrEq, 0, 4),
+        ] {
             let mut table = StringTable::new();
             let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
@@ -105,8 +103,8 @@ pub mod tests {
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
                 expression(&mut stream).unwrap()
             {
-                assert_eq!(op, *expected);
-                assert_eq!(ctx.line(), 1);
+                assert_eq!(op, expected);
+                assert_eq!(ctx, new_ctx(l, h));
                 assert_eq!(*left, Expression::I64(new_ctx(0, 1), 2));
                 assert_eq!(
                     *right,
@@ -137,7 +135,7 @@ pub mod tests {
                 expression(&mut stream).unwrap()
             {
                 assert_eq!(op, *expected);
-                assert_eq!(ctx.line(), 1);
+                assert_eq!(ctx, new_ctx(0, 13));
                 assert_eq!(*left, Expression::Boolean(new_ctx(0, 4), true));
                 assert_eq!(*right, Expression::Boolean(new_ctx(8, 13), false));
             } else {
@@ -159,11 +157,12 @@ pub mod tests {
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::Mul, left, right)) =
             expression(&mut stream).unwrap()
         {
-            assert_eq!(ctx.line(), 1);
-            match left.as_ref() {
-                Expression::BinaryOp(_, BinaryOperator::Add, ll, lr) => {
-                    assert_eq!(**ll, Expression::I64(new_ctx(1, 2), 2));
-                    assert_eq!(**lr, Expression::I64(new_ctx(5, 6), 4));
+            assert_eq!(ctx, new_ctx(0, 11));
+            match left {
+                box Expression::BinaryOp(ctx, BinaryOperator::Add, ll, lr) => {
+                    assert_eq!(ctx, new_ctx(0, 7));
+                    assert_eq!(*ll, Expression::I64(new_ctx(1, 2), 2));
+                    assert_eq!(*lr, Expression::I64(new_ctx(5, 6), 4));
                 }
                 _ => panic!("Expected Add syntax"),
             }
@@ -186,7 +185,7 @@ pub mod tests {
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::BOr, left, right)) =
             expression(&mut stream).unwrap()
         {
-            assert_eq!(ctx.line(), 1);
+            assert_eq!(ctx, new_ctx(0, 13));
             assert_eq!(*left, Expression::Boolean(new_ctx(0, 4), true));
             assert_eq!(*right, Expression::Boolean(new_ctx(8, 13), false));
         } else {
@@ -1084,7 +1083,7 @@ pub mod tests {
                 assert_eq!(
                     *cond,
                     Expression::BinaryOp(
-                        new_ctx(22, 24),
+                        new_ctx(20, 26),
                         BinaryOperator::BAnd,
                         Box::new(Expression::Identifier(new_ctx(20, 21), y)),
                         Box::new(Expression::Identifier(new_ctx(25, 26), z))

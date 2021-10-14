@@ -97,11 +97,11 @@ impl Expression<ParserContext> {
     }
 
     pub fn binary_op(
-        ctx: ParserContext,
         op: &Lex,
         left: Box<Self>,
         right: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
+        let ctx = left.get_context().join(*right.get_context());
         match op {
             Lex::Eq => Ok(Some(Expression::BinaryOp(
                 ctx,
@@ -247,7 +247,7 @@ pub fn binary_op(
                     op.to_ctx().line(),
                     ParserError::ExpectedExprAfter(op.s.clone()),
                 ))?;
-                Expression::binary_op(op.to_ctx(), &op.s, Box::new(left), Box::new(right))
+                Expression::binary_op(&op.s, Box::new(left), Box::new(right))
             }
             None => Ok(Some(left)),
         },
