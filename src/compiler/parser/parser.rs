@@ -260,15 +260,18 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
 
 fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
     match stream.next_if(&Lex::Struct) {
-        Some(token) => match stream.next_if_id() {
+        Some(st_def) => match stream.next_if_id() {
             Some((_line, _span, id)) => {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = parameter_list(stream)?;
-                stream.next_must_be(&Lex::RBrace)?;
-                Ok(Some(StructDef::new(id, token.to_ctx(), fields)))
+                let ctx = stream
+                    .next_must_be(&Lex::RBrace)?
+                    .to_ctx()
+                    .join(st_def.to_ctx());
+                Ok(Some(StructDef::new(id, ctx, fields)))
             }
             None => {
-                err!(token.l, ParserError::StructExpectedIdentifier)
+                err!(st_def.l, ParserError::StructExpectedIdentifier)
             }
         },
         None => Ok(None),

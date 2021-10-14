@@ -583,7 +583,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 1);
 
             if let Some(Item::Struct(sd)) = m.get_item(my_struct) {
-                assert_eq!(*sd.get_context(), new_ctx(22, 28));
+                assert_eq!(*sd.get_context(), new_ctx(22, 46));
                 assert_eq!(sd.get_name(), my_struct);
                 assert_eq!(
                     sd.get_fields(),
@@ -1155,13 +1155,13 @@ pub mod tests {
         for (text, expected) in vec![
             (
                 "struct MyStruct {}",
-                StructDef::new(my_struct, new_ctx(0, 6), vec![]),
+                StructDef::new(my_struct, new_ctx(0, 18), vec![]),
             ),
             (
                 "struct MyStruct {x: i64}",
                 StructDef::new(
                     my_struct,
-                    new_ctx(0, 6),
+                    new_ctx(0, 24),
                     vec![Parameter::new(new_ctx(17, 18), x, &Type::I64)],
                 ),
             ),
@@ -1169,7 +1169,7 @@ pub mod tests {
                 "struct MyStruct {x: i64, y: bool}",
                 StructDef::new(
                     my_struct,
-                    new_ctx(0, 6),
+                    new_ctx(0, 33),
                     vec![
                         Parameter::new(new_ctx(17, 18), x, &Type::I64),
                         Parameter::new(new_ctx(25, 26), y, &Type::Bool),
