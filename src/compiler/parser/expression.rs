@@ -75,19 +75,23 @@ impl Expression<ParserContext> {
     }
 
     pub fn unary_op(
-        line: ParserContext,
+        ctx: ParserContext,
         op: &Lex,
         operand: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
         match op {
             Lex::Minus => Ok(Some(Expression::UnaryOp(
-                line,
+                ctx.join(*operand.get_context()),
                 UnaryOperator::Negate,
                 operand,
             ))),
-            Lex::Not => Ok(Some(Expression::UnaryOp(line, UnaryOperator::Not, operand))),
+            Lex::Not => Ok(Some(Expression::UnaryOp(
+                ctx.join(*operand.get_context()),
+                UnaryOperator::Not,
+                operand,
+            ))),
             _ => {
-                err!(line.line(), ParserError::NotAUnaryOp(op.clone()))
+                err!(ctx.line(), ParserError::NotAUnaryOp(op.clone()))
             }
         }
     }

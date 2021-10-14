@@ -42,7 +42,7 @@ pub mod tests {
             let exp = expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
-                assert_eq!(ctx.line(), 1);
+                assert_eq!(ctx, new_ctx(0, 2));
                 assert_eq!(*operand, Expression::Identifier(new_ctx(1, 2), a));
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
@@ -67,10 +67,10 @@ pub mod tests {
             let exp = expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
-                assert_eq!(ctx.line(), 1);
+                assert_eq!(ctx, new_ctx(0, 3));
                 if let Expression::UnaryOp(ctx, op, operand) = *operand {
                     assert_eq!(op, *expected);
-                    assert_eq!(ctx.line(), 1);
+                    assert_eq!(ctx, new_ctx(1, 3));
                     assert_eq!(*operand, Expression::Identifier(new_ctx(2, 3), a));
                 }
             } else {
