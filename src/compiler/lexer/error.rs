@@ -1,12 +1,12 @@
-use crate::compiler::{CompilerDisplay, CompilerDisplayError, SourceError};
+use crate::compiler::{source::SourceChar, CompilerDisplay, CompilerDisplayError, SourceError};
 
 use super::tokens::Primitive;
 
 /// Errors which can be encountered while tokenizing a compilation unit
 #[derive(Clone, PartialEq, Debug)]
 pub enum LexerError {
-    Locked(Option<char>),
-    InvalidEscapeSequence(char),
+    Locked(Option<SourceChar>),
+    InvalidEscapeSequence(SourceChar),
     ExpectedEscapeCharacter,
     InvalidInteger,
     UnexpectedSuffixType(Primitive),

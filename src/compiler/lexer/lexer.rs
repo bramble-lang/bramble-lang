@@ -32,7 +32,7 @@ macro_rules! trace {
                 "{} <- L{}:{:?}",
                 function_name!(),
                 $ts.line(),
-                $ts.current_token()
+                $ts.current_char()
             )
         }
     };
@@ -101,9 +101,9 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// Advances the cursor one character and returns the character that was
     /// pointed to by the cursor before the advance.  Returns None if the cursor
     /// was already at the end of the stream.
-    fn next(&mut self) -> Option<char> {
+    fn next(&mut self) -> Option<SourceChar> {
         if self.index < self.lexer.chars.len() {
-            let c = self.lexer.chars[self.index].char();
+            let c = self.lexer.chars[self.index];
             self.index += 1;
             if c == '\n' {
                 self.line += 1;
@@ -150,18 +150,9 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     /// Returns the character pointed at by the cursor which is the next
     /// character in the stream.
-    fn peek(&self) -> Option<char> {
+    fn peek(&self) -> Option<SourceChar> {
         if self.index < self.lexer.chars.len() {
-            Some(self.lexer.chars[self.index].char())
-        } else {
-            None
-        }
-    }
-
-    /// Returns the character which is `i` characters away from the cursor.
-    fn peek_at(&self, i: usize) -> Option<char> {
-        if self.index + i < self.lexer.chars.len() {
-            Some(self.lexer.chars[self.index + i].char())
+            Some(self.lexer.chars[self.index])
         } else {
             None
         }
@@ -172,7 +163,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     fn peek_if(&self, t: char) -> bool {
         match self.peek() {
             None => false,
-            Some(c) => t == c,
+            Some(c) => c == t,
         }
     }
 
@@ -262,7 +253,7 @@ impl<'a> Lexer<'a> {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(err!(self.line(), LexerError::Locked(self.current_token())));
+                tokens.push(err!(self.line(), LexerError::Locked(self.current_char())));
                 break;
             }
         }
@@ -271,9 +262,9 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the character that the lexer cursor is currently pointing to.
-    fn current_token(&self) -> Option<char> {
+    fn current_char(&self) -> Option<SourceChar> {
         if self.index < self.chars.len() {
-            Some(self.chars[self.index].char())
+            Some(self.chars[self.index])
         } else {
             None
         }
@@ -639,11 +630,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn is_delimiter(c: char) -> bool {
+    fn is_delimiter(c: SourceChar) -> bool {
         c.is_ascii_punctuation() || c.is_whitespace()
     }
 
-    fn is_escape_code(c: char) -> bool {
+    fn is_escape_code(c: SourceChar) -> bool {
         c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
     }
 }
