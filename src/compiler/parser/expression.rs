@@ -660,7 +660,7 @@ mod test {
     }
 
     #[test]
-    fn parse_array_value() {
+    fn parse_array_expression() {
         for (text, expected) in vec![
             (
                 "[1]",
