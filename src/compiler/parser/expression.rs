@@ -93,87 +93,86 @@ impl Expression<ParserContext> {
     }
 
     pub fn binary_op(
-        line: ParserContext,
+        ctx: ParserContext,
         op: &Lex,
         left: Box<Self>,
         right: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
-        let i = line; //ParserInfo{l: line};
         match op {
             Lex::Eq => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::Eq,
                 left,
                 right,
             ))),
             Lex::NEq => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::NEq,
                 left,
                 right,
             ))),
             Lex::Ls => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::Ls,
                 left,
                 right,
             ))),
             Lex::LsEq => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::LsEq,
                 left,
                 right,
             ))),
             Lex::Gr => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::Gr,
                 left,
                 right,
             ))),
             Lex::GrEq => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::GrEq,
                 left,
                 right,
             ))),
             Lex::BAnd => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::BAnd,
                 left,
                 right,
             ))),
             Lex::BOr => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::BOr,
                 left,
                 right,
             ))),
             Lex::Add => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::Add,
                 left,
                 right,
             ))),
             Lex::Minus => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::Sub,
                 left,
                 right,
             ))),
             Lex::Mul => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::Mul,
                 left,
                 right,
             ))),
             Lex::Div => Ok(Some(Expression::BinaryOp(
-                i,
+                ctx,
                 BinaryOperator::Div,
                 left,
                 right,
             ))),
             _ => {
-                err!(line.line(), ParserError::NotABinaryOp(op.clone()))
+                err!(ctx.line(), ParserError::NotABinaryOp(op.clone()))
             }
         }
     }
