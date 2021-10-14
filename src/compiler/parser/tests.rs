@@ -340,6 +340,7 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
+        assert_eq!(*stm.get_context(), new_ctx(0, 19));
         match stm {
             Statement::Bind(box b) => {
                 assert_eq!(b.get_id(), x);
@@ -384,10 +385,11 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
 
-            let stm = statement(&mut stream);
-            assert!(stm.is_ok(), "{}", text);
+            let stm = statement(&mut stream).unwrap().unwrap();
 
-            match stm.unwrap().unwrap() {
+            assert_eq!(*stm.get_context(), new_ctx(0, text.len() as u32));
+
+            match stm {
                 Statement::Bind(box b) => {
                     assert_eq!(b.get_id(), x, "{}", text);
                     assert_eq!(b.get_type(), expected_ty, "{}", text);
@@ -411,6 +413,7 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
+        assert_eq!(*stm.get_context(), new_ctx(0, text.len() as u32));
         match stm {
             Statement::Mutate(box m) => {
                 assert_eq!(m.get_id(), x);
