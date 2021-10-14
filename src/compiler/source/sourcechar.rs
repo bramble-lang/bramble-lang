@@ -40,6 +40,12 @@ impl SourceCharIter {
         }
     }
 
+    /// Returns the upper bound for the global offset range that this iterator will
+    /// traverse.
+    pub fn high(&self) -> Offset {
+        self.high
+    }
+
     /// Will join the character with the current global offset value and then
     /// increment the global offset value to point to the start of the next character.
     ///

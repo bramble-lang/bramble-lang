@@ -3,6 +3,7 @@
 // by tokenize
 use stdext::function_name;
 
+use crate::compiler::source::Offset;
 use crate::compiler::{SourceChar, SourceCharIter, Span};
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
@@ -88,10 +89,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
             let high = if stop < self.lexer.chars.len() {
                 self.lexer.chars[stop].offset()
             } else {
-                let mut o = self.lexer.chars[stop - 1].offset();
-                o += 1; // TODO: This is temporary as unicode chars can be > 1.
-                o
-            }; // TODO: how do I get the byte immediately after the last char in the stream?
+                self.lexer.end_offset
+            };
             let span = Span::new(low, high);
 
             Some((self.lexer.string_table.insert(s), span))
@@ -190,6 +189,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
 pub struct Lexer<'a> {
     chars: Vec<SourceChar>,
+    end_offset: Offset,
     index: usize,
     line: u32,
     string_table: &'a mut StringTable,
@@ -198,6 +198,7 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn from_str(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
+        let end_offset = Offset::new(text.len() as u32);
         Lexer {
             chars: text
                 .chars()
@@ -205,6 +206,7 @@ impl<'a> Lexer<'a> {
                 .map(|(i, c)| SourceChar::from_char(i as u32, c))
                 .collect(),
             index: 0,
+            end_offset,
             line: 1,
             tracing: TracingConfig::Off,
             string_table,
@@ -215,10 +217,12 @@ impl<'a> Lexer<'a> {
         string_table: &'a mut StringTable,
         text: SourceCharIter,
     ) -> Result<Lexer<'a>, LexerError> {
+        let end_offset = text.high();
         let chars: Result<Vec<_>, _> = text.collect();
         Ok(Lexer {
             chars: chars?,
             index: 0,
+            end_offset,
             line: 1,
             tracing: TracingConfig::Off,
             string_table,
