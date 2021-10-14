@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf};
+use std::path::PathBuf;
 
 use super::{sourcechar::SourceCharIter, Offset};
 
@@ -65,7 +65,7 @@ impl SourceMap {
         let high = self.offset_high;
 
         // Add source file to the offset map
-        let entry = SourceMapEntry::new(low, high, file, path);
+        let entry = SourceMapEntry::new(low, high, path);
         self.map.push(entry);
 
         Ok(())
@@ -93,18 +93,12 @@ impl SourceMap {
 pub struct SourceMapEntry {
     low: Offset,
     high: Offset,
-    file: File, // TODO: I could just create a new file when ever chars is called
     path: PathBuf,
 }
 
 impl SourceMapEntry {
-    fn new(low: Offset, high: Offset, file: File, path: PathBuf) -> SourceMapEntry {
-        SourceMapEntry {
-            low,
-            high,
-            file,
-            path,
-        }
+    fn new(low: Offset, high: Offset, path: PathBuf) -> SourceMapEntry {
+        SourceMapEntry { low, high, path }
     }
 
     /// Get the file path for the source code that this entry in the [`SourceMap`]
@@ -116,8 +110,9 @@ impl SourceMapEntry {
     /// Creates a iterator over the unicode characters in the source code that
     /// this entry represents. Each entry in the iterator will include the
     /// unicode character and it's offset within the global offset space.
-    pub fn chars(&self) -> SourceCharIter {
-        SourceCharIter::new(self.file.try_clone().unwrap(), self.low, self.high)
+    pub fn read(&self) -> Result<SourceCharIter, std::io::Error> {
+        let file = std::fs::File::open(&self.path)?;
+        Ok(SourceCharIter::new(file, self.low, self.high))
     }
 }
 

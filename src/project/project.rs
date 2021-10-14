@@ -170,7 +170,7 @@ pub fn tokenize_source_map(
         // Create a compilation Unit from the SourceCharIter
         let src = CompilationUnit {
             path: module_path,
-            data: entry.chars(),
+            data: entry.read().unwrap(),
         };
 
         // Get the Token Set and add to the Vector of token sets
