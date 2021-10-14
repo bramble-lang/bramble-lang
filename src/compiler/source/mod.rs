@@ -25,20 +25,18 @@ pub struct SourceChar {
 }
 
 impl SourceChar {
-    pub fn new(o: Offset, c: char) -> SourceChar {
-        SourceChar { c, offset: o }
+    pub fn new(ch: char, offset: Offset) -> SourceChar {
+        SourceChar { c: ch, offset }
     }
 
+    /// Get the character value
     pub fn char(&self) -> char {
         self.c
     }
 
+    /// Get the global offset of this character
     pub fn offset(&self) -> Offset {
         self.offset
-    }
-
-    pub fn from_char(ch: char, offset: u32) -> SourceChar {
-        Self::new(Offset(offset), ch)
     }
 
     pub fn is_alphabetic(&self) -> bool {

@@ -90,7 +90,7 @@ impl Iterator for SourceCharIter {
             .next()
             .map(|ch| {
                 self.join_with_offset(ch?)
-                    .map(|(o, c)| SourceChar::new(o, c))
+                    .map(|(o, c)| SourceChar::new(c, o))
             })
             .or_else(|| {
                 if self.next_global_offset != self.high {

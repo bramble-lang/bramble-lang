@@ -203,7 +203,7 @@ impl<'a> Lexer<'a> {
             chars: text
                 .chars()
                 .enumerate()
-                .map(|(i, c)| SourceChar::from_char(c, i as u32))
+                .map(|(i, c)| SourceChar::new(c, Offset::new(i as u32)))
                 .collect(),
             index: 0,
             end_offset,
