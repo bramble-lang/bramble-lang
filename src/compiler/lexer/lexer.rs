@@ -177,7 +177,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
 
         for i in 0..l {
-            if self.lexer.chars[self.index + i].char() != tc[i] {
+            if self.lexer.chars[self.index + i] != tc[i] {
                 return false;
             }
         }
@@ -306,8 +306,8 @@ impl<'a> Lexer<'a> {
 
     pub fn consume_whitespace(&mut self) {
         trace!(self);
-        while self.index < self.chars.len() && self.chars[self.index].char().is_whitespace() {
-            if self.chars[self.index].char() == '\n' {
+        while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
+            if self.chars[self.index] == '\n' {
                 self.line += 1;
             }
             self.index += 1;
