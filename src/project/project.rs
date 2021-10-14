@@ -84,32 +84,11 @@ pub struct CompilationUnit<T> {
 }
 
 /// Given the location of source file(s) this function will read the file
-/// or files and return a list of the text of all source files. For each
-/// file there will also be the associated path to the file (relative to
-/// `src_path`).
+/// or files and construct the [`SourceMap`] for the project.
 ///
 /// If `src_path` is a directory, this will recursively read every file in
 /// that directory and its subdirectories.  If it is a file, it will read
 /// only that file.
-pub fn read_src_files(src_path: &std::path::Path, ext: &str) -> Vec<CompilationUnit<String>> {
-    let files = get_files(&src_path, ext).expect(&format!("Could not open: {:?}", src_path));
-    let mut texts: Vec<CompilationUnit<String>> = vec![];
-    for file in files {
-        let p = file_path_to_module_path(&file, &src_path);
-
-        let text = std::fs::read_to_string(&file)
-            .expect(&format!("Failed to read input file: {:?}", file));
-        texts.push(CompilationUnit {
-            path: p,
-            data: text,
-        });
-    }
-
-    texts
-}
-
-/// Given the location for source code files, this will build a [`SourceMap`]
-/// which can then be used to access all the source code for the target project.
 pub fn build_source_map(
     src_path: &std::path::Path,
     ext: &str,
