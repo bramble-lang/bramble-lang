@@ -282,7 +282,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
     }
 }
 fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
-    let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
+    let (fn_ctx, fn_name, params, fn_type) = match function_decl(stream, false)? {
         Some((l, n, p, v, t)) => {
             if v {
                 return err!(l.line(), ParserError::FnVarArgsNotAllowed);
@@ -299,15 +299,15 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                fn_line.line(),
+                fn_ctx.line(),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
     }
-    stream.next_must_be(&Lex::RBrace)?;
+    let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
 
     Ok(Some(RoutineDef {
-        context: fn_line,
+        context: ctx,
         def: RoutineDefType::Function,
         name: fn_name,
         params,
@@ -326,32 +326,28 @@ fn function_decl(
     HasVarArgs,
     Type,
 )> {
-    let fn_line = match stream.next_if(&Lex::FunctionDef) {
+    let mut fn_ctx = match stream.next_if(&Lex::FunctionDef) {
         Some(co) => co.to_ctx(),
         None => return Ok(None),
     };
 
-    let (fn_line, fn_span, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
-        fn_line.line(),
+    let (_, fn_def_span, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
+        fn_ctx.line(),
         ParserError::FnExpectedIdentifierAfterFn,
     ))?;
+    fn_ctx = fn_ctx.extend(fn_def_span);
+
     let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
         consume_type(stream)?.ok_or(CompilerError::new(
-            fn_line,
+            fn_ctx.line(),
             ParserError::FnExpectedTypeAfterArrow,
         ))?
     } else {
         Type::Unit
     };
 
-    Ok(Some((
-        ParserContext::new(fn_line, fn_span),
-        fn_name,
-        params,
-        has_varargs,
-        fn_type,
-    )))
+    Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type)))
 }
 
 fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {

@@ -484,7 +484,7 @@ pub mod tests {
                 ..
             }) = &m.get_functions()[0]
             {
-                assert_eq!(*context, new_ctx(21, 25));
+                assert_eq!(*context, new_ctx(18, 42));
                 assert_eq!(*name, test);
                 assert_eq!(
                     params,
@@ -707,7 +707,7 @@ pub mod tests {
             ..
         })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
-            assert_eq!(*l, new_ctx(3, 7));
+            assert_eq!(*l, new_ctx(0, 24));
             assert_eq!(*name, test);
             assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
             assert_eq!(ty, Type::Unit);
@@ -743,7 +743,7 @@ pub mod tests {
             ..
         })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
-            assert_eq!(*l, new_ctx(3, 7));
+            assert_eq!(*l, new_ctx(0, 37));
             assert_eq!(*name, test);
             assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
@@ -988,7 +988,7 @@ pub mod tests {
             ..
         })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
-            assert_eq!(*ctx, new_ctx(3, 7));
+            assert_eq!(*ctx, new_ctx(0, 42));
             assert_eq!(*name, test);
             assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
