@@ -441,7 +441,11 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
                 params.clone(),
             )),
             None => match struct_expression_params(stream)? {
-                Some(params) => Some(Expression::StructExpression(call_ctx, path, params.clone())),
+                Some((params_ctx, params)) => Some(Expression::StructExpression(
+                    call_ctx.join(params_ctx),
+                    path,
+                    params.clone(),
+                )),
                 None => {
                     if path.len() > 1 {
                         Some(Expression::Path(call_ctx, path))
@@ -481,10 +485,10 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
 
 fn struct_expression_params(
     stream: &mut TokenStream,
-) -> ParserResult<Vec<(StringId, Expression<ParserContext>)>> {
+) -> ParserResult<(ParserContext, Vec<(StringId, Expression<ParserContext>)>)> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
-        Some(_token) => {
+        Some(lbrace) => {
             let mut params = vec![];
             while let Some((line, _span, field_name)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
@@ -499,8 +503,11 @@ fn struct_expression_params(
                 };
             }
 
-            stream.next_must_be(&Lex::RBrace)?;
-            Ok(Some(params))
+            let ctx = stream
+                .next_must_be(&Lex::RBrace)?
+                .to_ctx()
+                .join(lbrace.to_ctx());
+            Ok(Some((ctx, params)))
         }
         _ => Ok(None),
     }
