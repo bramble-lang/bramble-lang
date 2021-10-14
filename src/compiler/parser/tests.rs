@@ -436,7 +436,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         if let Some(m) = parse(test, &tokens).unwrap().unwrap().get_module(test_mod) {
-            assert_eq!(*m.get_context(), new_ctx(0, 3));
+            assert_eq!(*m.get_context(), new_ctx(0, 15));
             assert_eq!(m.get_name(), test_mod);
         } else {
             panic!("No nodes returned by parser")
@@ -467,7 +467,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             let m = &m.get_modules()[0];
-            assert_eq!(*m.get_context(), new_ctx(0, 3));
+            assert_eq!(*m.get_context(), new_ctx(0, 44));
             assert_eq!(m.get_name(), test_fn_mod);
 
             assert_eq!(m.get_modules().len(), 0);

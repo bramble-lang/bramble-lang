@@ -142,8 +142,8 @@ impl Parser {
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
     let mut stream = TokenStream::new(&tokens);
 
-    let module_line = stream.peek().unwrap().to_ctx();
-    let mut module = Module::new(name, module_line);
+    let module_ctx = stream.peek().unwrap().to_ctx();
+    let mut module = Module::new(name, module_ctx);
 
     while stream.peek().is_some() {
         let start_index = stream.index();
@@ -159,18 +159,22 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserC
 
 fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
-        Some(token) => match stream.next_if_id() {
-            Some((_line, _span, module_name)) => {
-                let mut module = Module::new(module_name, token.to_ctx());
+        Some(module) => match stream.next_if_id() {
+            Some((_, _, module_name)) => {
+                let mut module = Module::new(module_name, module.to_ctx());
                 stream.next_must_be(&Lex::LBrace)?;
 
                 parse_items_into(stream, &mut module)?;
 
-                stream.next_must_be(&Lex::RBrace)?;
+                let ctx = stream
+                    .next_must_be(&Lex::RBrace)?
+                    .to_ctx()
+                    .join(*module.get_context());
+                *module.get_context_mut() = ctx;
                 Some(module)
             }
             _ => {
-                return err!(token.l, ParserError::ModExpectedName);
+                return err!(module.l, ParserError::ModExpectedName);
             }
         },
         None => None,
