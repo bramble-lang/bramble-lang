@@ -428,23 +428,23 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
 fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     let s: Option<Expression<ParserContext>> = match path(stream)? {
-        Some((line, path)) => match routine_call_params(stream)? {
+        Some((ctx, path)) => match routine_call_params(stream)? {
             Some(params) => Some(Expression::RoutineCall(
-                line,
+                ctx,
                 RoutineCall::Function,
                 path,
                 params.clone(),
             )),
-            None => match struct_init_params(stream)? {
-                Some(params) => Some(Expression::StructExpression(line, path, params.clone())),
+            None => match struct_expression_params(stream)? {
+                Some(params) => Some(Expression::StructExpression(ctx, path, params.clone())),
                 None => {
                     if path.len() > 1 {
-                        Some(Expression::Path(line, path))
+                        Some(Expression::Path(ctx, path))
                     } else {
                         if let Element::Id(sid) = path.last().unwrap() {
-                            Some(Expression::Identifier(line, *sid))
+                            Some(Expression::Identifier(ctx, *sid))
                         } else {
-                            return err!(line.line(), ParserError::PathExpectedIdentifier);
+                            return err!(ctx.line(), ParserError::PathExpectedIdentifier);
                         }
                     }
                 }
@@ -474,7 +474,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
     }
 }
 
-fn struct_init_params(
+fn struct_expression_params(
     stream: &mut TokenStream,
 ) -> ParserResult<Vec<(StringId, Expression<ParserContext>)>> {
     trace!(stream);

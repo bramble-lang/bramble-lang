@@ -1191,7 +1191,7 @@ pub mod tests {
     }
 
     #[test]
-    fn parse_struct_init() {
+    fn parse_struct_expression() {
         let mut table = StringTable::new();
         let my_struct = table.insert("MyStruct".into());
         let my_struct2 = table.insert("MyStruct2".into());
@@ -1203,7 +1203,7 @@ pub mod tests {
             (
                 "MyStruct{}",
                 Expression::StructExpression(
-                    new_ctx(0, 8),
+                    new_ctx(0, 10),
                     vec![Element::Id(my_struct)].into(),
                     vec![],
                 ),
@@ -1211,7 +1211,7 @@ pub mod tests {
             (
                 "MyStruct{x: 5}",
                 Expression::StructExpression(
-                    new_ctx(0, 8),
+                    new_ctx(0, 14),
                     vec![Element::Id(my_struct)].into(),
                     vec![(x, Expression::I64(new_ctx(12, 13), 5))],
                 ),
@@ -1219,7 +1219,7 @@ pub mod tests {
             (
                 "MyStruct{x: 5, y: false}",
                 Expression::StructExpression(
-                    new_ctx(0, 8),
+                    new_ctx(0, 24),
                     vec![Element::Id(my_struct)].into(),
                     vec![
                         (x, Expression::I64(new_ctx(12, 13), 5)),
@@ -1230,14 +1230,14 @@ pub mod tests {
             (
                 "MyStruct{x: 5, y: MyStruct2{z:3}}",
                 Expression::StructExpression(
-                    new_ctx(0, 8),
+                    new_ctx(0, 33),
                     vec![Element::Id(my_struct)].into(),
                     vec![
                         (x, Expression::I64(new_ctx(12, 13), 5)),
                         (
                             y,
                             Expression::StructExpression(
-                                new_ctx(18, 27),
+                                new_ctx(18, 32),
                                 vec![Element::Id(my_struct2)].into(),
                                 vec![(z, Expression::I64(new_ctx(30, 31), 3))],
                             ),
