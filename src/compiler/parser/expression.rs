@@ -182,17 +182,16 @@ impl Expression<ParserContext> {
 fn expression_block(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
-        Some(token) => {
+        Some(lbrace) => {
             let stmts = block(stream)?;
 
             let final_exp = expression(stream)?.map(|e| Box::new(e));
 
-            stream.next_must_be(&Lex::RBrace)?;
-            Ok(Some(Expression::ExpressionBlock(
-                token.to_ctx(),
-                stmts,
-                final_exp,
-            )))
+            let ctx = stream
+                .next_must_be(&Lex::RBrace)?
+                .to_ctx()
+                .join(lbrace.to_ctx());
+            Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
         }
         None => Ok(None),
     }
@@ -974,7 +973,7 @@ mod test {
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {
-            assert_eq!(ctx.line(), 1);
+            assert_eq!(ctx, new_ctx(0, 3));
             assert_eq!(body.len(), 0);
             assert_eq!(*final_exp, Expression::I64(new_ctx(1, 2), 5));
         } else {
@@ -1047,7 +1046,7 @@ mod test {
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {
-            assert_eq!(ctx.line(), 1);
+            assert_eq!(ctx, new_ctx(0, 29));
             assert_eq!(body.len(), 2);
             match &body[0] {
                 Statement::Bind(box b) => {
