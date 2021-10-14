@@ -522,7 +522,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_co_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 3));
+            assert_eq!(*m.get_context(), new_ctx(0, 44));
             assert_eq!(m.get_name(), test_co_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -579,7 +579,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_struct_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 3));
+            assert_eq!(*m.get_context(), new_ctx(0, 48));
             assert_eq!(m.get_name(), test_struct_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -619,7 +619,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_extern_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 3));
+            assert_eq!(*m.get_context(), new_ctx(0, 55));
             assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -661,7 +661,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_extern_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 3));
+            assert_eq!(*m.get_context(), new_ctx(0, 60));
             assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
