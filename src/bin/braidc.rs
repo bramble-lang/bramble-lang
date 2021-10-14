@@ -28,7 +28,6 @@ fn main() {
         .expect("Expected an input source file to compile");
     let src_path = Path::new(input);
     let project_name = get_project_name(&src_path).unwrap();
-    //let src_input = read_src_files(&src_path, BRAID_FILE_EXT);
     let sourcemap = build_source_map(&src_path, BRAID_FILE_EXT).unwrap();
 
     let manifests: Vec<_> = match read_manifests(&config) {

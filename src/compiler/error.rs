@@ -1,4 +1,4 @@
-//! A basic skelton type for all errors about user input that are generated
+//! A basic skeleton type for all errors about user input that are generated
 //! by the compiler.  The [`CompilerError`] contains information about the
 //! location within source code that caused the error and an inner error type
 //! that is a more refined and compiler stage specific error type.
