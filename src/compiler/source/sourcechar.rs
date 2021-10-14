@@ -40,11 +40,6 @@ impl SourceCharIter {
         }
     }
 
-    /// Get the [`Offset`] of the last character read from the character stream.
-    pub fn offset() -> Offset {
-        Offset(0)
-    }
-
     /// Will join the character with the current global offset value and then
     /// increment the global offset value to point to the start of the next character.
     ///

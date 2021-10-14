@@ -192,8 +192,8 @@ pub struct Lexer<'a> {
     chars: Vec<SourceChar>,
     index: usize,
     line: u32,
-    tracing: TracingConfig,
     string_table: &'a mut StringTable,
+    tracing: TracingConfig,
 }
 
 impl<'a> Lexer<'a> {
