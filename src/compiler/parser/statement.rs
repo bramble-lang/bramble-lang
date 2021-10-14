@@ -7,11 +7,7 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use crate::{
-    compiler::{
-        ast::*,
-        lexer::tokens::{Lex, Token},
-        CompilerError,
-    },
+    compiler::{ast::*, lexer::tokens::Lex, CompilerError},
     trace, StringId,
 };
 
@@ -46,8 +42,12 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
     };
 
     match stm {
-        Some(stm) => match stream.next_if(&Lex::Semicolon) {
-            Some(Token { s: _, .. }) => Ok(Some(stm)),
+        Some(mut stm) => match stream.next_if(&Lex::Semicolon) {
+            Some(semicolon) => {
+                let ctx = stm.get_context().join(semicolon.to_ctx());
+                *stm.get_context_mut() = ctx;
+                Ok(Some(stm))
+            }
             _ => {
                 if must_have_semicolon {
                     let line = stm.get_context().line();
@@ -89,14 +89,12 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                 ))?,
             };
 
+            let ctx = exp.get_context().join(token.to_ctx());
+
             match id_decl {
-                Expression::IdentifierDeclare(_, id, ty) => Ok(Some(Bind::new(
-                    token.to_ctx(),
-                    id,
-                    ty.clone(),
-                    is_mutable,
-                    exp,
-                ))),
+                Expression::IdentifierDeclare(_, id, ty) => {
+                    Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
+                }
                 _ => Err(CompilerError::new(
                     token.l,
                     ParserError::ExpectedTypeInIdDecl,

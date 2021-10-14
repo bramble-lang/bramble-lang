@@ -315,8 +315,10 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
+        assert_eq!(*stm.get_context(), new_ctx(0, 15));
         match stm {
             Statement::Bind(box b) => {
+                assert_eq!(*b.get_context(), new_ctx(0, 15));
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), false);
@@ -1134,7 +1136,7 @@ pub mod tests {
             if let Expression::ExpressionBlock(_ctx, body, None) = *body {
                 assert_eq!(
                     body[0],
-                    Statement::Expression(box Expression::I64(new_ctx(11, 12), 5))
+                    Statement::Expression(box Expression::I64(new_ctx(11, 13), 5))
                 );
             } else {
                 panic!("Expected Expression block, got {:?}", *body);
