@@ -1263,7 +1263,7 @@ pub mod tests {
         let test = table.insert("test".into());
         let test2 = table.insert("test 2".into());
 
-        for (text, expected, len) in vec![
+        for (text, expected, literal_len) in vec![
             ("fn test() -> String {return \"test\";}", test, 6),
             ("fn test() -> String {return \"test 2\";}", test2, 8),
         ] {
@@ -1279,7 +1279,10 @@ pub mod tests {
                         Statement::Return(box r) => {
                             assert_eq!(
                                 *r.get_value(),
-                                Some(Expression::StringLiteral(new_ctx(28, 28 + len), expected))
+                                Some(Expression::StringLiteral(
+                                    new_ctx(28, 28 + literal_len),
+                                    expected
+                                ))
                             )
                         }
                         _ => assert!(false, "Not a return statement"),
