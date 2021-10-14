@@ -163,7 +163,7 @@ mod test_tokenstream {
             Token {
                 l: 1,
                 s: Lex::LParen,
-                span: Span::zero(),
+                span: Span::new(Offset::new(0), Offset::new(1)),
             }
         );
     }

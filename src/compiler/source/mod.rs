@@ -2,7 +2,10 @@
 //! it's input data.  The [`Source`] module provides a common way to reference
 //! and retrieve the source code used by the compiler.
 
-use std::ops::AddAssign;
+use std::{
+    fmt::{Display, Write},
+    ops::AddAssign,
+};
 
 mod sourcechar;
 mod sourcemap;
@@ -15,26 +18,58 @@ pub use span::Span;
 /// Represents a single char from a source code file.  This includes the character
 /// and the global offset of the character (which points to the specific source
 /// code file and location within that file of this character)
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SourceChar {
     offset: Offset,
     c: char,
 }
 
 impl SourceChar {
-    pub fn new(o: Offset, c: char) -> SourceChar {
-        SourceChar { c, offset: o }
+    /// Create a new SourceChar
+    pub fn new(ch: char, offset: Offset) -> SourceChar {
+        SourceChar { c: ch, offset }
     }
 
+    /// Get the character value
     pub fn char(&self) -> char {
         self.c
     }
 
+    /// Get the global offset of this character
     pub fn offset(&self) -> Offset {
         self.offset
     }
 
-    pub fn from_char(o: u32, c: char) -> SourceChar {
-        Self::new(Offset(o), c)
+    pub fn is_alphabetic(&self) -> bool {
+        self.c.is_alphabetic()
+    }
+
+    pub fn is_alphanumeric(&self) -> bool {
+        self.c.is_alphanumeric()
+    }
+
+    pub fn is_numeric(&self) -> bool {
+        self.c.is_numeric()
+    }
+
+    pub fn is_whitespace(&self) -> bool {
+        self.c.is_whitespace()
+    }
+
+    pub fn is_ascii_punctuation(&self) -> bool {
+        self.c.is_ascii_punctuation()
+    }
+}
+
+impl PartialEq<char> for SourceChar {
+    fn eq(&self, other: &char) -> bool {
+        self.c == *other
+    }
+}
+
+impl Display for SourceChar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char(self.char())
     }
 }
 
@@ -49,10 +84,6 @@ pub struct Offset(u32);
 impl Offset {
     pub fn new(o: u32) -> Offset {
         Offset(o)
-    }
-
-    pub fn inc(&mut self) {
-        *self += 1;
     }
 }
 

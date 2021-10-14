@@ -3,6 +3,7 @@
 // by tokenize
 use stdext::function_name;
 
+use crate::compiler::source::Offset;
 use crate::compiler::{SourceChar, SourceCharIter, Span};
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
@@ -32,7 +33,7 @@ macro_rules! trace {
                 "{} <- L{}:{:?}",
                 function_name!(),
                 $ts.line(),
-                $ts.current_token()
+                $ts.current_char()
             )
         }
     };
@@ -42,7 +43,6 @@ struct LexerBranch<'a, 'st> {
     lexer: &'a mut Lexer<'st>,
     index: usize,
     line: u32,
-    offset: u32,
 }
 
 impl<'a, 'st> LexerBranch<'a, 'st> {
@@ -50,7 +50,6 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         LexerBranch {
             index: l.index,
             line: l.line,
-            offset: l.col,
             lexer: l,
         }
     }
@@ -59,14 +58,11 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// of accepting the current branch as correct and updating the source lexer
     /// to the match the cursor state of the branch.
     fn merge(mut self) -> Option<(StringId, Span)> {
-        let s = self.cut();
-
-        // TODO: Only execute this if the cut returned something
-        self.lexer.index = self.index;
-        self.lexer.line = self.line;
-        self.lexer.col = self.offset;
-
-        s
+        self.cut().and_then(|cut| {
+            self.lexer.index = self.index;
+            self.lexer.line = self.line;
+            Some(cut)
+        })
     }
 
     /// Cuts a string from the current branch from the last
@@ -91,10 +87,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
             let high = if stop < self.lexer.chars.len() {
                 self.lexer.chars[stop].offset()
             } else {
-                let mut o = self.lexer.chars[stop - 1].offset();
-                o += 1; // TODO: This is temporary as unicode chars can be > 1.
-                o
-            }; // TODO: how do I get the byte immediately after the last char in the stream?
+                self.lexer.end_offset
+            };
             let span = Span::new(low, high);
 
             Some((self.lexer.string_table.insert(s), span))
@@ -104,14 +98,12 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// Advances the cursor one character and returns the character that was
     /// pointed to by the cursor before the advance.  Returns None if the cursor
     /// was already at the end of the stream.
-    fn next(&mut self) -> Option<char> {
+    fn next(&mut self) -> Option<SourceChar> {
         if self.index < self.lexer.chars.len() {
-            let c = self.lexer.chars[self.index].char();
+            let c = self.lexer.chars[self.index];
             self.index += 1;
-            self.offset += 1;
             if c == '\n' {
                 self.line += 1;
-                self.offset = 0;
             }
             Some(c)
         } else {
@@ -147,7 +139,6 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
         if self.peek_ifn(t) {
             self.index += t.len();
-            self.offset += t.len() as u32;
             true
         } else {
             false
@@ -156,18 +147,9 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     /// Returns the character pointed at by the cursor which is the next
     /// character in the stream.
-    fn peek(&self) -> Option<char> {
+    fn peek(&self) -> Option<SourceChar> {
         if self.index < self.lexer.chars.len() {
-            Some(self.lexer.chars[self.index].char())
-        } else {
-            None
-        }
-    }
-
-    /// Returns the character which is `i` characters away from the cursor.
-    fn peek_at(&self, i: usize) -> Option<char> {
-        if self.index + i < self.lexer.chars.len() {
-            Some(self.lexer.chars[self.index + i].char())
+            Some(self.lexer.chars[self.index])
         } else {
             None
         }
@@ -178,7 +160,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     fn peek_if(&self, t: char) -> bool {
         match self.peek() {
             None => false,
-            Some(c) => t == c,
+            Some(c) => c == t,
         }
     }
 
@@ -195,7 +177,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
 
         for i in 0..l {
-            if self.lexer.chars[self.index + i].char() != tc[i] {
+            if self.lexer.chars[self.index + i] != tc[i] {
                 return false;
             }
         }
@@ -205,24 +187,25 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
 pub struct Lexer<'a> {
     chars: Vec<SourceChar>,
+    end_offset: Offset,
     index: usize,
     line: u32,
-    col: u32,
-    tracing: TracingConfig,
     string_table: &'a mut StringTable,
+    tracing: TracingConfig,
 }
 
 impl<'a> Lexer<'a> {
     pub fn from_str(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
+        let end_offset = Offset::new(text.len() as u32);
         Lexer {
             chars: text
                 .chars()
                 .enumerate()
-                .map(|(i, c)| SourceChar::from_char(i as u32, c))
+                .map(|(i, c)| SourceChar::new(c, Offset::new(i as u32)))
                 .collect(),
             index: 0,
+            end_offset,
             line: 1,
-            col: 0,
             tracing: TracingConfig::Off,
             string_table,
         }
@@ -232,12 +215,13 @@ impl<'a> Lexer<'a> {
         string_table: &'a mut StringTable,
         text: SourceCharIter,
     ) -> Result<Lexer<'a>, LexerError> {
+        let end_offset = text.high();
         let chars: Result<Vec<_>, _> = text.collect();
         Ok(Lexer {
-            chars: chars?, // TODO: Have this return an Error not fault
+            chars: chars?,
             index: 0,
+            end_offset,
             line: 1,
-            col: 0,
             tracing: TracingConfig::Off,
             string_table,
         })
@@ -271,7 +255,7 @@ impl<'a> Lexer<'a> {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(err!(self.line(), LexerError::Locked(self.current_token())));
+                tokens.push(err!(self.line(), LexerError::Locked(self.current_char())));
                 break;
             }
         }
@@ -280,9 +264,9 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the character that the lexer cursor is currently pointing to.
-    fn current_token(&self) -> Option<char> {
+    fn current_char(&self) -> Option<SourceChar> {
         if self.index < self.chars.len() {
-            Some(self.chars[self.index].char())
+            Some(self.chars[self.index])
         } else {
             None
         }
@@ -322,13 +306,11 @@ impl<'a> Lexer<'a> {
 
     pub fn consume_whitespace(&mut self) {
         trace!(self);
-        while self.index < self.chars.len() && self.chars[self.index].char().is_whitespace() {
-            if self.chars[self.index].char() == '\n' {
+        while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
+            if self.chars[self.index] == '\n' {
                 self.line += 1;
-                self.col = 0;
             }
             self.index += 1;
-            self.col += 1;
         }
     }
 
@@ -650,11 +632,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn is_delimiter(c: char) -> bool {
+    fn is_delimiter(c: SourceChar) -> bool {
         c.is_ascii_punctuation() || c.is_whitespace()
     }
 
-    fn is_escape_code(c: char) -> bool {
+    fn is_escape_code(c: SourceChar) -> bool {
         c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
     }
 }

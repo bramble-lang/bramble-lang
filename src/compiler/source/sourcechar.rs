@@ -40,9 +40,10 @@ impl SourceCharIter {
         }
     }
 
-    /// Get the [`Offset`] of the last character read from the character stream.
-    pub fn offset() -> Offset {
-        Offset(0)
+    /// Returns the upper bound for the global offset range that this iterator will
+    /// traverse.
+    pub fn high(&self) -> Offset {
+        self.high
     }
 
     /// Will join the character with the current global offset value and then
@@ -84,12 +85,12 @@ impl Iterator for SourceCharIter {
 
     /// Gets the next character from the source file.
     fn next(&mut self) -> Option<Self::Item> {
-        // Get the next byte in the file
+        // Get the next char in the file
         self.chars
             .next()
             .map(|ch| {
                 self.join_with_offset(ch?)
-                    .map(|(o, c)| SourceChar::new(o, c))
+                    .map(|(o, c)| SourceChar::new(c, o))
             })
             .or_else(|| {
                 if self.next_global_offset != self.high {
@@ -101,6 +102,7 @@ impl Iterator for SourceCharIter {
     }
 }
 
+/// Convert a stream of bytes into a stream of unicode characters.
 struct UnicodeCharIterator {
     bytes: OffsetBytes,
 }
