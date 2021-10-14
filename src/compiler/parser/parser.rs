@@ -476,25 +476,6 @@ pub(super) fn id_declaration_list(
     Ok(decls)
 }
 
-fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-    trace!(stream);
-    if stream.test_ifn(vec![Lex::Identifier(StringId::new()), Lex::LParen]) {
-        let (line, span, fn_name) = stream
-            .next_if_id()
-            .expect("CRITICAL: failed to get identifier");
-        let params = routine_call_params(stream)?
-            .ok_or(CompilerError::new(line, ParserError::FnCallExpectedParams))?;
-        Ok(Some(Expression::RoutineCall(
-            ParserContext::new(line, span),
-            RoutineCall::Function,
-            vec![Element::Id(fn_name)].into(),
-            params,
-        )))
-    } else {
-        Ok(None)
-    }
-}
-
 pub(super) fn routine_call_params(
     stream: &mut TokenStream,
 ) -> ParserResult<Vec<Expression<ParserContext>>> {
