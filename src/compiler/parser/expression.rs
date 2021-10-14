@@ -404,19 +404,19 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
 fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     Ok(match stream.next_if(&Lex::While) {
-        Some(token) => {
+        Some(whl) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                token.l,
+                whl.l,
                 ParserError::WhileExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let body = expression_block(stream)?
-                .ok_or(CompilerError::new(token.l, ParserError::WhileMissingBody))?;
+                .ok_or(CompilerError::new(whl.l, ParserError::WhileMissingBody))?;
 
             Some(Expression::While {
-                context: token.to_ctx(),
+                context: whl.to_ctx().join(*body.get_context()),
                 cond: Box::new(cond),
                 body: Box::new(body),
             })

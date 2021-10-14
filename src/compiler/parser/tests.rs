@@ -1129,9 +1129,9 @@ pub mod tests {
             body,
         }) = exp
         {
-            assert_eq!(l, new_ctx(0, 5));
+            assert_eq!(l, new_ctx(0, 14));
             assert_eq!(*cond, Expression::Identifier(new_ctx(7, 8), x));
-            if let Expression::ExpressionBlock(_l, body, None) = *body {
+            if let Expression::ExpressionBlock(_ctx, body, None) = *body {
                 assert_eq!(
                     body[0],
                     Statement::Expression(box Expression::I64(new_ctx(11, 12), 5))
