@@ -269,12 +269,12 @@ pub mod tests {
         let first = table.insert("first".into());
         let second = table.insert("second".into());
 
-        for text in vec![
-            "  thing .first.second",
-            "( thing).first.second",
-            " (thing .first).second",
-            "((thing .first).second)",
-            "( thing .first.second)",
+        for (text, ma_l, ma_h, id_l, id_h) in vec![
+            ("  thing .first.second", 2, 14, 2, 7),
+            ("( thing).first.second", 0, 14, 0, 8),
+            (" (thing .first).second", 1, 15, 2, 7),
+            ("((thing .first).second)", 1, 15, 2, 7),
+            ("( thing .first.second)", 2, 14, 2, 7),
         ] {
             let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
@@ -284,12 +284,12 @@ pub mod tests {
             let mut stream = TokenStream::new(&tokens);
             match expression(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
-                    assert_eq!(ctx.line(), 1);
+                    assert_eq!(ctx.line(), 1); // TODO: This should test the span
                     assert_eq!(
                         *left,
                         Expression::MemberAccess(
-                            new_ctx(8, 9),
-                            Box::new(Expression::Identifier(new_ctx(2, 7), thing)),
+                            new_ctx(ma_l, ma_h),
+                            Box::new(Expression::Identifier(new_ctx(id_l, id_h), thing)),
                             first,
                         ),
                         "Input: {}",

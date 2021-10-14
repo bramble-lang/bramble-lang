@@ -929,7 +929,11 @@ mod test {
 
     #[test]
     fn parse_member_access() {
-        for text in vec![" thing.first", "(thing).first", "(thing.first)"] {
+        for (text, low, high) in vec![
+            (" thing.first", 1, 6),
+            ("(thing).first", 0, 7),
+            ("(thing.first)", 1, 6),
+        ] {
             let mut table = StringTable::new();
             let thing_id = table.insert("thing".into());
             let first_id = table.insert("first".into());
@@ -944,7 +948,7 @@ mod test {
                     assert_eq!(ctx.line(), 1);
                     assert_eq!(
                         *left,
-                        Expression::Identifier(new_ctx(1, 6), thing_id),
+                        Expression::Identifier(new_ctx(low, high), thing_id),
                         "Input: {}",
                         text,
                     );
