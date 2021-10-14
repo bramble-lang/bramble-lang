@@ -137,14 +137,19 @@ impl<'a> TokenStream<'a> {
 mod test_tokenstream {
     use super::TokenStream;
     use crate::compiler::lexer::tokens::{Lex, Token};
-    use crate::compiler::Lexer;
+    use crate::compiler::source::Offset;
+    use crate::compiler::{Lexer, Span};
     use crate::StringTable;
+
+    fn new_span(l: u32, h: u32) -> Span {
+        Span::new(Offset::new(l), Offset::new(h))
+    }
 
     #[test]
     fn test_peek() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -156,8 +161,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: Span::new(Offset::new(0), Offset::new(1)),
             }
         );
     }
@@ -174,7 +179,7 @@ mod test_tokenstream {
     fn test_peek_at() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -186,8 +191,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: new_span(0, 1),
             }
         );
 
@@ -196,8 +201,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: new_span(1, 2),
             }
         );
 
@@ -209,7 +214,7 @@ mod test_tokenstream {
     fn test_next() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -221,8 +226,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: new_span(0, 1),
             }
         );
 
@@ -231,8 +236,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: new_span(1, 2),
             }
         );
 
@@ -241,8 +246,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: new_span(3, 4),
             }
         );
 
@@ -251,8 +256,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 5,
-                s: Lex::I64(4)
+                s: Lex::I64(4),
+                span: new_span(5, 6),
             }
         );
 
@@ -261,8 +266,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 6,
-                s: Lex::RParen
+                s: Lex::RParen,
+                span: new_span(6, 7),
             }
         );
 
@@ -271,8 +276,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 8,
-                s: Lex::Mul
+                s: Lex::Mul,
+                span: new_span(8, 9),
             }
         );
 
@@ -281,8 +286,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 10,
-                s: Lex::I64(3)
+                s: Lex::I64(3),
+                span: new_span(10, 11),
             }
         );
 
@@ -294,7 +299,7 @@ mod test_tokenstream {
     fn test_next_if() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -306,8 +311,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: new_span(0, 1),
             }
         );
 
@@ -316,8 +321,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: new_span(1, 2),
             }
         );
 
@@ -329,8 +334,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: new_span(1, 2),
             }
         );
     }
@@ -339,7 +344,7 @@ mod test_tokenstream {
     fn test_next_ifn() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -352,13 +357,13 @@ mod test_tokenstream {
             vec![
                 Token {
                     l: 1,
-                    c: 0,
-                    s: Lex::LParen
+                    s: Lex::LParen,
+                    span: new_span(0, 1),
                 },
                 Token {
                     l: 1,
-                    c: 1,
-                    s: Lex::I64(2)
+                    s: Lex::I64(2),
+                    span: new_span(1, 2),
                 }
             ]
         );
@@ -368,8 +373,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: new_span(3, 4),
             }
         );
     }
@@ -378,7 +383,7 @@ mod test_tokenstream {
     fn test_if_one_of() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -393,10 +398,10 @@ mod test_tokenstream {
     }
 
     #[test]
-    fn test_next_if_on_of() {
+    fn test_next_if_one_of() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -408,8 +413,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 0,
-                s: Lex::LParen
+                s: Lex::LParen,
+                span: new_span(0, 1),
             }
         );
         let p = ts.peek().unwrap();
@@ -417,8 +422,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: new_span(1, 2),
             }
         );
 
@@ -427,8 +432,8 @@ mod test_tokenstream {
             p,
             Token {
                 l: 1,
-                c: 1,
-                s: Lex::I64(2)
+                s: Lex::I64(2),
+                span: new_span(1, 2),
             }
         );
         let p = ts.peek().unwrap();
@@ -436,8 +441,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: new_span(3, 4),
             }
         );
 
@@ -448,8 +453,8 @@ mod test_tokenstream {
             *p,
             Token {
                 l: 1,
-                c: 3,
-                s: Lex::Add
+                s: Lex::Add,
+                span: new_span(3, 4),
             }
         );
     }

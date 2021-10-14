@@ -22,7 +22,7 @@ pub mod tests {
         {
             let mut table = StringTable::new();
             let a = table.insert("a".into());
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -47,7 +47,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let a = table.insert("a".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -85,7 +85,7 @@ pub mod tests {
         .iter()
         {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -112,7 +112,7 @@ pub mod tests {
         .iter()
         {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -134,7 +134,7 @@ pub mod tests {
     fn parse_nested_arithmetic_expression() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -161,7 +161,7 @@ pub mod tests {
     fn parse_boolean_expression() {
         let text = "true || false";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -212,7 +212,7 @@ pub mod tests {
         ] {
             test += 1;
             println!("Test #{}", test);
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -260,7 +260,7 @@ pub mod tests {
             "((thing.first).second)",
             "(thing.first.second)",
         ] {
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -293,7 +293,7 @@ pub mod tests {
         let text = "let x:i64 := 5;";
         let mut table = StringTable::new();
         let x = table.insert("x".into());
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -316,7 +316,7 @@ pub mod tests {
         let text = "let mut x:i64 := 5;";
         let mut table = StringTable::new();
         let x = table.insert("x".into());
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -360,7 +360,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let x = table.insert("x".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -387,7 +387,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -410,7 +410,7 @@ pub mod tests {
         let test = table.insert("test".into());
         let test_mod = table.insert("test_mod".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -431,7 +431,7 @@ pub mod tests {
         let test_fn_mod = table.insert("test_fn_mod".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -489,7 +489,7 @@ pub mod tests {
         let test = table.insert("test".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -543,7 +543,7 @@ pub mod tests {
         let my_struct = table.insert("my_struct".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -580,7 +580,7 @@ pub mod tests {
         let my_fn = table.insert("my_fn".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -619,7 +619,7 @@ pub mod tests {
         let my_fn = table.insert("my_fn".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -657,7 +657,7 @@ pub mod tests {
         let x = table.insert("x".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -693,7 +693,7 @@ pub mod tests {
         let x = table.insert("x".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -739,7 +739,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -755,7 +755,7 @@ pub mod tests {
         let y = table.insert("y".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -783,7 +783,7 @@ pub mod tests {
         let y = table.insert("y".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -812,7 +812,7 @@ pub mod tests {
         let test = table.insert("test".into());
         let test_mod = table.insert("test_mod".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -851,7 +851,7 @@ pub mod tests {
         let x = table.insert("x".into());
         let c = table.insert("c".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -886,7 +886,7 @@ pub mod tests {
         let b = table.insert("b".into());
         let c = table.insert("c".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -920,7 +920,7 @@ pub mod tests {
         let x = table.insert("x".into());
         let cor = table.insert("cor".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -963,7 +963,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -1003,7 +1003,7 @@ pub mod tests {
         let y = table.insert("y".into());
         let z = table.insert("z".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -1068,7 +1068,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -1119,7 +1119,7 @@ pub mod tests {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1182,7 +1182,7 @@ pub mod tests {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1204,7 +1204,7 @@ pub mod tests {
             ("fn test() -> String {return \"test\";}", test),
             ("fn test() -> String {return \"test 2\";}", test2),
         ] {
-            let tokens: Vec<Token> = Lexer::new(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()

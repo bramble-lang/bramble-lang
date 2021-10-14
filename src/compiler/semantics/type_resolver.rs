@@ -3,7 +3,7 @@ use crate::{
     compiler::{
         ast::*,
         import::Import,
-        parser::parser::ParserContext,
+        parser::ParserContext,
         semantics::semanticnode::{SemanticAst, SemanticNode},
         semantics::symbol_table::*,
         CompilerError,

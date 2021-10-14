@@ -1,6 +1,8 @@
-// Contains a macro and therefore this must be imported before all other modules
-mod error;
+// Modules that are needed only within the compiler
+mod error; // Contains a macro and therefore this must be imported before all other modules
+mod source;
 
+// Modules which should be accessible outside of  the [`compiler`] module
 pub mod ast;
 pub mod import;
 pub mod lexer;
@@ -9,9 +11,14 @@ pub mod parser;
 pub mod semantics;
 pub mod stringtable;
 
+// Expose certain compiler items outside of the module because they are key parts
+// of the interface between the compiler and modules which use the compiler.
 pub use error::CompilerError;
-
 pub use lexer::lexer::Lexer;
+pub use source::{SourceCharIter, SourceError, SourceMap, SourceMapError, Span};
+
+// Import items for use within the compiler submodule which are not needed outside
+use source::SourceChar;
 
 use crate::{StringTable, StringTableError};
 

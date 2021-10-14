@@ -13,6 +13,7 @@ use crate::{
     diagnostics::{config::TracingConfig, Diag, DiagData},
 };
 
+use super::ParserContext;
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
@@ -24,7 +25,6 @@ use super::{
 };
 use super::{tokenstream::TokenStream, ParserError};
 
-pub type ParserContext = u32;
 type HasVarArgs = bool;
 
 impl Context for ParserContext {
@@ -570,9 +570,8 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
     let ty = match stream.peek() {
         Some(Token {
-            l: _,
-            c: _,
             s: Lex::Primitive(primitive),
+            ..
         }) => {
             let ty = match *primitive {
                 Primitive::U8 => Some(Type::U8),
