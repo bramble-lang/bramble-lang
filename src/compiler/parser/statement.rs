@@ -130,8 +130,8 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
     trace!(stream);
     match stream.next_if(&Lex::Init) {
         Some(init_tok) => match path(stream)? {
-            Some((path_ctx, path)) => {
-                let (params_ctx, params) = routine_call_params(stream)?.ok_or(
+            Some((path, path_ctx)) => {
+                let (params, params_ctx) = routine_call_params(stream)?.ok_or(
                     CompilerError::new(path_ctx.line(), ParserError::ExpectedParams),
                 )?;
                 Ok(Some(Expression::RoutineCall(

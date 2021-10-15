@@ -432,15 +432,15 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
 fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     let s: Option<Expression<ParserContext>> = match path(stream)? {
-        Some((call_ctx, path)) => match routine_call_params(stream)? {
-            Some((params_ctx, params)) => Some(Expression::RoutineCall(
+        Some((path, call_ctx)) => match routine_call_params(stream)? {
+            Some((params, params_ctx)) => Some(Expression::RoutineCall(
                 call_ctx.join(params_ctx),
                 RoutineCall::Function,
                 path,
                 params.clone(),
             )),
             None => match struct_expression_params(stream)? {
-                Some((params_ctx, params)) => Some(Expression::StructExpression(
+                Some((params, params_ctx)) => Some(Expression::StructExpression(
                     call_ctx.join(params_ctx),
                     path,
                     params.clone(),
@@ -485,7 +485,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
 
 fn struct_expression_params(
     stream: &mut TokenStream,
-) -> ParserResult<(ParserContext, Vec<(StringId, Expression<ParserContext>)>)> {
+) -> ParserResult<(Vec<(StringId, Expression<ParserContext>)>, ParserContext)> {
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(lbrace) => {
@@ -507,7 +507,7 @@ fn struct_expression_params(
                 .next_must_be(&Lex::RBrace)?
                 .to_ctx()
                 .join(lbrace.to_ctx());
-            Ok(Some((ctx, params)))
+            Ok(Some((params, ctx)))
         }
         _ => Ok(None),
     }

@@ -453,7 +453,7 @@ fn parameter_list(
     // Convert tuples into parameters
     let params = params
         .iter()
-        .map(|(ctx, name, ty)| Parameter {
+        .map(|(name, ty, ctx)| Parameter {
             context: *ctx,
             name: *name,
             ty: ty.clone(),
@@ -465,14 +465,14 @@ fn parameter_list(
 
 pub(super) fn id_declaration_list(
     stream: &mut TokenStream,
-) -> Result<Vec<(ParserContext, StringId, Type)>, CompilerError<ParserError>> {
+) -> Result<Vec<(StringId, Type, ParserContext)>, CompilerError<ParserError>> {
     trace!(stream);
     let mut decls = vec![];
 
     while let Some(token) = id_declaration(stream)? {
         match token {
             Expression::IdentifierDeclare(ctx, id, ty) => {
-                decls.push((ctx, id, ty));
+                decls.push((id, ty, ctx));
                 stream.next_if(&Lex::Comma);
             }
             _ => panic!("CRITICAL: IdDeclaration not returned by id_declaration"),
@@ -484,7 +484,7 @@ pub(super) fn id_declaration_list(
 
 pub(super) fn routine_call_params(
     stream: &mut TokenStream,
-) -> ParserResult<(ParserContext, Vec<Expression<ParserContext>>)> {
+) -> ParserResult<(Vec<Expression<ParserContext>>, ParserContext)> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
         Some(lparen) => {
@@ -505,13 +505,13 @@ pub(super) fn routine_call_params(
                 .next_must_be(&Lex::RParen)?
                 .to_ctx()
                 .join(lparen.to_ctx());
-            Ok(Some((ctx, params)))
+            Ok(Some((params, ctx)))
         }
         _ => Ok(None),
     }
 }
 
-pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(ParserContext, Path)> {
+pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContext)> {
     trace!(stream);
     let mut path = vec![];
 
@@ -559,7 +559,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(ParserContext, Pat
         ctx = ctx.extend(span);
     }
 
-    Ok(Some((ctx, path.into())))
+    Ok(Some((path.into(), ctx)))
 }
 
 fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -597,7 +597,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)>
             ty.map(|ty| (ty, ctx))
         }
         _ => match path(stream)? {
-            Some((path_ctx, path)) => Some((Type::Custom(path), path_ctx)),
+            Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx)),
             _ => match array_type(stream)? {
                 Some((ty, ctx)) => Some((ty, ctx)),
                 None => None,
