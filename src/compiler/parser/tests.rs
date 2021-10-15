@@ -999,7 +999,7 @@ pub mod tests {
                     assert_eq!(
                         *r.get_value(),
                         Some(Expression::Yield(
-                            new_ctx(37, 40),
+                            new_ctx(31, 40),
                             Box::new(Expression::Identifier(new_ctx(37, 40), cor))
                         ))
                     );

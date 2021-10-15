@@ -469,13 +469,14 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
     trace!(stream);
     match stream.next_if(&Lex::Yield) {
         Some(token) => {
-            let line = token.to_ctx();
+            let ctx = token.to_ctx();
             match expression(stream)? {
                 Some(coroutine) => {
-                    Expression::new_yield(*coroutine.get_context(), Box::new(coroutine))
+                    let ctx = ctx.join(*coroutine.get_context());
+                    Expression::new_yield(ctx, Box::new(coroutine))
                 }
                 None => {
-                    err!(line.line(), ParserError::YieldExpectedIdentifier)
+                    err!(ctx.line(), ParserError::YieldExpectedIdentifier)
                 }
             }
         }
