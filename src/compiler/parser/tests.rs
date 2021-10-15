@@ -458,7 +458,7 @@ pub mod tests {
             .unwrap();
 
         if let Some(m) = parse(test, &tokens).unwrap() {
-            assert_eq!(*m.get_context(), new_ctx(0, 3));
+            assert_eq!(*m.get_context(), new_ctx(0, 44));
             assert_eq!(m.get_name(), test);
 
             assert_eq!(m.get_modules().len(), 1);
@@ -862,7 +862,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         if let Some(m) = parse(test_mod, &tokens).unwrap() {
-            assert_eq!(*m.get_context(), new_ctx(0, 2));
+            assert_eq!(*m.get_context(), new_ctx(0, 37));
             if let Some(Item::Routine(RoutineDef {
                 context,
                 def: RoutineDefType::Coroutine,

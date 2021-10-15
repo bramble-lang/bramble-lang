@@ -140,11 +140,11 @@ impl Parser {
 }
 
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
-    let mut stream = TokenStream::new(&tokens);
-
-    let module_ctx = stream.peek().unwrap().to_ctx();
+    let module_ctx =
+        ctx_for_tokens(&tokens).ok_or(CompilerError::new(0, ParserError::EmptyProject))?;
     let mut module = Module::new(name, module_ctx);
 
+    let mut stream = TokenStream::new(&tokens);
     while stream.peek().is_some() {
         let start_index = stream.index();
         parse_items_into(&mut stream, &mut module)?;
@@ -664,4 +664,13 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
         }
         None => Ok(None),
     }
+}
+
+/// Compute the minimum span that covers all the tokens in the slice.
+fn ctx_for_tokens(tokens: &[Token]) -> Option<ParserContext> {
+    // The vector of tokens is assumed to be ordered by their Offsets and that no
+    // two tokens have intersecting spans.
+    tokens
+        .first()
+        .and_then(|f| tokens.last().map(|l| f.to_ctx().join(l.to_ctx())))
 }
