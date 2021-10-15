@@ -26,8 +26,8 @@ use inkwell::{
 
 use crate::{
     compiler::{
-        ast::Element,
-        import::{Import, ImportRoutineDef},
+        ast::{Element, StructDef},
+        import::{Import, ImportRoutineDef, ImportStructDef},
     },
     result::Result,
     StringId, StringTable,
@@ -57,7 +57,7 @@ pub struct IrGen<'ctx> {
     string_pool: StringPool<'ctx>,
     string_table: &'ctx StringTable,
     registers: RegisterLookup<'ctx>,
-    struct_table: HashMap<String, &'ctx ast::StructDef<SemanticContext>>,
+    struct_table: HashMap<String, ast::StructDef<SemanticContext>>,
     fn_use_out_param: HashSet<String>,
 }
 
@@ -233,7 +233,7 @@ impl<'ctx> IrGen<'ctx> {
         for manifest in self.imports {
             // Add imported structures to the LLVM Module
             for sd in &manifest.structs {
-                self.add_struct_def(sd)
+                self.add_import_struct_def(sd)
             }
         }
 
@@ -373,7 +373,7 @@ impl<'ctx> IrGen<'ctx> {
             sd.get_context()
                 .canonical_path()
                 .to_label(self.string_table),
-            sd,
+            sd.clone(),
         );
         let name = sd
             .get_context()
@@ -395,6 +395,31 @@ impl<'ctx> IrGen<'ctx> {
             })
             .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
+        struct_ty.set_body(&fields_llvm, false);
+    }
+
+    /// Add a struct definition to the LLVM context and module.
+    fn add_import_struct_def(&mut self, sd: &'ctx ImportStructDef) {
+        let name = sd.path.to_label(self.string_table);
+        let struct_ty = self.context.opaque_struct_type(&name);
+
+        let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
+            .fields
+            .iter()
+            .filter_map(|(field_name, field_ty)| {
+                // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
+                match field_ty {
+                    ast::Type::Custom(_) => field_ty.to_llvm_ir(self),
+                    _ => field_ty.to_llvm_ir(self),
+                }
+                .map_err(|e| format!("L{}: {}", 0, e))
+                .unwrap()
+                .into_basic_type()
+                .ok()
+            })
+            .collect();
+
+        self.struct_table.insert(name, sd.into());
         struct_ty.set_body(&fields_llvm, false);
     }
 
@@ -1190,5 +1215,11 @@ impl<'ctx> LlvmToBasicTypeEnum<'ctx> for AnyTypeEnum<'ctx> {
                 todo!("Not implemented")
             }
         }
+    }
+}
+
+impl From<&ImportStructDef> for StructDef<SemanticContext> {
+    fn from(_: &ImportStructDef) -> Self {
+        todo!()
     }
 }

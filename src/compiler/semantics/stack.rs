@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use log::*;
 
 use crate::compiler::{
-    ast::{Element, Module, Node, Path, StructDef, Type},
-    import::{Import, ImportRoutineDef},
+    ast::{Element, Module, Node, Path, Type},
+    import::{Import, ImportRoutineDef, ImportStructDef},
 };
 use crate::StringId;
 
@@ -62,7 +62,7 @@ impl<'a> SymbolTableScopeStack {
         // imported structures (If any semantic analysis is done on functions)
         for import in imports.into_iter() {
             for sd in import.structs.iter() {
-                debug!("Import struct {}", sd);
+                debug!("Import struct {}", sd.path);
                 self.import_structdef(sd);
             }
         }
@@ -99,17 +99,17 @@ impl<'a> SymbolTableScopeStack {
 
     /// Add a function from another module to this symbol table
     /// So that calls to external functions can be type checked.
-    pub fn import_structdef(&mut self, sd: &StructDef<SemanticContext>) -> Option<Symbol> {
-        let canon_path = sd.get_context().canonical_path();
+    pub fn import_structdef(&mut self, sd: &ImportStructDef) -> Option<Symbol> {
+        let canon_path = sd.path.clone();
         match canon_path.item() {
             Some(item) => self.imported_symbols.insert(
                 canon_path.to_string(),
                 Symbol {
                     name: item.into(),
                     ty: Type::StructDef(
-                        sd.get_fields()
+                        sd.fields
                             .iter()
-                            .map(|p| (p.name.clone(), p.ty.clone()))
+                            .map(|(f_name, f_ty)| (f_name.clone(), f_ty.clone()))
                             .collect(),
                     ),
                     mutable: false,

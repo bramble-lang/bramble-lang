@@ -80,7 +80,7 @@ fn main() {
     let trace_type_resolver = get_type_resolver_tracing(&config);
 
     let imports: Result<Vec<_>, _> = manifests
-        .iter()
+        .into_iter()
         .map(|m| m.to_import(&mut string_table))
         .collect();
 

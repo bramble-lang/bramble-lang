@@ -2,14 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        ast::{
-            Element, Item, Module, Node, Parameter, Path, RoutineDef, RoutineDefType, StructDef,
-            Type,
-        },
-        import::{Import, ImportRoutineDef},
-        parser::ParserContext,
+        ast::{Element, Item, Module, Node, Path, RoutineDef, RoutineDefType, StructDef, Type},
+        import::{Import, ImportRoutineDef, ImportStructDef},
         semantics::semanticnode::SemanticContext,
-        CompilerDisplay, CompilerDisplayError, Span,
+        CompilerDisplay, CompilerDisplayError,
     },
     StringTable,
 };
@@ -69,15 +65,15 @@ impl Manifest {
 
     /// Convert a Manifest of a Braid artifact to set of definitions which can be used
     /// by the compiler for imported items.
-    pub fn to_import(&self, st: &mut StringTable) -> Result<Import, ManifestError> {
+    pub fn to_import(self, st: &mut StringTable) -> Result<Import, ManifestError> {
         let structs = self
             .structs
-            .iter()
+            .into_iter()
             .map(|s| s.to_sd(st))
             .collect::<Result<_, _>>()?;
         let funcs = self
             .routines
-            .iter()
+            .into_iter()
             .map(|r| r.to_rd(st))
             .collect::<Result<_, _>>()?;
 
@@ -129,7 +125,7 @@ impl ManifestRoutineDef {
         })
     }
 
-    fn to_rd(&self, st: &mut StringTable) -> Result<ImportRoutineDef, ManifestError> {
+    fn to_rd(self, st: &mut StringTable) -> Result<ImportRoutineDef, ManifestError> {
         let path = string_to_path(st, &self.canon_path)?;
         let params = self
             .params
@@ -172,25 +168,15 @@ impl ManifestStructDef {
         })
     }
 
-    fn to_sd(&self, st: &mut StringTable) -> Result<StructDef<SemanticContext>, ManifestError> {
-        let mut ctx =
-            SemanticContext::new_local(0, ParserContext::new(0, Span::zero()), Type::Unit);
-        ctx.set_canonical_path(string_to_path(st, &self.canon_path)?);
-
-        let name = st.insert(self.name.clone());
+    fn to_sd(self, st: &mut StringTable) -> Result<ImportStructDef, ManifestError> {
+        let canon_path = string_to_path(st, &self.canon_path)?;
         let fields = self
             .fields
             .iter()
-            .map(|(fnm, fty)| {
-                Ok(Parameter {
-                    context: ctx.clone(),
-                    name: st.insert(fnm.into()),
-                    ty: fty.to_ty(st)?,
-                })
-            })
+            .map(|(fnm, fty)| Ok((st.insert(fnm.into()), fty.to_ty(st)?)))
             .collect::<Result<Vec<_>, ManifestError>>()?;
 
-        Ok(StructDef::new(name, ctx, fields))
+        Ok(ImportStructDef::new(canon_path, fields))
     }
 }
 

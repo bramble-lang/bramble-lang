@@ -1,7 +1,6 @@
-use super::{
-    ast::{Path, StructDef, Type},
-    semantics::semanticnode::SemanticContext,
-};
+use crate::StringId;
+
+use super::ast::{Path, Type};
 
 /// Items which are imported from external libraries, projects, or modules.
 /// These definitions come from the manifests generated when those external
@@ -11,7 +10,7 @@ use super::{
 /// are used correctly.
 pub struct Import {
     /// Structs imported from an external artifact
-    pub structs: Vec<StructDef<SemanticContext>>,
+    pub structs: Vec<ImportStructDef>,
 
     /// Functions imported from an external artifact
     pub funcs: Vec<ImportRoutineDef>,
@@ -36,10 +35,17 @@ impl ImportRoutineDef {
     }
 }
 
+/// A structure which is imported from an external module or library
 pub struct ImportStructDef {
-    /// The canonical path of this routine within it's host module
+    /// The canonical path of this structure within it's host module
     pub path: Path,
 
-    /// The parameter list of this routine
-    pub params: Vec<Type>,
+    /// The field list of this structure
+    pub fields: Vec<(StringId, Type)>,
+}
+
+impl ImportStructDef {
+    pub fn new(path: Path, fields: Vec<(StringId, Type)>) -> ImportStructDef {
+        ImportStructDef { path, fields }
+    }
 }
