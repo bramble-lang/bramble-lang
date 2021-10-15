@@ -14,5 +14,24 @@ pub struct Import {
     pub structs: Vec<StructDef<SemanticContext>>,
 
     /// Functions imported from an external artifact
-    pub funcs: Vec<(Path, Vec<Type>, Type)>,
+    pub funcs: Vec<ImportRoutineDef>,
+}
+
+/// Describes the parameter list and the return type of a function defined
+/// in an external module or library.
+pub struct ImportRoutineDef {
+    /// The canonical path of the routine within it's host module
+    pub path: Path,
+
+    /// The parameter list of the routine
+    pub params: Vec<Type>,
+
+    /// The type that the routine resolves to
+    pub ty: Type,
+}
+
+impl ImportRoutineDef {
+    pub fn new(path: Path, params: Vec<Type>, ty: Type) -> ImportRoutineDef {
+        ImportRoutineDef { path, params, ty }
+    }
 }

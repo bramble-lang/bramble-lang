@@ -6,7 +6,7 @@ use crate::{
             Element, Item, Module, Node, Parameter, Path, RoutineDef, RoutineDefType, StructDef,
             Type,
         },
-        import::Import,
+        import::{Import, ImportRoutineDef},
         parser::ParserContext,
         semantics::semanticnode::SemanticContext,
         CompilerDisplay, CompilerDisplayError, Span,
@@ -129,7 +129,7 @@ impl ManifestRoutineDef {
         })
     }
 
-    fn to_rd(&self, st: &mut StringTable) -> Result<(Path, Vec<Type>, Type), ManifestError> {
+    fn to_rd(&self, st: &mut StringTable) -> Result<ImportRoutineDef, ManifestError> {
         let path = string_to_path(st, &self.canon_path)?;
         let params = self
             .params
@@ -138,7 +138,7 @@ impl ManifestRoutineDef {
             .collect::<Result<_, ManifestError>>()?;
         let ret_ty = self.ret_ty.to_ty(st)?;
 
-        Ok((path, params, ret_ty))
+        Ok(ImportRoutineDef::new(path, params, ret_ty))
     }
 }
 

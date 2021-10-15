@@ -25,7 +25,10 @@ use inkwell::{
 };
 
 use crate::{
-    compiler::{ast::Element, import::Import},
+    compiler::{
+        ast::Element,
+        import::{Import, ImportRoutineDef},
+    },
     result::Result,
     StringId, StringTable,
 };
@@ -237,7 +240,7 @@ impl<'ctx> IrGen<'ctx> {
         // Add all function definitions that are imported from other projects
         for manifest in self.imports {
             // Add imported functions to the LLVM Module
-            for (path, params, ty) in &manifest.funcs {
+            for ImportRoutineDef { path, params, ty } in &manifest.funcs {
                 self.add_fn_decl(&path.to_label(self.string_table), params, false, ty, 0);
             }
         }

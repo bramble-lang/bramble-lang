@@ -4,7 +4,7 @@ use log::*;
 
 use crate::compiler::{
     ast::{Element, Module, Node, Path, StructDef, Type},
-    import::Import,
+    import::{Import, ImportRoutineDef},
 };
 use crate::StringId;
 
@@ -68,9 +68,9 @@ impl<'a> SymbolTableScopeStack {
         }
 
         for import in imports.into_iter() {
-            for (path, params, ret_ty) in import.funcs.iter() {
+            for ImportRoutineDef { path, params, ty } in import.funcs.iter() {
                 debug!("Import function {}", path);
-                self.import_function(path.clone(), params.clone(), ret_ty.clone());
+                self.import_function(path.clone(), params.clone(), ty.clone());
             }
         }
     }
