@@ -32,11 +32,11 @@ impl Manifest {
     ) -> Result<Self, ManifestError> {
         let routines = routines
             .iter()
-            .map(|r| ManifestRoutineDef::from_rd(st, r))
+            .map(|r| ManifestRoutineDef::from_rd(r, st))
             .collect::<Result<Vec<_>, ManifestError>>()?;
         let structs = structs
             .iter()
-            .map(|s| ManifestStructDef::from_sd(st, s))
+            .map(|s| ManifestStructDef::from_sd(s, st))
             .collect::<Result<Vec<_>, ManifestError>>()?;
 
         Ok(Manifest { routines, structs })
@@ -109,7 +109,7 @@ struct ManifestRoutineDef {
 }
 
 impl ManifestRoutineDef {
-    fn from_rd(st: &StringTable, rd: &RoutineDef<SemanticContext>) -> Result<Self, ManifestError> {
+    fn from_rd(rd: &RoutineDef<SemanticContext>, st: &StringTable) -> Result<Self, ManifestError> {
         let name = st.get(rd.name)?.into();
         let params = rd
             .params
@@ -152,7 +152,7 @@ struct ManifestStructDef {
 }
 
 impl ManifestStructDef {
-    fn from_sd(st: &StringTable, sd: &StructDef<SemanticContext>) -> Result<Self, ManifestError> {
+    fn from_sd(sd: &StructDef<SemanticContext>, st: &StringTable) -> Result<Self, ManifestError> {
         let name = st.get(sd.get_name())?.into();
         let canon_path = path_to_string(st, sd.get_context().canonical_path())?;
         let fields = sd

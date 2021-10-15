@@ -35,3 +35,11 @@ impl ImportRoutineDef {
         ImportRoutineDef { path, params, ty }
     }
 }
+
+pub struct ImportStructDef {
+    /// The canonical path of this routine within it's host module
+    pub path: Path,
+
+    /// The parameter list of this routine
+    pub params: Vec<Type>,
+}
