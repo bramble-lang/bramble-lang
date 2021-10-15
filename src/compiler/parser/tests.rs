@@ -488,7 +488,7 @@ pub mod tests {
                 assert_eq!(*name, test);
                 assert_eq!(
                     params,
-                    &vec![Parameter::new(new_ctx(26, 27), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(26, 31), x, &Type::I64)]
                 );
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
@@ -544,7 +544,7 @@ pub mod tests {
                 assert_eq!(*name, test);
                 assert_eq!(
                     params,
-                    &vec![Parameter::new(new_ctx(26, 27), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(26, 31), x, &Type::I64)]
                 );
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
@@ -592,7 +592,7 @@ pub mod tests {
                 assert_eq!(sd.get_name(), my_struct);
                 assert_eq!(
                     sd.get_fields(),
-                    &vec![Parameter::new(new_ctx(39, 40), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(39, 45), x, &Type::I64)]
                 );
             }
         } else {
@@ -633,7 +633,7 @@ pub mod tests {
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
-                    &vec![Parameter::new(new_ctx(38, 39), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(38, 44), x, &Type::I64)]
                 );
                 assert_eq!(e.get_return_type(), Type::I32);
             }
@@ -675,7 +675,7 @@ pub mod tests {
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
-                    &vec![Parameter::new(new_ctx(38, 39), x, &Type::I64)]
+                    &vec![Parameter::new(new_ctx(38, 44), x, &Type::I64)]
                 );
                 assert_eq!(e.get_return_type(), Type::I32);
                 assert_eq!(e.has_varargs, true);
@@ -709,7 +709,7 @@ pub mod tests {
         {
             assert_eq!(*l, new_ctx(0, 24));
             assert_eq!(*name, test);
-            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 13), x, &Type::I64)]);
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -745,7 +745,7 @@ pub mod tests {
         {
             assert_eq!(*l, new_ctx(0, 37));
             assert_eq!(*name, test);
-            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 13), x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -874,7 +874,7 @@ pub mod tests {
             {
                 assert_eq!(*context, new_ctx(0, 37));
                 assert_eq!(*name, test);
-                assert_eq!(params, &vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
+                assert_eq!(params, &vec![Parameter::new(new_ctx(8, 13), x, &Type::I64)]);
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
@@ -991,7 +991,7 @@ pub mod tests {
         {
             assert_eq!(*ctx, new_ctx(0, 42));
             assert_eq!(*name, test);
-            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 9), x, &Type::I64)]);
+            assert_eq!(*params, vec![Parameter::new(new_ctx(8, 13), x, &Type::I64)]);
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
@@ -1169,7 +1169,7 @@ pub mod tests {
                 StructDef::new(
                     my_struct,
                     new_ctx(0, 24),
-                    vec![Parameter::new(new_ctx(17, 18), x, &Type::I64)],
+                    vec![Parameter::new(new_ctx(17, 23), x, &Type::I64)],
                 ),
             ),
             (
@@ -1178,8 +1178,8 @@ pub mod tests {
                     my_struct,
                     new_ctx(0, 33),
                     vec![
-                        Parameter::new(new_ctx(17, 18), x, &Type::I64),
-                        Parameter::new(new_ctx(25, 26), y, &Type::Bool),
+                        Parameter::new(new_ctx(17, 23), x, &Type::I64),
+                        Parameter::new(new_ctx(25, 32), y, &Type::Bool),
                     ],
                 ),
             ),

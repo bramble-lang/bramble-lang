@@ -50,9 +50,8 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
             }
             _ => {
                 if must_have_semicolon {
-                    let line = stm.get_context().line();
                     err!(
-                        line,
+                        stm.get_context().line(),
                         ParserError::ExpectedButFound(
                             vec![Lex::Semicolon],
                             stream.peek().map(|x| x.s.clone())
@@ -131,9 +130,10 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
     trace!(stream);
     match stream.next_if(&Lex::Init) {
         Some(init_tok) => match path(stream)? {
-            Some((l, path)) => {
-                let (params_ctx, params) = routine_call_params(stream)?
-                    .ok_or(CompilerError::new(l.line(), ParserError::ExpectedParams))?;
+            Some((path_ctx, path)) => {
+                let (params_ctx, params) = routine_call_params(stream)?.ok_or(
+                    CompilerError::new(path_ctx.line(), ParserError::ExpectedParams),
+                )?;
                 Ok(Some(Expression::RoutineCall(
                     init_tok.to_ctx().join(params_ctx),
                     RoutineCall::CoroutineInit,

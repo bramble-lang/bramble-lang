@@ -67,11 +67,10 @@ pub trait ParserCombinator<R> {
 
 impl Expression<ParserContext> {
     pub fn new_yield(
-        line: ParserContext,
+        ctx: ParserContext,
         coroutine_value: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
-        let i = line;
-        Ok(Some(Expression::Yield(i, coroutine_value)))
+        Ok(Some(Expression::Yield(ctx, coroutine_value)))
     }
 
     pub fn unary_op(
@@ -491,10 +490,10 @@ fn struct_expression_params(
     match stream.next_if(&Lex::LBrace) {
         Some(lbrace) => {
             let mut params = vec![];
-            while let Some((line, _span, field_name)) = stream.next_if_id() {
+            while let Some((ctx, _span, field_name)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(CompilerError::new(
-                    line,
+                    ctx,
                     ParserError::StructExpectedFieldExpr(field_name),
                 ))?;
                 params.push((field_name, field_value));
