@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{sourcechar::SourceCharIter, Offset};
+use super::{sourcechar::SourceCharIter, Offset, Span};
 
 /// The SourceMap keeps a table of input source files and the range of teh Global
 /// Offset which maps to that source file.
@@ -82,6 +82,16 @@ impl SourceMap {
     pub fn get(&self, idx: usize) -> Option<&SourceMapEntry> {
         if idx < self.len() {
             Some(&self.map[idx])
+        } else {
+            None
+        }
+    }
+
+    /// Returns a Span that covers the entire source code space.
+    /// This will return `None` if there is no source code
+    pub fn span(&self) -> Option<Span> {
+        if self.offset_high > Offset::new(0) {
+            Some(Span::new(Offset::new(0), self.offset_high))
         } else {
             None
         }

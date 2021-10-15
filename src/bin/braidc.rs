@@ -41,7 +41,7 @@ fn main() {
     let stop_stage = get_stage(&config).unwrap();
 
     let trace_lexer = get_lexer_tracing(&config);
-    let token_sets = match tokenize_source_map(&mut string_table, sourcemap, trace_lexer, src_path)
+    let token_sets = match tokenize_source_map(&sourcemap, &mut string_table, trace_lexer, src_path)
     {
         Ok(ts) => ts,
         Err(errs) => {
@@ -56,7 +56,13 @@ fn main() {
 
     let trace_parser = get_parser_tracing(&config);
     let project_name_id = string_table.insert(project_name.into());
-    let root = match parse_project(&mut string_table, project_name_id, token_sets, trace_parser) {
+    let root = match parse_project(
+        project_name_id,
+        token_sets,
+        &sourcemap,
+        &mut string_table,
+        trace_parser,
+    ) {
         Ok(root) => root,
         Err(errs) => {
             print_errs(&string_table, &errs);
