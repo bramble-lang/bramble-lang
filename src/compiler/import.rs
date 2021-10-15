@@ -20,13 +20,13 @@ pub struct Import {
 /// Describes the parameter list and the return type of a function defined
 /// in an external module or library.
 pub struct ImportRoutineDef {
-    /// The canonical path of the routine within it's host module
+    /// The canonical path of this routine within it's host module
     pub path: Path,
 
-    /// The parameter list of the routine
+    /// The parameter list of this routine
     pub params: Vec<Type>,
 
-    /// The type that the routine resolves to
+    /// The type that this routine resolves to
     pub ty: Type,
 }
 
