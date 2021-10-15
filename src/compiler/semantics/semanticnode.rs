@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{ast::*, parser::ParserContext},
+    compiler::{ast::*, parser::ParserContext, Span},
     diagnostics::{Diag, DiagData},
 };
 use crate::{diagnostics::config::TracingConfig, StringId};
@@ -10,6 +10,7 @@ use super::{error::SemanticError, symbol_table::SymbolTable};
 pub struct SemanticContext {
     id: u32,
     ln: u32,
+    span: Span,
     ty: Type,
     sym: SymbolTable,
     canonical_path: Path,
@@ -22,6 +23,10 @@ impl Context for SemanticContext {
 
     fn line(&self) -> u32 {
         self.ln
+    }
+
+    fn span(&self) -> Span {
+        self.span
     }
 }
 
@@ -62,6 +67,7 @@ impl SemanticContext {
         SemanticContext {
             id,
             ln: ctx.line(),
+            span: ctx.span(),
             ty,
             sym: SymbolTable::new(),
             canonical_path: Path::new(),
@@ -72,6 +78,7 @@ impl SemanticContext {
         SemanticContext {
             id,
             ln: ctx.line(),
+            span: ctx.span(),
             ty,
             sym: SymbolTable::new_routine(name),
             canonical_path: Path::new(),
@@ -82,6 +89,7 @@ impl SemanticContext {
         SemanticContext {
             id,
             ln: ctx.line(),
+            span: ctx.span(),
             ty: Type::Unit,
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),

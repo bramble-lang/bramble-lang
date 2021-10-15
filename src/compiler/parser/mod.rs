@@ -48,6 +48,10 @@ impl Context for ParserContext {
     fn line(&self) -> u32 {
         self.line
     }
+
+    fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl Diag for ParserContext {

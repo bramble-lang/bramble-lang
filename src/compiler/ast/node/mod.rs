@@ -3,6 +3,7 @@ use std::fmt::Display;
 mod iter;
 mod map;
 
+use crate::compiler::Span;
 use crate::StringId;
 
 pub use self::iter::{PostOrderIter, PreOrderIter};
@@ -54,4 +55,5 @@ impl Display for NodeType {
 pub trait Context {
     fn id(&self) -> u32;
     fn line(&self) -> u32;
+    fn span(&self) -> Span;
 }

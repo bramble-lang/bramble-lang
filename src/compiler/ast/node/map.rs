@@ -375,6 +375,7 @@ where
 mod test {
     use super::*;
     use crate::compiler::ast::{module::Module, ty::Type};
+    use crate::compiler::Span;
     use crate::diagnostics::DiagData;
     use crate::StringTable;
 
@@ -385,6 +386,10 @@ mod test {
 
         fn line(&self) -> u32 {
             0
+        }
+
+        fn span(&self) -> Span {
+            Span::zero()
         }
     }
 
@@ -404,6 +409,10 @@ mod test {
         fn line(&self) -> u32 {
             0
         }
+
+        fn span(&self) -> Span {
+            Span::zero()
+        }
     }
 
     impl Diag for i64 {
@@ -421,6 +430,10 @@ mod test {
 
         fn line(&self) -> u32 {
             0
+        }
+
+        fn span(&self) -> Span {
+            Span::zero()
         }
     }
 
