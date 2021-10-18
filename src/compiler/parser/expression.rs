@@ -323,20 +323,16 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
 fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.peek() {
-        Some(Token {
-            sym: Lex::LParen,
-            span,
-            ..
-        }) => {
-            let span = *span;
+        Some(lparen) if lparen.sym == Lex::LParen => {
+            let ctx = lparen.to_ctx();
             stream.next();
             let mut exp = expression(stream)?;
             let rparen = stream.next_must_be(&Lex::RParen)?;
+            let ctx = ctx.join(rparen.to_ctx());
 
             // Extend the Span of exp to cover the left paren and the right
             exp.as_mut().map(|exp| {
-                let span = Span::cover(span, rparen.span);
-                let ctx = exp.context().extend(span);
+                let ctx = exp.context().join(ctx);
                 *exp.get_context_mut() = ctx;
             });
 
