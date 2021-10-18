@@ -34,14 +34,17 @@ impl ImportRoutineDef {
         ImportRoutineDef { path, params, ty }
     }
 
+    /// The canonical path of this routine within it's host module
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    /// The parameter list of this routine
     pub fn params(&self) -> &[Type] {
         &self.params
     }
 
+    /// The type that this routine resolves to
     pub fn ty(&self) -> &Type {
         &self.ty
     }
@@ -61,10 +64,12 @@ impl ImportStructDef {
         ImportStructDef { path, fields }
     }
 
+    /// The canonical path of this structure within it's host module
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    /// The field list of this structure
     pub fn fields(&self) -> &[(StringId, Type)] {
         &self.fields
     }
