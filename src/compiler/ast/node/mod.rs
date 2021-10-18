@@ -3,6 +3,7 @@ use std::fmt::Display;
 mod iter;
 mod map;
 
+use crate::compiler::Span;
 use crate::StringId;
 
 pub use self::iter::{PostOrderIter, PreOrderIter};
@@ -12,7 +13,7 @@ use super::routinedef::RoutineDefType;
 
 pub trait Node<M: Context> {
     fn node_type(&self) -> NodeType;
-    fn get_context(&self) -> &M;
+    fn context(&self) -> &M;
     fn get_context_mut(&mut self) -> &mut M;
     fn children(&self) -> Vec<&dyn Node<M>>;
     fn name(&self) -> Option<StringId>;
@@ -54,4 +55,5 @@ impl Display for NodeType {
 pub trait Context {
     fn id(&self) -> u32;
     fn line(&self) -> u32;
+    fn span(&self) -> Span;
 }

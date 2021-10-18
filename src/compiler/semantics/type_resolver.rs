@@ -99,10 +99,9 @@ impl TypeResolver {
         &mut self,
         m: &Module<SemanticContext>,
     ) -> SemanticResult<Module<SemanticContext>> {
-        let mut nmodule = Module::new(m.get_name(), m.get_context().clone());
+        let mut nmodule = Module::new(m.get_name(), m.context().clone());
 
-        self.symbols
-            .enter_scope(nmodule.get_context().sym().clone());
+        self.symbols.enter_scope(nmodule.context().sym().clone());
 
         *nmodule.get_modules_mut() = m
             .get_modules()
@@ -216,7 +215,7 @@ impl TypeResolver {
         }
 
         // Update the context with canonical path information and set the type to Type::Unit
-        let ctx = struct_def.get_context().with_type(Type::Unit);
+        let ctx = struct_def.context().with_type(Type::Unit);
 
         Ok(StructDef::new(
             struct_def.get_name().clone(),
@@ -239,7 +238,7 @@ impl TypeResolver {
 
         // Update the context with canonical path information and set the type to Type::Unit
         let name = ex.name().expect("Externs must have a name");
-        let ctx = ex.get_context().with_type(ex.get_return_type().clone());
+        let ctx = ex.context().with_type(ex.get_return_type().clone());
         let ret_ty = ctx.ty().clone();
 
         Ok(Extern::new(
@@ -271,7 +270,7 @@ impl TypeResolver {
         &mut self,
         bind: &Bind<SemanticContext>,
     ) -> SemanticResult<Bind<SemanticContext>> {
-        let ctx = bind.get_context();
+        let ctx = bind.context();
         let rhs = bind.get_rhs();
         let result = {
             let ctx = ctx.with_type(bind.get_type().clone());
@@ -306,7 +305,7 @@ impl TypeResolver {
             Ok(symbol) => {
                 if symbol.mutable {
                     if symbol.ty == rhs.get_type() {
-                        let ctx = mutate.get_context().with_type(rhs.get_type().clone());
+                        let ctx = mutate.context().with_type(rhs.get_type().clone());
                         Ok(Mutate::new(ctx, mutate.get_id(), rhs))
                     } else {
                         Err(SemanticError::BindMismatch(
@@ -321,7 +320,7 @@ impl TypeResolver {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| CompilerError::new(mutate.get_context().line(), e))
+        result.map_err(|e| CompilerError::new(mutate.context().line(), e))
     }
 
     fn analyze_yieldreturn(
@@ -342,16 +341,16 @@ impl TypeResolver {
         // Get the expected yield return type of the coroutine that the yield return
         // occurs within.
         let current_func = self.symbols.get_current_fn().ok_or(CompilerError::new(
-            yr.get_context().line(),
+            yr.context().line(),
             SemanticError::YieldInvalidLocation,
         ))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_coroutine(current_func)
-            .map_err(|e| CompilerError::new(yr.get_context().line(), e))?;
+            .map_err(|e| CompilerError::new(yr.context().line(), e))?;
 
         if actual_ret_ty == expected_ret_ty {
-            let ctx = yr.get_context().with_type(actual_ret_ty);
+            let ctx = yr.context().with_type(actual_ret_ty);
             Ok(YieldReturn::new(ctx, actual_ret_exp))
         } else {
             Err(SemanticError::YieldExpected(
@@ -359,7 +358,7 @@ impl TypeResolver {
                 actual_ret_ty,
             ))
         }
-        .map_err(|e| CompilerError::new(yr.get_context().line(), e))
+        .map_err(|e| CompilerError::new(yr.context().line(), e))
     }
 
     fn analyze_return(
@@ -383,16 +382,16 @@ impl TypeResolver {
             .symbols
             .get_current_fn()
             .ok_or(SemanticError::ReturnInvalidLocation)
-            .map_err(|e| CompilerError::new(r.get_context().line(), e))?;
+            .map_err(|e| CompilerError::new(r.context().line(), e))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_func_or_cor(current_func)
-            .map_err(|e| CompilerError::new(r.get_context().line(), e))?;
+            .map_err(|e| CompilerError::new(r.context().line(), e))?;
 
         // Check that the actual expression matches the expected return type
         // of the function
         if actual_ret_ty == expected_ret_ty {
-            let ctx = r.get_context().with_type(actual_ret_ty);
+            let ctx = r.context().with_type(actual_ret_ty);
             Ok(Return::new(ctx, actual_ret_exp))
         } else {
             Err(SemanticError::ReturnExpected(
@@ -400,7 +399,7 @@ impl TypeResolver {
                 actual_ret_ty,
             ))
         }
-        .map_err(|e| CompilerError::new(r.get_context().line(), e))
+        .map_err(|e| CompilerError::new(r.context().line(), e))
     }
 
     /// Recursively resolve every child of the given expression and check that every
@@ -466,9 +465,9 @@ impl TypeResolver {
                         SemanticError::ArrayInvalidSize(nelements.len()),
                     ));
                 } else {
-                    el_ty = nelements[0].get_context().ty().clone();
+                    el_ty = nelements[0].context().ty().clone();
                     for e in &nelements {
-                        if e.get_context().ty() != el_ty {
+                        if e.context().ty() != el_ty {
                             return Err(CompilerError::new(
                                 ctx.line(),
                                 SemanticError::ArrayInconsistentElementTypes,
@@ -488,7 +487,7 @@ impl TypeResolver {
             } => {
                 //  Check that the array value is an array type
                 let n_array = self.analyze_expression(array)?;
-                let el_ty = match n_array.get_context().ty() {
+                let el_ty = match n_array.context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(CompilerError::new(
                         ctx.line(),
@@ -498,11 +497,11 @@ impl TypeResolver {
 
                 // Check that the index is an i64 type
                 let n_index = self.analyze_expression(index)?;
-                if !n_index.get_context().ty().is_integral() {
+                if !n_index.context().ty().is_integral() {
                     return Err(CompilerError::new(
                         ctx.line(),
                         SemanticError::ArrayIndexingInvalidIndexType(
-                            n_index.get_context().ty().clone(),
+                            n_index.context().ty().clone(),
                         ),
                     ));
                 }
@@ -824,7 +823,7 @@ impl TypeResolver {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(CompilerError::new(
-                        operand.get_context().line(),
+                        operand.context().line(),
                         SemanticError::ExpectedSignedInteger(op, operand.get_type().clone()),
                     ))
                 }
@@ -834,7 +833,7 @@ impl TypeResolver {
                     Ok((Type::Bool, operand))
                 } else {
                     Err(CompilerError::new(
-                        operand.get_context().line(),
+                        operand.context().line(),
                         SemanticError::ExpectedBool(op, operand.get_type().clone()),
                     ))
                 }
@@ -870,7 +869,7 @@ impl TypeResolver {
                         Type::I64
                     };
                     Err(CompilerError::new(
-                        l.get_context().line(),
+                        l.context().line(),
                         SemanticError::OpExpected(
                             op,
                             expected,
@@ -885,7 +884,7 @@ impl TypeResolver {
                     Ok((Type::Bool, l, r))
                 } else {
                     Err(CompilerError::new(
-                        l.get_context().line(),
+                        l.context().line(),
                         SemanticError::OpExpected(
                             op,
                             Type::Bool,
@@ -900,7 +899,7 @@ impl TypeResolver {
                     Ok((Type::Bool, l, r))
                 } else {
                     Err(CompilerError::new(
-                        l.get_context().line(),
+                        l.context().line(),
                         SemanticError::OpExpected(
                             op,
                             l.get_type().clone(),
@@ -991,21 +990,21 @@ impl TypeResolver {
         // If routine is root::my_main it must be a function type and have type () -> i64
         if def != &RoutineDefType::Function {
             return Err(CompilerError::new(
-                routine.get_context().line(),
+                routine.context().line(),
                 SemanticError::MainFnInvalidType,
             ));
         }
 
         if params.len() > 0 {
             return Err(CompilerError::new(
-                routine.get_context().line(),
+                routine.context().line(),
                 SemanticError::MainFnInvalidParams,
             ));
         }
 
         if p != Type::I64 {
             return Err(CompilerError::new(
-                routine.get_context().line(),
+                routine.context().line(),
                 SemanticError::MainFnInvalidType,
             ));
         }

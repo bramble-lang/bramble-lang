@@ -70,7 +70,7 @@ impl SymbolTable {
         module: &mut Module<SemanticContext>,
     ) -> Result<(), SemanticError> {
         debug!("Initialize symbol tables for AST");
-        let mut context = module.get_context().clone();
+        let mut context = module.context().clone();
 
         let fm = module.get_functions_mut();
         for f in fm.iter_mut() {

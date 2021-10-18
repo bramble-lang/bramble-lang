@@ -12,6 +12,7 @@ use crate::{
 /// such errors will be transformed into [ParserError]s.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParserError {
+    EmptyProject,
     Locked(Option<Token>),
     ModExpectedName,
     ModAlreadyContains(StringId),
@@ -158,6 +159,7 @@ impl CompilerDisplay for ParserError {
             ParserError::IndexOpInvalidExpr => {
                 format!("Index operator must contain valid expression")
             }
+            ParserError::EmptyProject => format!("No source code."),
         };
         Ok(msg)
     }

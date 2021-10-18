@@ -25,7 +25,7 @@ pub struct Module<M> {
 }
 
 impl<M: Context> Node<M> for Module<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 
@@ -282,11 +282,11 @@ pub enum Item<M> {
 }
 
 impl<M: Context> Node<M> for Item<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         match self {
-            Item::Routine(r) => r.get_context(),
-            Item::Struct(s) => s.get_context(),
-            Item::Extern(e) => e.get_context(),
+            Item::Routine(r) => r.context(),
+            Item::Struct(s) => s.context(),
+            Item::Extern(e) => e.context(),
         }
     }
 
@@ -379,7 +379,7 @@ mod test {
 
         let module = Module::new(test, 1);
         assert_eq!(module.get_name(), test);
-        assert_eq!(*module.get_context(), 1);
+        assert_eq!(*module.context(), 1);
     }
 
     #[test]

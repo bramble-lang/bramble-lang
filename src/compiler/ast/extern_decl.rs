@@ -20,7 +20,7 @@ pub struct Extern<M> {
 }
 
 impl<M: Context> Node<M> for Extern<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 

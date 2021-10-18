@@ -23,4 +23,16 @@ impl Span {
 
         Span { low, high }
     }
+
+    pub fn zero() -> Span {
+        Span::new(Offset(0), Offset(1))
+    }
+
+    /// Creates the smallest span that covers the two given spans.
+    pub fn cover(a: Span, b: Span) -> Span {
+        let low = a.low.min(b.low);
+        let high = a.high.max(b.high);
+
+        Span::new(low, high)
+    }
 }

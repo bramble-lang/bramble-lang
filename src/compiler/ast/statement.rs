@@ -20,15 +20,15 @@ pub enum Statement<M> {
 }
 
 impl<M: Context> Node<M> for Statement<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         use Statement::*;
 
         match self {
-            Return(x) => x.get_context(),
-            YieldReturn(x) => x.get_context(),
-            Expression(e) => e.get_context(),
-            Bind(b) => b.get_context(),
-            Mutate(m) => m.get_context(),
+            Return(x) => x.context(),
+            YieldReturn(x) => x.context(),
+            Expression(e) => e.context(),
+            Bind(b) => b.context(),
+            Mutate(m) => m.context(),
         }
     }
 
@@ -117,7 +117,7 @@ pub struct Bind<M> {
 }
 
 impl<M: Context> Node<M> for Bind<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 
@@ -200,7 +200,7 @@ pub struct Mutate<M> {
 }
 
 impl<M: Context> Node<M> for Mutate<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 
@@ -264,7 +264,7 @@ pub struct YieldReturn<M> {
 }
 
 impl<M: Context> Node<M> for YieldReturn<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 
@@ -327,7 +327,7 @@ pub struct Return<M> {
 }
 
 impl<M: Context> Node<M> for Return<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 

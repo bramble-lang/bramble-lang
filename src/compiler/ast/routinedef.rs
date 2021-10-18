@@ -20,7 +20,7 @@ pub struct RoutineDef<M> {
 }
 
 impl<M: Context> Node<M> for RoutineDef<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 

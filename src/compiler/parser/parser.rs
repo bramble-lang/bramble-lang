@@ -10,7 +10,7 @@ use crate::{
         lexer::tokens::{Lex, Primitive, Token},
         CompilerError,
     },
-    diagnostics::{config::TracingConfig, Diag, DiagData},
+    diagnostics::config::TracingConfig,
 };
 
 use super::ParserContext;
@@ -26,22 +26,6 @@ use super::{
 use super::{tokenstream::TokenStream, ParserError};
 
 type HasVarArgs = bool;
-
-impl Context for ParserContext {
-    fn id(&self) -> u32 {
-        0
-    }
-
-    fn line(&self) -> u32 {
-        *self
-    }
-}
-
-impl Diag for ParserContext {
-    fn diag(&self) -> DiagData {
-        DiagData::new(*self, 0)
-    }
-}
 
 pub(super) static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
 pub(super) static TRACE_START: AtomicUsize = AtomicUsize::new(0);
@@ -90,15 +74,15 @@ macro_rules! trace {
                     {
                         println!("{} <- {}", function_name!(), token)
                     } else if TRACE_END.load(Ordering::SeqCst) == 0
-                        && TRACE_START.load(Ordering::SeqCst) <= token.l as usize
+                        && TRACE_START.load(Ordering::SeqCst) <= token.line as usize
                     {
                         println!("{} <- {}", function_name!(), token)
                     } else if TRACE_START.load(Ordering::SeqCst) == 0
-                        && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
+                        && token.line as usize <= TRACE_END.load(Ordering::SeqCst)
                     {
                         println!("{} <- {}", function_name!(), token)
-                    } else if TRACE_START.load(Ordering::SeqCst) <= token.l as usize
-                        && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
+                    } else if TRACE_START.load(Ordering::SeqCst) <= token.line as usize
+                        && token.line as usize <= TRACE_END.load(Ordering::SeqCst)
                     {
                         println!("{} <- {}", function_name!(), token)
                     }
@@ -155,12 +139,12 @@ impl Parser {
     }
 }
 
-pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
+pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
+    let module_ctx =
+        ctx_for_tokens(&tokens).ok_or(CompilerError::new(0, ParserError::EmptyProject))?;
+    let mut module = Module::new(name, module_ctx);
+
     let mut stream = TokenStream::new(&tokens);
-
-    let module_line = stream.peek().map_or(1, |t| t.l);
-    let mut module = Module::new(name, module_line);
-
     while stream.peek().is_some() {
         let start_index = stream.index();
         parse_items_into(&mut stream, &mut module)?;
@@ -173,20 +157,24 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<u32>> {
     Ok(Some(module))
 }
 
-fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
+fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
-        Some(token) => match stream.next_if_id() {
-            Some((ln, module_name)) => {
-                let mut module = Module::new(module_name, ln);
+        Some(module) => match stream.next_if_id() {
+            Some((module_name, _, _)) => {
+                let mut module = Module::new(module_name, module.to_ctx());
                 stream.next_must_be(&Lex::LBrace)?;
 
                 parse_items_into(stream, &mut module)?;
 
-                stream.next_must_be(&Lex::RBrace)?;
+                let ctx = stream
+                    .next_must_be(&Lex::RBrace)?
+                    .to_ctx()
+                    .join(*module.context());
+                *module.get_context_mut() = ctx;
                 Some(module)
             }
             _ => {
-                return err!(token.l, ParserError::ModExpectedName);
+                return err!(module.line, ParserError::ModExpectedName);
             }
         },
         None => None,
@@ -195,7 +183,10 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<u32>> {
     Ok(mod_def)
 }
 
-fn parse_items_into(stream: &mut TokenStream, module: &mut Module<u32>) -> ParserResult<()> {
+fn parse_items_into(
+    stream: &mut TokenStream,
+    module: &mut Module<ParserContext>,
+) -> ParserResult<()> {
     if let Some((submods, items)) = parse_items(stream)? {
         for sm in submods {
             module.add_module(sm);
@@ -209,7 +200,9 @@ fn parse_items_into(stream: &mut TokenStream, module: &mut Module<u32>) -> Parse
     Ok(Some(()))
 }
 
-fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<Item<u32>>)> {
+fn parse_items(
+    stream: &mut TokenStream,
+) -> ParserResult<(Vec<Module<ParserContext>>, Vec<Item<ParserContext>>)> {
     let mut modules = vec![];
     let mut items = vec![];
     while stream.peek().is_some() {
@@ -245,51 +238,54 @@ fn parse_items(stream: &mut TokenStream) -> ParserResult<(Vec<Module<u32>>, Vec<
     }
 }
 
-fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<u32>> {
+fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
     match stream.next_if(&Lex::Extern) {
         Some(token) => match function_decl(stream, true)? {
-            Some((fn_line, fn_name, params, has_varargs, fn_type)) => {
+            Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    return err!(fn_line, ParserError::ExternInvalidVarArgs);
+                    return err!(fn_ctx.line(), ParserError::ExternInvalidVarArgs);
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
                     fn_name,
-                    fn_line,
+                    token.to_ctx(),
                     params,
                     has_varargs,
                     fn_type,
                 )))
             }
             None => {
-                err!(token.l, ParserError::ExternExpectedFnDecl)
+                err!(token.line, ParserError::ExternExpectedFnDecl)
             }
         },
         None => Ok(None),
     }
 }
 
-fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<u32>> {
+fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
     match stream.next_if(&Lex::Struct) {
-        Some(token) => match stream.next_if_id() {
-            Some((line, id)) => {
+        Some(st_def) => match stream.next_if_id() {
+            Some((id, _, _)) => {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = parameter_list(stream)?;
-                stream.next_must_be(&Lex::RBrace)?;
-                Ok(Some(StructDef::new(id, line, fields)))
+                let ctx = stream
+                    .next_must_be(&Lex::RBrace)?
+                    .to_ctx()
+                    .join(st_def.to_ctx());
+                Ok(Some(StructDef::new(id, ctx, fields)))
             }
             None => {
-                err!(token.l, ParserError::StructExpectedIdentifier)
+                err!(st_def.line, ParserError::StructExpectedIdentifier)
             }
         },
         None => Ok(None),
     }
 }
-fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
-    let (fn_line, fn_name, params, fn_type) = match function_decl(stream, false)? {
+fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
+    let (fn_ctx, fn_name, params, fn_type) = match function_decl(stream, false)? {
         Some((l, n, p, v, t)) => {
             if v {
-                return err!(l, ParserError::FnVarArgsNotAllowed);
+                return err!(l.line(), ParserError::FnVarArgsNotAllowed);
             }
             (l, n, p, t)
         }
@@ -303,15 +299,15 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                fn_line,
+                fn_ctx.line(),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
     }
-    stream.next_must_be(&Lex::RBrace)?;
+    let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
 
     Ok(Some(RoutineDef {
-        context: fn_line,
+        context: ctx,
         def: RoutineDefType::Function,
         name: fn_name,
         params,
@@ -323,50 +319,64 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
 fn function_decl(
     stream: &mut TokenStream,
     allow_var_args: bool,
-) -> ParserResult<(u32, StringId, Vec<Parameter<u32>>, HasVarArgs, Type)> {
-    let fn_line = match stream.next_if(&Lex::FunctionDef) {
-        Some(co) => co.l,
+) -> ParserResult<(
+    ParserContext,
+    StringId,
+    Vec<Parameter<ParserContext>>,
+    HasVarArgs,
+    Type,
+)> {
+    let mut fn_ctx = match stream.next_if(&Lex::FunctionDef) {
+        Some(co) => co.to_ctx(),
         None => return Ok(None),
     };
 
-    let (fn_line, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
-        fn_line,
+    let (fn_name, _, fn_def_span) = stream.next_if_id().ok_or(CompilerError::new(
+        fn_ctx.line(),
         ParserError::FnExpectedIdentifierAfterFn,
     ))?;
+    fn_ctx = fn_ctx.extend(fn_def_span);
+
     let (params, has_varargs) = fn_def_params(stream, allow_var_args)?;
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
-        consume_type(stream)?.ok_or(CompilerError::new(
-            fn_line,
-            ParserError::FnExpectedTypeAfterArrow,
-        ))?
+        consume_type(stream)?
+            .ok_or(CompilerError::new(
+                fn_ctx.line(),
+                ParserError::FnExpectedTypeAfterArrow,
+            ))?
+            .0
     } else {
         Type::Unit
     };
 
-    Ok(Some((fn_line, fn_name, params, has_varargs, fn_type)))
+    Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type)))
 }
 
-fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
-    let co_line = match stream.next_if(&Lex::CoroutineDef) {
-        Some(co) => co.l,
+fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
+    let ctx = match stream.next_if(&Lex::CoroutineDef) {
+        Some(co) => co.to_ctx(),
         None => return Ok(None),
     };
 
-    let (co_line, co_name) = stream.next_if_id().ok_or(CompilerError::new(
-        co_line,
+    let (co_name, _, _) = stream.next_if_id().ok_or(CompilerError::new(
+        ctx.line(),
         ParserError::CoExpectedIdentifierAfterCo,
     ))?;
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
-        return err!(co_line, ParserError::FnVarArgsNotAllowed);
+        return err!(ctx.line(), ParserError::FnVarArgsNotAllowed);
     }
 
     let co_type = match stream.next_if(&Lex::LArrow) {
-        Some(t) => consume_type(stream)?.ok_or(CompilerError::new(
-            t.l,
-            ParserError::FnExpectedTypeAfterArrow,
-        ))?,
+        Some(t) => {
+            consume_type(stream)?
+                .ok_or(CompilerError::new(
+                    t.line,
+                    ParserError::FnExpectedTypeAfterArrow,
+                ))?
+                .0
+        }
         _ => Type::Unit,
     };
 
@@ -377,15 +387,15 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<u32>> {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                stmts.last().map_or(co_line, |s| *s.get_context()),
+                stmts.last().map_or(ctx.line(), |s| s.context().line()),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
     }
-    stream.next_must_be(&Lex::RBrace)?;
+    let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(ctx);
 
     Ok(Some(RoutineDef {
-        context: co_line,
+        context: ctx,
         def: RoutineDefType::Coroutine,
         name: co_name,
         params,
@@ -443,8 +453,8 @@ fn parameter_list(
     // Convert tuples into parameters
     let params = params
         .iter()
-        .map(|(line, name, ty)| Parameter {
-            context: *line,
+        .map(|(name, ty, ctx)| Parameter {
+            context: *ctx,
             name: *name,
             ty: ty.clone(),
         })
@@ -455,14 +465,14 @@ fn parameter_list(
 
 pub(super) fn id_declaration_list(
     stream: &mut TokenStream,
-) -> Result<Vec<(u32, StringId, Type)>, CompilerError<ParserError>> {
+) -> Result<Vec<(StringId, Type, ParserContext)>, CompilerError<ParserError>> {
     trace!(stream);
     let mut decls = vec![];
 
     while let Some(token) = id_declaration(stream)? {
         match token {
-            Expression::IdentifierDeclare(line, id, ty) => {
-                decls.push((line, id, ty));
+            Expression::IdentifierDeclare(ctx, id, ty) => {
+                decls.push((id, ty, ctx));
                 stream.next_if(&Lex::Comma);
             }
             _ => panic!("CRITICAL: IdDeclaration not returned by id_declaration"),
@@ -472,31 +482,12 @@ pub(super) fn id_declaration_list(
     Ok(decls)
 }
 
-fn function_call(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-    trace!(stream);
-    if stream.test_ifn(vec![Lex::Identifier(StringId::new()), Lex::LParen]) {
-        let (line, fn_name) = stream
-            .next_if_id()
-            .expect("CRITICAL: failed to get identifier");
-        let params = routine_call_params(stream)?
-            .ok_or(CompilerError::new(line, ParserError::FnCallExpectedParams))?;
-        Ok(Some(Expression::RoutineCall(
-            line,
-            RoutineCall::Function,
-            vec![Element::Id(fn_name)].into(),
-            params,
-        )))
-    } else {
-        Ok(None)
-    }
-}
-
 pub(super) fn routine_call_params(
     stream: &mut TokenStream,
-) -> ParserResult<Vec<Expression<ParserContext>>> {
+) -> ParserResult<(Vec<Expression<ParserContext>>, ParserContext)> {
     trace!(stream);
     match stream.next_if(&Lex::LParen) {
-        Some(_) => {
+        Some(lparen) => {
             let mut params = vec![];
             while let Some(param) = expression(stream)? {
                 match param {
@@ -510,18 +501,21 @@ pub(super) fn routine_call_params(
                 }
             }
 
-            stream.next_must_be(&Lex::RParen)?;
-            Ok(Some(params))
+            let ctx = stream
+                .next_must_be(&Lex::RParen)?
+                .to_ctx()
+                .join(lparen.to_ctx());
+            Ok(Some((params, ctx)))
         }
         _ => Ok(None),
     }
 }
 
-pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
+pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContext)> {
     trace!(stream);
     let mut path = vec![];
 
-    let line = stream.peek().map(|t| t.l).unwrap_or_default();
+    let mut ctx = stream.peek().map(|t| t.to_ctx()).unwrap();
     // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
     if stream.test_if(&Lex::PathSeparator) {
         path.push(Element::FileRoot);
@@ -533,47 +527,62 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(u32, Path)> {
         path.push(Element::Selph);
     } else if stream.next_if(&Lex::PathSuper).is_some() {
         path.push(Element::Super);
-    } else if let Some(id) = stream.next_if_id() {
-        path.push(Element::Id(id.1));
+    } else if let Some((id, _, _)) = stream.next_if_id() {
+        path.push(Element::Id(id));
     } else {
         return Ok(None);
     }
 
     while let Some(token) = stream.next_if(&Lex::PathSeparator) {
-        match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
-            Some(Token {
-                s: Lex::PathSuper, ..
-            }) => path.push(Element::Super),
-            Some(Token {
-                s: Lex::Identifier(id),
-                ..
-            }) => path.push(Element::Id(id)),
-            _ => {
-                return err!(token.l, ParserError::PathExpectedIdentifier);
-            }
-        }
+        let span =
+            match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
+                Some(Token {
+                    sym: Lex::PathSuper,
+                    span,
+                    ..
+                }) => {
+                    path.push(Element::Super);
+                    span
+                }
+                Some(Token {
+                    sym: Lex::Identifier(id),
+                    span,
+                    ..
+                }) => {
+                    path.push(Element::Id(id));
+                    span
+                }
+                _ => {
+                    return err!(token.line, ParserError::PathExpectedIdentifier);
+                }
+            };
+        ctx = ctx.extend(span);
     }
 
-    Ok(Some((line, path.into())))
+    Ok(Some((path.into(), ctx)))
 }
 
 fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if_id() {
-        Some((line, id)) => Ok(Some(Expression::Identifier(line, id))),
+        Some((id, ln, span)) => Ok(Some(Expression::Identifier(
+            ParserContext::new(ln, span),
+            id,
+        ))),
         _ => Ok(None),
     }
 }
 
-fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
+fn consume_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
-    let ty = match stream.peek() {
+    let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {
         Some(Token {
-            s: Lex::Primitive(primitive),
-            ..
+            sym: Lex::Primitive(prim_ty),
+            line,
+            span,
         }) => {
-            let ty = match *primitive {
+            let ty = match prim_ty {
                 Primitive::U8 => Some(Type::U8),
                 Primitive::U16 => Some(Type::U16),
                 Primitive::U32 => Some(Type::U32),
@@ -585,37 +594,42 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<Type> {
                 Primitive::Bool => Some(Type::Bool),
                 Primitive::StringLiteral => Some(Type::StringLiteral),
             };
-            stream.next();
-            ty
+            let ctx = ParserContext::new(line, span);
+            ty.map(|ty| (ty, ctx))
         }
         _ => match path(stream)? {
-            Some((_, path)) => Some(Type::Custom(path)),
+            Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx)),
             _ => match array_type(stream)? {
-                Some(ty) => Some(ty),
+                Some((ty, ctx)) => Some((ty, ctx)),
                 None => None,
             },
         },
     }
-    .map(|ty| {
+    .map(|(ty, ctx)| {
         if is_coroutine {
-            Type::Coroutine(Box::new(ty))
+            (Type::Coroutine(Box::new(ty)), ctx)
         } else {
-            ty
+            (ty, ctx)
         }
     });
     Ok(ty)
 }
 
-fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
+fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
     trace!(stream);
     match stream.next_if(&Lex::LBracket) {
-        Some(Token { l: line, .. }) => {
-            let element_ty = consume_type(stream)?
-                .ok_or(CompilerError::new(line, ParserError::ArrayDeclExpectedType))?;
+        Some(lbracket) => {
+            let ctx = lbracket.to_ctx();
+            let (element_ty, _) = consume_type(stream)?.ok_or(CompilerError::new(
+                ctx.line(),
+                ParserError::ArrayDeclExpectedType,
+            ))?;
             stream.next_must_be(&Lex::Semicolon)?;
 
-            let len = expression(stream)?
-                .ok_or(CompilerError::new(line, ParserError::ArrayDeclExpectedSize))?;
+            let len = expression(stream)?.ok_or(CompilerError::new(
+                ctx.line(),
+                ParserError::ArrayDeclExpectedSize,
+            ))?;
             let len = match len {
                 Expression::U8(_, l) => l as usize,
                 Expression::U16(_, l) => l as usize,
@@ -628,8 +642,8 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
                 _ => return err!(0, ParserError::ArrayExpectedIntLiteral),
             };
 
-            stream.next_must_be(&Lex::RBracket)?;
-            Ok(Some(Type::Array(Box::new(element_ty), len)))
+            let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
+            Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
         }
         None => Ok(None),
     }
@@ -638,18 +652,26 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<Type> {
 pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
-        Some(t) => {
-            let line_id = t[0].l;
-            let line_value = t[1].l;
-            let id = t[0].s.get_str().expect(
+        Some(decl_tok) => {
+            let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());
+            let line = decl_tok[1].line;
+            let id = decl_tok[0].sym.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let ty = consume_type(stream)?.ok_or(CompilerError::new(
-                line_value,
-                ParserError::IdDeclExpectedType,
-            ))?;
-            Ok(Some(Expression::IdentifierDeclare(line_id, id, ty)))
+            let (ty, ty_ctx) = consume_type(stream)?
+                .ok_or(CompilerError::new(line, ParserError::IdDeclExpectedType))?;
+            let ctx = ctx.join(ty_ctx);
+            Ok(Some(Expression::IdentifierDeclare(ctx, id, ty)))
         }
         None => Ok(None),
     }
+}
+
+/// Compute the minimum span that covers all the tokens in the slice.
+fn ctx_for_tokens(tokens: &[Token]) -> Option<ParserContext> {
+    // The vector of tokens is assumed to be ordered by their Offsets and that no
+    // two tokens have intersecting spans.
+    tokens
+        .first()
+        .and_then(|f| tokens.last().map(|l| f.to_ctx().join(l.to_ctx())))
 }

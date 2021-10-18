@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{ast::*, parser::ParserContext},
+    compiler::{ast::*, parser::ParserContext, Span},
     diagnostics::{Diag, DiagData},
 };
 use crate::{diagnostics::config::TracingConfig, StringId};
@@ -10,6 +10,7 @@ use super::{error::SemanticError, symbol_table::SymbolTable};
 pub struct SemanticContext {
     id: u32,
     ln: u32,
+    span: Span,
     ty: Type,
     sym: SymbolTable,
     canonical_path: Path,
@@ -22,6 +23,10 @@ impl Context for SemanticContext {
 
     fn line(&self) -> u32 {
         self.ln
+    }
+
+    fn span(&self) -> Span {
+        self.span
     }
 }
 
@@ -45,43 +50,46 @@ pub type SemanticNode = Expression<SemanticContext>;
 
 impl SemanticNode {
     pub fn get_type(&self) -> &Type {
-        let meta = self.get_context();
+        let meta = self.context();
         &meta.ty
     }
 }
 
 impl Statement<SemanticContext> {
     pub fn get_type(&self) -> &Type {
-        let m = self.get_context();
+        let m = self.context();
         &m.ty
     }
 }
 
 impl SemanticContext {
-    pub fn new_local(id: u32, ln: u32, ty: Type) -> SemanticContext {
+    pub fn new_local(id: u32, ctx: ParserContext, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ln,
+            ln: ctx.line(),
+            span: ctx.span(),
             ty,
             sym: SymbolTable::new(),
             canonical_path: Path::new(),
         }
     }
 
-    pub fn new_routine(id: u32, ln: u32, name: StringId, ty: Type) -> SemanticContext {
+    pub fn new_routine(id: u32, ctx: ParserContext, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ln,
+            ln: ctx.line(),
+            span: ctx.span(),
             ty,
             sym: SymbolTable::new_routine(name),
             canonical_path: Path::new(),
         }
     }
 
-    pub fn new_module(id: u32, ln: u32, name: StringId) -> SemanticContext {
+    pub fn new_module(id: u32, ctx: ParserContext, name: StringId) -> SemanticContext {
         SemanticContext {
             id,
-            ln,
+            ln: ctx.line(),
+            span: ctx.span(),
             ty: Type::Unit,
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),
@@ -151,36 +159,44 @@ impl SemanticAst {
         m: &Module<ParserContext>,
         tracing: TracingConfig,
     ) -> Module<SemanticContext> {
-        let f = |n: &dyn Node<u32>| match n.node_type() {
+        let f = |n: &dyn Node<ParserContext>| match n.node_type() {
             NodeType::Module => {
                 let name = n.name().expect("Modules must have a name");
-                self.module_semantic_context_from(*n.get_context(), name)
+                self.module_semantic_context_from(*n.context(), name)
             }
             NodeType::RoutineDef(_) => {
                 let name = n.name().expect("RoutineDefs must have a name");
-                self.routine_semantic_context_from(*n.get_context(), name)
+                self.routine_semantic_context_from(*n.context(), name)
             }
-            _ => self.semantic_context_from(*n.get_context()),
+            _ => self.semantic_context_from(*n.context()),
         };
 
         let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);
         mapper.apply(m)
     }
 
-    fn semantic_context_from(&mut self, ln: u32) -> SemanticContext {
-        let sm_data = SemanticContext::new_local(self.next_id, ln, Type::Unknown);
+    fn semantic_context_from(&mut self, ctx: ParserContext) -> SemanticContext {
+        let sm_data = SemanticContext::new_local(self.next_id, ctx, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn routine_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
-        let sm_data = SemanticContext::new_routine(self.next_id, ln, name, Type::Unknown);
+    fn routine_semantic_context_from(
+        &mut self,
+        ctx: ParserContext,
+        name: StringId,
+    ) -> SemanticContext {
+        let sm_data = SemanticContext::new_routine(self.next_id, ctx, name, Type::Unknown);
         self.next_id += 1;
         sm_data
     }
 
-    fn module_semantic_context_from(&mut self, ln: u32, name: StringId) -> SemanticContext {
-        let sm_data = SemanticContext::new_module(self.next_id, ln, name);
+    fn module_semantic_context_from(
+        &mut self,
+        ctx: ParserContext,
+        name: StringId,
+    ) -> SemanticContext {
+        let sm_data = SemanticContext::new_module(self.next_id, ctx, name);
         self.next_id += 1;
         sm_data
     }

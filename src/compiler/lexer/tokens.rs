@@ -188,34 +188,38 @@ impl CompilerDisplay for Lex {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     /// Line that the token occurs on
-    pub l: u32,
+    pub line: u32,
 
     /// The value of the token
-    pub s: Lex,
+    pub sym: Lex,
 
     pub span: Span,
 }
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("L{}: {}", self.l, self.s))
+        f.write_fmt(format_args!("L{}: {}", self.line, self.sym))
     }
 }
 
 impl CompilerDisplay for Token {
     fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
-        Ok(format!("{}", self.s.fmt(st)?))
+        Ok(format!("{}", self.sym.fmt(st)?))
     }
 }
 
 impl Token {
     pub fn new(s: Lex, l: u32, span: Span) -> Token {
-        Token { l, s, span }
+        Token {
+            line: l,
+            sym: s,
+            span,
+        }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {
         // TODO: is there a way to make this easier to code
-        match self.s {
+        match self.sym {
             Lex::U8(_) => match a {
                 Lex::U8(_) => true,
                 _ => false,
@@ -308,7 +312,7 @@ impl Token {
             | Lex::PathSuper
             | Lex::PathFileRoot
             | Lex::PathProjectRoot
-            | Lex::LArrow => *a == self.s,
+            | Lex::LArrow => *a == self.sym,
         }
     }
 }

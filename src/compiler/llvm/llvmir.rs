@@ -25,7 +25,12 @@ use inkwell::{
 };
 
 use crate::{
-    compiler::{ast::Element, import::Import},
+    compiler::{
+        ast::{Element, Parameter, StructDef},
+        import::{Import, ImportRoutineDef, ImportStructDef},
+        parser::ParserContext,
+        Span,
+    },
     result::Result,
     StringId, StringTable,
 };
@@ -54,7 +59,7 @@ pub struct IrGen<'ctx> {
     string_pool: StringPool<'ctx>,
     string_table: &'ctx StringTable,
     registers: RegisterLookup<'ctx>,
-    struct_table: HashMap<String, &'ctx ast::StructDef<SemanticContext>>,
+    struct_table: HashMap<String, ast::StructDef<SemanticContext>>,
     fn_use_out_param: HashSet<String>,
 }
 
@@ -230,15 +235,21 @@ impl<'ctx> IrGen<'ctx> {
         for manifest in self.imports {
             // Add imported structures to the LLVM Module
             for sd in &manifest.structs {
-                self.add_struct_def(sd)
+                self.add_import_struct_def(sd)
             }
         }
 
         // Add all function definitions that are imported from other projects
         for manifest in self.imports {
             // Add imported functions to the LLVM Module
-            for (path, params, ty) in &manifest.funcs {
-                self.add_fn_decl(&path.to_label(self.string_table), params, false, ty, 0);
+            for rd in &manifest.funcs {
+                self.add_fn_decl(
+                    &rd.path().to_label(self.string_table),
+                    rd.params(),
+                    false,
+                    rd.ty(),
+                    0,
+                );
             }
         }
     }
@@ -278,27 +289,27 @@ impl<'ctx> IrGen<'ctx> {
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
     fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticContext>) {
-        let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
+        let params: Vec<_> = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
             &rd.context.canonical_path().to_label(self.string_table),
             &params,
             false,
             &rd.ret_ty,
-            rd.get_context().line(),
+            rd.context().line(),
         )
     }
 
     fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticContext>) {
         // Declare external function
-        let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
+        let params: Vec<_> = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
-            &ex.get_context()
+            &ex.context()
                 .canonical_path()
                 .to_label(self.string_table),
             &params,
             ex.has_varargs,
             ex.get_return_type(),
-            ex.get_context().line(),
+            ex.context().line(),
         );
     }
 
@@ -310,7 +321,7 @@ impl<'ctx> IrGen<'ctx> {
     fn add_fn_decl(
         &mut self,
         name: &str,
-        params: &Vec<ast::Type>,
+        params: &[ast::Type],
         has_var_arg: bool,
         ret_ty: &ast::Type,
         line: u32,
@@ -367,13 +378,13 @@ impl<'ctx> IrGen<'ctx> {
     /// Add a struct definition to the LLVM context and module.
     fn add_struct_def(&mut self, sd: &'ctx ast::StructDef<SemanticContext>) {
         self.struct_table.insert(
-            sd.get_context()
+            sd.context()
                 .canonical_path()
                 .to_label(self.string_table),
-            sd,
+            sd.clone(),
         );
         let name = sd
-            .get_context()
+            .context()
             .canonical_path()
             .to_label(self.string_table);
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
@@ -385,13 +396,38 @@ impl<'ctx> IrGen<'ctx> {
                     ast::Type::Custom(_) => f.ty.to_llvm_ir(self),
                     _ => f.ty.to_llvm_ir(self),
                 }
-                .map_err(|e| format!("L{}: {}", f.get_context().line(), e))
+                .map_err(|e| format!("L{}: {}", f.context().line(), e))
                 .unwrap()
                 .into_basic_type()
                 .ok()
             })
             .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
+        struct_ty.set_body(&fields_llvm, false);
+    }
+
+    /// Add a struct definition to the LLVM context and module.
+    fn add_import_struct_def(&mut self, sd: &'ctx ImportStructDef) {
+        let name = sd.path().to_label(self.string_table);
+        let struct_ty = self.context.opaque_struct_type(&name);
+
+        let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
+            .fields()
+            .iter()
+            .filter_map(|(field_name, field_ty)| {
+                // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
+                match field_ty {
+                    ast::Type::Custom(_) => field_ty.to_llvm_ir(self),
+                    _ => field_ty.to_llvm_ir(self),
+                }
+                .map_err(|e| format!("L{}: {}", 0, e))
+                .unwrap()
+                .into_basic_type()
+                .ok()
+            })
+            .collect();
+
+        self.struct_table.insert(name, sd.into());
         struct_ty.set_body(&fields_llvm, false);
     }
 
@@ -560,7 +596,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
         match self
             .get_type()
             .to_llvm_ir(llvm)
-            .map_err(|e| format!("L{}: {}", self.get_context().line(), e))
+            .map_err(|e| format!("L{}: {}", self.context().line(), e))
             .unwrap()
             .into_basic_type()
         {
@@ -810,7 +846,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             }
             ast::Expression::StructExpression(_, name, fields) => {
                 let sname = self
-                    .get_context()
+                    .context()
                     .ty()
                     .get_path()
                     .unwrap()
