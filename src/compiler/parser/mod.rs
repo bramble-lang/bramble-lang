@@ -25,17 +25,17 @@ impl ParserContext {
         ParserContext { line, span }
     }
 
-    /// Creates a new ParserContext with a Span that covers this span and the
-    /// span in `a`.
-    pub fn join(&self, b: ParserContext) -> ParserContext {
+    /// Joins this [`ParserContext`] with `a`, such that the span will cover
+    /// both contexts.
+    pub fn join(self, b: ParserContext) -> ParserContext {
         let line = self.line.min(b.line);
         let span = Span::cover(self.span, b.span);
         ParserContext::new(line, span)
     }
 
-    /// Creates anew ParserContext which has a span that's extended to cover
-    /// the given Span.
-    pub fn extend(&self, b: Span) -> ParserContext {
+    /// Extends the span of this [`ParserContext`] such that it also covers the
+    /// span described by `b`.
+    pub fn extend(self, b: Span) -> ParserContext {
         ParserContext::new(self.line, Span::cover(self.span, b))
     }
 }
