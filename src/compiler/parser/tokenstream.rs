@@ -43,7 +43,7 @@ impl<'a> TokenStream<'a> {
     pub fn next_if_id(&mut self) -> Option<(u32, Span, StringId)> {
         match self.next_if(&Lex::Identifier(StringId::new())) {
             Some(Token {
-                l,
+                line: l,
                 span,
                 s: Lex::Identifier(id),
                 ..
@@ -55,7 +55,7 @@ impl<'a> TokenStream<'a> {
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, CompilerError<ParserError>> {
         let (line, found) = match self.peek() {
-            Some(t) => (t.l, t.s.clone()),
+            Some(t) => (t.line, t.s.clone()),
             None => return err!(0, ParserError::ExpectedButFound(vec![test.clone()], None)),
         };
         match self.next_if(test) {
@@ -161,7 +161,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::LParen,
                 span: Span::new(Offset::new(0), Offset::new(1)),
             }
@@ -191,7 +191,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::LParen,
                 span: new_span(0, 1),
             }
@@ -201,7 +201,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(2),
                 span: new_span(1, 2),
             }
@@ -226,7 +226,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::LParen,
                 span: new_span(0, 1),
             }
@@ -236,7 +236,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(2),
                 span: new_span(1, 2),
             }
@@ -246,7 +246,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::Add,
                 span: new_span(3, 4),
             }
@@ -256,7 +256,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(4),
                 span: new_span(5, 6),
             }
@@ -266,7 +266,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::RParen,
                 span: new_span(6, 7),
             }
@@ -276,7 +276,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::Mul,
                 span: new_span(8, 9),
             }
@@ -286,7 +286,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(3),
                 span: new_span(10, 11),
             }
@@ -311,7 +311,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::LParen,
                 span: new_span(0, 1),
             }
@@ -321,7 +321,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(2),
                 span: new_span(1, 2),
             }
@@ -334,7 +334,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(2),
                 span: new_span(1, 2),
             }
@@ -357,12 +357,12 @@ mod test_tokenstream {
             *p,
             vec![
                 Token {
-                    l: 1,
+                    line: 1,
                     s: Lex::LParen,
                     span: new_span(0, 1),
                 },
                 Token {
-                    l: 1,
+                    line: 1,
                     s: Lex::I64(2),
                     span: new_span(1, 2),
                 }
@@ -373,7 +373,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::Add,
                 span: new_span(3, 4),
             }
@@ -413,7 +413,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::LParen,
                 span: new_span(0, 1),
             }
@@ -422,7 +422,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(2),
                 span: new_span(1, 2),
             }
@@ -432,7 +432,7 @@ mod test_tokenstream {
         assert_eq!(
             p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::I64(2),
                 span: new_span(1, 2),
             }
@@ -441,7 +441,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::Add,
                 span: new_span(3, 4),
             }
@@ -453,7 +453,7 @@ mod test_tokenstream {
         assert_eq!(
             *p,
             Token {
-                l: 1,
+                line: 1,
                 s: Lex::Add,
                 span: new_span(3, 4),
             }

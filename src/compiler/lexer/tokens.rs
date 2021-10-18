@@ -188,7 +188,7 @@ impl CompilerDisplay for Lex {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     /// Line that the token occurs on
-    pub l: u32,
+    pub line: u32,
 
     /// The value of the token
     pub s: Lex,
@@ -198,7 +198,7 @@ pub struct Token {
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("L{}: {}", self.l, self.s))
+        f.write_fmt(format_args!("L{}: {}", self.line, self.s))
     }
 }
 
@@ -210,7 +210,7 @@ impl CompilerDisplay for Token {
 
 impl Token {
     pub fn new(s: Lex, l: u32, span: Span) -> Token {
-        Token { l, s, span }
+        Token { line: l, s, span }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {

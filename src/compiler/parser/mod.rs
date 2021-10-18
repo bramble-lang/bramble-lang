@@ -63,7 +63,7 @@ impl Diag for ParserContext {
 impl Token {
     fn to_ctx(&self) -> ParserContext {
         ParserContext {
-            line: self.l,
+            line: self.line,
             span: self.span,
         }
     }

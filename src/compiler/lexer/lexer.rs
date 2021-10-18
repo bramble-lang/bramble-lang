@@ -561,7 +561,7 @@ impl<'a> Lexer<'a> {
         trace!(self);
         match &token {
             Token {
-                l,
+                line: l,
                 s: Identifier(id),
                 span,
                 ..
@@ -578,7 +578,7 @@ impl<'a> Lexer<'a> {
         trace!(self);
         match token {
             Token {
-                l,
+                line: l,
                 span,
                 s: Identifier(ref id),
                 ..
@@ -603,7 +603,7 @@ impl<'a> Lexer<'a> {
         trace!(self);
         match token {
             Token {
-                l,
+                line: l,
                 span,
                 s: Identifier(ref id),
                 ..

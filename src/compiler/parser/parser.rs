@@ -74,15 +74,15 @@ macro_rules! trace {
                     {
                         println!("{} <- {}", function_name!(), token)
                     } else if TRACE_END.load(Ordering::SeqCst) == 0
-                        && TRACE_START.load(Ordering::SeqCst) <= token.l as usize
+                        && TRACE_START.load(Ordering::SeqCst) <= token.line as usize
                     {
                         println!("{} <- {}", function_name!(), token)
                     } else if TRACE_START.load(Ordering::SeqCst) == 0
-                        && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
+                        && token.line as usize <= TRACE_END.load(Ordering::SeqCst)
                     {
                         println!("{} <- {}", function_name!(), token)
-                    } else if TRACE_START.load(Ordering::SeqCst) <= token.l as usize
-                        && token.l as usize <= TRACE_END.load(Ordering::SeqCst)
+                    } else if TRACE_START.load(Ordering::SeqCst) <= token.line as usize
+                        && token.line as usize <= TRACE_END.load(Ordering::SeqCst)
                     {
                         println!("{} <- {}", function_name!(), token)
                     }
@@ -174,7 +174,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
                 Some(module)
             }
             _ => {
-                return err!(module.l, ParserError::ModExpectedName);
+                return err!(module.line, ParserError::ModExpectedName);
             }
         },
         None => None,
@@ -255,7 +255,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
                 )))
             }
             None => {
-                err!(token.l, ParserError::ExternExpectedFnDecl)
+                err!(token.line, ParserError::ExternExpectedFnDecl)
             }
         },
         None => Ok(None),
@@ -275,7 +275,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
                 Ok(Some(StructDef::new(id, ctx, fields)))
             }
             None => {
-                err!(st_def.l, ParserError::StructExpectedIdentifier)
+                err!(st_def.line, ParserError::StructExpectedIdentifier)
             }
         },
         None => Ok(None),
@@ -372,7 +372,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         Some(t) => {
             consume_type(stream)?
                 .ok_or(CompilerError::new(
-                    t.l,
+                    t.line,
                     ParserError::FnExpectedTypeAfterArrow,
                 ))?
                 .0
@@ -553,7 +553,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
                     span
                 }
                 _ => {
-                    return err!(token.l, ParserError::PathExpectedIdentifier);
+                    return err!(token.line, ParserError::PathExpectedIdentifier);
                 }
             };
         ctx = ctx.extend(span);
@@ -653,7 +653,7 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
     match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
         Some(decl_tok) => {
             let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());
-            let line = decl_tok[1].l;
+            let line = decl_tok[1].line;
             let id = decl_tok[0].s.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );

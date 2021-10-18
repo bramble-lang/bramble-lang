@@ -76,14 +76,14 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
         Some(token) => {
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl = id_declaration(stream)?.ok_or(CompilerError::new(
-                token.l,
+                token.line,
                 ParserError::ExpectedIdDeclAfterLet,
             ))?;
             stream.next_must_be(&Lex::Assign)?;
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
                 None => expression(stream)?.ok_or(CompilerError::new(
-                    token.l,
+                    token.line,
                     ParserError::ExpectedExpressionOnRhs,
                 ))?,
             };
@@ -95,7 +95,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                     Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
                 }
                 _ => Err(CompilerError::new(
-                    token.l,
+                    token.line,
                     ParserError::ExpectedTypeInIdDecl,
                 )),
             }
@@ -118,7 +118,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 .get_str()
                 .expect("CRITICAL: identifier token cannot be converted to string");
             let exp = expression(stream)?.ok_or(CompilerError::new(
-                tokens[2].l,
+                tokens[2].line,
                 ParserError::ExpectedExpressionOnRhs,
             ))?;
             Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
@@ -142,7 +142,7 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
                 )))
             }
             None => Err(CompilerError::new(
-                init_tok.l,
+                init_tok.line,
                 ParserError::ExpectedIdAfterInit,
             )),
         },

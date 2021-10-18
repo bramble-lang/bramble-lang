@@ -285,7 +285,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                             )
                         })
                         .ok_or(CompilerError::new(
-                            token.l,
+                            token.line,
                             ParserError::MemberAccessExpectedField,
                         ))?,
                     Lex::LBracket => expression(stream)?
@@ -304,7 +304,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                         })??,
                     _ => {
                         return err!(
-                            token.l,
+                            token.line,
                             ParserError::ExpectedButFound(
                                 vec![Lex::LBracket, Lex::MemberAccess],
                                 Some(token.s.clone())
@@ -358,20 +358,24 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
         Some(if_tok) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                if_tok.l,
+                if_tok.line,
                 ParserError::IfExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let if_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                if_tok.l,
+                if_tok.line,
                 ParserError::IfTrueArmMissingExpr,
             ))?;
 
             // check for `else if`
             let else_arm = match stream.next_if(&Lex::Else) {
                 Some(_) => match stream.peek() {
-                    Some(Token { l, s: Lex::If, .. }) => {
+                    Some(Token {
+                        line: l,
+                        s: Lex::If,
+                        ..
+                    }) => {
                         let l = *l;
                         Some(
                             if_expression(stream)?
@@ -380,7 +384,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                     }
                     _ => {
                         let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                            if_tok.l,
+                            if_tok.line,
                             ParserError::IfFalseArmMissingExpr,
                         ))?;
                         Some(false_arm)
@@ -411,13 +415,13 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
         Some(whl) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                whl.l,
+                whl.line,
                 ParserError::WhileExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let body = expression_block(stream)?
-                .ok_or(CompilerError::new(whl.l, ParserError::WhileMissingBody))?;
+                .ok_or(CompilerError::new(whl.line, ParserError::WhileMissingBody))?;
 
             Some(Expression::While {
                 context: whl.to_ctx().join(*body.context()),
@@ -558,49 +562,49 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         Lex::I64(0),
     ]) {
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::U8(i),
             ..
         }) => Ok(Some(Expression::U8(ParserContext::new(l, span), i))),
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::U16(i),
             ..
         }) => Ok(Some(Expression::U16(ParserContext::new(l, span), i))),
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::U32(i),
             ..
         }) => Ok(Some(Expression::U32(ParserContext::new(l, span), i))),
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::U64(i),
             ..
         }) => Ok(Some(Expression::U64(ParserContext::new(l, span), i))),
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::I8(i),
             ..
         }) => Ok(Some(Expression::I8(ParserContext::new(l, span), i))),
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::I16(i),
             ..
         }) => Ok(Some(Expression::I16(ParserContext::new(l, span), i))),
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::I32(i),
             ..
         }) => Ok(Some(Expression::I32(ParserContext::new(l, span), i))),
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::I64(i),
             ..
@@ -614,7 +618,7 @@ fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
     trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::Bool(b),
             ..
@@ -627,7 +631,7 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserCon
     trace!(stream);
     match stream.next_if(&Lex::StringLiteral(StringId::new())) {
         Some(Token {
-            l,
+            line: l,
             span,
             s: Lex::StringLiteral(s),
             ..
