@@ -1226,6 +1226,9 @@ impl<'ctx> LlvmToBasicTypeEnum<'ctx> for AnyTypeEnum<'ctx> {
     }
 }
 
+/// Convert an Imported structure definition to the internal compilre structure
+/// definition.  This is needed by the LLVM layer so that it can store a table
+/// of all structure definitions.
 impl From<&ImportStructDef> for StructDef<SemanticContext> {
     fn from(isd: &ImportStructDef) -> Self {
         let name = isd.path().item().unwrap();
