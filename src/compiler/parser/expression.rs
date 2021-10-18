@@ -798,7 +798,7 @@ mod test {
                 "[5",
                 CompilerError::new(
                     0,
-                    Span::zero(),
+                    Span::new(Offset::new(2), Offset::new(2)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], None),
                 ),
             ),
@@ -806,7 +806,7 @@ mod test {
                 "[5 6]",
                 CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(3), Offset::new(4)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
                 ),
             ),
@@ -940,7 +940,7 @@ mod test {
                 "a[5",
                 CompilerError::new(
                     0,
-                    Span::new(Offset::new(1), Offset::new(3)),
+                    Span::new(Offset::new(3), Offset::new(3)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], None),
                 ),
             ),
@@ -1044,15 +1044,15 @@ mod test {
                 "{5 10 51}",
                 CompilerError::new(
                     1,
-                    Span::new(Offset::new(1), Offset::new(2)),
+                    Span::new(Offset::new(3), Offset::new(5)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(10))),
                 ),
             ),
             (
-                "{5; 10 51}",
+                " {5; 10 51}",
                 CompilerError::new(
                     1,
-                    Span::new(Offset::new(4), Offset::new(6)),
+                    Span::new(Offset::new(8), Offset::new(10)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(51))),
                 ),
             ),
@@ -1060,7 +1060,7 @@ mod test {
                 "{5; 10 let x:i64 := 5}",
                 CompilerError::new(
                     1,
-                    Span::new(Offset::new(4), Offset::new(6)),
+                    Span::new(Offset::new(7), Offset::new(10)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::Let)),
                 ),
             ),

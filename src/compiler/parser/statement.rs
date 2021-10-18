@@ -74,32 +74,32 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
 fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Let) {
-        Some(token) => {
+        Some(let_tok) => {
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl = id_declaration(stream)?.ok_or(CompilerError::new(
-                token.line,
-                token.span,
+                let_tok.line,
+                let_tok.span,
                 ParserError::ExpectedIdDeclAfterLet,
             ))?;
             stream.next_must_be(&Lex::Assign)?;
+
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
                 None => expression(stream)?.ok_or(CompilerError::new(
-                    token.line,
-                    token.span,
+                    let_tok.line,
+                    let_tok.span,
                     ParserError::ExpectedExpressionOnRhs,
                 ))?,
             };
-
-            let ctx = exp.context().join(token.to_ctx());
+            let ctx = exp.context().join(let_tok.to_ctx());
 
             match id_decl {
                 Expression::IdentifierDeclare(_, id, ty) => {
                     Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
                 }
                 _ => Err(CompilerError::new(
-                    token.line,
-                    token.span,
+                    let_tok.line,
+                    let_tok.span,
                     ParserError::ExpectedTypeInIdDecl,
                 )),
             }
