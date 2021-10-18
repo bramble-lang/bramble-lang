@@ -520,7 +520,7 @@ fn struct_expression_params(
 fn array_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::LBracket) {
-        Some(token) => {
+        Some(lbracket) => {
             let mut elements = vec![];
             // loop through comma separated list of expressions
             while let Some(element) = expression(stream)? {
@@ -533,7 +533,7 @@ fn array_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
             let rbracket = stream.next_must_be(&Lex::RBracket)?;
 
             // Compute the new span
-            let ctx = token.to_ctx().join(rbracket.to_ctx());
+            let ctx = lbracket.to_ctx().join(rbracket.to_ctx());
 
             let len = elements.len();
             Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
