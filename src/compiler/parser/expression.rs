@@ -940,7 +940,7 @@ mod test {
                 "a[5",
                 CompilerError::new(
                     0,
-                    Span::zero(),
+                    Span::new(Offset::new(1), Offset::new(3)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], None),
                 ),
             ),
@@ -948,17 +948,25 @@ mod test {
                 "a[5 6]",
                 CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(1), Offset::new(6)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
                 ),
             ),
             (
                 "a[]",
-                CompilerError::new(1, Span::zero(), ParserError::IndexOpInvalidExpr),
+                CompilerError::new(
+                    1,
+                    Span::new(Offset::new(4), Offset::new(5)),
+                    ParserError::IndexOpInvalidExpr,
+                ),
             ),
             (
                 "a[2 + ]",
-                CompilerError::new(1, Span::zero(), ParserError::ExpectedExprAfter(Lex::Add)),
+                CompilerError::new(
+                    1,
+                    Span::new(Offset::new(2), Offset::new(5)),
+                    ParserError::ExpectedExprAfter(Lex::Add),
+                ),
             ),
         ]
         .iter()
@@ -1036,7 +1044,7 @@ mod test {
                 "{5 10 51}",
                 CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(1), Offset::new(2)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(10))),
                 ),
             ),
@@ -1044,7 +1052,7 @@ mod test {
                 "{5; 10 51}",
                 CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(4), Offset::new(6)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(51))),
                 ),
             ),
@@ -1052,7 +1060,7 @@ mod test {
                 "{5; 10 let x:i64 := 5}",
                 CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(4), Offset::new(6)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::Let)),
                 ),
             ),
@@ -1060,7 +1068,7 @@ mod test {
                 "{let x: i64 := 10 5}",
                 CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(1), Offset::new(17)),
                     ParserError::ExpectedButFound(vec![Lex::Semicolon], Some(Lex::I64(5))),
                 ),
             ),

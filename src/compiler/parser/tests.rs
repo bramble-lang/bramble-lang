@@ -220,7 +220,7 @@ pub mod tests {
                 "thing::",
                 Err(CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(0), Offset::new(7)),
                     ParserError::PathExpectedIdentifier,
                 )),
             ),
@@ -228,7 +228,7 @@ pub mod tests {
                 "thing::first::",
                 Err(CompilerError::new(
                     1,
-                    Span::zero(),
+                    Span::new(Offset::new(0), Offset::new(14)),
                     ParserError::PathExpectedIdentifier,
                 )),
             ),
