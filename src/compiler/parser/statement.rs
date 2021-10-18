@@ -52,6 +52,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
                 if must_have_semicolon {
                     err!(
                         stm.context().line(),
+                        stm.context().span(),
                         ParserError::ExpectedButFound(
                             vec![Lex::Semicolon],
                             stream.peek().map(|x| x.sym.clone())
@@ -77,6 +78,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl = id_declaration(stream)?.ok_or(CompilerError::new(
                 token.line,
+                token.span,
                 ParserError::ExpectedIdDeclAfterLet,
             ))?;
             stream.next_must_be(&Lex::Assign)?;
@@ -84,6 +86,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                 Some(co_init) => co_init,
                 None => expression(stream)?.ok_or(CompilerError::new(
                     token.line,
+                    token.span,
                     ParserError::ExpectedExpressionOnRhs,
                 ))?,
             };
@@ -96,6 +99,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                 }
                 _ => Err(CompilerError::new(
                     token.line,
+                    token.span,
                     ParserError::ExpectedTypeInIdDecl,
                 )),
             }
@@ -119,6 +123,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 .expect("CRITICAL: identifier token cannot be converted to string");
             let exp = expression(stream)?.ok_or(CompilerError::new(
                 tokens[2].line,
+                tokens[2].span,
                 ParserError::ExpectedExpressionOnRhs,
             ))?;
             Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
@@ -131,9 +136,12 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
     match stream.next_if(&Lex::Init) {
         Some(init_tok) => match path(stream)? {
             Some((path, path_ctx)) => {
-                let (params, params_ctx) = routine_call_params(stream)?.ok_or(
-                    CompilerError::new(path_ctx.line(), ParserError::ExpectedParams),
-                )?;
+                let (params, params_ctx) =
+                    routine_call_params(stream)?.ok_or(CompilerError::new(
+                        path_ctx.line(),
+                        path_ctx.span(),
+                        ParserError::ExpectedParams,
+                    ))?;
                 Ok(Some(Expression::RoutineCall(
                     init_tok.to_ctx().join(params_ctx),
                     RoutineCall::CoroutineInit,
@@ -143,6 +151,7 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
             }
             None => Err(CompilerError::new(
                 init_tok.line,
+                init_tok.span,
                 ParserError::ExpectedIdAfterInit,
             )),
         },

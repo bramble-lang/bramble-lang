@@ -16,7 +16,7 @@
 #![macro_use]
 use crate::StringTable;
 
-use super::{CompilerDisplay, CompilerDisplayError};
+use super::{CompilerDisplay, CompilerDisplayError, Span};
 
 /// Represents all errors that are generated from within the Compiler
 /// module and its submodules.
@@ -34,6 +34,9 @@ pub struct CompilerError<IE: CompilerDisplay> {
     /// The line in the source code which caused the error
     line: u32,
 
+    /// The span of source code that caused this error
+    span: Span,
+
     /// An inner error value that contains more specific error information
     inner: IE,
 }
@@ -42,16 +45,16 @@ impl<IE> CompilerError<IE>
 where
     IE: CompilerDisplay,
 {
-    pub fn new(line: u32, inner: IE) -> Self {
-        CompilerError { line, inner }
+    pub fn new(line: u32, span: Span, inner: IE) -> Self {
+        CompilerError { line, span, inner }
     }
 
     /// Moves the Line number and Inner error out of the wrapping [CompilerError].
     /// This is to allow conversion of one type of [CompilerError] to another type, by
     /// converting the `inner` type into a new type and then creating a new [CompilerError]
     /// wrapper.
-    pub fn take(self) -> (u32, IE) {
-        (self.line, self.inner)
+    pub fn take(self) -> (u32, Span, IE) {
+        (self.line, self.span, self.inner)
     }
 }
 
@@ -68,7 +71,7 @@ where
 /// Helper macro to get rid of repitition of boilerplate code.
 //#[macro_export]
 macro_rules! err {
-    ($ln: expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $kind))
+    ($ln: expr, $span:expr, $kind: expr) => {
+        Err(CompilerError::new($ln, $span, $kind))
     };
 }

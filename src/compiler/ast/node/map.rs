@@ -40,7 +40,7 @@ impl<A, B, F> MapPreOrder<A, B, F>
 where
     A: Debug + Context + Diag,
     F: FnMut(&dyn Node<A>) -> B,
-    B: Diag,
+    B: Diag + Context,
 {
     pub fn new(name: &str, f: F, config: TracingConfig) -> MapPreOrder<A, B, F> {
         MapPreOrder {

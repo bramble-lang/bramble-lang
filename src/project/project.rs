@@ -22,8 +22,8 @@ pub enum ProjectError {
 
 impl From<CompilerError<ParserError>> for CompilerError<ProjectError> {
     fn from(parser_ce: CompilerError<ParserError>) -> Self {
-        let (line, ie) = parser_ce.take();
-        CompilerError::new(line, ProjectError::ParserError(ie))
+        let (line, span, ie) = parser_ce.take();
+        CompilerError::new(line, span, ProjectError::ParserError(ie))
     }
 }
 
@@ -119,9 +119,11 @@ pub fn parse_project(
     parser::parser::set_tracing(trace_parser);
 
     // The root module spans the entire source code space
-    let root_span = source_map
-        .span()
-        .ok_or(vec![CompilerError::new(0, ProjectError::EmptyProject)])?;
+    let root_span = source_map.span().ok_or(vec![CompilerError::new(
+        0,
+        Span::zero(),
+        ProjectError::EmptyProject,
+    )])?;
 
     let mut root = Module::new(root_module, ParserContext::new(0, root_span));
     let mut errors = vec![];
@@ -225,11 +227,19 @@ fn parse_src_tokens(
                 path: parent_path.to_owned(),
                 data: ast,
             }),
-            Ok(None) => Err(CompilerError::new(0, ProjectError::NoAstGenerated)),
+            Ok(None) => Err(CompilerError::new(
+                0,
+                Span::zero(),
+                ProjectError::NoAstGenerated,
+            )),
             Err(msg) => Err(msg.into()),
         }
     } else {
-        Err(CompilerError::new(0, ProjectError::InvalidPath))
+        Err(CompilerError::new(
+            0,
+            Span::zero(), // TODO: What's the correct span to have here
+            ProjectError::InvalidPath,
+        ))
     }
 }
 

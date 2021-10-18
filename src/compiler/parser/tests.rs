@@ -218,11 +218,19 @@ pub mod tests {
             ),
             (
                 "thing::",
-                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
+                Err(CompilerError::new(
+                    1,
+                    Span::zero(),
+                    ParserError::PathExpectedIdentifier,
+                )),
             ),
             (
                 "thing::first::",
-                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
+                Err(CompilerError::new(
+                    1,
+                    Span::zero(),
+                    ParserError::PathExpectedIdentifier,
+                )),
             ),
         ] {
             test += 1;

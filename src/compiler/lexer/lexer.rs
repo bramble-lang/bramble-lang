@@ -255,7 +255,11 @@ impl<'a> Lexer<'a> {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(err!(self.line(), LexerError::Locked(self.current_char())));
+                tokens.push(err!(
+                    self.line(),
+                    self.current_char_span().unwrap(), // If there is no Span then something very bad has happened
+                    LexerError::Locked(self.current_char())
+                ));
                 break;
             }
         }
@@ -267,6 +271,31 @@ impl<'a> Lexer<'a> {
     fn current_char(&self) -> Option<SourceChar> {
         if self.index < self.chars.len() {
             Some(self.chars[self.index])
+        } else {
+            None
+        }
+    }
+
+    fn current_char_span(&self) -> Option<Span> {
+        if self.index < self.chars.len() {
+            let char_offset = self.chars[self.index].offset();
+            let next_char_offset = if self.index + 1 < self.chars.len() {
+                self.chars[self.index + 1].offset()
+            } else {
+                self.end_offset
+            };
+
+            Some(Span::new(char_offset, next_char_offset))
+        } else {
+            None
+        }
+    }
+
+    fn span_to_char(&self, c: SourceChar) -> Option<Span> {
+        if self.index < self.chars.len() {
+            let start = self.chars[self.index].offset();
+            let end = c.offset(); // This will actually result in an off by one error for the span.
+            Some(Span::new(start, end))
         } else {
             None
         }
@@ -352,9 +381,21 @@ impl<'a> Lexer<'a> {
                 if c == '\\' {
                     match branch.next() {
                         Some(c) if Self::is_escape_code(c) => (),
-                        Some(c) => return err!(self.line(), LexerError::InvalidEscapeSequence(c)),
+                        Some(c) => {
+                            return err!(
+                                self.line(),
+                                self.span_to_char(c).unwrap(),
+                                LexerError::InvalidEscapeSequence(c)
+                            )
+                        }
 
-                        None => return err!(self.line(), LexerError::ExpectedEscapeCharacter),
+                        None => {
+                            return err!(
+                                self.line(),
+                                self.current_char_span().unwrap(), // Need to add a span to the branch
+                                LexerError::ExpectedEscapeCharacter
+                            );
+                        }
                     }
                 }
             }
@@ -402,7 +443,11 @@ impl<'a> Lexer<'a> {
             .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
-            return err!(self.line(), LexerError::InvalidInteger);
+            return err!(
+                self.line(),
+                self.current_char_span().unwrap(), // Need to add a span to the branch
+                LexerError::InvalidInteger
+            );
         }
 
         let (_, span) = branch.merge().unwrap();
@@ -458,7 +503,7 @@ impl<'a> Lexer<'a> {
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
-                err!(line, LexerError::UnexpectedSuffixType(prim))
+                err!(line, span, LexerError::UnexpectedSuffixType(prim))
             }
         }
     }

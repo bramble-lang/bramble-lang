@@ -189,10 +189,10 @@ fn lex_set_to_string(st: &StringTable, set: &[Lex]) -> Result<String, CompilerDi
 
 impl From<CompilerError<AstError>> for CompilerError<ParserError> {
     fn from(ce: CompilerError<AstError>) -> Self {
-        let (line, ae) = ce.take();
+        let (line, span, ae) = ce.take();
         match ae {
             AstError::ModuleAlreadyContains(sid) => {
-                CompilerError::new(line, ParserError::ModAlreadyContains(sid))
+                CompilerError::new(line, span, ParserError::ModAlreadyContains(sid))
             }
         }
     }

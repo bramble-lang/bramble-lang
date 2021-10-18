@@ -1,3 +1,4 @@
+use crate::compiler::Span;
 use crate::diagnostics::config::{Tracing, TracingConfig};
 use crate::{
     compiler::{
@@ -48,7 +49,8 @@ pub fn resolve_types_with_imports(
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast, trace_semantic_node);
     canonize_paths(&mut sm_ast, imports, trace_canonization)?; //TODO: Add a trace for this step
-    SymbolTable::add_item_defs_to_table(&mut sm_ast).map_err(|e| CompilerError::new(0, e))?;
+    SymbolTable::add_item_defs_to_table(&mut sm_ast)
+        .map_err(|e| CompilerError::new(0, Span::zero(), e))?;
 
     let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn);
 
@@ -169,7 +171,7 @@ impl TypeResolver {
         // Add parameters to symbol table
         for p in params.iter() {
             ctx.add_symbol(p.name, p.ty.clone(), false, false)
-                .map_err(|e| CompilerError::new(p.context.line(), e))?;
+                .map_err(|e| CompilerError::new(p.context().line(), p.context().span(), e))?;
         }
 
         self.symbols.enter_scope(ctx.sym().clone());
@@ -208,7 +210,7 @@ impl TypeResolver {
                 Type::Custom(ty_name) => {
                     self.symbols
                         .lookup_symbol_by_path(ty_name)
-                        .map_err(|e| CompilerError::new(field_ctx.line(), e))?;
+                        .map_err(|e| CompilerError::new(field_ctx.line(), field_ctx.span(), e))?;
                 }
                 _ => (),
             }
@@ -293,7 +295,7 @@ impl TypeResolver {
                 ))
             }
         };
-        result.map_err(|e| CompilerError::new(ctx.line(), e))
+        result.map_err(|e| CompilerError::new(ctx.line(), ctx.span(), e))
     }
 
     fn analyze_mutate(
@@ -320,7 +322,7 @@ impl TypeResolver {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| CompilerError::new(mutate.context().line(), e))
+        result.map_err(|e| CompilerError::new(mutate.context().line(), mutate.context().span(), e))
     }
 
     fn analyze_yieldreturn(
@@ -342,12 +344,13 @@ impl TypeResolver {
         // occurs within.
         let current_func = self.symbols.get_current_fn().ok_or(CompilerError::new(
             yr.context().line(),
+            yr.context().span(),
             SemanticError::YieldInvalidLocation,
         ))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_coroutine(current_func)
-            .map_err(|e| CompilerError::new(yr.context().line(), e))?;
+            .map_err(|e| CompilerError::new(yr.context().line(), yr.context().span(), e))?;
 
         if actual_ret_ty == expected_ret_ty {
             let ctx = yr.context().with_type(actual_ret_ty);
@@ -358,7 +361,7 @@ impl TypeResolver {
                 actual_ret_ty,
             ))
         }
-        .map_err(|e| CompilerError::new(yr.context().line(), e))
+        .map_err(|e| CompilerError::new(yr.context().line(), yr.context().span(), e))
     }
 
     fn analyze_return(
@@ -382,11 +385,11 @@ impl TypeResolver {
             .symbols
             .get_current_fn()
             .ok_or(SemanticError::ReturnInvalidLocation)
-            .map_err(|e| CompilerError::new(r.context().line(), e))?;
+            .map_err(|e| CompilerError::new(r.context().line(), r.context().span(), e))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_func_or_cor(current_func)
-            .map_err(|e| CompilerError::new(r.context().line(), e))?;
+            .map_err(|e| CompilerError::new(r.context().line(), r.context().span(), e))?;
 
         // Check that the actual expression matches the expected return type
         // of the function
@@ -399,7 +402,7 @@ impl TypeResolver {
                 actual_ret_ty,
             ))
         }
-        .map_err(|e| CompilerError::new(r.context().line(), e))
+        .map_err(|e| CompilerError::new(r.context().line(), r.context().span(), e))
     }
 
     /// Recursively resolve every child of the given expression and check that every
@@ -462,6 +465,7 @@ impl TypeResolver {
                 if nelements.len() == 0 {
                     return Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::ArrayInvalidSize(nelements.len()),
                     ));
                 } else {
@@ -470,6 +474,7 @@ impl TypeResolver {
                         if e.context().ty() != el_ty {
                             return Err(CompilerError::new(
                                 ctx.line(),
+                                ctx.span(),
                                 SemanticError::ArrayInconsistentElementTypes,
                             ));
                         }
@@ -491,6 +496,7 @@ impl TypeResolver {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::ArrayIndexingInvalidType(ty.clone()),
                     )),
                 }?;
@@ -500,6 +506,7 @@ impl TypeResolver {
                 if !n_index.context().ty().is_integral() {
                     return Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::ArrayIndexingInvalidIndexType(
                             n_index.context().ty().clone(),
                         ),
@@ -526,7 +533,7 @@ impl TypeResolver {
                 let ctx = match self
                     .symbols
                     .lookup_var(*id)
-                    .map_err(|e| CompilerError::new(ctx.line(), e))?
+                    .map_err(|e| CompilerError::new(ctx.line(), ctx.span(), e))?
                 {
                     Symbol { ty: p, .. } => ctx.with_type(p.clone()),
                 };
@@ -545,7 +552,7 @@ impl TypeResolver {
                         let (struct_def, _) = self
                             .symbols
                             .lookup_symbol_by_path(&struct_name)
-                            .map_err(|e| CompilerError::new(ctx.line(), e))?;
+                            .map_err(|e| CompilerError::new(ctx.line(), ctx.span(), e))?;
                         let member_ty = struct_def
                             .ty
                             .get_member(*member)
@@ -553,13 +560,14 @@ impl TypeResolver {
                                 struct_name.clone(),
                                 *member,
                             ))
-                            .map_err(|e| CompilerError::new(ctx.line(), e))?;
+                            .map_err(|e| CompilerError::new(ctx.line(), ctx.span(), e))?;
 
                         let ctx = ctx.with_type(member_ty.clone());
                         Ok(Expression::MemberAccess(ctx, Box::new(src), member.clone()))
                     }
                     _ => Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::MemberAccessInvalidRootType(src.get_type().clone()),
                     )),
                 }
@@ -605,6 +613,7 @@ impl TypeResolver {
                     } else {
                         Err(CompilerError::new(
                             ctx.line(),
+                            ctx.span(),
                             SemanticError::IfExprMismatchArms(
                                 if_arm.get_type().clone(),
                                 else_arm_ty,
@@ -614,6 +623,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::CondExpectedBool(cond.get_type().clone()),
                     ))
                 }
@@ -638,12 +648,14 @@ impl TypeResolver {
                     } else {
                         Err(CompilerError::new(
                             ctx.line(),
+                            ctx.span(),
                             SemanticError::WhileInvalidType(body.get_type().clone()),
                         ))
                     }
                 } else {
                     Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::WhileCondInvalidType(cond.get_type().clone()),
                     ))
                 }
@@ -655,6 +667,7 @@ impl TypeResolver {
                     _ => {
                         return Err(CompilerError::new(
                             ctx.line(),
+                            ctx.span(),
                             SemanticError::YieldInvalidType(exp.get_type().clone()),
                         ))
                     }
@@ -675,7 +688,7 @@ impl TypeResolver {
                 let (symbol, routine_canon_path) = self
                     .symbols
                     .lookup_symbol_by_path(routine_path)
-                    .map_err(|e| CompilerError::new(ctx.line(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.line(), ctx.span(), e))?;
 
                 // if the routine is external, then change the call type to extern
                 let call = if symbol.is_extern {
@@ -686,13 +699,14 @@ impl TypeResolver {
 
                 let (expected_param_tys, has_varargs, ret_ty) = self
                     .extract_routine_type_info(symbol, &call, &routine_canon_path)
-                    .map_err(|e| CompilerError::new(ctx.line(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.line(), ctx.span(), e))?;
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
                 if !has_varargs && (resolved_params.len() != expected_param_tys.len()) {
                     Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::RoutineCallWrongNumParams(
                             routine_path.clone(),
                             expected_param_tys.len(),
@@ -702,6 +716,7 @@ impl TypeResolver {
                 } else if has_varargs && (resolved_params.len() < expected_param_tys.len()) {
                     Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::FunctionParamsNotEnough(
                             routine_path.clone(),
                             expected_param_tys.len(),
@@ -715,7 +730,7 @@ impl TypeResolver {
                         &expected_param_tys,
                         has_varargs,
                     ) {
-                        Err(msg) => Err(CompilerError::new(ctx.line(), msg)),
+                        Err(msg) => Err(CompilerError::new(ctx.line(), ctx.span(), msg)),
                         Ok(()) => {
                             let ctx = ctx.with_type(ret_ty.clone());
                             Ok(Expression::RoutineCall(
@@ -758,18 +773,20 @@ impl TypeResolver {
                 let (struct_def, canonical_path) = self
                     .symbols
                     .lookup_symbol_by_path(&struct_name)
-                    .map_err(|e| CompilerError::new(ctx.line(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.line(), ctx.span(), e))?;
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
                     .ok_or(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::InvalidStructure,
                     ))?
                     .len();
                 if params.len() != expected_num_params {
                     return Err(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::StructExprWrongNumParams(expected_num_params, params.len()),
                     ));
                 }
@@ -778,12 +795,14 @@ impl TypeResolver {
                 for (pn, pv) in params.iter() {
                     let member_ty = struct_def_ty.get_member(*pn).ok_or(CompilerError::new(
                         ctx.line(),
+                        ctx.span(),
                         SemanticError::StructExprMemberNotFound(canonical_path.clone(), *pn),
                     ))?;
                     let param = self.analyze_expression(pv)?;
                     if param.get_type() != member_ty {
                         return Err(CompilerError::new(
                             ctx.line(),
+                            ctx.span(),
                             SemanticError::StructExprFieldTypeMismatch(
                                 canonical_path,
                                 *pn,
@@ -824,6 +843,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         operand.context().line(),
+                        operand.context().span(),
                         SemanticError::ExpectedSignedInteger(op, operand.get_type().clone()),
                     ))
                 }
@@ -834,6 +854,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         operand.context().line(),
+                        operand.context().span(),
                         SemanticError::ExpectedBool(op, operand.get_type().clone()),
                     ))
                 }
@@ -870,6 +891,7 @@ impl TypeResolver {
                     };
                     Err(CompilerError::new(
                         l.context().line(),
+                        l.context().span(),
                         SemanticError::OpExpected(
                             op,
                             expected,
@@ -885,6 +907,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         l.context().line(),
+                        l.context().span(),
                         SemanticError::OpExpected(
                             op,
                             Type::Bool,
@@ -900,6 +923,7 @@ impl TypeResolver {
                 } else {
                     Err(CompilerError::new(
                         l.context().line(),
+                        l.context().span(),
                         SemanticError::OpExpected(
                             op,
                             l.get_type().clone(),
@@ -991,6 +1015,7 @@ impl TypeResolver {
         if def != &RoutineDefType::Function {
             return Err(CompilerError::new(
                 routine.context().line(),
+                routine.context().span(),
                 SemanticError::MainFnInvalidType,
             ));
         }
@@ -998,6 +1023,7 @@ impl TypeResolver {
         if params.len() > 0 {
             return Err(CompilerError::new(
                 routine.context().line(),
+                routine.context().span(),
                 SemanticError::MainFnInvalidParams,
             ));
         }
@@ -1005,6 +1031,7 @@ impl TypeResolver {
         if p != Type::I64 {
             return Err(CompilerError::new(
                 routine.context().line(),
+                routine.context().span(),
                 SemanticError::MainFnInvalidType,
             ));
         }

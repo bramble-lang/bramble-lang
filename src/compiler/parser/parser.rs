@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
+use crate::compiler::Span;
 use crate::StringId;
 use crate::{
     compiler::{
@@ -140,8 +141,11 @@ impl Parser {
 }
 
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
-    let module_ctx =
-        ctx_for_tokens(&tokens).ok_or(CompilerError::new(0, ParserError::EmptyProject))?;
+    let module_ctx = ctx_for_tokens(&tokens).ok_or(CompilerError::new(
+        0,
+        Span::zero(),
+        ParserError::EmptyProject,
+    ))?;
     let mut module = Module::new(name, module_ctx);
 
     let mut stream = TokenStream::new(&tokens);
@@ -150,7 +154,11 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserC
         parse_items_into(&mut stream, &mut module)?;
 
         if stream.index() == start_index {
-            return err!(0, ParserError::Locked(stream.peek().map(|t| t.clone())));
+            return err!(
+                0,
+                stream.peek().unwrap().span,
+                ParserError::Locked(stream.peek().map(|t| t.clone()))
+            );
         }
     }
 
@@ -174,7 +182,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
                 Some(module)
             }
             _ => {
-                return err!(module.line, ParserError::ModExpectedName);
+                return err!(module.line, module.span, ParserError::ModExpectedName);
             }
         },
         None => None,
@@ -243,7 +251,11 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
         Some(token) => match function_decl(stream, true)? {
             Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    return err!(fn_ctx.line(), ParserError::ExternInvalidVarArgs);
+                    return err!(
+                        fn_ctx.line(),
+                        fn_ctx.span(),
+                        ParserError::ExternInvalidVarArgs
+                    );
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
@@ -255,7 +267,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
                 )))
             }
             None => {
-                err!(token.line, ParserError::ExternExpectedFnDecl)
+                err!(token.line, token.span, ParserError::ExternExpectedFnDecl)
             }
         },
         None => Ok(None),
@@ -275,7 +287,11 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
                 Ok(Some(StructDef::new(id, ctx, fields)))
             }
             None => {
-                err!(st_def.line, ParserError::StructExpectedIdentifier)
+                err!(
+                    st_def.line,
+                    st_def.span,
+                    ParserError::StructExpectedIdentifier
+                )
             }
         },
         None => Ok(None),
@@ -285,7 +301,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
     let (fn_ctx, fn_name, params, fn_type) = match function_decl(stream, false)? {
         Some((l, n, p, v, t)) => {
             if v {
-                return err!(l.line(), ParserError::FnVarArgsNotAllowed);
+                return err!(l.line(), l.span(), ParserError::FnVarArgsNotAllowed);
             }
             (l, n, p, t)
         }
@@ -300,6 +316,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
         None => {
             return err!(
                 fn_ctx.line(),
+                fn_ctx.span(),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
@@ -333,6 +350,7 @@ fn function_decl(
 
     let (fn_name, _, fn_def_span) = stream.next_if_id().ok_or(CompilerError::new(
         fn_ctx.line(),
+        fn_ctx.span(),
         ParserError::FnExpectedIdentifierAfterFn,
     ))?;
     fn_ctx = fn_ctx.extend(fn_def_span);
@@ -342,6 +360,7 @@ fn function_decl(
         consume_type(stream)?
             .ok_or(CompilerError::new(
                 fn_ctx.line(),
+                fn_ctx.span(),
                 ParserError::FnExpectedTypeAfterArrow,
             ))?
             .0
@@ -360,12 +379,13 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
 
     let (co_name, _, _) = stream.next_if_id().ok_or(CompilerError::new(
         ctx.line(),
+        ctx.span(),
         ParserError::CoExpectedIdentifierAfterCo,
     ))?;
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
-        return err!(ctx.line(), ParserError::FnVarArgsNotAllowed);
+        return err!(ctx.line(), ctx.span(), ParserError::FnVarArgsNotAllowed);
     }
 
     let co_type = match stream.next_if(&Lex::LArrow) {
@@ -373,6 +393,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
             consume_type(stream)?
                 .ok_or(CompilerError::new(
                     t.line,
+                    t.span,
                     ParserError::FnExpectedTypeAfterArrow,
                 ))?
                 .0
@@ -386,8 +407,12 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
+            let (line, span) = stmts.last().map_or((ctx.line(), ctx.span()), |s| {
+                (s.context().line(), s.context().span())
+            });
             return err!(
-                stmts.last().map_or(ctx.line(), |s| s.context().line()),
+                line,
+                span,
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
@@ -553,7 +578,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
                     span
                 }
                 _ => {
-                    return err!(token.line, ParserError::PathExpectedIdentifier);
+                    return err!(token.line, token.span, ParserError::PathExpectedIdentifier);
                 }
             };
         ctx = ctx.extend(span);
@@ -622,12 +647,14 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
             let ctx = lbracket.to_ctx();
             let (element_ty, _) = consume_type(stream)?.ok_or(CompilerError::new(
                 ctx.line(),
+                ctx.span(),
                 ParserError::ArrayDeclExpectedType,
             ))?;
             stream.next_must_be(&Lex::Semicolon)?;
 
             let len = expression(stream)?.ok_or(CompilerError::new(
                 ctx.line(),
+                ctx.span(),
                 ParserError::ArrayDeclExpectedSize,
             ))?;
             let len = match len {
@@ -639,7 +666,13 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
                 Expression::I16(_, l) => l as usize,
                 Expression::I32(_, l) => l as usize,
                 Expression::I64(_, l) => l as usize,
-                _ => return err!(0, ParserError::ArrayExpectedIntLiteral),
+                _ => {
+                    return err!(
+                        len.context().line(),
+                        len.context().span(),
+                        ParserError::ArrayExpectedIntLiteral
+                    )
+                }
             };
 
             let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
@@ -658,8 +691,11 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
             let id = decl_tok[0].sym.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let (ty, ty_ctx) = consume_type(stream)?
-                .ok_or(CompilerError::new(line, ParserError::IdDeclExpectedType))?;
+            let (ty, ty_ctx) = consume_type(stream)?.ok_or(CompilerError::new(
+                line,
+                decl_tok[0].span,
+                ParserError::IdDeclExpectedType,
+            ))?;
             let ctx = ctx.join(ty_ctx);
             Ok(Some(Expression::IdentifierDeclare(ctx, id, ty)))
         }

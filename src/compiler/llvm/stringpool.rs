@@ -122,7 +122,7 @@ impl<'a> StringPool<'a> {
         }
     }
 
-    pub fn extract_from_module<A>(&mut self, module: &Module<A>) {
+    pub fn extract_from_module<A: Context>(&mut self, module: &Module<A>) {
         for m in module.get_modules().iter() {
             self.extract_from_module(m);
         }
