@@ -471,8 +471,8 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
 fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if(&Lex::Yield) {
-        Some(token) => {
-            let ctx = token.to_ctx();
+        Some(yield_tok) => {
+            let ctx = yield_tok.to_ctx();
             match expression(stream)? {
                 Some(coroutine) => {
                     let ctx = ctx.join(*coroutine.context());
