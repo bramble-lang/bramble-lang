@@ -242,8 +242,14 @@ impl<'ctx> IrGen<'ctx> {
         // Add all function definitions that are imported from other projects
         for manifest in self.imports {
             // Add imported functions to the LLVM Module
-            for ImportRoutineDef { path, params, ty } in &manifest.funcs {
-                self.add_fn_decl(&path.to_label(self.string_table), params, false, ty, 0);
+            for rd in &manifest.funcs {
+                self.add_fn_decl(
+                    &rd.path().to_label(self.string_table),
+                    rd.params(),
+                    false,
+                    rd.ty(),
+                    0,
+                );
             }
         }
     }
@@ -283,7 +289,7 @@ impl<'ctx> IrGen<'ctx> {
     /// and to add the definition to the function when
     /// compiling the AST to LLVM.
     fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticContext>) {
-        let params = rd.get_params().iter().map(|p| p.ty.clone()).collect();
+        let params: Vec<_> = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
             &rd.context.canonical_path().to_label(self.string_table),
             &params,
@@ -295,7 +301,7 @@ impl<'ctx> IrGen<'ctx> {
 
     fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticContext>) {
         // Declare external function
-        let params = ex.get_params().iter().map(|p| p.ty.clone()).collect();
+        let params: Vec<_> = ex.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
             &ex.get_context()
                 .canonical_path()
@@ -315,7 +321,7 @@ impl<'ctx> IrGen<'ctx> {
     fn add_fn_decl(
         &mut self,
         name: &str,
-        params: &Vec<ast::Type>,
+        params: &[ast::Type],
         has_var_arg: bool,
         ret_ty: &ast::Type,
         line: u32,
@@ -402,11 +408,11 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Add a struct definition to the LLVM context and module.
     fn add_import_struct_def(&mut self, sd: &'ctx ImportStructDef) {
-        let name = sd.path.to_label(self.string_table);
+        let name = sd.path().to_label(self.string_table);
         let struct_ty = self.context.opaque_struct_type(&name);
 
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
-            .fields
+            .fields()
             .iter()
             .filter_map(|(field_name, field_ty)| {
                 // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
@@ -1222,16 +1228,16 @@ impl<'ctx> LlvmToBasicTypeEnum<'ctx> for AnyTypeEnum<'ctx> {
 
 impl From<&ImportStructDef> for StructDef<SemanticContext> {
     fn from(isd: &ImportStructDef) -> Self {
-        let name = isd.path.item().unwrap();
+        let name = isd.path().item().unwrap();
 
         let struct_def_ctx = SemanticContext::new_local(
             0,
             ParserContext::new(0, Span::zero()),
-            Type::StructDef(isd.fields.clone()),
+            Type::StructDef(isd.fields().into()),
         );
 
         let fields = isd
-            .fields
+            .fields()
             .iter()
             .map(|(name, ty)| {
                 Parameter::new(

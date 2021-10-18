@@ -4,7 +4,7 @@ use log::*;
 
 use crate::compiler::{
     ast::{Element, Module, Node, Path, Type},
-    import::{Import, ImportRoutineDef, ImportStructDef},
+    import::{Import, ImportStructDef},
 };
 use crate::StringId;
 
@@ -62,15 +62,19 @@ impl<'a> SymbolTableScopeStack {
         // imported structures (If any semantic analysis is done on functions)
         for import in imports.into_iter() {
             for sd in import.structs.iter() {
-                debug!("Import struct {}", sd.path);
+                debug!("Import struct {}", sd.path());
                 self.import_structdef(sd);
             }
         }
 
         for import in imports.into_iter() {
-            for ImportRoutineDef { path, params, ty } in import.funcs.iter() {
-                debug!("Import function {}", path);
-                self.import_function(path.clone(), params.clone(), ty.clone());
+            for imp_routine in import.funcs.iter() {
+                debug!("Import function {}", imp_routine.path());
+                self.import_function(
+                    imp_routine.path().clone(),
+                    imp_routine.params().into(),
+                    imp_routine.ty().clone(),
+                );
             }
         }
     }
@@ -100,14 +104,14 @@ impl<'a> SymbolTableScopeStack {
     /// Add a function from another module to this symbol table
     /// So that calls to external functions can be type checked.
     pub fn import_structdef(&mut self, sd: &ImportStructDef) -> Option<Symbol> {
-        let canon_path = sd.path.clone();
+        let canon_path = sd.path().clone();
         match canon_path.item() {
             Some(item) => self.imported_symbols.insert(
                 canon_path.to_string(),
                 Symbol {
                     name: item.into(),
                     ty: Type::StructDef(
-                        sd.fields
+                        sd.fields()
                             .iter()
                             .map(|(f_name, f_ty)| (f_name.clone(), f_ty.clone()))
                             .collect(),

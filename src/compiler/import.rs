@@ -20,32 +20,52 @@ pub struct Import {
 /// in an external module or library.
 pub struct ImportRoutineDef {
     /// The canonical path of this routine within it's host module
-    pub path: Path,
+    path: Path,
 
     /// The parameter list of this routine
-    pub params: Vec<Type>,
+    params: Vec<Type>,
 
     /// The type that this routine resolves to
-    pub ty: Type,
+    ty: Type,
 }
 
 impl ImportRoutineDef {
     pub fn new(path: Path, params: Vec<Type>, ty: Type) -> ImportRoutineDef {
         ImportRoutineDef { path, params, ty }
     }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn params(&self) -> &[Type] {
+        &self.params
+    }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
 }
 
 /// A structure which is imported from an external module or library
 pub struct ImportStructDef {
     /// The canonical path of this structure within it's host module
-    pub path: Path,
+    path: Path,
 
     /// The field list of this structure
-    pub fields: Vec<(StringId, Type)>,
+    fields: Vec<(StringId, Type)>,
 }
 
 impl ImportStructDef {
     pub fn new(path: Path, fields: Vec<(StringId, Type)>) -> ImportStructDef {
         ImportStructDef { path, fields }
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn fields(&self) -> &[(StringId, Type)] {
+        &self.fields
     }
 }
