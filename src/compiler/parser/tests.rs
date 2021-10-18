@@ -315,10 +315,10 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
-        assert_eq!(*stm.get_context(), new_ctx(0, 15));
+        assert_eq!(*stm.context(), new_ctx(0, 15));
         match stm {
             Statement::Bind(box b) => {
-                assert_eq!(*b.get_context(), new_ctx(0, 15));
+                assert_eq!(*b.context(), new_ctx(0, 15));
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), false);
@@ -340,7 +340,7 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
-        assert_eq!(*stm.get_context(), new_ctx(0, 19));
+        assert_eq!(*stm.context(), new_ctx(0, 19));
         match stm {
             Statement::Bind(box b) => {
                 assert_eq!(b.get_id(), x);
@@ -387,7 +387,7 @@ pub mod tests {
 
             let stm = statement(&mut stream).unwrap().unwrap();
 
-            assert_eq!(*stm.get_context(), new_ctx(0, text.len() as u32));
+            assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
 
             match stm {
                 Statement::Bind(box b) => {
@@ -413,7 +413,7 @@ pub mod tests {
             .unwrap();
         let mut stream = TokenStream::new(&tokens);
         let stm = statement(&mut stream).unwrap().unwrap();
-        assert_eq!(*stm.get_context(), new_ctx(0, text.len() as u32));
+        assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
             Statement::Mutate(box m) => {
                 assert_eq!(m.get_id(), x);
@@ -436,7 +436,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         if let Some(m) = parse(test, &tokens).unwrap().unwrap().get_module(test_mod) {
-            assert_eq!(*m.get_context(), new_ctx(0, 15));
+            assert_eq!(*m.context(), new_ctx(0, 15));
             assert_eq!(m.get_name(), test_mod);
         } else {
             panic!("No nodes returned by parser")
@@ -458,7 +458,7 @@ pub mod tests {
             .unwrap();
 
         if let Some(m) = parse(test, &tokens).unwrap() {
-            assert_eq!(*m.get_context(), new_ctx(0, 44));
+            assert_eq!(*m.context(), new_ctx(0, 44));
             assert_eq!(m.get_name(), test);
 
             assert_eq!(m.get_modules().len(), 1);
@@ -467,7 +467,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 0);
 
             let m = &m.get_modules()[0];
-            assert_eq!(*m.get_context(), new_ctx(0, 44));
+            assert_eq!(*m.context(), new_ctx(0, 44));
             assert_eq!(m.get_name(), test_fn_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -522,7 +522,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_co_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 44));
+            assert_eq!(*m.context(), new_ctx(0, 44));
             assert_eq!(m.get_name(), test_co_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -579,7 +579,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_struct_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 48));
+            assert_eq!(*m.context(), new_ctx(0, 48));
             assert_eq!(m.get_name(), test_struct_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -588,7 +588,7 @@ pub mod tests {
             assert_eq!(m.get_structs().len(), 1);
 
             if let Some(Item::Struct(sd)) = m.get_item(my_struct) {
-                assert_eq!(*sd.get_context(), new_ctx(22, 46));
+                assert_eq!(*sd.context(), new_ctx(22, 46));
                 assert_eq!(sd.get_name(), my_struct);
                 assert_eq!(
                     sd.get_fields(),
@@ -619,7 +619,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_extern_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 55));
+            assert_eq!(*m.context(), new_ctx(0, 55));
             assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -629,7 +629,7 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item(my_fn) {
-                assert_eq!(*e.get_context(), new_ctx(22, 28));
+                assert_eq!(*e.context(), new_ctx(22, 28));
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
@@ -661,7 +661,7 @@ pub mod tests {
             .unwrap()
             .get_module(test_extern_mod)
         {
-            assert_eq!(*m.get_context(), new_ctx(0, 60));
+            assert_eq!(*m.context(), new_ctx(0, 60));
             assert_eq!(m.get_name(), test_extern_mod);
 
             assert_eq!(m.get_modules().len(), 0);
@@ -671,7 +671,7 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item(my_fn) {
-                assert_eq!(*e.get_context(), new_ctx(22, 28));
+                assert_eq!(*e.context(), new_ctx(22, 28));
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
@@ -862,7 +862,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         if let Some(m) = parse(test_mod, &tokens).unwrap() {
-            assert_eq!(*m.get_context(), new_ctx(0, 37));
+            assert_eq!(*m.context(), new_ctx(0, 37));
             if let Some(Item::Routine(RoutineDef {
                 context,
                 def: RoutineDefType::Coroutine,

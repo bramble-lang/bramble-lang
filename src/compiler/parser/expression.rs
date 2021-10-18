@@ -80,12 +80,12 @@ impl Expression<ParserContext> {
     ) -> ParserResult<Expression<ParserContext>> {
         match op {
             Lex::Minus => Ok(Some(Expression::UnaryOp(
-                ctx.join(*operand.get_context()),
+                ctx.join(*operand.context()),
                 UnaryOperator::Negate,
                 operand,
             ))),
             Lex::Not => Ok(Some(Expression::UnaryOp(
-                ctx.join(*operand.get_context()),
+                ctx.join(*operand.context()),
                 UnaryOperator::Not,
                 operand,
             ))),
@@ -100,7 +100,7 @@ impl Expression<ParserContext> {
         left: Box<Self>,
         right: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
-        let ctx = left.get_context().join(*right.get_context());
+        let ctx = left.context().join(*right.context());
         match op {
             Lex::Eq => Ok(Some(Expression::BinaryOp(
                 ctx,
@@ -279,7 +279,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                         .next_if_id()
                         .map(|(_, member_span, member)| {
                             Expression::MemberAccess(
-                                ma.get_context().extend(member_span),
+                                ma.context().extend(member_span),
                                 Box::new(ma),
                                 member,
                             )
@@ -296,7 +296,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                         .map(|index| {
                             stream.next_must_be(&Lex::RBracket).map(|rbracket| {
                                 Expression::ArrayAt {
-                                    context: ma.get_context().join(rbracket.to_ctx()),
+                                    context: ma.context().join(rbracket.to_ctx()),
                                     array: box ma,
                                     index: box index,
                                 }
@@ -336,7 +336,7 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
             // Extend the Span of exp to cover the left paren and the right
             exp.as_mut().map(|exp| {
                 let span = Span::cover(span, rparen.span);
-                let ctx = exp.get_context().extend(span);
+                let ctx = exp.context().extend(span);
                 *exp.get_context_mut() = ctx;
             });
 
@@ -390,8 +390,8 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
             };
 
             let ctx = else_arm.as_ref().map_or_else(
-                || if_tok.to_ctx().join(*if_arm.get_context()),
-                |ea| if_tok.to_ctx().join(*ea.get_context()),
+                || if_tok.to_ctx().join(*if_arm.context()),
+                |ea| if_tok.to_ctx().join(*ea.context()),
             );
 
             Some(Expression::If {
@@ -420,7 +420,7 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
                 .ok_or(CompilerError::new(whl.l, ParserError::WhileMissingBody))?;
 
             Some(Expression::While {
-                context: whl.to_ctx().join(*body.get_context()),
+                context: whl.to_ctx().join(*body.context()),
                 cond: Box::new(cond),
                 body: Box::new(body),
             })
@@ -471,7 +471,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
             let ctx = token.to_ctx();
             match expression(stream)? {
                 Some(coroutine) => {
-                    let ctx = ctx.join(*coroutine.get_context());
+                    let ctx = ctx.join(*coroutine.context());
                     Expression::new_yield(ctx, Box::new(coroutine))
                 }
                 None => {

@@ -346,7 +346,7 @@ impl<'a> SymbolTableScopeStack {
                 }
             }
 
-            (*current).get_context().sym().get(item)
+            (*current).context().sym().get(item)
         }
     }
 

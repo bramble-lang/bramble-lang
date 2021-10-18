@@ -15,7 +15,7 @@ pub struct Parameter<M> {
 }
 
 impl<M: Context> Node<M> for Parameter<M> {
-    fn get_context(&self) -> &M {
+    fn context(&self) -> &M {
         &self.context
     }
 

@@ -50,14 +50,14 @@ pub type SemanticNode = Expression<SemanticContext>;
 
 impl SemanticNode {
     pub fn get_type(&self) -> &Type {
-        let meta = self.get_context();
+        let meta = self.context();
         &meta.ty
     }
 }
 
 impl Statement<SemanticContext> {
     pub fn get_type(&self) -> &Type {
-        let m = self.get_context();
+        let m = self.context();
         &m.ty
     }
 }
@@ -162,13 +162,13 @@ impl SemanticAst {
         let f = |n: &dyn Node<ParserContext>| match n.node_type() {
             NodeType::Module => {
                 let name = n.name().expect("Modules must have a name");
-                self.module_semantic_context_from(*n.get_context(), name)
+                self.module_semantic_context_from(*n.context(), name)
             }
             NodeType::RoutineDef(_) => {
                 let name = n.name().expect("RoutineDefs must have a name");
-                self.routine_semantic_context_from(*n.get_context(), name)
+                self.routine_semantic_context_from(*n.context(), name)
             }
-            _ => self.semantic_context_from(*n.get_context()),
+            _ => self.semantic_context_from(*n.context()),
         };
 
         let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);

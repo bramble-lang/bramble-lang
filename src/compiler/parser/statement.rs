@@ -44,14 +44,14 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
     match stm {
         Some(mut stm) => match stream.next_if(&Lex::Semicolon) {
             Some(semicolon) => {
-                let ctx = stm.get_context().join(semicolon.to_ctx());
+                let ctx = stm.context().join(semicolon.to_ctx());
                 *stm.get_context_mut() = ctx;
                 Ok(Some(stm))
             }
             _ => {
                 if must_have_semicolon {
                     err!(
-                        stm.get_context().line(),
+                        stm.context().line(),
                         ParserError::ExpectedButFound(
                             vec![Lex::Semicolon],
                             stream.peek().map(|x| x.s.clone())
@@ -88,7 +88,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                 ))?,
             };
 
-            let ctx = exp.get_context().join(token.to_ctx());
+            let ctx = exp.context().join(token.to_ctx());
 
             match id_decl {
                 Expression::IdentifierDeclare(_, id, ty) => {

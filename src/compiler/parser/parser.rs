@@ -169,7 +169,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
                 let ctx = stream
                     .next_must_be(&Lex::RBrace)?
                     .to_ctx()
-                    .join(*module.get_context());
+                    .join(*module.context());
                 *module.get_context_mut() = ctx;
                 Some(module)
             }
@@ -387,7 +387,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                stmts.last().map_or(ctx.line(), |s| s.get_context().line()),
+                stmts.last().map_or(ctx.line(), |s| s.context().line()),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
