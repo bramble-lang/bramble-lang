@@ -54,7 +54,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
                         stm.context().line(),
                         ParserError::ExpectedButFound(
                             vec![Lex::Semicolon],
-                            stream.peek().map(|x| x.s.clone())
+                            stream.peek().map(|x| x.sym.clone())
                         )
                     )
                 } else {
@@ -114,7 +114,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
         None => Ok(None),
         Some(tokens) => {
             let id = tokens[1]
-                .s
+                .sym
                 .get_str()
                 .expect("CRITICAL: identifier token cannot be converted to string");
             let exp = expression(stream)?.ok_or(CompilerError::new(

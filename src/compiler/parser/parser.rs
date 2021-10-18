@@ -537,7 +537,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
         let span =
             match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
                 Some(Token {
-                    s: Lex::PathSuper,
+                    sym: Lex::PathSuper,
                     span,
                     ..
                 }) => {
@@ -545,7 +545,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
                     span
                 }
                 Some(Token {
-                    s: Lex::Identifier(id),
+                    sym: Lex::Identifier(id),
                     span,
                     ..
                 }) => {
@@ -578,7 +578,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)>
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
     let ty = match stream.peek() {
         Some(Token {
-            s: Lex::Primitive(primitive),
+            sym: Lex::Primitive(primitive),
             ..
         }) => {
             let ty = match *primitive {
@@ -654,7 +654,7 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
         Some(decl_tok) => {
             let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());
             let line = decl_tok[1].line;
-            let id = decl_tok[0].s.get_str().expect(
+            let id = decl_tok[0].sym.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
             let (ty, ty_ctx) = consume_type(stream)?

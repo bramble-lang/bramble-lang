@@ -45,7 +45,7 @@ impl<'a> TokenStream<'a> {
             Some(Token {
                 line: l,
                 span,
-                s: Lex::Identifier(id),
+                sym: Lex::Identifier(id),
                 ..
             }) => Some((l, span, id)),
             Some(_) => None,
@@ -55,7 +55,7 @@ impl<'a> TokenStream<'a> {
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, CompilerError<ParserError>> {
         let (line, found) = match self.peek() {
-            Some(t) => (t.line, t.s.clone()),
+            Some(t) => (t.line, t.sym.clone()),
             None => return err!(0, ParserError::ExpectedButFound(vec![test.clone()], None)),
         };
         match self.next_if(test) {
@@ -162,7 +162,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::LParen,
+                sym: Lex::LParen,
                 span: Span::new(Offset::new(0), Offset::new(1)),
             }
         );
@@ -192,7 +192,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::LParen,
+                sym: Lex::LParen,
                 span: new_span(0, 1),
             }
         );
@@ -202,7 +202,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::I64(2),
+                sym: Lex::I64(2),
                 span: new_span(1, 2),
             }
         );
@@ -227,7 +227,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::LParen,
+                sym: Lex::LParen,
                 span: new_span(0, 1),
             }
         );
@@ -237,7 +237,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::I64(2),
+                sym: Lex::I64(2),
                 span: new_span(1, 2),
             }
         );
@@ -247,7 +247,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::Add,
+                sym: Lex::Add,
                 span: new_span(3, 4),
             }
         );
@@ -257,7 +257,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::I64(4),
+                sym: Lex::I64(4),
                 span: new_span(5, 6),
             }
         );
@@ -267,7 +267,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::RParen,
+                sym: Lex::RParen,
                 span: new_span(6, 7),
             }
         );
@@ -277,7 +277,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::Mul,
+                sym: Lex::Mul,
                 span: new_span(8, 9),
             }
         );
@@ -287,7 +287,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::I64(3),
+                sym: Lex::I64(3),
                 span: new_span(10, 11),
             }
         );
@@ -312,7 +312,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::LParen,
+                sym: Lex::LParen,
                 span: new_span(0, 1),
             }
         );
@@ -322,7 +322,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::I64(2),
+                sym: Lex::I64(2),
                 span: new_span(1, 2),
             }
         );
@@ -335,7 +335,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::I64(2),
+                sym: Lex::I64(2),
                 span: new_span(1, 2),
             }
         );
@@ -358,12 +358,12 @@ mod test_tokenstream {
             vec![
                 Token {
                     line: 1,
-                    s: Lex::LParen,
+                    sym: Lex::LParen,
                     span: new_span(0, 1),
                 },
                 Token {
                     line: 1,
-                    s: Lex::I64(2),
+                    sym: Lex::I64(2),
                     span: new_span(1, 2),
                 }
             ]
@@ -374,7 +374,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::Add,
+                sym: Lex::Add,
                 span: new_span(3, 4),
             }
         );
@@ -414,7 +414,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::LParen,
+                sym: Lex::LParen,
                 span: new_span(0, 1),
             }
         );
@@ -423,7 +423,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::I64(2),
+                sym: Lex::I64(2),
                 span: new_span(1, 2),
             }
         );
@@ -433,7 +433,7 @@ mod test_tokenstream {
             p,
             Token {
                 line: 1,
-                s: Lex::I64(2),
+                sym: Lex::I64(2),
                 span: new_span(1, 2),
             }
         );
@@ -442,7 +442,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::Add,
+                sym: Lex::Add,
                 span: new_span(3, 4),
             }
         );
@@ -454,7 +454,7 @@ mod test_tokenstream {
             *p,
             Token {
                 line: 1,
-                s: Lex::Add,
+                sym: Lex::Add,
                 span: new_span(3, 4),
             }
         );

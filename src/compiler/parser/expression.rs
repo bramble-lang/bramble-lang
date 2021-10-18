@@ -244,9 +244,9 @@ pub fn binary_op(
             Some(op) => {
                 let right = binary_op(stream, test, left_pattern)?.ok_or(CompilerError::new(
                     op.to_ctx().line(),
-                    ParserError::ExpectedExprAfter(op.s.clone()),
+                    ParserError::ExpectedExprAfter(op.sym.clone()),
                 ))?;
-                Expression::binary_op(&op.s, Box::new(left), Box::new(right))
+                Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
             }
             None => Ok(Some(left)),
         },
@@ -260,9 +260,9 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         Some(op) => {
             let factor = negate(stream)?.ok_or(CompilerError::new(
                 op.to_ctx().line(),
-                ParserError::ExpectedTermAfter(op.s.clone()),
+                ParserError::ExpectedTermAfter(op.sym.clone()),
             ))?;
-            Expression::unary_op(op.to_ctx(), &op.s, Box::new(factor))
+            Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
         }
         None => member_access(stream),
     }
@@ -274,7 +274,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
         Some(f) => {
             let mut ma = f;
             while let Some(token) = stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket]) {
-                ma = match token.s {
+                ma = match token.sym {
                     Lex::MemberAccess => stream
                         .next_if_id()
                         .map(|(_, member_span, member)| {
@@ -307,7 +307,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                             token.line,
                             ParserError::ExpectedButFound(
                                 vec![Lex::LBracket, Lex::MemberAccess],
-                                Some(token.s.clone())
+                                Some(token.sym.clone())
                             )
                         )
                     }
@@ -324,7 +324,7 @@ fn factor(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.peek() {
         Some(Token {
-            s: Lex::LParen,
+            sym: Lex::LParen,
             span,
             ..
         }) => {
@@ -373,7 +373,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                 Some(_) => match stream.peek() {
                     Some(Token {
                         line: l,
-                        s: Lex::If,
+                        sym: Lex::If,
                         ..
                     }) => {
                         let l = *l;
@@ -564,49 +564,49 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         Some(Token {
             line: l,
             span,
-            s: Lex::U8(i),
+            sym: Lex::U8(i),
             ..
         }) => Ok(Some(Expression::U8(ParserContext::new(l, span), i))),
         Some(Token {
             line: l,
             span,
-            s: Lex::U16(i),
+            sym: Lex::U16(i),
             ..
         }) => Ok(Some(Expression::U16(ParserContext::new(l, span), i))),
         Some(Token {
             line: l,
             span,
-            s: Lex::U32(i),
+            sym: Lex::U32(i),
             ..
         }) => Ok(Some(Expression::U32(ParserContext::new(l, span), i))),
         Some(Token {
             line: l,
             span,
-            s: Lex::U64(i),
+            sym: Lex::U64(i),
             ..
         }) => Ok(Some(Expression::U64(ParserContext::new(l, span), i))),
         Some(Token {
             line: l,
             span,
-            s: Lex::I8(i),
+            sym: Lex::I8(i),
             ..
         }) => Ok(Some(Expression::I8(ParserContext::new(l, span), i))),
         Some(Token {
             line: l,
             span,
-            s: Lex::I16(i),
+            sym: Lex::I16(i),
             ..
         }) => Ok(Some(Expression::I16(ParserContext::new(l, span), i))),
         Some(Token {
             line: l,
             span,
-            s: Lex::I32(i),
+            sym: Lex::I32(i),
             ..
         }) => Ok(Some(Expression::I32(ParserContext::new(l, span), i))),
         Some(Token {
             line: l,
             span,
-            s: Lex::I64(i),
+            sym: Lex::I64(i),
             ..
         }) => Ok(Some(Expression::I64(ParserContext::new(l, span), i))),
         Some(t) => panic!("Unexpected token: {:?}", t),
@@ -620,7 +620,7 @@ fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
         Some(Token {
             line: l,
             span,
-            s: Lex::Bool(b),
+            sym: Lex::Bool(b),
             ..
         }) => Ok(Some(Expression::Boolean(ParserContext::new(l, span), b))),
         _ => Ok(None),
@@ -633,7 +633,7 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserCon
         Some(Token {
             line: l,
             span,
-            s: Lex::StringLiteral(s),
+            sym: Lex::StringLiteral(s),
             ..
         }) => Ok(Some(Expression::StringLiteral(
             ParserContext::new(l, span),

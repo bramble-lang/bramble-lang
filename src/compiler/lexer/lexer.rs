@@ -562,7 +562,7 @@ impl<'a> Lexer<'a> {
         match &token {
             Token {
                 line: l,
-                s: Identifier(id),
+                sym: Identifier(id),
                 span,
                 ..
             } => match self.string_table.get(*id).unwrap() {
@@ -580,7 +580,7 @@ impl<'a> Lexer<'a> {
             Token {
                 line: l,
                 span,
-                s: Identifier(ref id),
+                sym: Identifier(ref id),
                 ..
             } => match self.string_table.get(*id).unwrap() {
                 "u8" => Token::new(Primitive(Primitive::U8), l, span),
@@ -605,7 +605,7 @@ impl<'a> Lexer<'a> {
             Token {
                 line: l,
                 span,
-                s: Identifier(ref id),
+                sym: Identifier(ref id),
                 ..
             } => match self.string_table.get(*id).unwrap() {
                 "let" => Token::new(Let, l, span),
