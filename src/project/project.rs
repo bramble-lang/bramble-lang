@@ -142,9 +142,9 @@ pub fn parse_project(
 /// of tokenized compilation units.
 pub fn tokenize_source_map(
     sourcemap: &SourceMap,
+    src_path: &std::path::Path,
     string_table: &mut StringTable,
     trace_lexer: TracingConfig,
-    src_path: &std::path::Path,
 ) -> Result<Vec<CompilationUnit<Vec<Token>>>, Vec<CompilerError<LexerError>>> {
     let mut project_token_sets = vec![];
 

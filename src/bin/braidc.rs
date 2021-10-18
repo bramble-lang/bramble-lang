@@ -41,7 +41,7 @@ fn main() {
     let stop_stage = get_stage(&config).unwrap();
 
     let trace_lexer = get_lexer_tracing(&config);
-    let token_sets = match tokenize_source_map(&sourcemap, &mut string_table, trace_lexer, src_path)
+    let token_sets = match tokenize_source_map(&sourcemap, src_path, &mut string_table, trace_lexer)
     {
         Ok(ts) => ts,
         Err(errs) => {
