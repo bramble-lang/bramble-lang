@@ -301,7 +301,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                             token.span,
                             ParserError::IndexOpInvalidExpr,
                         ))
-                        .map(|index| {
+                        .and_then(|index| {
                             stream.next_must_be(&Lex::RBracket).map(|rbracket| {
                                 Expression::ArrayAt {
                                     context: ma.context().join(rbracket.to_ctx()),
@@ -309,7 +309,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                                     index: box index,
                                 }
                             })
-                        })??,
+                        })?,
                     _ => {
                         return err!(
                             token.line,
