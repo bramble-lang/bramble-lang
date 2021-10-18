@@ -96,19 +96,80 @@ impl SourceMap {
             None
         }
     }
+
+    // Function returns the file(s) a span covers
+    pub fn files(&self, span: Span) -> Vec<&PathBuf> {
+        self.map
+            .iter()
+            .filter(|e| span.intersects(e.span))
+            .map(|e| &e.path)
+            .collect()
+    }
+
+    // Function returns the Line number of a span
+    pub fn lines(&self, span: Span) -> Vec<(&PathBuf, Vec<u32>)> {
+        // Get the list of files that the span covers
+        self.map
+            .iter()
+            .filter(|e| span.intersects(e.span))
+            .map(|file| {
+                let lines = self.file_lines(file, span);
+                (&file.path, lines)
+            })
+            .collect()
+    }
+
+    /// Returns the lines that a span covers in the given file.
+    /// Will return an empty vector if `span` does not intersect the file
+    /// at all.
+    fn file_lines(&self, file: &SourceMapEntry, span: Span) -> Vec<u32> {
+        let mut lines = vec![];
+        // Check that span intersects with the file's span in the global offset space
+        match file.span.intersection(span) {
+            Some(intersection) => {
+                // Then search through the file from the beginning until it reaches the
+                // start of the span, counting the number of new lines
+                // Then from the start of the span until the end of the span or the file
+                // Count each new line and add it to the vector
+                let mut stream = file.read().unwrap();
+
+                let mut line = 1;
+                let mut prev_line = 0;
+                while let Some(Ok(c)) = stream.next() {
+                    if c.offset() >= intersection.low() && c.offset() < intersection.high() {
+                        // if line number has changed then push onto the vector
+                        if line != prev_line {
+                            lines.push(line);
+                            prev_line = line;
+                        }
+                    }
+
+                    if c == '\n' {
+                        line += 1;
+                    }
+                }
+            }
+            None => (),
+        }
+        lines
+    }
+
+    // Function returns a snippet of code from a span
 }
 
 /// Tracks the assignment of a range within the global offset space
 #[derive(Debug)]
 pub struct SourceMapEntry {
-    low: Offset,
-    high: Offset,
+    span: Span,
     path: PathBuf,
 }
 
 impl SourceMapEntry {
     fn new(low: Offset, high: Offset, path: PathBuf) -> SourceMapEntry {
-        SourceMapEntry { low, high, path }
+        SourceMapEntry {
+            span: Span::new(low, high),
+            path,
+        }
     }
 
     /// Get the file path for the source code that this entry in the [`SourceMap`]
@@ -122,7 +183,7 @@ impl SourceMapEntry {
     /// unicode character and it's offset within the global offset space.
     pub fn read(&self) -> Result<SourceCharIter, std::io::Error> {
         let file = std::fs::File::open(&self.path)?;
-        Ok(SourceCharIter::new(file, self.low, self.high))
+        Ok(SourceCharIter::new(file, self.span.low(), self.span.high()))
     }
 }
 

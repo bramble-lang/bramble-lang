@@ -24,6 +24,10 @@ impl Span {
         Span { low, high }
     }
 
+    pub fn low(&self) -> Offset {
+        self.low
+    }
+
     pub fn high(&self) -> Offset {
         self.high
     }
@@ -38,5 +42,26 @@ impl Span {
         let high = a.high.max(b.high);
 
         Span::new(low, high)
+    }
+
+    /// Returns true if this [`Span`] and the Span `b` intersect
+    pub fn intersects(&self, b: Span) -> bool {
+        self.intersection(b).is_some()
+    }
+
+    pub fn intersection(&self, b: Span) -> Option<Span> {
+        // Test for the intersection of self and b
+        let low = if self.low < b.low { b.low } else { self.low };
+        let high = if self.high < b.high {
+            self.high
+        } else {
+            b.high
+        };
+
+        if low < high {
+            Some(Span::new(low, high))
+        } else {
+            None
+        }
     }
 }

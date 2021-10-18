@@ -85,6 +85,11 @@ impl Offset {
     pub fn new(o: u32) -> Offset {
         Offset(o)
     }
+
+    /// Converts a global offset into the local offset of a source file
+    pub fn to_local(&self, base: Offset) -> u64 {
+        (self.0 - base.0) as u64
+    }
 }
 
 impl AddAssign<u32> for Offset {
