@@ -1,5 +1,7 @@
-use super::ParserError;
+use super::{ctx_for_tokens, ParserError};
+use crate::compiler::ast::Context;
 use crate::compiler::lexer::tokens::{Lex, Token};
+use crate::compiler::source::Offset;
 use crate::compiler::{CompilerError, Span};
 use crate::StringId;
 //use crate::result::Result;
@@ -7,11 +9,17 @@ use crate::StringId;
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,
     index: usize,
+    span: Span,
 }
 
 impl<'a> TokenStream<'a> {
     pub fn new(tokens: &'a Vec<Token>) -> TokenStream {
-        TokenStream { tokens, index: 0 }
+        TokenStream {
+            tokens,
+            index: 0,
+            span: ctx_for_tokens(tokens)
+                .map_or(Span::new(Offset::new(0), Offset::new(0)), |ctx| ctx.span()),
+        }
     }
 
     pub fn index(&self) -> usize {
@@ -59,7 +67,7 @@ impl<'a> TokenStream<'a> {
             None => {
                 return err!(
                     0,
-                    Span::zero(),
+                    Span::new(self.span.high(), self.span.high()),
                     ParserError::ExpectedButFound(vec![test.clone()], None)
                 )
             }

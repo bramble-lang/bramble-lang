@@ -14,7 +14,7 @@ use crate::{
     diagnostics::config::TracingConfig,
 };
 
-use super::ParserContext;
+use super::{ctx_for_tokens, ParserContext};
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
@@ -701,13 +701,4 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
         }
         None => Ok(None),
     }
-}
-
-/// Compute the minimum span that covers all the tokens in the slice.
-fn ctx_for_tokens(tokens: &[Token]) -> Option<ParserContext> {
-    // The vector of tokens is assumed to be ordered by their Offsets and that no
-    // two tokens have intersecting spans.
-    tokens
-        .first()
-        .and_then(|f| tokens.last().map(|l| f.to_ctx().join(l.to_ctx())))
 }

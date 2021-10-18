@@ -948,7 +948,7 @@ mod test {
                 "a[5 6]",
                 CompilerError::new(
                     1,
-                    Span::new(Offset::new(1), Offset::new(6)),
+                    Span::new(Offset::new(4), Offset::new(5)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
                 ),
             ),
@@ -956,7 +956,7 @@ mod test {
                 "a[]",
                 CompilerError::new(
                     1,
-                    Span::new(Offset::new(4), Offset::new(5)),
+                    Span::new(Offset::new(1), Offset::new(2)),
                     ParserError::IndexOpInvalidExpr,
                 ),
             ),
@@ -964,7 +964,7 @@ mod test {
                 "a[2 + ]",
                 CompilerError::new(
                     1,
-                    Span::new(Offset::new(2), Offset::new(5)),
+                    Span::new(Offset::new(4), Offset::new(5)),
                     ParserError::ExpectedExprAfter(Lex::Add),
                 ),
             ),

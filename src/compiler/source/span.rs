@@ -24,6 +24,10 @@ impl Span {
         Span { low, high }
     }
 
+    pub fn high(&self) -> Offset {
+        self.high
+    }
+
     pub fn zero() -> Span {
         Span::new(Offset(0), Offset(1))
     }
