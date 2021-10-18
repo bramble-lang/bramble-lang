@@ -277,7 +277,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                 ma = match token.sym {
                     Lex::MemberAccess => stream
                         .next_if_id()
-                        .map(|(_, member_span, member)| {
+                        .map(|(member, _, member_span)| {
                             Expression::MemberAccess(
                                 ma.context().extend(member_span),
                                 Box::new(ma),
@@ -494,10 +494,10 @@ fn struct_expression_params(
     match stream.next_if(&Lex::LBrace) {
         Some(lbrace) => {
             let mut params = vec![];
-            while let Some((ctx, _span, field_name)) = stream.next_if_id() {
+            while let Some((field_name, ln, _span)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(CompilerError::new(
-                    ctx,
+                    ln,
                     ParserError::StructExpectedFieldExpr(field_name),
                 ))?;
                 params.push((field_name, field_value));

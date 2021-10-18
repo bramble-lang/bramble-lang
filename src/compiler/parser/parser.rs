@@ -160,7 +160,7 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserC
 fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
     let mod_def = match stream.next_if(&Lex::ModuleDef) {
         Some(module) => match stream.next_if_id() {
-            Some((_, _, module_name)) => {
+            Some((module_name, _, _)) => {
                 let mut module = Module::new(module_name, module.to_ctx());
                 stream.next_must_be(&Lex::LBrace)?;
 
@@ -265,7 +265,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
 fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
     match stream.next_if(&Lex::Struct) {
         Some(st_def) => match stream.next_if_id() {
-            Some((_, _, id)) => {
+            Some((id, _, _)) => {
                 stream.next_must_be(&Lex::LBrace)?;
                 let fields = parameter_list(stream)?;
                 let ctx = stream
@@ -331,7 +331,7 @@ fn function_decl(
         None => return Ok(None),
     };
 
-    let (_, fn_def_span, fn_name) = stream.next_if_id().ok_or(CompilerError::new(
+    let (fn_name, _, fn_def_span) = stream.next_if_id().ok_or(CompilerError::new(
         fn_ctx.line(),
         ParserError::FnExpectedIdentifierAfterFn,
     ))?;
@@ -358,7 +358,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         None => return Ok(None),
     };
 
-    let (_, _, co_name) = stream.next_if_id().ok_or(CompilerError::new(
+    let (co_name, _, _) = stream.next_if_id().ok_or(CompilerError::new(
         ctx.line(),
         ParserError::CoExpectedIdentifierAfterCo,
     ))?;
@@ -527,7 +527,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
         path.push(Element::Selph);
     } else if stream.next_if(&Lex::PathSuper).is_some() {
         path.push(Element::Super);
-    } else if let Some((_, _, id)) = stream.next_if_id() {
+    } else if let Some((id, _, _)) = stream.next_if_id() {
         path.push(Element::Id(id));
     } else {
         return Ok(None);
@@ -565,8 +565,8 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
 fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     trace!(stream);
     match stream.next_if_id() {
-        Some((ctx, span, id)) => Ok(Some(Expression::Identifier(
-            ParserContext::new(ctx, span),
+        Some((id, ln, span)) => Ok(Some(Expression::Identifier(
+            ParserContext::new(ln, span),
             id,
         ))),
         _ => Ok(None),
