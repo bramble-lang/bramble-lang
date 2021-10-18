@@ -576,12 +576,13 @@ fn identifier(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext
 fn consume_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
     trace!(stream);
     let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
-    let ty = match stream.peek() {
+    let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {
         Some(Token {
-            sym: Lex::Primitive(primitive),
-            ..
+            sym: Lex::Primitive(prim_ty),
+            line,
+            span,
         }) => {
-            let ty = match *primitive {
+            let ty = match prim_ty {
                 Primitive::U8 => Some(Type::U8),
                 Primitive::U16 => Some(Type::U16),
                 Primitive::U32 => Some(Type::U32),
@@ -593,7 +594,7 @@ fn consume_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)>
                 Primitive::Bool => Some(Type::Bool),
                 Primitive::StringLiteral => Some(Type::StringLiteral),
             };
-            let ctx = stream.next().unwrap().to_ctx();
+            let ctx = ParserContext::new(line, span);
             ty.map(|ty| (ty, ctx))
         }
         _ => match path(stream)? {
