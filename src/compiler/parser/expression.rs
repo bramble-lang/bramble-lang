@@ -14,7 +14,7 @@ use crate::{
     compiler::{
         ast::*,
         lexer::tokens::{Lex, Token},
-        CompilerError, Span,
+        CompilerError,
     },
     trace, StringId,
 };
