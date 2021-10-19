@@ -4,7 +4,7 @@ mod tests {
         compiler::{
             lexer::tokens::{Lex, Primitive, Token},
             source::Offset,
-            Span,
+            SourceMap, Span,
         },
         StringTable,
     };
@@ -20,7 +20,10 @@ mod tests {
     fn test_integer() {
         let text = "5";
         let mut table = StringTable::new();
-        let mut lexer = Lexer::from_str(&mut table, text);
+        let mut sm = SourceMap::new();
+        sm.add_string(text.into(), "/tst".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+        let mut lexer = Lexer::new(&mut table, src).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");

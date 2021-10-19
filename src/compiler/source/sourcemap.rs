@@ -64,8 +64,32 @@ impl SourceMap {
         self.offset_high += file_len as u32;
         let high = self.offset_high;
 
+        let src = SourceType::File(path.clone());
+
         // Add source file to the offset map
-        let entry = SourceMapEntry::new(low, high, path);
+        let entry = SourceMapEntry::new(low, high, src, path);
+        self.map.push(entry);
+
+        Ok(())
+    }
+
+    pub fn add_string(&mut self, text: String, path: PathBuf) -> Result<(), SourceMapError> {
+        if text.len() >= u32::MAX as usize {
+            return Err(SourceMapError::FileTooBig);
+        }
+
+        /*** Create a Source Char Iterator ***/
+        // Get the low offset for the file
+        let low = self.offset_high;
+
+        // Increment the offset high so that the file fits within the new range
+        self.offset_high += text.len() as u32;
+        let high = self.offset_high;
+
+        let src = SourceType::Text(text);
+
+        // Add source file to the offset map
+        let entry = SourceMapEntry::new(low, high, src, path);
         self.map.push(entry);
 
         Ok(())
@@ -162,14 +186,16 @@ impl SourceMap {
 #[derive(Debug)]
 pub struct SourceMapEntry {
     span: Span,
+    source: SourceType,
     path: PathBuf,
 }
 
 impl SourceMapEntry {
-    fn new(low: Offset, high: Offset, path: PathBuf) -> SourceMapEntry {
+    fn new(low: Offset, high: Offset, source: SourceType, path: PathBuf) -> SourceMapEntry {
         SourceMapEntry {
             span: Span::new(low, high),
-            path,
+            source: source,
+            path: path,
         }
     }
 
@@ -183,11 +209,27 @@ impl SourceMapEntry {
     /// this entry represents. Each entry in the iterator will include the
     /// unicode character and it's offset within the global offset space.
     pub fn read(&self) -> Result<Source, SourceError> {
-        let file = std::fs::File::open(&self.path)?;
-        let iter = SourceCharIter::new(file, self.span.low(), self.span.high());
-        let text: Result<Vec<_>, _> = iter.collect();
+        let text = match &self.source {
+            SourceType::File(f) => {
+                let file = std::fs::File::open(f)?;
+                let iter = SourceCharIter::new(file, self.span.low(), self.span.high());
+                let text: Result<Vec<_>, _> = iter.collect();
+                text
+            }
+            SourceType::Text(s) => {
+                let iter = SourceCharIter::new(s.as_bytes(), self.span.low(), self.span.high());
+                let text: Result<Vec<_>, _> = iter.collect();
+                text
+            }
+        };
         Ok(Source::new(text?, self.span))
     }
+}
+
+#[derive(Debug)]
+enum SourceType {
+    File(PathBuf),
+    Text(String),
 }
 
 #[derive(Debug)]
