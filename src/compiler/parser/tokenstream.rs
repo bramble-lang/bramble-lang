@@ -154,7 +154,7 @@ mod test_tokenstream {
     use super::TokenStream;
     use crate::compiler::lexer::tokens::{Lex, Token};
     use crate::compiler::source::Offset;
-    use crate::compiler::{Lexer, Span};
+    use crate::compiler::{Lexer, SourceMap, Span};
     use crate::StringTable;
 
     fn new_span(l: u32, h: u32) -> Span {
@@ -164,8 +164,14 @@ mod test_tokenstream {
     #[test]
     fn test_peek() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -194,8 +200,14 @@ mod test_tokenstream {
     #[test]
     fn test_peek_at() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -229,8 +241,14 @@ mod test_tokenstream {
     #[test]
     fn test_next() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -314,8 +332,14 @@ mod test_tokenstream {
     #[test]
     fn test_next_if() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -359,8 +383,14 @@ mod test_tokenstream {
     #[test]
     fn test_next_ifn() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -398,8 +428,14 @@ mod test_tokenstream {
     #[test]
     fn test_if_one_of() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
@@ -416,8 +452,14 @@ mod test_tokenstream {
     #[test]
     fn test_next_if_one_of() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
