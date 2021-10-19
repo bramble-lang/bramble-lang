@@ -138,13 +138,17 @@ mod type_resolver_tests {
                 Err("L3: Return expected bool but got i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -236,13 +240,16 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test: {}", ln);
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -304,7 +311,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -349,13 +361,16 @@ mod type_resolver_tests {
                 Err("L4: Could not find item with the given path: $test::my_mod::my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -413,7 +428,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -479,13 +499,17 @@ mod type_resolver_tests {
                 Err("L1: my_main must be a function of type () -> i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -550,7 +574,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -600,7 +629,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -644,7 +678,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -838,13 +877,17 @@ mod type_resolver_tests {
                 Err("L2: + expected i16 but found i16 and i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -969,13 +1012,17 @@ mod type_resolver_tests {
                 Err("L3: ! expected bool but found i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1040,13 +1087,17 @@ mod type_resolver_tests {
                 Err("L3: + expected i64 but found bool and i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1122,13 +1173,17 @@ mod type_resolver_tests {
                 Err("L3: * expected i64 but found bool and i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1205,13 +1260,17 @@ mod type_resolver_tests {
                 Err("L3: && expected bool but found i64 and bool"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1288,13 +1347,17 @@ mod type_resolver_tests {
                 Err("L3: || expected bool but found i64 and bool"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1374,13 +1437,17 @@ mod type_resolver_tests {
                     Err(format!("L2: {} expected bool but found bool and i64", op)),
                 ),
             ] {
-                let sm = SourceMap::new();
+                let mut sm = SourceMap::new();
+                sm.add_string(&text, "/test".into()).unwrap();
+                let src = sm.get(0).unwrap().read().unwrap();
+
                 let mut table = StringTable::new();
                 let main = table.insert("main".into());
                 let main_mod = table.insert(MAIN_MODULE.into());
                 let main_fn = table.insert("my_main".into());
 
-                let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+                let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                    .unwrap()
                     .tokenize()
                     .into_iter()
                     .collect::<LResult>()
@@ -1441,7 +1508,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1516,7 +1588,7 @@ mod type_resolver_tests {
             ),
         ] {
             let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
@@ -1639,13 +1711,17 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", line);
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1841,13 +1917,17 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", ln);
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1935,13 +2015,17 @@ mod type_resolver_tests {
                 Err("L3: Could not find definition for x in this scope"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2026,13 +2110,17 @@ mod type_resolver_tests {
                 Err("L2: Return expected unit but got i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2138,13 +2226,16 @@ mod type_resolver_tests {
                 Err("L2: Return expected bool but got i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2309,13 +2400,16 @@ mod type_resolver_tests {
                 Err("L2: Could not find item with the given path: $main::bad_fun ($main::bad_fun)"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2426,13 +2520,16 @@ mod type_resolver_tests {
                 Err("L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2526,13 +2623,17 @@ mod type_resolver_tests {
             ),*/
         ] {
             println!("Test L{}", line);
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2614,13 +2715,17 @@ mod type_resolver_tests {
                 Err("L3: Bind expected bool but got i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2688,13 +2793,17 @@ mod type_resolver_tests {
                 Err("L2: Return expected unit but got bool"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2766,13 +2875,17 @@ mod type_resolver_tests {
                 Err("L2: Return expected unit but got bool"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2872,13 +2985,17 @@ mod type_resolver_tests {
                 Err("L2: If expression has mismatching arms: expected i64 got unit"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2952,13 +3069,16 @@ mod type_resolver_tests {
                 Err("L2: The condition of a while expression must resolve to the bool type, but got: i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -3184,13 +3304,16 @@ mod type_resolver_tests {
             ),
         ] {
             println!("L{}", line);
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -3230,13 +3353,16 @@ mod type_resolver_tests {
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("L1: Return expected bool but got i64")),
             ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                     .tokenize()
                     .into_iter()
                     .collect::<LResult>()
@@ -3336,7 +3462,10 @@ mod type_resolver_tests {
                 Err("L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let std = table.insert("std".into());
             let test = table.insert("test".into());
@@ -3344,7 +3473,7 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
