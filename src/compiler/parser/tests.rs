@@ -11,7 +11,7 @@ pub mod tests {
                 expression::*, statement::*, tokenstream::TokenStream, ParserContext, ParserError,
             },
             source::Offset,
-            CompilerDisplay, CompilerError, Lexer, Span,
+            CompilerDisplay, CompilerError, Lexer, SourceMap, Span,
         },
         StringTable,
     };
@@ -241,12 +241,13 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens);
+            let sm = SourceMap::new();
             match expression(&mut stream) {
                 Ok(Some(Expression::Path(ctx, path))) => {
                     assert_eq!(ctx.line(), 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, "{:?}", msg.fmt(&table)),
+                        Err(msg) => assert!(false, "{:?}", msg.fmt(&sm, &table)),
                     }
                 }
                 Ok(Some(Expression::Identifier(ctx, id))) => {
@@ -262,7 +263,7 @@ pub mod tests {
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
-                    Ok(_) => assert!(false, "{}", msg.fmt(&table).unwrap()),
+                    Ok(_) => assert!(false, "{}", msg.fmt(&sm, &table).unwrap()),
                     Err(expected) => assert_eq!(expected, msg),
                 },
             }

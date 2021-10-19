@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{CompilerDisplay, CompilerDisplayError, Span},
+    compiler::{CompilerDisplay, CompilerDisplayError, SourceMap, Span},
     StringId,
 };
 
@@ -35,7 +35,7 @@ impl std::fmt::Display for Primitive {
 }
 
 impl CompilerDisplay for Primitive {
-    fn fmt(&self, _: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, _: &SourceMap, _: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         Ok(format!("{}", self))
     }
 }
@@ -176,7 +176,7 @@ impl std::fmt::Display for Lex {
 }
 
 impl CompilerDisplay for Lex {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, _: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         match self {
             Lex::Identifier(sid) => Ok(format!("identifier {}", st.get(*sid)?)),
             Lex::StringLiteral(sid) => Ok(format!("string literal {}", st.get(*sid)?)),
@@ -203,8 +203,8 @@ impl std::fmt::Display for Token {
 }
 
 impl CompilerDisplay for Token {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
-        Ok(format!("{}", self.sym.fmt(st)?))
+    fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+        Ok(format!("{}", self.sym.fmt(sm, st)?))
     }
 }
 

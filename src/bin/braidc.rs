@@ -33,7 +33,7 @@ fn main() {
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
-            print_errs(&string_table, &errs);
+            print_errs(&sourcemap, &string_table, &errs);
             exit(ERR_IMPORT_ERROR)
         }
     };
@@ -45,7 +45,7 @@ fn main() {
     {
         Ok(ts) => ts,
         Err(errs) => {
-            print_errs(&string_table, &errs);
+            print_errs(&sourcemap, &string_table, &errs);
             exit(ERR_LEXER_ERROR)
         }
     };
@@ -65,7 +65,7 @@ fn main() {
     ) {
         Ok(root) => root,
         Err(errs) => {
-            print_errs(&string_table, &errs);
+            print_errs(&sourcemap, &string_table, &errs);
             exit(ERR_PARSER_ERROR)
         }
     };
@@ -87,7 +87,7 @@ fn main() {
     let imports = match imports {
         Ok(im) => im,
         Err(msg) => {
-            print_errs(&string_table, &[msg]);
+            print_errs(&sourcemap, &string_table, &[msg]);
             exit(ERR_IMPORT_ERROR)
         }
     };
@@ -105,7 +105,7 @@ fn main() {
     ) {
         Ok(ast) => ast,
         Err(msg) => {
-            print_errs(&string_table, &[msg]);
+            print_errs(&sourcemap, &string_table, &[msg]);
             std::process::exit(ERR_TYPE_CHECK);
         }
     };
@@ -118,7 +118,7 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, &string_table, project_name, &imports);
+    let mut llvm = llvm::IrGen::new(&context, &sourcemap, &string_table, project_name, &imports);
     match llvm.ingest(&semantic_ast, main_fn_id) {
         Ok(()) => (),
         Err(msg) => {
@@ -134,7 +134,7 @@ fn main() {
     llvm.emit_object_code(Path::new(output_target)).unwrap();
 
     if config.is_present("manifest") {
-        let manifest = Manifest::extract(&string_table, &semantic_ast).unwrap();
+        let manifest = Manifest::extract(&sourcemap, &string_table, &semantic_ast).unwrap();
         match std::fs::File::create(format!("./target/{}.manifest", project_name))
             .map_err(|e| format!("{}", e))
             .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))

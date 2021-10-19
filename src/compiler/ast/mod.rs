@@ -20,7 +20,7 @@ pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;
 pub use self::ty::Type;
 
-use super::{CompilerDisplay, CompilerDisplayError};
+use super::{CompilerDisplay, CompilerDisplayError, SourceMap};
 use crate::StringId;
 
 pub const MAIN_MODULE: &str = "main";
@@ -32,7 +32,7 @@ pub enum AstError {
 }
 
 impl CompilerDisplay for AstError {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, _: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         match self {
             AstError::ModuleAlreadyContains(sid) => {
                 let s = st.get(*sid)?;
@@ -51,7 +51,7 @@ pub enum PathCanonizationError {
 }
 
 impl CompilerDisplay for PathCanonizationError {
-    fn fmt(&self, _st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, _: &SourceMap, _st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         match self {
             PathCanonizationError::SubceedingRoot => Ok(format!(
                 "Use of super would exceed the current depth of the path"

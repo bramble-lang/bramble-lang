@@ -29,7 +29,7 @@ use crate::{
         ast::{Element, Parameter, StructDef},
         import::{Import, ImportRoutineDef, ImportStructDef},
         parser::ParserContext,
-        Span,
+        SourceMap, Span,
     },
     result::Result,
     StringId, StringTable,
@@ -58,6 +58,7 @@ pub struct IrGen<'ctx> {
     imports: &'ctx [Import],
     string_pool: StringPool<'ctx>,
     string_table: &'ctx StringTable,
+    source_map: &'ctx SourceMap,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, ast::StructDef<SemanticContext>>,
     fn_use_out_param: HashSet<String>,
@@ -66,6 +67,7 @@ pub struct IrGen<'ctx> {
 impl<'ctx> IrGen<'ctx> {
     pub fn new(
         ctx: &'ctx context::Context,
+        source_map: &'ctx SourceMap,
         string_table: &'ctx StringTable,
         module: &str,
         imports: &'ctx [Import],
@@ -74,6 +76,7 @@ impl<'ctx> IrGen<'ctx> {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
+            source_map,
             string_table,
             imports,
             string_pool: StringPool::new(string_table),
@@ -213,7 +216,7 @@ impl<'ctx> IrGen<'ctx> {
         let entry_bb = self.context.append_basic_block(main, "entry");
         self.builder.position_at_end(entry_bb);
 
-        let user_main_name = path.to_label(self.string_table);
+        let user_main_name = path.to_label(self.source_map, self.string_table);
         let user_main = self
             .module
             .get_function(&user_main_name)
@@ -244,7 +247,7 @@ impl<'ctx> IrGen<'ctx> {
             // Add imported functions to the LLVM Module
             for rd in &manifest.funcs {
                 self.add_fn_decl(
-                    &rd.path().to_label(self.string_table),
+                    &rd.path().to_label(self.source_map, self.string_table),
                     rd.params(),
                     false,
                     rd.ty(),
@@ -291,7 +294,9 @@ impl<'ctx> IrGen<'ctx> {
     fn add_fn_def_decl(&mut self, rd: &'ctx ast::RoutineDef<SemanticContext>) {
         let params: Vec<_> = rd.get_params().iter().map(|p| p.ty.clone()).collect();
         self.add_fn_decl(
-            &rd.context.canonical_path().to_label(self.string_table),
+            &rd.context
+                .canonical_path()
+                .to_label(self.source_map, self.string_table),
             &params,
             false,
             &rd.ret_ty,
@@ -305,7 +310,7 @@ impl<'ctx> IrGen<'ctx> {
         self.add_fn_decl(
             &ex.context()
                 .canonical_path()
-                .to_label(self.string_table),
+                .to_label(self.source_map, self.string_table),
             &params,
             ex.has_varargs,
             ex.get_return_type(),
@@ -380,13 +385,13 @@ impl<'ctx> IrGen<'ctx> {
         self.struct_table.insert(
             sd.context()
                 .canonical_path()
-                .to_label(self.string_table),
+                .to_label(self.source_map, self.string_table),
             sd.clone(),
         );
         let name = sd
             .context()
             .canonical_path()
-            .to_label(self.string_table);
+            .to_label(self.source_map, self.string_table);
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
             .iter()
@@ -408,7 +413,7 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Add a struct definition to the LLVM context and module.
     fn add_import_struct_def(&mut self, sd: &'ctx ImportStructDef) {
-        let name = sd.path().to_label(self.string_table);
+        let name = sd.path().to_label(self.source_map, self.string_table);
         let struct_ty = self.context.opaque_struct_type(&name);
 
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
@@ -528,7 +533,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
-        let fn_name = self.context.canonical_path().to_label(llvm.string_table);
+        let fn_name = self
+            .context
+            .canonical_path()
+            .to_label(llvm.source_map, llvm.string_table);
         let fn_value = llvm
             .module
             .get_function(&fn_name)
@@ -821,7 +829,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         &val.get_type()
                             .get_path()
                             .unwrap()
-                            .to_label(llvm.string_table),
+                            .to_label(llvm.source_map, llvm.string_table),
                     )
                     .unwrap();
 
@@ -850,7 +858,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .ty()
                     .get_path()
                     .unwrap()
-                    .to_label(llvm.string_table);
+                    .to_label(llvm.source_map, llvm.string_table);
                 let sdef = llvm
                     .struct_table
                     .get(&sname)
@@ -1040,7 +1048,7 @@ impl ast::RoutineCall {
     fn to_label<'ctx>(&self, llvm: &IrGen<'ctx>, target: &ast::Path) -> String {
         match self {
             ast::RoutineCall::Function | ast::RoutineCall::CoroutineInit => {
-                target.to_label(llvm.string_table)
+                target.to_label(llvm.source_map, llvm.string_table)
             }
             ast::RoutineCall::Extern => llvm
                 .string_table
@@ -1131,7 +1139,7 @@ impl ast::Type {
                 .into(),
             ast::Type::Custom(name) => llvm
                 .module
-                .get_struct_type(&name.to_label(llvm.string_table))
+                .get_struct_type(&name.to_label(llvm.source_map, llvm.string_table))
                 .expect(&format!("Could not find struct {}", name))
                 .into(),
             ast::Type::Array(a, len) => {

@@ -5,7 +5,7 @@ pub use manifest::Manifest;
 pub use project::*;
 
 use crate::{
-    compiler::{ast::Type, CompilerDisplay, CompilerDisplayError},
+    compiler::{ast::Type, CompilerDisplay, CompilerDisplayError, SourceMap},
     StringTableError,
 };
 
@@ -27,12 +27,14 @@ pub enum ManifestError {
 }
 
 impl CompilerDisplay for ManifestError {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         Ok(match self {
             ManifestError::StringIdNotFound => {
                 format!("Could not write Manifest file: StringId was not found in StringTable")
             }
-            ManifestError::CannotConvertType(ty) => format!("Cannot convert type: {}", ty.fmt(st)?),
+            ManifestError::CannotConvertType(ty) => {
+                format!("Cannot convert type: {}", ty.fmt(sm, st)?)
+            }
             ManifestError::PathElementIsEmpty => format!("Path element is empty"),
             ManifestError::PathElementStartsWithInvalidChar(c) => {
                 format!("Path starts with invalid character: {}", c)

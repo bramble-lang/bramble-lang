@@ -16,7 +16,7 @@
 #![macro_use]
 use crate::StringTable;
 
-use super::{CompilerDisplay, CompilerDisplayError, Span};
+use super::{CompilerDisplay, CompilerDisplayError, SourceMap, Span};
 
 /// Represents all errors that are generated from within the Compiler
 /// module and its submodules.
@@ -62,8 +62,8 @@ impl<IE> CompilerDisplay for CompilerError<IE>
 where
     IE: CompilerDisplay,
 {
-    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
-        let inner = self.inner.fmt(st)?;
+    fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
+        let inner = self.inner.fmt(sm, st)?;
         Ok(format!("L{}: {}", self.line, inner))
     }
 }

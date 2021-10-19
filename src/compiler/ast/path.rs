@@ -1,4 +1,4 @@
-use crate::compiler::{CompilerDisplay, CompilerDisplayError};
+use crate::compiler::{CompilerDisplay, CompilerDisplayError, SourceMap};
 use crate::{StringId, StringTable};
 
 use super::PathCanonizationError;
@@ -18,7 +18,7 @@ pub enum Element {
 }
 
 impl CompilerDisplay for Element {
-    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, _: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
         Ok(match self {
             Element::FileRoot => ROOT_PATH.into(),
             Element::CanonicalRoot => CANONICAL_ROOT.into(),
@@ -181,10 +181,10 @@ impl Path {
         }
     }
 
-    pub fn to_label(&self, table: &StringTable) -> String {
+    pub fn to_label(&self, sm: &SourceMap, table: &StringTable) -> String {
         self.path
             .iter()
-            .map(|element| element.fmt(table).unwrap())
+            .map(|element| element.fmt(sm, table).unwrap())
             .collect::<Vec<_>>()
             .join("_")
     }
@@ -200,11 +200,11 @@ impl<I: std::slice::SliceIndex<[Element]>> std::ops::Index<I> for Path {
 }
 
 impl CompilerDisplay for Path {
-    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
         let mut ps: Vec<String> = vec![];
 
         for e in self.iter() {
-            let es = e.fmt(st)?;
+            let es = e.fmt(sm, st)?;
             ps.push(es);
         }
 
@@ -360,13 +360,14 @@ mod test_path {
 
     #[test]
     fn test_to_label() {
+        let sm = SourceMap::new();
         let mut table = StringTable::new();
         let item_id = Element::Id(table.insert("item".into()));
 
         let path: Path = vec![Element::Selph, item_id].into();
 
         let expected = "self_item";
-        assert_eq!(path.to_label(&table), expected);
+        assert_eq!(path.to_label(&sm, &table), expected);
     }
 
     #[test]
