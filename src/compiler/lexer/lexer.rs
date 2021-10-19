@@ -195,14 +195,18 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    // TODO: this function is temporary and only used for unit tests.  Will be deleted
+    // soon.
     pub fn from_str(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
         let end_offset = Offset::new(text.len() as u32);
+        let text: Vec<_> = text
+            .chars()
+            .enumerate()
+            .map(|(i, c)| SourceChar::new(c, Offset::new(i as u32)))
+            .collect();
+        let src = Source::new(text, Span::zero());
         Lexer {
-            chars: text
-                .chars()
-                .enumerate()
-                .map(|(i, c)| SourceChar::new(c, Offset::new(i as u32)))
-                .collect(),
+            chars: src,
             index: 0,
             end_offset,
             line: 1,
