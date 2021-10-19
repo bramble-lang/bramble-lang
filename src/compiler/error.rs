@@ -65,10 +65,36 @@ where
     fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
         let inner = self.inner.fmt(sm, st)?;
 
-        //let lines = sm.lines(self.span);
-        //let line = lines[0].1[0];
+        // For each source code file, format the line number so that
+        // If the span covers one line then format as "L{line}"
+        // If the span covers multiple then format as: "L{min}-{max}"
+        //
+        // If the span covers only one file, then format as "{Lines}"
+        // If the span covers multiple files, format as "{File}:{Lines}"
 
-        Ok(format!("L{}: {}", self.line, inner))
+        let lines = sm.lines(self.span).into_iter().map(|(f, lines)| {
+            let line = if lines.len() == 0 {
+                panic!("Span covers no indexed source code");
+            } else if lines.len() == 1 {
+                format!("L{}", lines[0])
+            } else {
+                let min = lines.iter().min().unwrap(); // unwrap b/c if the len > 1 and we cannot find min/max something serious is wrong
+                let max = lines.iter().max().unwrap();
+                format!("L{}-{}", min, max)
+            };
+            (f, line)
+        });
+
+        let line: String = if lines.len() == 1 {
+            lines.map(|(_, lines)| lines).collect()
+        } else {
+            lines
+                .map(|(f, lines)| format!("{:?}:{}", f, lines))
+                .collect::<Vec<_>>()
+                .join("; ")
+        };
+
+        Ok(format!("{}: {}", line, inner))
     }
 }
 
