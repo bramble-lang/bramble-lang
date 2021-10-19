@@ -3,8 +3,8 @@
 // by tokenize
 use stdext::function_name;
 
-use crate::compiler::source::Offset;
-use crate::compiler::{SourceChar, SourceCharIter, Span};
+use crate::compiler::source::{Offset, Source};
+use crate::compiler::{SourceChar, Span};
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
 
@@ -186,7 +186,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 }
 
 pub struct Lexer<'a> {
-    chars: Vec<SourceChar>,
+    chars: Source,
     end_offset: Offset,
     index: usize,
     line: u32,
@@ -211,14 +211,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn new(
-        string_table: &'a mut StringTable,
-        text: SourceCharIter,
-    ) -> Result<Lexer<'a>, LexerError> {
+    pub fn new(string_table: &'a mut StringTable, text: Source) -> Result<Lexer<'a>, LexerError> {
         let end_offset = text.high();
-        let chars: Result<Vec<_>, _> = text.collect();
         Ok(Lexer {
-            chars: chars?,
+            chars: text,
             index: 0,
             end_offset,
             line: 1,

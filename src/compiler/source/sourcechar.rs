@@ -248,10 +248,17 @@ pub enum SourceError {
     OffsetExceededMaxSize,
     UnexpectedEof,
     UnicodeError(UnicodeParsingError),
+    Io(std::io::Error),
 }
 
 impl From<UnicodeParsingError> for SourceError {
     fn from(ce: UnicodeParsingError) -> Self {
         SourceError::UnicodeError(ce)
+    }
+}
+
+impl From<std::io::Error> for SourceError {
+    fn from(_: std::io::Error) -> Self {
+        todo!()
     }
 }

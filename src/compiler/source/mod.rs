@@ -7,10 +7,12 @@ use std::{
     ops::AddAssign,
 };
 
+mod source;
 mod sourcechar;
 mod sourcemap;
 mod span;
 
+pub use source::Source;
 pub use sourcechar::{SourceCharIter, SourceError};
 pub use sourcemap::{SourceMap, SourceMapEntry, SourceMapError};
 pub use span::Span;

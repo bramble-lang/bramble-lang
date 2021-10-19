@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{sourcechar::SourceCharIter, Offset, Span};
+use super::{sourcechar::SourceCharIter, Offset, Source, SourceError, Span};
 
 /// The SourceMap keeps a table of input source files and the range of teh Global
 /// Offset which maps to that source file.
@@ -131,11 +131,12 @@ impl SourceMap {
                 // start of the span, counting the number of new lines
                 // Then from the start of the span until the end of the span or the file
                 // Count each new line and add it to the vector
-                let mut stream = file.read().unwrap();
+                let text = file.read().unwrap();
+                let mut stream = text.iter();
 
                 let mut line = 1;
                 let mut prev_line = 0;
-                while let Some(Ok(c)) = stream.next() {
+                while let Some(c) = stream.next() {
                     if c.offset() >= intersection.low() && c.offset() < intersection.high() {
                         // if line number has changed then push onto the vector
                         if line != prev_line {
@@ -144,7 +145,7 @@ impl SourceMap {
                         }
                     }
 
-                    if c == '\n' {
+                    if *c == '\n' {
                         line += 1;
                     }
                 }
@@ -181,9 +182,11 @@ impl SourceMapEntry {
     /// Creates a iterator over the unicode characters in the source code that
     /// this entry represents. Each entry in the iterator will include the
     /// unicode character and it's offset within the global offset space.
-    pub fn read(&self) -> Result<SourceCharIter, std::io::Error> {
+    pub fn read(&self) -> Result<Source, SourceError> {
         let file = std::fs::File::open(&self.path)?;
-        Ok(SourceCharIter::new(file, self.span.low(), self.span.high()))
+        let iter = SourceCharIter::new(file, self.span.low(), self.span.high());
+        let text: Result<Vec<_>, _> = iter.collect();
+        Ok(Source::new(text?, self.span))
     }
 }
 

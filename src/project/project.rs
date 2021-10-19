@@ -5,8 +5,8 @@ use crate::{
         ast::Module,
         lexer::{tokens::Token, LexerError},
         parser::{self, ParserContext, ParserError},
-        CompilerDisplay, CompilerDisplayError, CompilerError, SourceCharIter, SourceMap,
-        SourceMapError, Span,
+        CompilerDisplay, CompilerDisplayError, CompilerError, Source, SourceMap, SourceMapError,
+        Span,
     },
     StringId, StringTable,
 };
@@ -174,7 +174,7 @@ pub fn tokenize_source_map(
 /// Tokenizes a stream of unicode characters.
 fn tokenize_source(
     string_table: &mut StringTable,
-    src: CompilationUnit<SourceCharIter>,
+    src: CompilationUnit<Source>,
     trace_lexer: TracingConfig,
 ) -> Result<CompilationUnit<Vec<Token>>, Vec<CompilerError<LexerError>>> {
     let mut lexer = crate::compiler::Lexer::new(string_table, src.data).unwrap();
