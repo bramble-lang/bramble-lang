@@ -1,7 +1,7 @@
 //! Represents the contents of a unit of Source code (which could be a single
 //! file, or a String, etc)
 
-use std::{iter::FromIterator, ops::Index};
+use std::ops::Index;
 
 use super::{Offset, SourceChar, Span};
 
@@ -38,20 +38,5 @@ impl Index<usize> for Source {
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.text[index]
-    }
-}
-
-impl FromIterator<SourceChar> for Source {
-    fn from_iter<T: IntoIterator<Item = SourceChar>>(iter: T) -> Self {
-        let mut text = vec![];
-
-        for sc in iter {
-            text.push(sc)
-        }
-
-        Source {
-            text,
-            span: Span::zero(),
-        }
     }
 }
