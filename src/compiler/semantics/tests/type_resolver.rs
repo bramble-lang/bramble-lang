@@ -482,21 +482,21 @@ let src = sm.get(0).unwrap().read().unwrap();
                 "fn my_main() -> i32 {
                     return 0i32;
                 }",
-                Err("L1: my_main must be a function of type () -> i64"),
+                Err("L1-3: my_main must be a function of type () -> i64"),
             ),
             (
                 line!(),
                 "fn my_main(i: i32) -> i64 {
                     return 0;
                 }",
-                Err("L1: my_main must take no parameters. It must be of type () -> i64"),
+                Err("L1-3: my_main must take no parameters. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "co my_main() -> i64 {
                     return 0;
                 }",
-                Err("L1: my_main must be a function of type () -> i64"),
+                Err("L1-3: my_main must be a function of type () -> i64"),
             ),
         ] {
             let mut sm = SourceMap::new();
@@ -1831,7 +1831,7 @@ let src = sm.get(0).unwrap().read().unwrap();
                     let k: [i64;1] := [];
                     return k;
                 }",
-                Err("L1: Expected length > 0 for array, but found 0"),
+                Err("L1-4: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),

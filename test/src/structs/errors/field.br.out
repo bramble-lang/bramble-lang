@@ -1,1 +1,1 @@
-Error: L2: member bad not found on $field::field::MyStruct
+Error: L2-6: member bad not found on $field::field::MyStruct

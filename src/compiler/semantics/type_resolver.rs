@@ -1007,7 +1007,7 @@ impl TypeResolver {
         let RoutineDef {
             def,
             params,
-            ret_ty: p,
+            ret_ty,
             ..
         } = routine;
 
@@ -1028,7 +1028,7 @@ impl TypeResolver {
             ));
         }
 
-        if p != Type::I64 {
+        if ret_ty != Type::I64 {
             return Err(CompilerError::new(
                 routine.context().line(),
                 routine.context().span(),
