@@ -187,7 +187,7 @@ mod test {
     use super::super::super::lexer::tokens::Token;
     use super::super::super::parser::parser;
     use super::super::super::semantics::type_resolver::resolve_types;
-    use crate::compiler::Lexer;
+    use crate::compiler::{Lexer, SourceMap};
     use crate::diagnostics::config::TracingConfig;
 
     use super::*;
@@ -240,11 +240,16 @@ mod test {
                 vec!["hello", "world", "test2"],
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
             let mut table = StringTable::new();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
             let test_mod = table.insert("test_mod".into());
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+
+            let src = sm.get(0).unwrap().read().unwrap();
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()

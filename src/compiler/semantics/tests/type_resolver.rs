@@ -1515,13 +1515,18 @@ mod type_resolver_tests {
                 Err("L2: Bind expected [i16; 2] but got [i64; 2]"),
             ),
         ] {
-            let sm = SourceMap::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
+
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()

@@ -73,7 +73,7 @@ impl SourceMap {
         Ok(())
     }
 
-    pub fn add_string(&mut self, text: String, path: PathBuf) -> Result<(), SourceMapError> {
+    pub fn add_string(&mut self, text: &str, path: PathBuf) -> Result<(), SourceMapError> {
         if text.len() >= u32::MAX as usize {
             return Err(SourceMapError::FileTooBig);
         }
@@ -86,7 +86,7 @@ impl SourceMap {
         self.offset_high += text.len() as u32;
         let high = self.offset_high;
 
-        let src = SourceType::Text(text);
+        let src = SourceType::Text(text.into());
 
         // Add source file to the offset map
         let entry = SourceMapEntry::new(low, high, src, path);

@@ -670,7 +670,7 @@ mod test {
             ast::{Statement, Type},
             lexer::{tokens::Token, LexerError},
             source::Offset,
-            CompilerError, Lexer, Span,
+            CompilerError, Lexer, SourceMap, Span,
         },
         StringTable,
     };
@@ -697,8 +697,13 @@ mod test {
             ("64i64", Expression::I64(new_ctx(0, 5), 64)),
             ("64", Expression::I64(new_ctx(0, 2), 64)),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let src = sm.get(0).unwrap().read().unwrap();
+            let tokens = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -776,8 +781,13 @@ mod test {
                 ),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let src = sm.get(0).unwrap().read().unwrap();
+            let tokens = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -813,8 +823,13 @@ mod test {
         ]
         .iter()
         {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let src = sm.get(0).unwrap().read().unwrap();
+            let tokens = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -919,7 +934,11 @@ mod test {
             ),
         ] {
             println!("Test: {}", text);
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -971,8 +990,13 @@ mod test {
         ]
         .iter()
         {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let src = sm.get(0).unwrap().read().unwrap();
+            let tokens = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -992,7 +1016,13 @@ mod test {
             let mut table = StringTable::new();
             let thing_id = table.insert("thing".into());
             let first_id = table.insert("first".into());
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1020,7 +1050,13 @@ mod test {
     fn parse_expression_block_oneline() {
         let text = "{5}";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -1075,8 +1111,13 @@ mod test {
         ]
         .iter()
         {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let src = sm.get(0).unwrap().read().unwrap();
+            let tokens = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1097,7 +1138,13 @@ mod test {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
         let f = table.insert("f".into());
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()

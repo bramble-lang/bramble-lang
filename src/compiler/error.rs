@@ -64,6 +64,10 @@ where
 {
     fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
         let inner = self.inner.fmt(sm, st)?;
+
+        //let lines = sm.lines(self.span);
+        //let line = lines[0].1[0];
+
         Ok(format!("L{}: {}", self.line, inner))
     }
 }
