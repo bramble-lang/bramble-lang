@@ -1,7 +1,6 @@
 use super::{ctx_over_tokens, ParserError};
 use crate::compiler::ast::Context;
 use crate::compiler::lexer::tokens::{Lex, Token};
-use crate::compiler::source::Offset;
 use crate::compiler::{CompilerError, Span};
 use crate::StringId;
 //use crate::result::Result;
@@ -13,13 +12,12 @@ pub struct TokenStream<'a> {
 }
 
 impl<'a> TokenStream<'a> {
-    pub fn new(tokens: &'a Vec<Token>) -> TokenStream {
-        TokenStream {
+    pub fn new(tokens: &'a Vec<Token>) -> Option<TokenStream> {
+        ctx_over_tokens(tokens).map(|ctx| TokenStream {
             tokens,
             index: 0,
-            span: ctx_over_tokens(tokens)
-                .map_or(Span::new(Offset::new(0), Offset::new(0)), |ctx| ctx.span()),
-        }
+            span: ctx.span(),
+        })
     }
 
     pub fn index(&self) -> usize {
@@ -175,7 +173,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens);
+        let ts = TokenStream::new(&tokens).unwrap();
         let p = ts.peek().unwrap();
         assert_eq!(
             *p,
@@ -188,11 +186,10 @@ mod test_tokenstream {
     }
 
     #[test]
-    fn test_peek_empty() {
+    fn test_empty_stream() {
         let tokens = vec![];
         let ts = TokenStream::new(&tokens);
-        let p = ts.peek();
-        assert_eq!(p, None);
+        assert!(ts.is_none());
     }
 
     #[test]
@@ -211,7 +208,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens);
+        let ts = TokenStream::new(&tokens).unwrap();
         let p = ts.peek_at(0).unwrap();
         assert_eq!(
             *p,
@@ -252,7 +249,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next().unwrap();
         assert_eq!(
             p,
@@ -343,7 +340,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next_if(&Lex::LParen).unwrap(); // should I really use a borrow for this?  If not then gotta do clones and BS i think.
         assert_eq!(
             p,
@@ -394,7 +391,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next_ifn(vec![Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             *p,
@@ -439,7 +436,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens);
+        let ts = TokenStream::new(&tokens).unwrap();
         let p = ts.test_if_one_of(vec![Lex::LParen, Lex::I64(0)]);
         assert_eq!(p, true);
 
@@ -463,7 +460,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             p,

@@ -684,7 +684,7 @@ mod test {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             match number(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
@@ -768,7 +768,7 @@ mod test {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             match array_expression(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
@@ -808,7 +808,7 @@ mod test {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             assert_eq!(
                 array_expression(&mut stream).unwrap_err(),
                 *msg,
@@ -917,7 +917,7 @@ mod test {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             match expression(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
@@ -971,7 +971,7 @@ mod test {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             assert_eq!(expression(&mut stream).unwrap_err(), *msg, "{:?}", text);
         }
     }
@@ -997,7 +997,7 @@ mod test {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             match member_access(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
                     assert_eq!(ctx.line(), 1);
@@ -1031,7 +1031,7 @@ mod test {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {
@@ -1088,7 +1088,7 @@ mod test {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             assert_eq!(
                 expression_block(&mut stream).unwrap_err(),
                 *msg,
@@ -1115,7 +1115,7 @@ mod test {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
             expression_block(&mut stream).unwrap()
         {

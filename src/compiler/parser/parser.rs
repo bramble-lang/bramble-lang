@@ -141,11 +141,16 @@ impl Parser {
 }
 
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
+    // Create the module that represents the source code unit as a whole (usually the file)
+    // give it span that covers the entire set of tokens
     let module_ctx = ctx_over_tokens(&tokens)
         .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
     let mut module = Module::new(name, module_ctx);
 
-    let mut stream = TokenStream::new(&tokens);
+    // Create the token stream.
+    let mut stream = TokenStream::new(&tokens)
+        .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
+
     while stream.peek().is_some() {
         let start_index = stream.index();
         parse_items_into(&mut stream, &mut module)?;

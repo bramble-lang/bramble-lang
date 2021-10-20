@@ -44,7 +44,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             let exp = expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
@@ -74,7 +74,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             let exp = expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
@@ -115,7 +115,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
                 expression(&mut stream).unwrap()
             {
@@ -151,7 +151,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
                 expression(&mut stream).unwrap()
             {
@@ -179,7 +179,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::Mul, left, right)) =
             expression(&mut stream).unwrap()
         {
@@ -212,7 +212,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::BOr, left, right)) =
             expression(&mut stream).unwrap()
         {
@@ -274,7 +274,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             let sm = SourceMap::new();
             match expression(&mut stream) {
                 Ok(Some(Expression::Path(ctx, path))) => {
@@ -328,7 +328,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             match expression(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
                     assert_eq!(ctx.line(), 1); // TODO: This should test the span
@@ -366,7 +366,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 15));
         match stm {
@@ -396,7 +396,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 19));
         match stm {
@@ -446,7 +446,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
 
             let stm = statement(&mut stream).unwrap().unwrap();
 
@@ -479,7 +479,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
@@ -916,7 +916,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
+        let mut iter = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
@@ -953,7 +953,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         println!("{:?}", table);
-        let mut iter = TokenStream::new(&tokens);
+        let mut iter = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
@@ -1037,7 +1037,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box b) => {
@@ -1080,7 +1080,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box bind) => {
@@ -1170,7 +1170,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::If {
             context: l,
@@ -1215,7 +1215,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::If {
             context,
@@ -1286,7 +1286,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::While {
             context: l,
@@ -1424,7 +1424,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             let result = expression(&mut stream);
             assert_eq!(result, Ok(Some(expected)), "{:?}", text);
         }
