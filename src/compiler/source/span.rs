@@ -51,6 +51,8 @@ impl Span {
         self.intersection(b).is_some()
     }
 
+    /// If this and `a` intersect, then this will return the [`Span`] that
+    /// covers that intersection.
     pub fn intersection(&self, b: Span) -> Option<Span> {
         // Test for the intersection of self and b
         let low = if self.low < b.low { b.low } else { self.low };
