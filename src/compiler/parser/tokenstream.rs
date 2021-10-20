@@ -48,13 +48,14 @@ impl<'a> TokenStream<'a> {
     }
 
     // TODO: return the line # and the ID name
-    pub fn next_if_id(&mut self) -> Option<(StringId, Span)> {
+    pub fn next_if_id(&mut self) -> Option<(StringId, u32, Span)> {
         match self.next_if(&Lex::Identifier(StringId::new())) {
             Some(Token {
+                line: l,
                 span,
                 sym: Lex::Identifier(id),
                 ..
-            }) => Some((id, span)),
+            }) => Some((id, l, span)),
             Some(_) => None,
             None => None,
         }

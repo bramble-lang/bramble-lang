@@ -17,7 +17,7 @@ impl From<&ImportStructDef> for StructDef<SemanticContext> {
 
         let struct_def_ctx = SemanticContext::new_local(
             0,
-            ParserContext::new(Span::zero()),
+            ParserContext::new(0, Span::zero()),
             Type::StructDef(isd.fields().into()),
         );
 
@@ -26,7 +26,7 @@ impl From<&ImportStructDef> for StructDef<SemanticContext> {
             .iter()
             .map(|(name, ty)| {
                 Parameter::new(
-                    SemanticContext::new_local(0, ParserContext::new(Span::zero()), ty.clone()),
+                    SemanticContext::new_local(0, ParserContext::new(0, Span::zero()), ty.clone()),
                     *name,
                     ty,
                 )
