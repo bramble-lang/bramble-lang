@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use super::{sourcechar::SourceCharIter, Offset, Source, SourceError, Span};
 
+const MAX_SOURCE_SIZE: u32 = u32::MAX;
+
 /// The SourceMap keeps a table of input source files and the range of teh Global
 /// Offset which maps to that source file.
 ///
@@ -46,7 +48,7 @@ impl SourceMap {
         let file = std::fs::File::open(&path)?;
 
         let file_len = file.metadata()?.len();
-        if file_len >= u32::MAX as u64 {
+        if file_len >= MAX_SOURCE_SIZE as u64 {
             return Err(SourceMapError::FileTooBig);
         }
 
@@ -69,7 +71,7 @@ impl SourceMap {
 
     /// Adds a string as a unit of source code to the [`SourceMap`].
     pub fn add_string(&mut self, text: &str, path: PathBuf) -> Result<(), SourceMapError> {
-        if text.len() >= u32::MAX as usize {
+        if text.len() >= MAX_SOURCE_SIZE as usize {
             return Err(SourceMapError::FileTooBig);
         }
 
