@@ -69,15 +69,7 @@ where
         let inner = self.inner.fmt(sm, st)?;
 
         let lines_by_file = sm.lines(self.span).into_iter().map(|(f, lines)| {
-            let line = if lines.len() == 0 {
-                panic!("Span covers no indexed source code");
-            } else if lines.len() == 1 {
-                format!("L{}", lines[0])
-            } else {
-                let min = lines.iter().min().unwrap(); // unwrap b/c if the len > 1 and we cannot find min/max something serious is wrong
-                let max = lines.iter().max().unwrap();
-                format!("L{}-{}", min, max)
-            };
+            let line = format_line_set(&lines).expect("Span covers no indexed source code");
             (f, line)
         });
 
@@ -91,6 +83,27 @@ where
         };
 
         Ok(format!("{}: {}", formatted_span, inner))
+    }
+}
+
+/// Take a set of line numbers and format into a string that describes the range
+/// of lines.
+///
+/// If there is 1 line, then format as `L<line number>`
+/// If there are multiple lines, then format sa `L<min line>-<max line`
+fn format_line_set(lines: &[u32]) -> Option<String> {
+    if lines.len() > 0 {
+        let min = lines.iter().min().unwrap(); // unwrap b/c if the len > 1 and we cannot find min/max something serious is wrong
+        let max = lines.iter().max().unwrap();
+
+        if min < max {
+            Some(format!("L{}-{}", min, max))
+        } else {
+            // If min == max then formatting as `min-min` would be pointless
+            Some(format!("L{}", min))
+        }
+    } else {
+        None
     }
 }
 
