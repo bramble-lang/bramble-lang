@@ -33,7 +33,7 @@ fn main() {
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
-            print_errs(&sourcemap, &string_table, &errs);
+            print_errs(&errs, &sourcemap, &string_table);
             exit(ERR_IMPORT_ERROR)
         }
     };
@@ -45,7 +45,7 @@ fn main() {
     {
         Ok(ts) => ts,
         Err(errs) => {
-            print_errs(&sourcemap, &string_table, &errs);
+            print_errs(&errs, &sourcemap, &string_table);
             exit(ERR_LEXER_ERROR)
         }
     };
@@ -65,7 +65,7 @@ fn main() {
     ) {
         Ok(root) => root,
         Err(errs) => {
-            print_errs(&sourcemap, &string_table, &errs);
+            print_errs(&errs, &sourcemap, &string_table);
             exit(ERR_PARSER_ERROR)
         }
     };
@@ -87,7 +87,7 @@ fn main() {
     let imports = match imports {
         Ok(im) => im,
         Err(msg) => {
-            print_errs(&sourcemap, &string_table, &[msg]);
+            print_errs(&[msg], &sourcemap, &string_table);
             exit(ERR_IMPORT_ERROR)
         }
     };
@@ -105,7 +105,7 @@ fn main() {
     ) {
         Ok(ast) => ast,
         Err(msg) => {
-            print_errs(&sourcemap, &string_table, &[msg]);
+            print_errs(&[msg], &sourcemap, &string_table);
             std::process::exit(ERR_TYPE_CHECK);
         }
     };

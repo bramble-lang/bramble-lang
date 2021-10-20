@@ -17,7 +17,7 @@ pub const ERR_LEXER_ERROR: i32 = 5;
 pub const ERR_IMPORT_ERROR: i32 = 6;
 pub const ERR_MANIFEST_WRITE_ERROR: i32 = 7;
 
-pub fn print_errs<E: CompilerDisplay>(sm: &SourceMap, st: &StringTable, errs: &[E]) {
+pub fn print_errs<E: CompilerDisplay>(errs: &[E], sm: &SourceMap, st: &StringTable) {
     for e in errs {
         println!("Error: {}", e.fmt(sm, st).unwrap());
     }
