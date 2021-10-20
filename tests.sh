@@ -15,7 +15,7 @@ fi
 
 cd ./test
 
-./test-llvm.sh
+./test.sh
 if [[ $? -ne 0 ]]; then 
     ret=$(($ret + 1))
 fi
