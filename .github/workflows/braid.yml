@@ -36,6 +36,10 @@ jobs:
         with:
           toolchain: nightly
           override: true
+      - name: Cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
 
       # Runs a single command using the runners shell
       - name: Setup NASM
@@ -46,4 +50,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Run Braid Test Suite
         run: |
-          bash ./tests.sh
+          cd test
+          bash ./test.sh
+          bash ./test-imports.sh
+          bash ./syntax-test.sh 100
