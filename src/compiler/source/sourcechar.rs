@@ -179,7 +179,7 @@ impl<R: Read> UnicodeCharIterator<R> {
 
 /// Iterates over each byte in a file while keeping track of the current offset in the file
 struct OffsetBytes<R: Read> {
-    nread: u64,
+    byte_offset: u64,
     bytes: std::iter::Peekable<Bytes<R>>,
 }
 
@@ -188,18 +188,18 @@ impl<R: Read> OffsetBytes<R> {
     /// the each byte in the file (starting at the given position) and keeps
     /// tracke of the current offset in the file as the bytes are read.
     pub fn new(reader: R) -> OffsetBytes<R> {
-        let nread = 0;
+        let bytes_read = 0;
         let bytes = reader.bytes();
 
         OffsetBytes {
-            nread,
+            byte_offset: bytes_read,
             bytes: bytes.peekable(),
         }
     }
 
     /// Returns the offset of the iterators current position in the source
     pub fn offset(&self) -> u64 {
-        self.nread
+        self.byte_offset
     }
 
     /// Attempts to peek at the character the iterator is currently point
@@ -217,7 +217,7 @@ impl<R: Read> Iterator for OffsetBytes<R> {
     fn next(&mut self) -> Option<Self::Item> {
         self.bytes.next().map(|r| {
             r.map(|b| {
-                self.nread += 1;
+                self.byte_offset += 1;
                 b
             })
         })
@@ -257,7 +257,7 @@ impl From<UnicodeParsingError> for SourceError {
 }
 
 impl From<std::io::Error> for SourceError {
-    fn from(_: std::io::Error) -> Self {
-        todo!()
+    fn from(io: std::io::Error) -> Self {
+        Self::Io(io)
     }
 }
