@@ -68,7 +68,7 @@ where
     fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
         let inner = self.inner.fmt(sm, st)?;
 
-        let lines_by_file = sm.lines(self.span).into_iter().map(|(f, lines)| {
+        let lines_by_file = sm.lines_in_span(self.span).into_iter().map(|(f, lines)| {
             let line = format_line_set(&lines).expect("Span covers no indexed source code");
             (f, line)
         });

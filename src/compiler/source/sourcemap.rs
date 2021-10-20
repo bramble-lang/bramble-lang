@@ -128,7 +128,7 @@ impl SourceMap {
     }
 
     /// Returns the Line number of a span
-    pub fn lines(&self, span: Span) -> Vec<(&PathBuf, Vec<u32>)> {
+    pub fn lines_in_span(&self, span: Span) -> Vec<(&PathBuf, Vec<u32>)> {
         // Get the list of files that the span covers
         self.map
             .iter()
