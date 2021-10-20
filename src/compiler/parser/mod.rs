@@ -15,7 +15,7 @@ use super::{lexer::tokens::Token, CompilerError};
 type ParserResult<T> = Result<Option<T>, CompilerError<ParserError>>;
 
 /// Compute the minimum span that covers all the tokens in the slice.
-fn ctx_for_tokens(tokens: &[Token]) -> Option<ParserContext> {
+fn ctx_over_tokens(tokens: &[Token]) -> Option<ParserContext> {
     // The vector of tokens is assumed to be ordered by their Offsets and that no
     // two tokens have intersecting spans.
     tokens

@@ -14,7 +14,7 @@ use crate::{
     diagnostics::config::TracingConfig,
 };
 
-use super::{ctx_for_tokens, ParserContext};
+use super::{ctx_over_tokens, ParserContext};
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
@@ -141,7 +141,7 @@ impl Parser {
 }
 
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
-    let module_ctx = ctx_for_tokens(&tokens)
+    let module_ctx = ctx_over_tokens(&tokens)
         .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
     let mut module = Module::new(name, module_ctx);
 

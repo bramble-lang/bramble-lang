@@ -1,4 +1,4 @@
-use super::{ctx_for_tokens, ParserError};
+use super::{ctx_over_tokens, ParserError};
 use crate::compiler::ast::Context;
 use crate::compiler::lexer::tokens::{Lex, Token};
 use crate::compiler::source::Offset;
@@ -17,7 +17,7 @@ impl<'a> TokenStream<'a> {
         TokenStream {
             tokens,
             index: 0,
-            span: ctx_for_tokens(tokens)
+            span: ctx_over_tokens(tokens)
                 .map_or(Span::new(Offset::new(0), Offset::new(0)), |ctx| ctx.span()),
         }
     }
