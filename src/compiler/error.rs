@@ -59,17 +59,16 @@ impl<IE> CompilerDisplay for CompilerError<IE>
 where
     IE: CompilerDisplay,
 {
+    /// For each source code file, format the line number so that
+    /// If the span covers one line then format as "L{line}"
+    /// If the span covers multiple then format as: "L{min}-{max}"
+    ///
+    /// If the span covers only one file, then format as "{Lines}"
+    /// If the span covers multiple files, format as "{File}:{Lines}"
     fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
         let inner = self.inner.fmt(sm, st)?;
 
-        // For each source code file, format the line number so that
-        // If the span covers one line then format as "L{line}"
-        // If the span covers multiple then format as: "L{min}-{max}"
-        //
-        // If the span covers only one file, then format as "{Lines}"
-        // If the span covers multiple files, format as "{File}:{Lines}"
-
-        let lines = sm.lines(self.span).into_iter().map(|(f, lines)| {
+        let lines_by_file = sm.lines(self.span).into_iter().map(|(f, lines)| {
             let line = if lines.len() == 0 {
                 panic!("Span covers no indexed source code");
             } else if lines.len() == 1 {
@@ -82,16 +81,16 @@ where
             (f, line)
         });
 
-        let line: String = if lines.len() == 1 {
-            lines.map(|(_, lines)| lines).collect()
+        let formatted_span: String = if lines_by_file.len() == 1 {
+            lines_by_file.map(|(_, lines)| lines).collect()
         } else {
-            lines
+            lines_by_file
                 .map(|(f, lines)| format!("{:?}:{}", f, lines))
                 .collect::<Vec<_>>()
                 .join("; ")
         };
 
-        Ok(format!("{}: {}", line, inner))
+        Ok(format!("{}: {}", formatted_span, inner))
     }
 }
 
