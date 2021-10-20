@@ -110,7 +110,7 @@ fn format_line_set(lines: &[u32]) -> Option<String> {
 /// Helper macro to get rid of repitition of boilerplate code.
 //#[macro_export]
 macro_rules! err {
-    ($ctx:expr, $kind: expr) => {
-        Err(CompilerError::new($ctx, $kind))
+    ($span:expr, $kind: expr) => {
+        Err(CompilerError::new($span, $kind))
     };
 }
