@@ -81,7 +81,7 @@ where
             (f, line)
         });
 
-        let formatted_span: String = if lines_by_file.len() == 1 {
+        let formatted_span = if lines_by_file.len() == 1 {
             lines_by_file.map(|(_, lines)| lines).collect()
         } else {
             lines_by_file
