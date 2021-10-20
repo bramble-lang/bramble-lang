@@ -292,11 +292,11 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
 }
 fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
     let (fn_ctx, fn_name, params, fn_type) = match function_decl(stream, false)? {
-        Some((ctx, n, p, v, t)) => {
-            if v {
+        Some((ctx, name, params, is_variadic, ret_ty)) => {
+            if is_variadic {
                 return err!(ctx.span(), ParserError::FnVarArgsNotAllowed);
             }
-            (ctx, n, p, t)
+            (ctx, name, params, ret_ty)
         }
         None => return Ok(None),
     };
