@@ -31,9 +31,6 @@ use super::{CompilerDisplay, CompilerDisplayError, SourceMap, Span};
 /// are stored in the `inner` field.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompilerError<IE: CompilerDisplay> {
-    /// The line in the source code which caused the error
-    line: u32,
-
     /// The span of source code that caused this error
     span: Span,
 
@@ -46,15 +43,15 @@ where
     IE: CompilerDisplay,
 {
     pub fn new(line: u32, span: Span, inner: IE) -> Self {
-        CompilerError { line, span, inner }
+        CompilerError { span, inner }
     }
 
     /// Moves the Line number and Inner error out of the wrapping [CompilerError].
     /// This is to allow conversion of one type of [CompilerError] to another type, by
     /// converting the `inner` type into a new type and then creating a new [CompilerError]
     /// wrapper.
-    pub fn take(self) -> (u32, Span, IE) {
-        (self.line, self.span, self.inner)
+    pub fn take(self) -> (Span, IE) {
+        (self.span, self.inner)
     }
 }
 

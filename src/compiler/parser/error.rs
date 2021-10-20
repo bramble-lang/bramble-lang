@@ -203,10 +203,10 @@ fn lex_set_to_string(
 
 impl From<CompilerError<AstError>> for CompilerError<ParserError> {
     fn from(ce: CompilerError<AstError>) -> Self {
-        let (line, span, ae) = ce.take();
+        let (span, ae) = ce.take();
         match ae {
             AstError::ModuleAlreadyContains(sid) => {
-                CompilerError::new(line, span, ParserError::ModAlreadyContains(sid))
+                CompilerError::new(0, span, ParserError::ModAlreadyContains(sid))
             }
         }
     }
