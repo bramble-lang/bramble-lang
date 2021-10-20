@@ -62,8 +62,8 @@ impl<'a> TokenStream<'a> {
     }
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, CompilerError<ParserError>> {
-        let (line, span, found) = match self.peek() {
-            Some(t) => (t.line, t.span, t.sym.clone()),
+        let (span, found) = match self.peek() {
+            Some(t) => (t.span, t.sym.clone()),
             None => {
                 return err!(
                     0,

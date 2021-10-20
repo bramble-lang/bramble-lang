@@ -247,7 +247,6 @@ pub fn binary_op(
         Some(left) => match stream.next_if_one_of(test.clone()) {
             Some(op) => {
                 let right = binary_op(stream, test, left_pattern)?.ok_or(CompilerError::new(
-                    op.to_ctx().line(),
                     op.to_ctx().span(),
                     ParserError::ExpectedExprAfter(op.sym.clone()),
                 ))?;
@@ -264,7 +263,6 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
             let factor = negate(stream)?.ok_or(CompilerError::new(
-                op.to_ctx().line(),
                 op.to_ctx().span(),
                 ParserError::ExpectedTermAfter(op.sym.clone()),
             ))?;
@@ -291,13 +289,11 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                             )
                         })
                         .ok_or(CompilerError::new(
-                            token.line,
                             token.span,
                             ParserError::MemberAccessExpectedField,
                         ))?,
                     Lex::LBracket => expression(stream)?
                         .ok_or(CompilerError::new(
-                            token.to_ctx().line(),
                             token.span,
                             ParserError::IndexOpInvalidExpr,
                         ))
@@ -363,45 +359,39 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
         Some(if_tok) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                if_tok.line,
                 if_tok.span,
                 ParserError::IfExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let if_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                if_tok.line,
                 if_tok.span,
                 ParserError::IfTrueArmMissingExpr,
             ))?;
 
             // check for `else if`
-            let else_arm = match stream.next_if(&Lex::Else) {
-                Some(_) => match stream.peek() {
-                    Some(Token {
-                        line: l,
-                        sym: Lex::If,
-                        span,
-                    }) => {
-                        let l = *l;
-                        let span = *span;
-                        Some(if_expression(stream)?.ok_or(CompilerError::new(
-                            l,
-                            span,
-                            ParserError::IfElseExpectedIfExpr,
-                        ))?)
-                    }
-                    _ => {
-                        let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                            if_tok.line,
-                            if_tok.span,
-                            ParserError::IfFalseArmMissingExpr,
-                        ))?;
-                        Some(false_arm)
-                    }
-                },
-                None => None,
-            };
+            let else_arm =
+                match stream.next_if(&Lex::Else) {
+                    Some(_) => match stream.peek() {
+                        Some(Token {
+                            sym: Lex::If, span, ..
+                        }) => {
+                            let span = *span;
+                            Some(if_expression(stream)?.ok_or(CompilerError::new(
+                                span,
+                                ParserError::IfElseExpectedIfExpr,
+                            ))?)
+                        }
+                        _ => {
+                            let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
+                                if_tok.span,
+                                ParserError::IfFalseArmMissingExpr,
+                            ))?;
+                            Some(false_arm)
+                        }
+                    },
+                    None => None,
+                };
 
             let ctx = else_arm.as_ref().map_or_else(
                 || if_tok.to_ctx().join(*if_arm.context()),
@@ -425,17 +415,13 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
         Some(whl) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                whl.line,
                 whl.span,
                 ParserError::WhileExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
-            let body = expression_block(stream)?.ok_or(CompilerError::new(
-                whl.line,
-                whl.span,
-                ParserError::WhileMissingBody,
-            ))?;
+            let body = expression_block(stream)?
+                .ok_or(CompilerError::new(whl.span, ParserError::WhileMissingBody))?;
 
             Some(Expression::While {
                 context: whl.to_ctx().join(*body.context()),
@@ -512,10 +498,9 @@ fn struct_expression_params(
     match stream.next_if(&Lex::LBrace) {
         Some(lbrace) => {
             let mut params = vec![];
-            while let Some((field_name, ln, span)) = stream.next_if_id() {
+            while let Some((field_name, _ln, span)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(CompilerError::new(
-                    ln,
                     span,
                     ParserError::StructExpectedFieldExpr(field_name),
                 ))?;
@@ -807,7 +792,6 @@ mod test {
             (
                 "[5",
                 CompilerError::new(
-                    0,
                     Span::new(Offset::new(2), Offset::new(2)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], None),
                 ),
@@ -815,7 +799,6 @@ mod test {
             (
                 "[5 6]",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(3), Offset::new(4)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
                 ),
@@ -958,7 +941,6 @@ mod test {
             (
                 "a[5",
                 CompilerError::new(
-                    0,
                     Span::new(Offset::new(3), Offset::new(3)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], None),
                 ),
@@ -966,7 +948,6 @@ mod test {
             (
                 "a[5 6]",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(4), Offset::new(5)),
                     ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
                 ),
@@ -974,7 +955,6 @@ mod test {
             (
                 "a[]",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(1), Offset::new(2)),
                     ParserError::IndexOpInvalidExpr,
                 ),
@@ -982,7 +962,6 @@ mod test {
             (
                 "a[2 + ]",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(4), Offset::new(5)),
                     ParserError::ExpectedExprAfter(Lex::Add),
                 ),
@@ -1079,7 +1058,6 @@ mod test {
             (
                 "{5 10 51}",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(3), Offset::new(5)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(10))),
                 ),
@@ -1087,7 +1065,6 @@ mod test {
             (
                 " {5; 10 51}",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(8), Offset::new(10)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(51))),
                 ),
@@ -1095,7 +1072,6 @@ mod test {
             (
                 "{5; 10 let x:i64 := 5}",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(7), Offset::new(10)),
                     ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::Let)),
                 ),
@@ -1103,7 +1079,6 @@ mod test {
             (
                 "{let x: i64 := 10 5}",
                 CompilerError::new(
-                    1,
                     Span::new(Offset::new(1), Offset::new(17)),
                     ParserError::ExpectedButFound(vec![Lex::Semicolon], Some(Lex::I64(5))),
                 ),

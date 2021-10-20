@@ -42,7 +42,7 @@ impl<IE> CompilerError<IE>
 where
     IE: CompilerDisplay,
 {
-    pub fn new(line: u32, span: Span, inner: IE) -> Self {
+    pub fn new(span: Span, inner: IE) -> Self {
         CompilerError { span, inner }
     }
 
@@ -99,6 +99,6 @@ where
 //#[macro_export]
 macro_rules! err {
     ($ln: expr, $span:expr, $kind: expr) => {
-        Err(CompilerError::new($ln, $span, $kind))
+        Err(CompilerError::new($span, $kind))
     };
 }

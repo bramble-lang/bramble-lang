@@ -61,7 +61,7 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
         Some(name) => {
             let cpath = stack
                 .to_canonical(&vec![Element::Id(name)].into())
-                .map_err(|e| CompilerError::new(node.context().line(), node.context().span(), e))?;
+                .map_err(|e| CompilerError::new(node.context().span(), e))?;
             node.get_context_mut().set_canonical_path(cpath);
         }
         None => (),
@@ -80,9 +80,7 @@ impl Canonizable for Expression<SemanticContext> {
                             *path = canonical_path;
                             Ok(())
                         })
-                        .map_err(|e| {
-                            CompilerError::new(self.context().line(), self.context().span(), e)
-                        })
+                        .map_err(|e| CompilerError::new(self.context().span(), e))
                 } else {
                     Ok(())
                 }
@@ -95,9 +93,7 @@ impl Canonizable for Expression<SemanticContext> {
                             *path = canonical_path;
                             Ok(())
                         })
-                        .map_err(|e| {
-                            CompilerError::new(self.context().line(), self.context().span(), e)
-                        })
+                        .map_err(|e| CompilerError::new(self.context().span(), e))
                 } else {
                     Ok(())
                 }
@@ -110,9 +106,7 @@ impl Canonizable for Expression<SemanticContext> {
                             *path = canonical_path;
                             Ok(())
                         })
-                        .map_err(|e| {
-                            CompilerError::new(self.context().line(), self.context().span(), e)
-                        })
+                        .map_err(|e| CompilerError::new(self.context().span(), e))
                 } else {
                     Ok(())
                 }
@@ -128,7 +122,7 @@ impl Canonizable for Bind<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let canon_type = stack
             .canonize_type(self.get_type())
-            .map_err(|e| CompilerError::new(self.context().line(), self.context().span(), e))?;
+            .map_err(|e| CompilerError::new(self.context().span(), e))?;
         self.set_type(canon_type);
         Ok(())
     }
@@ -149,11 +143,9 @@ impl Canonizable for Module<SemanticContext> {
         // as the type checker expects all type references to be canonized.
         let mut sym = self.context().sym().clone();
         for s in sym.table_mut().iter_mut() {
-            let canonized_ty = stack.canonize_type(&s.ty).map_err(|e| {
-                let line = self.context().line();
-                let span = self.context().span();
-                CompilerError::new(line, span, e)
-            })?;
+            let canonized_ty = stack
+                .canonize_type(&s.ty)
+                .map_err(|e| CompilerError::new(self.context().span(), e))?;
             s.ty = canonized_ty;
         }
 
@@ -169,7 +161,7 @@ impl Canonizable for RoutineDef<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
             .canonize_type(&self.ret_ty)
-            .map_err(|e| CompilerError::new(self.context().line(), self.context().span(), e))?;
+            .map_err(|e| CompilerError::new(self.context().span(), e))?;
         self.ret_ty = ctype;
         Ok(())
     }
@@ -189,7 +181,7 @@ impl Canonizable for Extern<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
             .canonize_type(&self.ty)
-            .map_err(|e| CompilerError::new(self.context().line(), self.context().span(), e))?;
+            .map_err(|e| CompilerError::new(self.context().span(), e))?;
         self.ty = ctype;
         Ok(())
     }
@@ -199,7 +191,7 @@ impl Canonizable for Parameter<SemanticContext> {
     fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
         let ctype = stack
             .canonize_type(&self.ty)
-            .map_err(|e| CompilerError::new(self.context().line(), self.context().span(), e))?;
+            .map_err(|e| CompilerError::new(self.context().span(), e))?;
         self.ty = ctype;
         Ok(())
     }

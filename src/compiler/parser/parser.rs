@@ -141,11 +141,8 @@ impl Parser {
 }
 
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
-    let module_ctx = ctx_for_tokens(&tokens).ok_or(CompilerError::new(
-        0,
-        Span::zero(),
-        ParserError::EmptyProject,
-    ))?;
+    let module_ctx = ctx_for_tokens(&tokens)
+        .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
     let mut module = Module::new(name, module_ctx);
 
     let mut stream = TokenStream::new(&tokens);
@@ -349,7 +346,6 @@ fn function_decl(
     };
 
     let (fn_name, _, fn_def_span) = stream.next_if_id().ok_or(CompilerError::new(
-        fn_ctx.line(),
         fn_ctx.span(),
         ParserError::FnExpectedIdentifierAfterFn,
     ))?;
@@ -359,7 +355,6 @@ fn function_decl(
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
         consume_type(stream)?
             .ok_or(CompilerError::new(
-                fn_ctx.line(),
                 fn_ctx.span(),
                 ParserError::FnExpectedTypeAfterArrow,
             ))?
@@ -378,7 +373,6 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     };
 
     let (co_name, _, _) = stream.next_if_id().ok_or(CompilerError::new(
-        ctx.line(),
         ctx.span(),
         ParserError::CoExpectedIdentifierAfterCo,
     ))?;
@@ -392,7 +386,6 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         Some(t) => {
             consume_type(stream)?
                 .ok_or(CompilerError::new(
-                    t.line,
                     t.span,
                     ParserError::FnExpectedTypeAfterArrow,
                 ))?
@@ -407,9 +400,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
-            let (line, span) = stmts.last().map_or((ctx.line(), ctx.span()), |s| {
-                (s.context().line(), s.context().span())
-            });
+            let span = stmts.last().map_or(ctx.span(), |s| s.context().span());
             return err!(
                 line,
                 span,
@@ -646,14 +637,12 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
         Some(lbracket) => {
             let ctx = lbracket.to_ctx();
             let (element_ty, _) = consume_type(stream)?.ok_or(CompilerError::new(
-                ctx.line(),
                 ctx.span(),
                 ParserError::ArrayDeclExpectedType,
             ))?;
             stream.next_must_be(&Lex::Semicolon)?;
 
             let len = expression(stream)?.ok_or(CompilerError::new(
-                ctx.line(),
                 ctx.span(),
                 ParserError::ArrayDeclExpectedSize,
             ))?;
@@ -687,12 +676,10 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
     match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
         Some(decl_tok) => {
             let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());
-            let line = decl_tok[1].line;
             let id = decl_tok[0].sym.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
             let (ty, ty_ctx) = consume_type(stream)?.ok_or(CompilerError::new(
-                line,
                 decl_tok[0].span,
                 ParserError::IdDeclExpectedType,
             ))?;

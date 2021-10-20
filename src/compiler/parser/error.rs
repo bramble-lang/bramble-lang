@@ -206,7 +206,7 @@ impl From<CompilerError<AstError>> for CompilerError<ParserError> {
         let (span, ae) = ce.take();
         match ae {
             AstError::ModuleAlreadyContains(sid) => {
-                CompilerError::new(0, span, ParserError::ModAlreadyContains(sid))
+                CompilerError::new(span, ParserError::ModAlreadyContains(sid))
             }
         }
     }
