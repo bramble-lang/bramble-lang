@@ -152,7 +152,6 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserC
 
         if stream.index() == start_index {
             return err!(
-                0,
                 stream.peek().unwrap().span,
                 ParserError::Locked(stream.peek().map(|t| t.clone()))
             );
@@ -179,7 +178,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
                 Some(module)
             }
             _ => {
-                return err!(module.line, module.span, ParserError::ModExpectedName);
+                return err!(module.span, ParserError::ModExpectedName);
             }
         },
         None => None,
@@ -245,26 +244,22 @@ fn parse_items(
 
 fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
     match stream.next_if(&Lex::Extern) {
-        Some(token) => match function_decl(stream, true)? {
+        Some(extern_tok) => match function_decl(stream, true)? {
             Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    return err!(
-                        fn_ctx.line(),
-                        fn_ctx.span(),
-                        ParserError::ExternInvalidVarArgs
-                    );
+                    return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs);
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
                     fn_name,
-                    token.to_ctx(),
+                    extern_tok.to_ctx(),
                     params,
                     has_varargs,
                     fn_type,
                 )))
             }
             None => {
-                err!(token.line, token.span, ParserError::ExternExpectedFnDecl)
+                err!(extern_tok.span, ParserError::ExternExpectedFnDecl)
             }
         },
         None => Ok(None),
@@ -284,11 +279,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
                 Ok(Some(StructDef::new(id, ctx, fields)))
             }
             None => {
-                err!(
-                    st_def.line,
-                    st_def.span,
-                    ParserError::StructExpectedIdentifier
-                )
+                err!(st_def.span, ParserError::StructExpectedIdentifier)
             }
         },
         None => Ok(None),
@@ -296,11 +287,11 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
 }
 fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
     let (fn_ctx, fn_name, params, fn_type) = match function_decl(stream, false)? {
-        Some((l, n, p, v, t)) => {
+        Some((ctx, n, p, v, t)) => {
             if v {
-                return err!(l.line(), l.span(), ParserError::FnVarArgsNotAllowed);
+                return err!(ctx.span(), ParserError::FnVarArgsNotAllowed);
             }
-            (l, n, p, t)
+            (ctx, n, p, t)
         }
         None => return Ok(None),
     };
@@ -312,7 +303,6 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                fn_ctx.line(),
                 fn_ctx.span(),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
@@ -379,7 +369,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
-        return err!(ctx.line(), ctx.span(), ParserError::FnVarArgsNotAllowed);
+        return err!(ctx.span(), ParserError::FnVarArgsNotAllowed);
     }
 
     let co_type = match stream.next_if(&Lex::LArrow) {
@@ -402,7 +392,6 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         None => {
             let span = stmts.last().map_or(ctx.span(), |s| s.context().span());
             return err!(
-                line,
                 span,
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
@@ -485,8 +474,8 @@ pub(super) fn id_declaration_list(
     trace!(stream);
     let mut decls = vec![];
 
-    while let Some(token) = id_declaration(stream)? {
-        match token {
+    while let Some(id_decl) = id_declaration(stream)? {
+        match id_decl {
             Expression::IdentifierDeclare(ctx, id, ty) => {
                 decls.push((id, ty, ctx));
                 stream.next_if(&Lex::Comma);
@@ -549,7 +538,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
         return Ok(None);
     }
 
-    while let Some(token) = stream.next_if(&Lex::PathSeparator) {
+    while let Some(path_sep) = stream.next_if(&Lex::PathSeparator) {
         let span =
             match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
                 Some(Token {
@@ -569,7 +558,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
                     span
                 }
                 _ => {
-                    return err!(token.line, token.span, ParserError::PathExpectedIdentifier);
+                    return err!(path_sep.span, ParserError::PathExpectedIdentifier);
                 }
             };
         ctx = ctx.extend(span);
@@ -655,13 +644,7 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
                 Expression::I16(_, l) => l as usize,
                 Expression::I32(_, l) => l as usize,
                 Expression::I64(_, l) => l as usize,
-                _ => {
-                    return err!(
-                        len.context().line(),
-                        len.context().span(),
-                        ParserError::ArrayExpectedIntLiteral
-                    )
-                }
+                _ => return err!(len.context().span(), ParserError::ArrayExpectedIntLiteral),
             };
 
             let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);

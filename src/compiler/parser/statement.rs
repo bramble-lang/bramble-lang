@@ -51,7 +51,6 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
             _ => {
                 if must_have_semicolon {
                     err!(
-                        stm.context().line(),
                         stm.context().span(),
                         ParserError::ExpectedButFound(
                             vec![Lex::Semicolon],

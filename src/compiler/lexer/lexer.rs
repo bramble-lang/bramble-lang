@@ -236,7 +236,6 @@ impl<'a> Lexer<'a> {
             // Can no longer consume the input text
             if prev_index == self.index {
                 tokens.push(err!(
-                    self.line(),
                     self.current_char_span().unwrap(), // If there is no Span then something very bad has happened
                     LexerError::Locked(self.current_char())
                 ));
@@ -363,7 +362,6 @@ impl<'a> Lexer<'a> {
                         Some(c) if Self::is_escape_code(c) => (),
                         Some(c) => {
                             return err!(
-                                self.line(),
                                 self.span_to_char(c).unwrap(),
                                 LexerError::InvalidEscapeSequence(c)
                             )
@@ -371,7 +369,6 @@ impl<'a> Lexer<'a> {
 
                         None => {
                             return err!(
-                                self.line(),
                                 self.current_char_span().unwrap(), // Need to add a span to the branch
                                 LexerError::ExpectedEscapeCharacter
                             );
@@ -424,7 +421,6 @@ impl<'a> Lexer<'a> {
             .unwrap_or(false)
         {
             return err!(
-                self.line(),
                 self.current_char_span().unwrap(), // Need to add a span to the branch
                 LexerError::InvalidInteger
             );
@@ -483,7 +479,7 @@ impl<'a> Lexer<'a> {
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
-                err!(line, span, LexerError::UnexpectedSuffixType(prim))
+                err!(span, LexerError::UnexpectedSuffixType(prim))
             }
         }
     }

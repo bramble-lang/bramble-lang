@@ -90,7 +90,7 @@ impl Expression<ParserContext> {
                 operand,
             ))),
             _ => {
-                err!(ctx.line(), ctx.span(), ParserError::NotAUnaryOp(op.clone()))
+                err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
             }
         }
     }
@@ -175,11 +175,7 @@ impl Expression<ParserContext> {
                 right,
             ))),
             _ => {
-                err!(
-                    ctx.line(),
-                    ctx.span(),
-                    ParserError::NotABinaryOp(op.clone())
-                )
+                err!(ctx.span(), ParserError::NotABinaryOp(op.clone()))
             }
         }
     }
@@ -308,7 +304,6 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                         })?,
                     _ => {
                         return err!(
-                            token.line,
                             token.span,
                             ParserError::ExpectedButFound(
                                 vec![Lex::LBracket, Lex::MemberAccess],
@@ -456,11 +451,7 @@ fn function_call_or_variable(stream: &mut TokenStream) -> ParserResult<Expressio
                         if let Element::Id(sid) = path.last().unwrap() {
                             Some(Expression::Identifier(call_ctx, *sid))
                         } else {
-                            return err!(
-                                call_ctx.line(),
-                                call_ctx.span(),
-                                ParserError::PathExpectedIdentifier
-                            );
+                            return err!(call_ctx.span(), ParserError::PathExpectedIdentifier);
                         }
                     }
                 }
@@ -483,7 +474,7 @@ fn co_yield(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>>
                     Expression::new_yield(ctx, Box::new(coroutine))
                 }
                 None => {
-                    err!(ctx.line(), ctx.span(), ParserError::YieldExpectedIdentifier)
+                    err!(ctx.span(), ParserError::YieldExpectedIdentifier)
                 }
             }
         }

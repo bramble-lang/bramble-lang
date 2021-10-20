@@ -98,7 +98,7 @@ where
 /// Helper macro to get rid of repitition of boilerplate code.
 //#[macro_export]
 macro_rules! err {
-    ($ln: expr, $span:expr, $kind: expr) => {
-        Err(CompilerError::new($span, $kind))
+    ($ctx:expr, $kind: expr) => {
+        Err(CompilerError::new($ctx, $kind))
     };
 }

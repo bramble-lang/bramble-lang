@@ -66,7 +66,6 @@ impl<'a> TokenStream<'a> {
             Some(t) => (t.span, t.sym.clone()),
             None => {
                 return err!(
-                    0,
                     Span::new(self.span.high(), self.span.high()),
                     ParserError::ExpectedButFound(vec![test.clone()], None)
                 )
@@ -76,7 +75,6 @@ impl<'a> TokenStream<'a> {
             Some(t) => Ok(t),
             None => {
                 err!(
-                    line,
                     span,
                     ParserError::ExpectedButFound(vec![test.clone()], Some(found))
                 )

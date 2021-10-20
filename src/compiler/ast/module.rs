@@ -102,11 +102,7 @@ where
             self.functions.push(Item::Routine(f));
             Ok(())
         } else {
-            err!(
-                0,
-                f.context().span(),
-                AstError::ModuleAlreadyContains(fname)
-            )
+            err!(f.context().span(), AstError::ModuleAlreadyContains(fname))
         }
     }
 
@@ -116,11 +112,7 @@ where
             self.coroutines.push(Item::Routine(c));
             Ok(())
         } else {
-            err!(
-                0,
-                c.context().span(),
-                AstError::ModuleAlreadyContains(cname)
-            )
+            err!(c.context().span(), AstError::ModuleAlreadyContains(cname))
         }
     }
 
@@ -130,7 +122,7 @@ where
             self.structs.push(Item::Struct(s));
             Ok(())
         } else {
-            err!(0, s.context().span(), AstError::ModuleAlreadyContains(name))
+            err!(s.context().span(), AstError::ModuleAlreadyContains(name))
         }
     }
 
@@ -140,7 +132,7 @@ where
             self.externs.push(Item::Extern(e));
             Ok(())
         } else {
-            err!(0, e.context().span(), AstError::ModuleAlreadyContains(name))
+            err!(e.context().span(), AstError::ModuleAlreadyContains(name))
         }
     }
 
@@ -460,7 +452,6 @@ mod test {
         assert_eq!(
             result,
             err!(
-                0,
                 module.context().span(),
                 AstError::ModuleAlreadyContains(func)
             )
@@ -509,7 +500,6 @@ mod test {
         assert_eq!(
             result,
             err!(
-                0,
                 module.context().span(),
                 AstError::ModuleAlreadyContains(cor)
             )
@@ -546,7 +536,6 @@ mod test {
         assert_eq!(
             result,
             err!(
-                0,
                 module.context().span(),
                 AstError::ModuleAlreadyContains(dupe)
             )
@@ -583,7 +572,6 @@ mod test {
         assert_eq!(
             result,
             err!(
-                0,
                 module.context().span(),
                 AstError::ModuleAlreadyContains(dupe)
             )
@@ -709,7 +697,6 @@ mod test {
         assert_eq!(
             result,
             err!(
-                0,
                 module.context().span(),
                 AstError::ModuleAlreadyContains(puts)
             )
@@ -739,7 +726,6 @@ mod test {
         assert_eq!(
             result,
             err!(
-                0,
                 module.context().span(),
                 AstError::ModuleAlreadyContains(dupe)
             )
@@ -769,7 +755,6 @@ mod test {
         assert_eq!(
             result,
             err!(
-                0,
                 module.context().span(),
                 AstError::ModuleAlreadyContains(dupe)
             )
