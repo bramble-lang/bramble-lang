@@ -41,13 +41,7 @@ impl SourceMap {
         }
     }
 
-    /// Add a source unit which is a file to the [`SourceMap`]. If the source unit
-    /// is successfully added to the [`SourceMap`] then this will return a reference
-    /// to the [`SourceMapEntry`] for the given source code unit.  
-    ///
-    /// The entry provides
-    /// an interface for interacting with (e.g. reading) the file that also provides
-    /// global offset data about each character read from the file.
+    /// Add a file as unit of source code to the [`SourceMap`].
     pub fn add_file(&mut self, path: PathBuf) -> Result<(), SourceMapError> {
         let file = std::fs::File::open(&path)?;
 
@@ -73,6 +67,7 @@ impl SourceMap {
         Ok(())
     }
 
+    /// Adds a string as a unit of source code to the [`SourceMap`].
     pub fn add_string(&mut self, text: &str, path: PathBuf) -> Result<(), SourceMapError> {
         if text.len() >= u32::MAX as usize {
             return Err(SourceMapError::FileTooBig);
